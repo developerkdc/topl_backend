@@ -59,12 +59,8 @@ export const UpdateRole = catchAsync(async (req, res) => {
     });
   }
   updateData.updated_at = Date.now();
-  console.log(updateData,"6222");
-  const roles = await RolesModel.findByIdAndUpdate(
-    roleId,
-    { $set: updateData },
-    { new: true, runValidators: true }
-  );
+  console.log(updateData, "6222");
+  const roles = await RolesModel.findByIdAndUpdate(roleId, { $set: updateData }, { new: true, runValidators: true });
   if (!roles) {
     return res.status(404).json({
       result: [],
@@ -80,18 +76,13 @@ export const UpdateRole = catchAsync(async (req, res) => {
 });
 
 export const ListRoles = catchAsync(async (req, res) => {
-  const { string, boolean, numbers ,arrayField=[]} = req?.body?.searchFields || {};
- const {
-    page = 1,
-    limit = 10,
-    sortBy = "updated_at",
-    sort = "desc",
-  } = req.query;
+  const { string, boolean, numbers, arrayField = [] } = req?.body?.searchFields || {};
+  const { page = 1, limit = 10, sortBy = "updated_at", sort = "desc" } = req.query;
   const search = req.query.search || "";
   let searchQuery = {};
   if (search != "" && req?.body?.searchFields) {
-    const searchdata = DynamicSearch(search, boolean, numbers, string,arrayField);
-   if (searchdata?.length == 0) {
+    const searchdata = DynamicSearch(search, boolean, numbers, string, arrayField);
+    if (searchdata?.length == 0) {
       return res.status(404).json({
         statusCode: 404,
         status: false,
@@ -103,6 +94,7 @@ export const ListRoles = catchAsync(async (req, res) => {
     }
     searchQuery = searchdata;
   }
+  console.log(searchQuery, "10666");
   const totalDocument = await RolesModel.countDocuments({
     ...searchQuery,
   });
