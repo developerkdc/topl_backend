@@ -7,6 +7,7 @@ import catchAsync from "../utils/errors/catchAsync.js";
 import { IdRequired, SomethingWrong } from "../utils/response/response.js";
 
 import { DynamicSearch } from "../utils/dynamicSearch/dynamic.js";
+import { dynamic_filter } from "../utils/dymanicFilter.js";
 
 export const AddUser = catchAsync(async (req, res) => {
   const authUserDetail = req.userDetails;
@@ -30,11 +31,7 @@ export const AddUser = catchAsync(async (req, res) => {
 
   const newUser = new UserModel(userData);
   const savedUser = await newUser.save();
-  SendOtpEmail(
-    req.body.email_id,
-    `Your new password is: ${password}`,
-    "Your New Account Password"
-  );
+  SendOtpEmail(req.body.email_id, `Your new password is: ${password}`, "Your New Account Password");
   return res.status(201).json({
     result: savedUser,
     status: true,
@@ -51,13 +48,7 @@ export const UpdateUser = catchAsync(async (req, res) => {
       message: userId ? "Invalid user ID" : IdRequired,
     });
   }
-  const requiredFields = [
-    "employee_id",
-    "first_name",
-    "last_name",
-    "email_id",
-    "role_name",
-  ];
+  const requiredFields = ["employee_id", "first_name", "last_name", "email_id", "role_name"];
 
   for (const field of requiredFields) {
     if (req.body[field] === "") {
@@ -68,12 +59,8 @@ export const UpdateUser = catchAsync(async (req, res) => {
       });
     }
   }
-  const updateData = { ...req.body};
-  const user = await UserModel.findByIdAndUpdate(
-    userId,
-    { $set: updateData },
-    { new: true, runValidators: true }
-  );
+  const updateData = { ...req.body };
+  const user = await UserModel.findByIdAndUpdate(userId, { $set: updateData }, { new: true, runValidators: true });
   if (!user) {
     return res.status(404).json({
       status: false,
@@ -89,18 +76,18 @@ export const UpdateUser = catchAsync(async (req, res) => {
 });
 
 export const ListUser = catchAsync(async (req, res) => {
-  const { string, boolean, numbers ,arrayField=[]} = req?.body?.searchFields || {};
- const {
-    page = 1,
-    limit = 10,
-    sortBy = "updated_at",
-    sort = "desc",
-  } = req.query;
+  const { string, boolean, numbers, arrayField = [] } = req?.body?.searchFields || {};
+  const { page = 1, limit = 10, sortBy = "updated_at", sort = "desc" } = req.query;
   const search = req.query.search || "";
   let searchQuery = {};
+
+  const { ...data } = req?.body?.filters || {};
+  const matchQuery = dynamic_filter(data);
+  console.log(matchQuery);
+
   if (search != "" && req?.body?.searchFields) {
-    const searchdata = DynamicSearch(search, boolean, numbers, string,arrayField);
-   if (searchdata?.length == 0) {
+    const searchdata = DynamicSearch(search, boolean, numbers, string, arrayField);
+    if (searchdata?.length == 0) {
       return res.status(404).json({
         statusCode: 404,
         status: false,
@@ -114,6 +101,7 @@ export const ListUser = catchAsync(async (req, res) => {
   }
   const totalDocument = await UserModel.countDocuments({
     ...searchQuery,
+    ...matchQuery,
   });
   const totalPages = Math.ceil(totalDocument / limit);
   const validPage = Math.min(Math.max(page, 1), totalPages);
@@ -163,7 +151,7 @@ export const ListUser = catchAsync(async (req, res) => {
       },
     },
     {
-      $match: { ...searchQuery },
+      $match: { ...searchQuery, ...matchQuery },
     },
     {
       $sort: { [sortBy]: sort == "desc" ? -1 : 1 },
@@ -248,11 +236,7 @@ export const AdminChangePassword = catchAsync(async (req, res) => {
       });
     }
     const authUserDetail = req.userDetails;
-    SendOtpEmail(
-      authUserDetail.email_id,
-      `Your new password is: ${req.body.new_password}`,
-      "Your New Account Password"
-    );
+    SendOtpEmail(authUserDetail.email_id, `Your new password is: ${req.body.new_password}`, "Your New Account Password");
     return res.status(200).json({
       result: [],
       status: true,
@@ -260,9 +244,7 @@ export const AdminChangePassword = catchAsync(async (req, res) => {
     });
   } catch (error) {
     console.error("Error updating user password:", error);
-    return res
-      .status(500)
-      .json({ result: [], status: false, message: SomethingWrong });
+    return res.status(500).json({ result: [], status: false, message: SomethingWrong });
   }
 });
 
