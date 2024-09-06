@@ -26,13 +26,11 @@ const CheckRoleAndTokenAccess = async (req, res, next) => {
         .json({ result: [], status: false, message: UserNotFound });
     }
     req.userDetails = user;
-    const logEntry = `${new Date().toISOString()} - ${req.method} ${
-      req.url
-    } - User: ${
-      req.userDetails
+    const logEntry = `${new Date().toISOString()} - ${req.method} ${req.url
+      } - User: ${req.userDetails
         ? `${req.userDetails.first_name} ${req.userDetails.last_name}`
         : "Guest"
-    }\n`;
+      }\n`;
     console.log(logEntry);
     fs.appendFile(path.join(__dirname, "api.log"), logEntry, (err) => {
       if (err) {

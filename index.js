@@ -35,6 +35,8 @@ import { dirname } from "path";
 import fs from "fs";
 import path from "path";
 
+
+
 import { globalErrorHandler } from "./utils/errors/GlobalErrorHandler.js";
 const Configs = getConfigs();
 mongo_service();
@@ -53,7 +55,7 @@ var corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.urlencoded({ extended: true }));
 app.use("/upload", express.static("./upload"));
-app.use(express.static(path.join(__dirname,"public")));
+app.use(express.static(path.join(__dirname, "public")));
 app.use(express.static(__dirname));
 app.use(cookieParser());
 
