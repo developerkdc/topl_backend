@@ -56,6 +56,30 @@ const ExtractRequiredPermission = (routeName) => {
     case "/list-grade-master":
       return "grade_master_view";
 
+    // currency modules
+    case "/add-currency-master":
+      return "currency_master_create";
+    case "/update-currency-master":
+      return "currency_master_edit";
+    case "/list-currency-master":
+      return "currency_master_view";
+
+    // cut modules
+    case "/add-cut-master":
+      return "cut_master_create";
+    case "/update-cut-master":
+      return "cut_master_edit";
+    case "/list-cut-master":
+      return "cut_master_view";
+
+    // gst modules
+    case "/add-gst-master":
+      return "gst_master_create";
+    case "/update-gst-master":
+      return "gst_master_edit";
+    case "/list-gst-master":
+      return "gst_master_view";
+
     // pallete modules
 
     case "/add-pallete-master":

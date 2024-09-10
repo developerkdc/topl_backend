@@ -11,6 +11,9 @@ import profileRouter from "./routes/profile.routes.js";
 import supplierMasterRouter from "./routes/masters/supplier.routes.js";
 import unitMasterRouter from "./routes/masters/unit.routes.js";
 import gradeMasterRouter from "./routes/masters/grade.routes.js";
+import currencyMasterRouter from "./routes/masters/currency.routes.js";
+import cutMasterRouter from "./routes/masters/cut.routes.js";
+import gstMasterRouter from "./routes/masters/gst.routes.js";
 import palleteMasterRouter from "./routes/masters/pallete.routes.js";
 import partyNameMasterRouter from "./routes/masters/partyName.routes.js";
 import itemNameMasterRouter from "./routes/masters/itemName.routes.js";
@@ -75,6 +78,9 @@ app.use(`/api/${Configs.server.version}/item-category`, itemCategoryRouter)
 app.use(`/api/${Configs.server.version}/item-subcategory`, itemSubCategoryRouter)
 app.use(`/api/${Configs.server.version}/unit-master`, unitMasterRouter);
 app.use(`/api/${Configs.server.version}/grade-master`, gradeMasterRouter);
+app.use(`/api/${Configs.server.version}/currency-master`, currencyMasterRouter);
+app.use(`/api/${Configs.server.version}/cut-master`, cutMasterRouter);
+app.use(`/api/${Configs.server.version}/gst-master`, gstMasterRouter);
 app.use(`/api/${Configs.server.version}/pallete-master`, palleteMasterRouter);
 app.use(
   `/api/${Configs.server.version}/party-name-master`,

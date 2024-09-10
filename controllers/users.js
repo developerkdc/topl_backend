@@ -170,7 +170,7 @@ export const ListUser = catchAsync(async (req, res) => {
         verify_otp: 0,
       },
     },
-  ]);
+  ]).collation({ locale: "en", caseLevel: true });
   if (user) {
     return res.status(200).json({
       result: user,
