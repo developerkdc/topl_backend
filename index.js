@@ -32,6 +32,11 @@ import imagesRouter from "./routes/image/image.routes.js";
 import reportRouter from "./routes/report/report.routes.js";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
+import itemCategoryRouter from './routes/masters/item.cateory.routes.js'
+import itemSubCategoryRouter from './routes/masters/item.subcategory.routes.js'
+import departmentRouter from './routes/masters/department.routes.js'
+import machineRouter from './routes/masters/machine.routes.js';
+import seriesRouter from './routes/masters/series.routes.js'
 import fs from "fs";
 import path from "path";
 
@@ -66,6 +71,8 @@ app.use(`/api/${Configs.server.version}/profile`, profileRouter);
 
 //master
 app.use(`/api/${Configs.server.version}/supplier-master`, supplierMasterRouter);
+app.use(`/api/${Configs.server.version}/item-category`, itemCategoryRouter)
+app.use(`/api/${Configs.server.version}/item-subcategory`, itemSubCategoryRouter)
 app.use(`/api/${Configs.server.version}/unit-master`, unitMasterRouter);
 app.use(`/api/${Configs.server.version}/grade-master`, gradeMasterRouter);
 app.use(`/api/${Configs.server.version}/pallete-master`, palleteMasterRouter);
@@ -81,6 +88,20 @@ app.use(
   `/api/${Configs.server.version}/item-code-master`,
   itemCodeMasterRouter
 );
+app.use(
+  `/api/${Configs.server.version}/department-master`,
+  departmentRouter
+);
+app.use(
+  `/api/${Configs.server.version}/machine-master`,
+  machineRouter
+);
+app.use(
+  `/api/${Configs.server.version}/series-master`,
+  seriesRouter
+);
+
+
 
 // inventory
 app.use(
