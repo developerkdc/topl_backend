@@ -100,6 +100,52 @@ const ExtractRequiredPermission = (routeName) => {
     case "/list-party-name-master":
       return "party_master_view";
 
+    // item category modules
+
+    case "/add":
+      return "item_category_master_create";
+    case "/bulk-upload-item-master":
+      return "item_name_master_create";
+    case "/update/:id":
+      return "item_category_master_edit";
+    case "/list":
+      return "item_category_master_view";
+
+    // item subcategory modules
+
+    case "/add":
+      return "item_sub_category_master_create";
+    case "/bulk-upload-item-master":
+      return "item_name_master_create";
+    case "/update/:id":
+      return "item_sub_category_master_edit";
+    case "/list":
+      return "item_sub_category_master_view";
+
+    //department-master
+    case "/add-department":
+      return "department_master_create";
+    case "/update-department/:id":
+      return "department_master_edit";
+    case "/list-department":
+      return "department_master_view";
+
+    //machine-master
+    case "/add-machine":
+      return "machine_master_create";
+    case "/update-machine/:id":
+      return "machine_master_edit";
+    case "/list-machine":
+      return "machine_master_view";
+
+    //series-master
+    case "/add-series":
+      return "series_master_create";
+    case "/update-series/:id":
+      return "series_master_edit";
+    case "/list-series":
+      return "series_master_view";
+
     // item name modules
 
     case "/add-item-name-master":
