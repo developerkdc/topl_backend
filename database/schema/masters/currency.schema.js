@@ -1,21 +1,15 @@
 import mongoose from "mongoose";
 import LogSchemaFunction from "../LogsSchema/logs.schema.js";
 
-const UnitSchema = new mongoose.Schema({
-  unit_name: {
+const CurrencySchema = new mongoose.Schema({
+  currency_name: {
     type: String,
-    required: [true, "Unit Name is required."],
+    required: [true, "Currency Name is required."],
     trim: true,
-    unique: [true, "Unit Name already exist."],
+    unique: [true, "Currency Name already exist."],
   },
-  unit_symbolic_name: {
+  currency_remarks: {
     type: String,
-    required: [true, "Unit Symbolic Name is required."],
-    trim: true,
-  },
-  unit_gst_code: {
-    type: String,
-    required: [true, "Unit Name is required."],
     trim: true,
   },
   created_employee_id: {
@@ -34,7 +28,7 @@ const UnitSchema = new mongoose.Schema({
   deleted_at: { type: Date, default: null },
 });
 
-const UnitModel = mongoose.model("unit", UnitSchema);
-LogSchemaFunction("unit", UnitModel, []);
-
-export default UnitModel;
+CurrencySchema.index({ currency_name: 1 }, { unique: true });
+const CurrencyModel = mongoose.model("currency", CurrencySchema);
+LogSchemaFunction("currency", CurrencyModel, []);
+export default CurrencyModel;

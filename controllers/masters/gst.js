@@ -1,63 +1,52 @@
 import mongoose from "mongoose";
-import UnitModel from "../../database/schema/masters/unit.schema.js";
+import GstModel from "../../database/schema/masters/gst.schema.js";
 import catchAsync from "../../utils/errors/catchAsync.js";
 import { DynamicSearch } from "../../utils/dynamicSearch/dynamic.js";
 
-export const AddUnitMaster = catchAsync(async (req, res) => {
+export const AddGstMaster = catchAsync(async (req, res) => {
   const authUserDetail = req.userDetails;
-  const unitData = {
+  const gstData = {
     ...req.body,
     created_employee_id: authUserDetail._id,
-  };
-  const newUnitList = new UnitModel(unitData);
-  const savedUnit = await newUnitList.save();
+  };  
+  const newGstList = new GstModel(gstData);
+  const savedGst = await newGstList.save();
   return res.status(201).json({
-    result: savedUnit,
+    result: savedGst,
     status: true,
-    message: "Unit created successfully",
+    message: "Gst created successfully",
   });
 });
 
-export const UpdateUnitMaster = catchAsync(async (req, res) => {
-  const unitId = req.query.id;
+export const UpdateGstMaster = catchAsync(async (req, res) => {
+  const userId = req.query.id;
   const updateData = req.body;
-  if (!mongoose.Types.ObjectId.isValid(unitId)) {
-    return res
-      .status(400)
-      .json({ result: [], status: false, message: "Invalid unit ID" });
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    return res.status(400).json({ result: [], status: false, message: "Invalid Gst ID" });
   }
-  const unit = await UnitModel.findByIdAndUpdate(
-    unitId,
-    { $set: updateData },
-    { new: true, runValidators: true }
-  );
-  if (!unit) {
+  const user = await GstModel.findByIdAndUpdate(userId, { $set: updateData }, { new: true, runValidators: true });
+  if (!user) {
     return res.status(404).json({
       result: [],
       status: false,
-      message: "Unit not found.",
+      message: "User not found.",
     });
   }
   res.status(200).json({
-    result: unit,
+    result: user,
     status: true,
     message: "Updated successfully",
   });
 });
 
-export const ListUnitMaster = catchAsync(async (req, res) => {
-  const { string, boolean, numbers ,arrayField=[]} = req?.body?.searchFields || {};
- const {
-    page = 1,
-    limit = 10,
-    sortBy = "updated_at",
-    sort = "desc",
-  } = req.query;
+export const ListGstMaster = catchAsync(async (req, res) => {
+  const { string, boolean, numbers, arrayField = [] } = req?.body?.searchFields || {};
+  const { page = 1, limit = 10, sortBy = "updated_at", sort = "desc" } = req.query;
   const search = req.query.search || "";
   let searchQuery = {};
   if (search != "" && req?.body?.searchFields) {
-    const searchdata = DynamicSearch(search, boolean, numbers, string,arrayField);
-   if (searchdata?.length == 0) {
+    const searchdata = DynamicSearch(search, boolean, numbers, string, arrayField);
+    if (searchdata?.length == 0) {
       return res.status(404).json({
         statusCode: 404,
         status: false,
@@ -69,13 +58,13 @@ export const ListUnitMaster = catchAsync(async (req, res) => {
     }
     searchQuery = searchdata;
   }
-  const totalDocument = await UnitModel.countDocuments({
+  const totalDocument = await GstModel.countDocuments({
     ...searchQuery,
   });
   const totalPages = Math.ceil(totalDocument / limit);
   const validPage = Math.min(Math.max(page, 1), totalPages);
   const skip = Math.max((validPage - 1) * limit, 0);
-  const unitList = await UnitModel.aggregate([
+  const gstList = await GstModel.aggregate([
     {
       $lookup: {
         from: "users",
@@ -110,19 +99,20 @@ export const ListUnitMaster = catchAsync(async (req, res) => {
       $limit: limit,
     },
   ]).collation({ locale: "en", caseLevel: true });
-  if (unitList) {
+
+  if (gstList) {
     return res.status(200).json({
-      result: unitList,
+      result: gstList,
       status: true,
       totalPages: totalPages,
       currentPage: validPage,
-      message: "All UnitList List",
+      message: "All Gst List",
     });
   }
 });
 
-export const DropdownUnitMaster = catchAsync(async (req, res) => {
-  const list = await UnitModel.aggregate([
+export const DropdownGstMaster = catchAsync(async (req, res) => {
+  const list = await GstModel.aggregate([
     {
       $match: {
         status: "active",
@@ -130,13 +120,13 @@ export const DropdownUnitMaster = catchAsync(async (req, res) => {
     },
     {
       $project: {
-        unit_name: 1,
+        gst_percentage: 1,
       },
     },
   ]);
   res.status(200).json({
     result: list,
     status: true,
-    message: "Unit Dropdown List",
+    message: "Gst Dropdown List",
   });
 });

@@ -135,7 +135,7 @@ export const ListRoles = catchAsync(async (req, res) => {
     {
       $limit: limit,
     },
-  ]);
+  ]).collation({ locale: "en", caseLevel: true });
   if (rolesList) {
     return res.status(200).json({
       result: rolesList,

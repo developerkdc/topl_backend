@@ -1,21 +1,15 @@
 import mongoose from "mongoose";
 import LogSchemaFunction from "../LogsSchema/logs.schema.js";
 
-const UnitSchema = new mongoose.Schema({
-  unit_name: {
-    type: String,
-    required: [true, "Unit Name is required."],
+const GstSchema = new mongoose.Schema({
+  gst_percentage: {
+    type: Number,
+    required: [true, "Gst Percentage is required."],
     trim: true,
-    unique: [true, "Unit Name already exist."],
+    unique: [true, "Gst Percentage already exist."],
   },
-  unit_symbolic_name: {
+  gst_remarks: {
     type: String,
-    required: [true, "Unit Symbolic Name is required."],
-    trim: true,
-  },
-  unit_gst_code: {
-    type: String,
-    required: [true, "Unit Name is required."],
     trim: true,
   },
   created_employee_id: {
@@ -34,7 +28,7 @@ const UnitSchema = new mongoose.Schema({
   deleted_at: { type: Date, default: null },
 });
 
-const UnitModel = mongoose.model("unit", UnitSchema);
-LogSchemaFunction("unit", UnitModel, []);
-
-export default UnitModel;
+GstSchema.index({ gst_name: 1 }, { unique: true });
+const GstModel = mongoose.model("gst", GstSchema);
+LogSchemaFunction("gst", GstModel, []);
+export default GstModel;
