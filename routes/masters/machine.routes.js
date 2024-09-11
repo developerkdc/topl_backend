@@ -4,7 +4,7 @@ import { addMachine, MachineDetails, editMachineDetails } from '../../controller
 const router = Router();
 
 router.post('/add-machine', CheckRoleAndTokenAccess, addMachine);
-router.post("/update-machine/:id", CheckRoleAndTokenAccess, editMachineDetails);
+router.post("/update-machine", CheckRoleAndTokenAccess, editMachineDetails);
 router.get("/list-machine", CheckRoleAndTokenAccess, MachineDetails)
 
 export default router;

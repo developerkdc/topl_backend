@@ -1,4 +1,3 @@
-
 import catchAsync from "../../utils/errors/catchAsync.js";
 import ApiResponse from '../../utils/ApiResponse.js'
 import { StatusCodes } from '../../utils/constants.js';
@@ -40,7 +39,7 @@ export const addMachine = catchAsync(async (req, res) => {
 });
 
 export const editMachineDetails = catchAsync(async (req, res) => {
-    const { id } = req.params;
+    const { id } = req.query;
 
     if (!id) {
         return res.json(new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Id is missing"))
@@ -71,6 +70,7 @@ export const MachineDetails = catchAsync(async (req, res) => {
             $or: [
                 { "machine_name": { $regex: query, $options: "i" } },
                 { "departmentDetails.dept_name": { $regex: query, $options: "i" } },
+                { "userDetails.first_name": { $regex: query, $options: "i" } },
             ],
         }
         : {};
@@ -94,12 +94,12 @@ export const MachineDetails = catchAsync(async (req, res) => {
             }
         },
         { $match: searchQuery },
-        { $unwind: '$userDetails', preserveNullAndEmptyArrays: true },
-        { $unwind: '$departmentDetails', preserveNullAndEmptyArrays: true },
+        { $unwind: { path: '$userDetails', preserveNullAndEmptyArrays: true } },
+        { $unwind: { path: '$departmentDetails', preserveNullAndEmptyArrays: true } },
         {
             $project: {
                 sr_no: 1,
-                dept_name: 1,
+                machine_name: 1,
                 createdAt: 1,
                 created_by: 1,
                 "userDetails.first_name": 1,

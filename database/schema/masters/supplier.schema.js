@@ -1,8 +1,7 @@
 import mongoose from "mongoose";
-import LogSchemaFunction from "../LogsSchema/logs.schema.js";
-
 
 const SupplierSchema = new mongoose.Schema({
+  sr_no: Number,
   supplier_name: {
     type: String,
     required: [true, "Supplier Name is required."],
