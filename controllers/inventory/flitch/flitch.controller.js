@@ -8,19 +8,25 @@ export const listing_flitch_inventory = catchAsync(async (req,res,next)=>{
 
     const List_flitch_inventory_details = await flitch_inventory_items_details.aggregate([
         {
-            $skip: (parseInt(page) - 1) * parseInt(limit)
-        },
-        {
-            $limit:parseInt(limit)
-        },
-        {
             $lookup:{
                 from: "flitch_inventory_invoice_details",
                 localField:"invoice_id",
                 foreignField: "invoice_id",
                 as: "flitch_invoice_details"
             }
-        }
+        },
+        {
+            $unwind:{
+                path: "$flitch_invoice_details",
+                preserveNullAndEmptyArrays:true
+            }
+        },
+        {
+            $skip: (parseInt(page) - 1) * parseInt(limit)
+        },
+        {
+            $limit:parseInt(limit)
+        },
     ])
 })
 
