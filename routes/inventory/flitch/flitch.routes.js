@@ -1,8 +1,10 @@
 import express from "express";
-import { add_flitch_inventory, edit_flitch_inventory } from "../../../controllers/inventory/flitch/flitch.controller";
+import { add_flitch_inventory, edit_flitch_invoice_inventory, edit_flitch_item_inventory, listing_flitch_inventory } from "../../../controllers/inventory/flitch/flitch.controller.js";
 const flitch_router = express.Router();
 
+flitch_router.post('/list-inventory',listing_flitch_inventory);
 flitch_router.post('/add-inventory',add_flitch_inventory);
-flitch_router.patch('/edit-inventory/:item_id/:invoice_id',edit_flitch_inventory);
+flitch_router.patch('/edit-item-inventory/:item_id',edit_flitch_item_inventory);
+flitch_router.patch('/edit-invoice-inventory/:invoice_id',edit_flitch_invoice_inventory);
 
 export default flitch_router;
