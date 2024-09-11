@@ -46,6 +46,7 @@ import path from "path";
 
 
 import { globalErrorHandler } from "./utils/errors/GlobalErrorHandler.js";
+import flitch_router from "./routes/inventory/flitch/flitch.routes.js";
 const Configs = getConfigs();
 mongo_service();
 const app = express();
@@ -105,6 +106,10 @@ app.use(
 app.use(
   `/api/${Configs.server.version}/series-master`,
   seriesRouter
+);
+app.use(
+  `/api/${Configs.server.version}/flitch-inventory`,
+  flitch_router
 );
 
 
