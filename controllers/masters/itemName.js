@@ -5,51 +5,72 @@ import { DynamicSearch } from "../../utils/dynamicSearch/dynamic.js";
 
 import XLSX from "xlsx";
 import ApiError from "../../utils/errors/apiError.js";
-import ApiResponse from '../../utils/ApiResponse.js'
-import { StatusCodes } from '../../utils/constants.js';
-
+import ApiResponse from "../../utils/ApiResponse.js";
+import { StatusCodes } from "../../utils/constants.js";
 
 export const AddItemNameMaster = catchAsync(async (req, res) => {
   const authUserDetail = req.userDetails;
   const { item_name, category } = req.body;
   if (!item_name || !category) {
-    return res.json(new ApiResponse(StatusCodes.NOT_FOUND, "all fields are required"))
-  };
+    return res.json(
+      new ApiResponse(StatusCodes.NOT_FOUND, "all fields are required")
+    );
+  }
 
   const maxNumber = await ItemNameModel.aggregate([
     {
       $group: {
         _id: null,
         max: {
-          $max: "$sr_no"
-        }
-      }
-    }
+          $max: "$sr_no",
+        },
+      },
+    },
   ]);
 
   const created_by = authUserDetail.id;
 
-
   const newMax = maxNumber.length > 0 ? maxNumber[0].max + 1 : 1;
   const itemNameData = {
-    sr_no: newMax, item_name, category, created_by
+    sr_no: newMax,
+    item_name,
+    category,
+    created_by,
   };
   const newItemNameList = new ItemNameModel(itemNameData);
   const savedItemName = await newItemNameList.save();
-  return res.status(201).json(new ApiResponse(StatusCodes.OK, "Item created successfully..", savedItemName));
+  return res
+    .status(201)
+    .json(
+      new ApiResponse(
+        StatusCodes.OK,
+        "Item created successfully..",
+        savedItemName
+      )
+    );
 });
 
 export const UpdateItemNameMaster = catchAsync(async (req, res) => {
   const ItemNameId = req.query.id;
   const updateData = req.body;
   if (!mongoose.Types.ObjectId.isValid(ItemNameId)) {
-    return res.status(400).json(new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Invalid id"));
+    return res
+      .status(400)
+      .json(new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Invalid id"));
   }
-  const ItemName = await ItemNameModel.findByIdAndUpdate(ItemNameId, { $set: updateData }, { new: true, runValidators: true });
+  const ItemName = await ItemNameModel.findByIdAndUpdate(
+    ItemNameId,
+    { $set: updateData },
+    { new: true, runValidators: true }
+  );
   if (!ItemName) {
-    return res.status(404).json(new ApiResponse(StatusCodes.NOT_FOUND, "Item Not found..."));
+    return res
+      .status(404)
+      .json(new ApiResponse(StatusCodes.NOT_FOUND, "Item Not found..."));
   }
-  res.status(200).json(new ApiResponse(StatusCodes.OK, "Item Updated successfully..."));
+  res
+    .status(200)
+    .json(new ApiResponse(StatusCodes.OK, "Item Updated successfully..."));
 });
 
 export const ListItemNameMaster = catchAsync(async (req, res) => {
@@ -59,16 +80,12 @@ export const ListItemNameMaster = catchAsync(async (req, res) => {
   const skipped = (pageInt - 1) * limitInt;
 
   const sortDirection = sortOrder === "desc" ? -1 : 1;
-  const sortObj = sortField ? { [sortField]: sortDirection } : {}
+  const sortObj = sortField ? { [sortField]: sortDirection } : {};
   const searchQuery = query
     ? {
-      $or: [
-        { "item_name": { $regex: query, $options: "i" } },
-
-      ],
-    }
+        $or: [{ item_name: { $regex: query, $options: "i" } }],
+      }
     : {};
-
 
   const pipeline = [
     { $match: searchQuery },
@@ -77,18 +94,18 @@ export const ListItemNameMaster = catchAsync(async (req, res) => {
         from: "users",
         localField: "created_by",
         foreignField: "_id",
-        as: "userDetails"
-      }
+        as: "userDetails",
+      },
     },
     {
       $lookup: {
         from: "item_categories",
         localField: "category",
         foreignField: "_id",
-        as: "categoryDetails"
-      }
+        as: "categoryDetails",
+      },
     },
-    { $unwind: { path: '$userDetails', preserveNullAndEmptyArrays: true } },
+    { $unwind: { path: "$userDetails", preserveNullAndEmptyArrays: true } },
     // { $unwind: { path: '$categoryDetails', preserveNullAndEmptyArrays: true } },
 
     {
@@ -100,11 +117,11 @@ export const ListItemNameMaster = catchAsync(async (req, res) => {
         "userDetails.first_name": 1,
         "userDetails.last_name": 1,
         "categoryDetails._id": 1,
-        "categoryDetails.category": 1
-      }
+        "categoryDetails.category": 1,
+      },
     },
     { $skip: skipped },
-    { $limit: limitInt }
+    { $limit: limitInt },
   ];
 
   if (Object.keys(sortObj).length > 0) {
@@ -115,9 +132,14 @@ export const ListItemNameMaster = catchAsync(async (req, res) => {
   if (allDetails.length === 0) {
     return res.json(new ApiResponse(StatusCodes.OK, "NO Data found..."));
   }
-  const totalDocs = await ItemNameModel.countDocuments({ ...searchQuery })
+  const totalDocs = await ItemNameModel.countDocuments({ ...searchQuery });
   const totalPage = Math.ceil(totalDocs / limitInt);
-  return res.json(new ApiResponse(StatusCodes.OK, "All Details fetched succesfully..", { allDetails, totalPage }))
+  return res.json(
+    new ApiResponse(StatusCodes.OK, "All Details fetched succesfully..", {
+      allDetails,
+      totalPage,
+    })
+  );
 });
 
 export const DropdownItemNameMaster = catchAsync(async (req, res) => {
@@ -260,7 +282,8 @@ export const BulkUploadItemMaster = catchAsync(async (req, res, next) => {
     return res.status(400).json({
       result: [],
       status: false,
-      message: error.message || "An error occurred while uploading item master.",
+      message:
+        error.message || "An error occurred while uploading item master.",
     });
   }
 });

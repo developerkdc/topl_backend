@@ -30,8 +30,7 @@ export const addDepartment = catchAsync(async (req, res) => {
     const created_by = req.userDetails.id
 
 
-    // const newMax = maxNumber.length > 0 ? maxNumber[0].max + 1 : 1;
-    const newMax = 1
+    const newMax = maxNumber.length > 0 ? maxNumber[0].max + 1 : 1;
     const newDept = new departMentModel({
         sr_no: newMax, dept_name, created_by
     });
@@ -113,3 +112,10 @@ export const listDepartmentDetails = catchAsync(async (req, res) => {
     const totalPage = Math.ceil(totalDocs / limitInt);
     return res.json(new ApiResponse(StatusCodes.OK, "All Details fetched succesfully..", { allDetails, totalPage }))
 });
+
+
+export const fetchAllDepartments = catchAsync(async (req, res) => {
+    const allDepts = await departMentModel.find();
+
+    return res.json(new ApiResponse(StatusCodes.OK, "All depts fetched successfully..", allDepts))
+})

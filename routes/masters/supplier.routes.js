@@ -6,6 +6,7 @@ import {
   addContactPersonToBranch,
   AddSupplierMaster,
   fetchAllBranchesBySupplierId,
+  fetchAllSuppliers,
   fetchAllSupplierWithBranchesDetails,
   fetchContactPersonById,
   ListSupplierMaster,
@@ -35,13 +36,22 @@ router.get(
 );
 router.get("/supplier-logs", ListSuppliersLogs);
 router.post("/add-branch/:id", addBranchToSupplier);
-router.get("/list-supplier-master", fetchAllSupplierWithBranchesDetails);
+router.get(
+  "/list-supplier-master",
+  CheckRoleAndTokenAccess,
+  fetchAllSupplierWithBranchesDetails
+);
 router.post("/update-supplier-branch", updateSupplierBranchById);
 router.post("/update-contact-person", updateContactPersonInfo);
-router.get("/branchs-by-supplier/:id", fetchAllBranchesBySupplierId);
+router.get(
+  "/branchs-by-supplier/:id",
+  // CheckRoleAndTokenAccess,
+  fetchAllBranchesBySupplierId
+);
 router.get("/contact-person/:id", fetchContactPersonById);
 router.post("/add-contact-person/:id", addContactPersonToBranch);
-router.get("/")
+router.get("/all-suppliers", fetchAllSuppliers);
+
 // router.get("/list-supplier-master",CheckRoleAndTokenAccess, ListSupplierMasterLogs);
 
 export default router;

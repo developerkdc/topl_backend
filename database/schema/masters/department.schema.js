@@ -10,6 +10,9 @@ const departMentSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "user",
         default: null
+    },
+    deleted_at: {
+        type: Date,
     }
 }, { timestamps: true });
 
