@@ -14,6 +14,7 @@ import gradeMasterRouter from "./routes/masters/grade.routes.js";
 import currencyMasterRouter from "./routes/masters/currency.routes.js";
 import cutMasterRouter from "./routes/masters/cut.routes.js";
 import gstMasterRouter from "./routes/masters/gst.routes.js";
+import expenseTypeMasterRouter from "./routes/masters/expenseType.routes.js";
 import palleteMasterRouter from "./routes/masters/pallete.routes.js";
 import partyNameMasterRouter from "./routes/masters/partyName.routes.js";
 import itemNameMasterRouter from "./routes/masters/itemName.routes.js";
@@ -81,6 +82,7 @@ app.use(`/api/${Configs.server.version}/grade-master`, gradeMasterRouter);
 app.use(`/api/${Configs.server.version}/currency-master`, currencyMasterRouter);
 app.use(`/api/${Configs.server.version}/cut-master`, cutMasterRouter);
 app.use(`/api/${Configs.server.version}/gst-master`, gstMasterRouter);
+app.use(`/api/${Configs.server.version}/expenseType-master`, expenseTypeMasterRouter);
 app.use(`/api/${Configs.server.version}/pallete-master`, palleteMasterRouter);
 app.use(
   `/api/${Configs.server.version}/party-name-master`,

@@ -80,6 +80,14 @@ const ExtractRequiredPermission = (routeName) => {
     case "/list-gst-master":
       return "gst_master_view";
 
+    // expense type modules
+    case "/add-expenseType-master":
+      return "expense_type_master_create";
+    case "/update-expenseType-master":
+      return "expense_type_master_edit";
+    case "/list-expenseType-master":
+      return "expense_type_master_view";
+
     // pallete modules
 
     case "/add-pallete-master":
