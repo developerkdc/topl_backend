@@ -16,7 +16,7 @@ export const addSeries = catchAsync(async (req, res) => {
         return res.json(new ApiResponse(StatusCodes.OK, "series already exists"))
     };
 
-    const maxNumber = await series_name.aggregate([
+    const maxNumber = await seriesModel.aggregate([
         {
             $group: {
                 _id: null,
@@ -32,12 +32,12 @@ export const addSeries = catchAsync(async (req, res) => {
 
     const newMax = maxNumber.length > 0 ? maxNumber[0].max + 1 : 1;
 
-    const newDept = new departMentModel({
+    const newSeries = new seriesModel({
         sr_no: newMax, series_name, created_by
     });
-    await newDept.save();
+    await newSeries.save();
 
-    return res.json(new ApiResponse(StatusCodes.OK, "Series created successfully", newDept))
+    return res.json(new ApiResponse(StatusCodes.OK, "Series created successfully", newSeries))
 });
 
 export const editSeries = catchAsync(async (req, res) => {
@@ -112,4 +112,4 @@ export const listSeriesDetails = catchAsync(async (req, res) => {
     const totalDocs = await seriesModel.countDocuments({ ...searchQuery })
     const totalPage = Math.ceil(totalDocs / limitInt);
     return res.json(new ApiResponse(StatusCodes.OK, "All Details fetched succesfully..", { allDetails, totalPage }))
-});
+}); 

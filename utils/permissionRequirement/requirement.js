@@ -39,6 +39,11 @@ const ExtractRequiredPermission = (routeName) => {
       return "supplier_master_edit";
     case "/list-supplier-master":
       return "supplier_master_view";
+    //new routes
+    case "/add-branch/:id":
+      return "supplier_master_add_branch";
+    case "/branchs-by-supplier/:id":
+      return "supplier_master_list_branchs";
 
     // unit modules
     case "/add-unit-master":
@@ -141,7 +146,7 @@ const ExtractRequiredPermission = (routeName) => {
     //machine-master
     case "/add-machine":
       return "machine_master_create";
-    case "/update-machine/:id":
+    case "/update-machine":
       return "machine_master_edit";
     case "/list-machine":
       return "machine_master_view";
