@@ -415,6 +415,79 @@ const ExtractRequiredPermission = (routeName) => {
       return "dispatch_view";
     case "/get-available-raw-data":
       return "dispatch_view";
+
+    //plywood-inventory
+    case "/add-inventory":
+      return "plywood_inventory_create";
+    case "/edit-inventory/:item_id/:invoice_id":
+      return "plywood_inventory_edit";
+    case "/list-inventory":
+      return "plywood_inventory_view";
+
+    //flitch-inventory
+    case "/add-inventory":
+      return "flitch_inventory_create";
+    case "/edit-inventory/:item_id/:invoice_id":
+      return "flitch_inventory_edit";
+    case "/list-inventory":
+      return " flitch_inventory_view";
+
+    //veneer-inventory
+    case "/add-inventory":
+      return "veneer_inventory_create";
+    case "/edit-inventory/:item_id/:invoice_id":
+      return "veneer_inventory_edit";
+    case "/list-inventory":
+      return " veneer_inventory_view";
+
+    //mdf-inventory
+    case "/add-inventory":
+      return "mdf_inventory_create";
+    case "/edit-inventory/:item_id/:invoice_id":
+      return "mdf_inventory_edit";
+    case "/list-inventory":
+      return " mdf_inventory_view";
+
+    //face-inventory
+    case "/add-inventory":
+      return "face_inventory_create";
+    case "/edit-inventory/:item_id/:invoice_id":
+      return "face_inventory_edit";
+    case "/list-inventory":
+      return " face_inventory_view";
+
+    //fleece-inventory
+    case "/add-inventory":
+      return "fleece_inventory_create";
+    case "/edit-inventory/:item_id/:invoice_id":
+      return "fleece_inventory_edit";
+    case "/list-inventory":
+      return " fleece_inventory_view";
+
+    //other_goods-inventory
+    case "/add-inventory":
+      return "other_goods_inventory_create";
+    case "/edit-inventory/:item_id/:invoice_id":
+      return "other_goods_inventory_edit";
+    case "/list-inventory":
+      return " other_goods_inventory_view";
+
+    //crossCutting-factory-routes
+    case "/add-crossCutting":
+      return "crosscut_factory_create";
+    case "/edit-crossCutting/:id":
+      return "crosscut_factory_edit";
+    case "/list-crossCutting":
+      return "crosscut_factory_view";
+
+    //flitching-factory-routes
+    case "/add-flitching":
+      return "flitching_factory_create";
+    case "/edit-flitching/:id":
+      return "flitching_factory_edit";
+    case "/list-flitching":
+      return "flitching_factory_view";
+
     default:
       return null;
   }

@@ -130,7 +130,7 @@ export const createPressing = catchAsync(async (req, res, next) => {
     // looping through all inward for the selected consumable item
     for (let item of otherGoods) {
       if (remainingQuantity <= 0) break;
-      if(item.available_quantity <= 0) continue;
+      if (item.available_quantity <= 0) continue;
       const consumeFromItem = Math.min(
         item.available_quantity,
         remainingQuantity

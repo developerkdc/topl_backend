@@ -6,7 +6,7 @@ import { RawMaterialModel } from "../../database/schema/inventory/raw/raw.schema
 import { GroupModel } from "../../database/schema/group/groupCreated/groupCreated.schema.js";
 import { GroupHistoryModel } from "../../database/schema/group/groupHistory/groupHistory.schema.js";
 import GroupImagesModel from "../../database/schema/images/groupImages.schema.js";
-import { CuttingModel } from "../../database/schema/cutting/cutting.js";
+// import { CuttingModel } from "../../database/schema/cutting/cutting.js";
 
 export const FetchIssuedForCutting = catchAsync(async (req, res, next) => {
   const {
@@ -407,7 +407,7 @@ export const RevertIssuedForCutting = catchAsync(async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   const { issuedId } = req.query;
-  console.log(issuedId,'issuedId');
+  console.log(issuedId, "issuedId");
 
   try {
     let group_no_of_pattas_available = 0;
@@ -420,7 +420,7 @@ export const RevertIssuedForCutting = catchAsync(async (req, res, next) => {
     const IssuedForCuttingDetails = await IssuedForCuttingView.findOne({
       _id: new mongoose.Types.ObjectId(issuedId),
     });
-    console.log(IssuedForCuttingDetails,'IssuedForCuttingDetails');
+    console.log(IssuedForCuttingDetails, "IssuedForCuttingDetails");
     if (!IssuedForCuttingDetails) {
       return res.json({
         status: false,
@@ -466,7 +466,7 @@ export const RevertIssuedForCutting = catchAsync(async (req, res, next) => {
         total_item_sqm_available.toFixed(2)
       );
       arr.push(rawMaterial);
-      console.log(arr,'varr');
+      console.log(arr, "varr");
       await rawMaterial.save({ session, validateBeforeSave: false });
     }
 

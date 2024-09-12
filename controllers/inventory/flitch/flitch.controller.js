@@ -130,9 +130,9 @@ export const add_flitch_inventory = catchAsync(async (req, res, next) => {
             ...inventory_invoice_details
         }], { session });
 
-        if (add_invoice_details && add_invoice_details?.length < 0) {
-            return next(new ApiError("Failed to add invoice", 400))
-        }
+    if (add_invoice_details && add_invoice_details?.length < 0) {
+      return next(new ApiError("Failed to add invoice", 400));
+    }
 
         const invoice_details_id = add_invoice_details?.[0]?._id;
         const items_details = inventory_items_details?.map((elm, index) => {
@@ -145,9 +145,9 @@ export const add_flitch_inventory = catchAsync(async (req, res, next) => {
             session
         })
 
-        if (add_items_details && add_items_details?.length < 0) {
-            return next(new ApiError("Failed to add Items Details", 400))
-        }
+    if (add_items_details && add_items_details?.length < 0) {
+      return next(new ApiError("Failed to add Items Details", 400));
+    }
 
         await session.commitTransaction();
         session.endSession()

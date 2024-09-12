@@ -8,7 +8,9 @@ export const dynamic_filter = (filter = {}) => {
     }
   }
   if (filter.hasOwnProperty("range") && range) {
-    const range_obj = JSON.parse(JSON.stringify(range)?.replace(/from/g, "$gte")?.replace(/to/g, "$lte"));
+    const range_obj = JSON.parse(
+      JSON.stringify(range)?.replace(/from/g, "$gte")?.replace(/to/g, "$lte")
+    );
     if (range_obj?.date) {
       for (let i in range_obj?.date) {
         for (let j in range_obj?.date[i]) {

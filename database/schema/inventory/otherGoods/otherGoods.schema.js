@@ -117,6 +117,6 @@ const OtherGoodsSchema = new mongoose.Schema({
 });
 
 const OtherGoodsModel = mongoose.model("other_goods", OtherGoodsSchema);
-LogSchemaFunction("OtherGoods", OtherGoodsModel,[]);
+LogSchemaFunction("OtherGoods", OtherGoodsModel, []);
 
 export default OtherGoodsModel;

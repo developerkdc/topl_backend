@@ -109,107 +109,109 @@ const flitch_invoice_schema = new mongoose.Schema({
         required: [true, "Inwrad Sr No is required"],
     },
     inward_date: {
-        type: Date,
-        default: Date.now,
-        required: [true, "Inwrad Date is required"]
+      type: Date,
+      default: Date.now,
+      required: [true, "Inwrad Date is required"],
     },
     currency: {
-        type: String,
-        required: [true, "Currency is required"]
+      type: String,
+      required: [true, "Currency is required"],
     },
     workers_details: {
-        no_of_workers: {
-            type: Number,
-            required: [true, "No of worker is required"]
-        },
-        shift: {
-            type: String,
-            required: [true, "Shift is required"]
-        },
-        working_hours: {
-            type: Number,
-            required: [true, "Working hours is required"]
-        }
+      no_of_workers: {
+        type: Number,
+        required: [true, "No of worker is required"],
+      },
+      shift: {
+        type: String,
+        required: [true, "Shift is required"],
+      },
+      working_hours: {
+        type: Number,
+        required: [true, "Working hours is required"],
+      },
     },
     supplier_details: {
-        company_details: {
-            supplier_company_id: {
-                type: mongoose.Schema.Types.ObjectId,
-                required: [true, "company id is required"]
-            },
-            supplier_name: {
-                type: String,
-                required: [true, "Supplier Name is required."],
-                trim: true,
-            },
-            supplier_type: {
-                type: String,
-                required: [true, "Supplier Name is required."],
-                trim: true,
-            },
+      company_details: {
+        supplier_company_id: {
+          type: mongoose.Schema.Types.ObjectId,
+          required: [true, "company id is required"],
         },
-        branch_detail: {
-            branch_id: {
-                type: mongoose.Schema.Types.ObjectId,
-                required: [true, "company id is required"]
-            },
-            branch_name: {
+        supplier_name: {
+          type: String,
+          required: [true, "Supplier Name is required."],
+          trim: true,
+        },
+        supplier_type: {
+          type: String,
+          required: [true, "Supplier Name is required."],
+          trim: true,
+        },
+      },
+      branch_detail: {
+        branch_id: {
+          type: mongoose.Schema.Types.ObjectId,
+          required: [true, "company id is required"],
+        },
+        branch_name: {
+          type: String,
+          required: [true, "branch name is reqiured"],
+        },
+        contact_person: {
+          type: [
+            {
+              name: {
                 type: String,
-                required: [true, "branch name is reqiured"]
-            },
-            contact_person: {
-                type: [{
-                    name: {
-                        type: String,
-                        required: [true, "contact person name is required"],
-                        unique: [true, "contact person name is required"],
-                        trim: true
-                    },
-                    email: {
-                        type: String,
-                        required: [true, "email id is required"],
-                        trim: true
-                    },
-                    mobile_number: {
-                        type: String,
-                        required: [true, "mobile number is required"]
-                    },
-                    designation: {
-                        type: String,
-                        required: [true, "designation is required"]
-                    }
-                }],
-                required: [true, "at least one contact person is required"]
-            },
-            address: {
+                required: [true, "contact person name is required"],
+                unique: [true, "contact person name is required"],
+                trim: true,
+              },
+              email: {
                 type: String,
-                required: [true, "address is required"]
-            },
-            state: {
+                required: [true, "email id is required"],
+                trim: true,
+              },
+              mobile_number: {
                 type: String,
-                required: [true, "state is required"]
-            },
-            country: {
+                required: [true, "mobile number is required"],
+              },
+              designation: {
                 type: String,
-                required: [true, "country is required"]
+                required: [true, "designation is required"],
+              },
             },
-            city: {
-                type: String,
-                required: [true, "city is required"]
-            },
-            pincode: {
-                type: String,
-                required: [true, "pincode is required"]
-            },
-            gst_number: {
-                type: String,
-                required: [true, "gst number is required"]
-            },
-            web_url: {
-                type: String,
-                required: [true, "web url is required"]
-            },
-        }
+          ],
+          required: [true, "at least one contact person is required"],
+        },
+        address: {
+          type: String,
+          required: [true, "address is required"],
+        },
+        state: {
+          type: String,
+          required: [true, "state is required"],
+        },
+        country: {
+          type: String,
+          required: [true, "country is required"],
+        },
+        city: {
+          type: String,
+          required: [true, "city is required"],
+        },
+        pincode: {
+          type: String,
+          required: [true, "pincode is required"],
+        },
+        gst_number: {
+          type: String,
+          required: [true, "gst number is required"],
+        },
+        web_url: {
+          type: String,
+          required: [true, "web url is required"],
+        },
+      },
     },
     invoice_Details: invoice_details,
     created_by: {
