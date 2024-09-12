@@ -16,7 +16,6 @@ const item_details_schema = new mongoose.Schema({
     },
     item_sr_no: {
         type: Number,
-        unique: true,
         required: [true, "Invoice Sr No is required"],
     },
     item_name: {
@@ -98,6 +97,10 @@ const item_details_schema = new mongoose.Schema({
 }, {
     timestamps: true
 });
+
+item_details_schema.index({item_sr_no:1})
+item_details_schema.index({item_sr_no:1,invoice_id:1},{unique:true})
+
 
 const flitch_invoice_schema = new mongoose.Schema({
     inward_sr_no: {
@@ -218,6 +221,8 @@ const flitch_invoice_schema = new mongoose.Schema({
 }, {
     timestamps: true
 });
+
+flitch_invoice_schema.index({inward_sr_no:1})
 
 const flitch_inventory_items_view_schema = new mongoose.Schema({}, {
     strict: false,

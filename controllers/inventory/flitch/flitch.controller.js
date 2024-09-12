@@ -167,6 +167,27 @@ export const add_flitch_inventory = catchAsync(async (req, res, next) => {
     }
 })
 
+export const add_single_flitch_item_inventory = catchAsync(async (req, res, next) => {
+    const item_details = req.body?.item_details;
+
+    const invoice_id = item_details?.invoice_id;
+
+    if(!invoice_id || !mongoose.isValidObjectId(invoice_id)){
+        return next(new ApiError("Please provide valid invoice id",400))
+    }
+
+    const add_item_details = await flitch_inventory_items_details.create({
+        ...item_details
+    })
+
+    return res.status(200).json({
+        statusCode: 200,
+        status: "success",
+        data: add_item_details,
+        message: "Inventory Item has added successfully"
+    })
+})
+
 export const edit_flitch_item_inventory = catchAsync(async (req, res, next) => {
     const item_id = req.params?.item_id;
     const item_details = req.body?.item_details;
