@@ -15,19 +15,27 @@ export const CreateGroupDyed = catchAsync(async (req, res, next) => {
     session.startTransaction();
     const authUserDetail = req.userDetails;
     const bodyData = req.body;
-    const imageFilenames = req.files ? req.files.dying_images?.map((file) => file.filename) : [];
+    const imageFilenames = req.files
+      ? req.files.dying_images?.map((file) => file.filename)
+      : [];
 
     const group_details = JSON?.parse(bodyData?.group_data);
 
-    const extracted_group_details = group_details?.map((obj) => obj.group_details).flat();
+    const extracted_group_details = group_details
+      ?.map((obj) => obj.group_details)
+      .flat();
 
-    const issuedForDyingIndividualItemsExist = await IssuedForDyingGroupModel.find({
-      _id: { $in: extracted_group_details },
-    })
-      .populate("group_id")
-      .session(session);
+    const issuedForDyingIndividualItemsExist =
+      await IssuedForDyingGroupModel.find({
+        _id: { $in: extracted_group_details },
+      })
+        .populate("group_id")
+        .session(session);
 
-    if (issuedForDyingIndividualItemsExist.length != extracted_group_details.length) {
+    if (
+      issuedForDyingIndividualItemsExist.length !=
+      extracted_group_details.length
+    ) {
       return res.status(400).json({
         status: false,
         message: "Item not available",
@@ -53,14 +61,14 @@ export const CreateGroupDyed = catchAsync(async (req, res, next) => {
     // console.log(availableConsumedItem, "16000");
     if (
       availableConsumedItem.length <= 0 ||
-      availableConsumedItem[0].totalAvailable < Number(bodyData.liters_of_ammonia_used) * group_details?.length
+      availableConsumedItem[0].totalAvailable <
+        Number(bodyData.liters_of_ammonia_used) * group_details?.length
     ) {
       return res.status(400).json({
         status: false,
         message: `Insufficient consumable quantity.`,
       });
     }
-
 
     if (imageFilenames?.length > 0) {
       for (const GroupId of issuedForDyingIndividualItemsExist) {
@@ -120,19 +128,28 @@ export const CreateGroupDyed = catchAsync(async (req, res, next) => {
     //   }).session(session);
     // }
     if (saveData) {
-      await IssuedForDyingGroupModel.updateMany({ _id: { $in: extracted_group_details } }, { $set: { status: "dyed" } }).session(session);
+      await IssuedForDyingGroupModel.updateMany(
+        { _id: { $in: extracted_group_details } },
+        { $set: { status: "dyed" } }
+      ).session(session);
     }
 
     // updating other goods quantities
-    let otherGoods = await OtherGoodsModel.find({ item_name: bodyData?.consumed_item_name }).sort({ created_at: 1 });
+    let otherGoods = await OtherGoodsModel.find({
+      item_name: bodyData?.consumed_item_name,
+    }).sort({ created_at: 1 });
 
-    let remainingQuantity = Number(bodyData.liters_of_ammonia_used) * group_details?.length;
+    let remainingQuantity =
+      Number(bodyData.liters_of_ammonia_used) * group_details?.length;
 
     // looping through all inward for the selected consumable item
     for (let item of otherGoods) {
       if (remainingQuantity <= 0) break;
 
-      const consumeFromItem = Math.min(item.available_quantity, remainingQuantity);
+      const consumeFromItem = Math.min(
+        item.available_quantity,
+        remainingQuantity
+      );
 
       // Update the item's available_quantity in other goods collection
       let updatedOtherGoods = await OtherGoodsModel.findByIdAndUpdate(

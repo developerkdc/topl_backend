@@ -1,97 +1,119 @@
 import mongoose from "mongoose";
 import invoice_details from "../../../Utils/invoiceDetails.schema.js";
 
-const item_details_schema = new mongoose.Schema({
-  supplier_item_name: {
-    type: String,
-    default: null,
-  },
-  supplier_flitch_no: {
-    type: String,
-    default: null,
-  },
-  item_id: {
-    type: mongoose.Schema.Types.ObjectId,
-    required: [true, "Items id is required"],
-  },
-  item_sr_no: {
-    type: Number,
-    // unique:true,
-    required: [true, "Invoice Sr No is required"],
-  },
-  item_name: {
-    type: String,
-    required: [true, "Item Name is required"],
-  },
-  log_no: {
-    type: String,
-    required: [true, "Log No is required"],
-  },
-  flitch_code: {
-    type: String,
-    required: [true, "Flitch Code is required"],
-  },
-  flitch_formula: {
-    formula_type: {
+const item_details_schema = new mongoose.Schema(
+  {
+    supplier_item_name: {
       type: String,
-      enum: {
-        values: ["TQF", "FHF", "BF"],
-        message: "Invalid formula type",
-      },
-      required: [true, "Formula type is required"],
+      default: null,
     },
-    formula: {
+    item_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, "Items id is required"],
+    },
+    item_sr_no: {
+      type: Number,
+      // unique: true,
+      required: [true, "item Sr No is required"],
+    },
+    item_name: {
       type: String,
-      required: [true, "Flitch formula is required"],
+      required: [true, "Item Name is required"],
+    },
+    log_code: {
+      type: String,
+      required: [true, "log code is required"],
+    },
+    bundle_number: {
+      type: Number,
+      required: [true, "bundle number is required"],
+    },
+    pallet_number: {
+      type: String,
+      unique: [true, "pallet number must be unique"],
+      required: [true, "pallet_number is required"], //auto increment
+    },
+    length: {
+      type: Number,
+      required: [true, "Length is required"],
+    },
+    width: {
+      type: Number,
+      required: [true, "width is required"],
+    },
+    thickness: {
+      type: Number,
+      required: [true, "thickness is required"],
+    },
+    number_of_leaves: {
+      type: Number,
+      required: [true, "Number of leaves   is required"],
+    },
+    total_sq_meter: {
+      type: Number,
+      required: [true, "total square meter is required"],
+    },
+    cut_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, "cut id is required"],
+    },
+    cut_name: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, "cut name is required"],
+    },
+    series_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, "series id is required"],
+    },
+    series_name: {
+      type: String,
+      required: [true, "series name is required"],
+    },
+    grades_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, "grades id is required"],
+    },
+    grades_name: {
+      type: String,
+      required: [true, "grades name is required"],
+    },
+    rate_in_currency: {
+      type: Number,
+      required: [true, "Rate in currency is required"],
+    },
+    exchange_rate: {
+      type: String || Number,
+      required: [true, "exchange rate is required"],
+    },
+    rate_in_inr: {
+      type: Number,
+      required: [true, "Rate in inr is required"],
+    },
+    amount: {
+      type: Number,
+      required: [true, "Amount is required"],
+    },
+    remark: {
+      type: String,
+      default: null,
+    },
+    invoice_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, "Invioce Id is required"],
+    },
+    created_by: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, "created by is required field"],
+    },
+    deleted_at: {
+      type: Date,
+      default: null,
     },
   },
-  length: {
-    type: Number,
-    required: [true, "Length is required"],
-  },
-  width1: {
-    type: Number,
-    required: [true, "width1 is required"],
-  },
-  width2: {
-    type: Number,
-    required: [true, "width2 is required"],
-  },
-  width3: {
-    type: Number,
-    required: [true, "width3 is required"],
-  },
-  height: {
-    type: Number,
-    required: [true, "height is required"],
-  },
-  flitch_cmt: {
-    type: Number,
-    required: [true, "Flitch Cmt is required"],
-  },
-  rate_in_currency: {
-    type: Number,
-    required: [true, "Rate in currency is required"],
-  },
-  rate_in_inr: {
-    type: Number,
-    required: [true, "Rate in currency is required"],
-  },
-  amount: {
-    type: Number,
-    required: [true, "Rate in Inr is required"],
-  },
-  remark: {
-    type: String,
-    default: null,
-  },
-  invoice_id: {
-    type: mongoose.Schema.Types.ObjectId,
-    required: [true, "Invioce Id is required"],
-  },
-});
+  { timestamps: true }
+);
 
-const flitch_invoice_schema = new mongoose.Schema(
+const venner_invoice_schema = new mongoose.Schema(
   {
     inward_sr_no: {
       type: Number,
@@ -204,22 +226,30 @@ const flitch_invoice_schema = new mongoose.Schema(
       },
     },
     invoice_Details: invoice_details,
+    created_by: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, "created by is required field"],
+    },
+    deleted_at: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,
   }
 );
 
-export const flitch_inventory_items_details = mongoose.model(
-  "flitch_inventory_items_details",
+export const venner_inventory_items_details = mongoose.model(
+  "venner_inventory_items_details",
   item_details_schema
 );
-export const flitch_inventory_invoice_details = mongoose.model(
-  "flitch_inventory_invoice_details",
-  flitch_invoice_schema
+export const venner_inventory_invoice_details = mongoose.model(
+  "venner_inventory_invoice_details",
+  venner_invoice_schema
 );
 
-const flitch_inventory_items_view_schema = new mongoose.Schema(
+const venner_inventory_items_view_schema = new mongoose.Schema(
   {},
   {
     strict: false,
@@ -228,14 +258,14 @@ const flitch_inventory_items_view_schema = new mongoose.Schema(
   }
 );
 
-export const flitch_inventory_items_view_modal = mongoose.model(
-  "flitch_inventory_items_view",
-  flitch_inventory_items_view_schema
+export const venner_inventory_items_view_modal = mongoose.model(
+  "venner_inventory_items_view",
+  venner_inventory_items_view_schema
 );
 
 (async function () {
-  await flitch_inventory_items_view_modal.createCollection({
-    viewOn: "flitch_inventory_items_details",
+  await venner_inventory_items_view_modal.createCollection({
+    viewOn: "venner_inventory_items_details",
     pipeline: [
       {
         $sort: {
@@ -245,15 +275,15 @@ export const flitch_inventory_items_view_modal = mongoose.model(
       },
       {
         $lookup: {
-          from: "flitch_inventory_invoice_details",
+          from: "venner_inventory_invoice_details",
           localField: "invoice_id",
           foreignField: "_id",
-          as: "flitch_invoice_details",
+          as: "venner_invoice_details",
         },
       },
       {
         $unwind: {
-          path: "$flitch_invoice_details",
+          path: "$venner_invoice_details",
           preserveNullAndEmptyArrays: true,
         },
       },
