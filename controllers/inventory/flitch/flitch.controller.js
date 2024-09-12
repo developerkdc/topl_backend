@@ -130,13 +130,13 @@ export const add_flitch_inventory = catchAsync(async (req, res, next) => {
             ...inventory_invoice_details
         }], { session });
 
-    if (add_invoice_details && add_invoice_details?.length < 0) {
-      return next(new ApiError("Failed to add invoice", 400));
-    }
+        if (add_invoice_details && add_invoice_details?.length < 0) {
+            return next(new ApiError("Failed to add invoice", 400));
+        }
 
         const invoice_details_id = add_invoice_details?.[0]?._id;
         const items_details = inventory_items_details?.map((elm, index) => {
-            elm.item_sr_no = index + 1;
+            // elm.item_sr_no = index + 1;
             elm.invoice_id = invoice_details_id;
             return elm
         })
@@ -145,9 +145,9 @@ export const add_flitch_inventory = catchAsync(async (req, res, next) => {
             session
         })
 
-    if (add_items_details && add_items_details?.length < 0) {
-      return next(new ApiError("Failed to add Items Details", 400));
-    }
+        if (add_items_details && add_items_details?.length < 0) {
+            return next(new ApiError("Failed to add Items Details", 400));
+        }
 
         await session.commitTransaction();
         session.endSession()
@@ -172,8 +172,8 @@ export const add_single_flitch_item_inventory = catchAsync(async (req, res, next
 
     const invoice_id = item_details?.invoice_id;
 
-    if(!invoice_id || !mongoose.isValidObjectId(invoice_id)){
-        return next(new ApiError("Please provide valid invoice id",400))
+    if (!invoice_id || !mongoose.isValidObjectId(invoice_id)) {
+        return next(new ApiError("Please provide valid invoice id", 400))
     }
 
     const add_item_details = await flitch_inventory_items_details.create({
@@ -193,7 +193,9 @@ export const edit_flitch_item_inventory = catchAsync(async (req, res, next) => {
     const item_details = req.body?.item_details;
 
     const update_item_details = await flitch_inventory_items_details.updateOne({ _id: item_id }, {
-        $set: item_details
+        $set: {
+            ...item_details
+        }
     });
 
     if (!update_item_details?.acknowledged && update_item_details?.modifiedCount <= 0) {
@@ -214,7 +216,7 @@ export const edit_flitch_invoice_inventory = catchAsync(async (req, res, next) =
 
     const update_voice_details = await flitch_inventory_invoice_details.updateOne({ _id: invoice_id }, {
         $set: invoice_details
-    }, { session });
+    });
 
     if (!update_voice_details?.acknowledged && update_voice_details?.modifiedCount <= 0) {
         return next(new ApiError("Failed to update item details", 400))
