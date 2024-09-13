@@ -36,17 +36,24 @@ import imagesRouter from "./routes/image/image.routes.js";
 import reportRouter from "./routes/report/report.routes.js";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
-import itemCategoryRouter from './routes/masters/item.cateory.routes.js'
-import itemSubCategoryRouter from './routes/masters/item.subcategory.routes.js'
-import departmentRouter from './routes/masters/department.routes.js'
-import machineRouter from './routes/masters/machine.routes.js';
-import seriesRouter from './routes/masters/series.routes.js'
+import itemCategoryRouter from "./routes/masters/item.cateory.routes.js";
+import itemSubCategoryRouter from "./routes/masters/item.subcategory.routes.js";
+import departmentRouter from "./routes/masters/department.routes.js";
+import machineRouter from "./routes/masters/machine.routes.js";
+import seriesRouter from "./routes/masters/series.routes.js";
+import plywoodInventoryRoutes from "./routes/inventory/plywood/plywood.routes.js";
+import mdfInventoryRoutes from "./routes/inventory/mdf/mdf.routes.js";
+import vennerInventoryRoutes from "./routes/inventory/veener/venner.routes.js";
+import faceInventoryRoutes from "./routes/inventory/face/face.routes.js";
+import coreInventoryRoutes from "./routes/inventory/core/core.routes.js";
+import fleecePaperRoutes from "./routes/inventory/fleecePaper/fleecePaper.routes.js";
+import crossCuttingFactoryRoutes from "./routes/factory/crossCutting/crossCutting.routes.js";
+import flitchingFactoryRoutes from "./routes/factory/flitching/flitching.routes.js";
 import fs from "fs";
 import path from "path";
 
-
-
 import { globalErrorHandler } from "./utils/errors/GlobalErrorHandler.js";
+import flitch_router from "./routes/inventory/flitch/flitch.routes.js";
 const Configs = getConfigs();
 mongo_service();
 const app = express();
@@ -75,14 +82,20 @@ app.use(`/api/${Configs.server.version}/profile`, profileRouter);
 
 //master
 app.use(`/api/${Configs.server.version}/supplier-master`, supplierMasterRouter);
-app.use(`/api/${Configs.server.version}/item-category`, itemCategoryRouter)
-app.use(`/api/${Configs.server.version}/item-subcategory`, itemSubCategoryRouter)
+app.use(`/api/${Configs.server.version}/item-category`, itemCategoryRouter);
+app.use(
+  `/api/${Configs.server.version}/item-subcategory`,
+  itemSubCategoryRouter
+);
 app.use(`/api/${Configs.server.version}/unit-master`, unitMasterRouter);
 app.use(`/api/${Configs.server.version}/grade-master`, gradeMasterRouter);
 app.use(`/api/${Configs.server.version}/currency-master`, currencyMasterRouter);
 app.use(`/api/${Configs.server.version}/cut-master`, cutMasterRouter);
 app.use(`/api/${Configs.server.version}/gst-master`, gstMasterRouter);
-app.use(`/api/${Configs.server.version}/expenseType-master`, expenseTypeMasterRouter);
+app.use(
+  `/api/${Configs.server.version}/expenseType-master`,
+  expenseTypeMasterRouter
+);
 app.use(`/api/${Configs.server.version}/pallete-master`, palleteMasterRouter);
 app.use(
   `/api/${Configs.server.version}/party-name-master`,
@@ -96,20 +109,10 @@ app.use(
   `/api/${Configs.server.version}/item-code-master`,
   itemCodeMasterRouter
 );
-app.use(
-  `/api/${Configs.server.version}/department-master`,
-  departmentRouter
-);
-app.use(
-  `/api/${Configs.server.version}/machine-master`,
-  machineRouter
-);
-app.use(
-  `/api/${Configs.server.version}/series-master`,
-  seriesRouter
-);
-
-
+app.use(`/api/${Configs.server.version}/department-master`, departmentRouter);
+app.use(`/api/${Configs.server.version}/machine-master`, machineRouter);
+app.use(`/api/${Configs.server.version}/series-master`, seriesRouter);
+app.use(`/api/${Configs.server.version}/flitch-inventory`, flitch_router);
 
 // inventory
 app.use(
@@ -120,7 +123,32 @@ app.use(
   `/api/${Configs.server.version}/raw-material-inventory`,
   rawMaterialInventoryRouter
 );
+``;
+app.use(
+  `/api/${Configs.server.version}/plywood-inventory`,
+  plywoodInventoryRoutes
+);
+app.use(`/api/${Configs.server.version}/mdf-inventory`, mdfInventoryRoutes);
+app.use(
+  `/api/${Configs.server.version}/venner-inventory`,
+  vennerInventoryRoutes
+);
+app.use(`/api/${Configs.server.version}/face-inventory`, faceInventoryRoutes);
+app.use(`/api/${Configs.server.version}/core-inventory`, coreInventoryRoutes);
+app.use(
+  `/api/${Configs.server.version}/fleecePaper-inventory`,
+  fleecePaperRoutes
+);
 
+//factory - routes
+app.use(
+  `/api/${Configs.server.version}/factory/cross-cutting`,
+  crossCuttingFactoryRoutes
+);
+app.use(
+  `/api/${Configs.server.version}/factory/flitching`,
+  flitchingFactoryRoutes
+);
 // Grouping
 app.use(`/api/${Configs.server.version}/grouping`, groupingRouter);
 

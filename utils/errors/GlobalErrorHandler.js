@@ -16,7 +16,9 @@ export const globalErrorHandler = (err, req, res, next) => {
   if (err.message.includes("E11000 duplicate key error")) {
     const duplicateKey = extractDuplicateKeyFromErrorMessage(err.message);
 
-    let key = duplicateKey.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    let key = duplicateKey
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase());
 
     const message = `${key} already exists.`;
     err = new ApiError(message, 400);
@@ -33,7 +35,11 @@ export const globalErrorHandler = (err, req, res, next) => {
   }
 
   // Mongo validation Key Error
-  if (err.statusCode === 400 && (err.message.includes("validation failed") || err.message.includes("Validation failed"))) {
+  if (
+    err.statusCode === 400 &&
+    (err.message.includes("validation failed") ||
+      err.message.includes("Validation failed"))
+  ) {
     const validationDetails = extractValidationDetails(err.message);
     return res.status(err.statusCode).json({
       status: false,
@@ -54,8 +60,13 @@ const extractDuplicateKeyFromErrorMessage = (errorMessage) => {
 };
 
 const extractValidationDetails = (errorMessage) => {
-  const indexOfSecondColon = errorMessage.indexOf(":", errorMessage.indexOf(":"));
-  const trimmedErrorMessage = errorMessage.substring(indexOfSecondColon + 1).trim();
+  const indexOfSecondColon = errorMessage.indexOf(
+    ":",
+    errorMessage.indexOf(":")
+  );
+  const trimmedErrorMessage = errorMessage
+    .substring(indexOfSecondColon + 1)
+    .trim();
 
   let errorArr = trimmedErrorMessage.split(",");
   let messageObject = {};

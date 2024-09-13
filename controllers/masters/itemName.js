@@ -143,21 +143,28 @@ export const ListItemNameMaster = catchAsync(async (req, res) => {
 });
 
 export const DropdownItemNameMaster = catchAsync(async (req, res) => {
-  // console.log(req.query,"13777");
   const { type } = req.query;
 
-  var matchQuery = {
-    status: "active",
-  };
-  if (type && type != "") {
-    matchQuery = {
-      ...matchQuery,
-      type: type,
-    };
-  }
+  const searchQuery = type
+    ? {
+        $or: [{ "categoryDetails.category": { $regex: type, $options: "i" } }],
+      }
+    : {};
+
   const list = await ItemNameModel.aggregate([
     {
-      $match: matchQuery,
+      $lookup: {
+        from: "item_categories",
+        localField: "category",
+        foreignField: "_id",
+        as: "categoryDetails",
+      },
+    },
+    {
+      $unwind: "$categoryDetails",
+    },
+    {
+      $match: searchQuery,
     },
     {
       $project: {
@@ -165,11 +172,16 @@ export const DropdownItemNameMaster = catchAsync(async (req, res) => {
       },
     },
   ]);
-  res.status(200).json({
-    result: list,
-    status: true,
-    message: "Item Name Dropdown List",
-  });
+
+  res
+    .status(200)
+    .json(
+      new ApiResponse(
+        StatusCodes.OK,
+        "Name dropdown fetched successfully....",
+        list
+      )
+    );
 });
 
 // export const BulkUploadItemMaster = catchAsync(async (req, res, next) => {

@@ -46,8 +46,13 @@ export const UpdateUnitMaster = catchAsync(async (req, res) => {
 });
 
 export const ListUnitMaster = catchAsync(async (req, res) => {
-  const { string, boolean, numbers ,arrayField=[]} = req?.body?.searchFields || {};
- const {
+  const {
+    string,
+    boolean,
+    numbers,
+    arrayField = [],
+  } = req?.body?.searchFields || {};
+  const {
     page = 1,
     limit = 10,
     sortBy = "updated_at",
@@ -56,8 +61,14 @@ export const ListUnitMaster = catchAsync(async (req, res) => {
   const search = req.query.search || "";
   let searchQuery = {};
   if (search != "" && req?.body?.searchFields) {
-    const searchdata = DynamicSearch(search, boolean, numbers, string,arrayField);
-   if (searchdata?.length == 0) {
+    const searchdata = DynamicSearch(
+      search,
+      boolean,
+      numbers,
+      string,
+      arrayField
+    );
+    if (searchdata?.length == 0) {
       return res.status(404).json({
         statusCode: 404,
         status: false,

@@ -128,13 +128,16 @@ export const CreateIndividualSmoked = catchAsync(async (req, res, next) => {
     session.startTransaction();
     const authUserDetail = req.userDetails;
     const bodyData = req.body;
-    const imageFilenames = req?.files?.smoke_images?.map((file) => file?.filename);
+    const imageFilenames = req?.files?.smoke_images?.map(
+      (file) => file?.filename
+    );
 
     const item_details = JSON?.parse(bodyData?.item_details);
 
-    const issuedForSmokingIndividualItemsExist = await IssuedForSmokingIndividualModel.find({
-      item_id: { $in: item_details },
-    }).session(session);
+    const issuedForSmokingIndividualItemsExist =
+      await IssuedForSmokingIndividualModel.find({
+        item_id: { $in: item_details },
+      }).session(session);
     if (issuedForSmokingIndividualItemsExist?.length != item_details?.length) {
       return res.status(400).json({
         status: false,
@@ -159,7 +162,12 @@ export const CreateIndividualSmoked = catchAsync(async (req, res, next) => {
       },
     ]);
     // console.log(availableConsumedItem, "16000");
-    if (availableConsumedItem.length <= 0 || availableConsumedItem[0].totalAvailable <  Number(bodyData.liters_of_ammonia_used)*issuedForSmokingIndividualItemsExist?.length) {
+    if (
+      availableConsumedItem.length <= 0 ||
+      availableConsumedItem[0].totalAvailable <
+        Number(bodyData.liters_of_ammonia_used) *
+          issuedForSmokingIndividualItemsExist?.length
+    ) {
       return res.status(400).json({
         status: false,
         message: `Insufficient consumable quantity.`,
@@ -216,8 +224,8 @@ export const CreateIndividualSmoked = catchAsync(async (req, res, next) => {
         issued_for_smoking_date: bodyData.issued_for_smoking_date,
         process_time: bodyData.process_time,
         out_time: bodyData.out_time,
-        consumed_item_name:bodyData?.consumed_item_name,
-        consumed_item_name_id:bodyData?.consumed_item_name_id,
+        consumed_item_name: bodyData?.consumed_item_name,
+        consumed_item_name_id: bodyData?.consumed_item_name_id,
         liters_of_ammonia_used: bodyData.liters_of_ammonia_used,
         individual_smoked_remarks: bodyData.individual_smoked_remarks,
         smoke_images: imageFilenames,
@@ -246,15 +254,22 @@ export const CreateIndividualSmoked = catchAsync(async (req, res, next) => {
     }
 
     // updating other goods quantities
-    let otherGoods = await OtherGoodsModel.find({ item_name: bodyData?.consumed_item_name }).sort({ created_at: 1 });
+    let otherGoods = await OtherGoodsModel.find({
+      item_name: bodyData?.consumed_item_name,
+    }).sort({ created_at: 1 });
 
-    let remainingQuantity = Number(bodyData.liters_of_ammonia_used)*issuedForSmokingIndividualItemsExist?.length;
+    let remainingQuantity =
+      Number(bodyData.liters_of_ammonia_used) *
+      issuedForSmokingIndividualItemsExist?.length;
 
     // looping through all inward for the selected consumable item
     for (let item of otherGoods) {
       if (remainingQuantity <= 0) break;
 
-      const consumeFromItem = Math.min(item.available_quantity, remainingQuantity);
+      const consumeFromItem = Math.min(
+        item.available_quantity,
+        remainingQuantity
+      );
 
       // Update the item's available_quantity in other goods collection
       let updatedOtherGoods = await OtherGoodsModel.findByIdAndUpdate(
@@ -293,7 +308,7 @@ export const CreateIndividualSmoked = catchAsync(async (req, res, next) => {
 
       remainingQuantity -= consumeFromItem;
       // this is to give some time to OtherGoodsConsumedModel.create action
-      await new Promise(resolve => setTimeout(resolve, 50))
+      await new Promise((resolve) => setTimeout(resolve, 50));
     }
 
     // Commit the transaction

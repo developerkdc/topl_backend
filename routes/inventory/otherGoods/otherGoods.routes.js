@@ -1,26 +1,40 @@
 import express from "express";
-import CheckRoleAndTokenAccess from "../../../middlewares/permission.js";
 import {
-  AddOtherGoods,
-  EditOtherGoods,
-  FetchOtherGoods,
-  FetchOtherGoodsConsumption,
-  UpdateOtherGoods,
+  add_otherGoods_inventory,
+  add_single_otherGoods_item_inventory,
+  edit_otherGoods_invoice_inventory,
+  edit_otherGoods_item_inventory,
+  listing_otherGodds_inventory,
+  otherGoodsLogsCsv,
 } from "../../../controllers/inventory/otherGoods/otherGoods.js";
-import { ListOtherGoodsLogs } from "../../../controllers/logs/Inventory/OtherGoods/otherGoodsLogs.js";
-import { ListOtherGoodsConsumedLogs } from "../../../controllers/logs/Inventory/OtherGoods/otherGoodsConsumedLogs.js";
-
+import CheckRoleAndTokenAccess from "../../../middlewares/permission.js";
 const router = express.Router();
-router.post("/add-other-goods", CheckRoleAndTokenAccess, AddOtherGoods);
-router.post("/edit-other-goods", CheckRoleAndTokenAccess, EditOtherGoods);
-router.post("/update-other-goods", CheckRoleAndTokenAccess, UpdateOtherGoods);
-router.post("/list-other-goods", CheckRoleAndTokenAccess, FetchOtherGoods);
+
 router.post(
-  "/list-other-goods-consumed",
+  "/list-inventory",
   CheckRoleAndTokenAccess,
-  FetchOtherGoodsConsumption
+  listing_otherGodds_inventory
 );
-router.get("/othergood-logs", ListOtherGoodsLogs);
-router.get("/othergoodconsumed-logs", ListOtherGoodsConsumedLogs);
+router.post(
+  "/add-inventory",
+  CheckRoleAndTokenAccess,
+  add_otherGoods_inventory
+);
+router.post(
+  "/add-item-inventory",
+  CheckRoleAndTokenAccess,
+  add_single_otherGoods_item_inventory
+);
+router.patch(
+  "/edit-item-inventory/:item_id",
+  // CheckRoleAndTokenAccess,
+  edit_otherGoods_item_inventory
+);
+router.patch(
+  "/edit-invoice-inventory/:invoice_id",
+  // CheckRoleAndTokenAccess,
+  edit_otherGoods_invoice_inventory
+);
+router.post("/download-excel-othergoods-logs", otherGoodsLogsCsv);
 
 export default router;

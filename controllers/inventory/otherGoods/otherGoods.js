@@ -1,158 +1,290 @@
 import mongoose from "mongoose";
-import OtherGoodsModel from "../../../database/schema/inventory/otherGoods/otherGoods.schema.js";
+import {
+  othergoods_inventory_invoice_details,
+  othergoods_inventory_items_details,
+  othergoods_inventory_items_view_modal,
+} from "../../../database/schema/inventory/otherGoods/otherGoodsNew.schema.js";
 import catchAsync from "../../../utils/errors/catchAsync.js";
-import { IdRequired } from "../../../utils/response/response.js";
-import OtherGoodsConsumedModel from "../../../database/schema/inventory/otherGoods/otherGoodsConsumed.schema.js";
 import ApiError from "../../../utils/errors/apiError.js";
+import ApiResponse from "../../../utils/ApiResponse.js";
+import { StatusCodes } from "../../../utils/constants.js";
 import { DynamicSearch } from "../../../utils/dynamicSearch/dynamic.js";
+import { dynamic_filter } from "../../../utils/dymanicFilter.js";
+import { GenerateOtherGoodsLogs } from "../../../config/downloadExcel/Logs/Inventory/OtherGoods/otherGoods.js";
+export const listing_otherGodds_inventory = catchAsync(
+  async (req, res, next) => {
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = "updatedAt",
+      sort = "desc",
+      search = "",
+    } = req.query;
+    const {
+      string,
+      boolean,
+      numbers,
+      arrayField = [],
+    } = req?.body?.searchFields || {};
+    const filter = req.body?.filter;
 
-export const AddOtherGoods = catchAsync(async (req, res, next) => {
-  const authUserDetail = req.userDetails;
-  const data = req.body;
-  const otherGoodsData = data.item_details.map((ele) => {
-    return {
-      date_of_inward: req.body.date_of_inward,
-      supplier_details: req.body.supplier_details,
-      created_employee_id: authUserDetail._id,
-      ...ele,
-    };
-  });
-  // console.log(rawData);
-  const session = await mongoose.startSession();
-
-  try {
-    session.startTransaction();
-
-    const newRaw = await OtherGoodsModel.insertMany(otherGoodsData, {
-      session,
-    });
-
-    await session.commitTransaction();
-    session.endSession();
-
-    return res.json({
-      result: newRaw,
-      status: true,
-      message: "Other Goods Inventory added successfully.",
-    });
-  } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
-    return res.status(500).json({
-      status: false,
-      message: "Error occurred while adding Other Goods Inventory.",
-      error: error.message,
-    });
-  }
-});
-
-export const UpdateOtherGoods = catchAsync(async (req, res, next) => {
-  // Start a MongoDB session
-  const session = await mongoose.startSession();
-  // Start a transaction
-
-  try {
-    session.startTransaction();
-    const authUserDetail = req.userDetails;
-    const otherGoodsId = req.query.id;
-
-    if (!otherGoodsId || !mongoose.Types.ObjectId.isValid(otherGoodsId)) {
-      return res.status(400).json({
-        result: [],
-        status: false,
-        message: otherGoodsId ? "Invalid other goods ID" : IdRequired,
-      });
+    let search_query = {};
+    if (search != "" && req?.body?.searchFields) {
+      const search_data = DynamicSearch(
+        search,
+        boolean,
+        numbers,
+        string,
+        arrayField
+      );
+      if (search_data?.length == 0) {
+        return res.status(404).json({
+          statusCode: 404,
+          status: false,
+          data: {
+            data: [],
+          },
+          message: "Results Not Found",
+        });
+      }
+      search_query = search_data;
     }
 
-    const prevData = await OtherGoodsModel.findById(otherGoodsId).session(
-      session
-    );
+    const filterData = dynamic_filter(filter);
 
-    const { _id, ...consumedData } = {
-      ...req.body,
-      created_employee_id: authUserDetail._id,
+    const match_query = {
+      ...filterData,
+      ...search_query,
     };
 
-    const updated_available_quantity = parseFloat(
-      (prevData?.available_quantity - req.body?.consumption_quantity)?.toFixed(
-        2
-      )
-    );
-
-    if (updated_available_quantity < 0) {
-      return next(new ApiError("Other Goods Not Updated, Check Data", 400));
-    }
-
-    const otherGoods = await OtherGoodsModel.findByIdAndUpdate(
-      otherGoodsId,
+    const aggregate_stage = [
       {
-        $set: {
-          available_quantity: updated_available_quantity,
-          updated_at: Date.now(),
+        $match: match_query,
+      },
+      {
+        $sort: {
+          [sortBy]: sort === "desc" ? -1 : 1,
         },
       },
-      { new: true, runValidators: true, session }
-    );
-
-    if (!otherGoods) {
-      return res.status(404).json({
-        status: false,
-        message: "Other goods not found.",
-      });
-    }
-
-    const consumption = new OtherGoodsConsumedModel({
-      ...consumedData,
-      available_quantity: updated_available_quantity,
-    });
-    
-    const savedConsumption = await consumption.save({ session });
-
-    // if (updated_available_quantity === 0) {
-    //   const deleteInventory = await OtherGoodsModel.findByIdAndDelete(
-    //     otherGoodsId
-    //   ).session(session);
+      {
+        $skip: (parseInt(page) - 1) * parseInt(limit),
+      },
+      {
+        $limit: parseInt(limit),
+      },
+    ];
+    // console.log(sortBy !== 'updatedAt' && sort !== "desc")
+    // if (sortBy !== 'updatedAt' && sort !== "desc"){
+    //     console.log("first")
+    //     aggregate_stage[1] = {
+    //         $sort: {
+    //             [sortBy]: sort === "desc" ? -1 : 1
+    //         }
+    //     }
     // }
 
-    // Commit the transaction
+    const List_otherGoods_inventory_details =
+      await othergoods_inventory_items_view_modal.aggregate(aggregate_stage);
+
+    // return res.status(200).json({
+    //   statusCode: 200,
+    //   status: "success",
+    //   data: List_otherGoods_inventory_details,
+    //   message: "Data fetched successfully",
+    // });
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          StatusCodes.OK,
+          "Data fetched successfully",
+          List_otherGoods_inventory_details
+        )
+      );
+  }
+);
+
+export const add_otherGoods_inventory = catchAsync(async (req, res, next) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const { inventory_invoice_details, inventory_items_details } = req.body;
+    const created_by = req.userDetails.id; //extract userid from req.userDetails
+
+    const inward_sr_no = await othergoods_inventory_invoice_details.aggregate([
+      {
+        $group: {
+          _id: null,
+          latest_inward_sr_no: { $max: "$inward_sr_no" },
+        },
+      },
+    ]);
+
+    const latest_inward_sr_no =
+      inward_sr_no?.length > 0 && inward_sr_no?.[0]?.latest_inward_sr_no
+        ? inward_sr_no?.[0]?.latest_inward_sr_no + 1
+        : 1;
+    inventory_invoice_details.created_by = created_by;
+    const add_invoice_details =
+      await othergoods_inventory_invoice_details.create(
+        [
+          {
+            inward_sr_no: latest_inward_sr_no,
+            ...inventory_invoice_details,
+          },
+        ],
+        { session }
+      );
+
+    if (add_invoice_details && add_invoice_details?.length < 0) {
+      return next(new ApiError("Failed to add invoice", 400));
+    }
+
+    const invoice_details_id = add_invoice_details?.[0]?._id;
+    const items_details = inventory_items_details?.map((elm, index) => {
+      // elm.item_sr_no = index + 1;
+      elm.invoice_id = invoice_details_id;
+      elm.created_by = created_by;
+      return elm;
+    });
+
+    const add_items_details =
+      await othergoods_inventory_items_details.insertMany(items_details, {
+        session,
+      });
+
+    if (add_items_details && add_items_details?.length < 0) {
+      return next(new ApiError("Failed to add Items Details", 400));
+    }
+
     await session.commitTransaction();
     session.endSession();
-
-    res.status(200).json({
-      result: otherGoods,
-      status: true,
-      message: "Other goods updated successfully",
-    });
+    return res.status(200).json(
+      new ApiResponse(StatusCodes.OK, "Inventory has added successfully", {
+        add_invoice_details,
+        add_items_details,
+      })
+    );
   } catch (error) {
-    // Rollback the transaction if there is any error
     await session.abortTransaction();
     session.endSession();
-    return res.status(500).json({ error: error.message });
+    return next(error);
   }
 });
 
-export const FetchOtherGoods = catchAsync(async (req, res, next) => {
+export const add_single_otherGoods_item_inventory = catchAsync(
+  async (req, res, next) => {
+    const item_details = req.body?.item_details;
+
+    const invoice_id = item_details?.invoice_id;
+
+    if (!invoice_id || !mongoose.isValidObjectId(invoice_id)) {
+      return next(new ApiError("Please provide valid invoice id", 400));
+    }
+
+    const add_item_details = await othergoods_inventory_items_details.create({
+      ...item_details,
+    });
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          StatusCodes.OK,
+          "Inventory Item has added successfully",
+          add_item_details
+        )
+      );
+  }
+);
+
+export const edit_otherGoods_item_inventory = catchAsync(
+  async (req, res, next) => {
+    const item_id = req.params?.item_id;
+    const item_details = req.body?.item_details;
+
+    const update_item_details =
+      await othergoods_inventory_items_details.updateOne(
+        { _id: item_id },
+        {
+          $set: {
+            ...item_details,
+          },
+        }
+      );
+
+    if (
+      !update_item_details?.acknowledged &&
+      update_item_details?.modifiedCount <= 0
+    ) {
+      return next(new ApiError("Failed to update item details", 400));
+    }
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          StatusCodes.OK,
+          "Inventory Item has updated successfully",
+          update_item_details
+        )
+      );
+  }
+);
+
+export const edit_otherGoods_invoice_inventory = catchAsync(
+  async (req, res, next) => {
+    const invoice_id = req.params?.invoice_id;
+    const invoice_details = req.body?.invoice_details;
+
+    const update_voice_details =
+      await othergoods_inventory_invoice_details.updateOne(
+        { _id: invoice_id },
+        {
+          $set: invoice_details,
+        }
+      );
+
+    if (
+      !update_voice_details?.acknowledged &&
+      update_voice_details?.modifiedCount <= 0
+    ) {
+      return next(new ApiError("Failed to update item details", 400));
+    }
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          StatusCodes.OK,
+          "Inventory Invoice has updated successfully",
+          update_voice_details
+        )
+      );
+  }
+);
+
+export const otherGoodsLogsCsv = catchAsync(async (req, res) => {
+  const { search = "" } = req.query;
   const {
     string,
     boolean,
     numbers,
     arrayField = [],
   } = req?.body?.searchFields || {};
-  const { page, limit = 10, sortBy = "updated_at", sort = "desc" } = req.query;
-  const skip = Math.max((page - 1) * limit, 0);
+  const filter = req.body?.filter;
 
-  const search = req.query.search || "";
-
-  let searchQuery = {};
+  let search_query = {};
   if (search != "" && req?.body?.searchFields) {
-    const searchdata = DynamicSearch(
+    const search_data = DynamicSearch(
       search,
       boolean,
       numbers,
       string,
       arrayField
     );
-    if (searchdata?.length == 0) {
+    if (search_data?.length == 0) {
       return res.status(404).json({
         statusCode: 404,
         status: false,
@@ -162,255 +294,27 @@ export const FetchOtherGoods = catchAsync(async (req, res, next) => {
         message: "Results Not Found",
       });
     }
-    searchQuery = searchdata;
+    search_query = search_data;
   }
 
-  const { to, from, ...data } = req?.body?.filters || {};
-  const matchQuery = data || {};
+  const filterData = dynamic_filter(filter);
 
-  if (to && from) {
-    matchQuery["date_of_inward"] = {
-      $gte: new Date(from), // Greater than or equal to "from" date
-      $lte: new Date(to), // Less than or equal to "to" date
-    };
+  const match_query = {
+    ...filterData,
+    ...search_query,
+  };
+
+  const allData = await othergoods_inventory_items_view_modal.find(match_query);
+  if (allData.length === 0) {
+    return res
+      .status(StatusCodes.NOT_FOUND)
+      .json(new ApiResponse(StatusCodes.NOT_FOUND, "NO Data found..."));
   }
 
-  const totalDocuments = await OtherGoodsModel.aggregate([
-    {
-      $lookup: {
-        from: "users",
-        localField: "created_employee_id",
-        foreignField: "_id",
-        pipeline: [
-          {
-            $project: {
-              password: 0,
-            },
-          },
-        ],
-        as: "created_employee_id",
-      },
-    },
-    {
-      $unwind: {
-        path: "$created_employee_id",
-        preserveNullAndEmptyArrays: true,
-      },
-    },
-    {
-      $match: {
-        ...matchQuery,
-        ...searchQuery,
-      },
-    },
-    {
-      $sort: {
-        [sortBy]: sort == "desc" ? -1 : 1,
-      },
-    },
-    {
-      $count: "totalDocuments",
-    },
-  ]);
-  const totalPages = Math.ceil(totalDocuments?.[0]?.totalDocuments / limit);
+  // const excelLink = await GenerateOtherGoodsLogs(allData);
+  // console.log("link => ", excelLink);
 
-  const otherGoodsData = await OtherGoodsModel.aggregate([
-    {
-      $lookup: {
-        from: "users",
-        localField: "created_employee_id",
-        foreignField: "_id",
-        pipeline: [
-          {
-            $project: {
-              password: 0,
-            },
-          },
-        ],
-        as: "created_employee_id",
-      },
-    },
-    {
-      $unwind: {
-        path: "$created_employee_id",
-        preserveNullAndEmptyArrays: true,
-      },
-    },
-    {
-      $match: {
-        ...matchQuery,
-        ...searchQuery,
-      },
-    },
-    {
-      $sort: {
-        [sortBy]: sort == "desc" ? -1 : 1,
-      },
-    },
-    {
-      $skip: skip,
-    },
-    {
-      $limit: limit,
-    },
-  ]);
-
-  return res.status(200).json({
-    result: otherGoodsData,
-    statusCode: 200,
-    status: "success",
-    totalPages: totalPages,
-  });
-});
-
-export const FetchOtherGoodsConsumption = catchAsync(async (req, res, next) => {
-  const {
-    string,
-    boolean,
-    numbers,
-    arrayField = [],
-  } = req?.body?.searchFields || {};
-  const { page, limit = 10, sortBy = "updated_at", sort = "desc" } = req.query;
-  const skip = Math.max((page - 1) * limit, 0);
-
-  const search = req.query.search || "";
-
-  let searchQuery = {};
-  if (search != "" && req?.body?.searchFields) {
-    const searchdata = DynamicSearch(
-      search,
-      boolean,
-      numbers,
-      string,
-      arrayField
-    );
-    if (searchdata?.length == 0) {
-      return res.status(404).json({
-        statusCode: 404,
-        status: false,
-        data: {
-          data: [],
-        },
-        message: "Results Not Found",
-      });
-    }
-    searchQuery = searchdata;
-  }
-
-  const { to, from, ...data } = req?.body?.filters || {};
-  const matchQuery = data || {};
-
-  if (to && from) {
-    console.log(new Date(from));
-    matchQuery["date_of_consumption"] = {
-      $gte: new Date(from), // Greater than or equal to "from" date
-      $lte: new Date(to), // Less than or equal to "to" date
-    };
-  }
-
-  const totalDocuments = await OtherGoodsConsumedModel.aggregate([
-    {
-      $lookup: {
-        from: "users",
-        localField: "created_employee_id",
-        foreignField: "_id",
-        pipeline: [
-          {
-            $project: {
-              password: 0,
-            },
-          },
-        ],
-        as: "created_employee_id",
-      },
-    },
-    {
-      $unwind: {
-        path: "$created_employee_id",
-        preserveNullAndEmptyArrays: true,
-      },
-    },
-    {
-      $match: {
-        ...matchQuery,
-        ...searchQuery,
-      },
-    },
-    {
-      $sort: {
-        [sortBy]: sort == "desc" ? -1 : 1,
-      },
-    },
-    {
-      $count: "totalDocuments",
-    },
-  ]);
-  const totalPages = Math.ceil(totalDocuments?.[0]?.totalDocuments / limit);
-
-  const otherGoodsData = await OtherGoodsConsumedModel.aggregate([
-    {
-      $lookup: {
-        from: "users",
-        localField: "created_employee_id",
-        foreignField: "_id",
-        pipeline: [
-          {
-            $project: {
-              password: 0,
-            },
-          },
-        ],
-        as: "created_employee_id",
-      },
-    },
-    {
-      $unwind: {
-        path: "$created_employee_id",
-        preserveNullAndEmptyArrays: true,
-      },
-    },
-    {
-      $match: {
-        ...matchQuery,
-        ...searchQuery,
-      },
-    },
-    {
-      $sort: {
-        [sortBy]: sort == "desc" ? -1 : 1,
-      },
-    },
-    {
-      $skip: skip,
-    },
-    {
-      $limit: limit,
-    },
-  ]);
-  return res.status(200).json({
-    result: otherGoodsData,
-    statusCode: 200,
-    status: "success",
-    totalPages: totalPages,
-  });
-});
-
-export const EditOtherGoods = catchAsync(async (req, res, next) => {
-  const { itemId } = req.query;
-  const updates = req.body; // Request body containing the updates
-
-  // Find the item by ID and update it
-  const updatedItem = await OtherGoodsModel.findByIdAndUpdate(itemId, updates, {
-    new: true,
-  });
-
-  if (!updatedItem) {
-    return res.status(404).json({ error: "Item not found" });
-  }
-
-  res.status(200).json({
-    result: updatedItem,
-    statusCode: 200,
-    status: "success",
-  });
+  return res.json(
+    new ApiResponse(StatusCodes.OK, "Csv downloaded successfully...", allData)
+  );
 });

@@ -1,21 +1,25 @@
 import mongoose from "mongoose";
 
-
-const itemSubCategorySchema = new mongoose.Schema({
+const itemSubCategorySchema = new mongoose.Schema(
+  {
     sr_no: {
-        type: Number,
-        default: null
+      type: Number,
+      default: null,
     },
     name: {
-        type: String,
-        required: [true, "subcategory name is required"]
+      type: String,
+      required: [true, "subcategory name is required"],
     },
     created_by: {
-        type: mongoose.Schema.Types.ObjectId,
-        default: null
-    }
-}, { timestamps: true });
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
+  },
+  { timestamps: true }
+);
 
-const itemSubCategoryModel = mongoose.models.item_subcategories || mongoose.model('item_subcategory', itemSubCategorySchema);
+const itemSubCategoryModel =
+  mongoose.models.item_subcategories ||
+  mongoose.model("item_subcategory", itemSubCategorySchema);
 
-export default itemSubCategoryModel
+export default itemSubCategoryModel;
