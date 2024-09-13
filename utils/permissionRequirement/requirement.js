@@ -416,6 +416,13 @@ const ExtractRequiredPermission = (routeName) => {
     case "/get-available-raw-data":
       return "dispatch_view";
 
+    //logs-inventory
+    case "/add-inventory":
+      return "log_inventory_create";
+    case "/edit-inventory/:item_id/:invoice_id":
+      return "log_inventory_edit";
+    case "/list-inventory":
+      return " log_inventory_view";
     //plywood-inventory
     case "/add-inventory":
       return "plywood_inventory_create";
