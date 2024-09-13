@@ -1,8 +1,8 @@
 import mongoose from "mongoose";
 import {
-  flitch_inventory_invoice_details,
-  flitch_inventory_items_details,
-  flitch_inventory_items_view_modal,
+  flitch_inventory_invoice_model,
+  flitch_inventory_items_model,
+  flitch_inventory_items_view_model,
 } from "../../../database/schema/inventory/Flitch/flitch.schema.js";
 import catchAsync from "../../../utils/errors/catchAsync.js";
 import ApiError from "../../../utils/errors/apiError.js";
@@ -11,13 +11,14 @@ import { dynamic_filter } from "../../../utils/dymanicFilter.js";
 import ApiResponse from "../../../utils/ApiResponse.js";
 import { StatusCodes } from "../../../utils/constants.js";
 import { createFlitchLogsExcel } from "../../../config/downloadExcel/Logs/Inventory/flitch/flitchLogs.js";
+
 // export const listing_flitch_inventory = catchAsync(async (req, res, next) => {
 //     const { page = 1, limit = 10, sortBy = "updated_at", sort = "desc" } = req.query;
 
-//     const List_flitch_inventory_details = await flitch_inventory_items_details.aggregate([
+//     const List_flitch_inventory_details = await flitch_inventory_items_model.aggregate([
 //         {
 //             $lookup: {
-//                 from: "flitch_inventory_invoice_details",
+//                 from: "flitch_inventory_invoice_model",
 //                 localField: "invoice_id",
 //                 foreignField: "_id",
 //                 as: "flitch_invoice_details"
@@ -44,6 +45,7 @@ import { createFlitchLogsExcel } from "../../../config/downloadExcel/Logs/Invent
 //         message:"Data fetched successfully"
 //     })
 // })
+
 export const listing_flitch_inventory = catchAsync(async (req, res, next) => {
   const {
     page = 1,
@@ -116,7 +118,7 @@ export const listing_flitch_inventory = catchAsync(async (req, res, next) => {
   // }
 
   const List_flitch_inventory_details =
-    await flitch_inventory_items_view_modal.aggregate(aggregate_stage);
+    await flitch_inventory_items_view_model.aggregate(aggregate_stage);
 
   return res.status(200).json({
     statusCode: 200,
@@ -126,13 +128,33 @@ export const listing_flitch_inventory = catchAsync(async (req, res, next) => {
   });
 });
 
+export const item_sr_no_dropdown = catchAsync(async (req,res,next)=>{
+    const item_sr_no = await flitch_inventory_items_model.distinct("item_sr_no");
+    return res.status(200).json({
+        statusCode:200,
+        status:"success",
+        data:item_sr_no,
+        message:"Item Sr No Dropdown fetched successfully",
+    })
+});
+
+export const invoice_sr_no_dropdown = catchAsync(async (req,res,next)=>{
+    const item_sr_no = await flitch_inventory_invoice_model.distinct("inward_sr_no");
+    return res.status(200).json({
+        statusCode:200,
+        status:"success",
+        data:item_sr_no,
+        message:"Invoice Sr No Dropdown fetched successfully",
+    })
+})
+
 export const add_flitch_inventory = catchAsync(async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
     const { inventory_invoice_details, inventory_items_details } = req.body;
 
-    const inward_sr_no = await flitch_inventory_invoice_details.aggregate([
+    const inward_sr_no = await flitch_inventory_invoice_model.aggregate([
       {
         $group: {
           _id: null,
@@ -146,7 +168,7 @@ export const add_flitch_inventory = catchAsync(async (req, res, next) => {
         ? inward_sr_no?.[0]?.latest_inward_sr_no + 1
         : 1;
 
-    const add_invoice_details = await flitch_inventory_invoice_details.create(
+    const add_invoice_details = await flitch_inventory_invoice_model.create(
       [
         {
           inward_sr_no: latest_inward_sr_no,
@@ -167,7 +189,7 @@ export const add_flitch_inventory = catchAsync(async (req, res, next) => {
       return elm;
     });
 
-    const add_items_details = await flitch_inventory_items_details.insertMany(
+    const add_items_details = await flitch_inventory_items_model.insertMany(
       items_details,
       {
         session,
@@ -206,7 +228,7 @@ export const add_single_flitch_item_inventory = catchAsync(
       return next(new ApiError("Please provide valid invoice id", 400));
     }
 
-    const add_item_details = await flitch_inventory_items_details.create({
+    const add_item_details = await flitch_inventory_items_model.create({
       ...item_details,
     });
 
@@ -223,7 +245,7 @@ export const edit_flitch_item_inventory = catchAsync(async (req, res, next) => {
   const item_id = req.params?.item_id;
   const item_details = req.body?.item_details;
 
-  const update_item_details = await flitch_inventory_items_details.updateOne(
+  const update_item_details = await flitch_inventory_items_model.updateOne(
     { _id: item_id },
     {
       $set: {
@@ -253,7 +275,7 @@ export const edit_flitch_invoice_inventory = catchAsync(
     const invoice_details = req.body?.invoice_details;
 
     const update_voice_details =
-      await flitch_inventory_invoice_details.updateOne(
+      await flitch_inventory_invoice_model.updateOne(
         { _id: invoice_id },
         {
           $set: invoice_details,
@@ -315,7 +337,7 @@ export const flitchLogsCsv = catchAsync(async (req, res) => {
     ...search_query,
   };
 
-  const allData = await flitch_inventory_items_view_modal.find(match_query);
+  const allData = await flitch_inventory_items_view_model.find(match_query);
   if (allData.length === 0) {
     return res
       .status(StatusCodes.NOT_FOUND)
