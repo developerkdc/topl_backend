@@ -27,19 +27,8 @@ const log_item_details_schema = new mongoose.Schema({
     required: [true, "Log No is required"],
   },
   log_formula: {
-    formula_type: {
-      type: {
-        enum: {
-          values: ["A", "B"],
-          message: "Invalid formula type",
-        },
-        required: [true, "Formula type is required"],
-      },
-    },
-    formula: {
-      type: String,
-      required: [true, "Log formula is required"],
-    },
+    type: String,
+    required: [true, "Log formula is required"],
   },
   invoice_length: {
     type: Number,
@@ -214,14 +203,8 @@ const log_invoice_schema = new mongoose.Schema(
   }
 );
 
-export const log_inventory_items_details = mongoose.model(
-  "log_inventory_items_details",
-  log_item_details_schema
-);
-export const log_inventory_invoice_details = mongoose.model(
-  "log_inventory_invoice_details",
-  log_invoice_schema
-);
+export const log_inventory_items_details = mongoose.model("log_inventory_items_details", log_item_details_schema);
+export const log_inventory_invoice_details = mongoose.model("log_inventory_invoice_details", log_invoice_schema);
 
 const log_inventory_items_view_schema = new mongoose.Schema(
   {},
@@ -232,10 +215,7 @@ const log_inventory_items_view_schema = new mongoose.Schema(
   }
 );
 
-export const log_inventory_items_view_modal = mongoose.model(
-  "log_inventory_items_view",
-  log_inventory_items_view_schema
-);
+export const log_inventory_items_view_modal = mongoose.model("log_inventory_items_view", log_inventory_items_view_schema);
 
 (async function () {
   await log_inventory_items_view_modal.createCollection({
