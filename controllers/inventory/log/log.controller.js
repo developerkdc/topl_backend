@@ -1,17 +1,18 @@
 import mongoose from "mongoose";
 import {
-  plywood_inventory_invoice_details,
-  plywood_inventory_items_details,
-  plywood_inventory_items_view_modal,
-} from "../../../database/schema/inventory/Plywood/plywood.schema.js";
+  log_inventory_invoice_details,
+  log_inventory_items_details,
+  log_inventory_items_view_modal,
+} from "../../../database/schema/inventory/log/log.schema.js";
 import catchAsync from "../../../utils/errors/catchAsync.js";
 import ApiError from "../../../utils/errors/apiError.js";
 import ApiResponse from "../../../utils/ApiResponse.js";
 import { DynamicSearch } from "../../../utils/dynamicSearch/dynamic.js";
 import { dynamic_filter } from "../../../utils/dymanicFilter.js";
 import { StatusCodes } from "../../../utils/constants.js";
-import { createPlywoodLogsExcel } from "../../../config/downloadExcel/Logs/Inventory/plywood/plywood.js";
-export const listing_plywood_inventory = catchAsync(async (req, res, next) => {
+import { createMdfLogsExcel } from "../../../config/downloadExcel/Logs/Inventory/mdf/mdf.js";
+
+export const listing_log_inventory = catchAsync(async (req, res, next) => {
   const {
     page = 1,
     limit = 10,
@@ -82,25 +83,24 @@ export const listing_plywood_inventory = catchAsync(async (req, res, next) => {
   //     }
   // }
 
-  const List_plywood_inventory_details =
-    await plywood_inventory_items_view_modal.aggregate(aggregate_stage);
+  const List_log_inventory_details =
+    await log_inventory_items_view_modal.aggregate(aggregate_stage);
 
   return res.status(200).json({
     statusCode: 200,
     status: "success",
-    data: List_plywood_inventory_details,
+    data: List_log_inventory_details,
     message: "Data fetched successfully",
   });
 });
 
-export const add_plywood_inventory = catchAsync(async (req, res, next) => {
+export const add_log_inventory = catchAsync(async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
     const { inventory_invoice_details, inventory_items_details } = req.body;
-
-    const created_by = req.userDetails.id;
-    const inward_sr_no = await plywood_inventory_invoice_details.aggregate([
+    const created_by = req.userDetails.id; //extract userid from req.userDetails
+    const inward_sr_no = await log_inventory_invoice_details.aggregate([
       {
         $group: {
           _id: null,
@@ -109,13 +109,14 @@ export const add_plywood_inventory = catchAsync(async (req, res, next) => {
       },
     ]);
 
-    inventory_invoice_details.created_by = created_by;
     const latest_inward_sr_no =
       inward_sr_no?.length > 0 && inward_sr_no?.[0]?.latest_inward_sr_no
         ? inward_sr_no?.[0]?.latest_inward_sr_no + 1
         : 1;
 
-    const add_invoice_details = await plywood_inventory_invoice_details.create(
+    inventory_invoice_details.created_by = created_by;
+
+    const add_invoice_details = await log_inventory_invoice_details.create(
       [
         {
           inward_sr_no: latest_inward_sr_no,
@@ -137,7 +138,7 @@ export const add_plywood_inventory = catchAsync(async (req, res, next) => {
       return elm;
     });
 
-    const add_items_details = await plywood_inventory_items_details.insertMany(
+    const add_items_details = await log_inventory_items_details.insertMany(
       items_details,
       {
         session,
@@ -150,15 +151,12 @@ export const add_plywood_inventory = catchAsync(async (req, res, next) => {
 
     await session.commitTransaction();
     session.endSession();
-    return res.status(201).json({
-      statusCode: 201,
-      status: "Created",
-      data: {
+    return res.status(201).json(
+      new ApiResponse(StatusCodes.CREATED, "Inventory has added successfully", {
         add_invoice_details,
         add_items_details,
-      },
-      message: "Inventory has added successfully",
-    });
+      })
+    );
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
@@ -166,7 +164,7 @@ export const add_plywood_inventory = catchAsync(async (req, res, next) => {
   }
 });
 
-export const add_single_plywood_item_inventory = catchAsync(
+export const add_single_log_item_inventory = catchAsync(
   async (req, res, next) => {
     const item_details = req.body?.item_details;
 
@@ -176,79 +174,83 @@ export const add_single_plywood_item_inventory = catchAsync(
       return next(new ApiError("Please provide valid invoice id", 400));
     }
 
-    const add_item_details = await plywood_inventory_items_details.create({
+    const add_item_details = await log_inventory_items_details.create({
       ...item_details,
     });
 
-    return res.status(200).json({
-      statusCode: 200,
-      status: "success",
-      data: add_item_details,
-      message: "Inventory Item has added successfully",
-    });
-  }
-);
-
-export const edit_plywood_item_inventory = catchAsync(
-  async (req, res, next) => {
-    const item_id = req.params?.item_id;
-    const item_details = req.body?.item_details;
-
-    const update_item_details = await plywood_inventory_items_details.updateOne(
-      { _id: item_id },
-      {
-        $set: {
-          ...item_details,
-        },
-      }
-    );
-
-    if (
-      !update_item_details?.acknowledged &&
-      update_item_details?.modifiedCount <= 0
-    ) {
-      return next(new ApiError("Failed to update item details", 400));
-    }
-
-    return res.status(200).json({
-      statusCode: 200,
-      status: "Updated",
-      data: update_item_details,
-      message: "Inventory Item has updated successfully",
-    });
-  }
-);
-
-export const edit_plywood_invoice_inventory = catchAsync(
-  async (req, res, next) => {
-    const invoice_id = req.params?.invoice_id;
-    const invoice_details = req.body?.invoice_details;
-
-    const update_voice_details =
-      await plywood_inventory_invoice_details.updateOne(
-        { _id: invoice_id },
-        {
-          $set: invoice_details,
-        }
+    return res
+      .status(201)
+      .json(
+        new ApiResponse(
+          StatusCodes.CREATED,
+          "Inventory has added successfully",
+          add_item_details
+        )
       );
-
-    if (
-      !update_voice_details?.acknowledged &&
-      update_voice_details?.modifiedCount <= 0
-    ) {
-      return next(new ApiError("Failed to update item details", 400));
-    }
-
-    return res.status(200).json({
-      statusCode: 200,
-      status: "Updated",
-      data: update_voice_details,
-      message: "Inventory Invoice has updated successfully",
-    });
   }
 );
 
-export const plywoodLogsCsv = catchAsync(async (req, res) => {
+export const edit_log_item_inventory = catchAsync(async (req, res, next) => {
+  const item_id = req.params?.item_id;
+  const item_details = req.body?.item_details;
+
+  const update_item_details = await log_inventory_items_details.updateOne(
+    { _id: item_id },
+    {
+      $set: {
+        ...item_details,
+      },
+    }
+  );
+
+  if (
+    !update_item_details?.acknowledged &&
+    update_item_details?.modifiedCount <= 0
+  ) {
+    return next(new ApiError("Failed to update item details", 400));
+  }
+
+  return res
+    .status(StatusCodes.OK)
+    .json(
+      new ApiResponse(
+        StatusCodes.OK,
+        "Inventory item  updated successfully",
+        update_item_details
+      )
+    );
+});
+
+export const edit_log_invoice_inventory = catchAsync(async (req, res, next) => {
+  const invoice_id = req.params?.invoice_id;
+  const invoice_details = req.body?.invoice_details;
+
+  const update_voice_details = await log_inventory_invoice_details.updateOne(
+    { _id: invoice_id },
+    {
+      $set: invoice_details,
+    }
+  );
+
+  if (
+    !update_voice_details?.acknowledged &&
+    update_voice_details?.modifiedCount <= 0
+  ) {
+    return next(new ApiError("Failed to update item details", 400));
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        StatusCodes.OK,
+        "Inventory invoice has updated successfully",
+        update_voice_details
+      )
+    );
+});
+
+export const logLogsCsv = catchAsync(async (req, res) => {
   const { search = "" } = req.query;
   const {
     string,
@@ -287,15 +289,10 @@ export const plywoodLogsCsv = catchAsync(async (req, res) => {
     ...search_query,
   };
 
-  const allData = await plywood_inventory_items_view_modal.find(match_query);
+  const allData = await log_inventory_items_view_modal.find(match_query);
 
-  if (allData.length === 0) {
-    return res
-      .status(StatusCodes.NOT_FOUND)
-      .json(new ApiResponse(StatusCodes.NOT_FOUND, "NO Data found..."));
-  }
-  const excelLink = await createPlywoodLogsExcel(allData);
-  console.log("link => ", excelLink);
+  //   const excelLink = await createMdfLogsExcel(allData);
+  //   console.log("link => ", excelLink);
 
   return res.json(
     new ApiResponse(StatusCodes.OK, "Csv downloaded successfully...", excelLink)

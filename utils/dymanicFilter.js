@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 export const dynamic_filter = (filter = {}) => {
-  let { range,_ids,...obj } = filter;
+  let { range, _ids, ...obj } = filter;
   for (let key in _ids) {
     if (_ids.hasOwnProperty(key) && mongoose.isValidObjectId(_ids[key])) {
       obj[key] = mongoose.Types.ObjectId.createFromHexString(_ids[key]);

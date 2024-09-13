@@ -3,7 +3,6 @@ import CurrencyModel from "../../database/schema/masters/currency.schema.js";
 import catchAsync from "../../utils/errors/catchAsync.js";
 import { DynamicSearch } from "../../utils/dynamicSearch/dynamic.js";
 
-
 export const AddCurrencyMaster = catchAsync(async (req, res) => {
   const authUserDetail = req.userDetails;
   const currencyData = {
@@ -23,9 +22,15 @@ export const UpdateCurrencyMaster = catchAsync(async (req, res) => {
   const userId = req.query.id;
   const updateData = req.body;
   if (!mongoose.Types.ObjectId.isValid(userId)) {
-    return res.status(400).json({ result: [], status: false, message: "Invalid Currency ID" });
+    return res
+      .status(400)
+      .json({ result: [], status: false, message: "Invalid Currency ID" });
   }
-  const user = await CurrencyModel.findByIdAndUpdate(userId, { $set: updateData }, { new: true, runValidators: true });
+  const user = await CurrencyModel.findByIdAndUpdate(
+    userId,
+    { $set: updateData },
+    { new: true, runValidators: true }
+  );
   if (!user) {
     return res.status(404).json({
       result: [],
@@ -41,12 +46,28 @@ export const UpdateCurrencyMaster = catchAsync(async (req, res) => {
 });
 
 export const ListCurrencyMaster = catchAsync(async (req, res) => {
-  const { string, boolean, numbers, arrayField = [] } = req?.body?.searchFields || {};
-  const { page = 1, limit = 10, sortBy = "updated_at", sort = "desc" } = req.query;
+  const {
+    string,
+    boolean,
+    numbers,
+    arrayField = [],
+  } = req?.body?.searchFields || {};
+  const {
+    page = 1,
+    limit = 10,
+    sortBy = "updated_at",
+    sort = "desc",
+  } = req.query;
   const search = req.query.search || "";
   let searchQuery = {};
   if (search != "" && req?.body?.searchFields) {
-    const searchdata = DynamicSearch(search, boolean, numbers, string, arrayField);
+    const searchdata = DynamicSearch(
+      search,
+      boolean,
+      numbers,
+      string,
+      arrayField
+    );
     if (searchdata?.length == 0) {
       return res.status(404).json({
         statusCode: 404,

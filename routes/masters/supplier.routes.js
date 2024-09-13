@@ -5,6 +5,7 @@ import {
   addBranchToSupplier,
   addContactPersonToBranch,
   AddSupplierMaster,
+  DropdownSupplierName,
   fetchAllBranchesBySupplierId,
   fetchAllSuppliers,
   fetchAllSupplierWithBranchesDetails,
@@ -51,6 +52,7 @@ router.get(
 router.get("/contact-person/:id", fetchContactPersonById);
 router.post("/add-contact-person/:id", addContactPersonToBranch);
 router.get("/all-suppliers", fetchAllSuppliers);
+router.get("/dropdown-supplier-master", DropdownSupplierName);
 
 // router.get("/list-supplier-master",CheckRoleAndTokenAccess, ListSupplierMasterLogs);
 

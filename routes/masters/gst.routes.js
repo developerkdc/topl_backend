@@ -1,6 +1,11 @@
 import express from "express";
 import CheckRoleAndTokenAccess from "../../middlewares/permission.js";
-import { AddGstMaster, DropdownGstMaster, ListGstMaster, UpdateGstMaster } from "../../controllers/masters/gst.js";
+import {
+  AddGstMaster,
+  DropdownGstMaster,
+  ListGstMaster,
+  UpdateGstMaster,
+} from "../../controllers/masters/gst.js";
 // import { ListGstLogs } from "../../controllers/logs/Masters/GstLogs.js";
 
 const router = express.Router();

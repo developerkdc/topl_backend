@@ -123,7 +123,7 @@ app.use(
   `/api/${Configs.server.version}/raw-material-inventory`,
   rawMaterialInventoryRouter
 );
-
+``;
 app.use(
   `/api/${Configs.server.version}/plywood-inventory`,
   plywoodInventoryRoutes

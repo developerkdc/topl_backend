@@ -594,3 +594,25 @@ export const fetchAllSuppliers = catchAsync(async (req, res) => {
     )
   );
 });
+
+export const DropdownSupplierName = catchAsync(async (req, res) => {
+  const { type } = req.query;
+
+  const searchQuery = type
+    ? {
+        $or: [{ "supplier_type": { $regex: type, $options: "i" } }],
+      }
+    : {};
+
+  const list = await SupplierModel.find(searchQuery);
+
+  res
+    .status(200)
+    .json(
+      new ApiResponse(
+        StatusCodes.OK,
+        "SupplierName dropdown fetched successfully....",
+        list
+      )
+    );
+});

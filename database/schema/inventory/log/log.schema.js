@@ -214,16 +214,67 @@ const log_invoice_schema = new mongoose.Schema(
   }
 );
 
-const log_inventory_items_details = mongoose.model(
+export const log_inventory_items_details = mongoose.model(
   "log_inventory_items_details",
   log_item_details_schema
 );
-const log_inventory_invoice_details = mongoose.model(
+export const log_inventory_invoice_details = mongoose.model(
   "log_inventory_invoice_details",
   log_invoice_schema
 );
 
-export default {
-  log_inventory_items_details,
-  log_inventory_invoice_details,
-};
+const log_inventory_items_view_schema = new mongoose.Schema(
+  {},
+  {
+    strict: false,
+    autoCreate: false,
+    autoIndex: false,
+  }
+);
+
+export const log_inventory_items_view_modal = mongoose.model(
+  "log_inventory_items_view",
+  log_inventory_items_view_schema
+);
+
+(async function () {
+  await log_inventory_items_view_modal.createCollection({
+    viewOn: "log_inventory_items_details",
+    pipeline: [
+      {
+        $sort: {
+          updatedAt: 1,
+          _id: 1,
+        },
+      },
+      {
+        $lookup: {
+          from: "log_inventory_invoice_details",
+          localField: "invoice_id",
+          foreignField: "_id",
+          as: "mdf_invoice_details",
+        },
+      },
+      {
+        $unwind: {
+          path: "$log_invoice_details",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "created_by",
+          foreignField: "_id",
+          as: "created_user",
+        },
+      },
+      {
+        $unwind: {
+          path: "$created_user",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+    ],
+  });
+})();
