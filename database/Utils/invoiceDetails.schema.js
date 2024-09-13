@@ -35,17 +35,33 @@ const invoice_details = new mongoose.Schema({
     type: Number,
     default: 0,
   },
+  isFreightInclude: {
+    type: Boolean,
+    default: false,
+  },
   load_unload: {
     type: Number,
     default: 0,
+  },
+  isLoadUnloadInclude: {
+    type: Boolean,
+    default: false,
   },
   insurance: {
     type: Number,
     default: 0,
   },
+  isInsuranceInclude: {
+    type: Boolean,
+    default: false,
+  },
   other: {
     type: Number,
     default: 0,
+  },
+  isOtherInclude: {
+    type: Boolean,
+    default: false,
   },
   other_for_import: {
     type: Number,
