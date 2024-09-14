@@ -236,7 +236,7 @@ export const log_inventory_items_view_model = mongoose.model("log_inventory_item
           from: "log_inventory_invoice_details",
           localField: "invoice_id",
           foreignField: "_id",
-          as: "mdf_invoice_details",
+          as: "log_invoice_details",
         },
       },
       {
