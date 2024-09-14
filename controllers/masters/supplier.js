@@ -6,6 +6,7 @@ import ApiError from "../../utils/errors/apiError.js";
 import { StatusCodes } from "../../utils/constants.js";
 import ApiResponse from "../../utils/ApiResponse.js";
 import supplierBranchModel from "../../database/schema/masters/supplier.branches.schema.js";
+import path from "path";
 export const AddSupplierMaster = catchAsync(async (req, res) => {
   const { supplier_name, supplier_type } = req.body;
   const requiredFiedls = ["supplier_name", "supplier_type"];
@@ -246,6 +247,74 @@ export const addBranchToSupplier = catchAsync(async (req, res) => {
   );
 });
 
+//old
+// export const fetchAllSupplierWithBranchesDetails = catchAsync(
+//   async (req, res) => {
+//     const { query, sortField, sortOrder, page, limit } = req.query;
+//     const pageInt = parseInt(page) || 1;
+//     const limitInt = parseInt(limit) || 10;
+//     const skipped = (pageInt - 1) * limitInt;
+
+//     const sortDirection = sortOrder === "desc" ? -1 : 1;
+//     const sortObj = sortField ? { [sortField]: sortDirection } : {};
+
+//     const searchQuery = query
+//       ? {
+//           $or: [
+//             { "contact_person.name": { $regex: query, $options: "i" } },
+//             {
+//               "supplierDetails.supplier_name": { $regex: query, $options: "i" },
+//             },
+//             {
+//               "supplierDetails.supplier_type": { $regex: query, $options: "i" },
+//             },
+//           ],
+//         }
+//       : {};
+
+//     const pipeline = [
+//       { $match: searchQuery },
+//       {
+//         $lookup: {
+//           from: "suppliers",
+//           localField: "supplier_id",
+//           foreignField: "_id",
+//           as: "supplierDetails",
+//         },
+//       },
+
+//       {
+//         $unwind: "$supplierDetails",
+//       },
+//       { $skip: skipped },
+//       { $limit: limitInt },
+//       // { $sort: sortObj }
+//     ];
+
+//     if (Object.keys(sortObj).length > 0) {
+//       pipeline.push({ $sort: sortObj });
+//     }
+
+//     const allDetails = await supplierBranchModel.aggregate(pipeline);
+
+//     if (allDetails.length === 0) {
+//       return res.json(new ApiResponse(StatusCodes.OK, "NO Data found..."));
+//     }
+//     // const totalPage = allDetails.length;
+//     const totalDocs = await supplierBranchModel.countDocuments({
+//       ...searchQuery,
+//     });
+//     const totalPage = Math.ceil(totalDocs / limitInt);
+//     return res.json(
+//       new ApiResponse(StatusCodes.OK, "All Details fetched succesfully..", {
+//         allDetails,
+//         totalPage,
+//       })
+//     );
+//   }
+// );
+
+//new
 export const fetchAllSupplierWithBranchesDetails = catchAsync(
   async (req, res) => {
     const { query, sortField, sortOrder, page, limit } = req.query;
@@ -259,29 +328,105 @@ export const fetchAllSupplierWithBranchesDetails = catchAsync(
     const searchQuery = query
       ? {
           $or: [
-            { "contact_person.name": { $regex: query, $options: "i" } },
             {
-              "supplierDetails.supplier_name": { $regex: query, $options: "i" },
+              "supplierDetails.contact_person.name": {
+                $regex: query,
+                $options: "i",
+              },
             },
             {
-              "supplierDetails.supplier_type": { $regex: query, $options: "i" },
+              "supplierDetails.state": {
+                $regex: query,
+                $options: "i",
+              },
+            },
+            {
+              "supplierDetails.country": {
+                $regex: query,
+                $options: "i",
+              },
+            },
+            {
+              "supplierDetails.contact_person.state": {
+                $regex: query,
+                $options: "i",
+              },
+            },
+            {
+              "supplierDetails.contact_person.city": {
+                $regex: query,
+                $options: "i",
+              },
+            },
+            {
+              "supplier_name": { $regex: query, $options: "i" },
+            },
+            {
+              "supplier_type": { $regex: query, $options: "i" },
             },
           ],
         }
       : {};
+    // const searchQuery = query
+    //   ? {
+    //       $or: [
+    //         {
+    //           supplierDetails: {
+    //             $elemMatch: {
+    //               contact_person: {
+    //                 $elemMatch: {
+    //                   name: { $regex: query, $options: "i" },
+    //                 },
+    //               },
+    //             },
+    //           },
+    //         },
+    //         {
+    //           supplierDetails: {
+    //             $elemMatch: {
+    //               state: { $regex: query, $options: "i" },
+    //             },
+    //           },
+    //         },
+    //         {
+    //           supplierDetails: {
+    //             $elemMatch: {
+    //               country: { $regex: query, $options: "i" },
+    //             },
+    //           },
+    //         },
+    //         {
+    //           supplierDetails: {
+    //             $elemMatch: {
+    //               city: { $regex: query, $options: "i" },
+    //             },
+    //           },
+    //         },
+    //         {
+    //           supplier_name: { $regex: query, $options: "i" },
+    //         },
+    //         {
+    //           supplier_type: { $regex: query, $options: "i" },
+    //         },
+    //       ],
+    //     }
+    //   : {};
 
+    console.log("query -> ", searchQuery);
     const pipeline = [
-      { $match: searchQuery },
       {
         $lookup: {
-          from: "suppliers",
-          localField: "supplier_id",
-          foreignField: "_id",
+          from: "supplier_branches",
+          localField: "_id",
+          foreignField: "supplier_id",
           as: "supplierDetails",
         },
       },
 
-      { $unwind: "$supplierDetails" },
+      // {
+      //   $unwind: "$supplierDetails",
+      // },
+      { $match: searchQuery },
       { $skip: skipped },
       { $limit: limitInt },
       // { $sort: sortObj }
@@ -290,14 +435,17 @@ export const fetchAllSupplierWithBranchesDetails = catchAsync(
     if (Object.keys(sortObj).length > 0) {
       pipeline.push({ $sort: sortObj });
     }
-    console.log("pipeline => ", pipeline);
-    const allDetails = await supplierBranchModel.aggregate(pipeline);
-    console.log("details => ", allDetails);
+
+    const allDetails = await SupplierModel.aggregate(pipeline);
 
     if (allDetails.length === 0) {
       return res.json(new ApiResponse(StatusCodes.OK, "NO Data found..."));
     }
-    const totalPage = allDetails.length;
+    // const totalPage = allDetails.length;
+    const totalDocs = await SupplierModel.countDocuments({
+      ...searchQuery,
+    });
+    const totalPage = Math.ceil(totalDocs / limitInt);
     return res.json(
       new ApiResponse(StatusCodes.OK, "All Details fetched succesfully..", {
         allDetails,
@@ -306,7 +454,6 @@ export const fetchAllSupplierWithBranchesDetails = catchAsync(
     );
   }
 );
-
 export const updateSupplierBranchById = catchAsync(async (req, res) => {
   const { id } = req.query;
   const updateData = req.body;
