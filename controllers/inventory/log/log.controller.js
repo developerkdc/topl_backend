@@ -158,6 +158,7 @@ export const add_log_inventory = catchAsync(async (req, res, next) => {
       })
     );
   } catch (error) {
+    console.log(error);
     await session.abortTransaction();
     session.endSession();
     return next(error);

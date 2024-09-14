@@ -146,7 +146,7 @@ const log_invoice_schema = new mongoose.Schema(
               name: {
                 type: String,
                 required: [true, "Contact person name is required"],
-                unique: [true, "Contact person name is required"],
+                // unique: [true, "Contact person name is required"],
                 trim: true,
               },
               email: {
