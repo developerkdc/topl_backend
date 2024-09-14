@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import invoice_details from "../../../Utils/invoiceDetails.schema";
+import invoice_details from "../../../Utils/invoiceDetails.schema.js";
 
 const log_item_details_schema = new mongoose.Schema({
   item_sr_no: {
@@ -203,8 +203,8 @@ const log_invoice_schema = new mongoose.Schema(
   }
 );
 
-export const log_inventory_items_details = mongoose.model("log_inventory_items_details", log_item_details_schema);
-export const log_inventory_invoice_details = mongoose.model("log_inventory_invoice_details", log_invoice_schema);
+export const log_inventory_items_model = mongoose.model("log_inventory_items_details", log_item_details_schema);
+export const log_inventory_invoice_model = mongoose.model("log_inventory_invoice_details", log_invoice_schema);
 
 const log_inventory_items_view_schema = new mongoose.Schema(
   {},
@@ -215,10 +215,10 @@ const log_inventory_items_view_schema = new mongoose.Schema(
   }
 );
 
-export const log_inventory_items_view_modal = mongoose.model("log_inventory_items_view", log_inventory_items_view_schema);
+export const log_inventory_items_view_model = mongoose.model("log_inventory_items_view", log_inventory_items_view_schema);
 
 (async function () {
-  await log_inventory_items_view_modal.createCollection({
+  await log_inventory_items_view_model.createCollection({
     viewOn: "log_inventory_items_details",
     pipeline: [
       {

@@ -138,13 +138,13 @@ export const item_sr_no_dropdown = catchAsync(async (req,res,next)=>{
     })
 });
 
-export const invoice_sr_no_dropdown = catchAsync(async (req,res,next)=>{
+export const inward_sr_no_dropdown = catchAsync(async (req,res,next)=>{
     const item_sr_no = await flitch_inventory_invoice_model.distinct("inward_sr_no");
     return res.status(200).json({
         statusCode:200,
         status:"success",
         data:item_sr_no,
-        message:"Invoice Sr No Dropdown fetched successfully",
+        message:"Inward Sr No Dropdown fetched successfully",
     })
 })
 
