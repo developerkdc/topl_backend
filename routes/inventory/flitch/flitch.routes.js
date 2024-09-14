@@ -5,7 +5,7 @@ import {
   edit_flitch_invoice_inventory,
   edit_flitch_item_inventory,
   flitchLogsCsv,
-  invoice_sr_no_dropdown,
+  inward_sr_no_dropdown,
   item_sr_no_dropdown,
   listing_flitch_inventory,
 } from "../../../controllers/inventory/flitch/flitch.controller.js";
@@ -26,7 +26,7 @@ flitch_router.post("/download-excel-flitch-logs", flitchLogsCsv);
 
 //Dropdowns
 flitch_router.get("/item-srno-dropdown", item_sr_no_dropdown);
-flitch_router.get("/invoice-srno-dropdown", invoice_sr_no_dropdown);
+flitch_router.get("/inward-srno-dropdown", inward_sr_no_dropdown);
 
 
 export default flitch_router;

@@ -49,6 +49,7 @@ import coreInventoryRoutes from "./routes/inventory/core/core.routes.js";
 import fleecePaperRoutes from "./routes/inventory/fleecePaper/fleecePaper.routes.js";
 import crossCuttingFactoryRoutes from "./routes/factory/crossCutting/crossCutting.routes.js";
 import flitchingFactoryRoutes from "./routes/factory/flitching/flitching.routes.js";
+import logRouter from "./routes/inventory/log/log.routes.js"
 import fs from "fs";
 import path from "path";
 
@@ -112,9 +113,10 @@ app.use(
 app.use(`/api/${Configs.server.version}/department-master`, departmentRouter);
 app.use(`/api/${Configs.server.version}/machine-master`, machineRouter);
 app.use(`/api/${Configs.server.version}/series-master`, seriesRouter);
-app.use(`/api/${Configs.server.version}/flitch-inventory`, flitch_router);
 
 // inventory
+app.use(`/api/${Configs.server.version}/log-inventory`, logRouter);
+app.use(`/api/${Configs.server.version}/flitch-inventory`, flitch_router);
 app.use(
   `/api/${Configs.server.version}/other-goods-inventory`,
   otherGoodsInventoryRouter
