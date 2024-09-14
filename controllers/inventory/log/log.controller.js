@@ -51,7 +51,7 @@ export const listing_log_inventory = catchAsync(async (req, res, next) => {
   }
 
   const filterData = dynamic_filter(filter);
-
+  
   const match_query = {
     ...filterData,
     ...search_query,
@@ -86,10 +86,17 @@ export const listing_log_inventory = catchAsync(async (req, res, next) => {
   const List_log_inventory_details =
     await log_inventory_items_view_model.aggregate(aggregate_stage);
 
+  const totalCount = await log_inventory_items_view_model.countDocuments({
+    ...match_query
+  });
+
+  const totalPage = totalCount
+
   return res.status(200).json({
     statusCode: 200,
     status: "success",
     data: List_log_inventory_details,
+    totalPage:totalPage,
     message: "Data fetched successfully",
   });
 });
@@ -299,22 +306,22 @@ export const logLogsCsv = catchAsync(async (req, res) => {
   );
 });
 
-export const item_sr_no_dropdown = catchAsync(async (req,res,next)=>{
+export const item_sr_no_dropdown = catchAsync(async (req, res, next) => {
   const item_sr_no = await log_inventory_items_model.distinct("item_sr_no");
   return res.status(200).json({
-      statusCode:200,
-      status:"success",
-      data:item_sr_no,
-      message:"Item Sr No Dropdown fetched successfully",
+    statusCode: 200,
+    status: "success",
+    data: item_sr_no,
+    message: "Item Sr No Dropdown fetched successfully",
   })
 });
 
-export const inward_sr_no_dropdown = catchAsync(async (req,res,next)=>{
+export const inward_sr_no_dropdown = catchAsync(async (req, res, next) => {
   const item_sr_no = await log_inventory_invoice_model.distinct("inward_sr_no");
   return res.status(200).json({
-      statusCode:200,
-      status:"success",
-      data:item_sr_no,
-      message:"Inward Sr No Dropdown fetched successfully",
+    statusCode: 200,
+    status: "success",
+    data: item_sr_no,
+    message: "Inward Sr No Dropdown fetched successfully",
   })
 })

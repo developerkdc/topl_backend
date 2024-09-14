@@ -120,10 +120,15 @@ export const listing_flitch_inventory = catchAsync(async (req, res, next) => {
   const List_flitch_inventory_details =
     await flitch_inventory_items_view_model.aggregate(aggregate_stage);
 
+  const totalPage = await flitch_inventory_items_view_model.countDocuments({
+    ...match_query
+  });
+
   return res.status(200).json({
     statusCode: 200,
     status: "success",
     data: List_flitch_inventory_details,
+    totalPage:totalPage,
     message: "Data fetched successfully",
   });
 });
