@@ -84,6 +84,9 @@ const log_item_details_schema = new mongoose.Schema({
   },
 });
 
+log_item_details_schema.index({ item_sr_no: 1 });
+log_item_details_schema.index({ item_sr_no: 1, invoice_id: 1 }, { unique: true });
+
 const log_invoice_schema = new mongoose.Schema(
   {
     inward_sr_no: {
@@ -146,7 +149,6 @@ const log_invoice_schema = new mongoose.Schema(
               name: {
                 type: String,
                 required: [true, "Contact person name is required"],
-                // unique: [true, "Contact person name is required"],
                 trim: true,
               },
               email: {
@@ -202,6 +204,8 @@ const log_invoice_schema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+log_invoice_schema.index({ inward_sr_no: 1 });
 
 export const log_inventory_items_model = mongoose.model("log_inventory_items_details", log_item_details_schema);
 export const log_inventory_invoice_model = mongoose.model("log_inventory_invoice_details", log_invoice_schema);
