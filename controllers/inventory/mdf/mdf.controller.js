@@ -292,7 +292,7 @@ export const mdfLogsCsv = catchAsync(async (req, res) => {
   const allData = await mdf_inventory_items_view_modal.find(match_query);
 
   const excelLink = await createMdfLogsExcel(allData);
-  console.log("link => ", excelLink);
+  console.log("link => ", allData);
 
   return res.json(
     new ApiResponse(StatusCodes.OK, "Csv downloaded successfully...", excelLink)

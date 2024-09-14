@@ -78,16 +78,30 @@ export const createMdfLogsExcel = async (newData) => {
 
     newData?.forEach((data) => {
       try {
-        let contact_person_name;
-        let contact_person_email;
-        let contact_person_mobile_number;
-        let contact_person_designation;
+        let contactPersonData = [];
+
         data?.supplier_details?.branch_detail?.contact_person?.forEach((cp) => {
-          (contact_person_name = cp.name),
-            (contact_person_email = cp.email),
-            (contact_person_mobile_number = cp.mobile_number),
-            (contact_person_designation = cp.designation);
+          contactPersonData.push({
+            contact_person_name: cp.name,
+            contact_person_email: cp.email,
+            contact_person_mobile_number: cp.mobile_number,
+            contact_person_designation: cp.designation,
+          });
         });
+
+        const contactPersonNames = contactPersonData
+          .map((cp) => cp.contact_person_name)
+          .join(", ");
+        const contactPersonEmails = contactPersonData
+          .map((cp) => cp.contact_person_email)
+          .join(", ");
+        const contactPersonMobileNumbers = contactPersonData
+          .map((cp) => cp.contact_person_mobile_number)
+          .join(", ");
+        const contactPersonDesignations = contactPersonData
+          .map((cp) => cp.contact_person_designation)
+          .join(", ");
+
         const rowData = {
           //   inward_sr_no:  data.invoice_Details.,
           supplier_item_name: data.supplier_item_name,
@@ -119,10 +133,12 @@ export const createMdfLogsExcel = async (newData) => {
           supplier_type: data.supplier_details.company_details.supplier_type,
           branch_name: data.supplier_details.branch_detail.branch_name,
 
-          contact_person_name: contact_person_name,
-          contact_person_email: contact_person_email,
-          contact_person_mobile_number: contact_person_mobile_number,
-          contact_person_designation: contact_person_designation,
+          contact_person_name: contactPersonNames,
+          contact_person_email: contactPersonEmails,
+          contact_person_mobile_number: contactPersonMobileNumbers,
+
+          contact_person_designation: contactPersonDesignations,
+
           address: data.supplier_details.branch_detail.address,
           city: data.supplier_details.branch_detail.city,
           state: data.supplier_details.branch_detail.state,

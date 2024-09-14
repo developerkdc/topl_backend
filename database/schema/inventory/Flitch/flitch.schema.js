@@ -246,13 +246,13 @@ const flitch_inventory_items_view_schema = new mongoose.Schema(
   }
 );
 
-export const flitch_inventory_items_view_modal = mongoose.model(
+export const flitch_inventory_items_view_model = mongoose.model(
   "flitch_inventory_items_view",
   flitch_inventory_items_view_schema
 );
 
 (async function () {
-  await flitch_inventory_items_view_modal.createCollection({
+  await flitch_inventory_items_view_model.createCollection({
     viewOn: "flitch_inventory_items_details",
     pipeline: [
       {
@@ -293,11 +293,11 @@ export const flitch_inventory_items_view_modal = mongoose.model(
   });
 })();
 
-export const flitch_inventory_items_details = mongoose.model(
+export const flitch_inventory_items_model = mongoose.model(
   "flitch_inventory_items_details",
   item_details_schema
 );
-export const flitch_inventory_invoice_details = mongoose.model(
+export const flitch_inventory_invoice_model = mongoose.model(
   "flitch_inventory_invoice_details",
   flitch_invoice_schema
 );
