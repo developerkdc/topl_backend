@@ -90,7 +90,7 @@ export const listing_log_inventory = catchAsync(async (req, res, next) => {
     ...match_query
   });
 
-  const totalPage = totalCount
+  const totalPage = Math.ceil(totalCount / limit)
 
   return res.status(200).json({
     statusCode: 200,
