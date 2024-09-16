@@ -12,7 +12,7 @@ const router = Router();
 
 router.post("/add-department", CheckRoleAndTokenAccess, addDepartment);
 router.post("/update-department/:id", CheckRoleAndTokenAccess, editDepartment);
-router.get("/list-department", CheckRoleAndTokenAccess, listDepartmentDetails);
+router.post("/list-department", CheckRoleAndTokenAccess, listDepartmentDetails);
 router.get("/all-depts", fetchAllDepartments);
 router.get("/dropdown-department-master", DropdownDepartmentMaster);
 export default router;

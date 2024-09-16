@@ -6,6 +6,9 @@ const itemSubCategorySchema = new mongoose.Schema(
       type: Number,
       default: null,
     },
+    remark: {
+      type: String,
+    },
     name: {
       type: String,
       required: [true, "subcategory name is required"],

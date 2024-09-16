@@ -11,6 +11,6 @@ const router = Router();
 
 router.post("/add-series", CheckRoleAndTokenAccess, addSeries);
 router.post("/update-series/:id", CheckRoleAndTokenAccess, editSeries);
-router.get("/list-series", CheckRoleAndTokenAccess, listSeriesDetails);
+router.post("/list-series", CheckRoleAndTokenAccess, listSeriesDetails);
 router.get("/dropdown-series-master", DropdownSeriesNameMaster);
 export default router;

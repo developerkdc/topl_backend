@@ -51,7 +51,7 @@ export const listing_log_inventory = catchAsync(async (req, res, next) => {
   }
 
   const filterData = dynamic_filter(filter);
-  
+
   const match_query = {
     ...filterData,
     ...search_query,
@@ -87,16 +87,16 @@ export const listing_log_inventory = catchAsync(async (req, res, next) => {
     await log_inventory_items_view_model.aggregate(aggregate_stage);
 
   const totalCount = await log_inventory_items_view_model.countDocuments({
-    ...match_query
+    ...match_query,
   });
 
-  const totalPage = totalCount
+  const totalPage = Math.ceil(totalCount / limit)
 
   return res.status(200).json({
     statusCode: 200,
     status: "success",
     data: List_log_inventory_details,
-    totalPage:totalPage,
+    totalPage: totalPage,
     message: "Data fetched successfully",
   });
 });
@@ -314,7 +314,7 @@ export const item_sr_no_dropdown = catchAsync(async (req, res, next) => {
     status: "success",
     data: item_sr_no,
     message: "Item Sr No Dropdown fetched successfully",
-  })
+  });
 });
 
 export const inward_sr_no_dropdown = catchAsync(async (req, res, next) => {
@@ -324,5 +324,5 @@ export const inward_sr_no_dropdown = catchAsync(async (req, res, next) => {
     status: "success",
     data: item_sr_no,
     message: "Inward Sr No Dropdown fetched successfully",
-  })
-})
+  });
+});

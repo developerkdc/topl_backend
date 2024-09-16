@@ -3,9 +3,10 @@ import catchAsync from "../../utils/errors/catchAsync.js";
 import ApiResponse from "../../utils/ApiResponse.js";
 import { StatusCodes } from "../../utils/constants.js";
 import departMentModel from "../../database/schema/masters/department.schema.js";
+import { DynamicSearch } from "../../utils/dynamicSearch/dynamic.js";
 
 export const addDepartment = catchAsync(async (req, res) => {
-  const { dept_name } = req.body;
+  const { dept_name, remark } = req.body;
 
   if (!dept_name) {
     return res.json(
@@ -39,6 +40,7 @@ export const addDepartment = catchAsync(async (req, res) => {
   const newDept = new departMentModel({
     sr_no: newMax,
     dept_name,
+    remark,
     created_by,
   });
   await newDept.save();
@@ -84,17 +86,39 @@ export const editDepartment = catchAsync(async (req, res) => {
 
 export const listDepartmentDetails = catchAsync(async (req, res) => {
   const { query, sortField, sortOrder, page, limit } = req.query;
+  const {
+    string,
+    boolean,
+    numbers,
+    arrayField = [],
+  } = req?.body?.searchFields || {};
   const pageInt = parseInt(page) || 1;
   const limitInt = parseInt(limit) || 10;
   const skipped = (pageInt - 1) * limitInt;
 
   const sortDirection = sortOrder === "desc" ? -1 : 1;
   const sortObj = sortField ? { [sortField]: sortDirection } : {};
-  const searchQuery = query
-    ? {
-        $or: [{ dept_name: { $regex: query, $options: "i" } }],
-      }
-    : {};
+  let searchQuery = {};
+  if (query != "" && req?.body?.searchFields) {
+    const searchdata = DynamicSearch(
+      query,
+      boolean,
+      numbers,
+      string,
+      arrayField
+    );
+    if (searchdata?.length == 0) {
+      return res.status(404).json({
+        statusCode: 404,
+        status: false,
+        data: {
+          user: [],
+        },
+        message: "Results Not Found",
+      });
+    }
+    searchQuery = searchdata;
+  }
 
   const pipeline = [
     {
@@ -105,12 +129,13 @@ export const listDepartmentDetails = catchAsync(async (req, res) => {
         as: "userDetails",
       },
     },
-    { $match: searchQuery },
     { $unwind: "$userDetails" },
+    { $match: { ...searchQuery } },
     {
       $project: {
         sr_no: 1,
         dept_name: 1,
+        remark: 1,
         createdAt: 1,
         created_by: 1,
         "userDetails.first_name": 1,

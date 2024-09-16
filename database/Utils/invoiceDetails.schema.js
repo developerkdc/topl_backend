@@ -7,7 +7,7 @@ const invoice_details = new mongoose.Schema({
     required: [true, "Invoice Date is required."],
   },
   invoice_no: {
-    type: Number,
+    type: String,
     unique: true,
     required: [true, "Invoice No is required."],
   },

@@ -96,15 +96,46 @@ export const listItemCategories = catchAsync(async (req, res) => {
 
   const sortDirection = sortOrder === "desc" ? -1 : 1;
   const sortObj = sortField ? { [sortField]: sortDirection } : {};
+  // const searchQuery = query
+  //   ? {
+  //       $or: [
+  //         { "category": { $regex: query, $options: "i" } },
+  //         { "calculate_unit": { $regex: query, $options: "i" } },
+  //         { "product_hsn_code": { $regex: query, $options: "i" } },
+  //         { "userDetails.first_name": { $regex: query, $options: "i" } },
+  //         { "userDetails.last_name": { $regex: query, $options: "i" } },
+  //         // { "createdAt": { $regex: query, $options: "i" } },
+  //       ],
+  //     }
+  //   : {};
   const searchQuery = query
     ? {
         $or: [
-          { category: { $regex: query, $options: "i" } },
-          { calculate_unit: { $regex: query, $options: "i" } },
-          { product_hsn_code: { $regex: query, $options: "i" } },
+          { "category": { $regex: query, $options: "i" } },
+          { "calculate_unit": { $regex: query, $options: "i" } },
+          { "product_hsn_code": { $regex: query, $options: "i" } },
+          { "userDetails.first_name": { $regex: query, $options: "i" } },
+          { "userDetails.last_name": { $regex: query, $options: "i" } },
+
+          ...(isValidDate(query)
+            ? [
+                {
+                  createdAt: {
+                    $gte: new Date(new Date(query).setHours(0, 0, 0, 0)), // Start of the day
+                    $lt: new Date(new Date(query).setHours(23, 59, 59, 999)), // End of the day
+                  },
+                },
+              ]
+            : []),
         ],
       }
     : {};
+
+  // Helper function to validate the date
+  function isValidDate(dateString) {
+    const date = new Date(dateString);
+    return !isNaN(date.getTime());
+  }
 
   const pipeline = [
     {
@@ -115,8 +146,8 @@ export const listItemCategories = catchAsync(async (req, res) => {
         as: "userDetails",
       },
     },
-    { $match: searchQuery },
     { $unwind: "$userDetails" },
+    { $match: searchQuery },
     {
       $project: {
         sr_no: 1,
