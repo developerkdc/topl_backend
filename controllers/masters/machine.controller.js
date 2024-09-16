@@ -2,6 +2,7 @@ import catchAsync from "../../utils/errors/catchAsync.js";
 import ApiResponse from "../../utils/ApiResponse.js";
 import { StatusCodes } from "../../utils/constants.js";
 import machineModel from "../../database/schema/masters/machine.schema.js";
+import { DynamicSearch } from "../../utils/dynamicSearch/dynamic.js";
 
 export const addMachine = catchAsync(async (req, res) => {
   const { machine_name, department } = req.body;
@@ -44,7 +45,7 @@ export const addMachine = catchAsync(async (req, res) => {
   await newMachine.save();
 
   return res.json(
-    new ApiResponse(StatusCodes.OK, "Machine created successfully", newDept)
+    new ApiResponse(StatusCodes.OK, "Machine created successfully", newMachine)
   );
 });
 
@@ -81,21 +82,39 @@ export const editMachineDetails = catchAsync(async (req, res) => {
 
 export const MachineDetails = catchAsync(async (req, res) => {
   const { query, sortField, sortOrder, page, limit } = req.query;
+  const {
+    string,
+    boolean,
+    numbers,
+    arrayField = [],
+  } = req?.body?.searchFields || {};
   const pageInt = parseInt(page) || 1;
   const limitInt = parseInt(limit) || 10;
   const skipped = (pageInt - 1) * limitInt;
 
   const sortDirection = sortOrder === "desc" ? -1 : 1;
   const sortObj = sortField ? { [sortField]: sortDirection } : {};
-  const searchQuery = query
-    ? {
-        $or: [
-          { machine_name: { $regex: query, $options: "i" } },
-          { "departmentDetails.dept_name": { $regex: query, $options: "i" } },
-          { "userDetails.first_name": { $regex: query, $options: "i" } },
-        ],
-      }
-    : {};
+  let searchQuery = {};
+  if (query != "" && req?.body?.searchFields) {
+    const searchdata = DynamicSearch(
+      query,
+      boolean,
+      numbers,
+      string,
+      arrayField
+    );
+    if (searchdata?.length == 0) {
+      return res.status(404).json({
+        statusCode: 404,
+        status: false,
+        data: {
+          user: [],
+        },
+        message: "Results Not Found",
+      });
+    }
+    searchQuery = searchdata;
+  }
 
   const pipeline = [
     {
@@ -114,11 +133,11 @@ export const MachineDetails = catchAsync(async (req, res) => {
         as: "departmentDetails",
       },
     },
-    { $match: searchQuery },
     { $unwind: { path: "$userDetails", preserveNullAndEmptyArrays: true } },
     {
       $unwind: { path: "$departmentDetails", preserveNullAndEmptyArrays: true },
     },
+    { $match: { ...searchQuery } },
     {
       $project: {
         sr_no: 1,

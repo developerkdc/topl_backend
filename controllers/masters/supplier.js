@@ -325,48 +325,69 @@ export const fetchAllSupplierWithBranchesDetails = catchAsync(
     const sortDirection = sortOrder === "desc" ? -1 : 1;
     const sortObj = sortField ? { [sortField]: sortDirection } : {};
 
-    const searchQuery = query
-      ? {
-          $or: [
-            {
-              "supplierDetails.contact_person.name": {
-                $regex: query,
-                $options: "i",
-              },
-            },
-            {
-              "supplierDetails.state": {
-                $regex: query,
-                $options: "i",
-              },
-            },
-            {
-              "supplierDetails.country": {
-                $regex: query,
-                $options: "i",
-              },
-            },
-            {
-              "supplierDetails.contact_person.state": {
-                $regex: query,
-                $options: "i",
-              },
-            },
-            {
-              "supplierDetails.contact_person.city": {
-                $regex: query,
-                $options: "i",
-              },
-            },
-            {
-              "supplier_name": { $regex: query, $options: "i" },
-            },
-            {
-              "supplier_type": { $regex: query, $options: "i" },
-            },
-          ],
-        }
-      : {};
+    // const searchQuery = query
+    //   ? {
+    //       $or: [
+    //         {
+    //           "supplierDetails.contact_person.name": {
+    //             $regex: query,
+    //             $options: "i",
+    //           },
+    //         },
+    //         {
+    //           "supplierDetails.contact_person.email": {
+    //             $regex: query,
+    //             $options: "i",
+    //           },
+    //         },
+    //         {
+    //           "supplierDetails.contact_person.designation": {
+    //             $regex: query,
+    //             $options: "i",
+    //           },
+    //         },
+    //         {
+    //           "supplierDetails.contact_person.mobile_number": {
+    //             $regex: query,
+    //             $options: "i",
+    //           },
+    //         },
+    //         {
+    //           "supplierDetails.state": {
+    //             $regex: query,
+    //             $options: "i",
+    //           },
+    //         },
+    //         {
+    //           "supplierDetails.country": {
+    //             $regex: query,
+    //             $options: "i",
+    //           },
+    //         },
+    //         {
+    //           "supplierDetails.state": {
+    //             $regex: query,
+    //             $options: "i",
+    //           },
+    //         },
+    //         {
+    //           "supplierDetails.city": {
+    //             $regex: query,
+    //             $options: "i",
+    //           },
+    //         },
+    //         {
+    //           "supplier_name": { $regex: query, $options: "i" },
+    //         },
+    //         {
+    //           "sr_no": Number(query),
+    //         },
+    //         {
+    //           "supplier_type": { $regex: query, $options: "i" },
+    //         },
+    //       ],
+    //     }
+    //   : {};
     // const searchQuery = query
     //   ? {
     //       $or: [
@@ -411,6 +432,68 @@ export const fetchAllSupplierWithBranchesDetails = catchAsync(
     //       ],
     //     }
     //   : {};
+    const searchQuery = query
+      ? {
+          $or: [
+            {
+              "supplierDetails.contact_person.name": {
+                $regex: query,
+                $options: "i",
+              },
+            },
+            {
+              "supplierDetails.contact_person.email": {
+                $regex: query,
+                $options: "i",
+              },
+            },
+            {
+              "supplierDetails.contact_person.designation": {
+                $regex: query,
+                $options: "i",
+              },
+            },
+            {
+              "supplierDetails.contact_person.mobile_number": {
+                $regex: query,
+                $options: "i",
+              },
+            },
+            {
+              "supplierDetails.state": {
+                $regex: query,
+                $options: "i",
+              },
+            },
+            {
+              "supplierDetails.country": {
+                $regex: query,
+                $options: "i",
+              },
+            },
+            {
+              "supplierDetails.city": {
+                $regex: query,
+                $options: "i",
+              },
+            },
+            {
+              "supplier_name": { $regex: query, $options: "i" },
+            },
+            {
+              "supplier_type": { $regex: query, $options: "i" },
+            },
+            // Only search sr_no if query is a number
+            ...(isNaN(Number(query))
+              ? []
+              : [
+                  {
+                    "sr_no": Number(query),
+                  },
+                ]),
+          ],
+        }
+      : {};
 
     console.log("query -> ", searchQuery);
     const pipeline = [
