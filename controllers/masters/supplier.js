@@ -478,6 +478,12 @@ export const fetchAllSupplierWithBranchesDetails = catchAsync(
               },
             },
             {
+              "supplierDetails.address": {
+                $regex: query,
+                $options: "i",
+              },
+            },
+            {
               "supplier_name": { $regex: query, $options: "i" },
             },
             {
@@ -623,6 +629,12 @@ export const fetchAllBranchesBySupplierId = catchAsync(async (req, res) => {
   const searchQuery = query
     ? {
         $or: [
+          { "branch_name": { $regex: query, $options: "i" } },
+          { "address": { $regex: query, $options: "i" } },
+          { "country": { $regex: query, $options: "i" } },
+          { "city": { $regex: query, $options: "i" } },
+          { "pincode": { $regex: query, $options: "i" } },
+          { "gst_number": { $regex: query, $options: "i" } },
           { "contact_person.name": { $regex: query, $options: "i" } },
           { "supplierDetails.supplier_name": { $regex: query, $options: "i" } },
           { "supplierDetails.supplier_type": { $regex: query, $options: "i" } },
@@ -637,9 +649,6 @@ export const fetchAllBranchesBySupplierId = catchAsync(async (req, res) => {
 
   const pipeline = [
     {
-      $match: { ...searchQuery, supplier_id: new mongoose.Types.ObjectId(id) },
-    },
-    {
       $lookup: {
         from: "suppliers",
         localField: "supplier_id",
@@ -648,6 +657,13 @@ export const fetchAllBranchesBySupplierId = catchAsync(async (req, res) => {
       },
     },
     { $unwind: "$supplierDetails" },
+    {
+      $match: {
+        ...searchQuery,
+        supplier_id: new mongoose.Types.ObjectId(id),
+        is_main_branch: false,
+      },
+    },
     { $skip: skipped },
     { $limit: limitInt },
     // { $sort: sortObj },
