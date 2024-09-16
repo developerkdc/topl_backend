@@ -1,20 +1,27 @@
-import mongoose from "mongoose"
+import mongoose from "mongoose";
 
-const departMentSchema = new mongoose.Schema({
+const departMentSchema = new mongoose.Schema(
+  {
     sr_no: Number,
     dept_name: {
-        type: String,
-        required: [true, "department name is required"]
+      type: String,
+      required: [true, "department name is required"],
+    },
+    remark: {
+      type: String,
     },
     created_by: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "user",
-        default: null
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "user",
+      default: null,
     },
     deleted_at: {
-        type: Date,
-    }
-}, { timestamps: true });
+      type: Date,
+    },
+  },
+  { timestamps: true }
+);
 
-const departMentModel = mongoose.models.department || mongoose.model('department', departMentSchema);
+const departMentModel =
+  mongoose.models.department || mongoose.model("department", departMentSchema);
 export default departMentModel;

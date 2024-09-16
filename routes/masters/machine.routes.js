@@ -10,7 +10,7 @@ const router = Router();
 
 router.post("/add-machine", CheckRoleAndTokenAccess, addMachine);
 router.post("/update-machine", CheckRoleAndTokenAccess, editMachineDetails);
-router.get("/list-machine", CheckRoleAndTokenAccess, MachineDetails);
+router.post("/list-machine", CheckRoleAndTokenAccess, MachineDetails);
 router.get("/dropdown-machine-master", DropdownMachineNameMaster);
 
 export default router;

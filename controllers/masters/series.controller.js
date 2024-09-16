@@ -1,10 +1,11 @@
 import seriesModel from "../../database/schema/masters/series.schema.js";
 import ApiResponse from "../../utils/ApiResponse.js";
 import { StatusCodes } from "../../utils/constants.js";
+import { DynamicSearch } from "../../utils/dynamicSearch/dynamic.js";
 import catchAsync from "../../utils/errors/catchAsync.js";
 
 export const addSeries = catchAsync(async (req, res) => {
-  const { series_name } = req.body;
+  const { series_name, remark } = req.body;
 
   if (!series_name) {
     return res.json(
@@ -39,6 +40,7 @@ export const addSeries = catchAsync(async (req, res) => {
   const newSeries = new seriesModel({
     sr_no: newMax,
     series_name,
+    remark,
     created_by,
   });
   await newSeries.save();
@@ -81,18 +83,39 @@ export const editSeries = catchAsync(async (req, res) => {
 
 export const listSeriesDetails = catchAsync(async (req, res) => {
   const { query, sortField, sortOrder, page, limit } = req.query;
+  const {
+    string,
+    boolean,
+    numbers,
+    arrayField = [],
+  } = req?.body?.searchFields || {};
   const pageInt = parseInt(page) || 1;
   const limitInt = parseInt(limit) || 10;
   const skipped = (pageInt - 1) * limitInt;
 
   const sortDirection = sortOrder === "desc" ? -1 : 1;
   const sortObj = sortField ? { [sortField]: sortDirection } : {};
-  const searchQuery = query
-    ? {
-        $or: [{ series_name: { $regex: query, $options: "i" } }],
-      }
-    : {};
-
+  let searchQuery = {};
+  if (query != "" && req?.body?.searchFields) {
+    const searchdata = DynamicSearch(
+      query,
+      boolean,
+      numbers,
+      string,
+      arrayField
+    );
+    if (searchdata?.length == 0) {
+      return res.status(404).json({
+        statusCode: 404,
+        status: false,
+        data: {
+          user: [],
+        },
+        message: "Results Not Found",
+      });
+    }
+    searchQuery = searchdata;
+  }
   const pipeline = [
     {
       $lookup: {
@@ -102,12 +125,13 @@ export const listSeriesDetails = catchAsync(async (req, res) => {
         as: "userDetails",
       },
     },
-    { $match: searchQuery },
     { $unwind: "$userDetails" },
+    { $match: { ...searchQuery } },
     {
       $project: {
         sr_no: 1,
         series_name: 1,
+        remark: 1,
         createdAt: 1,
         created_by: 1,
         "userDetails.first_name": 1,

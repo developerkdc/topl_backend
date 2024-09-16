@@ -29,7 +29,7 @@ router.post(
   CheckRoleAndTokenAccess,
   UpdateItemNameMaster
 );
-router.get(
+router.post(
   "/list-item-name-master",
   CheckRoleAndTokenAccess,
   ListItemNameMaster

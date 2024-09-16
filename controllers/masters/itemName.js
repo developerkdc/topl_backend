@@ -75,20 +75,41 @@ export const UpdateItemNameMaster = catchAsync(async (req, res) => {
 
 export const ListItemNameMaster = catchAsync(async (req, res) => {
   const { query, sortField, sortOrder, page, limit } = req.query;
+  const {
+    string,
+    boolean,
+    numbers,
+    arrayField = [],
+  } = req?.body?.searchFields || {};
   const pageInt = parseInt(page) || 1;
   const limitInt = parseInt(limit) || 10;
   const skipped = (pageInt - 1) * limitInt;
 
   const sortDirection = sortOrder === "desc" ? -1 : 1;
   const sortObj = sortField ? { [sortField]: sortDirection } : {};
-  const searchQuery = query
-    ? {
-        $or: [{ item_name: { $regex: query, $options: "i" } }],
-      }
-    : {};
+  let searchQuery = {};
+  if (query != "" && req?.body?.searchFields) {
+    const searchdata = DynamicSearch(
+      query,
+      boolean,
+      numbers,
+      string,
+      arrayField
+    );
+    if (searchdata?.length == 0) {
+      return res.status(404).json({
+        statusCode: 404,
+        status: false,
+        data: {
+          user: [],
+        },
+        message: "Results Not Found",
+      });
+    }
+    searchQuery = searchdata;
+  }
 
   const pipeline = [
-    { $match: searchQuery },
     {
       $lookup: {
         from: "users",
@@ -107,6 +128,7 @@ export const ListItemNameMaster = catchAsync(async (req, res) => {
     },
     { $unwind: { path: "$userDetails", preserveNullAndEmptyArrays: true } },
     // { $unwind: { path: '$categoryDetails', preserveNullAndEmptyArrays: true } },
+    { $match: { ...searchQuery } },
 
     {
       $project: {

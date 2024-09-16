@@ -4,8 +4,9 @@ import ApiResponse from "../../utils/ApiResponse.js";
 import { StatusCodes } from "../../utils/constants.js";
 import itemCategoryModel from "../../database/schema/masters/item.category.schema.js";
 import itemSubCategoryModel from "../../database/schema/masters/item.subcategory.schema.js";
+import { DynamicSearch } from "../../utils/dynamicSearch/dynamic.js";
 export const addItems = catchAsync(async (req, res) => {
-  const { name } = req.body;
+  const { name, remark } = req.body;
 
   if (!name) {
     return res.json(
@@ -40,6 +41,7 @@ export const addItems = catchAsync(async (req, res) => {
   const newItemCatgory = new itemSubCategoryModel({
     sr_no: newMax,
     name,
+    remark,
     created_by,
   });
   await newItemCatgory.save();
@@ -96,17 +98,54 @@ export const editItemSubCategory = catchAsync(async (req, res) => {
 
 export const listItemSubCategories = catchAsync(async (req, res) => {
   const { query, sortField, sortOrder, page, limit } = req.query;
+  const {
+    string,
+    boolean,
+    numbers,
+    arrayField = [],
+  } = req?.body?.searchFields || {};
   const pageInt = parseInt(page) || 1;
   const limitInt = parseInt(limit) || 10;
   const skipped = (pageInt - 1) * limitInt;
 
   const sortDirection = sortOrder === "desc" ? -1 : 1;
   const sortObj = sortField ? { [sortField]: sortDirection } : {};
-  const searchQuery = query
-    ? {
-        $or: [{ name: { $regex: query, $options: "i" } }],
-      }
-    : {};
+  // const searchQuery = query
+  //   ? {
+  //       $or: [{ name: { $regex: query, $options: "i" } }],
+  //     }
+  //   : {};
+  let searchQuery = {};
+  if (query != "" && req?.body?.searchFields) {
+    const searchdata = DynamicSearch(
+      query,
+      boolean,
+      numbers,
+      string,
+      arrayField
+    );
+    if (searchdata?.length == 0) {
+      return res.status(404).json({
+        statusCode: 404,
+        status: false,
+        data: {
+          user: [],
+        },
+        message: "Results Not Found",
+      });
+    }
+    searchQuery = searchdata;
+  }
+
+  // const { to, from, ...data } = req?.body?.filters || {};
+  // const matchQuery = data || {};
+
+  // if (to && from) {
+  //   matchQuery["createdAt "] = {
+  //     $gte: new Date(from), // Greater than or equal to "from" date
+  //     $lte: new Date(to), // Less than or equal to "to" date
+  //   };
+  // }
 
   const pipeline = [
     {
@@ -117,12 +156,13 @@ export const listItemSubCategories = catchAsync(async (req, res) => {
         as: "userDetails",
       },
     },
-    { $match: searchQuery },
     { $unwind: "$userDetails" },
+    { $match: { ...searchQuery } },
     {
       $project: {
         sr_no: 1,
         name: 1,
+        remark: 1,
         createdAt: 1,
         created_by: 1,
         "userDetails.first_name": 1,
