@@ -11,6 +11,7 @@ import { DynamicSearch } from "../../../utils/dynamicSearch/dynamic.js";
 import { dynamic_filter } from "../../../utils/dymanicFilter.js";
 import { StatusCodes } from "../../../utils/constants.js";
 import { createMdfLogsExcel } from "../../../config/downloadExcel/Logs/Inventory/mdf/mdf.js";
+import { createLogLogsExcel } from "../../../config/downloadExcel/Logs/Inventory/log/log.js";
 
 export const listing_log_inventory = catchAsync(async (req, res, next) => {
   const {
@@ -90,7 +91,7 @@ export const listing_log_inventory = catchAsync(async (req, res, next) => {
     ...match_query,
   });
 
-  const totalPage = Math.ceil(totalCount / limit)
+  const totalPage = Math.ceil(totalCount / limit);
 
   return res.status(200).json({
     statusCode: 200,
@@ -299,8 +300,8 @@ export const logLogsCsv = catchAsync(async (req, res) => {
 
   const allData = await log_inventory_items_view_model.find(match_query);
 
-  //   const excelLink = await createMdfLogsExcel(allData);
-  //   console.log("link => ", excelLink);
+  const excelLink = await createLogLogsExcel(allData);
+  console.log("link => ", excelLink);
 
   return res.json(
     new ApiResponse(StatusCodes.OK, "Csv downloaded successfully...", excelLink)
