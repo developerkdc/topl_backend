@@ -525,7 +525,10 @@ export const fetchAllSupplierWithBranchesDetails = catchAsync(
       pipeline.push({ $sort: sortObj });
     }
 
-    const allDetails = await SupplierModel.aggregate(pipeline);
+    const allDetails = await SupplierModel.aggregate(pipeline).collation({
+      locale: "en",
+      caseLevel: true,
+    });
 
     if (allDetails.length === 0) {
       return res.json(new ApiResponse(StatusCodes.OK, "NO Data found..."));
