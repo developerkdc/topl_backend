@@ -3,14 +3,14 @@ export const SomethingWrong = "Something went wrong, please try again.";
 export const UserNotFound = "User not found, please try again.";
 export const RoleNotFound = "Role not found, please try again.";
 export const LogedIn = "Login successfully.";
-export const EmployeeIDRequired = "Employee Id is a required.";
+export const UserNameRequired = "User Name is a required.";
 export const PassowrdRequired = "Password is a required.";
 export const EmailRequired = "Email is a required.";
 export const OtpRequired= "Otp is a required.";
 export const IdRequired= "Id is a required.";
 
-export const EmployeeIDExist = "Employee id is already exists.";
-export const EmployeeIDNotExist = "Employee with this employee_id does not exists.";
+export const UserNameExist = "User Name is already exists.";
+export const UserNameNotExist = "Employee with this user name does not exists.";
 
 export const EmailInValid = "Invalid email, please try again later.";
 export const PasswordInValid = "Invalid password, please try again.";

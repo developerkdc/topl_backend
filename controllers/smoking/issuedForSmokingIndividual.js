@@ -54,7 +54,7 @@ export const FetchIssuedForSmokingIndividual = catchAsync(
     })
       .populate({
         path: "created_employee_id",
-        select: "_id employee_id first_name last_name",
+        select: "_id user_name first_name last_name",
       })
       .populate("item_details")
       .skip(skip)

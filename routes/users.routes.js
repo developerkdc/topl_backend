@@ -5,7 +5,6 @@ import {
   ListUser,
   UpdateUser,
   RoleNameList,
-  EmployeeIdAutoGenerate,
   AdminChangePassword,
 } from "../controllers/users.js";
 import CheckRoleAndTokenAccess from "../middlewares/permission.js";
@@ -23,6 +22,5 @@ router.patch(
   AdminChangePassword
 );
 router.get("/role-name-list", RoleNameList);
-router.get("/employee-id-auto-generate", EmployeeIdAutoGenerate);
 
 export default router;

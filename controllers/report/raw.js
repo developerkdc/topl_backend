@@ -24,7 +24,7 @@ export const RawReportExcel = catchAsync(async (req, res, next) => {
   })
     .populate({
       path: "created_employee_id",
-      select: "_id employee_id first_name last_name",
+      select: "_id user_name first_name last_name",
     })
     .populate({
       path: "supplier_details.supplier_name",

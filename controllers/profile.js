@@ -1,9 +1,9 @@
 import UserModel from "../database/schema/user.schema.js";
 import { IdRequired, UserNotFound } from "../utils/response/response.js";
 import catchAsync from "../utils/errors/catchAsync.js";
-import { FetchUserByEmail } from "../utils/fetchDetails/fetchDetailsByEmail.js";
 import { create, verify } from "../utils/authServices/index.js";
 import mongoose from "mongoose";
+import { FetchUserByUserName } from "../utils/fetchDetails/fetchDetailsByUserName.js";
 
 export const UpdateAuthUserProfile = async (req, res) => {
   const { first_name, last_name, phone, age, gender, country_code } =
@@ -71,7 +71,7 @@ export const ChangeAuthUserPassword = catchAsync(async (req, res) => {
 
   const authUserDetail = req.userDetails;
 
-  const user = await FetchUserByEmail(req, res, authUserDetail.email_id);
+  const user = await FetchUserByUserName(req, res, authUserDetail.user_name);
   const validOldPassword = await verify(old_password, user.password);
 
   if (!validOldPassword) {
@@ -84,7 +84,7 @@ export const ChangeAuthUserPassword = catchAsync(async (req, res) => {
 
   const hashedNewPassword = await create(new_password);
   const userUpdate = await UserModel.findOneAndUpdate(
-    { email_id: authUserDetail.email_id },
+    { email_id: authUserDetail.user_name },
     {
       $set: {
         password: hashedNewPassword,

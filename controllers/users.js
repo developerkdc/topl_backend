@@ -48,7 +48,7 @@ export const UpdateUser = catchAsync(async (req, res) => {
       message: userId ? "Invalid user ID" : IdRequired,
     });
   }
-  const requiredFields = ["employee_id", "first_name", "last_name", "email_id", "role_name"];
+  const requiredFields = ["user_name", "first_name", "last_name", "email_id", "role_name"];
 
   for (const field of requiredFields) {
     if (req.body[field] === "") {
@@ -261,23 +261,5 @@ export const RoleNameList = catchAsync(async (req, res) => {
     result: role,
     status: true,
     message: "List all role name.",
-  });
-});
-
-export const EmployeeIdAutoGenerate = catchAsync(async (req, res) => {
-  const user = await UserModel.distinct("employee_id");
-
-  if (!user || user.length === 0) {
-    return res.status(200).json({
-      result: 1,
-      status: true,
-      message: "Latest employee Id.",
-    });
-  }
-  const latestEmployeeId = Math.max(...user) + 1;
-  return res.status(200).json({
-    result: latestEmployeeId,
-    status: true,
-    message: "Latest employee Id.",
   });
 });
