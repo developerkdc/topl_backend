@@ -10,6 +10,7 @@ import {
   fetchAllSuppliers,
   fetchAllSupplierWithBranchesDetails,
   fetchContactPersonById,
+  fetchSupplierMainBranchBySupplierId,
   ListSupplierMaster,
   ListSupplierMasterWithOutPermission,
   updateContactPersonInfo,
@@ -53,6 +54,10 @@ router.get("/contact-person/:id", fetchContactPersonById);
 router.post("/add-contact-person/:id", addContactPersonToBranch);
 router.get("/all-suppliers", fetchAllSuppliers);
 router.get("/dropdown-supplier-master", DropdownSupplierName);
+router.get(
+  "/fetch-supplier-main-branch/:id",
+  fetchSupplierMainBranchBySupplierId
+);
 
 // router.get("/list-supplier-master",CheckRoleAndTokenAccess, ListSupplierMasterLogs);
 

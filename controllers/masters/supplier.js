@@ -56,6 +56,11 @@ export const UpdateSupplierMaster = catchAsync(async (req, res) => {
       new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Invalid id")
     );
   }
+  if (updateData.supplier_type) {
+    if (!Array.isArray(updateData.supplier_type)) {
+      updateData.supplier_type = [updateData.supplier_type];
+    }
+  }
   const supplier = await SupplierModel.findByIdAndUpdate(
     supplierId,
     { $set: updateData },
@@ -527,7 +532,8 @@ export const fetchAllSupplierWithBranchesDetails = catchAsync(
 
     const allDetails = await SupplierModel.aggregate(pipeline).collation({
       locale: "en",
-      caseLevel: true,
+      // caseLevel: true,
+      strength: 1,
     });
 
     if (allDetails.length === 0) {
@@ -849,7 +855,7 @@ export const DropdownSupplierName = catchAsync(async (req, res) => {
 
   const searchQuery = type
     ? {
-        $or: [{ "supplier_type": { $regex: type, $options: "i" } }],
+        supplier_type: { $elemMatch: { $regex: type, $options: "i" } },
       }
     : {};
 
@@ -865,3 +871,70 @@ export const DropdownSupplierName = catchAsync(async (req, res) => {
       )
     );
 });
+
+export const fetchSupplierMainBranchBySupplierId = catchAsync(
+  async (req, res) => {
+    const { id } = req.params;
+    if (!id) {
+      return res.json(
+        new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Id is missing")
+      );
+    }
+    // const supplierList = await SupplierModel.aggregate([
+    //   {
+    //     $lookup: {
+    //       from: "supplier_branches",
+    //       let: { supplier_id: "$supplier_id" },
+    //       pipeline: [
+    //         {
+    //           $match: {
+    //             $expr: {
+    //               $and: [
+    //                 { $eq: ["$supplier_id", { $toObjectId: id }] },
+    //                 { $eq: ["$is_main_branch", true] },
+    //               ],
+    //             },
+    //           },
+    //         },
+    //       ],
+    //       as: "branchDetails",
+    //     },
+    //   },
+    //   {
+    //     $unwind: {
+    //       path: "$branchDetails",
+    //       preserveNullAndEmptyArrays: true,
+    //     },
+    //   },
+    // ]);
+    const supplierMainBranch = await supplierBranchModel.aggregate([
+      {
+        $match: {
+          supplier_id: new mongoose.Types.ObjectId(id),
+          is_main_branch: true,
+        },
+      },
+      {
+        $lookup: {
+          from: "suppliers",
+          localField: "supplier_id",
+          foreignField: "_id",
+          as: "supplierDetails",
+        },
+      },
+      {
+        $unwind: {
+          path: "$supplierDetails",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+    ]);
+    return res.json(
+      new ApiResponse(
+        StatusCodes.OK,
+        "Main branch fetched successfully",
+        supplierMainBranch
+      )
+    );
+  }
+);

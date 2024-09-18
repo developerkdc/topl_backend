@@ -62,7 +62,8 @@ const supplierBranchesSchema = new mongoose.Schema({
   },
   web_url: {
     type: String,
-    required: [true, "web url is required"],
+    default: null,
+    // required: [true, "web url is required"],
   },
   is_main_branch: {
     type: Boolean,
