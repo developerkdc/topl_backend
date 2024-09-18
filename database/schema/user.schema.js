@@ -5,11 +5,11 @@ import LogSchemaFunction from "./LogsSchema/logs.schema.js";
 
 const Configs = getConfigs();
 const UserSchema = new mongoose.Schema({
-  employee_id: {
-    type: Number,
-    required: [true, "Employee ID is required."],
+  user_name: {
+    type: String,
+    required: [true, "User Name is required."],
     indexedDB: true,
-    unique: [true, "Employee ID already exist."],
+    unique: [true, "User Name already exist."],
   },
   first_name: {
     type: String,
@@ -37,9 +37,7 @@ const UserSchema = new mongoose.Schema({
     type: String,
     minlength: 5,
     maxlength: 50,
-    required: [true, "Email ID Required"],
     trim: true,
-    unique: [true, "Email ID already exist."],
   },
   pincode: {
     type: Number,
@@ -47,8 +45,6 @@ const UserSchema = new mongoose.Schema({
   },
   mobile_no: {
     type: String,
-    unique: [true, "Mobile Number already exist."],
-    required: [true, "Mobile Number Required"],
     trim: true,
     default: null,
   },
@@ -67,7 +63,6 @@ const UserSchema = new mongoose.Schema({
   },
   blood_group: {
     type: String,
-    // required: true,
     trim: true,
   },
   dob: {
@@ -109,11 +104,9 @@ const UserSchema = new mongoose.Schema({
 
 UserSchema.methods.jwtToken = function (next) {
   try {
-    return jwt.sign(
-      { id: this._id, employeeId: this.employee_id, emailId: this.email_id },
-      Configs.jwt.accessSecret,
-      { expiresIn: Configs.jwt.accessOptions.expiresIn || "24hr" }
-    );
+    return jwt.sign({ id: this._id, user_name: this.user_name }, Configs.jwt.accessSecret, {
+      expiresIn: Configs.jwt.accessOptions.expiresIn || "24hr",
+    });
   } catch (error) {
     return next(error);
   }
@@ -136,5 +129,5 @@ const lookup = [
     },
   },
 ];
-LogSchemaFunction("user", UserModel,lookup);
+LogSchemaFunction("user", UserModel, lookup);
 export default UserModel;

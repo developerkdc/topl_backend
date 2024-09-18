@@ -6,7 +6,7 @@ import catchAsync from "../utils/errors/catchAsync.js";
 import {
   EmailInValid,
   EmailRequired,
-  EmployeeIDRequired,
+  UserNameRequired,
   OtpNotValid,
   OtpNotVerified,
   OtpRequired,
@@ -22,12 +22,12 @@ const Configs = getConfigs();
 
 export const SignIn = catchAsync(async (req, res, next) => {
   const origin = req.get("Origin");
-  const { employee_id, password } = req.body;
-  if (!employee_id)
+  const { user_name, password } = req.body;
+  if (!user_name)
     return res.status(400).json({
       result: [],
       status: false,
-      message: EmployeeIDRequired,
+      message: UserNameRequired,
     });
 
   if (!password)
@@ -37,7 +37,7 @@ export const SignIn = catchAsync(async (req, res, next) => {
       message: PassowrdRequired,
     });
 
-  const user = await userModel.findOne({ employee_id: employee_id }).select("-otp -verify_otp -otp_expiry_date").populate("role_id");
+  const user = await userModel.findOne({ user_name: user_name }).select("-otp -verify_otp -otp_expiry_date").populate("role_id");
 
   if (!user) {
     return res.status(401).json({
@@ -168,15 +168,15 @@ export const VerifyOtp = catchAsync(async (req, res) => {
 });
 
 export const ResetPassword = catchAsync(async (req, res) => {
-  const { password, employee_id } = req.body;
-  if (!employee_id) {
-    return res.status(400).json({ result: [], status: false, message: EmployeeIDRequired });
+  const { password, user_name } = req.body;
+  if (!user_name) {
+    return res.status(400).json({ result: [], status: false, message: UserNameRequired });
   }
   if (!password) {
     return res.status(400).json({ result: [], status: false, message: PassowrdRequired });
   }
 
-  const user = await userModel.findOne({ employee_id: employee_id });
+  const user = await userModel.findOne({ user_name: user_name });
   if (!user) {
     return res.status(400).json({
       result: [],
@@ -198,7 +198,7 @@ export const ResetPassword = catchAsync(async (req, res) => {
 
   // Update the user's password
   await userModel.findOneAndUpdate(
-    { employee_id: employee_id },
+    { user_name: user_name },
     {
       $set: {
         password: hashedPassword,

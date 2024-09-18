@@ -50,7 +50,7 @@ export const BulkUploadForCreateGroup = catchAsync(async (req, res, next) => {
       "book_type",
       "group_grade",
       "group_no",
-      "employee_id",
+      "user_name",
     ];
     for (const item of data) {
       for (const field of requiredGroupFields) {
