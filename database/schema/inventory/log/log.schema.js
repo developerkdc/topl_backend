@@ -90,6 +90,8 @@ const log_item_details_schema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     required: [true, "Invoice Id is required"],
   },
+}, {
+  timestamps: true,
 });
 
 log_item_details_schema.index({ item_sr_no: 1 });
@@ -235,8 +237,8 @@ export const log_inventory_items_view_model = mongoose.model("log_inventory_item
     pipeline: [
       {
         $sort: {
-          updatedAt: 1,
-          _id: 1,
+          updatedAt: -1,
+          _id: -1,
         },
       },
       {
