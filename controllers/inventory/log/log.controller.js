@@ -74,9 +74,8 @@ export const listing_log_inventory = catchAsync(async (req, res, next) => {
       $limit: parseInt(limit),
     },
   ];
-  // console.log(sortBy !== 'updatedAt' && sort !== "desc")
-  // if (sortBy !== 'updatedAt' && sort !== "desc"){
-  //     console.log("first")
+  // console.log(!(sortBy === 'updatedAt' && sort === "desc"))
+  // if (!(sortBy === 'updatedAt' && sort === "desc")){
   //     aggregate_stage[1] = {
   //         $sort: {
   //             [sortBy]: sort === "desc" ? -1 : 1
