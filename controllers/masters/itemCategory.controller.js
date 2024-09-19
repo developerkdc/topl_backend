@@ -114,8 +114,7 @@ export const listItemCategories = catchAsync(async (req, res) => {
           { "category": { $regex: query, $options: "i" } },
           { "calculate_unit": { $regex: query, $options: "i" } },
           { "product_hsn_code": { $regex: query, $options: "i" } },
-          { "userDetails.first_name": { $regex: query, $options: "i" } },
-          { "userDetails.last_name": { $regex: query, $options: "i" } },
+          { "userDetails.user_name": { $regex: query, $options: "i" } },
 
           ...(isValidDate(query)
             ? [
@@ -157,7 +156,7 @@ export const listItemCategories = catchAsync(async (req, res) => {
         createdAt: 1,
         created_by: 1,
         "userDetails.first_name": 1,
-        "userDetails.last_name": 1,
+        "userDetails.user_name": 1,
       },
     },
     { $skip: skipped },

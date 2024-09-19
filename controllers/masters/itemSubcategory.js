@@ -166,7 +166,7 @@ export const listItemSubCategories = catchAsync(async (req, res) => {
         createdAt: 1,
         created_by: 1,
         "userDetails.first_name": 1,
-        "userDetails.last_name": 1,
+        "userDetails.user_name": 1,
       },
     },
     { $skip: skipped },
@@ -187,7 +187,7 @@ export const listItemSubCategories = catchAsync(async (req, res) => {
   });
   const totalPage = Math.ceil(totalDocs / limitInt);
   return res.json(
-    new ApiResponse(StatusCodes.OK, "All Details fetched succesfully..", {
+    new ApiResponse(StatusCodes.OK, "All Details fetched successfully..", {
       allDetails,
       totalPage,
     })

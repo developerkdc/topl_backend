@@ -10,7 +10,7 @@ export const OtpRequired= "Otp is a required.";
 export const IdRequired= "Id is a required.";
 
 export const UserNameExist = "User Name is already exists.";
-export const UserNameNotExist = "Employee with this user name does not exists.";
+export const UserNameNotExist = "User with this user name does not exists.";
 
 export const EmailInValid = "Invalid email, please try again later.";
 export const PasswordInValid = "Invalid password, please try again.";

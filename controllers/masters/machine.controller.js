@@ -145,7 +145,7 @@ export const MachineDetails = catchAsync(async (req, res) => {
         createdAt: 1,
         created_by: 1,
         "userDetails.first_name": 1,
-        "userDetails.last_name": 1,
+        "userDetails.user_name": 1,
         "departmentDetails._id": 1,
         "departmentDetails.dept_name": 1,
       },

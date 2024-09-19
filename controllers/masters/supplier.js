@@ -588,15 +588,50 @@ export const updateSupplierBranchById = catchAsync(async (req, res) => {
 
 export const updateContactPersonInfo = catchAsync(async (req, res) => {
   const { id } = req.query;
-  const updateData = req.body;
+  // const updateData = req.body;
+  const { name, email, mobile_number, designation } = req.body;
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.json(
       new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Invalid id")
     );
   }
+
+  const existingEmail = await supplierBranchModel.findOne({
+    "contact_person.email": email,
+    _id: { $ne: id },
+  });
+
+  if (existingEmail) {
+    return res
+      .status(StatusCodes.CONFLICT)
+      .json(
+        new ApiResponse(
+          StatusCodes.CONFLICT,
+          "Contact person with the same email already exists."
+        )
+      );
+  }
+
+  const existingMobileNumber = await supplierBranchModel.findOne({
+    "contact_person.mobile_number": mobile_number,
+    _id: { $ne: id },
+  });
+
+  if (existingMobileNumber) {
+    return res
+      .status(StatusCodes.CONFLICT)
+      .json(
+        new ApiResponse(
+          StatusCodes.CONFLICT,
+          "Contact person with the same mobile number already exists."
+        )
+      );
+  }
   const supplier = await supplierBranchModel.findOneAndUpdate(
     { "contact_person._id": id },
-    { $set: { "contact_person.$": updateData } },
+    {
+      $set: { "contact_person.$": { email, name, mobile_number, designation } },
+    },
     { new: true, runValidators: true }
   );
   if (!supplier) {
@@ -614,7 +649,7 @@ export const updateContactPersonInfo = catchAsync(async (req, res) => {
     .json(
       new ApiResponse(
         StatusCodes.OK,
-        "Branch updated successfully...",
+        "Contact Person updated successfully...",
         supplier
       )
     );
@@ -738,7 +773,7 @@ export const fetchContactPersonById = catchAsync(async (req, res) => {
 
 export const addContactPersonToBranch = catchAsync(async (req, res) => {
   const { id } = req.params;
-  // const { name, email, mobile_number, designation } = req.body;
+  const { name, email, mobile_number, designation } = req.body;
   if (!id) {
     return res.json(
       new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "branch id is missing")
@@ -754,7 +789,37 @@ export const addContactPersonToBranch = catchAsync(async (req, res) => {
       )
     );
   }
+  const existingEmail = await supplierBranchModel.findOne({
+    "contact_person.email": email,
+    _id: { $ne: id },
+  });
 
+  if (existingEmail) {
+    return res
+      .status(StatusCodes.CONFLICT)
+      .json(
+        new ApiResponse(
+          StatusCodes.CONFLICT,
+          "Contact person with the same email already exists."
+        )
+      );
+  }
+
+  const existingMobileNumber = await supplierBranchModel.findOne({
+    "contact_person.mobile_number": mobile_number,
+    _id: { $ne: id },
+  });
+
+  if (existingMobileNumber) {
+    return res
+      .status(StatusCodes.CONFLICT)
+      .json(
+        new ApiResponse(
+          StatusCodes.CONFLICT,
+          "Contact person with the same mobile number already exists."
+        )
+      );
+  }
   const updatedData = await supplierBranchModel.updateOne(
     { _id: id },
     { $push: { contact_person: req.body } },
