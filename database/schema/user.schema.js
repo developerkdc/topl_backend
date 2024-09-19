@@ -35,8 +35,6 @@ const UserSchema = new mongoose.Schema({
   },
   email_id: {
     type: String,
-    minlength: 5,
-    maxlength: 50,
     trim: true,
   },
   pincode: {

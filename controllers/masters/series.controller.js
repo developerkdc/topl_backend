@@ -135,7 +135,7 @@ export const listSeriesDetails = catchAsync(async (req, res) => {
         createdAt: 1,
         created_by: 1,
         "userDetails.first_name": 1,
-        "userDetails.last_name": 1,
+        "userDetails.user_name": 1,
       },
     },
     { $skip: skipped },

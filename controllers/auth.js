@@ -43,7 +43,7 @@ export const SignIn = catchAsync(async (req, res, next) => {
     return res.status(401).json({
       result: [],
       status: false,
-      message: "User not found with this employee Id.",
+      message: "User not found with this User Name.",
     });
   }
   if (user.status == false) {
