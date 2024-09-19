@@ -65,6 +65,7 @@ export const listing_log_inventory = catchAsync(async (req, res, next) => {
     {
       $sort: {
         [sortBy]: sort === "desc" ? -1 : 1,
+        _id: sort === "desc" ? -1 : 1
       },
     },
     {
