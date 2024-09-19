@@ -5,17 +5,18 @@ const contactPersonSchema = new mongoose.Schema({
   name: {
     type: String,
     required: [true, "contact person name is required"],
-    unique: [true, "contact person name is required"],
+    // unique: [true, "contact person name must be unique"],
     trim: true,
   },
   email: {
     type: String,
     required: [true, "email id is required"],
+    unique: [true, "contact person email must be unique"],
     trim: true,
   },
   mobile_number: {
     type: String,
-    required: [true, "mobile number is required"],
+    required: [true, "mobile number must be unique is required"],
   },
   designation: {
     type: String,

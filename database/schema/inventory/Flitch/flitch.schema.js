@@ -23,6 +23,14 @@ const item_details_schema = new mongoose.Schema(
       type: String,
       required: [true, "Item Name is required"],
     },
+    item_sub_category_name: {
+      type: Number,
+      required: [true, "item_sub_category_name is required"],
+    },
+    item_sub_category_id: {
+      type: String,
+      required: [true, "item_sub_category_id is required"],
+    },
     log_no: {
       type: String,
       required: [true, "Log No is required"],
