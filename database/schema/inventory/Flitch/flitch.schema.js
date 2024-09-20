@@ -24,7 +24,7 @@ const item_details_schema = new mongoose.Schema(
       required: [true, "Item Name is required"],
     },
     item_sub_category_name: {
-      type: Number,
+      type: String,
       required: [true, "item_sub_category_name is required"],
     },
     item_sub_category_id: {
@@ -40,18 +40,8 @@ const item_details_schema = new mongoose.Schema(
       required: [true, "Flitch Code is required"],
     },
     flitch_formula: {
-      formula_type: {
-        type: String,
-        enum: {
-          values: ["TQF", "FHF", "BF"],
-          message: "Invalid formula type",
-        },
-        required: [true, "Formula type is required"],
-      },
-      formula: {
-        type: String,
-        required: [true, "Flitch formula is required"],
-      },
+      type: String,
+      required: [true, "Flitch formula is required"],
     },
     length: {
       type: Number,
@@ -160,7 +150,7 @@ const flitch_invoice_schema = new mongoose.Schema(
           trim: true,
         },
         supplier_type: {
-          type: String,
+          type: [String],
           required: [true, "Supplier Name is required."],
           trim: true,
         },

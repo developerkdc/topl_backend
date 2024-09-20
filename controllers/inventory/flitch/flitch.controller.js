@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose, { STATES } from "mongoose";
 import {
   flitch_inventory_invoice_model,
   flitch_inventory_items_model,
@@ -121,37 +121,39 @@ export const listing_flitch_inventory = catchAsync(async (req, res, next) => {
     await flitch_inventory_items_view_model.aggregate(aggregate_stage);
 
   const totalPage = await flitch_inventory_items_view_model.countDocuments({
-    ...match_query
+    ...match_query,
   });
 
   return res.status(200).json({
     statusCode: 200,
     status: "success",
     data: List_flitch_inventory_details,
-    totalPage:totalPage,
+    totalPage: totalPage,
     message: "Data fetched successfully",
   });
 });
 
-export const item_sr_no_dropdown = catchAsync(async (req,res,next)=>{
-    const item_sr_no = await flitch_inventory_items_model.distinct("item_sr_no");
-    return res.status(200).json({
-        statusCode:200,
-        status:"success",
-        data:item_sr_no,
-        message:"Item Sr No Dropdown fetched successfully",
-    })
+export const item_sr_no_dropdown = catchAsync(async (req, res, next) => {
+  const item_sr_no = await flitch_inventory_items_model.distinct("item_sr_no");
+  return res.status(200).json({
+    statusCode: 200,
+    status: "success",
+    data: item_sr_no,
+    message: "Item Sr No Dropdown fetched successfully",
+  });
 });
 
-export const inward_sr_no_dropdown = catchAsync(async (req,res,next)=>{
-    const item_sr_no = await flitch_inventory_invoice_model.distinct("inward_sr_no");
-    return res.status(200).json({
-        statusCode:200,
-        status:"success",
-        data:item_sr_no,
-        message:"Inward Sr No Dropdown fetched successfully",
-    })
-})
+export const inward_sr_no_dropdown = catchAsync(async (req, res, next) => {
+  const item_sr_no = await flitch_inventory_invoice_model.distinct(
+    "inward_sr_no"
+  );
+  return res.status(200).json({
+    statusCode: 200,
+    status: "success",
+    data: item_sr_no,
+    message: "Inward Sr No Dropdown fetched successfully",
+  });
+});
 
 export const add_flitch_inventory = catchAsync(async (req, res, next) => {
   const session = await mongoose.startSession();
@@ -207,15 +209,15 @@ export const add_flitch_inventory = catchAsync(async (req, res, next) => {
 
     await session.commitTransaction();
     session.endSession();
-    return res.status(201).json({
-      statusCode: 201,
-      status: "Created",
-      data: {
-        add_invoice_details,
-        add_items_details,
-      },
-      message: "Inventory has added successfully",
-    });
+    return res
+      .status(StatusCodes.CREATED)
+      .json(
+        new ApiResponse(
+          StatusCodes.CREATED,
+          "Inventory has added successfully",
+          { add_invoice_details, add_items_details }
+        )
+      );
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
@@ -279,13 +281,12 @@ export const edit_flitch_invoice_inventory = catchAsync(
     const invoice_id = req.params?.invoice_id;
     const invoice_details = req.body?.invoice_details;
 
-    const update_voice_details =
-      await flitch_inventory_invoice_model.updateOne(
-        { _id: invoice_id },
-        {
-          $set: invoice_details,
-        }
-      );
+    const update_voice_details = await flitch_inventory_invoice_model.updateOne(
+      { _id: invoice_id },
+      {
+        $set: invoice_details,
+      }
+    );
 
     if (
       !update_voice_details?.acknowledged &&

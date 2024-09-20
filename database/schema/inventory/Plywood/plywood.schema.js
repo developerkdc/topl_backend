@@ -20,14 +20,22 @@ const item_details_schema = new mongoose.Schema(
       type: String,
       required: [true, "Item Name is required"],
     },
+    item_sub_category_name: {
+      type: String,
+      required: [true, "item_sub_category_name is required"],
+    },
+    item_sub_category_id: {
+      type: String,
+      required: [true, "item_sub_category_id is required"],
+    },
     plywood_type: {
       type: String,
       required: [true, "Plywood type is required"],
     },
-    plywood_sub_type: {
-      type: String,
-      required: [true, "Plywood-sub type is required"],
-    },
+    // plywood_sub_type: {
+    //   type: String,
+    //   required: [true, "Plywood-sub type is required"],
+    // },
     pallet_number: {
       type: Number,
       required: [true, "pallet_number is required"], //auto increment
@@ -130,7 +138,7 @@ const plywood_invoice_schema = new mongoose.Schema(
           trim: true,
         },
         supplier_type: {
-          type: String,
+          type: [String],
           required: [true, "Supplier Name is required."],
           trim: true,
         },

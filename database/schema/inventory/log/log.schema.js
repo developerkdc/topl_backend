@@ -104,7 +104,10 @@ const log_item_details_schema = new mongoose.Schema({
 });
 
 log_item_details_schema.index({ item_sr_no: 1 });
-log_item_details_schema.index({ item_sr_no: 1, invoice_id: 1 }, { unique: true });
+log_item_details_schema.index(
+  { item_sr_no: 1, invoice_id: 1 },
+  { unique: true }
+);
 
 const log_invoice_schema = new mongoose.Schema(
   {
@@ -148,7 +151,7 @@ const log_invoice_schema = new mongoose.Schema(
           trim: true,
         },
         supplier_type: {
-          type: String,
+          type: [String],
           required: [true, "Supplier Name is required."],
           trim: true,
         },
@@ -226,8 +229,14 @@ const log_invoice_schema = new mongoose.Schema(
 
 log_invoice_schema.index({ inward_sr_no: 1 });
 
-export const log_inventory_items_model = mongoose.model("log_inventory_items_details", log_item_details_schema);
-export const log_inventory_invoice_model = mongoose.model("log_inventory_invoice_details", log_invoice_schema);
+export const log_inventory_items_model = mongoose.model(
+  "log_inventory_items_details",
+  log_item_details_schema
+);
+export const log_inventory_invoice_model = mongoose.model(
+  "log_inventory_invoice_details",
+  log_invoice_schema
+);
 
 const log_inventory_items_view_schema = new mongoose.Schema(
   {},
@@ -238,7 +247,10 @@ const log_inventory_items_view_schema = new mongoose.Schema(
   }
 );
 
-export const log_inventory_items_view_model = mongoose.model("log_inventory_items_view", log_inventory_items_view_schema);
+export const log_inventory_items_view_model = mongoose.model(
+  "log_inventory_items_view",
+  log_inventory_items_view_schema
+);
 
 (async function () {
   await log_inventory_items_view_model.createCollection({

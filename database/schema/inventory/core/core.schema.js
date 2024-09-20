@@ -126,7 +126,7 @@ const core_invoice_schema = new mongoose.Schema(
           trim: true,
         },
         supplier_type: {
-          type: String,
+          type: [String],
           required: [true, "Supplier Name is required."],
           trim: true,
         },

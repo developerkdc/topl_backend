@@ -28,5 +28,4 @@ flitch_router.post("/download-excel-flitch-logs", flitchLogsCsv);
 flitch_router.get("/item-srno-dropdown", item_sr_no_dropdown);
 flitch_router.get("/inward-srno-dropdown", inward_sr_no_dropdown);
 
-
 export default flitch_router;
