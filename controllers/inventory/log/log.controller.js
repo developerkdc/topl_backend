@@ -199,6 +199,47 @@ export const add_single_log_item_inventory = catchAsync(
   }
 );
 
+export const edit_log_item_invoice_inventory = catchAsync(async (req, res, next) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const invoice_id = req.params?.invoice_id;
+    const items_details = req.body?.items_details;
+    const invoice_details = req.body?.invoice_details;
+
+    const update_invoice_details = await log_inventory_invoice_model.findOneAndUpdate({_id:invoice_id},{
+      $set:{
+        ...invoice_details
+      }
+    },{new:true,session})
+
+    if(!update_invoice_details) return next(new ApiError("Failed to update invoice",400));
+
+    const all_invoice_items = await log_inventory_items_model.deleteMany({invoice_id:invoice_id},{session});
+
+    if(!all_invoice_items.acknowledged && all_invoice_items.deletedCount <= 0) return next(new ApiError("Failed to update invoice items",400));
+
+    const update_item_details = await log_inventory_items_model.insertMany([...items_details],{session});
+
+    await session.commitTransaction();
+    session.endSession();
+    return res
+      .status(StatusCodes.OK)
+      .json(
+        new ApiResponse(
+          StatusCodes.OK,
+          "Inventory item  updated successfully",
+          update_item_details
+        )
+      );
+  } catch (error) {
+    console.log(error);
+    await session.abortTransaction();
+    session.endSession();
+    return next(error);
+  }
+});
+
 export const edit_log_item_inventory = catchAsync(async (req, res, next) => {
   const item_id = req.params?.item_id;
   const item_details = req.body?.item_details;

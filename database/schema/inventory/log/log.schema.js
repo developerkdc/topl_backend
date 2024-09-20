@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import invoice_details from "../../../Utils/invoiceDetails.schema.js";
+import { issues_for_status } from "../../../Utils/constants/constants.js";
 
 const log_item_details_schema = new mongoose.Schema({
   item_sr_no: {
@@ -37,6 +38,14 @@ const log_item_details_schema = new mongoose.Schema({
   log_formula: {
     type: String,
     required: [true, "Log formula is required"],
+  },
+  issue_status: {
+    type: String,
+    enum: {
+      values: [issues_for_status.crosscutting, issues_for_status.flitching, issues_for_status.log],
+      message: `Invalid status {{VALUE}} Issue Status must either be one of ${issues_for_status.crosscutting, issues_for_status.flitching, issues_for_status.log}`
+    },
+    default: issues_for_status.log
   },
   invoice_length: {
     type: Number,
