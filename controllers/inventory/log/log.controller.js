@@ -327,3 +327,42 @@ export const inward_sr_no_dropdown = catchAsync(async (req, res, next) => {
     message: "Inward Sr No Dropdown fetched successfully",
   });
 });
+
+export const log_item_listing_by_invoice = catchAsync(async (req, res, next) => {
+
+  const invoice_id = req.params.invoice_id;
+
+  const aggregate_stage = [
+    {
+      $match: {
+        'log_invoice_details._id': new mongoose.Types.ObjectId(invoice_id)
+      },
+    },
+    {
+      $sort: {
+        item_sr_no: 1
+      },
+    },
+    {
+      $project:{
+        log_invoice_details:0
+      }
+    }
+  ];
+
+  const single_invoice_list_log_inventory_details = await log_inventory_items_view_model.aggregate(aggregate_stage);
+
+  // const totalCount = await log_inventory_items_view_model.countDocuments({
+  //   ...match_query,
+  // });
+
+  // const totalPage = Math.ceil(totalCount / limit);
+
+  return res.status(200).json({
+    statusCode: 200,
+    status: "success",
+    data: single_invoice_list_log_inventory_details,
+    // totalPage: totalPage,
+    message: "Data fetched successfully",
+  });
+});
