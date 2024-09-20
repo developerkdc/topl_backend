@@ -5,6 +5,7 @@ import {
   addBranchToSupplier,
   addContactPersonToBranch,
   AddSupplierMaster,
+  DropdownSupplierBranches,
   DropdownSupplierName,
   fetchAllBranchesBySupplierId,
   fetchAllSuppliers,
@@ -45,6 +46,7 @@ router.get(
 );
 router.post("/update-supplier-branch", updateSupplierBranchById);
 router.post("/update-contact-person", updateContactPersonInfo);
+
 router.get(
   "/branchs-by-supplier/:id",
   // CheckRoleAndTokenAccess,
@@ -52,12 +54,14 @@ router.get(
 );
 router.get("/contact-person/:id", fetchContactPersonById);
 router.post("/add-contact-person/:id", addContactPersonToBranch);
-router.get("/all-suppliers", fetchAllSuppliers);
-router.get("/dropdown-supplier-master", DropdownSupplierName);
 router.get(
   "/fetch-supplier-main-branch/:id",
   fetchSupplierMainBranchBySupplierId
 );
+//apis without permission
+router.get("/all-suppliers", fetchAllSuppliers);
+router.get("/dropdown-supplier-master", DropdownSupplierName);
+router.get("/branches-by-supplier/:id", DropdownSupplierBranches);
 
 // router.get("/list-supplier-master",CheckRoleAndTokenAccess, ListSupplierMasterLogs);
 

@@ -16,6 +16,7 @@ const contactPersonSchema = new mongoose.Schema({
   },
   mobile_number: {
     type: String,
+    unique: [true, "contact person email must be unique"],
     required: [true, "mobile number must be unique is required"],
   },
   designation: {
