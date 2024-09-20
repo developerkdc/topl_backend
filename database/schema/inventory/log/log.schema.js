@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import invoice_details from "../../../Utils/invoiceDetails.schema.js";
+import { issues_for_status } from "../../../Utils/constants/constants.js";
 
 const log_item_details_schema = new mongoose.Schema({
   item_sr_no: {
@@ -37,6 +38,14 @@ const log_item_details_schema = new mongoose.Schema({
   log_formula: {
     type: String,
     required: [true, "Log formula is required"],
+  },
+  issue_status: {
+    type: String,
+    enum: {
+      values: [issues_for_status.crosscutting, issues_for_status.flitching, issues_for_status.log],
+      message: `Invalid status {{VALUE}} Issue Status must either be one of ${issues_for_status.crosscutting, issues_for_status.flitching, issues_for_status.log}`
+    },
+    default: issues_for_status.log
   },
   invoice_length: {
     type: Number,
@@ -95,7 +104,10 @@ const log_item_details_schema = new mongoose.Schema({
 });
 
 log_item_details_schema.index({ item_sr_no: 1 });
-log_item_details_schema.index({ item_sr_no: 1, invoice_id: 1 }, { unique: true });
+log_item_details_schema.index(
+  { item_sr_no: 1, invoice_id: 1 },
+  { unique: true }
+);
 
 const log_invoice_schema = new mongoose.Schema(
   {
@@ -139,7 +151,7 @@ const log_invoice_schema = new mongoose.Schema(
           trim: true,
         },
         supplier_type: {
-          type: String,
+          type: [String],
           required: [true, "Supplier Name is required."],
           trim: true,
         },
@@ -217,8 +229,14 @@ const log_invoice_schema = new mongoose.Schema(
 
 log_invoice_schema.index({ inward_sr_no: 1 });
 
-export const log_inventory_items_model = mongoose.model("log_inventory_items_details", log_item_details_schema);
-export const log_inventory_invoice_model = mongoose.model("log_inventory_invoice_details", log_invoice_schema);
+export const log_inventory_items_model = mongoose.model(
+  "log_inventory_items_details",
+  log_item_details_schema
+);
+export const log_inventory_invoice_model = mongoose.model(
+  "log_inventory_invoice_details",
+  log_invoice_schema
+);
 
 const log_inventory_items_view_schema = new mongoose.Schema(
   {},
@@ -229,7 +247,10 @@ const log_inventory_items_view_schema = new mongoose.Schema(
   }
 );
 
-export const log_inventory_items_view_model = mongoose.model("log_inventory_items_view", log_inventory_items_view_schema);
+export const log_inventory_items_view_model = mongoose.model(
+  "log_inventory_items_view",
+  log_inventory_items_view_schema
+);
 
 (async function () {
   await log_inventory_items_view_model.createCollection({

@@ -596,9 +596,17 @@ export const updateContactPersonInfo = catchAsync(async (req, res) => {
     );
   }
 
+  // const existingEmail = await supplierBranchModel.findOne({
+  //   "contact_person.email": email,
+  //   "contact_person._id": { $ne: id },
+  // });
   const existingEmail = await supplierBranchModel.findOne({
-    "contact_person.email": email,
-    _id: { $ne: id },
+    "contact_person": {
+      $elemMatch: {
+        email: email,
+        _id: { $ne: id },
+      },
+    },
   });
 
   if (existingEmail) {
@@ -612,9 +620,17 @@ export const updateContactPersonInfo = catchAsync(async (req, res) => {
       );
   }
 
+  // const existingMobileNumber = await supplierBranchModel.findOne({
+  //   "contact_person.mobile_number": mobile_number,
+  //   "contact_person._id": { $ne: id },
+  // });
   const existingMobileNumber = await supplierBranchModel.findOne({
-    "contact_person.mobile_number": mobile_number,
-    _id: { $ne: id },
+    "contact_person": {
+      $elemMatch: {
+        mobile_number: mobile_number,
+        _id: { $ne: id }, // Exclude the current contact person by id
+      },
+    },
   });
 
   if (existingMobileNumber) {
@@ -790,8 +806,8 @@ export const addContactPersonToBranch = catchAsync(async (req, res) => {
     );
   }
   const existingEmail = await supplierBranchModel.findOne({
-    "contact_person.email": email,
-    _id: { $ne: id },
+    _id: id, // Ensure we are checking within the same branch
+    "contact_person.email": email, // Search inside contact_person array
   });
 
   if (existingEmail) {
@@ -806,8 +822,8 @@ export const addContactPersonToBranch = catchAsync(async (req, res) => {
   }
 
   const existingMobileNumber = await supplierBranchModel.findOne({
-    "contact_person.mobile_number": mobile_number,
-    _id: { $ne: id },
+    _id: id, // Ensure we are checking within the same branch
+    "contact_person.mobile_number": mobile_number, // Search inside contact_person array
   });
 
   if (existingMobileNumber) {
@@ -1003,3 +1019,32 @@ export const fetchSupplierMainBranchBySupplierId = catchAsync(
     );
   }
 );
+
+export const DropdownSupplierBranches = catchAsync(async (req, res) => {
+  const { id } = req.params;
+
+  // const list = await SupplierModel.find(searchQuery);
+  const list = await supplierBranchModel.aggregate([
+    {
+      $match: { supplier_id: new mongoose.Types.ObjectId(id) },
+    },
+    {
+      $lookup: {
+        from: "suppliers",
+        localField: "supplier_id",
+        foreignField: "_id",
+        as: "supplierDetails",
+      },
+    },
+    { $unwind: "$supplierDetails" },
+  ]);
+  res
+    .status(200)
+    .json(
+      new ApiResponse(
+        StatusCodes.OK,
+        "SupplierBranchs dropdown fetched successfully....",
+        list
+      )
+    );
+});
