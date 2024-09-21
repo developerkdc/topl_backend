@@ -99,6 +99,12 @@ const log_item_details_schema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     required: [true, "Invoice Id is required"],
   },
+  created_by: {
+    type: mongoose.Types.ObjectId,
+    ref: "users",
+    required: [true,"Created By is required"],
+    trim: true,
+  },
 }, {
   timestamps: true,
 });
@@ -221,6 +227,12 @@ const log_invoice_schema = new mongoose.Schema(
       },
     },
     invoice_Details: invoice_details,
+    created_by: {
+      type: mongoose.Types.ObjectId,
+      ref: "users",
+      required: [true,"Created By is required"],
+      trim: true,
+    },
   },
   {
     timestamps: true,
