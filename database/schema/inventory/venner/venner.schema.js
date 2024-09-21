@@ -65,7 +65,7 @@ const veneer_item_details_schema = new mongoose.Schema({
     required: [true, "cut id is required"],
   },
   cut_name: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: String,
     required: [true, "cut name is required"],
   },
   series_id: {

@@ -132,7 +132,7 @@ app.use(
 );
 app.use(`/api/${Configs.server.version}/mdf-inventory`, mdfInventoryRoutes);
 app.use(
-  `/api/${Configs.server.version}/venner-inventory`,
+  `/api/${Configs.server.version}/veneer-inventory`,
   veneer_router
 );
 app.use(`/api/${Configs.server.version}/face-inventory`, faceInventoryRoutes);
