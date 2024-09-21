@@ -6,6 +6,10 @@ const veneer_item_details_schema = new mongoose.Schema({
     type: String,
     default: null,
   },
+  supplier_code: {
+    type: String,
+    default: null,
+  },
   item_id: {
     type: mongoose.Schema.Types.ObjectId,
     required: [true, "Items id is required"],
