@@ -109,7 +109,7 @@ export const add_face_inventory = catchAsync(async (req, res, next) => {
   session.startTransaction();
   try {
     const { inventory_invoice_details, inventory_items_details } = req.body;
-
+    const created_by = req.userDetails.id; //extract userid from req.userDetails
     const inward_sr_no = await face_inventory_invoice_details.aggregate([
       {
         $group: {
@@ -123,7 +123,7 @@ export const add_face_inventory = catchAsync(async (req, res, next) => {
       inward_sr_no?.length > 0 && inward_sr_no?.[0]?.latest_inward_sr_no
         ? inward_sr_no?.[0]?.latest_inward_sr_no + 1
         : 1;
-
+        inventory_invoice_details.created_by = created_by;
     const add_invoice_details = await face_inventory_invoice_details.create(
       [
         {
@@ -142,6 +142,7 @@ export const add_face_inventory = catchAsync(async (req, res, next) => {
     const items_details = inventory_items_details?.map((elm, index) => {
       // elm.item_sr_no = index + 1;
       elm.invoice_id = invoice_details_id;
+      elm.created_by = created_by;
       return elm;
     });
 
