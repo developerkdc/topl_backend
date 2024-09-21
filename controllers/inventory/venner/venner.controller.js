@@ -204,20 +204,22 @@ export const edit_veneer_item_invoice_inventory = catchAsync(async (req, res, ne
   session.startTransaction();
   try {
     const invoice_id = req.params?.invoice_id;
-    const items_details = req.body?.items_details;
-    const invoice_details = req.body?.invoice_details;
+    const items_details = req.body?.inventory_items_details;
+    const invoice_details = req.body?.inventory_invoice_details;
 
-    const update_invoice_details = await veneer_inventory_invoice_model.findOneAndUpdate({_id:invoice_id},{
+    const update_invoice_details = await veneer_inventory_invoice_model.updateOne({_id:invoice_id},{
       $set:{
         ...invoice_details
       }
-    },{new:true,session})
+    },{session})
 
-    if(!update_invoice_details) return next(new ApiError("Failed to update invoice",400));
+    console.log(update_invoice_details);
+
+    if(!update_invoice_details.acknowledged || update_invoice_details.modifiedCount <= 0) return next(new ApiError("Failed to update invoice",400));
 
     const all_invoice_items = await veneer_inventory_items_model.deleteMany({invoice_id:invoice_id},{session});
 
-    if(!all_invoice_items.acknowledged && all_invoice_items.deletedCount <= 0) return next(new ApiError("Failed to update invoice items",400));
+    if(!all_invoice_items.acknowledged || all_invoice_items.deletedCount <= 0) return next(new ApiError("Failed to update invoice items",400));
 
     const update_item_details = await veneer_inventory_items_model.insertMany([...items_details],{session});
 
@@ -228,7 +230,7 @@ export const edit_veneer_item_invoice_inventory = catchAsync(async (req, res, ne
       .json(
         new ApiResponse(
           StatusCodes.OK,
-          "Inventory item  updated successfully",
+          "Inventory item updated successfully",
           update_item_details
         )
       );
