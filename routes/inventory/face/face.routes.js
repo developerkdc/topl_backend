@@ -8,7 +8,7 @@ import {
 } from "../../../controllers/inventory/face/face.controller.js";
 import CheckRoleAndTokenAccess from "../../../middlewares/permission.js";
 const router = express.Router();
-router.post("/list-inventory", CheckRoleAndTokenAccess, listing_face_inventory);
+router.post("/face-list-inventory", CheckRoleAndTokenAccess, listing_face_inventory);
 router.post("/add-inventory", CheckRoleAndTokenAccess, add_face_inventory);
 router.post(
   "/add-item-inventory",

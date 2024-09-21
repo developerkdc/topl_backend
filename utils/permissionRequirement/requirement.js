@@ -460,8 +460,8 @@ const ExtractRequiredPermission = (routeName) => {
       return "face_inventory_create";
     case "/edit-inventory/:item_id/:invoice_id":
       return "face_inventory_edit";
-    case "/list-inventory":
-      return " face_inventory_view";
+    case "/face-list-inventory":
+      return "face_inventory_view";
 
     //fleece-inventory
     case "/add-inventory":
