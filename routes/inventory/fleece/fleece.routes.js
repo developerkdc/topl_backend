@@ -11,7 +11,7 @@ fleece_router.patch("/edit-invoice-item-inventory/:invoice_id", edit_fleece_item
 fleece_router.patch("/edit-item-inventory/:item_id", edit_fleece_item_inventory);
 fleece_router.patch("/edit-invoice-inventory/:invoice_id", edit_fleece_invoice_inventory);
 fleece_router.post("/download-excel-veneer", fleeceCsv);
-fleece_router.get("/veneer-item-listing-by-invoice/:invoice_id", fleece_item_listing_by_invoice);
+fleece_router.get("/fleece-item-listing-by-invoice/:invoice_id", fleece_item_listing_by_invoice);
 
 //dropdown
 fleece_router.get("/item-srno-dropdown", item_sr_no_dropdown);
