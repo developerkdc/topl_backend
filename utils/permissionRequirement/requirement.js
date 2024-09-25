@@ -422,7 +422,9 @@ const ExtractRequiredPermission = (routeName) => {
     case "/edit-inventory/:item_id/:invoice_id":
       return "log_inventory_edit";
     case "/list-inventory":
-      return " log_inventory_view";
+      return "log_inventory_view";
+    case "/issue_for_crosscutting":
+      return "log_inventory_create";
     //plywood-inventory
     case "/add-inventory":
       return "plywood_inventory_create";

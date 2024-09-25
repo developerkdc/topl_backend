@@ -12,6 +12,8 @@ import { dynamic_filter } from "../../../utils/dymanicFilter.js";
 import { StatusCodes } from "../../../utils/constants.js";
 import { createMdfLogsExcel } from "../../../config/downloadExcel/Logs/Inventory/mdf/mdf.js";
 import { createLogLogsExcel } from "../../../config/downloadExcel/Logs/Inventory/log/log.js";
+import { issues_for_crosscutting_model } from "../../../database/schema/factory/crossCutting/issuedForCutting.schema.js";
+import { issues_for_status } from "../../../database/Utils/constants/constants.js";
 
 export const listing_log_inventory = catchAsync(async (req, res, next) => {
   const {
@@ -75,14 +77,6 @@ export const listing_log_inventory = catchAsync(async (req, res, next) => {
       $limit: parseInt(limit),
     },
   ];
-  // console.log(!(sortBy === 'updatedAt' && sort === "desc"))
-  // if (!(sortBy === 'updatedAt' && sort === "desc")){
-  //     aggregate_stage[1] = {
-  //         $sort: {
-  //             [sortBy]: sort === "desc" ? -1 : 1
-  //         }
-  //     }
-  // }
 
   const List_log_inventory_details =
     await log_inventory_items_view_model.aggregate(aggregate_stage);
@@ -207,21 +201,21 @@ export const edit_log_item_invoice_inventory = catchAsync(async (req, res, next)
     const items_details = req.body?.inventory_items_details;
     const invoice_details = req.body?.inventory_invoice_details;
 
-    const update_invoice_details = await log_inventory_invoice_model.updateOne({_id:invoice_id},{
-      $set:{
+    const update_invoice_details = await log_inventory_invoice_model.updateOne({ _id: invoice_id }, {
+      $set: {
         ...invoice_details
       }
-    },{session})
+    }, { session })
 
     console.log(update_invoice_details);
 
-    if(!update_invoice_details.acknowledged || update_invoice_details.modifiedCount <= 0) return next(new ApiError("Failed to update invoice",400));
+    if (!update_invoice_details.acknowledged || update_invoice_details.modifiedCount <= 0) return next(new ApiError("Failed to update invoice", 400));
 
-    const all_invoice_items = await log_inventory_items_model.deleteMany({invoice_id:invoice_id},{session});
+    const all_invoice_items = await log_inventory_items_model.deleteMany({ invoice_id: invoice_id }, { session });
 
-    if(!all_invoice_items.acknowledged || all_invoice_items.deletedCount <= 0) return next(new ApiError("Failed to update invoice items",400));
+    if (!all_invoice_items.acknowledged || all_invoice_items.deletedCount <= 0) return next(new ApiError("Failed to update invoice items", 400));
 
-    const update_item_details = await log_inventory_items_model.insertMany([...items_details],{session});
+    const update_item_details = await log_inventory_items_model.insertMany([...items_details], { session });
 
     await session.commitTransaction();
     session.endSession();
@@ -387,8 +381,8 @@ export const log_item_listing_by_invoice = catchAsync(async (req, res, next) => 
       },
     },
     {
-      $project:{
-        log_invoice_details:0
+      $project: {
+        log_invoice_details: 0
       }
     }
   ];
@@ -409,3 +403,35 @@ export const log_item_listing_by_invoice = catchAsync(async (req, res, next) => 
     message: "Data fetched successfully",
   });
 });
+
+export const add_issue_for_crosscutting = catchAsync(async (req, res, next) => {
+
+    const log_items_ids = req.body?.log_items_ids
+    if (!Array.isArray(log_items_ids)) return next(new ApiError("log items id must be a array", 400));
+    const created_by = req.userDetails.id; //extract userid from req.userDetails
+
+    const log_items_ids_set = new Set(log_items_ids)
+    const update_log_items_status = await log_inventory_items_model.updateMany({ _id: { $in: [...log_items_ids_set] } }, {
+      $set: {
+        issue_status: issues_for_status.crosscutting
+      }
+    });
+
+    if (!update_log_items_status?.acknowledged && update_log_items_status.modifiedCount <= 0) return next(new ApiError("Failed to update", 400))
+
+    const log_issue_for_crosscutting_data = await log_inventory_items_model.find({ _id: { $in: [...log_items_ids_set] }, issue_status: issues_for_status.crosscutting }).lean();
+
+    const issue_for_crosscutting = log_issue_for_crosscutting_data.map((ele) => {
+      ele.log_inventory_item_id = ele?._id
+      ele.created_by = created_by
+      return ele
+    })
+
+    const issue_for_crosscutting_data = await issues_for_crosscutting_model.insertMany(issue_for_crosscutting);
+
+    return res.status(200).json(
+      new ApiResponse(StatusCodes.CREATED, "Issue for crosscutting done successfully", {
+        issue_for_crosscutting_data
+      })
+    );
+})
