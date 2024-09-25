@@ -125,7 +125,7 @@ const log_invoice_schema = new mongoose.Schema(
     inward_date: {
       type: Date,
       default: Date.now,
-      required: [true, ""],
+      required: [true, "Inward Date is required."],
     },
     currency: {
       type: String,
@@ -169,7 +169,7 @@ const log_invoice_schema = new mongoose.Schema(
         },
         branch_name: {
           type: String,
-          required: [true, "Branch name is reqiured"],
+          required: [true, "Branch name is required"],
         },
         contact_person: {
           type: [
