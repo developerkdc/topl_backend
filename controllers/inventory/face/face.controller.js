@@ -259,3 +259,105 @@ export const edit_face_invoice_inventory = catchAsync(
       );
   }
 );
+
+export const edit_face_item_invoice_inventory = catchAsync(async (req, res, next) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const invoice_id = req.params?.invoice_id;
+    const items_details = req.body?.inventory_items_details;
+    const invoice_details = req.body?.inventory_invoice_details;
+
+    const update_invoice_details = await face_inventory_invoice_details.updateOne({_id:invoice_id},{
+      $set:{
+        ...invoice_details
+      }
+    },{session})
+
+    console.log(update_invoice_details);
+
+    if(!update_invoice_details.acknowledged || update_invoice_details.modifiedCount <= 0) return next(new ApiError("Failed to update invoice",400));
+
+    const all_invoice_items = await face_inventory_items_details.deleteMany({invoice_id:invoice_id},{session});
+
+    if(!all_invoice_items.acknowledged || all_invoice_items.deletedCount <= 0) return next(new ApiError("Failed to update invoice items",400));
+
+    const update_item_details = await face_inventory_items_details.insertMany([...items_details],{session});
+
+    await session.commitTransaction();
+    session.endSession();
+    return res
+      .status(StatusCodes.OK)
+      .json(
+        new ApiResponse(
+          StatusCodes.OK,
+          "Inventory item updated successfully",
+          update_item_details
+        )
+      );
+  } catch (error) {
+    console.log(error);
+    await session.abortTransaction();
+    session.endSession();
+    return next(error);
+  }
+});
+
+export const face_item_listing_by_invoice = catchAsync(async (req, res, next) => {
+
+  const invoice_id = req.params.invoice_id;
+
+  const aggregate_stage = [
+    {
+      $match: {
+        'face_invoice_details._id': new mongoose.Types.ObjectId(invoice_id)
+      },
+    },
+    {
+      $sort: {
+        item_sr_no: 1
+      },
+    },
+    {
+      $project:{
+        face_invoice_details:0
+      }
+    }
+  ];
+
+  const single_invoice_list_face_inventory_details = await face_inventory_items_view_modal.aggregate(aggregate_stage);
+
+  // const totalCount = await log_inventory_items_view_model.countDocuments({
+  //   ...match_query,
+  // });
+
+  // const totalPage = Math.ceil(totalCount / limit);
+
+  return res.status(200).json({
+    statusCode: 200,
+    status: "success",
+    data: single_invoice_list_face_inventory_details,
+    // totalPage: totalPage,
+    message: "Data fetched successfully",
+  });
+});
+
+export const item_sr_no_dropdown = catchAsync(async (req, res, next) => {
+  const item_sr_no = await face_inventory_items_details.distinct("item_sr_no");
+  return res.status(200).json({
+    statusCode: 200,
+    status: "success",
+    data: item_sr_no,
+    message: "Item Sr No Dropdown fetched successfully",
+  });
+});
+
+export const inward_sr_no_dropdown = catchAsync(async (req, res, next) => {
+  const item_sr_no = await face_inventory_invoice_details.distinct("inward_sr_no");
+  return res.status(200).json({
+    statusCode: 200,
+    status: "success",
+    data: item_sr_no,
+    message: "Inward Sr No Dropdown fetched successfully",
+  });
+});

@@ -53,7 +53,7 @@ const item_details_schema = new mongoose.Schema(
       required: [true, "Rate in currency is required"],
     },
     exchange_rate: {
-      type: String || Number,
+      type: Number,
       required: [true, "exchange rate is required"],
     },
     rate_in_inr: {
@@ -88,17 +88,17 @@ const face_invoice_schema = new mongoose.Schema(
   {
     inward_sr_no: {
       type: Number,
-      unique: true,
-      required: [true, "Invoice Sr No is required"],
+      default: null,
+      required: [true, "Inward Sr.No is required."],
     },
     inward_date: {
       type: Date,
       default: Date.now,
-      required: [true, "Inwrad Date is required"],
+      required: [true, "Inward Date is required."],
     },
     currency: {
       type: String,
-      required: [true, "Currency is required"],
+      required: [true, "currency is required"],
     },
     workers_details: {
       no_of_workers: {
@@ -134,76 +134,73 @@ const face_invoice_schema = new mongoose.Schema(
       branch_detail: {
         branch_id: {
           type: mongoose.Schema.Types.ObjectId,
-          required: [true, "company id is required"],
+          required: [true, "Company id is required"],
         },
         branch_name: {
           type: String,
-          required: [true, "branch name is reqiured"],
+          required: [true, "Branch name is required"],
         },
         contact_person: {
           type: [
             {
               name: {
                 type: String,
-                required: [true, "contact person name is required"],
-                unique: [true, "contact person name is required"],
+                required: [true, "Contact person name is required"],
                 trim: true,
               },
               email: {
                 type: String,
-                required: [true, "email id is required"],
+                required: [true, "Email id is required"],
                 trim: true,
               },
               mobile_number: {
                 type: String,
-                required: [true, "mobile number is required"],
+                required: [true, "Mobile number is required"],
               },
               designation: {
                 type: String,
-                required: [true, "designation is required"],
+                required: [true, "Designation is required"],
               },
             },
           ],
-          required: [true, "at least one contact person is required"],
+          required: [true, "At least one contact person is required"],
         },
         address: {
           type: String,
-          required: [true, "address is required"],
+          required: [true, "Address is required"],
         },
         state: {
           type: String,
-          required: [true, "state is required"],
+          required: [true, "State is required"],
         },
         country: {
           type: String,
-          required: [true, "country is required"],
+          required: [true, "Country is required"],
         },
         city: {
           type: String,
-          required: [true, "city is required"],
+          required: [true, "City is required"],
         },
         pincode: {
           type: String,
-          required: [true, "pincode is required"],
+          required: [true, "Pincode is required"],
         },
         gst_number: {
           type: String,
-          required: [true, "gst number is required"],
+          required: [true, "Gst number is required"],
         },
         web_url: {
           type: String,
-          required: [true, "web url is required"],
+          required: [true, "Web url is required"],
         },
       },
     },
     invoice_Details: invoice_details,
     created_by: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: [true, "created by is required field"],
-    },
-    deleted_at: {
-      type: Date,
-      default: null,
+      type: mongoose.Types.ObjectId,
+      ref: "users",
+      required: [true,"Created By is required"],
+      trim: true,
     },
   },
   {
