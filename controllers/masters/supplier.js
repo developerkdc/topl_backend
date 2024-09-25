@@ -322,7 +322,7 @@ export const addBranchToSupplier = catchAsync(async (req, res) => {
 //new
 export const fetchAllSupplierWithBranchesDetails = catchAsync(
   async (req, res) => {
-    const { query, sortField, sortOrder, page, limit } = req.query;
+    const { query, sortField = "updated_at", sortOrder = "desc", page, limit } = req.query;
     const pageInt = parseInt(page) || 1;
     const limitInt = parseInt(limit) || 10;
     const skipped = (pageInt - 1) * limitInt;
@@ -520,15 +520,15 @@ export const fetchAllSupplierWithBranchesDetails = catchAsync(
       // {
       //   $unwind: "$supplierDetails",
       // },
+      { $sort: { [sortField]: sortOrder === "desc" ? -1 : 1 } },
       { $match: searchQuery },
       { $skip: skipped },
       { $limit: limitInt },
-      // { $sort: sortObj }
     ];
 
-    if (Object.keys(sortObj).length > 0) {
-      pipeline.push({ $sort: sortObj });
-    }
+    // if (Object.keys(sortObj).length > 0) {
+    //   pipeline.push({ $sort: sortObj });
+    // }
 
     const allDetails = await SupplierModel.aggregate(pipeline).collation({
       locale: "en",
