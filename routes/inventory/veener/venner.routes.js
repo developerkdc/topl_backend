@@ -1,34 +1,31 @@
 import { Router } from "express";
 import {
-  add_single_venner_item_inventory,
-  add_venner_inventory,
-  edit_venner_invoice_inventory,
-  edit_venner_item_inventory,
-  listing_venner_inventory,
+  add_veneer_inventory,
+  add_single_veneer_item_inventory,
+  edit_veneer_invoice_inventory,
+  edit_veneer_item_inventory,
+  edit_veneer_item_invoice_inventory,
+  inward_sr_no_dropdown,
+  item_sr_no_dropdown,
+  listing_veneer_inventory,
+  veneer_item_listing_by_invoice,
+  veneerCsv,
 } from "../../../controllers/inventory/venner/venner.controller.js";
 import CheckRoleAndTokenAccess from "../../../middlewares/permission.js";
 
-const router = Router();
-router.post(
-  "/list-inventory",
-  CheckRoleAndTokenAccess,
-  listing_venner_inventory
-);
-router.post("/add-inventory", CheckRoleAndTokenAccess, add_venner_inventory);
-router.post(
-  "/add-item-inventory",
-  CheckRoleAndTokenAccess,
-  add_single_venner_item_inventory
-);
-router.patch(
-  "/edit-item-inventory/:item_id",
-  CheckRoleAndTokenAccess,
-  edit_venner_item_inventory
-);
-router.patch(
-  "/edit-invoice-inventory/:invoice_id",
-  CheckRoleAndTokenAccess,
-  edit_venner_invoice_inventory
-);
+const veneer_router = Router();
 
-export default router;
+veneer_router.post("/list-inventory", listing_veneer_inventory);
+veneer_router.post("/add-inventory", CheckRoleAndTokenAccess, add_veneer_inventory);
+veneer_router.post("/add-item-inventory", add_single_veneer_item_inventory);
+veneer_router.patch("/edit-invoice-item-inventory/:invoice_id", edit_veneer_item_invoice_inventory);
+veneer_router.patch("/edit-item-inventory/:item_id", edit_veneer_item_inventory);
+veneer_router.patch("/edit-invoice-inventory/:invoice_id", edit_veneer_invoice_inventory);
+veneer_router.post("/download-excel-veneer", veneerCsv);
+veneer_router.get("/veneer-item-listing-by-invoice/:invoice_id", veneer_item_listing_by_invoice);
+
+//dropdown
+veneer_router.get("/item-srno-dropdown", item_sr_no_dropdown);
+veneer_router.get("/inward-srno-dropdown", inward_sr_no_dropdown);
+
+export default veneer_router;

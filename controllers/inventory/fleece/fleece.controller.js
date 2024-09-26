@@ -1,21 +1,18 @@
 import mongoose from "mongoose";
-import {
-  log_inventory_invoice_model,
-  log_inventory_items_model,
-  log_inventory_items_view_model,
-} from "../../../database/schema/inventory/log/log.schema.js";
-import catchAsync from "../../../utils/errors/catchAsync.js";
-import ApiError from "../../../utils/errors/apiError.js";
-import ApiResponse from "../../../utils/ApiResponse.js";
-import { DynamicSearch } from "../../../utils/dynamicSearch/dynamic.js";
-import { dynamic_filter } from "../../../utils/dymanicFilter.js";
-import { StatusCodes } from "../../../utils/constants.js";
-import { createMdfLogsExcel } from "../../../config/downloadExcel/Logs/Inventory/mdf/mdf.js";
 import { createLogLogsExcel } from "../../../config/downloadExcel/Logs/Inventory/log/log.js";
-import { issues_for_crosscutting_model } from "../../../database/schema/factory/crossCutting/issuedForCutting.schema.js";
-import { issues_for_status } from "../../../database/Utils/constants/constants.js";
+import {
+  fleece_inventory_invoice_modal,
+  fleece_inventory_items_modal,
+  fleece_inventory_items_view_modal,
+} from "../../../database/schema/inventory/fleece/fleece.schema.js";
+import ApiResponse from "../../../utils/ApiResponse.js";
+import { StatusCodes } from "../../../utils/constants.js";
+import { dynamic_filter } from "../../../utils/dymanicFilter.js";
+import { DynamicSearch } from "../../../utils/dynamicSearch/dynamic.js";
+import ApiError from "../../../utils/errors/apiError.js";
+import catchAsync from "../../../utils/errors/catchAsync.js";
 
-export const listing_log_inventory = catchAsync(async (req, res, next) => {
+export const listing_fleece_inventory = catchAsync(async (req, res, next) => {
   const {
     page = 1,
     limit = 10,
@@ -77,11 +74,19 @@ export const listing_log_inventory = catchAsync(async (req, res, next) => {
       $limit: parseInt(limit),
     },
   ];
+  // console.log(!(sortBy === 'updatedAt' && sort === "desc"))
+  // if (!(sortBy === 'updatedAt' && sort === "desc")){
+  //     aggregate_stage[1] = {
+  //         $sort: {
+  //             [sortBy]: sort === "desc" ? -1 : 1
+  //         }
+  //     }
+  // }
 
-  const List_log_inventory_details =
-    await log_inventory_items_view_model.aggregate(aggregate_stage);
+  const List_fleece_inventory_details =
+    await fleece_inventory_items_view_modal.aggregate(aggregate_stage);
 
-  const totalCount = await log_inventory_items_view_model.countDocuments({
+  const totalCount = await fleece_inventory_items_view_modal.countDocuments({
     ...match_query,
   });
 
@@ -90,19 +95,19 @@ export const listing_log_inventory = catchAsync(async (req, res, next) => {
   return res.status(200).json({
     statusCode: 200,
     status: "success",
-    data: List_log_inventory_details,
+    data: List_fleece_inventory_details,
     totalPage: totalPage,
     message: "Data fetched successfully",
   });
 });
 
-export const add_log_inventory = catchAsync(async (req, res, next) => {
+export const add_fleece_inventory = catchAsync(async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
     const { inventory_invoice_details, inventory_items_details } = req.body;
     const created_by = req.userDetails.id; //extract userid from req.userDetails
-    const inward_sr_no = await log_inventory_invoice_model.aggregate([
+    const inward_sr_no = await fleece_inventory_invoice_modal.aggregate([
       {
         $group: {
           _id: null,
@@ -118,7 +123,7 @@ export const add_log_inventory = catchAsync(async (req, res, next) => {
 
     inventory_invoice_details.created_by = created_by;
 
-    const add_invoice_details = await log_inventory_invoice_model.create(
+    const add_invoice_details = await fleece_inventory_invoice_modal.create(
       [
         {
           inward_sr_no: latest_inward_sr_no,
@@ -140,7 +145,7 @@ export const add_log_inventory = catchAsync(async (req, res, next) => {
       return elm;
     });
 
-    const add_items_details = await log_inventory_items_model.insertMany(
+    const add_items_details = await fleece_inventory_items_modal.insertMany(
       items_details,
       {
         session,
@@ -167,7 +172,7 @@ export const add_log_inventory = catchAsync(async (req, res, next) => {
   }
 });
 
-export const add_single_log_item_inventory = catchAsync(
+export const add_single_fleece_item_inventory = catchAsync(
   async (req, res, next) => {
     const item_details = req.body?.item_details;
 
@@ -177,7 +182,7 @@ export const add_single_log_item_inventory = catchAsync(
       return next(new ApiError("Please provide valid invoice id", 400));
     }
 
-    const add_item_details = await log_inventory_items_model.create({
+    const add_item_details = await fleece_inventory_items_modal.create({
       ...item_details,
     });
 
@@ -193,7 +198,7 @@ export const add_single_log_item_inventory = catchAsync(
   }
 );
 
-export const edit_log_item_invoice_inventory = catchAsync(async (req, res, next) => {
+export const edit_fleece_item_invoice_inventory = catchAsync(async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
@@ -201,21 +206,19 @@ export const edit_log_item_invoice_inventory = catchAsync(async (req, res, next)
     const items_details = req.body?.inventory_items_details;
     const invoice_details = req.body?.inventory_invoice_details;
 
-    const update_invoice_details = await log_inventory_invoice_model.updateOne({ _id: invoice_id }, {
-      $set: {
+    const update_invoice_details = await fleece_inventory_invoice_modal.updateOne({_id:invoice_id},{
+      $set:{
         ...invoice_details
       }
-    }, { session })
+    },{session})
 
-    console.log(update_invoice_details);
+    if(!update_invoice_details.acknowledged || update_invoice_details.modifiedCount <= 0) return next(new ApiError("Failed to update invoice",400));
 
-    if (!update_invoice_details.acknowledged || update_invoice_details.modifiedCount <= 0) return next(new ApiError("Failed to update invoice", 400));
+    const all_invoice_items = await fleece_inventory_items_modal.deleteMany({invoice_id:invoice_id},{session});
 
-    const all_invoice_items = await log_inventory_items_model.deleteMany({ invoice_id: invoice_id }, { session });
+    if(!all_invoice_items.acknowledged || all_invoice_items.deletedCount <= 0) return next(new ApiError("Failed to update invoice items",400));
 
-    if (!all_invoice_items.acknowledged || all_invoice_items.deletedCount <= 0) return next(new ApiError("Failed to update invoice items", 400));
-
-    const update_item_details = await log_inventory_items_model.insertMany([...items_details], { session });
+    const update_item_details = await fleece_inventory_items_modal.insertMany([...items_details],{session});
 
     await session.commitTransaction();
     session.endSession();
@@ -236,11 +239,11 @@ export const edit_log_item_invoice_inventory = catchAsync(async (req, res, next)
   }
 });
 
-export const edit_log_item_inventory = catchAsync(async (req, res, next) => {
+export const edit_fleece_item_inventory = catchAsync(async (req, res, next) => {
   const item_id = req.params?.item_id;
   const item_details = req.body?.item_details;
 
-  const update_item_details = await log_inventory_items_model.updateOne(
+  const update_item_details = await fleece_inventory_items_modal.updateOne(
     { _id: item_id },
     {
       $set: {
@@ -267,11 +270,11 @@ export const edit_log_item_inventory = catchAsync(async (req, res, next) => {
     );
 });
 
-export const edit_log_invoice_inventory = catchAsync(async (req, res, next) => {
+export const edit_fleece_invoice_inventory = catchAsync(async (req, res, next) => {
   const invoice_id = req.params?.invoice_id;
   const invoice_details = req.body?.invoice_details;
 
-  const update_voice_details = await log_inventory_invoice_model.updateOne(
+  const update_voice_details = await fleece_inventory_invoice_modal.updateOne(
     { _id: invoice_id },
     {
       $set: invoice_details,
@@ -296,7 +299,7 @@ export const edit_log_invoice_inventory = catchAsync(async (req, res, next) => {
     );
 });
 
-export const logLogsCsv = catchAsync(async (req, res) => {
+export const fleeceCsv = catchAsync(async (req, res) => {
   const { search = "" } = req.query;
   const {
     string,
@@ -335,7 +338,7 @@ export const logLogsCsv = catchAsync(async (req, res) => {
     ...search_query,
   };
 
-  const allData = await log_inventory_items_view_model.find(match_query);
+  const allData = await fleece_inventory_items_view_modal.find(match_query);
 
   const excelLink = await createLogLogsExcel(allData);
   console.log("link => ", excelLink);
@@ -346,7 +349,7 @@ export const logLogsCsv = catchAsync(async (req, res) => {
 });
 
 export const item_sr_no_dropdown = catchAsync(async (req, res, next) => {
-  const item_sr_no = await log_inventory_items_model.distinct("item_sr_no");
+  const item_sr_no = await fleece_inventory_items_modal.distinct("item_sr_no");
   return res.status(200).json({
     statusCode: 200,
     status: "success",
@@ -356,7 +359,7 @@ export const item_sr_no_dropdown = catchAsync(async (req, res, next) => {
 });
 
 export const inward_sr_no_dropdown = catchAsync(async (req, res, next) => {
-  const item_sr_no = await log_inventory_invoice_model.distinct("inward_sr_no");
+  const item_sr_no = await fleece_inventory_invoice_modal.distinct("inward_sr_no");
   return res.status(200).json({
     statusCode: 200,
     status: "success",
@@ -365,14 +368,14 @@ export const inward_sr_no_dropdown = catchAsync(async (req, res, next) => {
   });
 });
 
-export const log_item_listing_by_invoice = catchAsync(async (req, res, next) => {
+export const fleece_item_listing_by_invoice = catchAsync(async (req, res, next) => {
 
   const invoice_id = req.params.invoice_id;
 
   const aggregate_stage = [
     {
       $match: {
-        'log_invoice_details._id': new mongoose.Types.ObjectId(invoice_id)
+        'fleece_invoice_details._id': new mongoose.Types.ObjectId(invoice_id)
       },
     },
     {
@@ -381,15 +384,15 @@ export const log_item_listing_by_invoice = catchAsync(async (req, res, next) => 
       },
     },
     {
-      $project: {
-        log_invoice_details: 0
+      $project:{
+        fleece_invoice_details:0
       }
     }
   ];
 
-  const single_invoice_list_log_inventory_details = await log_inventory_items_view_model.aggregate(aggregate_stage);
+  const single_invoice_List_fleece_inventory_details = await fleece_inventory_items_view_modal.aggregate(aggregate_stage);
 
-  // const totalCount = await log_inventory_items_view_model.countDocuments({
+  // const totalCount = await fleece_inventory_items_view_modal.countDocuments({
   //   ...match_query,
   // });
 
@@ -398,40 +401,8 @@ export const log_item_listing_by_invoice = catchAsync(async (req, res, next) => 
   return res.status(200).json({
     statusCode: 200,
     status: "success",
-    data: single_invoice_list_log_inventory_details,
+    data: single_invoice_List_fleece_inventory_details,
     // totalPage: totalPage,
     message: "Data fetched successfully",
   });
 });
-
-export const add_issue_for_crosscutting = catchAsync(async (req, res, next) => {
-
-    const log_items_ids = req.body?.log_items_ids
-    if (!Array.isArray(log_items_ids)) return next(new ApiError("log items id must be a array", 400));
-    const created_by = req.userDetails.id; //extract userid from req.userDetails
-
-    const log_items_ids_set = new Set(log_items_ids)
-    const update_log_items_status = await log_inventory_items_model.updateMany({ _id: { $in: [...log_items_ids_set] } }, {
-      $set: {
-        issue_status: issues_for_status.crosscutting
-      }
-    });
-
-    if (!update_log_items_status?.acknowledged && update_log_items_status.modifiedCount <= 0) return next(new ApiError("Failed to update", 400))
-
-    const log_issue_for_crosscutting_data = await log_inventory_items_model.find({ _id: { $in: [...log_items_ids_set] }, issue_status: issues_for_status.crosscutting }).lean();
-
-    const issue_for_crosscutting = log_issue_for_crosscutting_data.map((ele) => {
-      ele.log_inventory_item_id = ele?._id
-      ele.created_by = created_by
-      return ele
-    })
-
-    const issue_for_crosscutting_data = await issues_for_crosscutting_model.insertMany(issue_for_crosscutting);
-
-    return res.status(200).json(
-      new ApiResponse(StatusCodes.CREATED, "Issue for crosscutting done successfully", {
-        issue_for_crosscutting_data
-      })
-    );
-})

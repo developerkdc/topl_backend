@@ -43,10 +43,8 @@ import machineRouter from "./routes/masters/machine.routes.js";
 import seriesRouter from "./routes/masters/series.routes.js";
 import plywoodInventoryRoutes from "./routes/inventory/plywood/plywood.routes.js";
 import mdfInventoryRoutes from "./routes/inventory/mdf/mdf.routes.js";
-import vennerInventoryRoutes from "./routes/inventory/veener/venner.routes.js";
 import faceInventoryRoutes from "./routes/inventory/face/face.routes.js";
 import coreInventoryRoutes from "./routes/inventory/core/core.routes.js";
-import fleecePaperRoutes from "./routes/inventory/fleecePaper/fleecePaper.routes.js";
 import crossCuttingFactoryRoutes from "./routes/factory/crossCutting/crossCutting.routes.js";
 import flitchingFactoryRoutes from "./routes/factory/flitching/flitching.routes.js";
 import logRouter from "./routes/inventory/log/log.routes.js"
@@ -55,6 +53,8 @@ import path from "path";
 
 import { globalErrorHandler } from "./utils/errors/GlobalErrorHandler.js";
 import flitch_router from "./routes/inventory/flitch/flitch.routes.js";
+import veneer_router from "./routes/inventory/veener/venner.routes.js";
+import fleece_router from "./routes/inventory/fleece/fleece.routes.js";
 const Configs = getConfigs();
 mongo_service();
 const app = express();
@@ -132,14 +132,14 @@ app.use(
 );
 app.use(`/api/${Configs.server.version}/mdf-inventory`, mdfInventoryRoutes);
 app.use(
-  `/api/${Configs.server.version}/venner-inventory`,
-  vennerInventoryRoutes
+  `/api/${Configs.server.version}/veneer-inventory`,
+  veneer_router
 );
 app.use(`/api/${Configs.server.version}/face-inventory`, faceInventoryRoutes);
 app.use(`/api/${Configs.server.version}/core-inventory`, coreInventoryRoutes);
 app.use(
-  `/api/${Configs.server.version}/fleecePaper-inventory`,
-  fleecePaperRoutes
+  `/api/${Configs.server.version}/fleece-inventory`,
+  fleece_router
 );
 
 //factory - routes

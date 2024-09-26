@@ -99,6 +99,12 @@ const log_item_details_schema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     required: [true, "Invoice Id is required"],
   },
+  created_by: {
+    type: mongoose.Types.ObjectId,
+    ref: "users",
+    required: [true,"Created By is required"],
+    trim: true,
+  },
 }, {
   timestamps: true,
 });
@@ -119,7 +125,7 @@ const log_invoice_schema = new mongoose.Schema(
     inward_date: {
       type: Date,
       default: Date.now,
-      required: [true, ""],
+      required: [true, "Inward Date is required."],
     },
     currency: {
       type: String,
@@ -163,7 +169,7 @@ const log_invoice_schema = new mongoose.Schema(
         },
         branch_name: {
           type: String,
-          required: [true, "Branch name is reqiured"],
+          required: [true, "Branch name is required"],
         },
         contact_person: {
           type: [
@@ -221,6 +227,12 @@ const log_invoice_schema = new mongoose.Schema(
       },
     },
     invoice_Details: invoice_details,
+    created_by: {
+      type: mongoose.Types.ObjectId,
+      ref: "users",
+      required: [true,"Created By is required"],
+      trim: true,
+    },
   },
   {
     timestamps: true,

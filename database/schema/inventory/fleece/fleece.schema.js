@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import invoice_details from "../../../Utils/invoiceDetails.schema.js";
 
-const item_details_schema = new mongoose.Schema(
+const fleece_item_details_schema = new mongoose.Schema(
   {
     supplier_item_name: {
       type: String,
@@ -13,16 +13,19 @@ const item_details_schema = new mongoose.Schema(
     },
     item_sr_no: {
       type: Number,
-      //   unique: true,
       required: [true, "item Sr No is required"],
     },
     item_name: {
       type: String,
       required: [true, "Item Name is required"],
     },
-    plywood_sub_type: {
+    item_sub_category_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, "Items Sub-Category Id is required"],
+    },
+    item_sub_category_name: {
       type: String,
-      required: [true, "plywood sub type is required"],
+      required: [true, "Item Sub-Category Name is required"],
     },
     number_of_roll: {
       type: Number,
@@ -84,21 +87,27 @@ const item_details_schema = new mongoose.Schema(
   { timestamps: true }
 );
 
-const fleecePaper_invoice_schema = new mongoose.Schema(
+fleece_item_details_schema.index({ item_sr_no: 1 });
+fleece_item_details_schema.index(
+  { item_sr_no: 1, invoice_id: 1 },
+  { unique: true }
+);
+
+const fleece_invoice_schema = new mongoose.Schema(
   {
     inward_sr_no: {
       type: Number,
-      unique: true,
-      required: [true, "Invoice Sr No is required"],
+      default: null,
+      required: [true, "Inward Sr.No is required. "],
     },
     inward_date: {
       type: Date,
       default: Date.now,
-      required: [true, "Inwrad Date is required"],
+      required: [true, ""],
     },
     currency: {
       type: String,
-      required: [true, "Currency is required"],
+      required: [true, "currency is required"],
     },
     workers_details: {
       no_of_workers: {
@@ -134,76 +143,73 @@ const fleecePaper_invoice_schema = new mongoose.Schema(
       branch_detail: {
         branch_id: {
           type: mongoose.Schema.Types.ObjectId,
-          required: [true, "company id is required"],
+          required: [true, "Company id is required"],
         },
         branch_name: {
           type: String,
-          required: [true, "branch name is reqiured"],
+          required: [true, "Branch name is reqiured"],
         },
         contact_person: {
           type: [
             {
               name: {
                 type: String,
-                required: [true, "contact person name is required"],
-                unique: [true, "contact person name is required"],
+                required: [true, "Contact person name is required"],
                 trim: true,
               },
               email: {
                 type: String,
-                required: [true, "email id is required"],
+                required: [true, "Email id is required"],
                 trim: true,
               },
               mobile_number: {
                 type: String,
-                required: [true, "mobile number is required"],
+                required: [true, "Mobile number is required"],
               },
               designation: {
                 type: String,
-                required: [true, "designation is required"],
+                required: [true, "Designation is required"],
               },
             },
           ],
-          required: [true, "at least one contact person is required"],
+          required: [true, "At least one contact person is required"],
         },
         address: {
           type: String,
-          required: [true, "address is required"],
+          required: [true, "Address is required"],
         },
         state: {
           type: String,
-          required: [true, "state is required"],
+          required: [true, "State is required"],
         },
         country: {
           type: String,
-          required: [true, "country is required"],
+          required: [true, "Country is required"],
         },
         city: {
           type: String,
-          required: [true, "city is required"],
+          required: [true, "City is required"],
         },
         pincode: {
           type: String,
-          required: [true, "pincode is required"],
+          required: [true, "Pincode is required"],
         },
         gst_number: {
           type: String,
-          required: [true, "gst number is required"],
+          required: [true, "Gst number is required"],
         },
         web_url: {
           type: String,
-          required: [true, "web url is required"],
+          required: [true, "Web url is required"],
         },
       },
     },
     invoice_Details: invoice_details,
     created_by: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: [true, "created by is required field"],
-    },
-    deleted_at: {
-      type: Date,
-      default: null,
+      type: mongoose.Types.ObjectId,
+      ref: "users",
+      required: [true, "Created By is required"],
+      trim: true,
     },
   },
   {
@@ -211,16 +217,16 @@ const fleecePaper_invoice_schema = new mongoose.Schema(
   }
 );
 
-export const fleecePaper_inventory_items_details = mongoose.model(
-  "fleecePaper_inventory_items_details",
-  item_details_schema
+export const fleece_inventory_items_modal = mongoose.model(
+  "fleece_inventory_items_details",
+  fleece_item_details_schema
 );
-export const fleecePaper_inventory_invoice_details = mongoose.model(
-  "fleecePaper_inventory_invoice_details",
-  fleecePaper_invoice_schema
+export const fleece_inventory_invoice_modal = mongoose.model(
+  "fleece_inventory_invoice_details",
+  fleece_invoice_schema
 );
 
-const fleecePaper_inventory_items_view_schema = new mongoose.Schema(
+const fleece_inventory_items_view_schema = new mongoose.Schema(
   {},
   {
     strict: false,
@@ -229,14 +235,14 @@ const fleecePaper_inventory_items_view_schema = new mongoose.Schema(
   }
 );
 
-export const fleecePaper_inventory_items_view_modal = mongoose.model(
-  "fleecePaper_inventory_items_view",
-  fleecePaper_inventory_items_view_schema
+export const fleece_inventory_items_view_modal = mongoose.model(
+  "fleece_inventory_items_view",
+  fleece_inventory_items_view_schema
 );
 
 (async function () {
-  await fleecePaper_inventory_items_view_modal.createCollection({
-    viewOn: "fleecePaper_inventory_items_details",
+  await fleece_inventory_items_view_modal.createCollection({
+    viewOn: "fleece_inventory_items_details",
     pipeline: [
       {
         $sort: {
@@ -246,15 +252,15 @@ export const fleecePaper_inventory_items_view_modal = mongoose.model(
       },
       {
         $lookup: {
-          from: "fleecePaper_inventory_invoice_details",
+          from: "fleece_inventory_invoice_details",
           localField: "invoice_id",
           foreignField: "_id",
-          as: "fleecePaper_invoice_details",
+          as: "fleece_invoice_details",
         },
       },
       {
         $unwind: {
-          path: "$fleecePaper_invoice_details",
+          path: "$fleece_invoice_details",
           preserveNullAndEmptyArrays: true,
         },
       },
