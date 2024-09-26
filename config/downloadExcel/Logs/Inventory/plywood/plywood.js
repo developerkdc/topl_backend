@@ -4,6 +4,12 @@ import ApiError from "../../../../../utils/errors/apiError.js";
 import dotenv from "dotenv/config";
 export const createPlywoodLogsExcel = async (newData) => {
   try {
+    const folderPath = "public/upload/reports/inventory/plywood";
+    try {
+      await fs.access(folderPath);
+    } catch (error) {
+      await fs.mkdir(folderPath, { recursive: true });
+    }
     const workbook = new exceljs.Workbook();
     const worksheet = workbook.addWorksheet("flitch-logs");
     const plywoodColumns = [

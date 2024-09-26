@@ -5,6 +5,12 @@ import dotenv from "dotenv/config";
 
 export const createLogLogsExcel = async (newData) => {
   try {
+    const folderPath = "public/upload/reports/inventory/log";
+    try {
+      await fs.access(folderPath);
+    } catch (error) {
+      await fs.mkdir(folderPath, { recursive: true });
+    }
     const workbook = new exceljs.Workbook();
     const worksheet = workbook.addWorksheet("log-logsreport");
 
