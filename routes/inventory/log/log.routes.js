@@ -1,5 +1,6 @@
 import { Router } from "express";
 import {
+  add_issue_for_crosscutting,
   add_log_inventory,
   add_single_log_item_inventory,
   edit_log_invoice_inventory,
@@ -27,5 +28,9 @@ router.get("/log-item-listing-by-invoice/:invoice_id", log_item_listing_by_invoi
 //dropdown
 router.get("/item-srno-dropdown", item_sr_no_dropdown);
 router.get("/inward-srno-dropdown", inward_sr_no_dropdown);
+
+//Issue for crosscutting
+router.post("/issue_for_crosscutting",CheckRoleAndTokenAccess, add_issue_for_crosscutting);
+
 
 export default router;
