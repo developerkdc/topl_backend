@@ -3,10 +3,10 @@ import invoice_details from "../../../Utils/invoiceDetails.schema.js";
 import { issues_for_status } from "../../../Utils/constants/constants.js";
 
 const issues_for_crosscutting_details_schema = new mongoose.Schema({
-  log_inventory_item_id:{
-    type:mongoose.Schema.Types.ObjectId,
-    ref:"log_inventory_items_details",
-    required:[true,"Log Inventory Items Id is required"]
+  log_inventory_item_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "log_inventory_items_details",
+    required: [true, "Log Inventory Items Id is required"]
   },
   item_sr_no: {
     type: Number,
@@ -80,6 +80,29 @@ const issues_for_crosscutting_details_schema = new mongoose.Schema({
     type: Number,
     required: [true, "Physical CMT is required"],
   },
+  avaiable_quantity: {
+    physical_length: {
+      type: Number,
+      default:function(){
+        return this.physical_length
+      },
+      required: [true, "Physical length is required"],
+    },
+    physical_diameter: {
+      type: Number,
+      default:function(){
+        return this.physical_diameter
+      },
+      required: [true, "Physical diameter is required"],
+    },
+    physical_cmt: {
+      type: Number,
+      default:function(){
+        return this.physical_cmt
+      },
+      required: [true, "Physical CMT is required"],
+    },
+  },
   exchange_rate: {
     type: Number,
     default: null,
@@ -107,7 +130,7 @@ const issues_for_crosscutting_details_schema = new mongoose.Schema({
   created_by: {
     type: mongoose.Types.ObjectId,
     ref: "users",
-    required: [true,"Created By is required"],
+    // required: [true, "Created By is required"],
     trim: true,
   },
 }, {

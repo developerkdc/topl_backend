@@ -8,8 +8,7 @@ import CheckRoleAndTokenAccess from "../../../middlewares/permission.js";
 const router = express.Router();
 
 router.post(
-  "/add-crossCutting",
-  CheckRoleAndTokenAccess,
+  "/add-crossCutting/:issued_crosscutting_id",
   add_cross_cutting_inventory
 );
 router.patch(
