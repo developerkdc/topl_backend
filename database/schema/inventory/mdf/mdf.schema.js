@@ -9,6 +9,7 @@ const item_details_schema = new mongoose.Schema(
     },
     item_id: {
       type: mongoose.Schema.Types.ObjectId,
+      ref: "item_name",
       required: [true, "Items id is required"],
     },
     item_sr_no: {
@@ -20,17 +21,22 @@ const item_details_schema = new mongoose.Schema(
       type: String,
       required: [true, "Item Name is required"],
     },
+    item_sub_category_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "item_subcategory",
+      required: [true, "Items Sub-Category Id is required"],
+    },
+    item_sub_category_name: {
+      type: String,
+      required: [true, "Item Sub-Category Name is required"],
+    },
     mdf_type: {
       type: String,
-      required: [true, "mdf type is required"],
-    },
-    mdf_sub_type: {
-      type: String,
-      required: [true, "mdf-sub type is required"],
+      required: [true, "MDF Type is required"],
     },
     pallet_number: {
       type: Number,
-      required: [true, "pallet_number is required"], //auto increment
+      required: [true, "Pallet Number is required"], //auto increment
     },
     length: {
       type: Number,
@@ -38,31 +44,31 @@ const item_details_schema = new mongoose.Schema(
     },
     width: {
       type: Number,
-      required: [true, "width is required"],
+      required: [true, "Width is required"],
     },
     thickness: {
       type: Number,
-      required: [true, "thickness is required"],
+      required: [true, "Thickness is required"],
     },
-    sheets: {
+    no_of_sheet: {
       type: Number,
-      required: [true, "sheets  is required"],
+      required: [true, "Number of Sheets  is required"],
     },
     total_sq_meter: {
       type: Number,
-      required: [true, "total square meter is required"],
+      required: [true, "Total square meter is required"],
     },
     rate_in_currency: {
       type: Number,
       required: [true, "Rate in currency is required"],
     },
     exchange_rate: {
-      type: String || Number,
-      required: [true, "exchange rate is required"],
+      type: Number,
+      required: [true, "Exchange rate is required"],
     },
     rate_in_inr: {
       type: Number,
-      required: [true, "Rate in inr is required"],
+      required: [true, "Rate in INR is required"],
     },
     amount: {
       type: Number,
@@ -74,10 +80,12 @@ const item_details_schema = new mongoose.Schema(
     },
     invoice_id: {
       type: mongoose.Schema.Types.ObjectId,
-      required: [true, "Invioce Id is required"],
+      ref:"mdf_inventory_invoice_details",
+      required: [true, "Invoice Id is required"],
     },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,
+      ref:"user",
       required: [true, "created by is required field"],
     },
     deleted_at: {
@@ -142,7 +150,7 @@ const mdf_invoice_schema = new mongoose.Schema(
         },
         branch_name: {
           type: String,
-          required: [true, "branch name is reqiured"],
+          required: [true, "branch name is required"],
         },
         contact_person: {
           type: [
@@ -150,7 +158,6 @@ const mdf_invoice_schema = new mongoose.Schema(
               name: {
                 type: String,
                 required: [true, "contact person name is required"],
-                unique: [true, "contact person name is required"],
                 trim: true,
               },
               email: {
@@ -215,14 +222,8 @@ const mdf_invoice_schema = new mongoose.Schema(
   }
 );
 
-export const mdf_inventory_items_details = mongoose.model(
-  "mdf_inventory_items_details",
-  item_details_schema
-);
-export const mdf_inventory_invoice_details = mongoose.model(
-  "mdf_inventory_invoice_details",
-  mdf_invoice_schema
-);
+export const mdf_inventory_items_details = mongoose.model("mdf_inventory_items_details", item_details_schema);
+export const mdf_inventory_invoice_details = mongoose.model("mdf_inventory_invoice_details", mdf_invoice_schema);
 
 const mdf_inventory_items_view_schema = new mongoose.Schema(
   {},
@@ -233,10 +234,7 @@ const mdf_inventory_items_view_schema = new mongoose.Schema(
   }
 );
 
-export const mdf_inventory_items_view_modal = mongoose.model(
-  "mdf_inventory_items_view",
-  mdf_inventory_items_view_schema
-);
+export const mdf_inventory_items_view_modal = mongoose.model("mdf_inventory_items_view", mdf_inventory_items_view_schema);
 
 (async function () {
   await mdf_inventory_items_view_modal.createCollection({
