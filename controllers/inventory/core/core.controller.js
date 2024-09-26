@@ -46,6 +46,7 @@ export const listing_core_inventory = catchAsync(async (req, res, next) => {
     {
       $sort: {
         [sortBy]: sort === "desc" ? -1 : 1,
+        _id: sort === "desc" ? -1 : 1,
       },
     },
     {
@@ -55,26 +56,23 @@ export const listing_core_inventory = catchAsync(async (req, res, next) => {
       $limit: parseInt(limit),
     },
   ];
-  // console.log(sortBy !== 'updatedAt' && sort !== "desc")
-  // if (sortBy !== 'updatedAt' && sort !== "desc"){
-  //     console.log("first")
-  //     aggregate_stage[1] = {
-  //         $sort: {
-  //             [sortBy]: sort === "desc" ? -1 : 1
-  //         }
-  //     }
-  // }
 
-  const List_venner_inventory_details = await core_inventory_items_view_modal.aggregate(aggregate_stage);
+  const List_core_inventory_details = await core_inventory_items_view_modal.aggregate(aggregate_stage);
 
-  // return res.status(200).json({
-  //   statusCode: 200,
-  //   status: "success",
-  //   data: List_otherGoods_inventory_details,
-  //   message: "Data fetched successfully",
-  // });
+  const totalCount = await core_inventory_items_view_modal.countDocuments({
+    ...match_query,
+  });
 
-  return res.status(200).json(new ApiResponse(StatusCodes.OK, "Data fetched successfully", List_venner_inventory_details));
+  const totalPage = Math.ceil(totalCount / limit);
+
+  return res.status(200).json({
+    statusCode: 200,
+    status: "success",
+    data: List_core_inventory_details,
+    totalPage: totalPage,
+    message: "Data fetched successfully",
+  });
+  // return res.status(200).json(new ApiResponse(StatusCodes.OK, "Data fetched successfully", List_core_inventory_details));
 });
 
 export const add_core_inventory = catchAsync(async (req, res, next) => {
