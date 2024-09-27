@@ -39,6 +39,7 @@ const item_details_schema = new mongoose.Schema(
     pallet_number: {
       type: Number,
       required: [true, "pallet_number is required"], //auto increment
+      unique: [true, "pallet number must be unique"],
     },
     length: {
       type: Number,
@@ -158,7 +159,7 @@ const plywood_invoice_schema = new mongoose.Schema(
               name: {
                 type: String,
                 required: [true, "contact person name is required"],
-                unique: [true, "contact person name is required"],
+                // unique: [true, "contact person name is required"],
                 trim: true,
               },
               email: {

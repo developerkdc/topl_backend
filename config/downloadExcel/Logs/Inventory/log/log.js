@@ -5,11 +5,18 @@ import dotenv from "dotenv/config";
 
 export const createLogLogsExcel = async (newData) => {
   try {
+    const folderPath = "public/upload/reports/inventory/log";
+    try {
+      await fs.access(folderPath);
+    } catch (error) {
+      await fs.mkdir(folderPath, { recursive: true });
+    }
     const workbook = new exceljs.Workbook();
     const worksheet = workbook.addWorksheet("log-logsreport");
 
     const logColumns = [
       { header: "Inward Sr No", key: "inward_sr_no", width: 15 },
+      { header: "Inward Date", key: "inward_date", width: 15 },
       { header: "Item Sr No", key: "item_sr_no", width: 15 },
       { header: "Item Name", key: "item_name", width: 20 },
       { header: "Supplier Item Name", key: "supplier_item_name", width: 20 },
@@ -27,7 +34,6 @@ export const createLogLogsExcel = async (newData) => {
       { header: "Rate in INR", key: "rate_in_inr", width: 20 },
       { header: "Amount", key: "amount", width: 20 },
       { header: "Remark", key: "remark", width: 20 },
-      { header: "Inward Date", key: "inward_date", width: 20 },
       { header: "Created Date", key: "createdAt", width: 20 },
       { header: "Updated Date", key: "updatedAt", width: 20 },
       { header: "Currency", key: "currency", width: 10 },

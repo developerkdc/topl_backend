@@ -120,9 +120,10 @@ export const listing_flitch_inventory = catchAsync(async (req, res, next) => {
   const List_flitch_inventory_details =
     await flitch_inventory_items_view_model.aggregate(aggregate_stage);
 
-  const totalPage = await flitch_inventory_items_view_model.countDocuments({
+  const totalItems = await flitch_inventory_items_view_model.countDocuments({
     ...match_query,
   });
+  const totalPage = Math.ceil(totalItems / parseInt(limit));
 
   return res.status(200).json({
     statusCode: 200,
@@ -356,3 +357,108 @@ export const flitchLogsCsv = catchAsync(async (req, res) => {
     new ApiResponse(StatusCodes.OK, "Csv downloaded successfully...", excelLink)
   );
 });
+
+export const flitch_item_listing_by_invoice = catchAsync(
+  async (req, res, next) => {
+    const invoice_id = req.params.invoice_id;
+
+    const aggregate_stage = [
+      {
+        $match: {
+          "flitch_invoice_details._id": new mongoose.Types.ObjectId(invoice_id),
+        },
+      },
+      {
+        $sort: {
+          item_sr_no: 1,
+        },
+      },
+      {
+        $project: {
+          flitch_invoice_details: 0,
+        },
+      },
+    ];
+
+    const single_invoice_list_flitch_inventory_details =
+      await flitch_inventory_items_view_model.aggregate(aggregate_stage);
+
+    // const totalCount = await log_inventory_items_view_model.countDocuments({
+    //   ...match_query,
+    // });
+
+    // const totalPage = Math.ceil(totalCount / limit);
+
+    return res.status(200).json({
+      statusCode: 200,
+      status: "success",
+      data: single_invoice_list_flitch_inventory_details,
+      // totalPage: totalPage,
+      message: "Data fetched successfully",
+    });
+  }
+);
+
+export const edit_flitch_item_invoice_inventory = catchAsync(
+  async (req, res, next) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+      const invoice_id = req.params?.invoice_id;
+      const items_details = req.body?.inventory_items_details;
+      const invoice_details = req.body?.inventory_invoice_details;
+
+      const update_invoice_details =
+        await flitch_inventory_invoice_model.updateOne(
+          { _id: invoice_id },
+          {
+            $set: {
+              ...invoice_details,
+            },
+          },
+          { session }
+        );
+
+      console.log(update_invoice_details);
+
+      if (
+        !update_invoice_details.acknowledged ||
+        update_invoice_details.modifiedCount <= 0
+      )
+        return next(new ApiError("Failed to update invoice", 400));
+
+      const all_invoice_items = await flitch_inventory_items_model.deleteMany(
+        { invoice_id: invoice_id },
+        { session }
+      );
+
+      if (
+        !all_invoice_items.acknowledged ||
+        all_invoice_items.deletedCount <= 0
+      )
+        return next(new ApiError("Failed to update invoice items", 400));
+
+      const update_item_details = await flitch_inventory_items_model.insertMany(
+        [...items_details],
+        { session }
+      );
+
+      await session.commitTransaction();
+      session.endSession();
+      return res
+        .status(StatusCodes.OK)
+        .json(
+          new ApiResponse(
+            StatusCodes.OK,
+            "Inventory item updated successfully",
+            update_item_details
+          )
+        );
+    } catch (error) {
+      console.log(error);
+      await session.abortTransaction();
+      session.endSession();
+      return next(error);
+    }
+  }
+);
