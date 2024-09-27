@@ -28,10 +28,16 @@ router.post("/add-inventory", CheckRoleAndTokenAccess, add_mdf_inventory);
 router.post("/add-item-inventory", add_single_mdf_item_inventory);
 router.patch("/edit-item-inventory/:item_id", edit_mdf_item_inventory);
 router.patch("/edit-invoice-inventory/:invoice_id", edit_mdf_invoice_inventory);
-router.post("/download-excel-mdf-logs", mdfLogsCsv);
+router.post("/download-excel-mdf", mdfLogsCsv);
 
-router.get("/mdf-item-listing-by-invoice/:invoice_id", mdf_item_listing_by_invoice);
-router.patch("/edit-invoice-item-inventory/:invoice_id", edit_mdf_item_invoice_inventory);
+router.get(
+  "/mdf-item-listing-by-invoice/:invoice_id",
+  mdf_item_listing_by_invoice
+);
+router.patch(
+  "/edit-invoice-item-inventory/:invoice_id",
+  edit_mdf_item_invoice_inventory
+);
 
 //dropdown
 router.get("/item-srno-dropdown", item_sr_no_dropdown);

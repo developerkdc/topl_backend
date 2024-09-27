@@ -326,55 +326,6 @@ export const edit_veneer_invoice_inventory = catchAsync(
   }
 );
 
-export const veneerCsv = catchAsync(async (req, res) => {
-  const { search = "" } = req.query;
-  const {
-    string,
-    boolean,
-    numbers,
-    arrayField = [],
-  } = req?.body?.searchFields || {};
-  const filter = req.body?.filter;
-
-  let search_query = {};
-  if (search != "" && req?.body?.searchFields) {
-    const search_data = DynamicSearch(
-      search,
-      boolean,
-      numbers,
-      string,
-      arrayField
-    );
-    if (search_data?.length == 0) {
-      return res.status(404).json({
-        statusCode: 404,
-        status: false,
-        data: {
-          data: [],
-        },
-        message: "Results Not Found",
-      });
-    }
-    search_query = search_data;
-  }
-
-  const filterData = dynamic_filter(filter);
-
-  const match_query = {
-    ...filterData,
-    ...search_query,
-  };
-
-  const allData = await veneer_inventory_items_view_modal.find(match_query);
-
-  const excelLink = await createLogLogsExcel(allData);
-  console.log("link => ", excelLink);
-
-  return res.json(
-    new ApiResponse(StatusCodes.OK, "Csv downloaded successfully...", excelLink)
-  );
-});
-
 export const item_sr_no_dropdown = catchAsync(async (req, res, next) => {
   const item_sr_no = await veneer_inventory_items_model.distinct("item_sr_no");
   return res.status(200).json({
@@ -439,6 +390,7 @@ export const veneer_item_listing_by_invoice = catchAsync(
 );
 
 export const veneerLogsCsv = catchAsync(async (req, res) => {
+  console.log("442");
   const { search = "" } = req.query;
   const {
     string,
@@ -476,7 +428,7 @@ export const veneerLogsCsv = catchAsync(async (req, res) => {
     ...filterData,
     ...search_query,
   };
-
+  console.log("479");
   const allData = await veneer_inventory_items_view_modal.find(match_query);
 
   if (allData.length === 0) {

@@ -115,7 +115,7 @@ export const createMdfLogsExcel = async (newData) => {
           item_sr_no: data.item_sr_no,
           item_name: data.item_name,
           mdf_type: data.mdf_type,
-          mdf_sub_type: data.mdf_sub_type,
+          mdf_sub_type: data.item_sub_category_name,
           pallet_number: data.pallet_number,
           length: data.length,
           width: data.width,

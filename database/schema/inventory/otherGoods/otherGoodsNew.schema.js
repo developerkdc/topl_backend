@@ -273,6 +273,14 @@ export const othergoods_inventory_items_view_modal = mongoose.model(
           from: "users",
           localField: "created_by",
           foreignField: "_id",
+          pipeline: [
+            {
+              $project: {
+                // "_id" : 1,
+                "user_name": 1,
+              },
+            },
+          ],
           as: "created_user",
         },
       },

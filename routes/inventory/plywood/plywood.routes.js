@@ -48,6 +48,6 @@ router.get(
   "/plywood-item-listing-by-invoice/:invoice_id",
   plywood_item_listing_by_invoice
 );
-router.post("/download-excel-plywood-logs", plywoodLogsCsv);
+router.post("/download-excel-plywood", plywoodLogsCsv);
 
 export default router;
