@@ -130,8 +130,23 @@ export const add_plywood_inventory = catchAsync(async (req, res, next) => {
     }
 
     const invoice_details_id = add_invoice_details?.[0]?._id;
+    const get_pallet_no = await plywood_inventory_items_details.aggregate([
+      {
+        $group: {
+          _id: null,
+          latest_pallet_no: { $max: "$pallet_number" },
+        },
+      },
+    ]);
+
+    let latest_pallet_no =
+      get_pallet_no?.length > 0 && get_pallet_no?.[0]?.latest_pallet_no
+        ? get_pallet_no?.[0]?.latest_pallet_no + 1
+        : 1;
     const items_details = inventory_items_details?.map((elm, index) => {
       // elm.item_sr_no = index + 1;
+      elm.pallet_number = latest_pallet_no;
+      latest_pallet_no += 1;
       elm.invoice_id = invoice_details_id;
       elm.created_by = created_by;
       return elm;
@@ -150,15 +165,12 @@ export const add_plywood_inventory = catchAsync(async (req, res, next) => {
 
     await session.commitTransaction();
     session.endSession();
-    return res.status(201).json({
-      statusCode: 201,
-      status: "Created",
-      data: {
+    return res.status(201).json(
+      new ApiResponse(201, "Inventory has added successfully", {
         add_invoice_details,
         add_items_details,
-      },
-      message: "Inventory has added successfully",
-    });
+      })
+    );
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
@@ -301,3 +313,136 @@ export const plywoodLogsCsv = catchAsync(async (req, res) => {
     new ApiResponse(StatusCodes.OK, "Csv downloaded successfully...", excelLink)
   );
 });
+
+export const edit_plywood_item_invoice_inventory = catchAsync(
+  async (req, res, next) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+      const invoice_id = req.params?.invoice_id;
+      const items_details = req.body?.inventory_items_details;
+      const invoice_details = req.body?.inventory_invoice_details;
+
+      const update_invoice_details =
+        await plywood_inventory_invoice_details.updateOne(
+          { _id: invoice_id },
+          {
+            $set: {
+              ...invoice_details,
+            },
+          },
+          { session }
+        );
+
+      console.log(update_invoice_details);
+
+      if (
+        !update_invoice_details.acknowledged ||
+        update_invoice_details.modifiedCount <= 0
+      )
+        return next(new ApiError("Failed to update invoice", 400));
+
+      const all_invoice_items =
+        await plywood_inventory_items_details.deleteMany(
+          { invoice_id: invoice_id },
+          { session }
+        );
+
+      if (
+        !all_invoice_items.acknowledged ||
+        all_invoice_items.deletedCount <= 0
+      )
+        return next(new ApiError("Failed to update invoice items", 400));
+      // get latest pallet number for newly added item
+      const get_pallet_no = await plywood_inventory_items_details.aggregate([
+        {
+          $group: {
+            _id: null,
+            latest_pallet_no: { $max: "$pallet_number" },
+          },
+        },
+      ]);
+      let latest_pallet_no =
+        get_pallet_no?.length > 0 && get_pallet_no?.[0]?.latest_pallet_no
+          ? get_pallet_no?.[0]?.latest_pallet_no + 1
+          : 1;
+
+      for (let i = 0; i < items_details.length; i++) {
+        if (
+          !items_details[i]?.pallet_number &&
+          !items_details[i]?.pallet_number > 0
+        ) {
+          items_details[i].pallet_number = latest_pallet_no;
+          latest_pallet_no += 1;
+        }
+      }
+
+      const update_item_details =
+        await plywood_inventory_items_details.insertMany([...items_details], {
+          session,
+        });
+
+      await session.commitTransaction();
+      session.endSession();
+      return res
+        .status(StatusCodes.OK)
+        .json(
+          new ApiResponse(
+            StatusCodes.OK,
+            "Inventory item updated successfully",
+            update_item_details
+          )
+        );
+    } catch (error) {
+      console.log(error);
+      await session.abortTransaction();
+      session.endSession();
+      return next(error);
+    }
+  }
+);
+
+export const plywood_item_listing_by_invoice = catchAsync(
+  async (req, res, next) => {
+    const invoice_id = req.params.invoice_id;
+
+    const aggregate_stage = [
+      {
+        $match: {
+          "plywood_invoice_details._id": new mongoose.Types.ObjectId(
+            invoice_id
+          ),
+        },
+      },
+      {
+        $sort: {
+          item_sr_no: 1,
+        },
+      },
+      {
+        $project: {
+          plywood_invoice_details: 0,
+        },
+      },
+    ];
+
+    const single_invoice_list_log_inventory_details =
+      await plywood_inventory_items_view_modal.aggregate(aggregate_stage);
+
+    // const totalCount = await log_inventory_items_view_model.countDocuments({
+    //   ...match_query,
+    // });
+
+    // const totalPage = Math.ceil(totalCount / limit);
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          StatusCodes.OK,
+          "Data fetched successfully",
+          single_invoice_list_log_inventory_details
+        )
+      );
+  }
+);

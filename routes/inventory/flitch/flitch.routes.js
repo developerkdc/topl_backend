@@ -4,6 +4,8 @@ import {
   add_single_flitch_item_inventory,
   edit_flitch_invoice_inventory,
   edit_flitch_item_inventory,
+  edit_flitch_item_invoice_inventory,
+  flitch_item_listing_by_invoice,
   flitchLogsCsv,
   inward_sr_no_dropdown,
   item_sr_no_dropdown,
@@ -23,7 +25,15 @@ flitch_router.patch(
   edit_flitch_invoice_inventory
 );
 flitch_router.post("/download-excel-flitch-logs", flitchLogsCsv);
+flitch_router.get(
+  "/flitch-item-listing-by-invoice/:invoice_id",
+  flitch_item_listing_by_invoice
+);
 
+flitch_router.patch(
+  "/edit-invoice-item-inventory/:invoice_id",
+  edit_flitch_item_invoice_inventory
+);
 //Dropdowns
 flitch_router.get("/item-srno-dropdown", item_sr_no_dropdown);
 flitch_router.get("/inward-srno-dropdown", inward_sr_no_dropdown);

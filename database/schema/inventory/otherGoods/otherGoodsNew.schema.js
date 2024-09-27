@@ -20,13 +20,14 @@ const item_details_schema = new mongoose.Schema(
       type: String,
       required: [true, "Item Name is required"],
     },
-    item_sub_type: {
+    item_sub_category_name: {
       type: String,
-      required: [true, "plywood sub type is required"],
+      required: [true, "other goods sub category name is required"],
     },
-    item_sub_type_id: {
+    item_sub_category_id: {
       type: String,
-      required: [true, "plywood sub type id is required"],
+      required: [true, "other goods sub category id is required"],
+      ref: "item_subcategory",
     },
     department_id: {
       type: String,
@@ -39,6 +40,7 @@ const item_details_schema = new mongoose.Schema(
     machine_id: {
       type: String,
       required: [true, "machine id is required"],
+      ref: "machine",
     },
     machine_name: {
       type: String,

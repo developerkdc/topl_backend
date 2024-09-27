@@ -4,6 +4,13 @@ import ApiError from "../../../../../utils/errors/apiError.js";
 import dotenv from "dotenv/config";
 export const createFlitchLogsExcel = async (newData) => {
   try {
+    const folderPath = "public/upload/reports/inventory/flitch";
+    try {
+      await fs.access(folderPath);
+    } catch (error) {
+      await fs.mkdir(folderPath, { recursive: true });
+      console.log("Folder created:", folderPath);
+    }
     const workbook = new exceljs.Workbook();
     const worksheet = workbook.addWorksheet("flitch-logs");
     const columns = [
@@ -237,6 +244,13 @@ export const createFlitchLogsExcel = async (newData) => {
     await fs.rename(filepath, destinationPath);
 
     const link = `${process.env.APP_URL}${destinationPath}`;
+    console.log(
+      "Attempting to rename file from",
+      filepath,
+      "to",
+      destinationPath
+    );
+
     console.log("link => ", link);
     // return res.json(new ApiResponse(200, "Excel created successfully...", link))
     return link;
