@@ -4,7 +4,9 @@ import {
   add_single_plywood_item_inventory,
   edit_plywood_invoice_inventory,
   edit_plywood_item_inventory,
+  edit_plywood_item_invoice_inventory,
   listing_plywood_inventory,
+  plywood_item_listing_by_invoice,
   plywoodLogsCsv,
 } from "../../../controllers/inventory/plywood/plywood.controller.js";
 import CheckRoleAndTokenAccess from "../../../middlewares/permission.js";
@@ -37,6 +39,14 @@ router.patch("/edit-item-inventory/:item_id", edit_plywood_item_inventory);
 router.patch(
   "/edit-invoice-inventory/:invoice_id",
   edit_plywood_invoice_inventory
+);
+router.patch(
+  "/edit-invoice-item-inventory/:invoice_id",
+  edit_plywood_item_invoice_inventory
+);
+router.get(
+  "/plywood-item-listing-by-invoice/:invoice_id",
+  plywood_item_listing_by_invoice
 );
 router.post("/download-excel-plywood-logs", plywoodLogsCsv);
 

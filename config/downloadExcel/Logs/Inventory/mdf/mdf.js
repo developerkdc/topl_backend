@@ -14,6 +14,7 @@ export const createMdfLogsExcel = async (newData) => {
     const worksheet = workbook.addWorksheet("flitch-logs");
     const mdfColumns = [
       { header: "Inward Sr No", key: "inward_sr_no", width: 15 },
+      { header: "Inward Date", key: "inward_date", width: 20 },
       { header: "Item Sr No", key: "item_sr_no", width: 15 },
       { header: "Item Name", key: "item_name", width: 20 },
       { header: "Supplier Item Name", key: "supplier_item_name", width: 20 },
@@ -31,7 +32,7 @@ export const createMdfLogsExcel = async (newData) => {
       { header: "Amount", key: "amount", width: 15 },
       { header: "Remark", key: "remark", width: 20 },
       //   { header: "Invoice ID", key: "invoice_id", width: 30 },
-      { header: "Inward Date", key: "inward_date", width: 20 },
+
       { header: "Created Date", key: "createdAt", width: 20 },
       { header: "Updated Date", key: "updatedAt", width: 20 },
       { header: "Currency", key: "currency", width: 10 },
