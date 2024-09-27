@@ -3,10 +3,19 @@ import {
   add_cross_cutting_inventory,
   edit_cross_cutting_inventory,
   listing_cross_cutting_inventory,
+  revert_issue_for_crosscutting,
 } from "../../../controllers/factory/crossCutting/crossCutting.controller.js";
 import CheckRoleAndTokenAccess from "../../../middlewares/permission.js";
 const router = express.Router();
 
+//Issue for crosscutting
+router.post(
+  "/revert-issue-for-crosscutting/:issue_for_crosscutting_id",
+  revert_issue_for_crosscutting
+);
+
+
+// Crosscutting
 router.post(
   "/add-crossCutting/:issued_crosscutting_id",
   add_cross_cutting_inventory

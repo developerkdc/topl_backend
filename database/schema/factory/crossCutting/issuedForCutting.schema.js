@@ -80,24 +80,28 @@ const issues_for_crosscutting_details_schema = new mongoose.Schema({
     type: Number,
     required: [true, "Physical CMT is required"],
   },
+  crosscutting_completed: {
+    type: Boolean,
+    default: false
+  },
   avaiable_quantity: {
     physical_length: {
       type: Number,
-      default:function(){
+      default: function () {
         return this.physical_length
       },
       required: [true, "Physical length is required"],
     },
     physical_diameter: {
       type: Number,
-      default:function(){
+      default: function () {
         return this.physical_diameter
       },
       required: [true, "Physical diameter is required"],
     },
     physical_cmt: {
       type: Number,
-      default:function(){
+      default: function () {
         return this.physical_cmt
       },
       required: [true, "Physical CMT is required"],

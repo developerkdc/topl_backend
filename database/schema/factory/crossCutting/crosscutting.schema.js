@@ -6,6 +6,11 @@ const crosscutting_done_schema = new mongoose.Schema({
     ref: 'issues_for_crosscutting',
     required: [true, 'issue for croscutting id is required']
   },
+  log_inventory_item_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "log_inventory_items_details",
+    required: [true, "Log Inventory Items Id is required"]
+  },
   crosscut_date: {
     type: Date,
     required: [true, "flicthing date is required"],
@@ -39,7 +44,7 @@ const crosscutting_done_schema = new mongoose.Schema({
     trim: true,
     required: [true, "code is required"],
   },
-  log_no_code:{
+  log_no_code: {
     type: String,
     trim: true,
     required: [true, "code is required"]
