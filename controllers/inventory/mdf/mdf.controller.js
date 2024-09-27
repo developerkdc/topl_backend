@@ -59,7 +59,7 @@ export const listing_mdf_inventory = catchAsync(async (req, res, next) => {
   ];
 
   const List_mdf_inventory_details = await mdf_inventory_items_view_modal.aggregate(aggregate_stage);
-  
+
   const totalCount = await mdf_inventory_items_view_modal.countDocuments({
     ...match_query,
   });
@@ -271,6 +271,24 @@ export const edit_mdf_item_invoice_inventory = catchAsync(async (req, res, next)
 
     if (!all_invoice_items.acknowledged || all_invoice_items.deletedCount <= 0)
       return next(new ApiError("Failed to update invoice items", 400));
+
+    // get latest pallet number for newly added item
+    const get_pallet_no = await mdf_inventory_items_details.aggregate([
+      {
+        $group: {
+          _id: null,
+          latest_pallet_no: { $max: "$pallet_number" },
+        },
+      },
+    ]);
+    let latest_pallet_no = get_pallet_no?.length > 0 && get_pallet_no?.[0]?.latest_pallet_no ? get_pallet_no?.[0]?.latest_pallet_no + 1 : 1;
+
+    for (let i = 0; i < items_details.length; i++) {
+      if (!items_details[i]?.pallet_number && !items_details[i]?.pallet_number > 0) {
+        items_details[i].pallet_number = latest_pallet_no;
+        latest_pallet_no += 1;
+      }
+    }
 
     const update_item_details = await mdf_inventory_items_details.insertMany([...items_details], { session });
 

@@ -37,6 +37,7 @@ const item_details_schema = new mongoose.Schema(
     pallet_number: {
       type: Number,
       required: [true, "Pallet Number is required"], //auto increment
+      unique:[true, "Pallet Number should be unique."]
     },
     length: {
       type: Number,
