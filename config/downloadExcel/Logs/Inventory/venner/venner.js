@@ -8,8 +8,10 @@ export const createVeneerLogsExcel = async (newData) => {
     try {
       await fs.access(folderPath);
     } catch (error) {
+      console.log("folder errrr => ", error);
       await fs.mkdir(folderPath, { recursive: true });
     }
+    console.log("14");
     const workbook = new exceljs.Workbook();
     const worksheet = workbook.addWorksheet("venner-logs");
     const veneerColumns = [
@@ -240,6 +242,6 @@ export const createVeneerLogsExcel = async (newData) => {
     return link;
   } catch (error) {
     console.log("errr => ", error);
-    throw new ApiError(500, error.message, error);
+    throw new ApiError(error.message, 500);
   }
 };

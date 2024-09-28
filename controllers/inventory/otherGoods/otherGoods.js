@@ -73,15 +73,31 @@ export const listing_otherGodds_inventory = catchAsync(
         $limit: parseInt(limit),
       },
     ];
-    // console.log(sortBy !== 'updatedAt' && sort !== "desc")
-    // if (sortBy !== 'updatedAt' && sort !== "desc"){
-    //     console.log("first")
-    //     aggregate_stage[1] = {
-    //         $sort: {
-    //             [sortBy]: sort === "desc" ? -1 : 1
-    //         }
-    //     }
-    // }
+    // const aggregate_stage = [
+    //   {
+    //     $match: match_query,
+    //   },
+    //   {
+    //     $sort: {
+    //       [sortBy]: sort === "desc" ? -1 : 1,
+    //     },
+    //   },
+    //   {
+    //     $skip: (parseInt(page) - 1) * parseInt(limit),
+    //   },
+    //   {
+    //     $limit: parseInt(limit),
+    //   },
+    //   {
+    //     $addFields: {
+    //       "created_user": {
+    //         user_name: "$created_user.user_name",
+    //         first_name: "$created_user.first_name",
+    //         last_name: "$created_user.last_name",
+    //       },
+    //     },
+    //   },
+    // ];
 
     const List_otherGoods_inventory_details =
       await othergoods_inventory_items_view_modal.aggregate(aggregate_stage);

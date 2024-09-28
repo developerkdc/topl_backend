@@ -9,7 +9,6 @@ import {
   item_sr_no_dropdown,
   listing_veneer_inventory,
   veneer_item_listing_by_invoice,
-  veneerCsv,
   veneerLogsCsv,
 } from "../../../controllers/inventory/venner/venner.controller.js";
 import CheckRoleAndTokenAccess from "../../../middlewares/permission.js";
@@ -35,7 +34,7 @@ veneer_router.patch(
   "/edit-invoice-inventory/:invoice_id",
   edit_veneer_invoice_inventory
 );
-veneer_router.post("/download-excel-veneer", veneerCsv);
+// veneer_router.post("/download-excel-veneer", veneerCsv);
 veneer_router.get(
   "/veneer-item-listing-by-invoice/:invoice_id",
   veneer_item_listing_by_invoice

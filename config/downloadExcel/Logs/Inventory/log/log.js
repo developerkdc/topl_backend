@@ -179,6 +179,6 @@ export const createLogLogsExcel = async (newData) => {
     console.log("link => ", link);
     return link;
   } catch (error) {
-    throw new ApiError("Error generating log logs Excel file", error.message);
+    throw new ApiError("Error generating  logs Excel file", 500);
   }
 };
