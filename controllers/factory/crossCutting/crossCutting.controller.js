@@ -109,18 +109,21 @@ export const revert_issue_for_crosscutting = catchAsync(async function (
     const issue_for_crosscutting = await issues_for_crosscutting_model.findOne({
       _id: issue_for_crosscutting_id,
     });
-    if (!issue_for_crosscutting)
-      return next(new ApiError("Item not found", 400));
-    if (
-      issue_for_crosscutting?.avaiable_quantity?.physical_length !==
-      issue_for_crosscutting?.physical_length
-    )
-      return next(
-        new ApiError(
-          "Cannot revert because original length is not matched",
-          400
-        )
-      );
+
+    if (!issue_for_crosscutting) return next(new ApiError("Item not found", 400));
+    if (issue_for_crosscutting?.available_quantity?.physical_length !== issue_for_crosscutting?.physical_length) return next(new ApiError("Cannot revert because original length is not matched", 400));
+
+    const update_log_item_status = await log_inventory_items_model.updateOne(
+      { _id: issue_for_crosscutting?.log_inventory_item_id },
+      {
+        $set: {
+          issue_status: issues_for_status.log,
+        },
+      },
+      { session }
+    );
+
+    if (!update_log_item_status.acknowledged || update_log_item_status.modifiedCount <= 0) return next(new ApiError("unable to update status", 400));
 
     const deleted_issues_for_crosscutting =
       await issues_for_crosscutting_model.deleteOne(
@@ -130,27 +133,7 @@ export const revert_issue_for_crosscutting = catchAsync(async function (
         { session }
       );
 
-    if (
-      !deleted_issues_for_crosscutting.acknowledged ||
-      deleted_issues_for_crosscutting.deletedCount <= 0
-    )
-      return next(new ApiError("Unable to revert issue for crosscutting", 400));
-
-    const update_log_item_status = await log_inventory_items_model.updateOne(
-      { _id: issue_for_crosscutting_id },
-      {
-        $set: {
-          issue_status: issues_for_status.log,
-        },
-      },
-      { session }
-    );
-
-    if (
-      !update_log_item_status.acknowledged ||
-      update_log_item_status.modifiedCount <= 0
-    )
-      return next(new ApiError("unable to update status", 400));
+    if (!deleted_issues_for_crosscutting.acknowledged || deleted_issues_for_crosscutting.deletedCount <= 0) return next(new ApiError("Unable to revert issue for crosscutting", 400));
 
     await session.commitTransaction();
     session.endSession();
@@ -167,7 +150,7 @@ export const revert_issue_for_crosscutting = catchAsync(async function (
 
 //Crosscutting done
 export const listing_cross_cutting_inventory = catchAsync(
-  async (req, res, next) => {}
+  async (req, res, next) => { }
 );
 
 export const add_cross_cutting_inventory = catchAsync(
@@ -222,7 +205,7 @@ export const add_cross_cutting_inventory = catchAsync(
     }
 
     let issued_crosscuting_avaiable_physical_length =
-      issues_for_crosscutting_data?.avaiable_quantity?.physical_length;
+      issues_for_crosscutting_data?.available_quantity?.physical_length;
     for (let crosscutting of crosscutting_details) {
       //Updating latest avaible physical length
       let crosscutting_done_length = crosscutting?.length;
@@ -278,6 +261,41 @@ export const add_cross_cutting_inventory = catchAsync(
   }
 );
 
+export const latest_crosscutting_code = catchAsync(async function (req, res, next) {
+  const issued_crosscutting_id = req.params?.issued_crosscutting_id;
+
+  const crossCuttingLatestCode = await crosscutting_done_model.aggregate([
+    {
+      $match: {
+        issue_for_croscutting_id: new mongoose.Types.ObjectId(
+          issued_crosscutting_id
+        ),
+      },
+    },
+    {
+      $sort: {
+        code: -1,
+      },
+    },
+    {
+      $project: {
+        code: 1,
+        issued_crosscutting_id: 1,
+      },
+    },
+  ]);
+
+  const latestCode = crossCuttingLatestCode?.[0] || "A";
+
+  return res
+    .status(201)
+    .json(
+      new ApiResponse(StatusCodes.CREATED, "Latest Crosscutting code", latestCode)
+    );
+})
+
 export const edit_cross_cutting_inventory = catchAsync(
-  async (req, res, next) => {}
+  async (req, res, next) => { }
 );
+
+
