@@ -2,13 +2,101 @@ import mongoose from "mongoose";
 import catchAsync from "../../../utils/errors/catchAsync.js";
 import ApiError from "../../../utils/errors/apiError.js";
 import ApiResponse from "../../../utils/ApiResponse.js";
-import { issues_for_crosscutting_model } from "../../../database/schema/factory/crossCutting/issuedForCutting.schema.js";
+import {
+  issues_for_crosscutting_model,
+  issues_for_crosscutting_view_model,
+} from "../../../database/schema/factory/crossCutting/issuedForCutting.schema.js";
 import { crosscutting_done_model } from "../../../database/schema/factory/crossCutting/crosscutting.schema.js";
 import { StatusCodes } from "../../../utils/constants.js";
 import { log_inventory_items_model } from "../../../database/schema/inventory/log/log.schema.js";
 import { issues_for_status } from "../../../database/Utils/constants/constants.js";
+import { dynamic_filter } from "../../../utils/dymanicFilter.js";
+import { DynamicSearch } from "../../../utils/dynamicSearch/dynamic.js";
 
 //Issue for crosscutting
+export const listing_issue_for_crosscutting = catchAsync(
+  async (req, res, next) => {
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = "updatedAt",
+      sort = "desc",
+      search = "",
+    } = req.query;
+    const {
+      string,
+      boolean,
+      numbers,
+      arrayField = [],
+    } = req?.body?.searchFields || {};
+    const filter = req.body?.filter;
+
+    let search_query = {};
+    if (search != "" && req?.body?.searchFields) {
+      const search_data = DynamicSearch(
+        search,
+        boolean,
+        numbers,
+        string,
+        arrayField
+      );
+      if (search_data?.length == 0) {
+        return res.status(404).json({
+          statusCode: 404,
+          status: false,
+          data: {
+            data: [],
+          },
+          message: "Results Not Found",
+        });
+      }
+      search_query = search_data;
+    }
+
+    const filterData = dynamic_filter(filter);
+
+    const match_query = {
+      ...filterData,
+      ...search_query,
+    };
+
+    const aggregate_stage = [
+      {
+        $match: match_query,
+      },
+      {
+        $sort: {
+          [sortBy]: sort === "desc" ? -1 : 1,
+          _id: sort === "desc" ? -1 : 1,
+        },
+      },
+      {
+        $skip: (parseInt(page) - 1) * parseInt(limit),
+      },
+      {
+        $limit: parseInt(limit),
+      },
+    ];
+
+    const issue_for_crosscutting_details =
+      await issues_for_crosscutting_view_model.aggregate(aggregate_stage);
+
+    const totalCount = await issues_for_crosscutting_view_model.countDocuments({
+      ...match_query,
+    });
+
+    const totalPage = Math.ceil(totalCount / limit);
+
+    return res.status(200).json({
+      statusCode: 200,
+      status: "success",
+      data: issue_for_crosscutting_details,
+      totalPage: totalPage,
+      message: "Data fetched successfully",
+    });
+  }
+);
+
 export const revert_issue_for_crosscutting = catchAsync(async function (
   req,
   res,
@@ -162,7 +250,7 @@ export const add_cross_cutting_inventory = catchAsync(
         { _id: issued_crosscutting_id },
         {
           $set: {
-            "avaiable_quantity.physical_length":
+            "available_quantity.physical_length":
               issued_crosscuting_avaiable_physical_length,
             crosscutting_completed: is_crosscutting_completed,
           },
