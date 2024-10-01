@@ -1,5 +1,6 @@
 import getConfigs from "../config/config.js";
 import userModel from "../database/schema/user.schema.js";
+import ApiResponse from "../utils/ApiResponse.js";
 import { create, generateOTP, verify } from "../utils/authServices/index.js";
 import { SendOtpEmail } from "../utils/emailServices/otp.js";
 import catchAsync from "../utils/errors/catchAsync.js";
@@ -37,7 +38,10 @@ export const SignIn = catchAsync(async (req, res, next) => {
       message: PassowrdRequired,
     });
 
-  const user = await userModel.findOne({ user_name: user_name }).select("-otp -verify_otp -otp_expiry_date").populate("role_id");
+  const user = await userModel
+    .findOne({ user_name: user_name })
+    .select("-otp -verify_otp -otp_expiry_date")
+    .populate("role_id");
 
   if (!user) {
     return res.status(401).json({
@@ -57,12 +61,16 @@ export const SignIn = catchAsync(async (req, res, next) => {
   const passwordMatch = await verify(password, passwordHash);
 
   if (!passwordMatch) {
-    return res.status(401).json({ result: [], status: false, message: PasswordInValid });
+    return res
+      .status(401)
+      .json({ result: [], status: false, message: PasswordInValid });
   }
 
   const token = user.jwtToken(next);
   const options = {
-    expires: new Date(Date.now() + Configs.cookie.cookie_expire * 24 * 60 * 60 * 1000),
+    expires: new Date(
+      Date.now() + Configs.cookie.cookie_expire * 24 * 60 * 60 * 1000
+    ),
     httpOnly: true,
     sameSite: "Lax",
   };
@@ -79,16 +87,27 @@ export const SignIn = catchAsync(async (req, res, next) => {
 });
 
 export const ForgetPassword = catchAsync(async (req, res) => {
-  const { email_id } = req.body;
+  const { user_name } = req.body;
 
-  if (!email_id) {
-    return res.status(400).json({ result: [], status: false, message: EmailRequired });
+  if (!user_name) {
+    return res
+      .status(400)
+      .json({ result: [], status: false, message: UserNameRequired });
   }
 
-  const user = await userModel.findOne({ email_id: email_id });
+  const user = await userModel.findOne({ user_name: user_name });
   if (!user) {
-    return res.status(401).json({ message: "User not found with this email Id." });
+    return res
+      .status(401)
+      .json({ message: "User not found with this user name." });
   }
+
+  if (!user.email_id) {
+    return res
+      .status(401)
+      .json({ message: "Email id not found. Please contact Admin" });
+  }
+
   // Generate OTP
   const otp = generateOTP();
 
@@ -97,7 +116,7 @@ export const ForgetPassword = catchAsync(async (req, res) => {
   const formattedExpiryDate = otpExpiryDate.toISOString();
 
   await userModel.findOneAndUpdate(
-    { email_id: email_id },
+    { user_name: user_name },
     {
       $set: {
         otp: otp,
@@ -108,27 +127,33 @@ export const ForgetPassword = catchAsync(async (req, res) => {
   );
 
   // Send OTP to the user's email
-  SendOtpEmail(email_id, `Your OTP is: ${otp}`, "Your OTP");
+  SendOtpEmail(user?.email_id, `Your OTP is: ${otp}`, "Your OTP");
 
-  return res.status(200).json({ result: [], status: true, message: OtpSentToEmail });
+  return res
+    .status(200)
+    .json({ result: [], status: true, message: OtpSentToEmail });
 });
 
 export const VerifyOtp = catchAsync(async (req, res) => {
-  const { email_id, otp } = req.body;
+  const { user_name, otp } = req.body;
 
-  if (!email_id) {
-    return res.status(400).json({ result: [], status: false, message: EmailRequired });
+  if (!user_name) {
+    return res
+      .status(400)
+      .json({ result: [], status: false, message: UserNameRequired });
   }
   if (!otp) {
-    return res.status(400).json({ result: [], status: false, message: OtpRequired });
+    return res
+      .status(400)
+      .json({ result: [], status: false, message: OtpRequired });
   }
 
-  const user = await userModel.findOne({ email_id: email_id });
+  const user = await userModel.findOne({ user_name: user_name });
   if (!user) {
     return res.status(400).json({
       result: [],
       status: false,
-      message: EmailInValid,
+      message: "Invalid username, please try again later.",
     });
   }
   // Assuming user is the result of your findOneAndUpdate operation
@@ -141,7 +166,9 @@ export const VerifyOtp = catchAsync(async (req, res) => {
     const diffInHours = diffInMilliseconds / (1000 * 60 * 60); // Convert milliseconds to hours
 
     if (Math.abs(Math.round(diffInHours)) > 1) {
-      return res.status(400).json({ result: [], status: false, message: "OtpExpired" });
+      return res
+        .status(400)
+        .json({ result: [], status: false, message: "OtpExpired" });
     }
   } else {
     console.error("Invalid otp expiry date:", user?.otp_expiry_date);
@@ -155,7 +182,7 @@ export const VerifyOtp = catchAsync(async (req, res) => {
     });
   }
   await userModel.findOneAndUpdate(
-    { email_id: email_id },
+    { user_name: user_name },
     {
       $set: {
         verify_otp: true,
@@ -164,16 +191,22 @@ export const VerifyOtp = catchAsync(async (req, res) => {
     { new: true, useFindAndModify: false }
   );
 
-  return res.status(200).json({ result: [], status: true, message: OtpVerified });
+  return res
+    .status(200)
+    .json({ result: [], status: true, message: OtpVerified });
 });
 
 export const ResetPassword = catchAsync(async (req, res) => {
   const { password, user_name } = req.body;
   if (!user_name) {
-    return res.status(400).json({ result: [], status: false, message: UserNameRequired });
+    return res
+      .status(400)
+      .json({ result: [], status: false, message: UserNameRequired });
   }
   if (!password) {
-    return res.status(400).json({ result: [], status: false, message: PassowrdRequired });
+    return res
+      .status(400)
+      .json({ result: [], status: false, message: PassowrdRequired });
   }
 
   const user = await userModel.findOne({ user_name: user_name });
@@ -210,5 +243,7 @@ export const ResetPassword = catchAsync(async (req, res) => {
     { new: true, useFindAndModify: false }
   );
 
-  return res.status(200).json({ result: [], status: true, message: PasswordReset });
+  return res
+    .status(200)
+    .json({ result: [], status: true, message: PasswordReset });
 });

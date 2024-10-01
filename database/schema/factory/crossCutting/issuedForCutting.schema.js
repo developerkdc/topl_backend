@@ -84,7 +84,7 @@ const issues_for_crosscutting_details_schema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
-  avaiable_quantity: {
+  available_quantity: {
     physical_length: {
       type: Number,
       default: function () {
@@ -151,3 +151,60 @@ export const issues_for_crosscutting_model = mongoose.model(
   "issues_for_crosscutting",
   issues_for_crosscutting_details_schema
 );
+
+const issues_for_crosscutting_view_schema = new mongoose.Schema(
+  {},
+  {
+    strict: false,
+    autoCreate: false,
+    autoIndex: false,
+  }
+);
+
+export const issues_for_crosscutting_view_model = mongoose.model(
+  "issues_for_crosscutting_view",
+  issues_for_crosscutting_view_schema
+);
+
+(async function () {
+  await issues_for_crosscutting_view_model.createCollection({
+    viewOn: "issues_for_crosscuttings",
+    pipeline: [
+      {
+        $sort: {
+          updatedAt: -1,
+          _id: -1,
+        },
+      },
+      {
+        $lookup: {
+          from: "log_inventory_invoice_details",
+          localField: "invoice_id",
+          foreignField: "_id",
+          as: "log_invoice_details",
+        },
+      },
+      {
+        $unwind: {
+          path: "$log_invoice_details",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "created_by",
+          foreignField: "_id",
+          as: "created_user",
+        },
+      },
+      {
+        $unwind: {
+          path: "$created_user",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+    ],
+  });
+})();
+
