@@ -98,21 +98,21 @@ export const revert_rejected_crosscutting = catchAsync(async function (req, res,
         const rejected_crosscutting_id = req.params?.rejected_crosscutting_id;
         const rejected_crosscutting = await rejected_crosscutting_model.findOne({
             _id: rejected_crosscutting_id,
-        });
-        if (!rejected_crosscutting)
-            return next(new ApiError("Item not found", 400));
+        }).lean();
+        if (!rejected_crosscutting) return next(new ApiError("Rejected Item not found", 400));
 
-        const issues_for_crosscutting_data = await issues_for_crosscutting_model.findOne({ _id: rejected_crosscutting_id?.log_inventory_item_id })
+        const issues_for_crosscutting_data = await issues_for_crosscutting_model.findOne({ log_inventory_item_id: rejected_crosscutting?.log_inventory_item_id }).lean()
 
         if (issues_for_crosscutting_data) {
             const { rejected_quantity, ...data } = rejected_crosscutting
             const update_issues_for_crosscutting_item_quantity = await issues_for_crosscutting_model.updateOne(
-                { _id: rejected_crosscutting_id?.log_inventory_item_id },
+                { _id: issues_for_crosscutting_data?._id },
                 {
                     $inc: {
                         "available_quantity.physical_length": rejected_quantity?.physical_length,
                         "available_quantity.physical_diameter": rejected_quantity?.physical_diameter,
                         "available_quantity.physical_cmt": rejected_quantity?.physical_cmt,
+                        "available_quantity.amount": rejected_quantity?.amount,
                     },
                 },
                 { session }
@@ -171,10 +171,10 @@ export const add_rejected_issues_for_crosscutting = catchAsync(async function (r
         const issues_for_crosscutting_data = await issues_for_crosscutting_model.findOne({
             _id: issue_for_crosscutting_id,
         })
-        .select({created_by:0,createdAt:0,updatedAt:0})
-        .lean();
+            .select({ created_by: 0, createdAt: 0, updatedAt: 0 })
+            .lean();
 
-        if(!issues_for_crosscutting_data) return next(new ApiError("Issue for crosscutting not found", 404));
+        if (!issues_for_crosscutting_data) return next(new ApiError("Issue for crosscutting not found", 404));
 
         const { _id, available_quantity, ...data } = issues_for_crosscutting_data;
 
@@ -182,7 +182,7 @@ export const add_rejected_issues_for_crosscutting = catchAsync(async function (r
             {
                 ...data,
                 rejected_quantity: available_quantity,
-                created_by:created_by
+                created_by: created_by
             }
         ], { session })
 

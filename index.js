@@ -149,7 +149,7 @@ app.use(
   crossCuttingFactoryRoutes
 );
 app.use(
-  `/api/${Configs.server.version}/factory/rejected-croscutting`,
+  `/api/${Configs.server.version}/factory/rejected-crosscutting`,
   rejected_crosscutting_router
 );
 
