@@ -44,7 +44,7 @@ const issues_for_crosscutting_details_schema = new mongoose.Schema({
     type: String,
     required: [true, "Log formula is required"],
   },
-  issue_status: {
+  status: {
     type: String,
     enum: {
       values: [issues_for_status.crosscutting],
@@ -105,6 +105,13 @@ const issues_for_crosscutting_details_schema = new mongoose.Schema({
         return this.physical_cmt
       },
       required: [true, "Physical CMT is required"],
+    },
+    amount: {
+      type: Number,
+      default: function () {
+        return this.amount
+      },
+      required: [true, "Rate in Inr is required"],
     },
   },
   exchange_rate: {

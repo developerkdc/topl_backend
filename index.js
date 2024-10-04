@@ -55,6 +55,7 @@ import { globalErrorHandler } from "./utils/errors/GlobalErrorHandler.js";
 import flitch_router from "./routes/inventory/flitch/flitch.routes.js";
 import veneer_router from "./routes/inventory/veener/venner.routes.js";
 import fleece_router from "./routes/inventory/fleece/fleece.routes.js";
+import rejected_crosscutting_router from "./routes/factory/crossCutting/rejectedCrosscutting.routes.js";
 const Configs = getConfigs();
 mongo_service();
 const app = express();
@@ -147,6 +148,13 @@ app.use(
   `/api/${Configs.server.version}/factory/cross-cutting`,
   crossCuttingFactoryRoutes
 );
+app.use(
+  `/api/${Configs.server.version}/factory/rejected-crosscutting`,
+  rejected_crosscutting_router
+);
+
+
+
 app.use(
   `/api/${Configs.server.version}/factory/flitching`,
   flitchingFactoryRoutes
