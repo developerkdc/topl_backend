@@ -2,6 +2,7 @@ import express from "express";
 import {
   add_cross_cutting_inventory,
   edit_cross_cutting_inventory,
+  latest_crosscutting_code,
   listing_cross_cutting_inventory,
   listing_issue_for_crosscutting,
   revert_issue_for_crosscutting,
@@ -34,6 +35,10 @@ router.get(
   "/list-crossCutting",
   CheckRoleAndTokenAccess,
   listing_cross_cutting_inventory
+);
+router.get(
+  "/latest-code-crossCutting",
+  latest_crosscutting_code
 );
 
 export default router;

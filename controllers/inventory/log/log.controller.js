@@ -455,13 +455,13 @@ export const add_issue_for_crosscutting = catchAsync(async (req, res, next) => {
       _id: { $in: [...log_items_ids_set] },
       issue_status: issues_for_status.crosscutting,
     })
+    .select({created_by:0,createdAt:0,updatedAt:0})
     .lean();
 
   const issue_for_crosscutting = log_issue_for_crosscutting_data.map((ele) => {
-    const {createdAt,updatedAt,...data} = ele
-    data.log_inventory_item_id = data?._id;
-    data.created_by = created_by;
-    return data;
+    ele.log_inventory_item_id = ele?._id;
+    ele.created_by = created_by;
+    return ele;
   });
 
   const issue_for_crosscutting_data =
