@@ -22,15 +22,9 @@ export const UpdateCutMaster = catchAsync(async (req, res) => {
   const userId = req.query.id;
   const updateData = req.body;
   if (!mongoose.Types.ObjectId.isValid(userId)) {
-    return res
-      .status(400)
-      .json({ result: [], status: false, message: "Invalid Cut ID" });
+    return res.status(400).json({ result: [], status: false, message: "Invalid Cut ID" });
   }
-  const user = await CutModel.findByIdAndUpdate(
-    userId,
-    { $set: updateData },
-    { new: true, runValidators: true }
-  );
+  const user = await CutModel.findByIdAndUpdate(userId, { $set: updateData }, { new: true, runValidators: true });
   if (!user) {
     return res.status(404).json({
       result: [],
@@ -46,28 +40,12 @@ export const UpdateCutMaster = catchAsync(async (req, res) => {
 });
 
 export const ListCutMaster = catchAsync(async (req, res) => {
-  const {
-    string,
-    boolean,
-    numbers,
-    arrayField = [],
-  } = req?.body?.searchFields || {};
-  const {
-    page = 1,
-    limit = 10,
-    sortBy = "updated_at",
-    sort = "desc",
-  } = req.query;
+  const { string, boolean, numbers, arrayField = [] } = req?.body?.searchFields || {};
+  const { page = 1, limit = 10, sortBy = "updated_at", sort = "desc" } = req.query;
   const search = req.query.search || "";
   let searchQuery = {};
   if (search != "" && req?.body?.searchFields) {
-    const searchdata = DynamicSearch(
-      search,
-      boolean,
-      numbers,
-      string,
-      arrayField
-    );
+    const searchdata = DynamicSearch(search, boolean, numbers, string, arrayField);
     if (searchdata?.length == 0) {
       return res.status(404).json({
         statusCode: 404,
@@ -127,7 +105,6 @@ export const ListCutMaster = catchAsync(async (req, res) => {
       result: cutList,
       status: true,
       totalPages: totalPages,
-      currentPage: validPage,
       message: "All Cut List",
     });
   }

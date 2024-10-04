@@ -6,15 +6,10 @@ import departMentModel from "../../database/schema/masters/department.schema.js"
 import { DynamicSearch } from "../../utils/dynamicSearch/dynamic.js";
 
 export const addDepartment = catchAsync(async (req, res) => {
-  const { dept_name, remark } = req.body;
+  const { dept_name, dept_access, remark } = req.body;
 
   if (!dept_name) {
-    return res.json(
-      new ApiResponse(
-        StatusCodes.INTERNAL_SERVER_ERROR,
-        "deptartment name is required"
-      )
-    );
+    return res.json(new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Department name is required"));
   }
   const checkIfAlreadyExists = await departMentModel.find({
     dept_name: dept_name,
@@ -34,79 +29,70 @@ export const addDepartment = catchAsync(async (req, res) => {
     },
   ]);
 
-  const created_by = req.userDetails.id;
+  const created_employee_id = req.userDetails.id;
 
   const newMax = maxNumber.length > 0 ? maxNumber[0].max + 1 : 1;
   const newDept = new departMentModel({
     sr_no: newMax,
     dept_name,
+    dept_access,
     remark,
-    created_by,
+    created_employee_id,
   });
   await newDept.save();
 
-  return res.json(
-    new ApiResponse(StatusCodes.OK, "Department created successfully", newDept)
-  );
+  return res.json(new ApiResponse(StatusCodes.OK, "Department created successfully", newDept));
 });
 
 export const editDepartment = catchAsync(async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   const { id } = req.params;
 
   if (!id) {
-    return res.json(
-      new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Id is missing")
-    );
+    return res.json(new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Id is missing"));
   }
 
   const validateDept = await departMentModel.findById(id);
   if (!validateDept) {
-    return res.json(
-      new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Invalid Category id")
-    );
+    return res.json(new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Invalid Category id"));
+  }
+
+  const checkIfAlreadyExists = await departMentModel.find({
+    _id: { $ne: id },
+    dept_name: req?.body?.dept_name,
+  });
+
+  if (checkIfAlreadyExists.length > 0) {
+    return res.status(404).json(new ApiResponse(StatusCodes.NOT_FOUND, "Department Already Exist."));
   }
 
   const updatedData = await departMentModel.findByIdAndUpdate(
     id,
-    { $set: req.body },
-    { runValidators: true, new: true }
+    { $set: { ...req.body, updated_at: Date.now() } },
+    { runValidators: true, new: true },
+    { session }
   );
   if (!updatedData) {
-    return res.json(
-      new ApiResponse(
-        StatusCodes.INTERNAL_SERVER_ERROR,
-        "Err updating department"
-      )
-    );
+    return res.json(new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Err updating department"));
   }
-  return res.json(
-    new ApiResponse(StatusCodes.OK, "department updated successfully")
-  );
+
+  
+
+
+  return res.json(new ApiResponse(StatusCodes.OK, "Department updated successfully"));
 });
 
 export const listDepartmentDetails = catchAsync(async (req, res) => {
-  const { query, sortField, sortOrder, page, limit } = req.query;
-  const {
-    string,
-    boolean,
-    numbers,
-    arrayField = [],
-  } = req?.body?.searchFields || {};
-  const pageInt = parseInt(page) || 1;
-  const limitInt = parseInt(limit) || 10;
-  const skipped = (pageInt - 1) * limitInt;
-
-  const sortDirection = sortOrder === "desc" ? -1 : 1;
-  const sortObj = sortField ? { [sortField]: sortDirection } : {};
+  const { string, boolean, numbers, arrayField = [] } = req?.body?.searchFields || {};
+  const { page = 1, limit = 10, sortBy = "updated_at", sort = "desc" } = req.query;
+  const search = req.query.search || "";
   let searchQuery = {};
-  if (query != "" && req?.body?.searchFields) {
-    const searchdata = DynamicSearch(
-      query,
-      boolean,
-      numbers,
-      string,
-      arrayField
-    );
+
+  if (search != "" && req?.body?.searchFields) {
+    const searchdata = DynamicSearch(search, boolean, numbers, string, arrayField);
+    console.log(searchdata, "77");
     if (searchdata?.length == 0) {
       return res.status(404).json({
         statusCode: 404,
@@ -119,61 +105,60 @@ export const listDepartmentDetails = catchAsync(async (req, res) => {
     }
     searchQuery = searchdata;
   }
+  const totalDocument = await departMentModel.countDocuments({
+    ...searchQuery,
+  });
 
-  const pipeline = [
+  const totalPages = Math.ceil(totalDocument / limit);
+  const validPage = Math.min(Math.max(page, 1), totalPages);
+  const skip = Math.max((validPage - 1) * limit, 0);
+
+  const departmentList = await departMentModel.aggregate([
     {
       $lookup: {
         from: "users",
-        localField: "created_by",
+        localField: "created_employee_id",
         foreignField: "_id",
-        as: "userDetails",
+        pipeline: [
+          {
+            $project: {
+              user_name: 1,
+              first_name: 1,
+              last_name: 1,
+            },
+          },
+        ],
+        as: "created_employee_id",
       },
     },
-    { $unwind: "$userDetails" },
+    {
+      $unwind: {
+        path: "$created_employee_id",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
     { $match: { ...searchQuery } },
     {
-      $project: {
-        sr_no: 1,
-        dept_name: 1,
-        remark: 1,
-        createdAt: 1,
-        created_by: 1,
-        "userDetails.first_name": 1,
-        "userDetails.last_name": 1,
-      },
+      $sort: { [sortBy]: sort == "desc" ? -1 : 1 },
     },
-    { $skip: skipped },
-    { $limit: limitInt },
-  ];
+    { $skip: skip },
+    { $limit: limit },
+  ]);
 
-  if (Object.keys(sortObj).length > 0) {
-    pipeline.push({ $sort: sortObj });
+  if (departmentList) {
+    return res.status(200).json({
+      result: departmentList,
+      status: true,
+      totalPages: totalPages,
+      message: "All Department List",
+    });
   }
-  const allDetails = await departMentModel.aggregate(pipeline);
-  if (allDetails.length === 0) {
-    return res.json(new ApiResponse(StatusCodes.OK, "NO Data found..."));
-  }
-
-  const totalDocs = await departMentModel.countDocuments({ ...searchQuery });
-  const totalPage = Math.ceil(totalDocs / limitInt);
-  return res.json(
-    new ApiResponse(StatusCodes.OK, "All Details fetched succesfully..", {
-      allDetails,
-      totalPage,
-    })
-  );
 });
 
 export const fetchAllDepartments = catchAsync(async (req, res) => {
   const allDepts = await departMentModel.find();
 
-  return res.json(
-    new ApiResponse(
-      StatusCodes.OK,
-      "All depts fetched successfully..",
-      allDepts
-    )
-  );
+  return res.json(new ApiResponse(StatusCodes.OK, "All depts fetched successfully..", allDepts));
 });
 
 export const DropdownDepartmentMaster = catchAsync(async (req, res) => {
@@ -181,7 +166,7 @@ export const DropdownDepartmentMaster = catchAsync(async (req, res) => {
 
   const searchQuery = type
     ? {
-        $or: [{ "dept_name": { $regex: type, $options: "i" } }],
+        $or: [{ dept_name: { $regex: type, $options: "i" } }],
       }
     : {};
 
@@ -196,13 +181,5 @@ export const DropdownDepartmentMaster = catchAsync(async (req, res) => {
     },
   ]);
 
-  res
-    .status(200)
-    .json(
-      new ApiResponse(
-        StatusCodes.OK,
-        "Department dropdown fetched successfully....",
-        list
-      )
-    );
+  res.status(200).json(new ApiResponse(StatusCodes.OK, "Department dropdown fetched successfully....", list));
 });
