@@ -152,13 +152,14 @@ app.use(
   `/api/${Configs.server.version}/factory/rejected-crosscutting`,
   rejected_crosscutting_router
 );
-
-
-
 app.use(
   `/api/${Configs.server.version}/factory/flitching`,
   flitchingFactoryRoutes
 );
+
+
+
+
 // Grouping
 app.use(`/api/${Configs.server.version}/grouping`, groupingRouter);
 
