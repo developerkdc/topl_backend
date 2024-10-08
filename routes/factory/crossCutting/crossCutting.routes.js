@@ -33,8 +33,8 @@ router.patch(
   CheckRoleAndTokenAccess,
   edit_cross_cutting_inventory
 );
-router.get(
-  "/list-crossCutting",
+router.post(
+  "/list-crossCutting-done",
   // CheckRoleAndTokenAccess,add token access and uncomment
   listing_cross_cutting_inventory
 );
