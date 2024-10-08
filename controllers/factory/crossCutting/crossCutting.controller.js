@@ -8,10 +8,11 @@ import {
 } from "../../../database/schema/factory/crossCutting/issuedForCutting.schema.js";
 import { crosscutting_done_model, crossCuttingsDone_view_modal } from "../../../database/schema/factory/crossCutting/crosscutting.schema.js";
 import { StatusCodes } from "../../../utils/constants.js";
-import { log_inventory_items_model } from "../../../database/schema/inventory/log/log.schema.js";
+import { log_inventory_invoice_model, log_inventory_items_model } from "../../../database/schema/inventory/log/log.schema.js";
 import { issues_for_status } from "../../../database/Utils/constants/constants.js";
 import { dynamic_filter } from "../../../utils/dymanicFilter.js";
 import { DynamicSearch } from "../../../utils/dynamicSearch/dynamic.js";
+import { issues_for_flitching_model } from "../../../database/schema/factory/flitching/issuedForFlitching.schema.js";
 
 //Issue for crosscutting
 export const listing_issue_for_crosscutting = catchAsync(
@@ -58,7 +59,7 @@ export const listing_issue_for_crosscutting = catchAsync(
     const match_query = {
       ...filterData,
       ...search_query,
-      crosscutting_completed:false
+      crosscutting_completed: false
     };
 
     const aggregate_stage = [
@@ -135,6 +136,22 @@ export const revert_issue_for_crosscutting = catchAsync(async function (
       );
 
     if (!deleted_issues_for_crosscutting.acknowledged || deleted_issues_for_crosscutting.deletedCount <= 0) return next(new ApiError("Unable to revert issue for crosscutting", 400));
+
+    const issue_for_crosscutting_log_invoice_found = await issues_for_crosscutting_model.find({
+      _id: { $ne: issue_for_crosscutting_id },
+      invoice_id: issue_for_crosscutting?.invoice_id,
+    });
+    const issue_for_crosscutting_flitching_log_invoice_found = await issues_for_flitching_model.find({
+      invoice_id: issue_for_crosscutting?.invoice_id,
+    });
+
+    if (issue_for_crosscutting_log_invoice_found?.length <= 0 && issue_for_crosscutting_flitching_log_invoice_found?.length <= 0) {
+      await log_inventory_invoice_model.updateOne({ _id: issue_for_crosscutting?.invoice_id }, {
+        $set: {
+          isEditable: true
+        }
+      }, { session })
+    }
 
     await session.commitTransaction();
     session.endSession();

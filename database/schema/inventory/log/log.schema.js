@@ -226,6 +226,10 @@ const log_invoice_schema = new mongoose.Schema(
         },
       },
     },
+    isEditable:{
+      type:Boolean,
+      default:true
+    },
     invoice_Details: invoice_details,
     created_by: {
       type: mongoose.Types.ObjectId,
