@@ -58,6 +58,7 @@ export const listing_issue_for_crosscutting = catchAsync(
     const match_query = {
       ...filterData,
       ...search_query,
+      crosscutting_completed:false
     };
 
     const aggregate_stage = [
@@ -155,12 +156,11 @@ export const addCrossCutDone = catchAsync(async (req, res) => {
 
   try {
     const result = await crosscutting_done_model.insertMany(newData, { session });
-    const updateIssueForCrusstingAvailableQuantity = await issues_for_crosscutting_model.findOneAndUpdate()
+
     if (result && result.length < 0) {
       return res.json(new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Err Inserting Crosscutiing Done Items..."))
     };
     const { id, available_sqm, available_length, amount, crosscutting_completed } = available_data;
-
 
     await issues_for_crosscutting_model.findByIdAndUpdate(
       { _id: id },

@@ -13,10 +13,10 @@ router.post(
   listing_issue_for_flitching
 );
 
-// router.post(
-//   "/revert-issue-for-flitching/:issue_for_flitching_id",
-//   revert_issue_for_flitching
-// );
+router.post(
+  "/revert-issue-for-flitching/:issue_for_flitching_id",
+  revert_issue_for_flitching
+);
 
 router.post("/add-flitching", CheckRoleAndTokenAccess, add_flitching_inventory);
 router.patch(
