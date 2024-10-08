@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   add_issue_for_crosscutting,
+  add_issue_for_flitching,
   add_log_inventory,
   add_single_log_item_inventory,
   edit_log_invoice_inventory,
@@ -8,6 +9,7 @@ import {
   edit_log_item_invoice_inventory,
   inward_sr_no_dropdown,
   item_sr_no_dropdown,
+  listing_log_history_inventory,
   listing_log_inventory,
   log_item_listing_by_invoice,
   logLogsCsv,
@@ -17,6 +19,7 @@ import CheckRoleAndTokenAccess from "../../../middlewares/permission.js";
 const router = Router();
 
 router.post("/list-inventory", listing_log_inventory);
+router.post("/list-history-inventory", listing_log_history_inventory);
 router.post("/add-inventory", CheckRoleAndTokenAccess, add_log_inventory);
 router.post("/add-item-inventory", add_single_log_item_inventory);
 router.patch(
@@ -40,6 +43,11 @@ router.post(
   "/issue_for_crosscutting",
   CheckRoleAndTokenAccess,
   add_issue_for_crosscutting
+);
+router.post(
+  "/issue_for_flitching",
+  CheckRoleAndTokenAccess,
+  add_issue_for_flitching
 );
 
 export default router;

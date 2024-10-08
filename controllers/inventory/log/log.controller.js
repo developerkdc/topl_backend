@@ -14,6 +14,7 @@ import { createMdfLogsExcel } from "../../../config/downloadExcel/Logs/Inventory
 import { createLogLogsExcel } from "../../../config/downloadExcel/Logs/Inventory/log/log.js";
 import { issues_for_crosscutting_model } from "../../../database/schema/factory/crossCutting/issuedForCutting.schema.js";
 import { issues_for_status } from "../../../database/Utils/constants/constants.js";
+import { issues_for_flitching_model } from "../../../database/schema/factory/flitching/issuedForFlitching.schema.js";
 
 export const listing_log_inventory = catchAsync(async (req, res, next) => {
   const {
@@ -476,4 +477,136 @@ export const add_issue_for_crosscutting = catchAsync(async (req, res, next) => {
       }
     )
   );
+});
+
+export const add_issue_for_flitching = catchAsync(async (req, res, next) => {
+  const log_items_ids = req.body?.log_items_ids;
+  if (!Array.isArray(log_items_ids))
+    return next(new ApiError("log items id must be a array", 400));
+  const created_by = req.userDetails.id; //extract userid from req.userDetails
+
+  const log_items_ids_set = new Set(log_items_ids);
+  const update_log_items_status = await log_inventory_items_model.updateMany(
+    { _id: { $in: [...log_items_ids_set] } },
+    {
+      $set: {
+        issue_status: issues_for_status.flitching,
+      },
+    }
+  );
+
+  if (
+    !update_log_items_status?.acknowledged &&
+    update_log_items_status.modifiedCount <= 0
+  )
+    return next(new ApiError("Failed to update", 400));
+
+  const log_issue_for_flitching_data = await log_inventory_items_model
+    .find({
+      _id: { $in: [...log_items_ids_set] },
+      issue_status: issues_for_status.flitching,
+    })
+    .select({created_by:0,createdAt:0,updatedAt:0})
+    .lean();
+
+  const issue_for_flitching = log_issue_for_flitching_data.map((ele) => {
+    ele.log_inventory_item_id = ele?._id;
+    ele.created_by = created_by;
+    return ele;
+  });
+
+  const issue_for_flitching_data =
+    await issues_for_flitching_model.insertMany(issue_for_flitching);
+
+  return res.status(200).json(
+    new ApiResponse(
+      StatusCodes.CREATED,
+      "Issue for flitching done successfully",
+      {
+        issue_for_flitching_data,
+      }
+    )
+  );
+});
+
+export const listing_log_history_inventory = catchAsync(async (req, res, next) => {
+  const {
+    page = 1,
+    limit = 10,
+    sortBy = "updatedAt",
+    sort = "desc",
+    search = "",
+  } = req.query;
+  const {
+    string,
+    boolean,
+    numbers,
+    arrayField = [],
+  } = req?.body?.searchFields || {};
+  const filter = req.body?.filter;
+
+  let search_query = {};
+  if (search != "" && req?.body?.searchFields) {
+    const search_data = DynamicSearch(
+      search,
+      boolean,
+      numbers,
+      string,
+      arrayField
+    );
+    if (search_data?.length == 0) {
+      return res.status(404).json({
+        statusCode: 404,
+        status: false,
+        data: {
+          data: [],
+        },
+        message: "Results Not Found",
+      });
+    }
+    search_query = search_data;
+  }
+
+  const filterData = dynamic_filter(filter);
+
+  const match_query = {
+    ...filterData,
+    ...search_query,
+    issue_status:{$ne:issues_for_status?.log}
+  };
+
+  const aggregate_stage = [
+    {
+      $match: match_query,
+    },
+    {
+      $sort: {
+        [sortBy]: sort === "desc" ? -1 : 1,
+        _id: sort === "desc" ? -1 : 1,
+      },
+    },
+    {
+      $skip: (parseInt(page) - 1) * parseInt(limit),
+    },
+    {
+      $limit: parseInt(limit),
+    },
+  ];
+
+  const List_log_inventory_details =
+    await log_inventory_items_view_model.aggregate(aggregate_stage);
+
+  const totalCount = await log_inventory_items_view_model.countDocuments({
+    ...match_query,
+  });
+
+  const totalPage = Math.ceil(totalCount / limit);
+
+  return res.status(200).json({
+    statusCode: 200,
+    status: "success",
+    data: List_log_inventory_details,
+    totalPage: totalPage,
+    message: "Data fetched successfully",
+  });
 });
