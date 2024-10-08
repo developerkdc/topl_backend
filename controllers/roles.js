@@ -8,7 +8,8 @@ export const AddRole = catchAsync(async (req, res) => {
   const authUserDetail = req.userDetails;
   const roleData = {
     ...req.body,
-    created_employee_id: authUserDetail._id,
+    // created_employee_id: authUserDetail._id,
+    created_employee_id: '66d6b301414c6838b6a7dba5',
   };
   const newRole = new RolesModel(roleData);
   const savedRole = await newRole.save();

@@ -48,7 +48,7 @@ export const UpdateUser = catchAsync(async (req, res) => {
       message: userId ? "Invalid user ID" : IdRequired,
     });
   }
-  const requiredFields = ["user_name", "first_name", "last_name", "email_id", "role_name"];
+  const requiredFields = ["user_name", "first_name", "last_name", "role_name"];
 
   for (const field of requiredFields) {
     if (req.body[field] === "") {
