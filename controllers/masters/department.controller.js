@@ -4,6 +4,7 @@ import ApiResponse from "../../utils/ApiResponse.js";
 import { StatusCodes } from "../../utils/constants.js";
 import departMentModel from "../../database/schema/masters/department.schema.js";
 import { DynamicSearch } from "../../utils/dynamicSearch/dynamic.js";
+import mongoose from "mongoose";
 
 export const addDepartment = catchAsync(async (req, res) => {
   const { dept_name, dept_access, remark } = req.body;
@@ -51,11 +52,13 @@ export const editDepartment = catchAsync(async (req, res) => {
   const { id } = req.params;
 
   if (!id) {
+    await session.abortTransaction(); 
     return res.json(new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Id is missing"));
   }
 
   const validateDept = await departMentModel.findById(id);
   if (!validateDept) {
+    await session.abortTransaction(); 
     return res.json(new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Invalid Category id"));
   }
 
@@ -65,21 +68,22 @@ export const editDepartment = catchAsync(async (req, res) => {
   });
 
   if (checkIfAlreadyExists.length > 0) {
+    await session.abortTransaction(); 
     return res.status(404).json(new ApiResponse(StatusCodes.NOT_FOUND, "Department Already Exist."));
   }
 
   const updatedData = await departMentModel.findByIdAndUpdate(
     id,
     { $set: { ...req.body, updated_at: Date.now() } },
-    { runValidators: true, new: true },
-    { session }
+    { runValidators: true, new: true, session },
   );
   if (!updatedData) {
+    await session.abortTransaction(); 
     return res.json(new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Err updating department"));
   }
 
-  
-
+  await session.commitTransaction(); // Commit the transaction if successful
+  session.endSession(); // End session
 
   return res.json(new ApiResponse(StatusCodes.OK, "Department updated successfully"));
 });
@@ -174,11 +178,11 @@ export const DropdownDepartmentMaster = catchAsync(async (req, res) => {
     {
       $match: searchQuery,
     },
-    {
-      $project: {
-        dept_name: 1,
-      },
-    },
+    // {
+    //   $project: {
+    //     dept_name: 1,
+    //   },
+    // },
   ]);
 
   res.status(200).json(new ApiResponse(StatusCodes.OK, "Department dropdown fetched successfully....", list));
