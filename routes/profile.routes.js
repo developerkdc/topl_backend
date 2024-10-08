@@ -8,9 +8,9 @@ import CheckRoleAndTokenAccess from "../middlewares/permission.js";
 const router = express.Router();
 
 
-router.post("/update-user-profile",CheckRoleAndTokenAccess,UpdateAuthUserProfile);
-router.patch("/change-password",CheckRoleAndTokenAccess,ChangeAuthUserPassword);
-router.get("/list-user-profile",CheckRoleAndTokenAccess,GetAuthUser);
+router.post("/update-user-profile", CheckRoleAndTokenAccess, UpdateAuthUserProfile);
+router.patch("/change-password", CheckRoleAndTokenAccess, ChangeAuthUserPassword);
+router.get("/list-user-profile", CheckRoleAndTokenAccess, GetAuthUser);
 
 
 export default router;

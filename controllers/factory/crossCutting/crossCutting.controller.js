@@ -148,9 +148,122 @@ export const revert_issue_for_crosscutting = catchAsync(async function (
   }
 });
 
+export const addCrossCutDone = catchAsync(async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  const { available_data, newData } = req.body
+
+  try {
+    const result = await crosscutting_done_model.insertMany(newData, { session });
+    const updateIssueForCrusstingAvailableQuantity = await issues_for_crosscutting_model.findOneAndUpdate()
+    if (result && result.length < 0) {
+      return res.json(new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Err Inserting Crosscutiing Done Items..."))
+    };
+    const { id, available_sqm, available_length, amount, crosscutting_completed } = available_data;
+
+
+    await issues_for_crosscutting_model.findByIdAndUpdate(
+      { _id: id },
+      {
+        $set: {
+          'available_quantity physical_cmt': available_sqm,
+          'available_quantity.physical_length': available_length,
+          'available_quantity.amount': amount,
+          'crosscutting_completed': crosscutting_completed,
+        }
+      },
+      { session, new: true }
+    );
+    await session.commitTransaction();
+    session.endSession();
+    return res.json(new ApiResponse(StatusCodes.OK, "Item Added Successfully", result))
+  } catch (error) {
+    await session.abortTransaction();
+    throw new ApiError(error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+  }
+})
 //Crosscutting done
 export const listing_cross_cutting_inventory = catchAsync(
-  async (req, res, next) => { }
+  async (req, res, next) => {
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = "updatedAt",
+      sort = "desc",
+      search = "",
+    } = req.query;
+    const {
+      string,
+      boolean,
+      numbers,
+      arrayField = [],
+    } = req?.body?.searchFields || {};
+    const filter = req.body?.filter;
+
+    let search_query = {};
+    if (search != "" && req?.body?.searchFields) {
+      const search_data = DynamicSearch(
+        search,
+        boolean,
+        numbers,
+        string,
+        arrayField
+      );
+      if (search_data?.length == 0) {
+        return res.status(404).json({
+          statusCode: 404,
+          status: false,
+          data: {
+            data: [],
+          },
+          message: "Results Not Found",
+        });
+      }
+      search_query = search_data;
+    }
+
+    const filterData = dynamic_filter(filter);
+
+    const match_query = {
+      ...filterData,
+      ...search_query,
+    };
+
+    const aggregate_stage = [
+      {
+        $match: match_query,
+      },
+      {
+        $sort: {
+          [sortBy]: sort === "desc" ? -1 : 1,
+          _id: sort === "desc" ? -1 : 1,
+        },
+      },
+      {
+        $skip: (parseInt(page) - 1) * parseInt(limit),
+      },
+      {
+        $limit: parseInt(limit),
+      },
+    ];
+
+    const cross_cutting_done_list =
+      await crosscutting_done_model.aggregate(aggregate_stage);
+
+    const totalCount = await crosscutting_done_model.countDocuments({
+      ...match_query,
+    });
+
+    const totalPage = Math.ceil(totalCount / limit);
+
+    return res.status(200).json({
+      statusCode: 200,
+      status: "success",
+      data: cross_cutting_done_list,
+      totalPage: totalPage,
+      message: "Data fetched successfully",
+    });
+  }
 );
 
 export const add_cross_cutting_inventory = catchAsync(
