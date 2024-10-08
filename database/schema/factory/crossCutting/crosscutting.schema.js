@@ -117,73 +117,73 @@ export const crosscutting_done_model = mongoose.model(
   crosscutting_done_schema
 );
 
-// const crossCuttings_view_schema = new mongoose.Schema(
-//   {},
-//   {
-//     strict: false,
-//     autoCreate: false,
-//     autoIndex: false,
-//   }
-// );
+const crossCuttingsDone_view_schema = new mongoose.Schema(
+  {},
+  {
+    strict: false,
+    autoCreate: false,
+    autoIndex: false,
+  }
+);
 
-// export const crossCuttings_view_modal = mongoose.model(
-//   "cross_cuttings",
-//   crossCuttings_view_schema
-// );
+export const crossCuttingsDone_view_modal = mongoose.model(
+  "cross_cuttings_done_view",
+  crossCuttingsDone_view_schema
+);
 
-// (async function () {
-//   await crossCuttings_view_modal.createCollection({
-//     viewOn: "cross_cuttings",
-//     pipeline: [
-//       {
-//         $sort: {
-//           updatedAt: 1,
-//           _id: 1,
-//         },
-//       },
-//       {
-//         $lookup: {
-//           from: "machines",
-//           localField: "machine_id",
-//           foreignField: "_id",
-//           as: "machineDetails",
-//         },
-//       },
+(async function () {
+  await crossCuttingsDone_view_modal.createCollection({
+    viewOn: "crosscutting_dones",
+    pipeline: [
+      {
+        $sort: {
+          updatedAt: 1,
+          _id: 1,
+        },
+      },
+      {
+        $lookup: {
+          from: "issues_for_crosscuttings",
+          localField: "issue_for_croscutting_id",
+          foreignField: "_id",
+          as: "issuedCrossCuttingDetails",
+        },
+      },
 
-//       {
-//         $lookup: {
-//           from: "item_names",
-//           localField: "item_id",
-//           foreignField: "_id",
-//           as: "itemDetails",
-//         },
-//       },
-//       {
-//         $unwind: {
-//           path: "$machineDetails",
-//           preserveNullAndEmptyArrays: true,
-//         },
-//       },
-//       {
-//         $unwind: {
-//           path: "$itemDetails",
-//           preserveNullAndEmptyArrays: true,
-//         },
-//       },
-//       {
-//         $lookup: {
-//           from: "users",
-//           localField: "created_by",
-//           foreignField: "_id",
-//           as: "created_user",
-//         },
-//       },
-//       {
-//         $unwind: {
-//           path: "$created_user",
-//           preserveNullAndEmptyArrays: true,
-//         },
-//       },
-//     ],
-//   });
-// })();
+      {
+        $lookup: {
+          from: "log_inventory_items_details",
+          localField: "log_inventory_item_id",
+          foreignField: "_id",
+          as: "logInventoryItemDetails",
+        },
+      },
+      {
+        $unwind: {
+          path: "$issuedCrossCuttingDetails",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $unwind: {
+          path: "$logInventoryItemDetails",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "created_by",
+          foreignField: "_id",
+          as: "created_user",
+        },
+      },
+      {
+        $unwind: {
+          path: "$created_user",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+    ],
+  });
+})();
