@@ -14,37 +14,37 @@ import {
   log_item_listing_by_invoice,
   logLogsCsv,
 } from "../../../controllers/inventory/log/log.controller.js";
+import AuthMiddleware from "../../../middlewares/verifyToken.js";
+import RolesPermissions from "../../../middlewares/permission.js";
 
 const router = Router();
 
-router.post("/list-inventory", listing_log_inventory);
-router.post("/list-history-inventory", listing_log_history_inventory);
-router.post("/add-inventory", add_log_inventory);
-router.post("/add-item-inventory", add_single_log_item_inventory);
+router.post("/list-inventory", AuthMiddleware, RolesPermissions("log_inventory", "view"), listing_log_inventory);
+router.post("/list-history-inventory", AuthMiddleware, RolesPermissions("log_inventory", "view"), listing_log_history_inventory);
+router.post("/add-inventory", AuthMiddleware, RolesPermissions("log_inventory", "create"), add_log_inventory);
+router.post("/add-item-inventory", AuthMiddleware, RolesPermissions("log_inventory", "create"), add_single_log_item_inventory);
 router.patch(
   "/edit-invoice-item-inventory/:invoice_id",
+  AuthMiddleware,
+  RolesPermissions("log_inventory", "edit"),
   edit_log_item_invoice_inventory
 );
-router.patch("/edit-item-inventory/:item_id", edit_log_item_inventory);
-router.patch("/edit-invoice-inventory/:invoice_id", edit_log_invoice_inventory);
-router.post("/download-excel-log-logs", logLogsCsv);
+router.patch("/edit-item-inventory/:item_id", AuthMiddleware, RolesPermissions("log_inventory", "edit"), edit_log_item_inventory);
+router.patch("/edit-invoice-inventory/:invoice_id", AuthMiddleware, RolesPermissions("log_inventory", "edit"), edit_log_invoice_inventory);
+router.post("/download-excel-log-logs", AuthMiddleware, RolesPermissions("log_inventory", "view"), logLogsCsv);
 router.get(
   "/log-item-listing-by-invoice/:invoice_id",
+  AuthMiddleware,
+  RolesPermissions("log_inventory", "edit"),
   log_item_listing_by_invoice
 );
 
 //dropdown
-router.get("/item-srno-dropdown", item_sr_no_dropdown);
-router.get("/inward-srno-dropdown", inward_sr_no_dropdown);
+router.get("/item-srno-dropdown", AuthMiddleware, item_sr_no_dropdown);
+router.get("/inward-srno-dropdown", AuthMiddleware, inward_sr_no_dropdown);
 
 //Issue for crosscutting
-router.post(
-  "/issue_for_crosscutting",
-  add_issue_for_crosscutting
-);
-router.post(
-  "/issue_for_flitching",
-  add_issue_for_flitching
-);
+router.post("/issue_for_crosscutting", AuthMiddleware, RolesPermissions("log_inventory", "view"), add_issue_for_crosscutting);
+router.post("/issue_for_flitching", AuthMiddleware, RolesPermissions("log_inventory", "view"), add_issue_for_flitching);
 
 export default router;

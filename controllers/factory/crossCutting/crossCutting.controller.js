@@ -6,7 +6,7 @@ import {
   issues_for_crosscutting_model,
   issues_for_crosscutting_view_model,
 } from "../../../database/schema/factory/crossCutting/issuedForCutting.schema.js";
-import { crosscutting_done_model } from "../../../database/schema/factory/crossCutting/crosscutting.schema.js";
+import { crosscutting_done_model, crossCuttingsDone_view_modal } from "../../../database/schema/factory/crossCutting/crosscutting.schema.js";
 import { StatusCodes } from "../../../utils/constants.js";
 import { log_inventory_items_model } from "../../../database/schema/inventory/log/log.schema.js";
 import { issues_for_status } from "../../../database/Utils/constants/constants.js";
@@ -411,4 +411,30 @@ export const edit_cross_cutting_inventory = catchAsync(
   async (req, res, next) => { }
 );
 
+export const fetch_all_crosscuts_by_issue_for_crosscut_id = catchAsync(async (req, res) => {
+  const { id } = req.params;
+
+  if (!id) {
+    throw new ApiError(StatusCodes.NOT_FOUND, "Issue for crosscut id is missing...")
+  };
+
+  const pipeline = [
+    {
+      $match: {
+        "issue_for_croscutting_id": new mongoose.Types.ObjectId(id)
+      }
+    },
+    {
+      $sort: { log_no_code: 1 }
+    }
+  ];
+
+  const allDetails = await crossCuttingsDone_view_modal.aggregate(pipeline);
+
+  if (allDetails.length === 0) {
+    return res.json(new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "No Data Found...."))
+  }
+  return res.json(new ApiResponse(StatusCodes.OK, "All Crosscuts fetched successfully....", allDetails))
+
+})
 

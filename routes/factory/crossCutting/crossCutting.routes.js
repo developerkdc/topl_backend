@@ -3,6 +3,7 @@ import {
   add_cross_cutting_inventory,
   addCrossCutDone,
   edit_cross_cutting_inventory,
+  fetch_all_crosscuts_by_issue_for_crosscut_id,
   latest_crosscutting_code,
   listing_cross_cutting_inventory,
   listing_issue_for_crosscutting,
@@ -42,5 +43,7 @@ router.get(
   "/latest-code-crossCutting/:id",
   latest_crosscutting_code
 );
+
+router.get("/list-crosscuts-by-issued-crosscut-id/:id", fetch_all_crosscuts_by_issue_for_crosscut_id)
 
 export default router;
