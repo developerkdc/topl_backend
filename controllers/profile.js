@@ -84,7 +84,7 @@ export const ChangeAuthUserPassword = catchAsync(async (req, res) => {
 
   const hashedNewPassword = await create(new_password);
   const userUpdate = await UserModel.findOneAndUpdate(
-    { email_id: authUserDetail.user_name },
+    { user_name: authUserDetail.user_name },
     {
       $set: {
         password: hashedNewPassword,

@@ -1,6 +1,7 @@
 import express from "express";
 import {
   add_cross_cutting_inventory,
+  addCrossCutDone,
   edit_cross_cutting_inventory,
   latest_crosscutting_code,
   listing_cross_cutting_inventory,
@@ -19,6 +20,7 @@ router.post(
   "/listing_issue_for_crosscutting",
   listing_issue_for_crosscutting
 );
+router.post("/add-crossCut-done", addCrossCutDone)
 
 
 // Crosscutting
@@ -33,11 +35,11 @@ router.patch(
 );
 router.get(
   "/list-crossCutting",
-  CheckRoleAndTokenAccess,
+  // CheckRoleAndTokenAccess,add token access and uncomment
   listing_cross_cutting_inventory
 );
 router.get(
-  "/latest-code-crossCutting",
+  "/latest-code-crossCutting/:id",
   latest_crosscutting_code
 );
 

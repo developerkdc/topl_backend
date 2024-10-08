@@ -11,7 +11,7 @@ export const createPlywoodLogsExcel = async (newData) => {
       await fs.mkdir(folderPath, { recursive: true });
     }
     const workbook = new exceljs.Workbook();
-    const worksheet = workbook.addWorksheet("flitch-logs");
+    const worksheet = workbook.addWorksheet("Plywood-logs");
     const plywoodColumns = [
       { header: "Inward Sr No", key: "inward_sr_no", width: 15 },
       { header: "Item Sr No", key: "item_sr_no", width: 15 },

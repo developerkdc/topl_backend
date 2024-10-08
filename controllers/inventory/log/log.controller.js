@@ -455,7 +455,7 @@ export const add_issue_for_crosscutting = catchAsync(async (req, res, next) => {
       _id: { $in: [...log_items_ids_set] },
       issue_status: issues_for_status.crosscutting,
     })
-    .select({created_by:0,createdAt:0,updatedAt:0})
+    .select({ created_by: 0, createdAt: 0, updatedAt: 0 })
     .lean();
 
   const issue_for_crosscutting = log_issue_for_crosscutting_data.map((ele) => {

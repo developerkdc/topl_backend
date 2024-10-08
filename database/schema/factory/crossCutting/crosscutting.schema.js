@@ -70,6 +70,25 @@ const crosscutting_done_schema = new mongoose.Schema(
       type: Number,
       required: [true, "per_cmt_cost is required"],
     },
+    factor: {
+      type: Number,
+      required: [true, "factor is required"]
+    },
+    wastage_info: {
+      wastage_sqm: {
+        type: Number,
+        required: [true, "wastage_sqm is required"]
+      },
+      wastage_length: {
+        type: Number,
+        required: [true, "wastage_length is required"]
+      }
+    },
+
+    required_hours: {
+      type: Number,
+      required: [true, "Required hours is required"]
+    },
     remarks: {
       type: String,
       default: null,
