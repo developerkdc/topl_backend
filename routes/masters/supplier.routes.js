@@ -1,6 +1,4 @@
 import express from "express";
-
-import CheckRoleAndTokenAccess from "../../middlewares/permission.js";
 import {
   addBranchToSupplier,
   addContactPersonToBranch,
@@ -19,50 +17,31 @@ import {
   UpdateSupplierMaster,
 } from "../../controllers/masters/supplier.js";
 import { ListSuppliersLogs } from "../../controllers/logs/Masters/suppliersLogs.js";
+import AuthMiddleware from "../../middlewares/verifyToken.js";
+import RolesPermissions from "../../middlewares/permission.js";
 
 const router = express.Router();
 
-router.post("/add-supplier-master", CheckRoleAndTokenAccess, AddSupplierMaster);
-router.post(
-  "/update-supplier-master",
-  CheckRoleAndTokenAccess,
-  UpdateSupplierMaster
-);
-router.post(
-  "/list-supplier-master",
-  CheckRoleAndTokenAccess,
-  ListSupplierMaster
-);
-router.get(
-  "/list-supplier-master-without-permission",
-  ListSupplierMasterWithOutPermission
-);
-router.get("/supplier-logs", ListSuppliersLogs);
-router.post("/add-branch/:id", addBranchToSupplier);
-router.get(
-  "/list-supplier-master",
-  CheckRoleAndTokenAccess,
-  fetchAllSupplierWithBranchesDetails
-);
-router.post("/update-supplier-branch", updateSupplierBranchById);
-router.post("/update-contact-person", updateContactPersonInfo);
+router.post("/add-supplier-master", AuthMiddleware, RolesPermissions("supplier_master", "create"), AddSupplierMaster);
+router.post("/update-supplier-master", AuthMiddleware, RolesPermissions("supplier_master", "create"), UpdateSupplierMaster);
+router.post("/list-supplier-master", AuthMiddleware, RolesPermissions("supplier_master", "create"), ListSupplierMaster);
+router.get("/list-supplier-master-without-permission", AuthMiddleware, ListSupplierMasterWithOutPermission);
+router.get("/supplier-logs", AuthMiddleware, ListSuppliersLogs);
+router.post("/add-branch/:id", AuthMiddleware, RolesPermissions("supplier_master", "create"), addBranchToSupplier);
+router.get("/list-supplier-master", AuthMiddleware, RolesPermissions("supplier_master", "create"), fetchAllSupplierWithBranchesDetails);
+router.post("/update-supplier-branch", AuthMiddleware, RolesPermissions("supplier_master", "create"), updateSupplierBranchById);
+router.post("/update-contact-person", AuthMiddleware, RolesPermissions("supplier_master", "create"), updateContactPersonInfo);
 
-router.get(
-  "/branchs-by-supplier/:id",
-  // CheckRoleAndTokenAccess,
-  fetchAllBranchesBySupplierId
-);
-router.get("/contact-person/:id", fetchContactPersonById);
-router.post("/add-contact-person/:id", addContactPersonToBranch);
-router.get(
-  "/fetch-supplier-main-branch/:id",
-  fetchSupplierMainBranchBySupplierId
-);
-//apis without permission
-router.get("/all-suppliers", fetchAllSuppliers);
-router.get("/dropdown-supplier-master", DropdownSupplierName);
-router.get("/branches-by-supplier/:id", DropdownSupplierBranches);
+router.get("/branchs-by-supplier/:id", AuthMiddleware, RolesPermissions("supplier_master", "create"), fetchAllBranchesBySupplierId);
+router.get("/contact-person/:id", AuthMiddleware, RolesPermissions("supplier_master", "create"), fetchContactPersonById);
+router.post("/add-contact-person/:id", AuthMiddleware, RolesPermissions("supplier_master", "create"), addContactPersonToBranch);
+router.get("/fetch-supplier-main-branch/:id", AuthMiddleware, RolesPermissions("supplier_master", "create"), fetchSupplierMainBranchBySupplierId);
 
-// router.get("/list-supplier-master",CheckRoleAndTokenAccess, ListSupplierMasterLogs);
+// without permission
+router.get("/all-suppliers", AuthMiddleware, fetchAllSuppliers);
+router.get("/dropdown-supplier-master", AuthMiddleware, DropdownSupplierName);
+router.get("/branches-by-supplier/:id", AuthMiddleware, DropdownSupplierBranches);
+
+// router.get("/list-supplier-master",AuthMiddleware, RolesPermissions("role", "create"), ListSupplierMasterLogs);
 
 export default router;

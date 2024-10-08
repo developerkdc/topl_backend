@@ -98,19 +98,19 @@ app.use(
   `/api/${Configs.server.version}/expenseType-master`,
   expenseTypeMasterRouter
 );
-app.use(`/api/${Configs.server.version}/pallete-master`, palleteMasterRouter);
-app.use(
-  `/api/${Configs.server.version}/party-name-master`,
-  partyNameMasterRouter
-);
+// app.use(`/api/${Configs.server.version}/pallete-master`, palleteMasterRouter);
+// app.use(
+//   `/api/${Configs.server.version}/party-name-master`,
+//   partyNameMasterRouter
+// );
 app.use(
   `/api/${Configs.server.version}/item-name-master`,
   itemNameMasterRouter
 );
-app.use(
-  `/api/${Configs.server.version}/item-code-master`,
-  itemCodeMasterRouter
-);
+// app.use(
+//   `/api/${Configs.server.version}/item-code-master`,
+//   itemCodeMasterRouter
+// );
 app.use(`/api/${Configs.server.version}/department-master`, departmentRouter);
 app.use(`/api/${Configs.server.version}/machine-master`, machineRouter);
 app.use(`/api/${Configs.server.version}/series-master`, seriesRouter);
@@ -122,11 +122,11 @@ app.use(
   `/api/${Configs.server.version}/other-goods-inventory`,
   otherGoodsInventoryRouter
 );
-app.use(
-  `/api/${Configs.server.version}/raw-material-inventory`,
-  rawMaterialInventoryRouter
-);
-``;
+// app.use(
+//   `/api/${Configs.server.version}/raw-material-inventory`,
+//   rawMaterialInventoryRouter
+// );
+
 app.use(
   `/api/${Configs.server.version}/plywood-inventory`,
   plywoodInventoryRoutes

@@ -9,7 +9,8 @@ import {
   plywood_item_listing_by_invoice,
   plywoodLogsCsv,
 } from "../../../controllers/inventory/plywood/plywood.controller.js";
-import CheckRoleAndTokenAccess from "../../../middlewares/permission.js";
+import AuthMiddleware from "../../../middlewares/verifyToken.js";
+import RolesPermissions from "../../../middlewares/permission.js";
 
 const router = Router();
 
@@ -24,30 +25,28 @@ const router = Router();
 //   CheckRoleAndTokenAccess,
 //   listing_plywood_inventory
 // );
-router.post(
-  "/list-inventory",
-  CheckRoleAndTokenAccess,
-  listing_plywood_inventory
-);
-router.post("/add-inventory", CheckRoleAndTokenAccess, add_plywood_inventory);
-router.post(
-  "/add-item-inventory",
-  CheckRoleAndTokenAccess,
-  add_single_plywood_item_inventory
-);
-router.patch("/edit-item-inventory/:item_id", edit_plywood_item_inventory);
+router.post("/list-inventory", AuthMiddleware, RolesPermissions("plywood_inventory", "view"), listing_plywood_inventory);
+router.post("/add-inventory", AuthMiddleware, RolesPermissions("plywood_inventory", "create"), add_plywood_inventory);
+router.post("/add-item-inventory", AuthMiddleware, RolesPermissions("plywood_inventory", "create"), add_single_plywood_item_inventory);
+router.patch("/edit-item-inventory/:item_id", AuthMiddleware, RolesPermissions("plywood_inventory", "create"), edit_plywood_item_inventory);
 router.patch(
   "/edit-invoice-inventory/:invoice_id",
+  AuthMiddleware,
+  RolesPermissions("plywood_inventory", "edit"),
   edit_plywood_invoice_inventory
 );
 router.patch(
   "/edit-invoice-item-inventory/:invoice_id",
+  AuthMiddleware,
+  RolesPermissions("plywood_inventory", "edit"),
   edit_plywood_item_invoice_inventory
 );
 router.get(
   "/plywood-item-listing-by-invoice/:invoice_id",
+  AuthMiddleware,
+  RolesPermissions("plywood_inventory", "edit"),
   plywood_item_listing_by_invoice
 );
-router.post("/download-excel-plywood", plywoodLogsCsv);
+router.post("/download-excel-plywood", AuthMiddleware, RolesPermissions("plywood_inventory", "view"), plywoodLogsCsv);
 
 export default router;
