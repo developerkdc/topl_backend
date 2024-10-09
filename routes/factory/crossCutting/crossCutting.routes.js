@@ -9,38 +9,43 @@ import {
   listing_issue_for_crosscutting,
   revert_issue_for_crosscutting,
 } from "../../../controllers/factory/crossCutting/crossCutting.controller.js";
-import CheckRoleAndTokenAccess from "../../../middlewares/permission.js";
+import AuthMiddleware from "../../../middlewares/verifyToken.js";
+import RolesPermissions from "../../../middlewares/permission.js";
 const router = express.Router();
 
 //Issue for crosscutting
 router.post(
   "/revert-issue-for-crosscutting/:issue_for_crosscutting_id",
+  AuthMiddleware, RolesPermissions("crosscut_factory", "view"),
   revert_issue_for_crosscutting
 );
 router.post(
   "/listing_issue_for_crosscutting",
+  AuthMiddleware, RolesPermissions("crosscut_factory", "view"),
   listing_issue_for_crosscutting
 );
-router.post("/add-crossCut-done", addCrossCutDone)
+router.post("/add-crossCut-done", AuthMiddleware, RolesPermissions("crosscut_factory", "create"),addCrossCutDone)
 
 
 // Crosscutting
-router.post(
-  "/add-crossCutting/:issued_crosscutting_id",
-  add_cross_cutting_inventory
-);
+// router.post(
+//   "/add-crossCutting/:issued_crosscutting_id",
+//   AuthMiddleware, RolesPermissions("crosscut_factory", "create"),
+//   add_cross_cutting_inventory
+// ); // old 
 router.patch(
   "/edit-crossCutting/:id",
-  CheckRoleAndTokenAccess,
+  AuthMiddleware, RolesPermissions("crosscut_factory", "edit"),
   edit_cross_cutting_inventory
 );
 router.post(
   "/list-crossCutting-done",
-  // CheckRoleAndTokenAccess,add token access and uncomment
+  AuthMiddleware, RolesPermissions("crosscut_factory", "view"),
   listing_cross_cutting_inventory
 );
 router.get(
   "/latest-code-crossCutting/:id",
+  AuthMiddleware,
   latest_crosscutting_code
 );
 

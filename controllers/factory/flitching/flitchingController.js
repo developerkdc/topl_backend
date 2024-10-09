@@ -3,11 +3,12 @@ import { issues_for_flitching_model, issues_for_flitching_view_model } from "../
 import { dynamic_filter } from "../../../utils/dymanicFilter.js";
 import { DynamicSearch } from "../../../utils/dynamicSearch/dynamic.js";
 import catchAsync from "../../../utils/errors/catchAsync.js";
-import { log_inventory_items_model } from "../../../database/schema/inventory/log/log.schema.js";
+import { log_inventory_invoice_model, log_inventory_items_model } from "../../../database/schema/inventory/log/log.schema.js";
 import { issues_for_status } from "../../../database/Utils/constants/constants.js";
 import { StatusCodes } from "../../../utils/constants.js";
 import ApiResponse from "../../../utils/ApiResponse.js";
 import ApiError from "../../../utils/errors/apiError.js";
+import { issues_for_crosscutting_model } from "../../../database/schema/factory/crossCutting/issuedForCutting.schema.js";
 
 export const listing_issue_for_flitching = catchAsync(
   async (req, res, next) => {
@@ -130,6 +131,22 @@ export const revert_issue_for_flitching = catchAsync(async function (
 
     if (!deleted_issues_for_flitching?.acknowledged || deleted_issues_for_flitching?.deletedCount <= 0) return next(new ApiError("Unable to revert issue for flitching", 400));
 
+    const issue_for_crosscutting_flitching_log_invoice_found = await issues_for_flitching_model.find({
+      _id: { $ne: issue_for_flitching_id },
+      invoice_id: issue_for_flitching?.invoice_id,
+    });
+    const issue_for_crosscutting_log_invoice_found = await issues_for_crosscutting_model.find({
+      invoice_id: issue_for_flitching?.invoice_id,
+    });
+
+    if (issue_for_crosscutting_log_invoice_found?.length <= 0 && issue_for_crosscutting_flitching_log_invoice_found?.length <= 0) {
+      await log_inventory_invoice_model.updateOne({ _id: issue_for_flitching?.invoice_id }, {
+        $set: {
+          isEditable: true
+        }
+      }, { session })
+    }
+
     await session.commitTransaction();
     session.endSession();
     return res
@@ -143,8 +160,8 @@ export const revert_issue_for_flitching = catchAsync(async function (
   }
 });
 
-export const add_flitching_inventory = catchAsync(async (req, res, next) => {});
+export const add_flitching_inventory = catchAsync(async (req, res, next) => { });
 
 export const edit_flitching_inventory = catchAsync(
-  async (req, res, next) => {}
+  async (req, res, next) => { }
 );
