@@ -415,7 +415,9 @@ export const latest_crosscutting_code = catchAsync(async function (req, res, nex
     },
   ]);
 
-  const latestCode = crossCuttingLatestCode?.[0] || "A";
+  const latestCode = crossCuttingLatestCode?.[0] || {
+    code:"A"
+  };
 
   return res
     .status(201)
