@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import invoice_details from "../../../Utils/invoiceDetails.schema.js";
 import { issues_for_status } from "../../../Utils/constants/constants.js";
+import expensesSchema from "../../masters/expenses.schema.js";
 
 const log_item_details_schema = new mongoose.Schema({
   item_sr_no: {
@@ -231,6 +232,10 @@ const log_invoice_schema = new mongoose.Schema(
       default:true
     },
     invoice_Details: invoice_details,
+    expenses:{
+      type:[expensesSchema],
+      default:null
+    },
     created_by: {
       type: mongoose.Types.ObjectId,
       ref: "users",
