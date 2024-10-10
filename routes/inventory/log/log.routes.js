@@ -11,6 +11,7 @@ import {
   item_sr_no_dropdown,
   listing_log_history_inventory,
   listing_log_inventory,
+  log_invoice_listing,
   log_item_listing_by_invoice,
   logLogsCsv,
 } from "../../../controllers/inventory/log/log.controller.js";
@@ -32,6 +33,13 @@ router.patch(
 router.patch("/edit-item-inventory/:item_id", AuthMiddleware, RolesPermissions("log_inventory", "edit"), edit_log_item_inventory);
 router.patch("/edit-invoice-inventory/:invoice_id", AuthMiddleware, RolesPermissions("log_inventory", "edit"), edit_log_invoice_inventory);
 router.post("/download-excel-log-logs", AuthMiddleware, RolesPermissions("log_inventory", "view"), logLogsCsv);
+
+router.post(
+  "/log-invoice-listing",
+  AuthMiddleware,
+  RolesPermissions("log_inventory", "edit"),
+  log_invoice_listing
+);
 router.get(
   "/log-item-listing-by-invoice/:invoice_id",
   AuthMiddleware,
@@ -45,6 +53,7 @@ router.get("/inward-srno-dropdown", AuthMiddleware, inward_sr_no_dropdown);
 
 //Issue for crosscutting
 router.post("/issue_for_crosscutting", AuthMiddleware, RolesPermissions("log_inventory", "view"), add_issue_for_crosscutting);
+//Issue for flitching
 router.post("/issue_for_flitching", AuthMiddleware, RolesPermissions("log_inventory", "view"), add_issue_for_flitching);
 
 export default router;

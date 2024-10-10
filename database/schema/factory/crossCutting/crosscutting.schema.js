@@ -12,22 +12,6 @@ const crosscutting_done_schema = new mongoose.Schema(
       ref: "log_inventory_items_details",
       required: [true, "Log Inventory Items Id is required"],
     },
-    crosscut_date: {
-      type: Date,
-      required: [true, "flicthing date is required"],
-    },
-    workers: {
-      type: Number,
-      required: [true, "workers are required"],
-    },
-    shift: {
-      type: String,
-      required: [true, "shift is required"],
-    },
-    working_hours: {
-      type: Number,
-      required: [true, "working hours are required"],
-    },
     machine_id: {
       type: mongoose.Schema.Types.ObjectId,
       required: [true, "machine id is required"],
@@ -84,10 +68,31 @@ const crosscutting_done_schema = new mongoose.Schema(
         required: [true, "wastage_length is required"]
       }
     },
-
+    worker_details: {
+      crosscut_date: {
+        type: Date,
+        required: [true, "flicthing date is required"],
+      },
+      workers: {
+        type: Number,
+        required: [true, "workers are required"],
+      },
+      shift: {
+        type: String,
+        required: [true, "shift is required"],
+      },
+      working_hours: {
+        type: Number,
+        required: [true, "working hours are required"],
+      },
+    },
     required_hours: {
       type: Number,
       required: [true, "Required hours is required"]
+    },
+    required_workers: {
+      type: Number,
+      required: [true, "Required workers is required"]
     },
     remarks: {
       type: String,
@@ -150,40 +155,26 @@ export const crossCuttingsDone_view_modal = mongoose.model(
         },
       },
 
-      {
-        $lookup: {
-          from: "log_inventory_items_details",
-          localField: "log_inventory_item_id",
-          foreignField: "_id",
-          as: "logInventoryItemDetails",
-        },
-      },
+      // {
+      //   $lookup: {
+      //     from: "log_inventory_items_details",
+      //     localField: "log_inventory_item_id",
+      //     foreignField: "_id",
+      //     as: "logInventoryItemDetails",
+      //   },
+      // },
       {
         $unwind: {
           path: "$issuedCrossCuttingDetails",
           preserveNullAndEmptyArrays: true,
         },
       },
-      {
-        $unwind: {
-          path: "$logInventoryItemDetails",
-          preserveNullAndEmptyArrays: true,
-        },
-      },
-      {
-        $lookup: {
-          from: "users",
-          localField: "created_by",
-          foreignField: "_id",
-          as: "created_user",
-        },
-      },
-      {
-        $unwind: {
-          path: "$created_user",
-          preserveNullAndEmptyArrays: true,
-        },
-      },
+      // {
+      //   $unwind: {
+      //     path: "$logInventoryItemDetails",
+      //     preserveNullAndEmptyArrays: true,
+      //   },
+      // },
     ],
   });
 })();

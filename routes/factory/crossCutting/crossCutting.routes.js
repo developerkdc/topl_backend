@@ -24,7 +24,7 @@ router.post(
   AuthMiddleware, RolesPermissions("crosscut_factory", "view"),
   listing_issue_for_crosscutting
 );
-router.post("/add-crossCut-done", AuthMiddleware, RolesPermissions("crosscut_factory", "create"),addCrossCutDone)
+router.post("/add-crossCut-done", AuthMiddleware, RolesPermissions("crosscut_factory", "create"), addCrossCutDone)
 
 
 // Crosscutting
@@ -44,11 +44,11 @@ router.post(
   listing_cross_cutting_inventory
 );
 router.get(
-  "/latest-code-crossCutting/:id",
+  "/latest-code-crossCutting/:issued_crosscutting_id",
   AuthMiddleware,
   latest_crosscutting_code
 );
 
-router.get("/list-crosscuts-by-issued-crosscut-id/:id", fetch_all_crosscuts_by_issue_for_crosscut_id)
+router.get("/list-crosscuts-by-issued-crosscut-id/:id", AuthMiddleware, RolesPermissions("crosscut_factory", "view"), fetch_all_crosscuts_by_issue_for_crosscut_id)
 
 export default router;

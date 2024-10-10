@@ -56,6 +56,7 @@ import flitch_router from "./routes/inventory/flitch/flitch.routes.js";
 import veneer_router from "./routes/inventory/veener/venner.routes.js";
 import fleece_router from "./routes/inventory/fleece/fleece.routes.js";
 import rejected_crosscutting_router from "./routes/factory/crossCutting/rejectedCrosscutting.routes.js";
+import expenseRouter from "./routes/masters/Expenses/index.js";
 const Configs = getConfigs();
 mongo_service();
 const app = express();
@@ -97,6 +98,10 @@ app.use(`/api/${Configs.server.version}/gst-master`, gstMasterRouter);
 app.use(
   `/api/${Configs.server.version}/expenseType-master`,
   expenseTypeMasterRouter
+);
+app.use(
+  `/api/${Configs.server.version}/expense-master`,
+  expenseRouter
 );
 // app.use(`/api/${Configs.server.version}/pallete-master`, palleteMasterRouter);
 // app.use(
