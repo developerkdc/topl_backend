@@ -1,5 +1,5 @@
 import express from "express";
-import { add_rejected_issues_for_crosscutting, listing_rejected_crosscutting, revert_rejected_crosscutting } from "../../../controllers/factory/crossCutting/RejectedCrosscutting.controller.js";
+import { add_rejected_issues_for_crosscutting, listing_rejected_crosscutting, revert_rejected_crosscutting } from "../../../controllers/factory/crossCutting/rejectedCrosscutting.controller.js";
 import RolesPermissions from "../../../middlewares/permission.js";
 import AuthMiddleware from "../../../middlewares/verifyToken.js";
 const rejected_crosscutting_router = express.Router();

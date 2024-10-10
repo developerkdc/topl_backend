@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import { issues_for_crosscutting_model } from "../../../database/schema/factory/crossCutting/issuedForCutting.schema.js";
-import { rejected_crosscutting_model, rejected_crosscutting_view_model } from "../../../database/schema/factory/crossCutting/RejectedCrosscutting.schema.js";
+import { rejected_crosscutting_model, rejected_crosscutting_view_model } from "../../../database/schema/factory/crossCutting/rejectedCrosscutting.schema.js";
 import { dynamic_filter } from "../../../utils/dymanicFilter.js";
 import { DynamicSearch } from "../../../utils/dynamicSearch/dynamic.js";
 import catchAsync from "../../../utils/errors/catchAsync.js";
