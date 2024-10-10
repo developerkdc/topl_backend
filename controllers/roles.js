@@ -14,7 +14,7 @@ export const AddRole = catchAsync(async (req, res) => {
   const newRole = new RolesModel(roleData);
   const savedRole = await newRole.save();
 
-  return res.status(201).json({
+  return res.status(200).json({
     result: savedRole,
     status: true,
     message: "Role created successfully",
