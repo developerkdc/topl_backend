@@ -58,7 +58,7 @@ export const listing_issue_for_crosscutting = catchAsync(
     const match_query = {
       ...filterData,
       ...search_query,
-      crosscutting_completed:false
+      crosscutting_completed: false
     };
 
     const aggregate_stage = [
@@ -166,7 +166,7 @@ export const addCrossCutDone = catchAsync(async (req, res) => {
       { _id: id },
       {
         $set: {
-          'available_quantity physical_cmt': available_sqm,
+          'available_quantity.physical_cmt': available_sqm,
           'available_quantity.physical_length': available_length,
           'available_quantity.amount': amount,
           'crosscutting_completed': crosscutting_completed,
@@ -248,9 +248,9 @@ export const listing_cross_cutting_inventory = catchAsync(
     ];
 
     const cross_cutting_done_list =
-      await crosscutting_done_model.aggregate(aggregate_stage);
+      await crossCuttingsDone_view_modal.aggregate(aggregate_stage);
 
-    const totalCount = await crosscutting_done_model.countDocuments({
+    const totalCount = await crossCuttingsDone_view_modal.countDocuments({
       ...match_query,
     });
 
@@ -399,7 +399,7 @@ export const latest_crosscutting_code = catchAsync(async function (req, res, nex
   ]);
 
   const latestCode = crossCuttingLatestCode?.[0] || "A";
-
+  // console.log("code => ", crossCuttingLatestCode)
   return res
     .status(201)
     .json(
