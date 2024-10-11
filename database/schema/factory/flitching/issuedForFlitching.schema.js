@@ -130,6 +130,14 @@ const issues_for_flitching_details_schema = new mongoose.Schema({
     type: Number,
     required: [true, "Rate in Inr is required"],
   },
+  amount_factor: {
+    type: Number,
+    default: 0,
+  },
+  expense_amount: {
+    type: Number,
+    default: 0,
+  },
   remark: {
     type: String,
     default: null,

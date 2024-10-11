@@ -95,7 +95,6 @@ export const ListRoles = catchAsync(async (req, res) => {
     }
     searchQuery = searchdata;
   }
-  console.log(searchQuery, "10666");
   const totalDocument = await RolesModel.countDocuments({
     ...searchQuery,
   });
