@@ -22,7 +22,7 @@ router.post(
   revert_issue_for_flitching
 );
 
-router.post("/add-flitching", CheckRoleAndTokenAccess, add_flitching_inventory);
+router.post("/add-flitching", AuthMiddleware, RolesPermissions("flitching_factory", "create"), add_flitching_inventory);
 router.patch(
   "/edit-flitching/:id",
   edit_flitching_inventory

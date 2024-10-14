@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose, { startSession } from "mongoose";
 import { issues_for_flitching_model, issues_for_flitching_view_model } from "../../../database/schema/factory/flitching/issuedForFlitching.schema.js";
 import { dynamic_filter } from "../../../utils/dymanicFilter.js";
 import { DynamicSearch } from "../../../utils/dynamicSearch/dynamic.js";
@@ -9,6 +9,7 @@ import { StatusCodes } from "../../../utils/constants.js";
 import ApiResponse from "../../../utils/ApiResponse.js";
 import ApiError from "../../../utils/errors/apiError.js";
 import { issues_for_crosscutting_model } from "../../../database/schema/factory/crossCutting/issuedForCutting.schema.js";
+import { flitchingModel } from "../../../database/schema/factory/flitching/flitching.schema.js";
 
 export const listing_issue_for_flitching = catchAsync(
   async (req, res, next) => {
@@ -160,7 +161,30 @@ export const revert_issue_for_flitching = catchAsync(async function (
   }
 });
 
-export const add_flitching_inventory = catchAsync(async (req, res, next) => { });
+export const add_flitching_inventory = catchAsync(async (req, res, next) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const { newData } = req.body;
+    const { _id } = req.userDetails
+    // console.log("user details => ", _id)
+    const updatedData = newData?.map((item) => {
+      item.created_by = _id;
+      return item
+    })
+
+    const result = await flitchingModel.insertMany(updatedData, { session });
+
+    if (result && result.length < 0) {
+      return res.json(new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Err Inserting Flitching Done Items..."))
+    };
+    await session.commitTransaction();
+    session.endSession();
+    return res.json(new ApiResponse(StatusCodes.OK, "Item Added Successfully", result))
+  } catch (error) {
+    throw new ApiError(error.message, StatusCodes.INTERNAL_SERVER_ERROR)
+  }
+});
 
 export const edit_flitching_inventory = catchAsync(
   async (req, res, next) => { }
