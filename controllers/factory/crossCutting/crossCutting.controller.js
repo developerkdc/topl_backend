@@ -416,7 +416,7 @@ export const latest_crosscutting_code = catchAsync(async function (req, res, nex
   ]);
 
   const latestCode = crossCuttingLatestCode?.[0] || {
-    code:"A"
+    code: "A"
   };
 
   return res
@@ -427,7 +427,61 @@ export const latest_crosscutting_code = catchAsync(async function (req, res, nex
 })
 
 export const edit_cross_cutting_inventory = catchAsync(
-  async (req, res, next) => { }
+  async (req, res, next) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+      const { id } = req.params;
+      const { available_data, newData } = req.body;
+
+      const all_invoice_items = await crosscutting_done_model.deleteMany(
+        { issue_for_croscutting_id: id },
+        { session }
+      );
+
+      if (
+        !all_invoice_items.acknowledged ||
+        all_invoice_items.deletedCount <= 0
+      ) {
+        return next(new ApiError("Failed to update invoice items", 400));
+      }
+
+      const update_item_details = await crosscutting_done_model.insertMany(
+        [...newData],
+        { session }
+      );
+      const { available_sqm, available_length, amount, crosscutting_completed } = available_data;
+
+      await issues_for_crosscutting_model.findByIdAndUpdate(
+        { _id: id },
+        {
+          $set: {
+            'available_quantity.physical_cmt': available_sqm,
+            'available_quantity.physical_length': available_length,
+            'available_quantity.amount': amount,
+            'crosscutting_completed': crosscutting_completed,
+          }
+        },
+        { session, new: true }
+      );
+      await session.commitTransaction();
+      session.endSession();
+      return res
+        .status(StatusCodes.OK)
+        .json(
+          new ApiResponse(
+            StatusCodes.OK,
+            "Inventory item updated successfully",
+            update_item_details
+          )
+        );
+    } catch (error) {
+      console.log(error);
+      await session.abortTransaction();
+      session.endSession();
+      return next(error);
+    }
+  }
 );
 
 export const fetch_all_crosscuts_by_issue_for_crosscut_id = catchAsync(async (req, res) => {
@@ -456,4 +510,26 @@ export const fetch_all_crosscuts_by_issue_for_crosscut_id = catchAsync(async (re
   return res.json(new ApiResponse(StatusCodes.OK, "All Crosscuts fetched successfully....", allDetails))
 
 })
+
+export const log_no_dropdown = catchAsync(async (req, res, next) => {
+  const log_no = await crosscutting_done_model.distinct("log_no");
+  return res.status(200).json({
+    statusCode: 200,
+    status: "success",
+    data: log_no,
+    message: "Log No Dropdown fetched successfully",
+  });
+});
+
+// export const machine_name_dropdown = catchAsync(async (req, res, next) => {
+//   const machineList = await crosscutting_done_model.distinct(
+//     "machine_name"
+//   );
+//   return res.status(200).json({
+//     statusCode: 200,
+//     status: "success",
+//     data: machineList,
+//     message: "Machine Name Dropdown fetched successfully",
+//   });
+// });
 

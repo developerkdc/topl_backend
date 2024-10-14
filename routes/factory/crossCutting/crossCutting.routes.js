@@ -7,6 +7,8 @@ import {
   latest_crosscutting_code,
   listing_cross_cutting_inventory,
   listing_issue_for_crosscutting,
+  log_no_dropdown,
+  // machine_name_dropdown,
   revert_issue_for_crosscutting,
 } from "../../../controllers/factory/crossCutting/crossCutting.controller.js";
 import AuthMiddleware from "../../../middlewares/verifyToken.js";
@@ -33,7 +35,7 @@ router.post("/add-crossCut-done", AuthMiddleware, RolesPermissions("crosscut_fac
 //   AuthMiddleware, RolesPermissions("crosscut_factory", "create"),
 //   add_cross_cutting_inventory
 // ); // old 
-router.patch(
+router.post(
   "/edit-crossCutting/:id",
   AuthMiddleware, RolesPermissions("crosscut_factory", "edit"),
   edit_cross_cutting_inventory
@@ -51,4 +53,6 @@ router.get(
 
 router.get("/list-crosscuts-by-issued-crosscut-id/:id", AuthMiddleware, RolesPermissions("crosscut_factory", "view"), fetch_all_crosscuts_by_issue_for_crosscut_id)
 
+router.get("/log-no-dropdown", log_no_dropdown);
+// router.get("/machine-name-dropdown", machine_name_dropdown)
 export default router;

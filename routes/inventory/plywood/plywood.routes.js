@@ -8,6 +8,7 @@ import {
   listing_plywood_inventory,
   plywood_item_listing_by_invoice,
   plywoodLogsCsv,
+  inward_sr_no_dropdown, item_sr_no_dropdown
 } from "../../../controllers/inventory/plywood/plywood.controller.js";
 import AuthMiddleware from "../../../middlewares/verifyToken.js";
 import RolesPermissions from "../../../middlewares/permission.js";
@@ -48,5 +49,6 @@ router.get(
   plywood_item_listing_by_invoice
 );
 router.post("/download-excel-plywood", AuthMiddleware, RolesPermissions("plywood_inventory", "view"), plywoodLogsCsv);
-
+router.get("/item-srno-dropdown", AuthMiddleware, item_sr_no_dropdown);
+router.get("/inward-srno-dropdown", AuthMiddleware, inward_sr_no_dropdown);
 export default router;
