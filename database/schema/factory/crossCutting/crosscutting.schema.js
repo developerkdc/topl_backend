@@ -54,7 +54,11 @@ const crosscutting_done_schema = new mongoose.Schema(
       type: Number,
       required: [true, "per_cmt_cost is required"],
     },
-    factor: {
+    expense_amount: {
+      type: Number,
+      default: 0
+    },
+    sqm_factor: {
       type: Number,
       required: [true, "factor is required"]
     },
