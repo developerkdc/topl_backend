@@ -92,6 +92,14 @@ const log_item_details_schema = new mongoose.Schema({
     type: Number,
     required: [true, "Rate in Inr is required"],
   },
+  amount_factor: {
+    type: Number,
+    default: 0,
+  },
+  expense_amount: {
+    type: Number,
+    default: 0,
+  },
   remark: {
     type: String,
     default: null,
@@ -103,7 +111,7 @@ const log_item_details_schema = new mongoose.Schema({
   created_by: {
     type: mongoose.Types.ObjectId,
     ref: "users",
-    required: [true,"Created By is required"],
+    required: [true, "Created By is required"],
     trim: true,
   },
 }, {
@@ -227,19 +235,23 @@ const log_invoice_schema = new mongoose.Schema(
         },
       },
     },
-    isEditable:{
-      type:Boolean,
-      default:true
+    isEditable: {
+      type: Boolean,
+      default: true
     },
     invoice_Details: invoice_details,
-    expenses:{
-      type:[expensesSchema],
-      default:null
+    expenses: {
+      type: [expensesSchema],
+      default: null
+    },
+    totalExpenseAmount:{
+      type: Number,
+      default:0
     },
     created_by: {
       type: mongoose.Types.ObjectId,
       ref: "users",
-      required: [true,"Created By is required"],
+      required: [true, "Created By is required"],
       trim: true,
     },
   },
