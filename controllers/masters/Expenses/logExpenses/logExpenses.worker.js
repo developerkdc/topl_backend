@@ -78,18 +78,18 @@ const processedExpense = async function () {
                 })
             }
         } else {
-            // const issueForFlitching = await issues_for_flitching_model.findOne({ log_inventory_item_id: logItemId })
-            // if (issueForFlitching) { // check for isssue for flitching
-            //     const flitchingDone = await flitching_done_model.find({ issue_for_croscutting_id: issueForCrosscutting?._id });
-            //     for (let flitchingDoneItem of flitchingDone) { // loop through crosscutting done and update the expense amount
-            //         const expenseAmount = flitchingDoneItem?.sqm_factor * logItems?.expense_amount;
-            //         const updateExpenseInFlitchingDone = await flitching_done_model.updateOne({ _id: flitchingDoneItem?._id }, {
-            //             $set: {
-            //                 expense_amount: expenseAmount
-            //             }
-            //         })
-            //     }
-            // }
+            const issueForFlitching = await issues_for_flitching_model.findOne({ log_inventory_item_id: logItemId })
+            if (issueForFlitching) { // check for isssue for flitching
+                const flitchingDone = await flitching_done_model.find({ issue_for_croscutting_id: issueForCrosscutting?._id });
+                for (let flitchingDoneItem of flitchingDone) { // loop through crosscutting done and update the expense amount
+                    const expenseAmount = flitchingDoneItem?.sqm_factor * logItems?.expense_amount;
+                    const updateExpenseInFlitchingDone = await flitching_done_model.updateOne({ _id: flitchingDoneItem?._id }, {
+                        $set: {
+                            expense_amount: expenseAmount
+                        }
+                    })
+                }
+            }
         }
     }
 

@@ -121,7 +121,7 @@ const flitchingSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-export const flitchingModel =
+export const flitching_done_model =
   mongoose.models.flitchings || mongoose.model("flitching", flitchingSchema);
 
 const flitching_view_schema = new mongoose.Schema(

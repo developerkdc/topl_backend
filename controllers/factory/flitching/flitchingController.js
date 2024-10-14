@@ -9,7 +9,7 @@ import { StatusCodes } from "../../../utils/constants.js";
 import ApiResponse from "../../../utils/ApiResponse.js";
 import ApiError from "../../../utils/errors/apiError.js";
 import { issues_for_crosscutting_model } from "../../../database/schema/factory/crossCutting/issuedForCutting.schema.js";
-import { flitchingModel } from "../../../database/schema/factory/flitching/flitching.schema.js";
+import { flitching_done_model } from "../../../database/schema/factory/flitching/flitching.schema.js";
 
 export const listing_issue_for_flitching = catchAsync(
   async (req, res, next) => {
@@ -173,7 +173,7 @@ export const add_flitching_inventory = catchAsync(async (req, res, next) => {
       return item
     })
 
-    const result = await flitchingModel.insertMany(updatedData, { session });
+    const result = await flitching_done_model.insertMany(updatedData, { session });
 
     if (result && result.length < 0) {
       return res.json(new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Err Inserting Flitching Done Items..."))
