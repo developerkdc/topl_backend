@@ -2,23 +2,8 @@ import mongoose from "mongoose";
 
 const flitchingSchema = new mongoose.Schema(
   {
-    sr_no: Number,
-    flitching_date: {
-      type: Date,
-      required: [true, "flicthing date is required"],
-    },
-    workers: {
-      type: Number,
-      required: [true, "workers are required"],
-    },
-    shift: {
-      type: String,
-      required: [true, "shift is required"],
-    },
-    working_hours: {
-      type: Number,
-      required: [true, "working hours are required"],
-    },
+    // sr_no: Number,
+
     machine_id: {
       type: mongoose.Schema.Types.ObjectId,
       required: [true, "machine id is required"],
@@ -27,14 +12,14 @@ const flitchingSchema = new mongoose.Schema(
       type: String,
       required: [true, "machine name is required"],
     },
-    item_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: [true, "item id is required"],
-    },
-    item_name: {
-      type: String,
-      required: [true, "item name is required"],
-    },
+    // item_id: {
+    //   type: mongoose.Schema.Types.ObjectId,
+    //   required: [true, "item id is required"],
+    // },
+    // item_name: {
+    //   type: String,
+    //   required: [true, "item name is required"],
+    // },
     log_no: {
       type: String,
       required: [true, "log number is required"],
@@ -67,7 +52,38 @@ const flitchingSchema = new mongoose.Schema(
       type: Number,
       required: [true, "crosscut cmt is required"],
     },
-
+    sqm_factor: {
+      type: Number,
+      required: [true, "sqm factor is required"]
+    },
+    wastage_info: {
+      wastage_sqm: {
+        type: Number,
+        required: [true, "wastage sqm is required"]
+      },
+      wastage_length: {
+        type: Number,
+        required: [true, "wastage length is required "]
+      }
+    },
+    worker_details: {
+      flitching_date: {
+        type: Date,
+        required: [true, "flicthing date is required"],
+      },
+      workers: {
+        type: Number,
+        required: [true, "workers are required"],
+      },
+      shift: {
+        type: String,
+        required: [true, "shift is required"],
+      },
+      working_hours: {
+        type: Number,
+        required: [true, "working hours are required"],
+      },
+    },
     per_cmt_cost: {
       type: Number,
       required: [true, "per_cmt_cost is required"],
@@ -75,6 +91,19 @@ const flitchingSchema = new mongoose.Schema(
     cost_amount: {
       type: Number,
       required: [true, "cost_amount is required"],
+    },
+    required_hours: {
+      type: Number,
+      required: [true, "required hours is required"]
+    },
+    required_workers: {
+      type: Number,
+      required: [true, "required workers is required"]
+    },
+    flitching_completed: {
+      type: Boolean,
+      required: [true, "flitching completed status is required "],
+      default: false
     },
     remarks: {
       type: String,
