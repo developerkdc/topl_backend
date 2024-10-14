@@ -7,7 +7,7 @@ import {
   edit_othergoods_item_invoice_inventory,
   listing_otherGodds_inventory,
   othergoods_item_listing_by_invoice,
-  otherGoodsLogsCsv,
+  otherGoodsLogsCsv, inward_sr_no_dropdown, item_sr_no_dropdown
 } from "../../../controllers/inventory/otherGoods/otherGoods.js";
 import AuthMiddleware from "../../../middlewares/verifyToken.js";
 import RolesPermissions from "../../../middlewares/permission.js";
@@ -46,5 +46,8 @@ router.get(
   othergoods_item_listing_by_invoice
 );
 router.post("/download-excel-othergoods-logs", AuthMiddleware, RolesPermissions("other_goods_inventory", "view"), otherGoodsLogsCsv);
+
+router.get("/item-srno-dropdown", AuthMiddleware, item_sr_no_dropdown);
+router.get("/inward-srno-dropdown", AuthMiddleware, inward_sr_no_dropdown);
 
 export default router;

@@ -463,3 +463,26 @@ export const othergoods_item_listing_by_invoice = catchAsync(
       );
   }
 );
+
+
+export const item_sr_no_dropdown = catchAsync(async (req, res, next) => {
+  const item_sr_no = await othergoods_inventory_items_details.distinct("item_sr_no");
+  return res.status(200).json({
+    statusCode: 200,
+    status: "success",
+    data: item_sr_no,
+    message: "Item Sr No Dropdown fetched successfully",
+  });
+});
+
+export const inward_sr_no_dropdown = catchAsync(async (req, res, next) => {
+  const item_sr_no = await othergoods_inventory_invoice_details.distinct(
+    "inward_sr_no"
+  );
+  return res.status(200).json({
+    statusCode: 200,
+    status: "success",
+    data: item_sr_no,
+    message: "Inward Sr No Dropdown fetched successfully",
+  });
+});
