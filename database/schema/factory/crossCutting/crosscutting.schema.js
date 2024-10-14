@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 
 const crosscutting_done_schema = new mongoose.Schema(
   {
-    issue_for_croscutting_id: {
+    issue_for_crosscutting_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "issues_for_crosscutting",
       required: [true, "issue for croscutting id is required"],
@@ -114,10 +114,10 @@ const crosscutting_done_schema = new mongoose.Schema(
   { timestamps: true }
 );
 
-crosscutting_done_schema.index({ issue_for_croscutting_id: -1 });
+crosscutting_done_schema.index({ issue_for_crosscutting_id: -1 });
 crosscutting_done_schema.index({ code: -1 });
 crosscutting_done_schema.index(
-  { issue_for_croscutting_id: -1, code: -1 },
+  { issue_for_crosscutting_id: -1, code: -1 },
   { unique: true }
 );
 
@@ -153,7 +153,7 @@ export const crossCuttingsDone_view_modal = mongoose.model(
       {
         $lookup: {
           from: "issues_for_crosscuttings",
-          localField: "issue_for_croscutting_id",
+          localField: "issue_for_crosscutting_id",
           foreignField: "_id",
           as: "issuedCrossCuttingDetails",
         },

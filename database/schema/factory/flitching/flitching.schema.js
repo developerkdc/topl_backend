@@ -3,7 +3,21 @@ import mongoose from "mongoose";
 const flitchingSchema = new mongoose.Schema(
   {
     // sr_no: Number,
-
+    issue_for_flitching_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "issues_for_crosscutting",
+      default:null,
+    },
+    log_inventory_item_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "log_inventory_items_details",
+      required: [true, "Log Inventory Items Id is required"],
+    },
+    crosscut_done_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "issues_for_crosscutting",
+      default:null,
+    },
     machine_id: {
       type: mongoose.Schema.Types.ObjectId,
       required: [true, "machine id is required"],
