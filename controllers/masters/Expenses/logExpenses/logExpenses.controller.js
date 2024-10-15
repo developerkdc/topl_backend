@@ -1,11 +1,15 @@
 import mongoose from "mongoose";
-import { log_inventory_invoice_model, log_inventory_items_model, log_inventory_items_view_model } from "../../../database/schema/inventory/log/log.schema.js";
-import { dynamic_filter } from "../../../utils/dymanicFilter.js";
-import { DynamicSearch } from "../../../utils/dynamicSearch/dynamic.js";
-import catchAsync from "../../../utils/errors/catchAsync.js";
-import ApiError from "../../../utils/errors/apiError.js";
-import ApiResponse from "../../../utils/ApiResponse.js";
-import { StatusCodes } from "../../../utils/constants.js";
+import { log_inventory_invoice_model, log_inventory_items_model, log_inventory_items_view_model } from "../../../../database/schema/inventory/log/log.schema.js";
+import { dynamic_filter } from "../../../../utils/dymanicFilter.js";
+import { DynamicSearch } from "../../../../utils/dynamicSearch/dynamic.js";
+import catchAsync from "../../../../utils/errors/catchAsync.js";
+import ApiError from "../../../../utils/errors/apiError.js";
+import ApiResponse from "../../../../utils/ApiResponse.js";
+import { StatusCodes } from "../../../../utils/constants.js";
+import { issues_for_crosscutting_model } from "../../../../database/schema/factory/crossCutting/issuedForCutting.schema.js";
+import { crosscutting_done_model } from "../../../../database/schema/factory/crossCutting/crosscutting.schema.js";
+import { issues_for_flitching_model } from "../../../../database/schema/factory/flitching/issuedForFlitching.schema.js";
+import { Worker } from "worker_threads"
 
 export const logExpenses_invoice_listing = catchAsync(async function (req, res, next) {
     const {
@@ -150,46 +154,24 @@ export const add_logExpenses = catchAsync(async (req, res, next) => {
 
         if (!updateExpenseDetails?.acknowledged && updateExpenseDetails?.modifiedCount <= 0) return next(new ApiError("Failed to add expenses", 400));
 
-        const updateLogItemsExpenses = await log_inventory_items_model.aggregate([
-            {
-                $match: {
-                    invoice_id: new mongoose.Types.ObjectId(invoice_id)
-                }
-            },
-            {
-                $set: {
-                    amount_factor: {
-                        $multiply: [
-                            "$amount",
-                            { $divide: [100, invoiceAmount] }
-                        ]
-                    },
-                    expense_amount: {
-                        $multiply: [
-                            {
-                                $multiply: [
-                                    "$amount",
-                                    { $divide: [100, invoiceAmount] }
-                                ]
-                            },
-                            { $divide: [totalExpenseAmount, 100] }
-                        ]
-                    }
-                }
-            },
-            {
-                $merge: {
-                    into: "log_inventory_items_details",
-                    whenMatched: "merge"
-                }
-            }
-        ])
-
-        if (!updateLogItemsExpenses?.acknowledged && updateLogItemsExpenses?.modifiedCount <= 0) return next(new ApiError("Failed to add item expenses", 400));
 
         await session.commitTransaction();
         session.endSession();
-        return res.status(200).json(new ApiResponse(StatusCodes.OK, "Expenses Added successfully"));
+        res.status(200).json(new ApiResponse(StatusCodes.OK, "Expenses Added successfully"));
+
+        const logExpensesWorker = new Worker('./controllers/masters/Expenses/logExpenses/logExpenses.worker.js', {
+            workerData: {
+                invoice_id: invoice_id
+            }
+        });
+
+        logExpensesWorker.on('message', (message) => {
+            console.log(message);
+        })
+        logExpensesWorker.on('error', (error) => {
+            console.log(error);
+        })
+
     } catch (error) {
         console.log(error);
         await session.abortTransaction();
@@ -197,3 +179,4 @@ export const add_logExpenses = catchAsync(async (req, res, next) => {
         return next(error);
     }
 })
+
