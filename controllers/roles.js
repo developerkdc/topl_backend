@@ -3,6 +3,7 @@ import catchAsync from "../utils/errors/catchAsync.js";
 import { IdRequired } from "../utils/response/response.js";
 import RolesModel from "../database/schema/roles.schema.js";
 import { DynamicSearch } from "../utils/dynamicSearch/dynamic.js";
+import { dynamic_filter } from "../utils/dymanicFilter.js";
 
 export const AddRole = catchAsync(async (req, res) => {
   const authUserDetail = req.userDetails;
@@ -81,6 +82,10 @@ export const ListRoles = catchAsync(async (req, res) => {
   const { page = 1, limit = 10, sortBy = "updated_at", sort = "desc" } = req.query;
   const search = req.query.search || "";
   let searchQuery = {};
+
+  const { ...data } = req?.body?.filters || {};
+  const matchQuery = dynamic_filter(data);
+
   if (search != "" && req?.body?.searchFields) {
     const searchdata = DynamicSearch(search, boolean, numbers, string, arrayField);
     if (searchdata?.length == 0) {
@@ -97,6 +102,7 @@ export const ListRoles = catchAsync(async (req, res) => {
   }
   const totalDocument = await RolesModel.countDocuments({
     ...searchQuery,
+    ...matchQuery
   });
   const totalPages = Math.ceil(totalDocument / limit);
   const validPage = Math.min(Math.max(page, 1), totalPages);
@@ -124,7 +130,7 @@ export const ListRoles = catchAsync(async (req, res) => {
       },
     },
     {
-      $match: { ...searchQuery },
+      $match: { ...searchQuery,...matchQuery },
     },
     {
       $sort: { [sortBy]: sort == "desc" ? -1 : 1 },
