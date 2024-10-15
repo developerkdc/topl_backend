@@ -42,6 +42,10 @@ const flitchingSchema = new mongoose.Schema(
       type: String,
       required: [true, "flitch code is required"],
     },
+    flitch_formula: {
+      type: String,
+      required: [true, "flitch flitch is required"],
+    },
     length: {
       type: Number,
       required: [true, "length is required"],

@@ -273,3 +273,42 @@ export const listing_flitching_done_inventory = catchAsync(
 
     return res.status(200).json(new ApiResponse(StatusCodes.OK, "Data fetched successfully...", { flitching_done_list, totalPage }))
   })
+
+
+export const log_no_dropdown = catchAsync(async (req, res, next) => {
+  const log_no = await flitching_view_modal.distinct("log_no");
+  return res.status(200).json({
+    statusCode: 200,
+    status: "success",
+    data: log_no,
+    message: "Log No Dropdown fetched successfully",
+  });
+});
+
+
+export const fetch_all_flitchings_by_issue_for_flitching_id = catchAsync(async (req, res) => {
+  const { id } = req.params;
+
+  if (!id) {
+    throw new ApiError(StatusCodes.NOT_FOUND, "Issue for Flitching id is missing...")
+  };
+
+  const pipeline = [
+    {
+      $match: {
+        "issue_for_flitching_id": new mongoose.Types.ObjectId(id)
+      }
+    },
+    {
+      $sort: { log_no: 1 }
+    }
+  ];
+
+  const allDetails = await flitching_view_modal.aggregate(pipeline);
+
+  if (allDetails.length === 0) {
+    return res.json(new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "No Data Found...."))
+  }
+  return res.json(new ApiResponse(StatusCodes.OK, "All Flitchings fetched successfully....", allDetails))
+
+})
