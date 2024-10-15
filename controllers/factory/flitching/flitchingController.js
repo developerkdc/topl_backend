@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose, { startSession } from "mongoose";
 import { issues_for_flitching_model, issues_for_flitching_view_model } from "../../../database/schema/factory/flitching/issuedForFlitching.schema.js";
 import { dynamic_filter } from "../../../utils/dymanicFilter.js";
 import { DynamicSearch } from "../../../utils/dynamicSearch/dynamic.js";
@@ -9,6 +9,7 @@ import { StatusCodes } from "../../../utils/constants.js";
 import ApiResponse from "../../../utils/ApiResponse.js";
 import ApiError from "../../../utils/errors/apiError.js";
 import { issues_for_crosscutting_model } from "../../../database/schema/factory/crossCutting/issuedForCutting.schema.js";
+import { flitching_done_model, flitching_view_modal } from "../../../database/schema/factory/flitching/flitching.schema.js";
 
 export const listing_issue_for_flitching = catchAsync(
   async (req, res, next) => {
@@ -54,6 +55,7 @@ export const listing_issue_for_flitching = catchAsync(
     const match_query = {
       ...filterData,
       ...search_query,
+      flitching_completed: false
     };
 
     const aggregate_stage = [
@@ -160,8 +162,114 @@ export const revert_issue_for_flitching = catchAsync(async function (
   }
 });
 
-export const add_flitching_inventory = catchAsync(async (req, res, next) => { });
+export const add_flitching_inventory = catchAsync(async (req, res, next) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const { newData, issuedFlitchId } = req.body;
+    const { _id } = req.userDetails
+    // console.log("user details => ", _id)
+    const updatedData = newData?.map((item) => {
+      item.created_by = _id;
+      return item
+    })
+
+    const result = await flitching_done_model.insertMany(updatedData, { session });
+
+    if (result && result.length < 0) {
+      return res.json(new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Err Inserting Flitching Done Items..."))
+    };
+    const update_flitching_completed_status = await issues_for_flitching_model.findByIdAndUpdate(issuedFlitchId, {
+      $set: {
+        flitching_completed: true
+      }
+    }, { runValidators: true, new: true })
+    if (!update_flitching_completed_status) {
+      return res.json(new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Unable to update flitching status..."))
+    }
+    await session.commitTransaction();
+    session.endSession();
+    return res.json(new ApiResponse(StatusCodes.OK, "Item Added Successfully", result))
+  } catch (error) {
+    throw new ApiError(error.message, StatusCodes.INTERNAL_SERVER_ERROR)
+  }
+});
 
 export const edit_flitching_inventory = catchAsync(
   async (req, res, next) => { }
 );
+export const listing_flitching_done_inventory = catchAsync(
+  async (req, res, next) => {
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = "updatedAt",
+      sort = "desc",
+      search = "",
+    } = req.query;
+    const {
+      string,
+      boolean,
+      numbers,
+      arrayField = [],
+    } = req?.body?.searchFields || {};
+    const filter = req.body?.filter;
+
+    let search_query = {};
+    if (search != "" && req?.body?.searchFields) {
+      const search_data = DynamicSearch(
+        search,
+        boolean,
+        numbers,
+        string,
+        arrayField
+      );
+      if (search_data?.length == 0) {
+        return res.status(404).json({
+          statusCode: 404,
+          status: false,
+          data: {
+            data: [],
+          },
+          message: "Results Not Found",
+        });
+      }
+      search_query = search_data;
+    }
+
+    const filterData = dynamic_filter(filter);
+
+    const match_query = {
+      ...filterData,
+      ...search_query,
+    };
+
+    const aggregate_stage = [
+      {
+        $match: match_query,
+      },
+      {
+        $sort: {
+          [sortBy]: sort === "desc" ? -1 : 1,
+          _id: sort === "desc" ? -1 : 1,
+        },
+      },
+      {
+        $skip: (parseInt(page) - 1) * parseInt(limit),
+      },
+      {
+        $limit: parseInt(limit),
+      },
+    ];
+
+    const flitching_done_list =
+      await flitching_view_modal.aggregate(aggregate_stage);
+
+    const totalCount = await flitching_view_modal.countDocuments({
+      ...match_query,
+    });
+
+    const totalPage = Math.ceil(totalCount / limit);
+
+    return res.status(200).json(new ApiResponse(StatusCodes.OK, "Data fetched successfully...", { flitching_done_list, totalPage }))
+  })

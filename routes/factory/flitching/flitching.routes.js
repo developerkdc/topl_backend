@@ -2,6 +2,7 @@ import express from "express";
 import {
   add_flitching_inventory,
   edit_flitching_inventory,
+  listing_flitching_done_inventory,
   listing_issue_for_flitching,
   revert_issue_for_flitching
 } from "../../../controllers/factory/flitching/flitchingController.js";
@@ -22,10 +23,11 @@ router.post(
   revert_issue_for_flitching
 );
 
-router.post("/add-flitching", CheckRoleAndTokenAccess, add_flitching_inventory);
+router.post("/add-flitching", AuthMiddleware, RolesPermissions("flitching_factory", "create"), add_flitching_inventory);
 router.patch(
   "/edit-flitching/:id",
   edit_flitching_inventory
 );
+router.post("/list-flitching-done", AuthMiddleware, RolesPermissions("flitching_factory", "view"), listing_flitching_done_inventory)
 
 export default router;

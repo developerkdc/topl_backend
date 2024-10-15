@@ -11,8 +11,8 @@ import { dynamic_filter } from "../utils/dymanicFilter.js";
 
 export const AddUser = catchAsync(async (req, res) => {
   const authUserDetail = req.userDetails;
-  const password = generateRandomPassword(8);
-  const hashedPassword = await create(password);
+  // const password = generateRandomPassword(8);
+  const hashedPassword = await create(req?.body?.user_name);
   const userData = {
     ...req.body,
     created_employee_id: authUserDetail._id,
@@ -31,7 +31,7 @@ export const AddUser = catchAsync(async (req, res) => {
 
   const newUser = new UserModel(userData);
   const savedUser = await newUser.save();
-  SendOtpEmail(req.body.email_id, `Your new password is: ${password}`, "Your New Account Password");
+  // SendOtpEmail(req.body.email_id, `Your new password is: ${password}`, "Your New Account Password");
   return res.status(201).json({
     result: savedUser,
     status: true,
@@ -60,13 +60,26 @@ export const UpdateUser = catchAsync(async (req, res) => {
     }
   }
   const updateData = { ...req.body };
-  const user = await UserModel.findByIdAndUpdate(userId, { $set: updateData }, { new: true, runValidators: true });
-  if (!user) {
+
+  let actualUserDetails = await UserModel.findById(userId);
+
+  if (!actualUserDetails) {
     return res.status(404).json({
       status: false,
       message: "User not found.",
     });
+  } else if (actualUserDetails?.user_type === "ADMIN" && updateData?.user_type === "STAFF") {
+    let UserWithApprover = await UserModel.find({ approver_user_name: actualUserDetails?.user_name });
+    if (UserWithApprover.length > 0) {
+      return res.status(404).json({
+        status: false,
+        message:
+          "This user has been assigned as approver, so can't change the type from ADMIN to STAFF. Change their approver and try again.",
+      });
+    }
   }
+
+  const user = await UserModel.findByIdAndUpdate(userId, { $set: updateData }, { new: true, runValidators: true });
 
   res.status(200).json({
     result: user,
@@ -228,7 +241,7 @@ export const AdminChangePassword = catchAsync(async (req, res) => {
       },
       { new: true, useFindAndModify: false }
     );
-    console.log(userUpdate, "user");
+    // console.log(userUpdate, "user");
     if (!userUpdate) {
       return res.status(404).json({
         status: false,
@@ -236,7 +249,7 @@ export const AdminChangePassword = catchAsync(async (req, res) => {
       });
     }
     const authUserDetail = req.userDetails;
-    SendOtpEmail(authUserDetail.email_id, `Your new password is: ${req.body.new_password}`, "Your New Account Password");
+    // SendOtpEmail(authUserDetail.email_id, `Your new password is: ${req.body.new_password}`, "Your New Account Password");
     return res.status(200).json({
       result: [],
       status: true,
@@ -249,7 +262,8 @@ export const AdminChangePassword = catchAsync(async (req, res) => {
 });
 
 export const RoleNameList = catchAsync(async (req, res) => {
-  const role = await RolesModel.find({}, "_id role_name");
+  const { dept_name } = req.body;
+  const role = await RolesModel.find({ dept_name: dept_name }, "_id role_name");
   if (!role) {
     return res.status(401).json({
       result: [],
@@ -260,6 +274,18 @@ export const RoleNameList = catchAsync(async (req, res) => {
   return res.status(200).json({
     result: role,
     status: true,
-    message: "List all role name.",
+    message: "List Role name for department.",
+  });
+});
+
+export const ListApproverUser = catchAsync(async (req, res) => {
+  const { dept_name } = req.body;
+
+  const approverUser = await UserModel.find({ dept_name: dept_name }, "_id user_name");
+
+  return res.status(200).json({
+    result: approverUser,
+    status: true,
+    message: "All Approver Users List",
   });
 });

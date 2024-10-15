@@ -10,6 +10,36 @@ const UserSchema = new mongoose.Schema({
     required: [true, "User Name is required."],
     indexedDB: true,
     unique: [true, "User Name already exist."],
+    trim:true
+  },
+  user_type: {
+    type: String,
+    required: [true, "User Type is required."],
+    indexedDB: true,
+  },
+  dept_name: {
+    type: String,
+    required: [true, "Department Name is required."],
+    indexedDB: true,
+  },
+  dept_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: [true, "Department ID is Required"],
+    ref: "department",
+  },
+  approver_user_name: {
+    type: String,
+    required: [true, "Approver User Name is required."],
+    indexedDB: true,
+  },
+  approver_id: {
+    type: String,
+    default: null,
+  },
+  role_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: [true, "Role is Required"],
+    ref: "roles",
   },
   first_name: {
     type: String,
@@ -76,11 +106,6 @@ const UserSchema = new mongoose.Schema({
     trim: true,
   },
   status: { type: Boolean, default: true },
-  role_id: {
-    type: mongoose.Schema.Types.ObjectId,
-    required: [true, "Role is Required"],
-    ref: "roles",
-  },
   password: { type: String, default: null, trim: true },
   otp: { type: String, trim: true, default: null },
   verify_otp: { type: Boolean, default: false },

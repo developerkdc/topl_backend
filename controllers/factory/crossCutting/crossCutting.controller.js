@@ -303,7 +303,7 @@ export const add_cross_cutting_inventory = catchAsync(
     const crossCuttingLatestCode = await crosscutting_done_model.aggregate([
       {
         $match: {
-          issue_for_croscutting_id: new mongoose.Types.ObjectId(
+          issue_for_crosscutting_id: new mongoose.Types.ObjectId(
             issued_crosscutting_id
           ),
         },
@@ -352,7 +352,7 @@ export const add_cross_cutting_inventory = catchAsync(
         // crosscut_date:new Date(crosscutting_details?.crosscut_date),
         code: newCode,
         log_no_code: newLogCode,
-        issue_for_croscutting_id: issues_for_crosscutting_data?._id,
+        issue_for_crosscutting_id: issues_for_crosscutting_data?._id,
         log_inventory_item_id:
           issues_for_crosscutting_data?.log_inventory_item_id,
         log_no: issues_for_crosscutting_data?.log_no,
@@ -397,7 +397,7 @@ export const latest_crosscutting_code = catchAsync(async function (req, res, nex
   const crossCuttingLatestCode = await crosscutting_done_model.aggregate([
     {
       $match: {
-        issue_for_croscutting_id: new mongoose.Types.ObjectId(
+        issue_for_crosscutting_id: new mongoose.Types.ObjectId(
           issued_crosscutting_id
         ),
       },
@@ -435,7 +435,7 @@ export const edit_cross_cutting_inventory = catchAsync(
       const { available_data, newData } = req.body;
 
       const all_invoice_items = await crosscutting_done_model.deleteMany(
-        { issue_for_croscutting_id: id },
+        { issue_for_crosscutting_id: id },
         { session }
       );
 
@@ -494,7 +494,7 @@ export const fetch_all_crosscuts_by_issue_for_crosscut_id = catchAsync(async (re
   const pipeline = [
     {
       $match: {
-        "issue_for_croscutting_id": new mongoose.Types.ObjectId(id)
+        "issue_for_crosscutting_id": new mongoose.Types.ObjectId(id)
       }
     },
     {

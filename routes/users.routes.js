@@ -1,5 +1,5 @@
 import express from "express";
-import { AddUser, DeleteUser, ListUser, UpdateUser, RoleNameList, AdminChangePassword } from "../controllers/users.js";
+import { AddUser, DeleteUser, ListUser, UpdateUser, RoleNameList, AdminChangePassword, ListApproverUser } from "../controllers/users.js";
 import { ListUserLogs } from "../controllers/logs/userLogs.js";
 import AuthMiddleware from "../middlewares/verifyToken.js";
 import RolesPermissions from "../middlewares/permission.js";
@@ -14,6 +14,7 @@ router.patch("/admin-change-password", AuthMiddleware, RolesPermissions("user", 
 // router.get("/user-logs",AuthMiddleware, ListUserLogs);
 
 // without permission
-router.get("/role-name-list", AuthMiddleware, RoleNameList);
+router.post("/list-approver-user", AuthMiddleware, ListApproverUser);
+router.post("/role-list-for-dept", AuthMiddleware, RoleNameList);
 
 export default router;
