@@ -101,18 +101,22 @@ export const revert_rejected_crosscutting = catchAsync(async function (req, res,
         }).lean();
         if (!rejected_crosscutting) return next(new ApiError("Rejected Item not found", 400));
 
-        const issues_for_crosscutting_data = await issues_for_crosscutting_model.findOne({ log_inventory_item_id: rejected_crosscutting?.log_inventory_item_id }).lean()
+        const issues_for_crosscutting_data = await issues_for_crosscutting_model.findOne({ _id: rejected_crosscutting?.issue_for_crosscutting_id }).lean()
 
         if (issues_for_crosscutting_data) {
             const { rejected_quantity, ...data } = rejected_crosscutting
             const update_issues_for_crosscutting_item_quantity = await issues_for_crosscutting_model.updateOne(
                 { _id: issues_for_crosscutting_data?._id },
                 {
+                    $set: {
+                        is_rejected: false
+                    },
                     $inc: {
                         "available_quantity.physical_length": rejected_quantity?.physical_length,
-                        "available_quantity.physical_diameter": rejected_quantity?.physical_diameter,
                         "available_quantity.physical_cmt": rejected_quantity?.physical_cmt,
                         "available_quantity.amount": rejected_quantity?.amount,
+                        "available_quantity.sqm_factor": rejected_quantity?.sqm_factor,
+                        "available_quantity.expense_amount": rejected_quantity?.expense_amount,
                     },
                 },
                 { session }
@@ -122,16 +126,6 @@ export const revert_rejected_crosscutting = catchAsync(async function (req, res,
                 update_issues_for_crosscutting_item_quantity.modifiedCount <= 0
             )
                 return next(new ApiError("unable to update status", 400));
-        } else {
-            const { rejected_quantity, ...data } = rejected_crosscutting
-            const add_issues_for_crosscutting_item = await issues_for_crosscutting_model.create([
-                {
-                    ...data,
-                    available_quantity: rejected_quantity
-                }
-            ], { session })
-
-            if (!add_issues_for_crosscutting_item?.[0]) return next(new ApiError("unable to add issue for crosscutting", 400));
         }
 
         const deleted_rejected_crosscutting =
@@ -170,6 +164,7 @@ export const add_rejected_issues_for_crosscutting = catchAsync(async function (r
 
         const issues_for_crosscutting_data = await issues_for_crosscutting_model.findOne({
             _id: issue_for_crosscutting_id,
+            crosscutting_completed: false
         })
             .select({ created_by: 0, createdAt: 0, updatedAt: 0 })
             .lean();
@@ -181,6 +176,7 @@ export const add_rejected_issues_for_crosscutting = catchAsync(async function (r
         const add_rejected_crosscutting_item = await rejected_crosscutting_model.create([
             {
                 ...data,
+                issue_for_crosscutting_id: _id,
                 rejected_quantity: available_quantity,
                 created_by: created_by
             }
@@ -188,11 +184,20 @@ export const add_rejected_issues_for_crosscutting = catchAsync(async function (r
 
         if (!add_rejected_crosscutting_item?.[0]) return next(new ApiError("unable to add issue for crosscutting", 400));
 
-        const delete_issues_for_crosscutting_item = await issues_for_crosscutting_model.deleteOne({
+        const reject_issues_for_crosscutting_item = await issues_for_crosscutting_model.updateOne({
             _id: issue_for_crosscutting_id,
+        }, {
+            $set: {
+                is_rejected: true,
+                "available_quantity.physical_length": 0,
+                "available_quantity.physical_cmt": 0,
+                "available_quantity.amount": 0,
+                "available_quantity.sqm_factor": 0,
+                "available_quantity.expense_amount": 0,
+            },
         }, { session });
 
-        if (!delete_issues_for_crosscutting_item.acknowledged || delete_issues_for_crosscutting_item.deletedCount <= 0) return next(new ApiError("Unable to reject issue for crosscutting", 400));
+        if (!reject_issues_for_crosscutting_item.acknowledged || reject_issues_for_crosscutting_item.modifiedCount <= 0) return next(new ApiError("Unable to reject issue for crosscutting", 400));
 
         await session.commitTransaction();
         session.endSession();

@@ -90,7 +90,7 @@ export const logExpenses_invoice_listing = catchAsync(async function (req, res, 
         totalPage: totalPage,
         message: "Data fetched successfully",
     });
-})
+});
 
 export const logExpenses_item_listing_by_invoice = catchAsync(
     async (req, res, next) => {
@@ -178,5 +178,4 @@ export const add_logExpenses = catchAsync(async (req, res, next) => {
         session.endSession();
         return next(error);
     }
-})
-
+});

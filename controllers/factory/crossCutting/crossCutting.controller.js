@@ -59,7 +59,8 @@ export const listing_issue_for_crosscutting = catchAsync(
     const match_query = {
       ...filterData,
       ...search_query,
-      crosscutting_completed: false
+      crosscutting_completed: false,
+      is_rejected: false
     };
 
     const aggregate_stage = [
@@ -199,6 +200,7 @@ export const addCrossCutDone = catchAsync(async (req, res) => {
     throw new ApiError(error.message, StatusCodes.INTERNAL_SERVER_ERROR);
   }
 })
+
 //Crosscutting done
 export const listing_cross_cutting_inventory = catchAsync(
   async (req, res, next) => {
@@ -391,6 +393,68 @@ export const add_cross_cutting_inventory = catchAsync(
   }
 );
 
+export const revert_crosscutting_done = catchAsync(async function (req, res, next) {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const crosscutting_done_id = req.params?.crosscutting_done_id;
+    const crosscutting_done = await crosscutting_done_model.findOne({
+      _id: crosscutting_done_id,
+    }).lean();
+    if (!crosscutting_done) return next(new ApiError("Crosscutting Done Item not found", 400));
+
+    const issues_for_crosscutting_data = await issues_for_crosscutting_model.findOne({ _id: crosscutting_done?.issue_for_crosscutting_id }).lean()
+
+    if (issues_for_crosscutting_data) {
+      const { length, girth, crosscut_cmt, cost_amount } = crosscutting_done
+      const update_issues_for_crosscutting_item_quantity = await issues_for_crosscutting_model.updateOne(
+        { _id: issues_for_crosscutting_data?._id },
+        {
+          $set: {
+            is_rejected: false
+          },
+          $inc: {
+            "available_quantity.physical_length": length,
+            "available_quantity.physical_cmt": crosscut_cmt,
+            "available_quantity.amount": cost_amount,
+          },
+        },
+        { session }
+      );
+      if (
+        !update_issues_for_crosscutting_item_quantity.acknowledged ||
+        update_issues_for_crosscutting_item_quantity.modifiedCount <= 0
+      )
+        return next(new ApiError("unable to update status", 400));
+    }
+
+    const deleted_crosscutting_done =
+      await crosscutting_done_model.deleteOne(
+        {
+          _id: crosscutting_done_id,
+        },
+        { session }
+      );
+
+    if (
+      !deleted_crosscutting_done.acknowledged ||
+      deleted_crosscutting_done.deletedCount <= 0
+    )
+      return next(new ApiError("Unable to revert issue for crosscutting", 400));
+
+    await session.commitTransaction();
+    session.endSession();
+    return res
+      .status(200)
+      .json(new ApiResponse(StatusCodes.OK, "Reverted successfully"));
+  } catch (error) {
+    console.log(error);
+    await session.abortTransaction();
+    session.endSession();
+    return next(error);
+  }
+});
+
 export const latest_crosscutting_code = catchAsync(async function (req, res, next) {
   const issued_crosscutting_id = req.params?.issued_crosscutting_id;
 
@@ -520,16 +584,4 @@ export const log_no_dropdown = catchAsync(async (req, res, next) => {
     message: "Log No Dropdown fetched successfully",
   });
 });
-
-// export const machine_name_dropdown = catchAsync(async (req, res, next) => {
-//   const machineList = await crosscutting_done_model.distinct(
-//     "machine_name"
-//   );
-//   return res.status(200).json({
-//     statusCode: 200,
-//     status: "success",
-//     data: machineList,
-//     message: "Machine Name Dropdown fetched successfully",
-//   });
-// });
 
