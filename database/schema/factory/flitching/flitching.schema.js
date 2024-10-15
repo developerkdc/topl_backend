@@ -6,7 +6,7 @@ const flitchingSchema = new mongoose.Schema(
     issue_for_flitching_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "issues_for_crosscutting",
-      default:null,
+      default: null,
     },
     log_inventory_item_id: {
       type: mongoose.Schema.Types.ObjectId,
@@ -16,7 +16,7 @@ const flitchingSchema = new mongoose.Schema(
     crosscut_done_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "issues_for_crosscutting",
-      default:null,
+      default: null,
     },
     machine_id: {
       type: mongoose.Schema.Types.ObjectId,
@@ -148,7 +148,7 @@ const flitching_view_schema = new mongoose.Schema(
 );
 
 export const flitching_view_modal = mongoose.model(
-  "flitchings",
+  "flitching_done_view",
   flitching_view_schema
 );
 
@@ -164,33 +164,19 @@ export const flitching_view_modal = mongoose.model(
       },
       {
         $lookup: {
-          from: "machines",
-          localField: "machine_id",
+          from: "issues_for_flitchings",
+          localField: "issue_for_flitching_id",
           foreignField: "_id",
-          as: "machineDetails",
+          as: "issueForFlitchingDetails",
+        },
+      },
+      {
+        $unwind: {
+          path: "$issueForFlitchingDetails",
+          preserveNullAndEmptyArrays: true,
         },
       },
 
-      {
-        $lookup: {
-          from: "item_names",
-          localField: "item_id",
-          foreignField: "_id",
-          as: "itemDetails",
-        },
-      },
-      {
-        $unwind: {
-          path: "$machineDetails",
-          preserveNullAndEmptyArrays: true,
-        },
-      },
-      {
-        $unwind: {
-          path: "$itemDetails",
-          preserveNullAndEmptyArrays: true,
-        },
-      },
       {
         $lookup: {
           from: "users",
