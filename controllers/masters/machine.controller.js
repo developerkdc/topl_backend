@@ -3,6 +3,7 @@ import ApiResponse from "../../utils/ApiResponse.js";
 import { StatusCodes } from "../../utils/constants.js";
 import machineModel from "../../database/schema/masters/machine.schema.js";
 import { DynamicSearch } from "../../utils/dynamicSearch/dynamic.js";
+import mongoose from "mongoose";
 
 export const addMachine = catchAsync(async (req, res) => {
   const { machine_name, department } = req.body;
@@ -177,8 +178,8 @@ export const DropdownMachineNameMaster = catchAsync(async (req, res) => {
 
   const searchQuery = type
     ? {
-        $or: [{ "deptDetails.dept_name": { $regex: type, $options: "i" } }],
-      }
+      $or: [{ "deptDetails.dept_name": { $regex: type, $options: "i" } }],
+    }
     : {};
 
   const list = await machineModel.aggregate([
@@ -195,6 +196,48 @@ export const DropdownMachineNameMaster = catchAsync(async (req, res) => {
     },
     {
       $match: searchQuery,
+    },
+    {
+      $project: {
+        machine_name: 1,
+      },
+    },
+  ]);
+
+  res
+    .status(200)
+    .json(
+      new ApiResponse(
+        StatusCodes.OK,
+        "Machine Name dropdown fetched successfully....",
+        list
+      )
+    );
+});
+
+export const DropdownMachineNameMasterById = catchAsync(async (req, res) => {
+  const { id } = req.query;
+
+  // const searchQuery = type
+  //   ? {
+  //     $or: [{ "deptDetails.dept_name": { $regex: type, $options: "i" } }],
+  //   }
+  //   : {};
+
+  const list = await machineModel.aggregate([
+    {
+      $lookup: {
+        from: "departments",
+        localField: "department",
+        foreignField: "_id",
+        as: "deptDetails",
+      },
+    },
+    {
+      $unwind: "$deptDetails",
+    },
+    {
+      $match: { department: new mongoose.Types.ObjectId(id) },
     },
     {
       $project: {

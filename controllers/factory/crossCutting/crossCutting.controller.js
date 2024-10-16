@@ -13,6 +13,7 @@ import { issues_for_status } from "../../../database/Utils/constants/constants.j
 import { dynamic_filter } from "../../../utils/dymanicFilter.js";
 import { DynamicSearch } from "../../../utils/dynamicSearch/dynamic.js";
 import { issues_for_flitching_model } from "../../../database/schema/factory/flitching/issuedForFlitching.schema.js";
+import { createCrosscuttingDoneExcel } from "../../../config/downloadExcel/Logs/Factory/crossCutting/index.js";
 
 //Issue for crosscutting
 export const listing_issue_for_crosscutting = catchAsync(
@@ -594,6 +595,7 @@ export const revert_crosscutting_done = catchAsync(async function (req, res, nex
   try {
     const { id } = req.params;
     const { isChecked } = req.body;
+    console.log("body => ", req.body)
     // const issue_forCrossCutting = await issues_for_crosscutting_data.findOne({
     //   _id: id,
     // }).lean();
@@ -616,8 +618,6 @@ export const revert_crosscutting_done = catchAsync(async function (req, res, nex
         updateData = {
           $set: {
             crosscutting_completed: false,
-          },
-          $set: {
             "available_quantity.physical_length": physical_length,
             "available_quantity.physical_cmt": physical_cmt,
             "available_quantity.amount": amount,
@@ -625,30 +625,41 @@ export const revert_crosscutting_done = catchAsync(async function (req, res, nex
           },
         };
       } else {
-        const all_crosscutting_done = await crosscutting_done_model.find({
-          issue_for_crosscutting_id: id,
-        }).lean();
-
-        const total = all_crosscutting_done?.reduce(
-          (acc, doc) => {
-            acc.length += doc.length;
-            acc.crosscut_cmt += doc.crosscut_cmt;
-            acc.cost_amount += doc.cost_amount;
-            acc.expense_amount += doc.expense_amount;
-            return acc;
+        const aggregatedTotal = await crosscutting_done_model.aggregate([
+          {
+            $match: {
+              issue_for_crosscutting_id: new mongoose.Types.ObjectId(id)
+            }
           },
-          { length: 0, crosscut_cmt: 0, cost_amount: 0, expense_amount: 0 }
-        );
+          {
+            $group: {
+              _id: null,
+              total_length: { $sum: "$length" },
+              total_crosscut_cmt: { $sum: "$crosscut_cmt" },
+              total_cost_amount: { $sum: "$cost_amount" },
+              total_expense_amount: { $sum: "$expense_amount" }
+            }
+          }
+        ]);
 
+        // Check if any aggregation result was returned
+        const total = aggregatedTotal?.length > 0 ? aggregatedTotal[0] : {
+          total_length: 0,
+          total_crosscut_cmt: 0,
+          total_cost_amount: 0,
+          total_expense_amount: 0
+        };
+
+        console.log("total new  => ", total)
         updateData = {
           $set: {
             crosscutting_completed: false,
           },
-          $set: {
-            "available_quantity.physical_length": total.length,
-            "available_quantity.physical_cmt": total.crosscut_cmt,
-            "available_quantity.amount": total.cost_amount,
-            "available_quantity.expense_amount": total.expense_amount,
+          $inc: {
+            "available_quantity.physical_length": total.total_length,
+            "available_quantity.physical_cmt": total.total_crosscut_cmt,
+            "available_quantity.amount": total.total_cost_amount,
+            "available_quantity.expense_amount": total.total_expense_amount,
           },
         };
       }
@@ -690,3 +701,51 @@ export const revert_crosscutting_done = catchAsync(async function (req, res, nex
   }
 });
 
+export const crossCuttingDoneExcel = catchAsync(async (req, res) => {
+  const { search = "" } = req.query;
+  const {
+    string,
+    boolean,
+    numbers,
+    arrayField = [],
+  } = req?.body?.searchFields || {};
+  const filter = req.body?.filter;
+
+  let search_query = {};
+  if (search != "" && req?.body?.searchFields) {
+    const search_data = DynamicSearch(
+      search,
+      boolean,
+      numbers,
+      string,
+      arrayField
+    );
+    if (search_data?.length == 0) {
+      return res.status(404).json({
+        statusCode: 404,
+        status: false,
+        data: {
+          data: [],
+        },
+        message: "Results Not Found",
+      });
+    }
+    search_query = search_data;
+  }
+
+  const filterData = dynamic_filter(filter);
+
+  const match_query = {
+    ...filterData,
+    ...search_query,
+  };
+
+  const allData = await crosscutting_done_model.find(match_query);
+
+  const excelLink = await createCrosscuttingDoneExcel(allData);
+  console.log("link => ", excelLink);
+
+  return res.json(
+    new ApiResponse(StatusCodes.OK, "Csv downloaded successfully...", excelLink)
+  );
+});
