@@ -8,7 +8,7 @@ const logExpenseRouter = express.Router();
 logExpenseRouter.post(
     "/log-expense-invoice-listing",
     AuthMiddleware,
-    RolesPermissions("expense_master", "edit"),
+    RolesPermissions("expense_master", "view"),
     logExpenses_invoice_listing
 );
 

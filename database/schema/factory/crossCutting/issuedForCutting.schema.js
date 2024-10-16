@@ -84,6 +84,10 @@ const issues_for_crosscutting_details_schema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  is_rejected: {
+    type: Boolean,
+    default: false
+  },
   available_quantity: {
     physical_length: {
       type: Number,
@@ -111,7 +115,18 @@ const issues_for_crosscutting_details_schema = new mongoose.Schema({
       default: function () {
         return this.amount
       },
-      required: [true, "Rate in Inr is required"],
+      required: [true, "Amount is required"],
+    },
+    sqm_factor: {
+      type: Number,
+      default: 1
+    },
+    expense_amount: {
+      type: Number,
+      default: function () {
+        return this.expense_amount
+      },
+      required: [true, "Expense Amount is required"],
     },
   },
   exchange_rate: {

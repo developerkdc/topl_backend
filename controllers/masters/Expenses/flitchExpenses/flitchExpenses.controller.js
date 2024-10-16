@@ -1,17 +1,13 @@
 import mongoose from "mongoose";
-import { log_inventory_invoice_model, log_inventory_items_model, log_inventory_items_view_model } from "../../../../database/schema/inventory/log/log.schema.js";
-import { dynamic_filter } from "../../../../utils/dymanicFilter.js";
-import { DynamicSearch } from "../../../../utils/dynamicSearch/dynamic.js";
-import catchAsync from "../../../../utils/errors/catchAsync.js";
-import ApiError from "../../../../utils/errors/apiError.js";
+import { flitch_inventory_invoice_model, flitch_inventory_items_model } from "../../../../database/schema/inventory/Flitch/flitch.schema.js";
 import ApiResponse from "../../../../utils/ApiResponse.js";
 import { StatusCodes } from "../../../../utils/constants.js";
-import { issues_for_crosscutting_model } from "../../../../database/schema/factory/crossCutting/issuedForCutting.schema.js";
-import { crosscutting_done_model } from "../../../../database/schema/factory/crossCutting/crosscutting.schema.js";
-import { issues_for_flitching_model } from "../../../../database/schema/factory/flitching/issuedForFlitching.schema.js";
-import { Worker } from "worker_threads"
+import { dynamic_filter } from "../../../../utils/dymanicFilter.js";
+import { DynamicSearch } from "../../../../utils/dynamicSearch/dynamic.js";
+import ApiError from "../../../../utils/errors/apiError.js";
+import catchAsync from "../../../../utils/errors/catchAsync.js";
 
-export const logExpenses_invoice_listing = catchAsync(async function (req, res, next) {
+export const flitchExpenses_invoice_listing = catchAsync(async function (req, res, next) {
     const {
         page = 1,
         limit = 10,
@@ -74,10 +70,10 @@ export const logExpenses_invoice_listing = catchAsync(async function (req, res, 
         },
     ];
 
-    const List_log_invoice_details =
-        await log_inventory_invoice_model.aggregate(aggregate_stage);
+    const List_flitch_invoice_details =
+        await flitch_inventory_invoice_model.aggregate(aggregate_stage);
 
-    const totalCount = await log_inventory_invoice_model.countDocuments({
+    const totalCount = await flitch_inventory_invoice_model.countDocuments({
         ...match_query,
     });
 
@@ -86,13 +82,13 @@ export const logExpenses_invoice_listing = catchAsync(async function (req, res, 
     return res.status(200).json({
         statusCode: 200,
         status: "success",
-        data: List_log_invoice_details,
+        data: List_flitch_invoice_details,
         totalPage: totalPage,
         message: "Data fetched successfully",
     });
 });
 
-export const logExpenses_item_listing_by_invoice = catchAsync(
+export const flitchExpenses_item_listing_by_invoice = catchAsync(
     async (req, res, next) => {
         const invoice_id = req.params.invoice_id;
 
@@ -109,8 +105,8 @@ export const logExpenses_item_listing_by_invoice = catchAsync(
             }
         ];
 
-        const logExpense_item_by_invoice = await log_inventory_items_model.aggregate(aggregate_stage);
-        const logExpense_invoice = await log_inventory_invoice_model.findOne({ _id: invoice_id });
+        const flitchExpense_item_by_invoice = await flitch_inventory_items_model.aggregate(aggregate_stage);
+        const flitchExpense_invoice = await flitch_inventory_invoice_model.findOne({ _id: invoice_id });
 
         // const totalCount = await log_inventory_items_view_model.countDocuments({
         //   ...match_query,
@@ -122,8 +118,8 @@ export const logExpenses_item_listing_by_invoice = catchAsync(
             statusCode: 200,
             status: "success",
             data: {
-                items: logExpense_item_by_invoice,
-                invoice: logExpense_invoice
+                items: flitchExpense_item_by_invoice,
+                invoice: flitchExpense_invoice
             },
             // totalPage: totalPage,
             message: "Data fetched successfully",
@@ -131,7 +127,7 @@ export const logExpenses_item_listing_by_invoice = catchAsync(
     }
 );
 
-export const add_logExpenses = catchAsync(async (req, res, next) => {
+export const add_flitchExpenses = catchAsync(async (req, res, next) => {
     const session = await mongoose.startSession()
     session.startTransaction()
     try {
@@ -139,13 +135,13 @@ export const add_logExpenses = catchAsync(async (req, res, next) => {
         const otherExpensesList = req.body?.otherExpensesList;
         const totalExpenseAmount = req.body?.totalExpenseAmount;
         if (!otherExpensesList && !Array.isArray(otherExpensesList)) return next(new ApiError("Expenses list must be array", 400));
-        const invoiceDetails = await log_inventory_invoice_model.findOne({
+        const invoiceDetails = await flitch_inventory_invoice_model.findOne({
             _id: new mongoose.Types.ObjectId(invoice_id)
         });
         if (!invoiceDetails) return next(new ApiError("Invoice not found", 404));
         const invoiceAmount = invoiceDetails?.invoice_Details?.total_item_amount || 0;
 
-        const updateExpenseDetails = await log_inventory_invoice_model.updateOne({ _id: new mongoose.Types.ObjectId(invoice_id) }, {
+        const updateExpenseDetails = await flitch_inventory_invoice_model.updateOne({ _id: new mongoose.Types.ObjectId(invoice_id) }, {
             $set: {
                 expenses: otherExpensesList,
                 totalExpenseAmount: totalExpenseAmount,
@@ -159,18 +155,40 @@ export const add_logExpenses = catchAsync(async (req, res, next) => {
         session.endSession();
         res.status(200).json(new ApiResponse(StatusCodes.OK, "Expenses Added successfully"));
 
-        const logExpensesWorker = new Worker('./controllers/masters/Expenses/logExpenses/logExpenses.worker.js', {
-            workerData: {
-                invoice_id: invoice_id
+        const updateFlitchItemsExpenses = await flitch_inventory_items_model.aggregate([
+            {
+                $match: {
+                    invoice_id: new mongoose.Types.ObjectId(invoice_id)
+                }
+            },
+            {
+                $set: {
+                    amount_factor: {
+                        $multiply: [
+                            "$amount",
+                            { $divide: [100, invoiceAmount] }
+                        ]
+                    },
+                    expense_amount: {
+                        $multiply: [
+                            {
+                                $multiply: [
+                                    "$amount",
+                                    { $divide: [100, invoiceAmount] }
+                                ]
+                            },
+                            { $divide: [totalExpenseAmount, 100] }
+                        ]
+                    }
+                }
+            },
+            {
+                $merge: {
+                    into: "flitch_inventory_items_details",
+                    whenMatched: "merge"
+                }
             }
-        });
-
-        logExpensesWorker.on('message', (message) => {
-            console.log(message);
-        })
-        logExpensesWorker.on('error', (error) => {
-            console.log(error);
-        })
+        ]);
 
     } catch (error) {
         console.log(error);

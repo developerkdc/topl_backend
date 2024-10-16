@@ -111,7 +111,14 @@ const issues_for_flitching_details_schema = new mongoose.Schema({
       default: function () {
         return this.amount
       },
-      required: [true, "Rate in Inr is required"],
+      required: [true, "Amount is required"],
+    },
+    expense_amount: {
+      type: Number,
+      default: function () {
+        return this.expense_amount
+      },
+      required: [true, "Expense Amount is required"],
     },
   },
   exchange_rate: {

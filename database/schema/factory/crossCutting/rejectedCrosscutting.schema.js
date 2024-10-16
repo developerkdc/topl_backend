@@ -1,6 +1,11 @@
 import mongoose from "mongoose";
 
 const rejected_crosscutting_details_schema = new mongoose.Schema({
+    issue_for_crosscutting_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "issues_for_crosscutting",
+        required: [true, "issue for croscutting id is required"],
+    },
     log_inventory_item_id: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "log_inventory_items_details",
@@ -102,6 +107,17 @@ const rejected_crosscutting_details_schema = new mongoose.Schema({
                 return this.amount
             },
             required: [true, "Rate in Inr is required"],
+        },
+        sqm_factor: {
+            type: Number,
+            default: 1
+        },
+        expense_amount: {
+            type: Number,
+            default: function () {
+                return this.expense_amount
+            },
+            required: [true, "Expense Amount is required"],
         },
     },
     exchange_rate: {
