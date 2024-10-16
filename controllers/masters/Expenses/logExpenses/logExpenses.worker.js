@@ -48,7 +48,7 @@ const processedExpense = async function () {
                 whenMatched: "merge"
             }
         }
-    ])
+    ]);
 
     const logItemsExpenses = await log_inventory_items_model.aggregate([
         {
