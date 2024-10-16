@@ -2,12 +2,14 @@ import express from "express";
 import {
   add_cross_cutting_inventory,
   addCrossCutDone,
+  crossCuttingDoneExcel,
   edit_cross_cutting_inventory,
   fetch_all_crosscuts_by_issue_for_crosscut_id,
   latest_crosscutting_code,
   listing_cross_cutting_inventory,
   listing_issue_for_crosscutting,
   log_no_dropdown,
+  revert_crosscutting_done,
   // machine_name_dropdown,
   revert_issue_for_crosscutting,
 } from "../../../controllers/factory/crossCutting/crossCutting.controller.js";
@@ -54,5 +56,8 @@ router.get(
 router.get("/list-crosscuts-by-issued-crosscut-id/:id", AuthMiddleware, RolesPermissions("crosscut_factory", "view"), fetch_all_crosscuts_by_issue_for_crosscut_id)
 
 router.get("/log-no-dropdown", log_no_dropdown);
+router.post("/revert-crosscutting-done-items/:id", AuthMiddleware, revert_crosscutting_done)
 // router.get("/machine-name-dropdown", machine_name_dropdown)
+router.post("/download-crosscutting-done-excel", AuthMiddleware, RolesPermissions("crosscut_factory", "view"), crossCuttingDoneExcel)
+
 export default router;

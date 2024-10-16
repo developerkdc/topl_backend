@@ -542,7 +542,7 @@ export const add_issue_for_crosscutting = catchAsync(async (req, res, next) => {
 
   const issue_for_crosscutting = log_issue_for_crosscutting_data.map((ele) => {
     const { _id, ...data } = ele
-    data.log_inventory_item_id = data?._id;
+    data.log_inventory_item_id = _id;
     data.created_by = created_by;
     return data;
   });
@@ -600,7 +600,7 @@ export const add_issue_for_flitching = catchAsync(async (req, res, next) => {
 
   const issue_for_flitching = log_issue_for_flitching_data.map((ele) => {
     const { _id, ...data } = ele
-    data.log_inventory_item_id = data?._id;
+    data.log_inventory_item_id = _id;
     data.created_by = created_by;
     return data;
   });
