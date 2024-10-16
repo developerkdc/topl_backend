@@ -42,6 +42,10 @@ const flitchingSchema = new mongoose.Schema(
       type: String,
       required: [true, "flitch code is required"],
     },
+    log_no_code: {
+      type: String,
+      required: [true, "Log No Code  is required"],
+    },
     flitch_formula: {
       type: String,
       required: [true, "flitch flitch is required"],
@@ -122,6 +126,10 @@ const flitchingSchema = new mongoose.Schema(
       type: Boolean,
       required: [true, "flitching completed status is required "],
       default: false
+    },
+    expense_amount: {
+      type: Number,
+      required: [true, "expense amount is required"]
     },
     remarks: {
       type: String,

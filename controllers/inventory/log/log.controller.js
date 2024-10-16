@@ -541,9 +541,10 @@ export const add_issue_for_crosscutting = catchAsync(async (req, res, next) => {
     .lean();
 
   const issue_for_crosscutting = log_issue_for_crosscutting_data.map((ele) => {
-    ele.log_inventory_item_id = ele?._id;
-    ele.created_by = created_by;
-    return ele;
+    const { _id, ...data } = ele
+    data.log_inventory_item_id = data?._id;
+    data.created_by = created_by;
+    return data;
   });
 
   const issue_for_crosscutting_data = await issues_for_crosscutting_model.insertMany(issue_for_crosscutting);
@@ -598,9 +599,10 @@ export const add_issue_for_flitching = catchAsync(async (req, res, next) => {
     .lean();
 
   const issue_for_flitching = log_issue_for_flitching_data.map((ele) => {
-    ele.log_inventory_item_id = ele?._id;
-    ele.created_by = created_by;
-    return ele;
+    const { _id, ...data } = ele
+    data.log_inventory_item_id = data?._id;
+    data.created_by = created_by;
+    return data;
   });
 
   const issue_for_flitching_data =

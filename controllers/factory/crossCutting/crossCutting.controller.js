@@ -394,67 +394,68 @@ export const add_cross_cutting_inventory = catchAsync(
   }
 );
 
-export const revert_crosscutting_done = catchAsync(async function (req, res, next) {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-  try {
-    const crosscutting_done_id = req.params?.crosscutting_done_id;
-    const crosscutting_done = await crosscutting_done_model.findOne({
-      _id: crosscutting_done_id,
-    }).lean();
-    if (!crosscutting_done) return next(new ApiError("Crosscutting Done Item not found", 400));
+// export const revert_crosscutting_done = catchAsync(async function (req, res, next) {
+//   const session = await mongoose.startSession();
+//   session.startTransaction();
+//   try {
+//     const crosscutting_done_id = req.params?.crosscutting_done_id;
+//     const { isChecked } = req.body;
+//     const crosscutting_done = await crosscutting_done_model.findOne({
+//       _id: crosscutting_done_id,
+//     }).lean();
+//     if (!crosscutting_done) return next(new ApiError("Crosscutting Done Item not found", 400));
 
-    const issues_for_crosscutting_data = await issues_for_crosscutting_model.findOne({ _id: crosscutting_done?.issue_for_crosscutting_id }).lean()
+//     const issues_for_crosscutting_data = await issues_for_crosscutting_model.findOne({ _id: crosscutting_done?.issue_for_crosscutting_id }).lean()
 
-    if (issues_for_crosscutting_data) {
-      const { length, girth, crosscut_cmt, cost_amount } = crosscutting_done
-      const update_issues_for_crosscutting_item_quantity = await issues_for_crosscutting_model.updateOne(
-        { _id: issues_for_crosscutting_data?._id },
-        {
-          $set: {
-            is_rejected: false
-          },
-          $inc: {
-            "available_quantity.physical_length": length,
-            "available_quantity.physical_cmt": crosscut_cmt,
-            "available_quantity.amount": cost_amount,
-          },
-        },
-        { session }
-      );
-      if (
-        !update_issues_for_crosscutting_item_quantity.acknowledged ||
-        update_issues_for_crosscutting_item_quantity.modifiedCount <= 0
-      )
-        return next(new ApiError("unable to update status", 400));
-    }
+//     if (issues_for_crosscutting_data) {
+//       const { length, girth, crosscut_cmt, cost_amount } = crosscutting_done
+//       const update_issues_for_crosscutting_item_quantity = await issues_for_crosscutting_model.updateOne(
+//         { _id: issues_for_crosscutting_data?._id },
+//         {
+//           $set: {
+//             is_rejected: false
+//           },
+//           $inc: {
+//             "available_quantity.physical_length": length,
+//             "available_quantity.physical_cmt": crosscut_cmt,
+//             "available_quantity.amount": cost_amount,
+//           },
+//         },
+//         { session }
+//       );
+//       if (
+//         !update_issues_for_crosscutting_item_quantity.acknowledged ||
+//         update_issues_for_crosscutting_item_quantity.modifiedCount <= 0
+//       )
+//         return next(new ApiError("unable to update status", 400));
+//     }
 
-    const deleted_crosscutting_done =
-      await crosscutting_done_model.deleteOne(
-        {
-          _id: crosscutting_done_id,
-        },
-        { session }
-      );
+//     const deleted_crosscutting_done =
+//       await crosscutting_done_model.deleteOne(
+//         {
+//           _id: crosscutting_done_id,
+//         },
+//         { session }
+//       );
 
-    if (
-      !deleted_crosscutting_done.acknowledged ||
-      deleted_crosscutting_done.deletedCount <= 0
-    )
-      return next(new ApiError("Unable to revert issue for crosscutting", 400));
+//     if (
+//       !deleted_crosscutting_done.acknowledged ||
+//       deleted_crosscutting_done.deletedCount <= 0
+//     )
+//       return next(new ApiError("Unable to revert issue for crosscutting", 400));
 
-    await session.commitTransaction();
-    session.endSession();
-    return res
-      .status(200)
-      .json(new ApiResponse(StatusCodes.OK, "Reverted successfully"));
-  } catch (error) {
-    console.log(error);
-    await session.abortTransaction();
-    session.endSession();
-    return next(error);
-  }
-});
+//     await session.commitTransaction();
+//     session.endSession();
+//     return res
+//       .status(200)
+//       .json(new ApiResponse(StatusCodes.OK, "Reverted successfully"));
+//   } catch (error) {
+//     console.log(error);
+//     await session.abortTransaction();
+//     session.endSession();
+//     return next(error);
+//   }
+// });
 
 export const latest_crosscutting_code = catchAsync(async function (req, res, next) {
   const issued_crosscutting_id = req.params?.issued_crosscutting_id;
@@ -585,5 +586,107 @@ export const log_no_dropdown = catchAsync(async (req, res, next) => {
     data: log_no,
     message: "Log No Dropdown fetched successfully",
   });
+});
+
+export const revert_crosscutting_done = catchAsync(async function (req, res, next) {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const { id } = req.params;
+    const { isChecked } = req.body;
+    // const issue_forCrossCutting = await issues_for_crosscutting_data.findOne({
+    //   _id: id,
+    // }).lean();
+    const issues_for_crosscutting_data = await issues_for_crosscutting_model.findOne({ _id: id }).lean();
+    if (!issues_for_crosscutting_data) return next(new ApiError("Crosscutting Done Item not found", 400));
+
+
+    if (issues_for_crosscutting_data) {
+      let updateData = {};
+
+      if (isChecked) {
+
+        const {
+          physical_length,
+          physical_cmt,
+          amount,
+          expense_amount,
+        } = issues_for_crosscutting_data;
+
+        updateData = {
+          $set: {
+            crosscutting_completed: false,
+          },
+          $set: {
+            "available_quantity.physical_length": physical_length,
+            "available_quantity.physical_cmt": physical_cmt,
+            "available_quantity.amount": amount,
+            "available_quantity.expense_amount": expense_amount,
+          },
+        };
+      } else {
+        const all_crosscutting_done = await crosscutting_done_model.find({
+          issue_for_crosscutting_id: id,
+        }).lean();
+
+        const total = all_crosscutting_done?.reduce(
+          (acc, doc) => {
+            acc.length += doc.length;
+            acc.crosscut_cmt += doc.crosscut_cmt;
+            acc.cost_amount += doc.cost_amount;
+            acc.expense_amount += doc.expense_amount;
+            return acc;
+          },
+          { length: 0, crosscut_cmt: 0, cost_amount: 0, expense_amount: 0 }
+        );
+
+        updateData = {
+          $set: {
+            crosscutting_completed: false,
+          },
+          $set: {
+            "available_quantity.physical_length": total.length,
+            "available_quantity.physical_cmt": total.crosscut_cmt,
+            "available_quantity.amount": total.cost_amount,
+            "available_quantity.expense_amount": total.expense_amount,
+          },
+        };
+      }
+
+      const update_issues_for_crosscutting_item_quantity = await issues_for_crosscutting_model.updateOne(
+        { _id: issues_for_crosscutting_data?._id },
+        updateData,
+        { session }
+      );
+
+      if (
+        !update_issues_for_crosscutting_item_quantity.acknowledged ||
+        update_issues_for_crosscutting_item_quantity.modifiedCount <= 0
+      )
+        return next(new ApiError("Unable to update available quantities", 400));
+    }
+
+    const deleted_crosscutting_done = await crosscutting_done_model.deleteMany(
+      { issue_for_crosscutting_id: id },
+      { session }
+    );
+
+    if (
+      !deleted_crosscutting_done.acknowledged ||
+      deleted_crosscutting_done.deletedCount <= 0
+    )
+      return next(new ApiError("Unable to revert crosscutting item", 400));
+
+    await session.commitTransaction();
+    session.endSession();
+    return res
+      .status(200)
+      .json(new ApiResponse(StatusCodes.OK, "Reverted successfully"));
+  } catch (error) {
+    console.log(error);
+    await session.abortTransaction();
+    session.endSession();
+    return next(error);
+  }
 });
 
