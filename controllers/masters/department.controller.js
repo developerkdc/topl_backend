@@ -16,7 +16,7 @@ export const addDepartment = catchAsync(async (req, res) => {
     dept_name: dept_name,
   });
   if (checkIfAlreadyExists.length > 0) {
-    return res.json(new ApiResponse(StatusCodes.OK, "Category already exists"));
+    return res.json(new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Category already exists"));
   }
 
   const maxNumber = await departMentModel.aggregate([
@@ -52,13 +52,13 @@ export const editDepartment = catchAsync(async (req, res) => {
   const { id } = req.params;
 
   if (!id) {
-    await session.abortTransaction(); 
+    await session.abortTransaction();
     return res.json(new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Id is missing"));
   }
 
   const validateDept = await departMentModel.findById(id);
   if (!validateDept) {
-    await session.abortTransaction(); 
+    await session.abortTransaction();
     return res.json(new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Invalid Category id"));
   }
 
@@ -68,7 +68,7 @@ export const editDepartment = catchAsync(async (req, res) => {
   });
 
   if (checkIfAlreadyExists.length > 0) {
-    await session.abortTransaction(); 
+    await session.abortTransaction();
     return res.status(404).json(new ApiResponse(StatusCodes.NOT_FOUND, "Department Already Exist."));
   }
 
@@ -78,7 +78,7 @@ export const editDepartment = catchAsync(async (req, res) => {
     { runValidators: true, new: true, session },
   );
   if (!updatedData) {
-    await session.abortTransaction(); 
+    await session.abortTransaction();
     return res.json(new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Err updating department"));
   }
 
@@ -170,8 +170,8 @@ export const DropdownDepartmentMaster = catchAsync(async (req, res) => {
 
   const searchQuery = type
     ? {
-        $or: [{ dept_name: { $regex: type, $options: "i" } }],
-      }
+      $or: [{ dept_name: { $regex: type, $options: "i" } }],
+    }
     : {};
 
   const list = await departMentModel.aggregate([
