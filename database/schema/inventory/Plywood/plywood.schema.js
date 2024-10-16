@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import invoice_details from "../../../Utils/invoiceDetails.schema.js";
+import expensesSchema from "../../masters/expenses.schema.js";
 
 const item_details_schema = new mongoose.Schema(
   {
@@ -210,6 +211,14 @@ const plywood_invoice_schema = new mongoose.Schema(
       },
     },
     invoice_Details: invoice_details,
+    expenses: {
+      type: [expensesSchema],
+      default: null,
+    },
+    totalExpenseAmount: {
+      type: Number,
+      default: 0,
+    },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,
       required: [true, "created by is required field"],
@@ -224,14 +233,8 @@ const plywood_invoice_schema = new mongoose.Schema(
   }
 );
 
-export const plywood_inventory_items_details = mongoose.model(
-  "plywood_inventory_items_details",
-  item_details_schema
-);
-export const plywood_inventory_invoice_details = mongoose.model(
-  "plywood_inventory_invoice_details",
-  plywood_invoice_schema
-);
+export const plywood_inventory_items_details = mongoose.model("plywood_inventory_items_details", item_details_schema);
+export const plywood_inventory_invoice_details =mongoose.model("plywood_inventory_invoice_details", plywood_invoice_schema);
 
 const plywood_inventory_items_view_schema = new mongoose.Schema(
   {},
@@ -242,10 +245,7 @@ const plywood_inventory_items_view_schema = new mongoose.Schema(
   }
 );
 
-export const plywood_inventory_items_view_modal = mongoose.model(
-  "plywood_inventory_items_view",
-  plywood_inventory_items_view_schema
-);
+export const plywood_inventory_items_view_modal =  mongoose.model("plywood_inventory_items_view", plywood_inventory_items_view_schema);
 
 (async function () {
   await plywood_inventory_items_view_modal.createCollection({

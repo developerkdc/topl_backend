@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import invoice_details from "../../../Utils/invoiceDetails.schema.js";
+import expensesSchema from "../../masters/expenses.schema.js";
 
 const item_details_schema = new mongoose.Schema(
   {
@@ -63,6 +64,14 @@ const item_details_schema = new mongoose.Schema(
     amount: {
       type: Number,
       required: [true, "Amount is required"],
+    },
+    amount_factor: {
+      type: Number,
+      default: 0,
+    },
+    expense_amount: {
+      type: Number,
+      default: 0,
     },
     remark: {
       type: String,
@@ -197,6 +206,14 @@ const core_invoice_schema = new mongoose.Schema(
       },
     },
     invoice_Details: invoice_details,
+    expenses: {
+      type: [expensesSchema],
+      default: null,
+    },
+    totalExpenseAmount: {
+      type: Number,
+      default: 0,
+    },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,
       required: [true, "created by is required field"],
@@ -211,14 +228,8 @@ const core_invoice_schema = new mongoose.Schema(
   }
 );
 
-export const core_inventory_items_details = mongoose.model(
-  "core_inventory_items_details",
-  item_details_schema
-);
-export const core_inventory_invoice_details = mongoose.model(
-  "core_inventory_invoice_details",
-  core_invoice_schema
-);
+export const core_inventory_items_details = mongoose.model("core_inventory_items_details", item_details_schema);
+export const core_inventory_invoice_details = mongoose.model("core_inventory_invoice_details", core_invoice_schema);
 
 const core_inventory_items_view_schema = new mongoose.Schema(
   {},
@@ -229,10 +240,7 @@ const core_inventory_items_view_schema = new mongoose.Schema(
   }
 );
 
-export const core_inventory_items_view_modal = mongoose.model(
-  "core_inventory_items_view",
-  core_inventory_items_view_schema
-);
+export const core_inventory_items_view_modal = mongoose.model("core_inventory_items_view", core_inventory_items_view_schema);
 
 (async function () {
   await core_inventory_items_view_modal.createCollection({

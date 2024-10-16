@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import invoice_details from "../../../Utils/invoiceDetails.schema.js";
+import expensesSchema from "../../masters/expenses.schema.js";
 
 const veneer_item_details_schema = new mongoose.Schema({
   supplier_item_name: {
@@ -103,6 +104,14 @@ const veneer_item_details_schema = new mongoose.Schema({
   amount: {
     type: Number,
     required: [true, "Amount is required"],
+  },
+  amount_factor: {
+    type: Number,
+    default: 0,
+  },
+  expense_amount: {
+    type: Number,
+    default: 0,
   },
   remark: {
     type: String,
@@ -244,6 +253,14 @@ const veneer_invoice_schema = new mongoose.Schema(
       },
     },
     invoice_Details: invoice_details,
+    expenses: {
+      type: [expensesSchema],
+      default: null,
+    },
+    totalExpenseAmount: {
+      type: Number,
+      default: 0,
+    },
     created_by: {
       type: mongoose.Types.ObjectId,
       ref: "users",

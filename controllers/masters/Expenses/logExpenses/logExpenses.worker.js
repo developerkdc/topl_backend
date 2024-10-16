@@ -23,25 +23,19 @@ const processedExpense = async function () {
         },
         {
             $set: {
-                amount_factor: {
-                    $multiply: [
-                        "$amount",
-                        { $divide: [100, invoiceAmount] }
-                    ]
-                },
-                expense_amount: {
-                    $multiply: [
-                        {
-                            $multiply: [
-                                "$amount",
-                                { $divide: [100, invoiceAmount] }
-                            ]
-                        },
-                        { $divide: [totalExpenseAmount, 100] }
-                    ]
-                }
-            }
-        },
+              amount_factor: {
+                $divide: ["$amount", invoiceAmount],
+              },
+              expense_amount: {
+                $multiply: [
+                  {
+                    $divide: ["$amount", invoiceAmount],
+                  },
+                  totalExpenseAmount,
+                ],
+              },
+            },
+          },
         {
             $merge: {
                 into: "log_inventory_items_details",
