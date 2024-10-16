@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { addMachine, MachineDetails, editMachineDetails, DropdownMachineNameMaster } from "../../controllers/masters/machine.controller.js";
+import { addMachine, MachineDetails, editMachineDetails, DropdownMachineNameMaster, DropdownMachineNameMasterById } from "../../controllers/masters/machine.controller.js";
 import AuthMiddleware from "../../middlewares/verifyToken.js";
 import RolesPermissions from "../../middlewares/permission.js";
 const router = Router();
@@ -10,5 +10,6 @@ router.post("/list-machine", AuthMiddleware, RolesPermissions("machine_master", 
 
 // without permission
 router.get("/dropdown-machine-master", AuthMiddleware, DropdownMachineNameMaster);
+router.get("/dropdown-machine-master-by-deptartment", AuthMiddleware, DropdownMachineNameMasterById);
 
 export default router;

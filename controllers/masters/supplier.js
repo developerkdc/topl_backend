@@ -228,6 +228,35 @@ export const addBranchToSupplier = catchAsync(async (req, res) => {
       new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Invalid supplier_id")
     );
   }
+
+  for (let person of contact_person) {
+    const { name, email, designation, mobile_number } = person;
+    if (!name || !email || !designation || !mobile_number) {
+      return res.json(
+        new ApiResponse(
+          StatusCodes.INTERNAL_SERVER_ERROR,
+          "Each contact person must have name, email, designation, and mobile number"
+        )
+      );
+    }
+
+
+    const existingContact = await supplierBranchModel.findOne({
+      $or: [
+        { 'contact_person.email': email },
+        { 'contact_person.mobile_number': mobile_number },
+      ],
+    });
+
+    if (existingContact) {
+      return res.json(
+        new ApiResponse(
+          StatusCodes.CONFLICT,
+          `Contact person with email ${email} or mobile number ${mobile_number} already exists`
+        )
+      );
+    }
+  }
   const newSupplierBranch = new supplierBranchModel({
     supplier_id: id,
     contact_person,
@@ -439,71 +468,71 @@ export const fetchAllSupplierWithBranchesDetails = catchAsync(
     //   : {};
     const searchQuery = query
       ? {
-          $or: [
-            {
-              "supplierDetails.contact_person.name": {
-                $regex: query,
-                $options: "i",
+        $or: [
+          {
+            "supplierDetails.contact_person.name": {
+              $regex: query,
+              $options: "i",
+            },
+          },
+          {
+            "supplierDetails.contact_person.email": {
+              $regex: query,
+              $options: "i",
+            },
+          },
+          {
+            "supplierDetails.contact_person.designation": {
+              $regex: query,
+              $options: "i",
+            },
+          },
+          {
+            "supplierDetails.contact_person.mobile_number": {
+              $regex: query,
+              $options: "i",
+            },
+          },
+          {
+            "supplierDetails.state": {
+              $regex: query,
+              $options: "i",
+            },
+          },
+          {
+            "supplierDetails.country": {
+              $regex: query,
+              $options: "i",
+            },
+          },
+          {
+            "supplierDetails.city": {
+              $regex: query,
+              $options: "i",
+            },
+          },
+          {
+            "supplierDetails.address": {
+              $regex: query,
+              $options: "i",
+            },
+          },
+          {
+            "supplier_name": { $regex: query, $options: "i" },
+          },
+          {
+            "supplier_type": { $regex: query, $options: "i" },
+          },
+          // Only search sr_no if query is a number
+          ...(isNaN(Number(query))
+            ? []
+            : [
+              {
+                "sr_no": Number(query),
               },
-            },
-            {
-              "supplierDetails.contact_person.email": {
-                $regex: query,
-                $options: "i",
-              },
-            },
-            {
-              "supplierDetails.contact_person.designation": {
-                $regex: query,
-                $options: "i",
-              },
-            },
-            {
-              "supplierDetails.contact_person.mobile_number": {
-                $regex: query,
-                $options: "i",
-              },
-            },
-            {
-              "supplierDetails.state": {
-                $regex: query,
-                $options: "i",
-              },
-            },
-            {
-              "supplierDetails.country": {
-                $regex: query,
-                $options: "i",
-              },
-            },
-            {
-              "supplierDetails.city": {
-                $regex: query,
-                $options: "i",
-              },
-            },
-            {
-              "supplierDetails.address": {
-                $regex: query,
-                $options: "i",
-              },
-            },
-            {
-              "supplier_name": { $regex: query, $options: "i" },
-            },
-            {
-              "supplier_type": { $regex: query, $options: "i" },
-            },
-            // Only search sr_no if query is a number
-            ...(isNaN(Number(query))
-              ? []
-              : [
-                  {
-                    "sr_no": Number(query),
-                  },
-                ]),
-          ],
-        }
+            ]),
+        ],
+      }
       : {};
 
     console.log("query -> ", searchQuery);
@@ -586,90 +615,7 @@ export const updateSupplierBranchById = catchAsync(async (req, res) => {
     );
 });
 
-export const updateContactPersonInfo = catchAsync(async (req, res) => {
-  const { id } = req.query;
-  // const updateData = req.body;
-  const { name, email, mobile_number, designation } = req.body;
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-    return res.json(
-      new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Invalid id")
-    );
-  }
 
-  // const existingEmail = await supplierBranchModel.findOne({
-  //   "contact_person.email": email,
-  //   "contact_person._id": { $ne: id },
-  // });
-  const existingEmail = await supplierBranchModel.findOne({
-    "contact_person": {
-      $elemMatch: {
-        email: email,
-        _id: { $ne: id },
-      },
-    },
-  });
-
-  if (existingEmail) {
-    return res
-      .status(StatusCodes.CONFLICT)
-      .json(
-        new ApiResponse(
-          StatusCodes.CONFLICT,
-          "Contact person with the same email already exists."
-        )
-      );
-  }
-
-  // const existingMobileNumber = await supplierBranchModel.findOne({
-  //   "contact_person.mobile_number": mobile_number,
-  //   "contact_person._id": { $ne: id },
-  // });
-  const existingMobileNumber = await supplierBranchModel.findOne({
-    "contact_person": {
-      $elemMatch: {
-        mobile_number: mobile_number,
-        _id: { $ne: id }, // Exclude the current contact person by id
-      },
-    },
-  });
-
-  if (existingMobileNumber) {
-    return res
-      .status(StatusCodes.CONFLICT)
-      .json(
-        new ApiResponse(
-          StatusCodes.CONFLICT,
-          "Contact person with the same mobile number already exists."
-        )
-      );
-  }
-  const supplier = await supplierBranchModel.findOneAndUpdate(
-    { "contact_person._id": id },
-    {
-      $set: { "contact_person.$": { email, name, mobile_number, designation } },
-    },
-    { new: true, runValidators: true }
-  );
-  if (!supplier) {
-    return res
-      .status(StatusCodes.NOT_FOUND)
-      .json(
-        new ApiResponse(
-          StatusCodes.NOT_FOUND,
-          "Supplier Branch not found with given Id"
-        )
-      );
-  }
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(
-        StatusCodes.OK,
-        "Contact Person updated successfully...",
-        supplier
-      )
-    );
-});
 
 export const fetchAllBranchesBySupplierId = catchAsync(async (req, res) => {
   const { id } = req.params;
@@ -688,18 +634,18 @@ export const fetchAllBranchesBySupplierId = catchAsync(async (req, res) => {
   const sortObj = sortField ? { [sortField]: sortDirection } : {};
   const searchQuery = query
     ? {
-        $or: [
-          { "branch_name": { $regex: query, $options: "i" } },
-          { "address": { $regex: query, $options: "i" } },
-          { "country": { $regex: query, $options: "i" } },
-          { "city": { $regex: query, $options: "i" } },
-          { "pincode": { $regex: query, $options: "i" } },
-          { "gst_number": { $regex: query, $options: "i" } },
-          { "contact_person.name": { $regex: query, $options: "i" } },
-          { "supplierDetails.supplier_name": { $regex: query, $options: "i" } },
-          { "supplierDetails.supplier_type": { $regex: query, $options: "i" } },
-        ],
-      }
+      $or: [
+        { "branch_name": { $regex: query, $options: "i" } },
+        { "address": { $regex: query, $options: "i" } },
+        { "country": { $regex: query, $options: "i" } },
+        { "city": { $regex: query, $options: "i" } },
+        { "pincode": { $regex: query, $options: "i" } },
+        { "gst_number": { $regex: query, $options: "i" } },
+        { "contact_person.name": { $regex: query, $options: "i" } },
+        { "supplierDetails.supplier_name": { $regex: query, $options: "i" } },
+        { "supplierDetails.supplier_type": { $regex: query, $options: "i" } },
+      ],
+    }
     : {};
 
   const validateId = await SupplierModel.findById(id);
@@ -806,7 +752,7 @@ export const addContactPersonToBranch = catchAsync(async (req, res) => {
     );
   }
   const existingEmail = await supplierBranchModel.findOne({
-    _id: id, // Ensure we are checking within the same branch
+    // _id: id, // Ensure we are checking within the same branch
     "contact_person.email": email, // Search inside contact_person array
   });
 
@@ -822,7 +768,7 @@ export const addContactPersonToBranch = catchAsync(async (req, res) => {
   }
 
   const existingMobileNumber = await supplierBranchModel.findOne({
-    _id: id, // Ensure we are checking within the same branch
+    // _id: id, // Ensure we are checking within the same branch
     "contact_person.mobile_number": mobile_number, // Search inside contact_person array
   });
 
@@ -872,16 +818,16 @@ export const fetchAllSupplierWithBranchesDetailsBySupplierId = catchAsync(
     console.log("sort obj => ", sortObj);
     const searchQuery = query
       ? {
-          $or: [
-            { "contact_person.name": { $regex: query, $options: "i" } },
-            {
-              "supplierDetails.supplier_name": { $regex: query, $options: "i" },
-            },
-            {
-              "supplierDetails.supplier_type": { $regex: query, $options: "i" },
-            },
-          ],
-        }
+        $or: [
+          { "contact_person.name": { $regex: query, $options: "i" } },
+          {
+            "supplierDetails.supplier_name": { $regex: query, $options: "i" },
+          },
+          {
+            "supplierDetails.supplier_type": { $regex: query, $options: "i" },
+          },
+        ],
+      }
       : {};
 
     const pipeline = [
@@ -936,8 +882,8 @@ export const DropdownSupplierName = catchAsync(async (req, res) => {
 
   const searchQuery = type
     ? {
-        supplier_type: { $elemMatch: { $regex: type, $options: "i" } },
-      }
+      supplier_type: { $elemMatch: { $regex: type, $options: "i" } },
+    }
     : {};
 
   const list = await SupplierModel.find(searchQuery);
@@ -1048,3 +994,211 @@ export const DropdownSupplierBranches = catchAsync(async (req, res) => {
       )
     );
 });
+
+export const updateContactPersonInfo = catchAsync(async (req, res) => {
+  const { id } = req.query;
+  // const updateData = req.body;
+  const { name, email, mobile_number, designation } = req.body;
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.json(
+      new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Invalid id")
+    );
+  }
+
+  const objectId = new mongoose.Types.ObjectId(id);
+
+  // const existingEmail = await supplierBranchModel.findOne({
+  //   "contact_person.email": email,
+  //   "contact_person._id": { $ne: id },
+  // });
+  const existingEmail = await supplierBranchModel.findOne({
+    "contact_person": {
+      $elemMatch: {
+        email: email,
+        _id: { $ne: objectId },
+      },
+    },
+  });
+  console.log(existingEmail, "email")
+  if (existingEmail) {
+    return res
+      .status(StatusCodes.CONFLICT)
+      .json(
+        new ApiResponse(
+          StatusCodes.CONFLICT,
+          "Contact person with the same email already exists."
+        )
+      );
+  }
+
+  // const existingMobileNumber = await supplierBranchModel.findOne({
+  //   "contact_person.mobile_number": mobile_number,
+  //   "contact_person._id": { $ne: id },
+  // });
+  const existingMobileNumber = await supplierBranchModel.findOne({
+    "contact_person": {
+      $elemMatch: {
+        mobile_number: mobile_number,
+        _id: { $ne: objectId },
+      },
+    },
+  });
+
+  console.log(existingMobileNumber, "mobile number")
+
+  if (existingMobileNumber) {
+    return res
+      .status(StatusCodes.CONFLICT)
+      .json(
+        new ApiResponse(
+          StatusCodes.CONFLICT,
+          "Contact person with the same mobile number already exists."
+        )
+      );
+  }
+  const supplier = await supplierBranchModel.findOneAndUpdate(
+    { "contact_person._id": objectId },
+    {
+      $set: { "contact_person.$": { email, name, mobile_number, designation } },
+    },
+    { new: true, runValidators: true }
+  );
+  if (!supplier) {
+    return res
+      .status(StatusCodes.NOT_FOUND)
+      .json(
+        new ApiResponse(
+          StatusCodes.NOT_FOUND,
+          "Supplier Branch not found with given Id"
+        )
+      );
+  }
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        StatusCodes.OK,
+        "Contact Person updated successfully...",
+        supplier
+      )
+    );
+});
+
+
+
+
+export const addBranchToSuppliers = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  const {
+    contact_person,
+    address,
+    state,
+    country,
+    city,
+    pincode,
+    gst_number,
+    web_url,
+    is_main_branch,
+    branch_name,
+  } = req.body;
+  console.log("req body => ", req.body);
+
+  // Check if required fields are present
+  const requiredFields = [
+    "contact_person",
+    "address",
+    "state",
+    "country",
+    "city",
+    "pincode",
+    "gst_number",
+    "web_url",
+    "branch_name",
+  ];
+
+  for (let field of requiredFields) {
+    if (!req.body[field]) {
+      return res.json(
+        new ApiResponse(
+          StatusCodes.INTERNAL_SERVER_ERROR,
+          `${field} is missing`
+        )
+      );
+    }
+  }
+
+  // Validate contact_person array
+  if (!Array.isArray(contact_person) || contact_person.length === 0) {
+    return res.json(
+      new ApiResponse(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        "Contact person details are missing or not in array format"
+      )
+    );
+  }
+
+  // Validate each contact person object
+  for (let person of contact_person) {
+    const { name, email, designation, mobile_number } = person;
+    if (!name || !email || !designation || !mobile_number) {
+      return res.json(
+        new ApiResponse(
+          StatusCodes.INTERNAL_SERVER_ERROR,
+          "Each contact person must have name, email, designation, and mobile number"
+        )
+      );
+    }
+
+    // Check if email or mobile_number already exists in any branch
+    const existingContact = await supplierBranchModel.findOne({
+      $or: [
+        { 'contact_person.email': email },
+        { 'contact_person.mobile_number': mobile_number },
+      ],
+    });
+
+    if (existingContact) {
+      return res.json(
+        new ApiResponse(
+          StatusCodes.CONFLICT,
+          `Contact person with email ${email} or mobile number ${mobile_number} already exists`
+        )
+      );
+    }
+  }
+
+  // Check if the supplier exists
+  const validateSupplierId = await SupplierModel.findById(id);
+  if (!validateSupplierId) {
+    return res.json(
+      new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Invalid supplier_id")
+    );
+  }
+
+  // Create new supplier branch
+  const newSupplierBranch = new supplierBranchModel({
+    supplier_id: id,
+    contact_person,
+    address,
+    state,
+    country,
+    city,
+    pincode,
+    gst_number,
+    web_url,
+    is_main_branch,
+    branch_name,
+  });
+
+  // Save new branch to the database
+  await newSupplierBranch.save();
+
+  return res.json(
+    new ApiResponse(
+      StatusCodes.OK,
+      "New branch created successfully...",
+      newSupplierBranch
+    )
+  );
+});
+
