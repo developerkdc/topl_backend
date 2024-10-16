@@ -21,6 +21,10 @@ const expensesSchema = new mongoose.Schema({
         type:String,
         default:null
     },
+    serviceProviderDetails:{
+        type:{},
+        default:null
+    },
     amount:{
         type:Number,
         required:[true,"Amount is required"]

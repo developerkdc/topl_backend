@@ -281,7 +281,7 @@ export const RoleNameList = catchAsync(async (req, res) => {
 export const ListApproverUser = catchAsync(async (req, res) => {
   const { dept_name } = req.body;
 
-  const approverUser = await UserModel.find({ dept_name: dept_name }, "_id user_name");
+  const approverUser = await UserModel.find({ dept_name: dept_name, user_type: "ADMIN" }, "_id user_name");
 
   return res.status(200).json({
     result: approverUser,
