@@ -248,7 +248,7 @@ export const listing_cross_cutting_inventory = catchAsync(
     const match_query = {
       ...filterData,
       ...search_query,
-      issue_status:issues_for_status?.crosscut_done
+      issue_status: issues_for_status?.crosscut_done
     };
 
     const aggregate_stage = [
@@ -648,7 +648,7 @@ export const revert_crosscutting_done = catchAsync(async function (req, res, nex
         // Check if any aggregation result was returned
         const total = aggregatedTotal?.length > 0 ? aggregatedTotal[0] : {
           total_length: 0,
-          sqm_factor:0,
+          sqm_factor: 0,
           total_crosscut_cmt: 0,
           total_cost_amount: 0,
           total_expense_amount: 0
@@ -755,16 +755,16 @@ export const crossCuttingDoneExcel = catchAsync(async (req, res) => {
 });
 
 export const add_crosscut_issue_for_flitching = catchAsync(async (req, res, next) => {
-  const crosscut_id = req.body?.crosscut_id;
+  const crosscut_id = req.params?.crosscut_id;
   if (!crosscut_id)
     return next(new ApiError("crosscut id is required", 400));
   const created_by = req.userDetails.id; //extract userid from req.userDetails
 
-  const crosscut_done_details = await crosscutting_done_model.findOne({_id:crosscut_id});
-  if(!crosscut_done_details) return next(new ApiError("Item not found",404));
+  const crosscut_done_details = await crosscutting_done_model.findOne({ _id: crosscut_id });
+  if (!crosscut_done_details) return next(new ApiError("Item not found", 404));
 
-  const update_crosscut_done_status = await log_inventory_items_model.updateMany(
-    { _id: crosscut_done_details?.log_inventory_item_id},
+  const update_crosscut_done_status = await crosscutting_done_model.updateMany(
+    { _id: crosscut_done_details?._id },
     {
       $set: {
         issue_status: issues_for_status.flitching,
@@ -773,50 +773,45 @@ export const add_crosscut_issue_for_flitching = catchAsync(async (req, res, next
   );
 
   if (
-    !update_log_items_status?.acknowledged &&
-    update_log_items_status.modifiedCount <= 0
+    !update_crosscut_done_status?.acknowledged &&
+    update_crosscut_done_status.modifiedCount <= 0
   )
     return next(new ApiError("Failed to update", 400));
 
-  const log_issue_for_flitching_data = await log_inventory_items_model
-    .find({
-      _id: { $in: [...log_items_ids_set] },
-      issue_status: issues_for_status.flitching,
+  const log_details = await log_inventory_items_model
+    .findOne({
+      _id: crosscut_done_details?.log_inventory_item_id,
+      issue_status: issues_for_status.crosscutting,
     })
     .select({ created_by: 0, createdAt: 0, updatedAt: 0 })
     .lean();
 
-  const issue_for_flitching = log_issue_for_flitching_data.map((ele) => {
-    const { _id, ...data } = ele
-    // data.log_inventory_item_id = _id;
-    // data.created_by = created_by;
-    // return data;
-    return {
-      log_inventory_item_id: _id,
-      item_sr_no: data?.item_sr_no,
-      supplier_item_name: data?.supplier_item_name,
-      supplier_log_no: data?.supplier_log_no,
-      item_id: data?.item_id,
-      item_name: data?.item_name,
-      item_sub_category_id: data?.item_sub_category_id,
-      item_sub_category_name: data?.item_sub_category_name,
-      log_no: data?.log_no,
-      log_formula: data?.log_formula,
-      length: data?.physical_length,
-      diameter: data?.physical_diameter,
-      cmt: data?.physical_cmt,
-      rate: data?.rate_in_inr,
-      amount: data?.amount,
-      amount_factor: data?.amount_factor,
-      expense_amount: data?.expense_amount,
-      remark: data?.remark,
-      invoice_id: data?.invoice_id,
-      created_by: created_by,
-    }
-  });
+  const issue_for_flitching = {
+    log_inventory_item_id: crosscut_done_details?.log_inventory_item_id,
+    crosscut_done_id: crosscut_done_details?._id,
+    item_sr_no: log_details?.item_sr_no,
+    supplier_item_name: log_details?.supplier_item_name,
+    supplier_log_no: log_details?.supplier_log_no,
+    item_id: log_details?.item_id,
+    item_name: log_details?.item_name,
+    item_sub_category_id: log_details?.item_sub_category_id,
+    item_sub_category_name: log_details?.item_sub_category_name,
+    log_no: crosscut_done_details?.log_no_code,
+    log_formula: log_details?.log_formula,
+    length: crosscut_done_details?.length,
+    diameter: crosscut_done_details?.girth,
+    cmt: crosscut_done_details?.crosscut_cmt,
+    rate: crosscut_done_details?.per_cmt_cost,
+    amount: crosscut_done_details?.cost_amount,
+    amount_factor: crosscut_done_details?.amount_factor,
+    expense_amount: crosscut_done_details?.expense_amount,
+    remark: crosscut_done_details?.remarks,
+    invoice_id: log_details?.invoice_id,
+    created_by: created_by,
+  };
 
   const issue_for_flitching_data =
-    await issues_for_flitching_model.insertMany(issue_for_flitching);
+    await issues_for_flitching_model.create(issue_for_flitching);
 
   return res.status(200).json(
     new ApiResponse(
