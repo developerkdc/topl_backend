@@ -18,7 +18,7 @@ export const addItems = catchAsync(async (req, res) => {
     category: category,
   });
   if (checkIfAlreadyExists.length > 0) {
-    return res.json(new ApiResponse(StatusCodes.OK, "Category already exists"));
+    return res.json(new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Category already exists"));
   }
 
   const maxNumber = await itemCategoryModel.aggregate([
@@ -110,24 +110,24 @@ export const listItemCategories = catchAsync(async (req, res) => {
   //   : {};
   const searchQuery = query
     ? {
-        $or: [
-          { "category": { $regex: query, $options: "i" } },
-          { "calculate_unit": { $regex: query, $options: "i" } },
-          { "product_hsn_code": { $regex: query, $options: "i" } },
-          { "userDetails.user_name": { $regex: query, $options: "i" } },
+      $or: [
+        { "category": { $regex: query, $options: "i" } },
+        { "calculate_unit": { $regex: query, $options: "i" } },
+        { "product_hsn_code": { $regex: query, $options: "i" } },
+        { "userDetails.user_name": { $regex: query, $options: "i" } },
 
-          ...(isValidDate(query)
-            ? [
-                {
-                  createdAt: {
-                    $gte: new Date(new Date(query).setHours(0, 0, 0, 0)), // Start of the day
-                    $lt: new Date(new Date(query).setHours(23, 59, 59, 999)), // End of the day
-                  },
-                },
-              ]
-            : []),
-        ],
-      }
+        ...(isValidDate(query)
+          ? [
+            {
+              createdAt: {
+                $gte: new Date(new Date(query).setHours(0, 0, 0, 0)), // Start of the day
+                $lt: new Date(new Date(query).setHours(23, 59, 59, 999)), // End of the day
+              },
+            },
+          ]
+          : []),
+      ],
+    }
     : {};
 
   // Helper function to validate the date
@@ -199,8 +199,8 @@ export const DropdownItemCategoryNameMaster = catchAsync(async (req, res) => {
 
   const searchQuery = type
     ? {
-        $or: [{ "category": { $regex: type, $options: "i" } }],
-      }
+      $or: [{ "category": { $regex: type, $options: "i" } }],
+    }
     : {};
 
   const list = await itemCategoryModel.aggregate([
