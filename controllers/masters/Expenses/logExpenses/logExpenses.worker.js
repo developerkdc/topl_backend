@@ -6,6 +6,7 @@ import { parentPort, workerData } from 'worker_threads';
 import mongo_service from "../../../../database/mongo.service.js";
 import { issues_for_flitching_model } from "../../../../database/schema/factory/flitching/issuedForFlitching.schema.js";
 import { flitching_done_model } from "../../../../database/schema/factory/flitching/flitching.schema.js";
+import { rejected_crosscutting_model } from "../../../../database/schema/factory/crossCutting/rejectedCrosscutting.schema.js";
 mongo_service();
 
 const processedExpense = async function () {
@@ -23,19 +24,19 @@ const processedExpense = async function () {
         },
         {
             $set: {
-              amount_factor: {
-                $divide: ["$amount", invoiceAmount],
-              },
-              expense_amount: {
-                $multiply: [
-                  {
+                amount_factor: {
                     $divide: ["$amount", invoiceAmount],
-                  },
-                  totalExpenseAmount,
-                ],
-              },
+                },
+                expense_amount: {
+                    $multiply: [
+                        {
+                            $divide: ["$amount", invoiceAmount],
+                        },
+                        totalExpenseAmount,
+                    ],
+                },
             },
-          },
+        },
         {
             $merge: {
                 into: "log_inventory_items_details",
@@ -56,14 +57,16 @@ const processedExpense = async function () {
 
     for (let logItems of logItemsExpenses) { // loop through logitems
         const logItemId = logItems?._id
-        await issues_for_crosscutting_model.updateOne({ log_inventory_item_id: logItemId }, {
-            $set: {
-                amount_factor: logItems?.amount_factor,
-                expense_amount: logItems?.expense_amount,
-            }
-        })
         const issueForCrosscutting = await issues_for_crosscutting_model.findOne({ log_inventory_item_id: logItemId })
         if (issueForCrosscutting) { // check for isssue for cutting
+            const available_expense_amount = issueForCrosscutting?.available_quantity?.sqm_factor * logItems?.expense_amount
+            await issues_for_crosscutting_model.updateOne({ _id: issueForCrosscutting?._id }, {
+                $set: {
+                    amount_factor: logItems?.amount_factor,
+                    expense_amount: logItems?.expense_amount,
+                    "available_quantity.expense_amount": available_expense_amount
+                }
+            })
             const crosscuttingDone = await crosscutting_done_model.find({ issue_for_crosscutting_id: issueForCrosscutting?._id });
             for (let crosscuttingDoneItem of crosscuttingDone) { // loop through crosscutting done and update the expense amount
                 const expenseAmount = crosscuttingDoneItem?.sqm_factor * issueForCrosscutting?.expense_amount;
@@ -81,6 +84,17 @@ const processedExpense = async function () {
                         }
                     })
                 }
+            }
+            const rejected_crosscutting = await rejected_crosscutting_model.findOne({ issue_for_crosscutting_id: issueForCrosscutting?._id });
+            if (rejected_crosscutting) {
+                const available_expense_amount = rejected_crosscutting?.available_quantity?.sqm_factor * logItems?.expense_amount
+                await rejected_crosscutting_model.updateOne({ issue_for_crosscutting_id: issueForCrosscutting?._id }, {
+                    $set: {
+                        amount_factor: logItems?.amount_factor,
+                        expense_amount: logItems?.expense_amount,
+                        "rejected_quantity.expense_amount": available_expense_amount
+                    }
+                })
             }
         } else {
             const issueForFlitching = await issues_for_flitching_model.findOne({ log_inventory_item_id: logItemId })
