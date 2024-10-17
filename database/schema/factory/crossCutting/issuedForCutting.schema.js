@@ -145,6 +145,10 @@ const issues_for_crosscutting_details_schema = new mongoose.Schema({
     type: Number,
     required: [true, "Rate in Inr is required"],
   },
+  sqm_factor: {
+    type: Number,
+    default: 1,
+  },
   amount_factor: {
     type: Number,
     default: 0,

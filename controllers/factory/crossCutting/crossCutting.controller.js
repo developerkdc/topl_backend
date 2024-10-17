@@ -248,6 +248,7 @@ export const listing_cross_cutting_inventory = catchAsync(
     const match_query = {
       ...filterData,
       ...search_query,
+      issue_status:issues_for_status?.crosscut_done
     };
 
     const aggregate_stage = [
@@ -618,6 +619,7 @@ export const revert_crosscutting_done = catchAsync(async function (req, res, nex
         updateData = {
           $set: {
             crosscutting_completed: false,
+            "available_quantity.sqm_factor": 1,
             "available_quantity.physical_length": physical_length,
             "available_quantity.physical_cmt": physical_cmt,
             "available_quantity.amount": amount,
@@ -635,6 +637,7 @@ export const revert_crosscutting_done = catchAsync(async function (req, res, nex
             $group: {
               _id: null,
               total_length: { $sum: "$length" },
+              sqm_factor: { $sum: "$sqm_factor" },
               total_crosscut_cmt: { $sum: "$crosscut_cmt" },
               total_cost_amount: { $sum: "$cost_amount" },
               total_expense_amount: { $sum: "$expense_amount" }
@@ -645,18 +648,19 @@ export const revert_crosscutting_done = catchAsync(async function (req, res, nex
         // Check if any aggregation result was returned
         const total = aggregatedTotal?.length > 0 ? aggregatedTotal[0] : {
           total_length: 0,
+          sqm_factor:0,
           total_crosscut_cmt: 0,
           total_cost_amount: 0,
           total_expense_amount: 0
         };
 
-        console.log("total new  => ", total)
         updateData = {
           $set: {
             crosscutting_completed: false,
           },
           $inc: {
             "available_quantity.physical_length": total.total_length,
+            "available_quantity.sqm_factor": total.sqm_factor,
             "available_quantity.physical_cmt": total.total_crosscut_cmt,
             "available_quantity.amount": total.total_cost_amount,
             "available_quantity.expense_amount": total.total_expense_amount,
@@ -747,5 +751,80 @@ export const crossCuttingDoneExcel = catchAsync(async (req, res) => {
 
   return res.json(
     new ApiResponse(StatusCodes.OK, "Csv downloaded successfully...", excelLink)
+  );
+});
+
+export const add_crosscut_issue_for_flitching = catchAsync(async (req, res, next) => {
+  const crosscut_id = req.body?.crosscut_id;
+  if (!crosscut_id)
+    return next(new ApiError("crosscut id is required", 400));
+  const created_by = req.userDetails.id; //extract userid from req.userDetails
+
+  const crosscut_done_details = await crosscutting_done_model.findOne({_id:crosscut_id});
+  if(!crosscut_done_details) return next(new ApiError("Item not found",404));
+
+  const update_crosscut_done_status = await log_inventory_items_model.updateMany(
+    { _id: crosscut_done_details?.log_inventory_item_id},
+    {
+      $set: {
+        issue_status: issues_for_status.flitching,
+      },
+    }
+  );
+
+  if (
+    !update_log_items_status?.acknowledged &&
+    update_log_items_status.modifiedCount <= 0
+  )
+    return next(new ApiError("Failed to update", 400));
+
+  const log_issue_for_flitching_data = await log_inventory_items_model
+    .find({
+      _id: { $in: [...log_items_ids_set] },
+      issue_status: issues_for_status.flitching,
+    })
+    .select({ created_by: 0, createdAt: 0, updatedAt: 0 })
+    .lean();
+
+  const issue_for_flitching = log_issue_for_flitching_data.map((ele) => {
+    const { _id, ...data } = ele
+    // data.log_inventory_item_id = _id;
+    // data.created_by = created_by;
+    // return data;
+    return {
+      log_inventory_item_id: _id,
+      item_sr_no: data?.item_sr_no,
+      supplier_item_name: data?.supplier_item_name,
+      supplier_log_no: data?.supplier_log_no,
+      item_id: data?.item_id,
+      item_name: data?.item_name,
+      item_sub_category_id: data?.item_sub_category_id,
+      item_sub_category_name: data?.item_sub_category_name,
+      log_no: data?.log_no,
+      log_formula: data?.log_formula,
+      length: data?.physical_length,
+      diameter: data?.physical_diameter,
+      cmt: data?.physical_cmt,
+      rate: data?.rate_in_inr,
+      amount: data?.amount,
+      amount_factor: data?.amount_factor,
+      expense_amount: data?.expense_amount,
+      remark: data?.remark,
+      invoice_id: data?.invoice_id,
+      created_by: created_by,
+    }
+  });
+
+  const issue_for_flitching_data =
+    await issues_for_flitching_model.insertMany(issue_for_flitching);
+
+  return res.status(200).json(
+    new ApiResponse(
+      StatusCodes.CREATED,
+      "Issue for flitching done successfully",
+      {
+        issue_for_flitching_data,
+      }
+    )
   );
 });
