@@ -19,7 +19,7 @@ export const addSeries = catchAsync(async (req, res) => {
     series_name: series_name,
   });
   if (checkIfAlreadyExists.length > 0) {
-    return res.json(new ApiResponse(StatusCodes.OK, "series already exists"));
+    return res.json(new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "series already exists"));
   }
 
   const maxNumber = await seriesModel.aggregate([
@@ -165,8 +165,8 @@ export const DropdownSeriesNameMaster = catchAsync(async (req, res) => {
 
   const searchQuery = type
     ? {
-        $or: [{ "series_name": { $regex: type, $options: "i" } }],
-      }
+      $or: [{ "series_name": { $regex: type, $options: "i" } }],
+    }
     : {};
 
   const list = await seriesModel.aggregate([
