@@ -5,6 +5,7 @@ import { StatusCodes } from "../../utils/constants.js";
 import departMentModel from "../../database/schema/masters/department.schema.js";
 import { DynamicSearch } from "../../utils/dynamicSearch/dynamic.js";
 import mongoose from "mongoose";
+import RolesModel from "../../database/schema/roles.schema.js";
 
 export const addDepartment = catchAsync(async (req, res) => {
   const { dept_name, dept_access, remark } = req.body;
@@ -71,6 +72,30 @@ export const editDepartment = catchAsync(async (req, res) => {
     await session.abortTransaction();
     return res.status(404).json(new ApiResponse(StatusCodes.NOT_FOUND, "Department Already Exist."));
   }
+
+  let findRolesForDept = await RolesModel.find({ dept_id: id });
+  // console.log(findRolesForDept, "findRolesForDept");
+
+  let deptAccess = req?.body?.dept_access;
+
+  findRolesForDept?.map(async (role) => {
+    for (let key in deptAccess) {
+      if (deptAccess[key] === true) {
+        role.permissions[key] = { ...role.permissions[key], view: true };
+      } else {
+        role.permissions[key] = { view: false, edit: false, create: false };
+      }
+    }
+    await RolesModel.findByIdAndUpdate(
+      role._id,
+      {
+        $set: {
+          permissions: role.permissions,
+        },
+      },
+    );
+  });
+
 
   const updatedData = await departMentModel.findByIdAndUpdate(
     id,
@@ -170,8 +195,8 @@ export const DropdownDepartmentMaster = catchAsync(async (req, res) => {
 
   const searchQuery = type
     ? {
-      $or: [{ dept_name: { $regex: type, $options: "i" } }],
-    }
+        $or: [{ dept_name: { $regex: type, $options: "i" } }],
+      }
     : {};
 
   const list = await departMentModel.aggregate([
