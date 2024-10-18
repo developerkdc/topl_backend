@@ -158,7 +158,6 @@ export const revert_issue_for_flitching = catchAsync(async function (
       });
       if (issue_for_flitching_crosscut_done_found?.length <= 0) {
         await crosscutting_done_model.updateMany({
-          _id: { $ne: issue_for_flitching?.crosscut_done_id },
           issue_for_crosscutting_id: issue_for_flitching?.issue_for_crosscutting_id
         }, {
           $set: {
