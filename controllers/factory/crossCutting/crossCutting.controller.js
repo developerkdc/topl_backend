@@ -179,7 +179,7 @@ export const addCrossCutDone = catchAsync(async (req, res) => {
     if (result && result.length < 0) {
       return res.json(new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Err Inserting Crosscutiing Done Items..."))
     };
-    const { id, available_sqm, available_length, amount, crosscutting_completed, sqm_factor } = available_data;
+    const { id, available_sqm, available_length, amount, crosscutting_completed, sqm_factor,expense_amount } = available_data;
 
     await issues_for_crosscutting_model.findByIdAndUpdate(
       { _id: id },
@@ -189,6 +189,7 @@ export const addCrossCutDone = catchAsync(async (req, res) => {
           'available_quantity.physical_length': available_length,
           'available_quantity.amount': amount,
           'available_quantity.sqm_factor': sqm_factor,
+          'available_quantity.expense_amount': expense_amount,
           'crosscutting_completed': crosscutting_completed,
         }
       },
@@ -518,7 +519,7 @@ export const edit_cross_cutting_inventory = catchAsync(
         [...newData],
         { session }
       );
-      const { available_sqm, available_length, amount, crosscutting_completed, sqm_factor } = available_data;
+      const { available_sqm, available_length, amount, crosscutting_completed, sqm_factor,expense_amount } = available_data;
 
       await issues_for_crosscutting_model.findByIdAndUpdate(
         { _id: id },
@@ -528,6 +529,7 @@ export const edit_cross_cutting_inventory = catchAsync(
             'available_quantity.physical_length': available_length,
             'available_quantity.amount': amount,
             'available_quantity.sqm_factor': sqm_factor,
+            'available_quantity.expense_amount': expense_amount,
             'crosscutting_completed': crosscutting_completed,
           }
         },
