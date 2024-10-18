@@ -168,9 +168,7 @@ export const DropdownItemNameMaster = catchAsync(async (req, res) => {
   const { type } = req.query;
 
   const searchQuery = type
-    ? {
-        $or: [{ "categoryDetails.category": { $regex: type, $options: "i" } }],
-      }
+    ? { "categoryDetails.category": type }
     : {};
 
   const list = await ItemNameModel.aggregate([
