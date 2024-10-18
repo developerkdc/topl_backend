@@ -600,9 +600,31 @@ export const add_issue_for_flitching = catchAsync(async (req, res, next) => {
 
   const issue_for_flitching = log_issue_for_flitching_data.map((ele) => {
     const { _id, ...data } = ele
-    data.log_inventory_item_id = _id;
-    data.created_by = created_by;
-    return data;
+    // data.log_inventory_item_id = _id;
+    // data.created_by = created_by;
+    // return data;
+    return {
+      log_inventory_item_id: _id,
+      item_sr_no: data?.item_sr_no,
+      supplier_item_name: data?.supplier_item_name,
+      supplier_log_no: data?.supplier_log_no,
+      item_id: data?.item_id,
+      item_name: data?.item_name,
+      item_sub_category_id: data?.item_sub_category_id,
+      item_sub_category_name: data?.item_sub_category_name,
+      log_no: data?.log_no,
+      log_formula: data?.log_formula,
+      length: data?.physical_length,
+      diameter: data?.physical_diameter,
+      cmt: data?.physical_cmt,
+      rate: data?.rate_in_inr,
+      amount: data?.amount,
+      amount_factor: data?.amount_factor,
+      expense_amount: data?.expense_amount,
+      remark: data?.remark,
+      invoice_id: data?.invoice_id,
+      created_by: created_by,
+    }
   });
 
   const issue_for_flitching_data =

@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { issues_for_status } from "../../../Utils/constants/constants.js";
 
 const crosscutting_done_schema = new mongoose.Schema(
   {
@@ -61,6 +62,14 @@ const crosscutting_done_schema = new mongoose.Schema(
     sqm_factor: {
       type: Number,
       required: [true, "factor is required"]
+    },
+    issue_status: {
+      type: String,
+      enum: {
+        values: [issues_for_status.crosscut_done, issues_for_status.flitching],
+        message: `Invalid status {{VALUE}} Issue Status must either be one of ${issues_for_status.crosscut_done, issues_for_status.flitching}`
+      },
+      default: issues_for_status.crosscut_done
     },
     wastage_info: {
       wastage_sqm: {

@@ -1,6 +1,7 @@
 import express from "express";
 import {
   add_cross_cutting_inventory,
+  add_crosscut_issue_for_flitching,
   addCrossCutDone,
   crossCuttingDoneExcel,
   edit_cross_cutting_inventory,
@@ -57,6 +58,7 @@ router.get("/list-crosscuts-by-issued-crosscut-id/:id", AuthMiddleware, RolesPer
 
 router.get("/log-no-dropdown", log_no_dropdown);
 router.post("/revert-crosscutting-done-items/:id", AuthMiddleware, revert_crosscutting_done)
+router.post("/add-crosscut-issue-for-flitching/:crosscut_id", AuthMiddleware, add_crosscut_issue_for_flitching)
 // router.get("/machine-name-dropdown", machine_name_dropdown)
 router.post("/download-crosscutting-done-excel", AuthMiddleware, RolesPermissions("crosscut_factory", "view"), crossCuttingDoneExcel)
 
