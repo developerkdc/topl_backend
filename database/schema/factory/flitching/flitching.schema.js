@@ -15,7 +15,7 @@ const flitchingSchema = new mongoose.Schema(
     },
     crosscut_done_id: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "issues_for_crosscutting",
+      ref: "crosscutting_done",
       default: null,
     },
     machine_id: {
@@ -121,11 +121,6 @@ const flitchingSchema = new mongoose.Schema(
     required_workers: {
       type: Number,
       required: [true, "required workers is required"]
-    },
-    flitching_completed: {
-      type: Boolean,
-      required: [true, "flitching completed status is required "],
-      default: false
     },
     expense_amount: {
       type: Number,

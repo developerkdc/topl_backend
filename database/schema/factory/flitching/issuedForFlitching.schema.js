@@ -8,6 +8,11 @@ const issues_for_flitching_details_schema = new mongoose.Schema({
     ref: "log_inventory_items_details",
     required: [true, "Log Inventory Items Id is required"]
   },
+  crosscut_done_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "crosscutting_done",
+    default: null,
+  },
   item_sr_no: {
     type: Number,
     required: [true, "Items Sr.No is required"],
@@ -52,31 +57,31 @@ const issues_for_flitching_details_schema = new mongoose.Schema({
     },
     default: issues_for_status.flitching
   },
-  invoice_length: {
-    type: Number,
-    required: [true, "Invoice length is required"],
-  },
-  invoice_diameter: {
-    type: Number,
-    required: [true, "Invoice diameter is required"],
-  },
-  invoice_cmt: {
-    type: Number,
-    required: [true, "Invoice CMT is required"],
-  },
-  indian_cmt: {
-    type: Number,
-    required: [true, "Indian CMT is required"],
-  },
-  physical_length: {
+  // invoice_length: {
+  //   type: Number,
+  //   required: [true, "Invoice length is required"],
+  // },
+  // invoice_diameter: {
+  //   type: Number,
+  //   required: [true, "Invoice diameter is required"],
+  // },
+  // invoice_cmt: {
+  //   type: Number,
+  //   required: [true, "Invoice CMT is required"],
+  // },
+  // indian_cmt: {
+  //   type: Number,
+  //   required: [true, "Indian CMT is required"],
+  // },
+  length: {
     type: Number,
     required: [true, "Physical length is required"],
   },
-  physical_diameter: {
+  diameter: {
     type: Number,
     required: [true, "Physical diameter is required"],
   },
-  physical_cmt: {
+  cmt: {
     type: Number,
     required: [true, "Physical CMT is required"],
   },
@@ -85,26 +90,26 @@ const issues_for_flitching_details_schema = new mongoose.Schema({
     default: false
   },
   available_quantity: {
-    physical_length: {
+    length: {
       type: Number,
       default: function () {
-        return this.physical_length
+        return this.length
       },
-      required: [true, "Physical length is required"],
+      required: [true, " length is required"],
     },
-    physical_diameter: {
+    diameter: {
       type: Number,
       default: function () {
-        return this.physical_diameter
+        return this.diameter
       },
-      required: [true, "Physical diameter is required"],
+      required: [true, " diameter is required"],
     },
-    physical_cmt: {
+    cmt: {
       type: Number,
       default: function () {
-        return this.physical_cmt
+        return this.cmt
       },
-      required: [true, "Physical CMT is required"],
+      required: [true, " CMT is required"],
     },
     amount: {
       type: Number,
@@ -112,6 +117,10 @@ const issues_for_flitching_details_schema = new mongoose.Schema({
         return this.amount
       },
       required: [true, "Amount is required"],
+    },
+    sqm_factor: {
+      type: Number,
+      default: 1,
     },
     expense_amount: {
       type: Number,
@@ -121,15 +130,15 @@ const issues_for_flitching_details_schema = new mongoose.Schema({
       required: [true, "Expense Amount is required"],
     },
   },
-  exchange_rate: {
-    type: Number,
-    default: null,
-  },
-  rate_in_currency: {
-    type: Number,
-    default: null,
-  },
-  rate_in_inr: {
+  // exchange_rate: {
+  //   type: Number,
+  //   default: null,
+  // },
+  // rate_in_currency: {
+  //   type: Number,
+  //   default: null,
+  // },
+  rate: {
     type: Number,
     required: [true, "Rate in currency is required"],
   },
@@ -140,6 +149,10 @@ const issues_for_flitching_details_schema = new mongoose.Schema({
   amount_factor: {
     type: Number,
     default: 0,
+  },
+  sqm_factor: {
+    type: Number,
+    default: 1,
   },
   expense_amount: {
     type: Number,
