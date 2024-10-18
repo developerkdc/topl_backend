@@ -16,7 +16,7 @@ export const addDepartment = catchAsync(async (req, res) => {
     dept_name: dept_name,
   });
   if (checkIfAlreadyExists.length > 0) {
-    return res.json(new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Category already exists"));
+    return res.json(new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Department name already exists"));
   }
 
   const maxNumber = await departMentModel.aggregate([
