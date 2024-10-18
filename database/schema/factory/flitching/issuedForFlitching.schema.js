@@ -178,7 +178,7 @@ const issues_for_flitching_details_schema = new mongoose.Schema({
 
 issues_for_flitching_details_schema.index({ item_sr_no: 1 });
 issues_for_flitching_details_schema.index(
-  { item_sr_no: 1, invoice_id: 1 },
+  { item_sr_no: 1, invoice_id: 1, crosscut_done_id: 1 },
   { unique: true }
 );
 

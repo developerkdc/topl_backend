@@ -20,6 +20,7 @@ import {
   flitching_view_modal,
 } from "../../../database/schema/factory/flitching/flitching.schema.js";
 import { createFlitchingDoneExcel } from "../../../config/downloadExcel/Logs/Factory/flitching/index.js";
+import { crosscutting_done_model } from "../../../database/schema/factory/crossCutting/crosscutting.schema.js";
 
 export const listing_issue_for_flitching = catchAsync(
   async (req, res, next) => {
@@ -119,32 +120,41 @@ export const revert_issue_for_flitching = catchAsync(async function (
     });
 
     if (!issue_for_flitching) return next(new ApiError("Item not found", 400));
-    if (
-      issue_for_flitching?.available_quantity?.physical_length !==
-      issue_for_flitching?.physical_length
-    )
-      return next(
-        new ApiError(
-          "Cannot revert because original length is not matched",
-          400
-        )
+
+    if (issue_for_flitching?.crosscut_done_id && mongoose.isValidObjectId(issue_for_flitching?.crosscut_done_id)) {
+      const update_crosscut_done_status = await crosscutting_done_model.updateOne(
+        { _id: issue_for_flitching?.crosscut_done_id },
+        {
+          $set: {
+            issue_status: issues_for_status.crosscut_done,
+          },
+        },
+        { session }
       );
 
-    const update_log_item_status = await log_inventory_items_model.updateOne(
-      { _id: issue_for_flitching?.log_inventory_item_id },
-      {
-        $set: {
-          issue_status: issues_for_status.log,
+      if (
+        !update_crosscut_done_status.acknowledged ||
+        update_crosscut_done_status.modifiedCount <= 0
+      )
+        return next(new ApiError("unable to update status", 400));
+    } else {
+      const update_log_item_status = await log_inventory_items_model.updateOne(
+        { _id: issue_for_flitching?.log_inventory_item_id },
+        {
+          $set: {
+            issue_status: issues_for_status.log,
+          },
         },
-      },
-      { session }
-    );
+        { session }
+      );
 
-    if (
-      !update_log_item_status.acknowledged ||
-      update_log_item_status.modifiedCount <= 0
-    )
-      return next(new ApiError("unable to update status", 400));
+      if (
+        !update_log_item_status.acknowledged ||
+        update_log_item_status.modifiedCount <= 0
+      )
+        return next(new ApiError("unable to update status", 400));
+    }
+
 
     const deleted_issues_for_flitching =
       await issues_for_flitching_model.deleteOne(
