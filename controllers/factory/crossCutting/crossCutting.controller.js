@@ -790,6 +790,7 @@ export const add_crosscut_issue_for_flitching = catchAsync(async (req, res, next
 
   const issue_for_flitching = {
     log_inventory_item_id: crosscut_done_details?.log_inventory_item_id,
+    issue_for_crosscutting_id: crosscut_done_details?.issue_for_crosscutting_id,
     crosscut_done_id: crosscut_done_details?._id,
     item_sr_no: log_details?.item_sr_no,
     supplier_item_name: log_details?.supplier_item_name,
@@ -814,6 +815,12 @@ export const add_crosscut_issue_for_flitching = catchAsync(async (req, res, next
 
   const issue_for_flitching_data =
     await issues_for_flitching_model.create(issue_for_flitching);
+
+  await crosscutting_done_model.updateMany({issue_for_crosscutting_id:crosscut_done_details?.issue_for_crosscutting_id},{
+    $set:{
+      isEditable:false
+    }
+  });
 
   return res.status(200).json(
     new ApiResponse(
