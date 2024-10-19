@@ -136,7 +136,35 @@ export const revert_issue_for_flitching = catchAsync(async function (
         !update_crosscut_done_status.acknowledged ||
         update_crosscut_done_status.modifiedCount <= 0
       )
-        return next(new ApiError("unable to update status", 400));
+        return next(new ApiError("unable to update crosscut status", 400));
+
+      const deleted_issues_for_flitching =
+        await issues_for_flitching_model.deleteOne(
+          {
+            _id: issue_for_flitching?._id,
+          },
+          { session }
+        );
+
+      if (
+        !deleted_issues_for_flitching?.acknowledged ||
+        deleted_issues_for_flitching?.deletedCount <= 0
+      )
+        return next(new ApiError("Unable to revert issue for flitching", 400));
+
+      const issue_for_flitching_crosscut_done_found = await issues_for_flitching_model.find({
+        _id: { $ne: issue_for_flitching?._id },
+        crosscut_done_id: issue_for_flitching?.crosscut_done_id
+      });
+      if (issue_for_flitching_crosscut_done_found?.length <= 0) {
+        await crosscutting_done_model.updateMany({
+          issue_for_crosscutting_id: issue_for_flitching?.issue_for_crosscutting_id
+        }, {
+          $set: {
+            isEditable: true
+          }
+        });
+      }
     } else {
       const update_log_item_status = await log_inventory_items_model.updateOne(
         { _id: issue_for_flitching?.log_inventory_item_id },
@@ -152,48 +180,48 @@ export const revert_issue_for_flitching = catchAsync(async function (
         !update_log_item_status.acknowledged ||
         update_log_item_status.modifiedCount <= 0
       )
-        return next(new ApiError("unable to update status", 400));
-    }
+        return next(new ApiError("unable to update log status", 400));
 
-
-    const deleted_issues_for_flitching =
-      await issues_for_flitching_model.deleteOne(
-        {
-          _id: issue_for_flitching?._id,
-        },
-        { session }
-      );
-
-    if (
-      !deleted_issues_for_flitching?.acknowledged ||
-      deleted_issues_for_flitching?.deletedCount <= 0
-    )
-      return next(new ApiError("Unable to revert issue for flitching", 400));
-
-    const issue_for_crosscutting_flitching_log_invoice_found =
-      await issues_for_flitching_model.find({
-        _id: { $ne: issue_for_flitching_id },
-        invoice_id: issue_for_flitching?.invoice_id,
-      });
-    const issue_for_crosscutting_log_invoice_found =
-      await issues_for_crosscutting_model.find({
-        invoice_id: issue_for_flitching?.invoice_id,
-      });
-
-    if (
-      issue_for_crosscutting_log_invoice_found?.length <= 0 &&
-      issue_for_crosscutting_flitching_log_invoice_found?.length <= 0
-    ) {
-      await log_inventory_invoice_model.updateOne(
-        { _id: issue_for_flitching?.invoice_id },
-        {
-          $set: {
-            isEditable: true,
+      const deleted_issues_for_flitching =
+        await issues_for_flitching_model.deleteOne(
+          {
+            _id: issue_for_flitching?._id,
           },
-        },
-        { session }
-      );
+          { session }
+        );
+
+      if (
+        !deleted_issues_for_flitching?.acknowledged ||
+        deleted_issues_for_flitching?.deletedCount <= 0
+      )
+        return next(new ApiError("Unable to revert issue for flitching", 400));
+
+      const issue_for_flitching_log_invoice_found =
+        await issues_for_flitching_model.find({
+          _id: { $ne: issue_for_flitching_id },
+          invoice_id: issue_for_flitching?.invoice_id,
+        });
+      const issue_for_crosscutting_log_invoice_found =
+        await issues_for_crosscutting_model.find({
+          invoice_id: issue_for_flitching?.invoice_id,
+        });
+
+      if (
+        issue_for_crosscutting_log_invoice_found?.length <= 0 &&
+        issue_for_flitching_log_invoice_found?.length <= 0
+      ) {
+        await log_inventory_invoice_model.updateOne(
+          { _id: issue_for_flitching?.invoice_id },
+          {
+            $set: {
+              isEditable: true,
+            },
+          },
+          { session }
+        );
+      }
     }
+
 
     await session.commitTransaction();
     session.endSession();

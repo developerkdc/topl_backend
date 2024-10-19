@@ -111,6 +111,10 @@ const crosscutting_done_schema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    isEditable:{
+      type:Boolean,
+      default:true
+    },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,
       // required: [true, "created by is required"],

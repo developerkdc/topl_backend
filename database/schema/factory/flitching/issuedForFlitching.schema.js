@@ -8,6 +8,11 @@ const issues_for_flitching_details_schema = new mongoose.Schema({
     ref: "log_inventory_items_details",
     required: [true, "Log Inventory Items Id is required"]
   },
+  issue_for_crosscutting_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "issues_for_crosscutting",
+    default: null,
+  },
   crosscut_done_id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "crosscutting_done",
