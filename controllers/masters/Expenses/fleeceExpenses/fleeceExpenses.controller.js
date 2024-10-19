@@ -162,7 +162,7 @@ export const add_fleeceExpenses = catchAsync(async (req, res, next) => {
       },
       {
         $merge: {
-          into: "fleece_inventory_items_modal",
+          into: "fleece_inventory_items_details",
           whenMatched: "merge",
         },
       },
