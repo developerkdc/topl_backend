@@ -309,7 +309,7 @@ export const mdfLogsCsv = catchAsync(async (req, res) => {
   const allData = await mdf_inventory_items_view_modal.find(match_query);
 
   const excelLink = await createMdfLogsExcel(allData);
-  console.log("link => ", allData);
+  console.log("link => ", excelLink);
 
   return res.json(
     new ApiResponse(StatusCodes.OK, "Csv downloaded successfully...", excelLink)
@@ -353,25 +353,25 @@ export const edit_mdf_item_invoice_inventory = catchAsync(
       )
         return next(new ApiError("Failed to update invoice items", 400));
 
-    // get latest pallet number for newly added item
-    const get_pallet_no = await mdf_inventory_items_details.aggregate([
-      {
-        $group: {
-          _id: null,
-          latest_pallet_no: { $max: "$pallet_number" },
+      // get latest pallet number for newly added item
+      const get_pallet_no = await mdf_inventory_items_details.aggregate([
+        {
+          $group: {
+            _id: null,
+            latest_pallet_no: { $max: "$pallet_number" },
+          },
         },
-      },
-    ]);
-    let latest_pallet_no = get_pallet_no?.length > 0 && get_pallet_no?.[0]?.latest_pallet_no ? get_pallet_no?.[0]?.latest_pallet_no + 1 : 1;
+      ]);
+      let latest_pallet_no = get_pallet_no?.length > 0 && get_pallet_no?.[0]?.latest_pallet_no ? get_pallet_no?.[0]?.latest_pallet_no + 1 : 1;
 
-    for (let i = 0; i < items_details.length; i++) {
-      if (!items_details[i]?.pallet_number && !items_details[i]?.pallet_number > 0) {
-        items_details[i].pallet_number = latest_pallet_no;
-        latest_pallet_no += 1;
+      for (let i = 0; i < items_details.length; i++) {
+        if (!items_details[i]?.pallet_number && !items_details[i]?.pallet_number > 0) {
+          items_details[i].pallet_number = latest_pallet_no;
+          latest_pallet_no += 1;
+        }
       }
-    }
 
-    const update_item_details = await mdf_inventory_items_details.insertMany([...items_details], { session });
+      const update_item_details = await mdf_inventory_items_details.insertMany([...items_details], { session });
 
       await session.commitTransaction();
       session.endSession();

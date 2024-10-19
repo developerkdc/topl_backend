@@ -59,6 +59,22 @@ export const createFleeceLogsExcel = async (newData) => {
         key: "invoice_value_with_gst",
         width: 20,
       },
+      { header: "Contact Person Name", key: "contact_person_name", width: 25 },
+      {
+        header: "Contact Person Email",
+        key: "contact_person_email",
+        width: 25,
+      },
+      {
+        header: "Contact Person Mobile Number",
+        key: "contact_person_mobile_no",
+        width: 25,
+      },
+      {
+        header: "Contact Person Designation",
+        key: "contact_person_designation",
+        width: 25,
+      },
     ];
 
     worksheet.columns = columns;
@@ -122,6 +138,10 @@ export const createFleeceLogsExcel = async (newData) => {
           web_url:
             data.fleece_invoice_details?.supplier_details?.branch_detail
               ?.web_url,
+          contact_person_name: data.fleece_invoice_details.supplier_details.branch_detail.contact_person[0].name,
+          contact_person_email: data.fleece_invoice_details.supplier_details.branch_detail.contact_person[0].email,
+          contact_person_designation: data.fleece_invoice_details.supplier_details.branch_detail.contact_person[0].designation,
+          contact_person_mobile_no: data.fleece_invoice_details.supplier_details.branch_detail.contact_person[0].mobile_number,
           invoice_no: data.fleece_invoice_details?.invoice_Details?.invoice_no,
           total_item_amount:
             data.fleece_invoice_details?.invoice_Details?.total_item_amount,

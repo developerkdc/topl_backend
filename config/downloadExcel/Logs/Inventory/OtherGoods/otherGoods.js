@@ -37,6 +37,12 @@ export const GenerateOtherGoodsLogs = async (newData) => {
         key: "contact_person_email",
         width: 25,
       },
+      { header: "Contact Person Designation", key: "contact_person_designation", width: 25 },
+      {
+        header: "Contact Person Mobile Number",
+        key: "contact_person_mobile_no",
+        width: 25,
+      },
       { header: "Invoice No", key: "invoice_no", width: 20 },
       { header: "Invoice Date", key: "invoice_date", width: 20 },
       { header: "Remark", key: "remark", width: 20 },
@@ -46,43 +52,45 @@ export const GenerateOtherGoodsLogs = async (newData) => {
     worksheet.columns = OtherGoodsColumns;
 
     newData.forEach((data) => {
-      data.othergoods_invoice_details.supplier_details.branch_detail.contact_person.forEach(
-        (person) => {
-          worksheet.addRow({
-            inward_sr_no: data.othergoods_invoice_details.inward_sr_no,
-            inward_date: data.othergoods_invoice_details.inward_date,
-            item_sr_no: data.item_sr_no,
-            item_name: data.item_name,
-            item_description: data.item_description,
-            subcategory_name: data.item_sub_category_name,
-            department_name: data.department_name,
-            machine_name: data.machine_name,
-            brand_name: data.brand_name,
-            total_quantity: data.total_quantity,
-            rate_in_currency: data.rate_in_currency || "-",
-            exchange_rate: data.exchange_rate || "-",
-            rate_in_inr: data.rate_in_inr || "-",
-            amount: data.amount,
-            supplier_name:
-              data.othergoods_invoice_details.supplier_details.company_details
-                .supplier_name,
-            supplier_type:
-              data.othergoods_invoice_details.supplier_details.company_details
-                .supplier_type,
-            contact_person_name: person.name,
-            contact_person_email: person.email,
-            invoice_no:
-              data.othergoods_invoice_details.invoice_Details.invoice_no,
-            invoice_date: new Date(
-              data.othergoods_invoice_details.invoice_Details.invoice_date
-            ).toLocaleDateString(),
-            remark: data.remark,
-            created_by:
-              data.created_user.first_name + " " + data.created_user.last_name,
-          });
-        }
-      );
-    });
+      // data.othergoods_invoice_details.supplier_details.branch_detail.contact_person.forEach(
+      //   (person) => {
+      worksheet.addRow({
+        inward_sr_no: data.othergoods_invoice_details.inward_sr_no,
+        inward_date: data.othergoods_invoice_details.inward_date,
+        item_sr_no: data.item_sr_no,
+        item_name: data.item_name,
+        item_description: data.item_description,
+        subcategory_name: data.item_sub_category_name,
+        department_name: data.department_name,
+        machine_name: data.machine_name,
+        brand_name: data.brand_name,
+        total_quantity: data.total_quantity,
+        rate_in_currency: data.rate_in_currency || "-",
+        exchange_rate: data.exchange_rate || "-",
+        rate_in_inr: data.rate_in_inr || "-",
+        amount: data.amount,
+        supplier_name:
+          data.othergoods_invoice_details.supplier_details.company_details
+            .supplier_name,
+        supplier_type:
+          data.othergoods_invoice_details.supplier_details.company_details
+            .supplier_type,
+        contact_person_name: data.othergoods_invoice_details.supplier_details.branch_details.contact_person[0].name,
+        contact_person_email: data.othergoods_invoice_details.supplier_details.branch_details.contact_person[0].email,
+        contact_person_designation: data.othergoods_invoice_details.supplier_details.branch_details.contact_person[0].designation,
+        contact_person_mobile_no: data.othergoods_invoice_details.supplier_details.branch_details.contact_person[0].mobile_number,
+        invoice_no:
+          data.othergoods_invoice_details.invoice_Details.invoice_no,
+        invoice_date: new Date(
+          data.othergoods_invoice_details.invoice_Details.invoice_date
+        ).toLocaleDateString(),
+        remark: data.remark,
+        created_by:
+          data.created_user.first_name + " " + data.created_user.last_name,
+      });
+    }
+    );
+    // });
 
     const filepath =
       "public/upload/reports/inventory/othergoods/othergoods-inventory-report.xlsx";
