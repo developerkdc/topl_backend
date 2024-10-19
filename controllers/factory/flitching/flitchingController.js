@@ -156,6 +156,8 @@ export const revert_issue_for_flitching = catchAsync(async function (
         _id: { $ne: issue_for_flitching?._id },
         crosscut_done_id: issue_for_flitching?.crosscut_done_id
       });
+
+      console.log(issue_for_flitching_crosscut_done_found, issue_for_flitching_crosscut_done_found?.length <= 0)
       if (issue_for_flitching_crosscut_done_found?.length <= 0) {
         await crosscutting_done_model.updateMany({
           issue_for_crosscutting_id: issue_for_flitching?.issue_for_crosscutting_id
@@ -163,8 +165,9 @@ export const revert_issue_for_flitching = catchAsync(async function (
           $set: {
             isEditable: true
           }
-        });
+        }, { session });
       }
+
     } else {
       const update_log_item_status = await log_inventory_items_model.updateOne(
         { _id: issue_for_flitching?.log_inventory_item_id },
@@ -222,9 +225,9 @@ export const revert_issue_for_flitching = catchAsync(async function (
       }
     }
 
-
     await session.commitTransaction();
     session.endSession();
+
     return res
       .status(200)
       .json(new ApiResponse(StatusCodes.OK, "Reverted successfully"));
@@ -233,6 +236,8 @@ export const revert_issue_for_flitching = catchAsync(async function (
     await session.abortTransaction();
     session.endSession();
     return next(error);
+  } finally {
+    session.endSession();
   }
 });
 

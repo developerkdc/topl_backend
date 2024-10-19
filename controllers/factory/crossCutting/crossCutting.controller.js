@@ -14,6 +14,7 @@ import { dynamic_filter } from "../../../utils/dymanicFilter.js";
 import { DynamicSearch } from "../../../utils/dynamicSearch/dynamic.js";
 import { issues_for_flitching_model } from "../../../database/schema/factory/flitching/issuedForFlitching.schema.js";
 import { createCrosscuttingDoneExcel } from "../../../config/downloadExcel/Logs/Factory/crossCutting/index.js";
+import { rejected_crosscutting_model } from "../../../database/schema/factory/crossCutting/rejectedCrosscutting.schema.js";
 
 //Issue for crosscutting
 export const listing_issue_for_crosscutting = catchAsync(
@@ -179,7 +180,7 @@ export const addCrossCutDone = catchAsync(async (req, res) => {
     if (result && result.length < 0) {
       return res.json(new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Err Inserting Crosscutiing Done Items..."))
     };
-    const { id, available_sqm, available_length, amount, crosscutting_completed, sqm_factor,expense_amount } = available_data;
+    const { id, available_sqm, available_length, amount, crosscutting_completed, sqm_factor, expense_amount } = available_data;
 
     await issues_for_crosscutting_model.findByIdAndUpdate(
       { _id: id },
@@ -519,7 +520,7 @@ export const edit_cross_cutting_inventory = catchAsync(
         [...newData],
         { session }
       );
-      const { available_sqm, available_length, amount, crosscutting_completed, sqm_factor,expense_amount } = available_data;
+      const { available_sqm, available_length, amount, crosscutting_completed, sqm_factor, expense_amount } = available_data;
 
       await issues_for_crosscutting_model.findByIdAndUpdate(
         { _id: id },
@@ -605,74 +606,94 @@ export const revert_crosscutting_done = catchAsync(async function (req, res, nex
     const issues_for_crosscutting_data = await issues_for_crosscutting_model.findOne({ _id: id }).lean();
     if (!issues_for_crosscutting_data) return next(new ApiError("Crosscutting Done Item not found", 400));
 
+    const rejected_data = await rejected_crosscutting_model.findOne({ issue_for_crosscutting_id: id });
+
+
+    let updated_physical_length = issues_for_crosscutting_data?.physical_length;
+    let updated_physical_cmt = issues_for_crosscutting_data?.physical_cmt;
+    let updated_amount = issues_for_crosscutting_data?.amount;
+    let updated_expense_amount = issues_for_crosscutting_data?.expense_amount;
+    let updated_sqm_factor = issues_for_crosscutting_data?.sqm_factor
+
+    if (rejected_data) {
+      updated_physical_length -= rejected_data?.rejected_quantity?.physical_length;
+      updated_physical_cmt -= rejected_data?.rejected_quantity?.physical_cmt;
+      updated_amount -= rejected_data?.rejected_quantity?.amount;
+      updated_expense_amount -= rejected_data?.rejected_quantity?.expense_amount
+      updated_sqm_factor -= rejected_data?.rejected_quantity?.sqm_factor
+    }
+
+
+
 
     if (issues_for_crosscutting_data) {
       let updateData = {};
 
-      if (isChecked) {
+      // if (isChecked) {
 
-        const {
-          physical_length,
-          physical_cmt,
-          amount,
-          expense_amount,
-        } = issues_for_crosscutting_data;
+      //   const {
+      //     physical_length,
+      //     physical_cmt,
+      //     amount,
+      //     expense_amount,
+      //   } = issues_for_crosscutting_data;
 
-        updateData = {
-          $set: {
-            crosscutting_completed: false,
-            "available_quantity.sqm_factor": 1,
-            "available_quantity.physical_length": physical_length,
-            "available_quantity.physical_cmt": physical_cmt,
-            "available_quantity.amount": amount,
-            "available_quantity.expense_amount": expense_amount,
-          },
-        };
-      } else {
-        const aggregatedTotal = await crosscutting_done_model.aggregate([
-          {
-            $match: {
-              issue_for_crosscutting_id: new mongoose.Types.ObjectId(id)
-            }
-          },
-          {
-            $group: {
-              _id: null,
-              total_length: { $sum: "$length" },
-              sqm_factor: { $sum: "$sqm_factor" },
-              total_crosscut_cmt: { $sum: "$crosscut_cmt" },
-              total_cost_amount: { $sum: "$cost_amount" },
-              total_expense_amount: { $sum: "$expense_amount" }
-            }
-          }
-        ]);
+      //   updateData = {
+      //     $set: {
+      //       crosscutting_completed: false,
+      //       "available_quantity.sqm_factor": 1,
+      //       "available_quantity.physical_length": physical_length,
+      //       "available_quantity.physical_cmt": physical_cmt,
+      //       "available_quantity.amount": amount,
+      //       "available_quantity.expense_amount": expense_amount,
+      //     },
+      //   };
+      // } else {
+      //   const aggregatedTotal = await crosscutting_done_model.aggregate([
+      //     {
+      //       $match: {
+      //         issue_for_crosscutting_id: new mongoose.Types.ObjectId(id)
+      //       }
+      //     },
+      //     {
+      //       $group: {
+      //         _id: null,
+      //         total_length: { $sum: { $add: ["$length", "$wastage_info.wastage_length"] } },
+      //         sqm_factor: { $sum: "$sqm_factor" },
+      //         // total_crosscut_cmt: { $sum: "$crosscut_cmt" },
+      //         total_crosscut_cmt: { $sum: { $add: ["$crosscut_cmt", "$wastage_info.wastage_sqm"] } },
+      //         total_cost_amount: { $sum: "$cost_amount" },
+      //         total_expense_amount: { $sum: "$expense_amount" }
+      //       }
+      //     }
+      //   ]);
 
-        // Check if any aggregation result was returned
-        const total = aggregatedTotal?.length > 0 ? aggregatedTotal[0] : {
-          total_length: 0,
-          sqm_factor: 0,
-          total_crosscut_cmt: 0,
-          total_cost_amount: 0,
-          total_expense_amount: 0
-        };
+      //   // Check if any aggregation result was returned
+      //   const total = aggregatedTotal?.length > 0 ? aggregatedTotal[0] : {
+      //     total_length: 0,
+      //     sqm_factor: 0,
+      //     total_crosscut_cmt: 0,
+      //     total_cost_amount: 0,
+      //     total_expense_amount: 0
+      //   };
 
-        updateData = {
-          $set: {
-            crosscutting_completed: false,
-          },
-          $inc: {
-            "available_quantity.physical_length": total.total_length,
-            "available_quantity.sqm_factor": total.sqm_factor,
-            "available_quantity.physical_cmt": total.total_crosscut_cmt,
-            "available_quantity.amount": total.total_cost_amount,
-            "available_quantity.expense_amount": total.total_expense_amount,
-          },
-        };
-      }
+      //   updateData = {
+      //     $set: {
+      //       crosscutting_completed: false,
+      //     },
+      //     $inc: {
+      //       "available_quantity.physical_length": total.total_length,
+      //       "available_quantity.sqm_factor": total.sqm_factor,
+      //       "available_quantity.physical_cmt": total.total_crosscut_cmt,
+      //       "available_quantity.amount": total.total_cost_amount,
+      //       "available_quantity.expense_amount": total.total_expense_amount,
+      //     },
+      //   };
+      // }
 
       const update_issues_for_crosscutting_item_quantity = await issues_for_crosscutting_model.updateOne(
         { _id: issues_for_crosscutting_data?._id },
-        updateData,
+        { $set: { 'available_quantity.physical_length': updated_physical_length, "available_quantity.physical_cmt": updated_physical_cmt, "available_quantity.amount": updated_amount, "available_quantity.expense_amount": updated_expense_amount, crosscutting_completed: false, "available_quantity.sqm_factor": updated_sqm_factor } },
         { session }
       );
 
@@ -744,6 +765,7 @@ export const crossCuttingDoneExcel = catchAsync(async (req, res) => {
   const match_query = {
     ...filterData,
     ...search_query,
+    issue_status: issues_for_status?.crosscut_done
   };
 
   const allData = await crosscutting_done_model.find(match_query);

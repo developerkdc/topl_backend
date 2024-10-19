@@ -138,7 +138,7 @@ export const add_veneerExpenses = catchAsync(async (req, res, next) => {
     await session.commitTransaction();
     session.endSession();
     res.status(200).json(new ApiResponse(StatusCodes.OK, "Expenses Added successfully"));
-
+  console.log(invoice_id,invoiceAmount,totalExpenseAmount)
     const updateVeneerItemsExpenses = await veneer_inventory_items_model.aggregate([
       {
         $match: {
@@ -162,7 +162,7 @@ export const add_veneerExpenses = catchAsync(async (req, res, next) => {
       },
       {
         $merge: {
-          into: "veneer_inventory_items_model",
+          into: "veneer_inventory_items_details",
           whenMatched: "merge",
         },
       },

@@ -13,6 +13,7 @@ import {
 } from "../../../controllers/inventory/venner/venner.controller.js";
 import AuthMiddleware from "../../../middlewares/verifyToken.js";
 import RolesPermissions from "../../../middlewares/permission.js";
+import { downloadVeneerExcelFormat } from "../../../controllers/inventory/venner/Excels/veneerExcels.controller.js";
 
 const veneer_router = Router();
 
@@ -49,5 +50,8 @@ veneer_router.post("/download-excel-veneer", AuthMiddleware, RolesPermissions("v
 //dropdown
 veneer_router.get("/item-srno-dropdown", AuthMiddleware, item_sr_no_dropdown);
 veneer_router.get("/inward-srno-dropdown", AuthMiddleware, inward_sr_no_dropdown);
+
+//Excels
+veneer_router.get("/donwload-format", AuthMiddleware, downloadVeneerExcelFormat);
 
 export default veneer_router;
