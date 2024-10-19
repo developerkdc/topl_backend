@@ -335,6 +335,7 @@ export const edit_flitching_inventory = catchAsync(async (req, res, next) => {
     return next(error);
   }
 });
+
 export const listing_flitching_done_inventory = catchAsync(
   async (req, res, next) => {
     const {
@@ -522,9 +523,6 @@ export const revert_flitching_done_items = catchAsync(
     }
   }
 );
-
-
-
 
 export const flitchingDoneExcel = catchAsync(async (req, res) => {
   const { search = "" } = req.query;
