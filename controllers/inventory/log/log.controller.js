@@ -627,8 +627,15 @@ export const add_issue_for_flitching = catchAsync(async (req, res, next) => {
     }
   });
 
-  const issue_for_flitching_data =
-    await issues_for_flitching_model.insertMany(issue_for_flitching);
+  const issue_for_flitching_data = await issues_for_flitching_model.insertMany(issue_for_flitching);
+
+  const invoice_ids = log_issue_for_flitching_data.map((e) => e.invoice_id)
+
+  const update_isEditable_invoice = await log_inventory_invoice_model.updateMany({ _id: { $in: invoice_ids } }, {
+    $set: {
+      isEditable: false,
+    }
+  })
 
   return res.status(200).json(
     new ApiResponse(
