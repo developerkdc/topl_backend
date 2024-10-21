@@ -10,9 +10,15 @@ import itemSubCategoryModel from "../../../../database/schema/masters/item.subca
 import seriesModel from "../../../../database/schema/masters/series.schema.js";
 import CutModel from "../../../../database/schema/masters/cut.schema.js";
 import GradeModel from "../../../../database/schema/masters/grade.schema.js";
+import { Worker } from 'worker_threads';
+import { fileURLToPath } from "url";
+import path, { dirname } from "path";
+import { emitProgressUpdate } from "../../../../index.js";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 export const downloadVeneerExcelFormat = catchAsync(async (req, res, next) => {
-  const destinationPath = `public/upload/downloadFormat/veneer.xlsx`;
+  const destinationPath = `downloadFormat/veneer.xlsx`;
 
   const link = `${process.env.APP_URL}${destinationPath}`;
   return res.json(
@@ -24,7 +30,7 @@ export const importVeneerData = catchAsync(async (Req, res, next) => {
 
 })
 
-export const BulkUploadVeneerData = catchAsync(
+export const BulkUploaddVeneerData = catchAsync(
   async (req, res, next) => {
     const file = req.file;
     if (!file || !file.path) {
@@ -190,3 +196,82 @@ export const BulkUploadVeneerData = catchAsync(
     }
   }
 );
+
+export const BulkUploadVeneerData = (req, res, next) => {
+  const file = req.file;
+  const socketId = req.body.socketId;
+
+  if (!file || !file.path) {
+    return res.status(400).json({
+      result: [],
+      status: false,
+      message: 'No file uploaded or file path not found.',
+    });
+  }
+  const fileName = file?.originalname;
+  const worker = new Worker(path.resolve(__dirname, 'bulkUploadWorker.js'));
+
+  worker.postMessage({
+    file,
+    otherDetails: JSON.parse(req.body.finalData),
+    created_by: req.userDetails.id,
+    reqBody: req.body,
+  });
+
+  worker.on('message', (message) => {
+    if (message.status === 'progress') {
+      emitProgressUpdate({
+        fileName:fileName,
+        socketId:socketId,
+        progress: message?.progress,
+        status: message?.status,
+      });
+    } else if (message.status === 'success') {
+      emitProgressUpdate({
+        fileName:fileName,
+        socketId:socketId,
+        status: message.status || null,
+        success: {
+          status: true,
+          message: message?.message || null,
+        },
+        validationErrors: message?.validationErrors
+      })
+    } else if (message.status === 'error') {
+      console.log(message.message, "error")
+      emitProgressUpdate({
+        fileName:fileName,
+        socketId:socketId,
+        status: message.status,
+        error: {
+          status: true,
+          message: message.message,
+        },
+      })
+    }
+  });
+
+  worker.on('error', (err) => {
+    console.log(err,"worker error")
+    emitProgressUpdate({
+      fileName:fileName,
+      socketId:socketId,
+      status: "error",
+      error: {
+        status: true,
+        message: err.message,
+      },
+    })
+  });
+
+  worker.on('exit', (code) => {
+    if (code !== 0) {
+      console.error(`Worker stopped with exit code ${code}`);
+    }
+  });
+
+  return res.status(202).json({
+    status: true,
+    message: 'Bulk upload processing has started.',
+  });
+};
