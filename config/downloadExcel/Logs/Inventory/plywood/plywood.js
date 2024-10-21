@@ -57,6 +57,21 @@ export const createPlywoodLogsExcel = async (newData) => {
         header: "Invoice Value with GST",
         key: "invoice_value_with_gst",
         width: 20,
+      }, { header: "Contact Person Name", key: "contact_person_name", width: 25 },
+      {
+        header: "Contact Person Email",
+        key: "contact_person_email",
+        width: 25,
+      },
+      {
+        header: "Contact Person Mobile Number",
+        key: "contact_person_mobile_no",
+        width: 25,
+      },
+      {
+        header: "Contact Person Designation",
+        key: "contact_person_designation",
+        width: 25,
       },
       { header: "Invoice Remark", key: "invoice_remark", width: 20 },
     ];
@@ -105,6 +120,10 @@ export const createPlywoodLogsExcel = async (newData) => {
           pincode: data.supplier_details.branch_detail.pincode,
           gst_number: data.supplier_details.branch_detail.gst_number,
           web_url: data.supplier_details.branch_detail.web_url,
+          contact_person_name: data.supplier_details.branch_detail.contact_person[0].name,
+          contact_person_email: data.supplier_details.branch_detail.contact_person[0].email,
+          contact_person_designation: data.supplier_details.branch_detail.contact_person[0].designation,
+          contact_person_mobile_no: data.supplier_details.branch_detail.contact_person[0].mobile_number,
           invoice_date: data.invoice_Details.invoice_date,
           invoice_no: data.invoice_Details.invoice_no,
           total_item_amount: data.invoice_Details.total_item_amount,

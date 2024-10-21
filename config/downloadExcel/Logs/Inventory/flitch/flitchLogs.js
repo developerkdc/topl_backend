@@ -149,6 +149,22 @@ export const createFlitchLogsExcel = async (newData) => {
         key: "invoice_remark",
         width: 20,
       },
+      { header: "Contact Person Name", key: "contact_person_name", width: 25 },
+      {
+        header: "Contact Person Email",
+        key: "contact_person_email",
+        width: 25,
+      },
+      {
+        header: "Contact Person Mobile Number",
+        key: "contact_person_mobile_no",
+        width: 25,
+      },
+      {
+        header: "Contact Person Designation",
+        key: "contact_person_designation",
+        width: 25,
+      },
     ];
 
     worksheet.columns = columns;
@@ -213,6 +229,10 @@ export const createFlitchLogsExcel = async (newData) => {
               .gst_number,
           web_url:
             data.flitch_invoice_details.supplier_details.branch_detail.web_url,
+          contact_person_name: data.flitch_invoice_details.supplier_details.branch_detail.contact_person[0].name,
+          contact_person_email: data.flitch_invoice_details.supplier_details.branch_detail.contact_person[0].email,
+          contact_person_designation: data.flitch_invoice_details.supplier_details.branch_detail.contact_person[0].designation,
+          contact_person_mobile_no: data.flitch_invoice_details.supplier_details.branch_detail.contact_person[0].mobile_number,
           invoice_date:
             data.flitch_invoice_details.invoice_Details.invoice_date,
           invoice_no: data.flitch_invoice_details.invoice_Details.invoice_no,

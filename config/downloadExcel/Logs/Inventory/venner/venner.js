@@ -103,29 +103,29 @@ export const createVeneerLogsExcel = async (newData) => {
 
     newData?.forEach((data) => {
       try {
-        let contactPersonData = [];
+        // let contactPersonData = [];
 
-        data?.supplier_details?.branch_detail?.contact_person?.forEach((cp) => {
-          contactPersonData.push({
-            contact_person_name: cp.name,
-            contact_person_email: cp.email,
-            contact_person_mobile_number: cp.mobile_number,
-            contact_person_designation: cp.designation,
-          });
-        });
+        // data?.supplier_details?.branch_detail?.contact_person?.forEach((cp) => {
+        //   contactPersonData.push({
+        //     contact_person_name: cp.name,
+        //     contact_person_email: cp.email,
+        //     contact_person_mobile_number: cp.mobile_number,
+        //     contact_person_designation: cp.designation,
+        //   });
+        // });
 
-        const contactPersonNames = contactPersonData
-          .map((cp) => cp.contact_person_name)
-          .join(", ");
-        const contactPersonEmails = contactPersonData
-          .map((cp) => cp.contact_person_email)
-          .join(", ");
-        const contactPersonMobileNumbers = contactPersonData
-          .map((cp) => cp.contact_person_mobile_number)
-          .join(", ");
-        const contactPersonDesignations = contactPersonData
-          .map((cp) => cp.contact_person_designation)
-          .join(", ");
+        // const contactPersonNames = contactPersonData
+        //   .map((cp) => cp.contact_person_name)
+        //   .join(", ");
+        // const contactPersonEmails = contactPersonData
+        //   .map((cp) => cp.contact_person_email)
+        //   .join(", ");
+        // const contactPersonMobileNumbers = contactPersonData
+        //   .map((cp) => cp.contact_person_mobile_number)
+        //   .join(", ");
+        // const contactPersonDesignations = contactPersonData
+        //   .map((cp) => cp.contact_person_designation)
+        //   .join(", ");
 
         const rowData = {
           inward_sr_no: data?.veneer_invoice_details?.inward_sr_no,
@@ -168,10 +168,10 @@ export const createVeneerLogsExcel = async (newData) => {
           branch_name:
             data?.veneer_invoice_details?.supplier_details?.branch_detail
               ?.branch_name,
-          contact_person_name: contactPersonNames, // Assuming these are pre-calculated
-          contact_person_email: contactPersonEmails,
-          contact_person_mobile_number: contactPersonMobileNumbers,
-          contact_person_designation: contactPersonDesignations,
+          // contact_person_name: contactPersonNames, // Assuming these are pre-calculated
+          // contact_person_email: contactPersonEmails,
+          // contact_person_mobile_number: contactPersonMobileNumbers,
+          // contact_person_designation: contactPersonDesignations,
           address:
             data?.veneer_invoice_details?.supplier_details?.branch_detail
               ?.address,
@@ -192,6 +192,10 @@ export const createVeneerLogsExcel = async (newData) => {
           web_url:
             data?.veneer_invoice_details?.supplier_details?.branch_detail
               ?.web_url,
+          contact_person_name: data.veneer_invoice_details.supplier_details.branch_detail.contact_person[0].name,
+          contact_person_email: data.veneer_invoice_details.supplier_details.branch_detail.contact_person[0].email,
+          contact_person_designation: data.veneer_invoice_details.supplier_details.branch_detail.contact_person[0].designation,
+          contact_person_mobile_no: data.veneer_invoice_details.supplier_details.branch_detail.contact_person[0].mobile_number,
           invoice_date:
             data?.veneer_invoice_details?.invoice_Details?.invoice_date,
           invoice_no: data?.veneer_invoice_details?.invoice_Details?.invoice_no,
