@@ -78,7 +78,7 @@ export const BulkUploadVeneerData = catchAsync(
       const invoiceFinalData = {
         ...otherDetails,
         inward_sr_no: latest_inward_sr_no,
-        invoiceDetails: invoiceDetails[0],
+        invoice_Details: invoiceDetails[0],
         created_by: created_by
       }
       const invoiceInstance = new veneer_inventory_invoice_model(invoiceFinalData);
