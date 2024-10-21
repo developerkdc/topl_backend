@@ -12,7 +12,7 @@ import CutModel from "../../../../database/schema/masters/cut.schema.js";
 import GradeModel from "../../../../database/schema/masters/grade.schema.js";
 
 export const downloadVeneerExcelFormat = catchAsync(async (req, res, next) => {
-  const destinationPath = `public/upload/downloadFormat/veneer.xlsx`;
+  const destinationPath = `downloadFormat/veneer.xlsx`;
 
   const link = `${process.env.APP_URL}${destinationPath}`;
   return res.json(
