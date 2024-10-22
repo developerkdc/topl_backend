@@ -13,7 +13,7 @@ import GradeModel from "../../../../database/schema/masters/grade.schema.js";
 import { Worker } from 'worker_threads';
 import { fileURLToPath } from "url";
 import path, { dirname } from "path";
-import { emitProgressUpdate } from "../../../../index.js";
+import { emitProgressUpdate } from "../../../../socket.io.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -208,7 +208,7 @@ export const BulkUploadVeneerData = (req, res, next) => {
       message: 'No file uploaded or file path not found.',
     });
   }
-  const fileName = file?.originalname;
+  const fileName = file?.filename;
   const worker = new Worker(path.resolve(__dirname, 'bulkUploadWorker.js'));
 
   worker.postMessage({

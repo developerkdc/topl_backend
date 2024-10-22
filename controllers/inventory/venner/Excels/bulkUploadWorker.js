@@ -19,7 +19,10 @@ parentPort.on('message', async (data) => {
     const { file, otherDetails, created_by, reqBody } = data;
 
     const session = await mongoose.startSession();
-    session.startTransaction();
+    session.startTransaction({
+        readConcern: { level: 'local' }, // Local read concern (faster than snapshot)
+        writeConcern: { w: 'majority' }, // Ensure writes are acknowledged
+    });
 
     try {
         const workbook = XLSX.readFile(file.path);
@@ -58,7 +61,11 @@ parentPort.on('message', async (data) => {
         };
 
         const invoiceInstance = new veneer_inventory_invoice_model(invoiceFinalData);
-        await invoiceInstance.validate();
+        try {
+            await invoiceInstance.validate();
+        } catch (error) {   
+            throw new Error("Invoice validation failed")
+        }
         const invoiceDetailsData = await invoiceInstance.save();
         const invoiceId = invoiceDetailsData._id;
 
@@ -149,6 +156,7 @@ parentPort.on('message', async (data) => {
                 console.log("Bulk insert successfully completed.");
             } catch (err) {
                 console.log("Error during bulk insert:", err);
+                throw new Error("something went wrong")
             }
         } else {
             console.log("No valid items to upload.");
@@ -157,6 +165,7 @@ parentPort.on('message', async (data) => {
         // Handle validation errors if there are any
         if (validationErrors.length > 0) {
             console.error("Some items failed validation:", validationErrors);
+            throw new Error("Item validation failed")
         }
         await session.commitTransaction();
         session.endSession();
@@ -176,5 +185,6 @@ parentPort.on('message', async (data) => {
         });
     } finally {
         session.endSession();
+        process.exit()
     }
 });

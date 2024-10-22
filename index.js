@@ -63,7 +63,7 @@ const Configs = getConfigs();
 mongo_service();
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, {
+export const io = new Server(server, {
   cors: {
     origin: '*', // Adjust according to your needs (e.g., "http://localhost:3000")
     methods: ['GET', 'POST'],
@@ -229,25 +229,6 @@ io.on('connection', (socket) => {
     console.log('Client disconnected:', socket.id);
   });
 });
-
-export function emitProgressUpdate(data) {
-  if (io && data?.socketId) {
-    io.to(data?.socketId).emit('progress', {
-      fileName: data?.fileName || "",
-      progress: data?.progress || 0,
-      status: data?.status || null,
-      success: {
-        status: data?.success?.status || false,
-        message: data?.success?.message || null,
-      },
-      error: {
-        status: data?.error?.status || false,
-        message: data?.error?.message || null,
-      },
-      validationErrors: data?.validationErrors || null
-    });
-  }
-}
 
 server.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
