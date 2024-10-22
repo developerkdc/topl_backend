@@ -152,5 +152,5 @@ const lookup = [
     },
   },
 ];
-LogSchemaFunction("user", UserModel, lookup);
+// LogSchemaFunction("user", UserModel, lookup);
 export default UserModel;

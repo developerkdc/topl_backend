@@ -50,6 +50,7 @@ import flitchingFactoryRoutes from "./routes/factory/flitching/flitching.routes.
 import logRouter from "./routes/inventory/log/log.routes.js"
 import fs from "fs";
 import path from "path";
+import { Server } from "socket.io";
 
 import { globalErrorHandler } from "./utils/errors/GlobalErrorHandler.js";
 import flitch_router from "./routes/inventory/flitch/flitch.routes.js";
@@ -57,14 +58,22 @@ import veneer_router from "./routes/inventory/veener/venner.routes.js";
 import fleece_router from "./routes/inventory/fleece/fleece.routes.js";
 import rejected_crosscutting_router from "./routes/factory/crossCutting/rejectedCrosscutting.routes.js";
 import expenseRouter from "./routes/masters/Expenses/index.js";
+import { error } from "console";
 const Configs = getConfigs();
 mongo_service();
 const app = express();
 const server = http.createServer(app);
+export const io = new Server(server, {
+  cors: {
+    origin: '*', // Adjust according to your needs (e.g., "http://localhost:3000")
+    methods: ['GET', 'POST'],
+  },
+});
 const PORT = Configs.server.port;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-app.use(express.json());
+app.use(express.json({ limit: 'Infinity' }));
+app.use(express.urlencoded({ limit: 'Infinity', extended: true }));
 
 var corsOptions = {
   origin: Configs.cors.origin,
@@ -72,7 +81,6 @@ var corsOptions = {
   credentials: Configs.cors.credentials,
 };
 app.use(cors(corsOptions));
-app.use(express.urlencoded({ extended: true }));
 app.use("/upload", express.static("./upload"));
 app.use(express.static("./format"));
 app.use(express.static(path.join(__dirname, "public")));
@@ -212,6 +220,14 @@ app.use(globalErrorHandler);
 // Error handling for the server
 server.on("error", (error) => {
   console.error(`Server error: ${error.message}`);
+});
+
+io.on('connection', (socket) => {
+  console.log('Client connected:', socket.id);
+
+  socket.on('disconnect', () => {
+    console.log('Client disconnected:', socket.id);
+  });
 });
 
 server.listen(PORT, () => {
