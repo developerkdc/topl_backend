@@ -8,6 +8,7 @@ import authRouter from "./routes/auth.routes.js";
 import usersRouter from "./routes/users.routes.js";
 import rolesRouter from "./routes/roles.routes.js";
 import profileRouter from "./routes/profile.routes.js";
+import approvalConfigRouter from "./routes/approvalConfig/approvalConfig.routes.js";
 import supplierMasterRouter from "./routes/masters/supplier.routes.js";
 import unitMasterRouter from "./routes/masters/unit.routes.js";
 import gradeMasterRouter from "./routes/masters/grade.routes.js";
@@ -91,6 +92,7 @@ app.use(`/api/${Configs.server.version}/auth`, authRouter);
 app.use(`/api/${Configs.server.version}/user`, usersRouter);
 app.use(`/api/${Configs.server.version}/role`, rolesRouter);
 app.use(`/api/${Configs.server.version}/profile`, profileRouter);
+app.use(`/api/${Configs.server.version}/approval-config`, approvalConfigRouter);
 
 //master
 app.use(`/api/${Configs.server.version}/supplier-master`, supplierMasterRouter);

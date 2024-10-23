@@ -6,6 +6,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { FetchUserByUserName } from "../utils/fetchDetails/fetchDetailsByUserName.js";
 import UserModel from "../database/schema/user.schema.js";
+import ApiError from "../utils/errors/apiError.js";
 
 // Get the directory name of the current module file
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -81,7 +82,7 @@ const RolesPermissions = (name, key) => {
         return res.status(403).json({ result: [], status: false, message: "User role not found or role is disabled." });
       }
 
-      const isAuthorized = user?.role_id?.permissions[name][key];
+      const isAuthorized = user?.role_id?.permissions?.[name]?.[key];
       if (isAuthorized != true) {
         return res.status(400).json({
           result: [],
