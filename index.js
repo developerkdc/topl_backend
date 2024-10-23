@@ -59,6 +59,7 @@ import fleece_router from "./routes/inventory/fleece/fleece.routes.js";
 import rejected_crosscutting_router from "./routes/factory/crossCutting/rejectedCrosscutting.routes.js";
 import expenseRouter from "./routes/masters/Expenses/index.js";
 import { error } from "console";
+import approvalRouters from "./routes/approval/approval.routes.js";
 const Configs = getConfigs();
 mongo_service();
 const app = express();
@@ -215,6 +216,9 @@ app.use(`/api/${Configs.server.version}/image`, imagesRouter);
 
 // report
 app.use(`/api/${Configs.server.version}/report`, reportRouter);
+
+//Approval
+app.use(`/api/${Configs.server.version}/approval`, approvalRouters);
 
 app.use(globalErrorHandler);
 // Error handling for the server
