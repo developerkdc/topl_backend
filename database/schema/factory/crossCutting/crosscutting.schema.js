@@ -67,7 +67,7 @@ const crosscutting_done_schema = new mongoose.Schema(
       type: String,
       enum: {
         values: [issues_for_status.crosscut_done, issues_for_status.flitching],
-        message: `Invalid status {{VALUE}} Issue Status must either be one of ${issues_for_status.crosscut_done, issues_for_status.flitching}`
+        message: `Invalid status {{VALUE}} Issue Status must either be one of ${issues_for_status.crosscut_done}, ${issues_for_status.flitching}}`
       },
       default: issues_for_status.crosscut_done
     },

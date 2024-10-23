@@ -8,6 +8,7 @@ import authRouter from "./routes/auth.routes.js";
 import usersRouter from "./routes/users.routes.js";
 import rolesRouter from "./routes/roles.routes.js";
 import profileRouter from "./routes/profile.routes.js";
+import approvalConfigRouter from "./routes/approvalConfig/approvalConfig.routes.js";
 import supplierMasterRouter from "./routes/masters/supplier.routes.js";
 import unitMasterRouter from "./routes/masters/unit.routes.js";
 import gradeMasterRouter from "./routes/masters/grade.routes.js";
@@ -59,6 +60,7 @@ import fleece_router from "./routes/inventory/fleece/fleece.routes.js";
 import rejected_crosscutting_router from "./routes/factory/crossCutting/rejectedCrosscutting.routes.js";
 import expenseRouter from "./routes/masters/Expenses/index.js";
 import { error } from "console";
+import approvalRouters from "./routes/approval/approval.routes.js";
 const Configs = getConfigs();
 mongo_service();
 const app = express();
@@ -91,6 +93,7 @@ app.use(`/api/${Configs.server.version}/auth`, authRouter);
 app.use(`/api/${Configs.server.version}/user`, usersRouter);
 app.use(`/api/${Configs.server.version}/role`, rolesRouter);
 app.use(`/api/${Configs.server.version}/profile`, profileRouter);
+app.use(`/api/${Configs.server.version}/approval-config`, approvalConfigRouter);
 
 //master
 app.use(`/api/${Configs.server.version}/supplier-master`, supplierMasterRouter);
@@ -215,6 +218,9 @@ app.use(`/api/${Configs.server.version}/image`, imagesRouter);
 
 // report
 app.use(`/api/${Configs.server.version}/report`, reportRouter);
+
+//Approval
+app.use(`/api/${Configs.server.version}/approval`, approvalRouters);
 
 app.use(globalErrorHandler);
 // Error handling for the server

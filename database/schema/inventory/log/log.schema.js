@@ -3,7 +3,7 @@ import invoice_details from "../../../Utils/invoiceDetails.schema.js";
 import { issues_for_status } from "../../../Utils/constants/constants.js";
 import expensesSchema from "../../masters/expenses.schema.js";
 
-const log_item_details_schema = new mongoose.Schema({
+export const log_item_details_schema = new mongoose.Schema({
   item_sr_no: {
     type: Number,
     required: [true, "Items Sr.No is required"],
@@ -44,7 +44,7 @@ const log_item_details_schema = new mongoose.Schema({
     type: String,
     enum: {
       values: [issues_for_status.crosscutting, issues_for_status.flitching, issues_for_status.log],
-      message: `Invalid status {{VALUE}} Issue Status must either be one of ${issues_for_status.crosscutting, issues_for_status.flitching, issues_for_status.log}`
+      message: `Invalid status {{VALUE}} Issue Status must either be one of ${issues_for_status.crosscutting}, ${issues_for_status.flitching}, ${issues_for_status.log}}`
     },
     default: issues_for_status.log
   },
@@ -124,7 +124,7 @@ log_item_details_schema.index(
   { unique: true }
 );
 
-const log_invoice_schema = new mongoose.Schema(
+export const log_invoice_schema = new mongoose.Schema(
   {
     inward_sr_no: {
       type: Number,

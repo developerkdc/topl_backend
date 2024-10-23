@@ -63,7 +63,7 @@ parentPort.on('message', async (data) => {
         const invoiceInstance = new veneer_inventory_invoice_model(invoiceFinalData);
         try {
             await invoiceInstance.validate();
-        } catch (error) {   
+        } catch (error) {
             throw new Error("Invoice validation failed")
         }
         const invoiceDetailsData = await invoiceInstance.save();
@@ -106,6 +106,7 @@ parentPort.on('message', async (data) => {
                 // Construct the object
                 const itemDetailsObj = {
                     ...elm,
+                    exchange_rate: otherDetails?.exchange_rate,
                     item_id: itemNameDetails?.[0]?._id,
                     item_sub_category_id: itemSubcategoryDetails?._id,
                     cut_id: cutNameDetails?._id,
