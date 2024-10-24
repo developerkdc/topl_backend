@@ -64,7 +64,7 @@ parentPort.on('message', async (data) => {
         try {
             await invoiceInstance.validate();
         } catch (error) {
-            throw new Error("Invoice validation failed")
+            throw error
         }
         const invoiceDetailsData = await invoiceInstance.save();
         const invoiceId = invoiceDetailsData._id;
@@ -147,6 +147,7 @@ parentPort.on('message', async (data) => {
                 }
             } catch (err) {
                 console.error("Error processing item:", elm, err);
+                throw err;
             }
         }
 
@@ -157,7 +158,7 @@ parentPort.on('message', async (data) => {
                 console.log("Bulk insert successfully completed.");
             } catch (err) {
                 console.log("Error during bulk insert:", err);
-                throw new Error("something went wrong")
+                throw err
             }
         } else {
             console.log("No valid items to upload.");
@@ -177,15 +178,12 @@ parentPort.on('message', async (data) => {
             validationErrors
         });
     } catch (error) {
-        console.log(error)
         await session.abortTransaction();
         session.endSession();
+        console.log(error.message,"pppppppppppppppppppppppppppp")
         parentPort.postMessage({
             status: 'error',
             message: error.message,
         });
-    } finally {
-        session.endSession();
-        process.exit()
     }
 });
