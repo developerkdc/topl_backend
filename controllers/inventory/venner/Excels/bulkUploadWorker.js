@@ -154,13 +154,15 @@ parentPort.on('message', async (data) => {
         // Execute bulk insert if there are any operations to perform
         if (bulkOperations.length > 0) {
             try {
-                await veneer_inventory_items_model.bulkWrite(bulkOperations);
+                await veneer_inventory_items_model.bulkWrite(bulkOperations, { session });
                 console.log("Bulk insert successfully completed.");
             } catch (err) {
                 console.log("Error during bulk insert:", err);
+                await veneer_inventory_invoice_model.deleteOne({_id:invoiceId});
                 throw err
             }
         } else {
+            await veneer_inventory_invoice_model.deleteOne({_id:invoiceId});
             console.log("No valid items to upload.");
         }
 
@@ -178,9 +180,9 @@ parentPort.on('message', async (data) => {
             validationErrors
         });
     } catch (error) {
+        console.log(error)
         await session.abortTransaction();
         session.endSession();
-        console.log(error.message,"pppppppppppppppppppppppppppp")
         parentPort.postMessage({
             status: 'error',
             message: error.message,
