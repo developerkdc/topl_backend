@@ -9,6 +9,8 @@ const itemCategorySchema = new mongoose.Schema(
     category: {
       type: String,
       required: [true, "category is required"],
+      unique: [true, "Category Name already exist."],
+      trim: true,
     },
     calculate_unit: {
       type: String,
