@@ -5,7 +5,9 @@ const machineSchema = new mongoose.Schema(
     sr_no: Number,
     machine_name: {
       type: String,
-      required: [true, "department name is required"],
+      required: [true, "Machine name is required"],
+      unique: [true, "Machine Name already exist."],
+      trim: true,
     },
     department: {
       type: mongoose.Schema.Types.ObjectId,

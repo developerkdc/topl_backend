@@ -11,7 +11,9 @@ const itemSubCategorySchema = new mongoose.Schema(
     },
     name: {
       type: String,
-      required: [true, "subcategory name is required"],
+      required: [true, "Subcategory name is required"],
+      unique: [true, "Subcategory Name already exist."],
+      trim: true,
     },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,

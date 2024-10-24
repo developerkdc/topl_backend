@@ -3,7 +3,9 @@ import mongoose from "mongoose"
 const expensesSchema = new mongoose.Schema({
     expenseType:{
         type:String,
-        required:[true,"expense type is required"]
+        required:[true,"expense type is required"],
+        unique: [true, "Cut Name already exist."],
+        trim: true,
     },
     expenseTypeId:{
         type:mongoose.Schema.Types.ObjectId,
