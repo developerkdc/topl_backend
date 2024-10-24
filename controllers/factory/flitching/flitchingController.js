@@ -154,10 +154,10 @@ export const revert_issue_for_flitching = catchAsync(async function (
 
       const issue_for_flitching_crosscut_done_found = await issues_for_flitching_model.find({
         _id: { $ne: issue_for_flitching?._id },
-        crosscut_done_id: issue_for_flitching?.crosscut_done_id
+        issue_for_crosscutting_id: issue_for_flitching?.issue_for_crosscutting_id,
+        crosscut_done_id: { $ne: null }
       });
 
-      console.log(issue_for_flitching_crosscut_done_found, issue_for_flitching_crosscut_done_found?.length <= 0)
       if (issue_for_flitching_crosscut_done_found?.length <= 0) {
         await crosscutting_done_model.updateMany({
           issue_for_crosscutting_id: issue_for_flitching?.issue_for_crosscutting_id

@@ -2,9 +2,10 @@ import mongoose from "mongoose";
 import catchAsync from "../../../utils/errors/catchAsync.js";
 import { dynamic_filter } from "../../../utils/dymanicFilter.js";
 import { DynamicSearch } from "../../../utils/dynamicSearch/dynamic.js";
-import { log_approval_inventory_invoice_model, log_approval_inventory_items_model } from "../../../database/schema/inventory/log/logApproval.schema.js";
+import { veneer_approval_inventory_invoice_model, veneer_approval_inventory_items_model } from "../../../database/schema/inventory/venner/veneerApproval.schema.js";
+// import { veneer_approval_inventory_invoice_model, veneer_approval_inventory_items_model } from "../../../database/schema/inventory/Veneer/veneerApproval.schema.js";
 
-export const logApproval_invoice_listing = catchAsync(async function (req, res, next) {
+export const veneerApproval_invoice_listing = catchAsync(async function (req, res, next) {
     const {
         page = 1,
         limit = 10,
@@ -67,10 +68,10 @@ export const logApproval_invoice_listing = catchAsync(async function (req, res, 
         },
     ];
 
-    const List_log_invoice_details =
-        await log_approval_inventory_invoice_model.aggregate(aggregate_stage);
+    const List_veneer_invoice_details =
+        await veneer_approval_inventory_invoice_model.aggregate(aggregate_stage);
 
-    const totalCount = await log_approval_inventory_invoice_model.countDocuments({
+    const totalCount = await veneer_approval_inventory_invoice_model.countDocuments({
         ...match_query,
     });
 
@@ -79,13 +80,13 @@ export const logApproval_invoice_listing = catchAsync(async function (req, res, 
     return res.status(200).json({
         statusCode: 200,
         status: "success",
-        data: List_log_invoice_details,
+        data: List_veneer_invoice_details,
         totalPage: totalPage,
         message: "Data fetched successfully",
     });
 });
 
-export const logApproval_item_listing_by_invoice = catchAsync(
+export const veneerApproval_item_listing_by_invoice = catchAsync(
     async (req, res, next) => {
         const invoice_id = req.params.invoice_id;
 
@@ -102,10 +103,10 @@ export const logApproval_item_listing_by_invoice = catchAsync(
             }
         ];
 
-        const logExpense_item_by_invoice = await log_approval_inventory_items_model.aggregate(aggregate_stage);
-        const logExpense_invoice = await log_approval_inventory_invoice_model.findOne({ _id: invoice_id });
+        const veneerExpense_item_by_invoice = await veneer_approval_inventory_items_model.aggregate(aggregate_stage);
+        const veneerExpense_invoice = await veneer_approval_inventory_invoice_model.findOne({ _id: invoice_id });
 
-        // const totalCount = await log_inventory_items_view_model.countDocuments({
+        // const totalCount = await veneer_inventory_items_view_model.countDocuments({
         //   ...match_query,
         // });
 
@@ -115,8 +116,8 @@ export const logApproval_item_listing_by_invoice = catchAsync(
             statusCode: 200,
             status: "success",
             data: {
-                items: logExpense_item_by_invoice,
-                invoice: logExpense_invoice
+                items: veneerExpense_item_by_invoice,
+                invoice: veneerExpense_invoice
             },
             // totalPage: totalPage,
             message: "Data fetched successfully",

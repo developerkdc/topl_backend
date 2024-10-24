@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import invoice_details from "../../../Utils/invoiceDetails.schema.js";
 import expensesSchema from "../../masters/expenses.schema.js";
 
-const veneer_item_details_schema = new mongoose.Schema({
+export const veneer_item_details_schema = new mongoose.Schema({
   supplier_item_name: {
     type: String,
     default: null,
@@ -141,7 +141,7 @@ veneer_item_details_schema.index(
   { unique: true }
 );
 
-const veneer_invoice_schema = new mongoose.Schema(
+export const veneer_invoice_schema = new mongoose.Schema(
   {
     inward_sr_no: {
       type: Number,

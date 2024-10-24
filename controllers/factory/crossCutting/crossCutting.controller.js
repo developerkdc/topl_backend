@@ -196,6 +196,22 @@ export const addCrossCutDone = catchAsync(async (req, res) => {
       },
       { session, new: true }
     );
+
+    const issue_for_flitching_crosscut_done_found = await issues_for_flitching_model.find({
+      issue_for_crosscutting_id: result?.issue_for_crosscutting_id,
+      crosscut_done_id:{$ne:null}
+    });
+
+    if (issue_for_flitching_crosscut_done_found?.length <= 0) {
+      await crosscutting_done_model.updateMany({
+        issue_for_crosscutting_id: result?.issue_for_crosscutting_id
+      }, {
+        $set: {
+          isEditable: false
+        }
+      }, { session });
+    }
+    
     await session.commitTransaction();
     session.endSession();
     return res.json(new ApiResponse(StatusCodes.OK, "Item Added Successfully", result))
