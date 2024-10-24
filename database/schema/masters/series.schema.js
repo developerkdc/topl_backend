@@ -5,7 +5,9 @@ const seriesSchema = new mongoose.Schema(
     sr_no: Number,
     series_name: {
       type: String,
-      required: [true, "series name is required"],
+      required: [true, "Series name is required"],
+      unique: [true, "Series Name already exist."],
+      trim: true,
     },
     remark: {
       type: String,
