@@ -36,6 +36,18 @@ parentPort.on('message', async (data) => {
             throw new Error('No invoice or items found in the uploaded file.');
         }
 
+        let invoiceDate = invoiceDetails?.[0].invoice_date;
+
+        if (typeof invoiceDate === 'number') {
+            invoiceDate = XLSX.SSF.parse_date_code(invoiceDate);
+        } else if (typeof invoiceDate === 'string') {
+            invoiceDate = new Date(invoiceDate);
+        }
+
+        if (isNaN(invoiceDate.getTime())) {
+            invoiceDate = new Date();
+        }
+
         const inward_sr_no = await veneer_inventory_invoice_model.aggregate([
             {
                 $group: {
@@ -55,7 +67,9 @@ parentPort.on('message', async (data) => {
             inward_sr_no: latest_inward_sr_no,
             invoice_Details: {
                 ...invoiceDetails[0],
-                invoice_no: otherDetails?.invoice_no
+                invoice_date:invoiceDate,
+                invoice_no: otherDetails?.invoice_no,
+
             },
             created_by: created_by,
         };
@@ -158,11 +172,11 @@ parentPort.on('message', async (data) => {
                 console.log("Bulk insert successfully completed.");
             } catch (err) {
                 console.log("Error during bulk insert:", err);
-                await veneer_inventory_invoice_model.deleteOne({_id:invoiceId});
+                await veneer_inventory_invoice_model.deleteOne({ _id: invoiceId });
                 throw err
             }
         } else {
-            await veneer_inventory_invoice_model.deleteOne({_id:invoiceId});
+            await veneer_inventory_invoice_model.deleteOne({ _id: invoiceId });
             console.log("No valid items to upload.");
         }
 

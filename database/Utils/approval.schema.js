@@ -1,32 +1,34 @@
 import mongoose from "mongoose";
 
 const approvalSchema = new mongoose.Schema({
-    editedBy: {
-        type: mongoose.Types.ObjectId,
-        required: [true, "Edited by Person is required"]
-    },
-    approvalPerson: {
-        type: mongoose.Types.ObjectId,
-        required: [true, "Approval person is required"]
-    },
-    approvalBy: {
-        user: {
+    approval: {
+        editedBy: {
             type: mongoose.Types.ObjectId,
-            default:null,
+            required: [true, "Edited by Person is required"]
         },
-        remark: {
-            type: String,
-            default: null
-        }
-    },
-    rejectedBy: {
-        user: {
+        approvalPerson: {
             type: mongoose.Types.ObjectId,
-            default:null,
+            required: [true, "Approval person is required"]
         },
-        remark: {
-            type: String,
-            default: null
+        approvalBy: {
+            user: {
+                type: mongoose.Types.ObjectId,
+                default: null,
+            },
+            remark: {
+                type: String,
+                default: null
+            }
+        },
+        rejectedBy: {
+            user: {
+                type: mongoose.Types.ObjectId,
+                default: null,
+            },
+            remark: {
+                type: String,
+                default: null
+            }
         }
     }
 });
