@@ -1,9 +1,13 @@
 import mongoose from "mongoose";
 
 const approvalSchema = new mongoose.Schema({
+    editedBy: {
+        type: mongoose.Types.ObjectId,
+        required: [true, "Edited by Person is required"]
+    },
     approvalPerson: {
         type: mongoose.Types.ObjectId,
-        required: [true, "approval person is required"]
+        required: [true, "Approval person is required"]
     },
     approvalBy: {
         user: {
