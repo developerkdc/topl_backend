@@ -10,8 +10,7 @@ const log_approval_item_details_schema = new mongoose.Schema(log_item_details_sc
 
 log_approval_item_details_schema.index({ item_sr_no: 1 });
 log_approval_item_details_schema.index(
-  { item_sr_no: 1, invoice_id: 1 },
-  { unique: true }
+  { item_sr_no: 1, invoice_id: 1 }
 );
 
 const log_approval_invoice_schema = new mongoose.Schema(log_invoice_schema);

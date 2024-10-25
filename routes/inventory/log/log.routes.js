@@ -17,6 +17,7 @@ import {
 } from "../../../controllers/inventory/log/log.controller.js";
 import AuthMiddleware from "../../../middlewares/verifyToken.js";
 import RolesPermissions from "../../../middlewares/permission.js";
+import { verifyApproval } from "../../../middlewares/approval.middleware.js";
 
 const router = Router();
 
@@ -28,6 +29,7 @@ router.patch(
   "/edit-invoice-item-inventory/:invoice_id",
   AuthMiddleware,
   RolesPermissions("log_inventory", "edit"),
+  // verifyApproval("log_inventory", "edit"),
   edit_log_item_invoice_inventory
 );
 router.patch("/edit-item-inventory/:item_id", AuthMiddleware, RolesPermissions("log_inventory", "edit"), edit_log_item_inventory);

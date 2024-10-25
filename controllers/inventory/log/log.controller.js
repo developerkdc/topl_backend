@@ -15,6 +15,7 @@ import { createLogLogsExcel } from "../../../config/downloadExcel/Logs/Inventory
 import { issues_for_crosscutting_model } from "../../../database/schema/factory/crossCutting/issuedForCutting.schema.js";
 import { issues_for_status } from "../../../database/Utils/constants/constants.js";
 import { issues_for_flitching_model } from "../../../database/schema/factory/flitching/issuedForFlitching.schema.js";
+import { log_approval_inventory_invoice_model, log_approval_inventory_items_model } from "../../../database/schema/inventory/log/logApproval.schema.js";
 
 export const listing_log_inventory = catchAsync(async (req, res, next) => {
   const {
@@ -233,6 +234,8 @@ export const edit_log_item_invoice_inventory = catchAsync(
       const invoice_id = req.params?.invoice_id;
       const items_details = req.body?.inventory_items_details;
       const invoice_details = req.body?.inventory_invoice_details;
+      const sendForApproval = true;
+      const user = req.userDetails;
 
       const update_invoice_details =
         await log_inventory_invoice_model.updateOne(
@@ -244,8 +247,6 @@ export const edit_log_item_invoice_inventory = catchAsync(
           },
           { session }
         );
-
-      console.log(update_invoice_details);
 
       if (
         !update_invoice_details.acknowledged ||
@@ -280,6 +281,40 @@ export const edit_log_item_invoice_inventory = catchAsync(
             update_item_details
           )
         );
+      // if (!sendForApproval) {
+
+      // } else {
+      //   const edited_by = user?.id
+      //   const add_invoice_details = await log_approval_inventory_invoice_model.create([{
+      //     ...invoice_details,
+      //     approval: {
+      //       editedBy: edited_by,
+      //       approvalPerson: edited_by,
+      //     }
+      //   }],{session})
+
+      //   if (!add_invoice_details?.[0])
+      //     return next(new ApiError("Failed to add invoice approval", 400));
+
+      //   const add_approval_item_details = await log_approval_inventory_items_model.insertMany(
+      //     [...items_details],
+      //     { session }
+      //   );
+
+      //   await session.commitTransaction();
+      //   session.endSession();
+      //   return res
+      //     .status(StatusCodes.OK)
+      //     .json(
+      //       new ApiResponse(
+      //         StatusCodes.OK,
+      //         "Inventory item send for approval successfully",
+      //         add_approval_item_details
+      //       )
+      //     );
+      // }
+
+
     } catch (error) {
       console.log(error);
       await session.abortTransaction();

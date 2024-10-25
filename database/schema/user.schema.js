@@ -33,7 +33,7 @@ const UserSchema = new mongoose.Schema({
     indexedDB: true,
   },
   approver_id: {
-    type: String,
+    type: mongoose.Schema.Types.ObjectId,
     default: null,
   },
   role_id: {
