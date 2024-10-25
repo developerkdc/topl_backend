@@ -44,7 +44,7 @@ parentPort.on('message', async (data) => {
             invoiceDate = new Date(invoiceDate);
         }
 
-        if (isNaN(invoiceDate.getTime())) {
+        if (isNaN(invoiceDate?.getTime())) {
             invoiceDate = new Date();
         }
 
@@ -67,7 +67,7 @@ parentPort.on('message', async (data) => {
             inward_sr_no: latest_inward_sr_no,
             invoice_Details: {
                 ...invoiceDetails[0],
-                invoice_date:invoiceDate,
+                invoice_date: invoiceDate,
                 invoice_no: otherDetails?.invoice_no,
 
             },
@@ -166,7 +166,8 @@ parentPort.on('message', async (data) => {
         }
 
         // Execute bulk insert if there are any operations to perform
-        if (bulkOperations.length > 0) {
+        // if (bulkOperations.length > 0) {
+        if (validationErrors.length === 0) {
             try {
                 await veneer_inventory_items_model.bulkWrite(bulkOperations, { session });
                 console.log("Bulk insert successfully completed.");
