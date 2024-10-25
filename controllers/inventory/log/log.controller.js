@@ -237,82 +237,82 @@ export const edit_log_item_invoice_inventory = catchAsync(
       const sendForApproval = true;
       const user = req.userDetails;
 
-      if (!sendForApproval) {
-        const update_invoice_details =
-          await log_inventory_invoice_model.updateOne(
-            { _id: invoice_id },
-            {
-              $set: {
-                ...invoice_details,
-              },
+      const update_invoice_details =
+        await log_inventory_invoice_model.updateOne(
+          { _id: invoice_id },
+          {
+            $set: {
+              ...invoice_details,
             },
-            { session }
-          );
-
-        if (
-          !update_invoice_details.acknowledged ||
-          update_invoice_details.modifiedCount <= 0
-        )
-          return next(new ApiError("Failed to update invoice", 400));
-
-        const all_invoice_items = await log_inventory_items_model.deleteMany(
-          { invoice_id: invoice_id },
+          },
           { session }
         );
 
-        if (
-          !all_invoice_items.acknowledged ||
-          all_invoice_items.deletedCount <= 0
-        )
-          return next(new ApiError("Failed to update invoice items", 400));
+      if (
+        !update_invoice_details.acknowledged ||
+        update_invoice_details.modifiedCount <= 0
+      )
+        return next(new ApiError("Failed to update invoice", 400));
 
-        const update_item_details = await log_inventory_items_model.insertMany(
-          [...items_details],
-          { session }
+      const all_invoice_items = await log_inventory_items_model.deleteMany(
+        { invoice_id: invoice_id },
+        { session }
+      );
+
+      if (
+        !all_invoice_items.acknowledged ||
+        all_invoice_items.deletedCount <= 0
+      )
+        return next(new ApiError("Failed to update invoice items", 400));
+
+      const update_item_details = await log_inventory_items_model.insertMany(
+        [...items_details],
+        { session }
+      );
+
+      await session.commitTransaction();
+      session.endSession();
+      return res
+        .status(StatusCodes.OK)
+        .json(
+          new ApiResponse(
+            StatusCodes.OK,
+            "Inventory item updated successfully",
+            update_item_details
+          )
         );
+      // if (!sendForApproval) {
 
-        await session.commitTransaction();
-        session.endSession();
-        return res
-          .status(StatusCodes.OK)
-          .json(
-            new ApiResponse(
-              StatusCodes.OK,
-              "Inventory item updated successfully",
-              update_item_details
-            )
-          );
+      // } else {
+      //   const edited_by = user?.id
+      //   const add_invoice_details = await log_approval_inventory_invoice_model.create([{
+      //     ...invoice_details,
+      //     approval: {
+      //       editedBy: edited_by,
+      //       approvalPerson: edited_by,
+      //     }
+      //   }],{session})
 
-      } else {
-        const edited_by = user?.id
-        const add_invoice_details = await log_approval_inventory_invoice_model.create([{
-          ...invoice_details,
-          approval: {
-            editedBy: edited_by,
-            approvalPerson: edited_by,
-          }
-        }],{session})
+      //   if (!add_invoice_details?.[0])
+      //     return next(new ApiError("Failed to add invoice approval", 400));
 
-        if (!add_invoice_details?.[0])
-          return next(new ApiError("Failed to add invoice approval", 400));
+      //   const add_approval_item_details = await log_approval_inventory_items_model.insertMany(
+      //     [...items_details],
+      //     { session }
+      //   );
 
-        const add_approval_item_details = await log_approval_inventory_items_model.insertMany(
-          [...items_details],
-          { session }
-        );
-
-        await session.commitTransaction();
-        session.endSession();
-        return res
-          .status(StatusCodes.OK)
-          .json(
-            new ApiResponse(
-              StatusCodes.OK,
-              "Inventory item send for approval successfully",
-              add_approval_item_details
-            )
-          );
-      }
+      //   await session.commitTransaction();
+      //   session.endSession();
+      //   return res
+      //     .status(StatusCodes.OK)
+      //     .json(
+      //       new ApiResponse(
+      //         StatusCodes.OK,
+      //         "Inventory item send for approval successfully",
+      //         add_approval_item_details
+      //       )
+      //     );
+      // }
 
 
     } catch (error) {
