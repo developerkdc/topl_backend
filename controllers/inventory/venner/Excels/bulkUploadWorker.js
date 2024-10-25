@@ -39,13 +39,17 @@ parentPort.on('message', async (data) => {
         let invoiceDate = invoiceDetails?.[0].invoice_date;
 
         if (typeof invoiceDate === 'number') {
-            invoiceDate = XLSX.SSF.parse_date_code(invoiceDate);
+            const parsedDate = XLSX.SSF.parse_date_code(invoiceDate);
+            invoiceDate = parsedDate
+                ? new Date(parsedDate.y, parsedDate.m - 1, parsedDate.d, parsedDate.H, parsedDate.M, parsedDate.S)
+                : null;
         } else if (typeof invoiceDate === 'string') {
             invoiceDate = new Date(invoiceDate);
         }
 
-        if (isNaN(invoiceDate.getTime())) {
-            invoiceDate = new Date();
+        // Check if the date is valid
+        if (!(invoiceDate instanceof Date) || isNaN(invoiceDate.getTime())) {
+            invoiceDate = new Date(); // Fallback to current date
         }
 
         const inward_sr_no = await veneer_inventory_invoice_model.aggregate([
@@ -67,7 +71,7 @@ parentPort.on('message', async (data) => {
             inward_sr_no: latest_inward_sr_no,
             invoice_Details: {
                 ...invoiceDetails[0],
-                invoice_date:invoiceDate,
+                invoice_date: invoiceDate,
                 invoice_no: otherDetails?.invoice_no,
 
             },
@@ -166,7 +170,8 @@ parentPort.on('message', async (data) => {
         }
 
         // Execute bulk insert if there are any operations to perform
-        if (bulkOperations.length > 0) {
+        // if (bulkOperations.length > 0) {
+        if (validationErrors.length === 0) {
             try {
                 await veneer_inventory_items_model.bulkWrite(bulkOperations, { session });
                 console.log("Bulk insert successfully completed.");
