@@ -4,7 +4,38 @@ const expensesSchema = new mongoose.Schema({
     expenseType:{
         type:String,
         required:[true,"expense type is required"],
-        unique: [true, "Cut Name already exist."],
+        trim: true,
+    },
+    expenseTypeId:{
+        type:mongoose.Schema.Types.ObjectId,
+        required:[true,"expense type Id is required"]
+    },
+    invoiceDate:{
+        type:String,
+        default:Date.now
+    },
+    invoiceNo:{
+        type:String,
+        default:null
+    },
+    serviceProviderName:{
+        type:String,
+        default:null
+    },
+    serviceProviderDetails:{
+        type:{},
+        default:null
+    },
+    amount:{
+        type:Number,
+        required:[true,"Amount is required"]
+    },
+});
+
+export const approvalExpensesSchema = new mongoose.Schema({
+    expenseType:{
+        type:String,
+        required:[true,"expense type is required"],
         trim: true,
     },
     expenseTypeId:{

@@ -239,14 +239,46 @@ export const log_invoice_schema = new mongoose.Schema(
       type: Boolean,
       default: true
     },
+    approval_status: {
+      sendForApproval: {
+        status: {
+          type: Boolean,
+          default: false
+        },
+        remark: {
+          type: String,
+          default: null
+        }
+      },
+      approved: {
+        status: {
+          type: Boolean,
+          default: false
+        },
+        remark: {
+          type: String,
+          default: null
+        }
+      },
+      rejected: {
+        status: {
+          type: Boolean,
+          default: false
+        },
+        remark: {
+          type: String,
+          default: null
+        }
+      },
+    },
     invoice_Details: invoice_details,
     expenses: {
       type: [expensesSchema],
       default: null
     },
-    totalExpenseAmount:{
+    totalExpenseAmount: {
       type: Number,
-      default:0
+      default: 0
     },
     created_by: {
       type: mongoose.Types.ObjectId,
@@ -261,6 +293,7 @@ export const log_invoice_schema = new mongoose.Schema(
 );
 
 log_invoice_schema.index({ inward_sr_no: 1 });
+log_invoice_schema.index({ inward_sr_no: 1, "expensesSchema.expenseType": 1 }, { unique: true });
 
 export const log_inventory_items_model = mongoose.model(
   "log_inventory_items_details",

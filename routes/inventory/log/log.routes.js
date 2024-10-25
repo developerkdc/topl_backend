@@ -29,7 +29,7 @@ router.patch(
   "/edit-invoice-item-inventory/:invoice_id",
   AuthMiddleware,
   RolesPermissions("log_inventory", "edit"),
-  // verifyApproval("log_inventory", "edit"),
+  verifyApproval("log_inventory", "edit"),
   edit_log_item_invoice_inventory
 );
 router.patch("/edit-item-inventory/:item_id", AuthMiddleware, RolesPermissions("log_inventory", "edit"), edit_log_item_inventory);
