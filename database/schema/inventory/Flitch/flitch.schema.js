@@ -224,7 +224,7 @@ export const flitch_invoice_schema = new mongoose.Schema(
         },
         web_url: {
           type: String,
-          required: [true, "web url is required"],
+          // required: [true, "web url is required"],
         },
       },
     },
