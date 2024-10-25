@@ -39,17 +39,13 @@ parentPort.on('message', async (data) => {
         let invoiceDate = invoiceDetails?.[0].invoice_date;
 
         if (typeof invoiceDate === 'number') {
-            const parsedDate = XLSX.SSF.parse_date_code(invoiceDate);
-            invoiceDate = parsedDate
-                ? new Date(parsedDate.y, parsedDate.m - 1, parsedDate.d, parsedDate.H, parsedDate.M, parsedDate.S)
-                : null;
+            invoiceDate = XLSX.SSF.parse_date_code(invoiceDate);
         } else if (typeof invoiceDate === 'string') {
             invoiceDate = new Date(invoiceDate);
         }
 
-        // Check if the date is valid
-        if (!(invoiceDate instanceof Date) || isNaN(invoiceDate.getTime())) {
-            invoiceDate = new Date(); // Fallback to current date
+        if (isNaN(invoiceDate?.getTime())) {
+            invoiceDate = new Date();
         }
 
         const inward_sr_no = await veneer_inventory_invoice_model.aggregate([
