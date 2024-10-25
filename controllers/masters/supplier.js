@@ -206,7 +206,7 @@ export const addBranchToSupplier = catchAsync(async (req, res) => {
     "city",
     "pincode",
     "gst_number",
-    "web_url",
+    // "web_url",
     "branch_name",
   ];
   for (let field of requiredFields) {
@@ -1112,7 +1112,7 @@ export const addBranchToSuppliers = catchAsync(async (req, res) => {
     "city",
     "pincode",
     "gst_number",
-    "web_url",
+    // "web_url",
     "branch_name",
   ];
 
