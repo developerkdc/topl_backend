@@ -61,7 +61,6 @@ export const UpdateRole = catchAsync(async (req, res) => {
     });
   }
   updateData.updated_at = Date.now();
-  console.log(updateData, "6222");
   const roles = await RolesModel.findByIdAndUpdate(roleId, { $set: updateData }, { new: true, runValidators: true });
   if (!roles) {
     return res.status(404).json({
