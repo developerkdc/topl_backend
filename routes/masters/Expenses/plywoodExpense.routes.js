@@ -14,14 +14,14 @@ plywoodExpenseRouter.post(
 plywoodExpenseRouter.get(
     "/plywood-expense-item-listing-by-invoice/:invoice_id",
     AuthMiddleware,
-    RolesPermissions("expense_master", "edit"),
+    // RolesPermissions("expense_master", "edit"),
     plywoodExpenses_item_listing_by_invoice
 );
 
 plywoodExpenseRouter.patch(
     "/add-plywood-expenses/:invoice_id",
     AuthMiddleware,
-    RolesPermissions("expense_master", "edit"),
+    // RolesPermissions("expense_master", "edit"),
     add_plywoodExpenses
 );
 

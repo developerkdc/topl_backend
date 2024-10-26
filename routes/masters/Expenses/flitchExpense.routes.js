@@ -14,14 +14,14 @@ flitchExpenseRouter.post(
 flitchExpenseRouter.get(
     "/flitch-expense-item-listing-by-invoice/:invoice_id",
     AuthMiddleware,
-    RolesPermissions("expense_master", "edit"),
+    // RolesPermissions("expense_master", "edit"),
     flitchExpenses_item_listing_by_invoice
 );
 
 flitchExpenseRouter.patch(
     "/add-flitch-expenses/:invoice_id",
     AuthMiddleware,
-    RolesPermissions("expense_master", "edit"),
+    // RolesPermissions("expense_master", "edit"),
     add_flitchExpenses
 );
 

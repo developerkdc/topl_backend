@@ -14,14 +14,14 @@ faceExpenseRouter.post(
 faceExpenseRouter.get(
     "/face-expense-item-listing-by-invoice/:invoice_id",
     AuthMiddleware,
-    RolesPermissions("expense_master", "edit"),
+    // RolesPermissions("expense_master", "edit"),
     faceExpenses_item_listing_by_invoice
 );
 
 faceExpenseRouter.patch(
     "/add-face-expenses/:invoice_id",
     AuthMiddleware,
-    RolesPermissions("expense_master", "edit"),
+    // RolesPermissions("expense_master", "edit"),
     add_faceExpenses
 );
 
