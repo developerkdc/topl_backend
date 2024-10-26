@@ -200,7 +200,7 @@ export const face_invoice_schema = new mongoose.Schema(
         },
         web_url: {
           type: String,
-          required: [true, "Web url is required"],
+          // required: [true, "Web url is required"],
         },
       },
     },
