@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import invoice_details from "../../../Utils/invoiceDetails.schema.js";
 import { issues_for_status } from "../../../Utils/constants/constants.js";
 import expensesSchema from "../../masters/expenses.schema.js";
+import { approval_status } from "../../../Utils/approvalStatus.schema.js";
 
 export const log_item_details_schema = new mongoose.Schema({
   item_sr_no: {
@@ -239,38 +240,7 @@ export const log_invoice_schema = new mongoose.Schema(
       type: Boolean,
       default: true
     },
-    approval_status: {
-      sendForApproval: {
-        status: {
-          type: Boolean,
-          default: false
-        },
-        remark: {
-          type: String,
-          default: null
-        }
-      },
-      approved: {
-        status: {
-          type: Boolean,
-          default: false
-        },
-        remark: {
-          type: String,
-          default: null
-        }
-      },
-      rejected: {
-        status: {
-          type: Boolean,
-          default: false
-        },
-        remark: {
-          type: String,
-          default: null
-        }
-      },
-    },
+    approval_status: approval_status,
     invoice_Details: invoice_details,
     expenses: {
       type: [expensesSchema],

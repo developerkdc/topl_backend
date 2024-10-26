@@ -15,6 +15,7 @@ import AuthMiddleware from "../../../middlewares/verifyToken.js";
 import RolesPermissions from "../../../middlewares/permission.js";
 import { BulkUploadVeneerData, downloadVeneerExcelFormat } from "../../../controllers/inventory/venner/Excels/veneerExcels.controller.js";
 import multerFunction from "../../../config/bulkUpload/bulk.js";
+import { verifyApproval } from "../../../middlewares/approval.middleware.js";
 
 const veneer_router = Router();
 
@@ -25,6 +26,7 @@ veneer_router.patch(
   "/edit-invoice-item-inventory/:invoice_id",
   AuthMiddleware,
   RolesPermissions("veneer_inventory", "edit"),
+  verifyApproval("veneer_inventory", "edit"),
   edit_veneer_item_invoice_inventory
 );
 veneer_router.patch(

@@ -234,8 +234,8 @@ export const edit_log_item_invoice_inventory = catchAsync(
       const invoice_id = req.params?.invoice_id;
       const items_details = req.body?.inventory_items_details;
       const invoice_details = req.body?.inventory_invoice_details;
-      // const sendForApproval = req.sendForApproval;
-      const sendForApproval = true;
+      const sendForApproval = req.sendForApproval;
+      // const sendForApproval = true;
       const user = req.userDetails;
 
       if (!sendForApproval) {
@@ -300,15 +300,27 @@ export const edit_log_item_invoice_inventory = catchAsync(
 
       } else {
         const edited_by = user?.id;
-        // const approval_person = user.approver_id;
-        const approval_person = edited_by;
+        const approval_person = user.approver_id;
+        // const approval_person = edited_by;
         const { _id, ...invoiceDetailsData } = invoice_details;
-        
+
         const add_invoice_details = await log_approval_inventory_invoice_model.create([{
           ...invoiceDetailsData,
           invoice_id: invoice_id,
-          "approval_status.sendForApproval.status": true,
-          "approval_status.sendForApproval.message": "Approval Pending",
+          approval_status: {
+            sendForApproval: {
+              status: true,
+              remark: "Approval Pending"
+            },
+            approved: {
+              status: false,
+              remark: null
+            },
+            rejected: {
+              status: false,
+              remark: null
+            }
+          },
           approval: {
             editedBy: edited_by,
             approvalPerson: approval_person,
@@ -322,8 +334,20 @@ export const edit_log_item_invoice_inventory = catchAsync(
           { _id: invoice_id },
           {
             $set: {
-              "approval_status.sendForApproval.status": true,
-              "approval_status.sendForApproval.message": "Approval Pending",
+              approval_status: {
+                sendForApproval: {
+                  status: true,
+                  remark: "Approval Pending"
+                },
+                approved: {
+                  status: false,
+                  remark: null
+                },
+                rejected: {
+                  status: false,
+                  remark: null
+                }
+              },
             },
           },
           { session }
@@ -333,7 +357,7 @@ export const edit_log_item_invoice_inventory = catchAsync(
           const { _id, ...itemData } = ele;
           return {
             ...itemData,
-            item_id: _id ? _id : new mongoose.Types.ObjectId(),
+            log_item_id: _id ? _id : new mongoose.Types.ObjectId(),
             approval_invoice_id: add_invoice_details[0]?._id
           }
         })

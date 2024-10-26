@@ -3,8 +3,17 @@ import approvalSchema from "../../../Utils/approval.schema.js";
 import { issues_for_status } from "../../../Utils/constants/constants.js";
 import { approval_invoice_details } from "../../../Utils/invoiceDetails.schema.js";
 import { approvalExpensesSchema } from "../../masters/expenses.schema.js";
+import { approval_status } from "../../../Utils/approvalStatus.schema.js";
 
 const log_approval_item_details_schema = new mongoose.Schema({
+  log_item_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: [true, "Items id is required"],
+  },
+  approval_invoice_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: [true, "approval invoice id is required"],
+  },
   item_sr_no: {
     type: Number,
     required: [true, "Items Sr.No is required"],
@@ -16,14 +25,6 @@ const log_approval_item_details_schema = new mongoose.Schema({
   supplier_log_no: {
     type: String,
     default: null,
-  },
-  item_id: {
-    type: mongoose.Schema.Types.ObjectId,
-    required: [true, "Items id is required"],
-  },
-  approval_invoice_id: {
-    type: mongoose.Schema.Types.ObjectId,
-    required: [true, "Items id is required"],
   },
   item_name: {
     type: String,
@@ -237,7 +238,8 @@ const log_approval_invoice_schema = new mongoose.Schema(
         },
         web_url: {
           type: String,
-          required: [true, "Web url is required"],
+          default: null
+          // required: [true, "Web url is required"],
         },
       },
     },
@@ -245,38 +247,7 @@ const log_approval_invoice_schema = new mongoose.Schema(
       type: Boolean,
       default: true
     },
-    approval_status: {
-      sendForApproval: {
-        status: {
-          type: Boolean,
-          default: false
-        },
-        remark: {
-          type: String,
-          default: null
-        }
-      },
-      approved: {
-        status: {
-          type: Boolean,
-          default: false
-        },
-        remark: {
-          type: String,
-          default: null
-        }
-      },
-      rejected: {
-        status: {
-          type: Boolean,
-          default: false
-        },
-        remark: {
-          type: String,
-          default: null
-        }
-      },
-    },
+    approval_status: approval_status,
     invoice_Details: approval_invoice_details,
     expenses: {
       type: [approvalExpensesSchema],
