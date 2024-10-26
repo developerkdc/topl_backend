@@ -239,7 +239,6 @@ const log_approval_invoice_schema = new mongoose.Schema(
         web_url: {
           type: String,
           default: null
-          // required: [true, "Web url is required"],
         },
       },
     },

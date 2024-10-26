@@ -18,7 +18,6 @@ export const veneer_item_details_schema = new mongoose.Schema({
   },
   item_sr_no: {
     type: Number,
-    // unique: true,
     required: [true, "item Sr No is required"],
   },
   item_name: {
@@ -146,7 +145,7 @@ export const veneer_invoice_schema = new mongoose.Schema(
   {
     inward_sr_no: {
       type: Number,
-      default: null,
+      unique:true,
       required: [true, "Inward Sr.No is required. "],
     },
     inward_date: {
@@ -249,7 +248,7 @@ export const veneer_invoice_schema = new mongoose.Schema(
         },
         web_url: {
           type: String,
-          // required: [true, "Web url is required"],
+          default: null
         },
       },
     },

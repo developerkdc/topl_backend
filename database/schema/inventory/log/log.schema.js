@@ -129,7 +129,7 @@ export const log_invoice_schema = new mongoose.Schema(
   {
     inward_sr_no: {
       type: Number,
-      default: null,
+      unique:true,
       required: [true, "Inward Sr.No is required. "],
     },
     inward_date: {
@@ -232,7 +232,7 @@ export const log_invoice_schema = new mongoose.Schema(
         },
         web_url: {
           type: String,
-          // required: [true, "Web url is required"],
+          default: null
         },
       },
     },

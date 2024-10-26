@@ -257,7 +257,7 @@ const veneer_approval_invoice_schema = new mongoose.Schema(
         },
         web_url: {
           type: String,
-          // required: [true, "Web url is required"],
+          default: null
         },
       },
     },

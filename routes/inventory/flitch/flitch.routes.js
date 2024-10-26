@@ -13,6 +13,7 @@ import {
 } from "../../../controllers/inventory/flitch/flitch.controller.js";
 import RolesPermissions from "../../../middlewares/permission.js";
 import AuthMiddleware from "../../../middlewares/verifyToken.js";
+import { verifyApproval } from "../../../middlewares/approval.middleware.js";
 const flitch_router = express.Router();
 
 flitch_router.post("/list-inventory", AuthMiddleware, RolesPermissions("flitch_inventory", "view"), listing_flitch_inventory);
@@ -42,6 +43,7 @@ flitch_router.patch(
   "/edit-invoice-item-inventory/:invoice_id",
   AuthMiddleware,
   RolesPermissions("flitch_inventory", "edit"),
+  verifyApproval("flitch_inventory", "edit"),
   edit_flitch_item_invoice_inventory
 );
 //Dropdowns

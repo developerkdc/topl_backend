@@ -161,7 +161,7 @@ export const log_approve_invoice_details = catchAsync(async (req, res, next) => 
                         remark: null
                     }
                 },
-                "approvalBy.user": user._id,
+                "approval.approvalBy.user": user._id,
             }
         }, { session, new: true }).lean();
         if (!invoice_details) return next(new ApiError("No invoice found for approval", 404));
@@ -249,7 +249,7 @@ export const log_reject_invoice_details = catchAsync(async (req, res, next) => {
                         remark: remark
                     }
                 },
-                "rejectedBy.user": user._id,
+                "approval.rejectedBy.user": user._id,
             }
         }, { session, new: true }).lean();
         if (!invoice_details) return next(new ApiError("No invoice found for approval", 404));
