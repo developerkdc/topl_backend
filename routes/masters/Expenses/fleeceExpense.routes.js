@@ -14,14 +14,14 @@ fleeceExpenseRouter.post(
 fleeceExpenseRouter.get(
     "/fleece-expense-item-listing-by-invoice/:invoice_id",
     AuthMiddleware,
-    RolesPermissions("expense_master", "edit"),
+    // RolesPermissions("expense_master", "edit"),
     fleeceExpenses_item_listing_by_invoice
 );
 
 fleeceExpenseRouter.patch(
     "/add-fleece-expenses/:invoice_id",
     AuthMiddleware,
-    RolesPermissions("expense_master", "edit"),
+    // RolesPermissions("expense_master", "edit"),
     add_fleeceExpenses
 );
 

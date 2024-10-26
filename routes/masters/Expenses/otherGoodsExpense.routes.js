@@ -14,14 +14,14 @@ otherGoodsExpenseRouter.post(
 otherGoodsExpenseRouter.get(
     "/otherGoods-expense-item-listing-by-invoice/:invoice_id",
     AuthMiddleware,
-    RolesPermissions("expense_master", "edit"),
+    // RolesPermissions("expense_master", "edit"),
     otherGoodsExpenses_item_listing_by_invoice
 );
 
 otherGoodsExpenseRouter.patch(
     "/add-otherGoods-expenses/:invoice_id",
     AuthMiddleware,
-    RolesPermissions("expense_master", "edit"),
+    // RolesPermissions("expense_master", "edit"),
     add_otherGoodsExpenses
 );
 

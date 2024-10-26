@@ -14,14 +14,14 @@ veneerExpenseRouter.post(
 veneerExpenseRouter.get(
     "/veneer-expense-item-listing-by-invoice/:invoice_id",
     AuthMiddleware,
-    RolesPermissions("expense_master", "edit"),
+    // RolesPermissions("expense_master", "edit"),
     veneerExpenses_item_listing_by_invoice
 );
 
 veneerExpenseRouter.patch(
     "/add-veneer-expenses/:invoice_id",
     AuthMiddleware,
-    RolesPermissions("expense_master", "edit"),
+    // RolesPermissions("expense_master", "edit"),
     add_veneerExpenses
 );
 
