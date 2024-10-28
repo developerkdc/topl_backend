@@ -12,6 +12,7 @@ import {
 } from "../../../controllers/inventory/plywood/plywood.controller.js";
 import AuthMiddleware from "../../../middlewares/verifyToken.js";
 import RolesPermissions from "../../../middlewares/permission.js";
+import { verifyApproval } from "../../../middlewares/approval.middleware.js";
 
 const router = Router();
 
@@ -40,6 +41,7 @@ router.patch(
   "/edit-invoice-item-inventory/:invoice_id",
   AuthMiddleware,
   RolesPermissions("plywood_inventory", "edit"),
+  verifyApproval("plywood_inventory", "edit"),
   edit_plywood_item_invoice_inventory
 );
 router.get(

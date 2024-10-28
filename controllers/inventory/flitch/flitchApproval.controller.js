@@ -4,7 +4,7 @@ import { DynamicSearch } from "../../../utils/dynamicSearch/dynamic.js";
 import ApiError from "../../../utils/errors/apiError.js";
 import catchAsync from "../../../utils/errors/catchAsync.js";
 import { flitch_approval_inventory_invoice_model, flitch_approval_inventory_items_model } from "../../../database/schema/inventory/Flitch/flitchApproval.schema.js";
-import { flitch_inventory_invoice_model } from "../../../database/schema/inventory/Flitch/flitch.schema.js";
+import { flitch_inventory_invoice_model, flitch_inventory_items_model } from "../../../database/schema/inventory/Flitch/flitch.schema.js";
 
 export const flitchApproval_invoice_listing = catchAsync(async function (req, res, next) {
     const {
@@ -175,7 +175,11 @@ export const flitch_approve_invoice_details = catchAsync(async (req, res, next) 
         }).lean();
         if (items_details?.length <= 0) return next(new ApiError("No invoice items found for approval", 404));
 
-        await flitch_approval_inventory_items_model.aggregate([
+        await flitch_inventory_items_model.deleteMany({
+            invoice_id: new mongoose.Types.ObjectId(invoice_id)
+        }, { session });
+
+        const approval_invoice_items_data = await flitch_approval_inventory_items_model.aggregate([
             {
                 $match: {
                     approval_invoice_id: invoice_details?._id,
@@ -188,15 +192,11 @@ export const flitch_approve_invoice_details = catchAsync(async (req, res, next) 
                 },
             },
             {
-                $unset: ["flitch_item_id","approval_invoice_id"]
-            },
-            {
-                $merge: {
-                    into: "flitch_inventory_items_details",
-                    whenMatched: "merge",
-                }
+                $unset: ["flitch_item_id", "approval_invoice_id"]
             }
         ]);
+
+        await flitch_inventory_items_model.insertMany(approval_invoice_items_data, { session })
 
         await session.commitTransaction();
         session.endSession();
@@ -220,7 +220,7 @@ export const flitch_reject_invoice_details = catchAsync(async (req, res, next) =
     try {
         const invoiceId = req.params?.invoice_id;
         const document_id = req.params._id;
-        const remark = req.body?.remark
+        const remark = req.body?.remark || "Rejected"
         const user = req.userDetails;
 
         const invoice_details = await flitch_approval_inventory_invoice_model.findOneAndUpdate({

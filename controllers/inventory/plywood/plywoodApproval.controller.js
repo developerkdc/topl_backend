@@ -1,8 +1,10 @@
 import mongoose from "mongoose";
-import catchAsync from "../../../utils/errors/catchAsync.js";
+import { plywood_inventory_invoice_details, plywood_inventory_items_details } from "../../../database/schema/inventory/Plywood/plywood.schema.js";
+import { plywood_approval_inventory_invoice_model, plywood_approval_inventory_items_model } from "../../../database/schema/inventory/Plywood/plywoodApproval.schema.js";
 import { dynamic_filter } from "../../../utils/dymanicFilter.js";
 import { DynamicSearch } from "../../../utils/dynamicSearch/dynamic.js";
-import { plywood_approval_inventory_invoice_model, plywood_approval_inventory_items_model } from "../../../database/schema/inventory/Plywood/plywoodApproval.schema.js";
+import ApiError from "../../../utils/errors/apiError.js";
+import catchAsync from "../../../utils/errors/catchAsync.js";
 
 export const plywoodApproval_invoice_listing = catchAsync(async function (req, res, next) {
     const {
@@ -19,6 +21,7 @@ export const plywoodApproval_invoice_listing = catchAsync(async function (req, r
         arrayField = [],
     } = req?.body?.searchFields || {};
     const filter = req.body?.filter;
+    const user = req.userDetails;
 
     let search_query = {};
     if (search != "" && req?.body?.searchFields) {
@@ -47,6 +50,7 @@ export const plywoodApproval_invoice_listing = catchAsync(async function (req, r
     const match_query = {
         ...filterData,
         ...search_query,
+        "approval.approvalPerson": user?._id
     };
 
     const aggregate_stage = [
@@ -88,10 +92,12 @@ export const plywoodApproval_invoice_listing = catchAsync(async function (req, r
 export const plywoodApproval_item_listing_by_invoice = catchAsync(
     async (req, res, next) => {
         const invoice_id = req.params.invoice_id;
+        const document_id = req.params._id;
 
         const aggregate_stage = [
             {
                 $match: {
+                    approval_invoice_id: new mongoose.Types.ObjectId(document_id),
                     "invoice_id": new mongoose.Types.ObjectId(invoice_id),
                 },
             },
@@ -103,13 +109,10 @@ export const plywoodApproval_item_listing_by_invoice = catchAsync(
         ];
 
         const plywoodExpense_item_by_invoice = await plywood_approval_inventory_items_model.aggregate(aggregate_stage);
-        const plywoodExpense_invoice = await plywood_approval_inventory_invoice_model.findOne({ _id: invoice_id });
-
-        // const totalCount = await plywood_inventory_items_view_model.countDocuments({
-        //   ...match_query,
-        // });
-
-        // const totalPage = Math.ceil(totalCount / limit);
+        const plywoodExpense_invoice = await plywood_approval_inventory_invoice_model.findOne({
+            _id: document_id,
+            invoice_id: invoice_id
+        });
 
         return res.status(200).json({
             statusCode: 200,
@@ -123,3 +126,160 @@ export const plywoodApproval_item_listing_by_invoice = catchAsync(
         });
     }
 );
+
+export const plywood_approve_invoice_details = catchAsync(async (req, res, next) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+        const invoiceId = req.params?.invoice_id;
+        const document_id = req.params._id;
+        const user = req.userDetails;
+
+        const invoice_details = await plywood_approval_inventory_invoice_model.findOneAndUpdate({
+            _id: document_id,
+            invoice_id: invoiceId,
+            "approval.approvalPerson": user._id
+        }, {
+            $set: {
+                approval_status: {
+                    sendForApproval: {
+                        status: false,
+                        remark: null
+                    },
+                    approved: {
+                        status: true,
+                        remark: null
+                    },
+                    rejected: {
+                        status: false,
+                        remark: null
+                    }
+                },
+                "approval.approvalBy.user": user._id,
+            }
+        }, { session, new: true }).lean();
+        if (!invoice_details) return next(new ApiError("No invoice found for approval", 404));
+
+        const { _id, invoice_id, approvalBy, ...invoiceData } = invoice_details
+
+        const update_plywood_invoice = await plywood_inventory_invoice_details.updateOne({ _id: invoice_id }, {
+            $set: {
+                ...invoiceData,
+            }
+        }, { session })
+        if (!update_plywood_invoice.acknowledged || update_plywood_invoice.modifiedCount <= 0) return next(new ApiError("Failed to approve invoice"), 400);
+
+        const items_details = await plywood_approval_inventory_items_model.find({
+            approval_invoice_id: invoice_details?._id,
+            invoice_id: invoice_id
+        }).lean();
+        if (items_details?.length <= 0) return next(new ApiError("No invoice items found for approval", 404));
+
+        await plywood_inventory_items_details.deleteMany({
+            invoice_id: new mongoose.Types.ObjectId(invoice_id)
+        }, { session });
+
+        const approval_invoice_items_data = await plywood_approval_inventory_items_model.aggregate([
+            {
+                $match: {
+                    approval_invoice_id: invoice_details?._id,
+                    invoice_id: new mongoose.Types.ObjectId(invoice_id)
+                }
+            },
+            {
+                $set: {
+                    _id: "$plywood_item_id"
+                },
+            },
+            {
+                $unset: ["plywood_item_id", "approval_invoice_id"]
+            }
+        ]);
+
+        await plywood_inventory_items_details.insertMany(approval_invoice_items_data, { session })
+
+        await session.commitTransaction();
+        session.endSession();
+        return res.status(200).json({
+            statusCode: 200,
+            status: "success",
+            message: "Invoice has approved successfully",
+        });
+
+    } catch (error) {
+        console.log(error);
+        await session.abortTransaction();
+        session.endSession();
+        return next(error);
+    }
+})
+
+export const plywood_reject_invoice_details = catchAsync(async (req, res, next) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+        const invoiceId = req.params?.invoice_id;
+        const document_id = req.params._id;
+        const remark = req.body?.remark || "Rejected"
+        const user = req.userDetails;
+
+        const invoice_details = await plywood_approval_inventory_invoice_model.findOneAndUpdate({
+            _id: document_id,
+            invoice_id: invoiceId,
+            "approval.approvalPerson": user._id
+        }, {
+            $set: {
+                approval_status: {
+                    sendForApproval: {
+                        status: false,
+                        remark: null
+                    },
+                    approved: {
+                        status: false,
+                        remark: null
+                    },
+                    rejected: {
+                        status: true,
+                        remark: remark
+                    }
+                },
+                "approval.rejectedBy.user": user._id,
+            }
+        }, { session, new: true }).lean();
+        if (!invoice_details) return next(new ApiError("No invoice found for approval", 404));
+
+        const update_plywood_invoice = await plywood_inventory_invoice_details.updateOne({ _id: invoiceId }, {
+            $set: {
+                approval_status: {
+                    sendForApproval: {
+                        status: false,
+                        remark: null
+                    },
+                    approved: {
+                        status: false,
+                        remark: null
+                    },
+                    rejected: {
+                        status: true,
+                        remark: remark
+                    }
+                },
+            }
+        }, { session })
+        if (!update_plywood_invoice.acknowledged || update_plywood_invoice.modifiedCount <= 0) return next(new ApiError("Failed to reject invoice"), 400);
+
+        await session.commitTransaction();
+        session.endSession();
+        return res.status(200).json({
+            statusCode: 200,
+            status: "success",
+            message: "Invoice has rejected successfully",
+        });
+
+    } catch (error) {
+        console.log(error);
+        await session.abortTransaction();
+        session.endSession();
+        return next(error);
+    }
+})
