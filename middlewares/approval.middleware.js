@@ -10,12 +10,8 @@ export const verifyApproval = function (module, action) {
         if (configuration?.[module] && configuration?.[module]?.[action]) {
             if (users.user_type === "ADMIN" && users.approver_user_name === "Self Approved" && !users.approver_id) {
                 req.sendForApproval = false;
-                console.log("first")
-                // next();
             } else if (users.user_type === "STAFF" && users.approver_user_name !== "Self Approved" && users.approver_id) {
                 req.sendForApproval = true;
-                console.log("second")
-                // next();
             }
         }
         next();
