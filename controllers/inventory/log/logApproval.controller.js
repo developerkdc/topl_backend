@@ -1,12 +1,10 @@
 import mongoose from "mongoose";
-import catchAsync from "../../../utils/errors/catchAsync.js";
+import { log_inventory_invoice_model } from "../../../database/schema/inventory/log/log.schema.js";
+import { log_approval_inventory_invoice_model, log_approval_inventory_items_model } from "../../../database/schema/inventory/log/logApproval.schema.js";
 import { dynamic_filter } from "../../../utils/dymanicFilter.js";
 import { DynamicSearch } from "../../../utils/dynamicSearch/dynamic.js";
-import { log_approval_inventory_invoice_model, log_approval_inventory_items_model } from "../../../database/schema/inventory/log/logApproval.schema.js";
-import { log_inventory_invoice_model } from "../../../database/schema/inventory/log/log.schema.js";
 import ApiError from "../../../utils/errors/apiError.js";
-import { StatusCodes } from "../../../utils/constants.js";
-import ApiResponse from "../../../utils/ApiResponse.js";
+import catchAsync from "../../../utils/errors/catchAsync.js";
 
 export const logApproval_invoice_listing = catchAsync(async function (req, res, next) {
     const {
@@ -135,7 +133,7 @@ export const logApproval_item_listing_by_invoice = catchAsync(
     }
 );
 
-export const approve_invoice_details = catchAsync(async (req, res, next) => {
+export const log_approve_invoice_details = catchAsync(async (req, res, next) => {
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
@@ -163,7 +161,7 @@ export const approve_invoice_details = catchAsync(async (req, res, next) => {
                         remark: null
                     }
                 },
-                "approvalBy.user": user._id,
+                "approval.approvalBy.user": user._id,
             }
         }, { session, new: true }).lean();
         if (!invoice_details) return next(new ApiError("No invoice found for approval", 404));
@@ -192,11 +190,11 @@ export const approve_invoice_details = catchAsync(async (req, res, next) => {
             },
             {
                 $set: {
-                    _id: "$item_id"
+                    _id: "$log_item_id"
                 },
             },
             {
-                $unset: ["item_id"]
+                $unset: ["log_item_id","approval_invoice_id"]
             },
             {
                 $merge: {
@@ -222,7 +220,7 @@ export const approve_invoice_details = catchAsync(async (req, res, next) => {
     }
 })
 
-export const reject_invoice_details = catchAsync(async (req, res, next) => {
+export const log_reject_invoice_details = catchAsync(async (req, res, next) => {
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
@@ -251,7 +249,7 @@ export const reject_invoice_details = catchAsync(async (req, res, next) => {
                         remark: remark
                     }
                 },
-                "rejectedBy.user": user._id,
+                "approval.rejectedBy.user": user._id,
             }
         }, { session, new: true }).lean();
         if (!invoice_details) return next(new ApiError("No invoice found for approval", 404));

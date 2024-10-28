@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import invoice_details from "../../../Utils/invoiceDetails.schema.js";
 import expensesSchema from "../../masters/expenses.schema.js";
+import { approval_status } from "../../../Utils/approvalStatus.schema.js";
 
 export const veneer_item_details_schema = new mongoose.Schema({
   supplier_item_name: {
@@ -17,7 +18,6 @@ export const veneer_item_details_schema = new mongoose.Schema({
   },
   item_sr_no: {
     type: Number,
-    // unique: true,
     required: [true, "item Sr No is required"],
   },
   item_name: {
@@ -145,7 +145,7 @@ export const veneer_invoice_schema = new mongoose.Schema(
   {
     inward_sr_no: {
       type: Number,
-      default: null,
+      unique:true,
       required: [true, "Inward Sr.No is required. "],
     },
     inward_date: {
@@ -248,10 +248,11 @@ export const veneer_invoice_schema = new mongoose.Schema(
         },
         web_url: {
           type: String,
-          // required: [true, "Web url is required"],
+          default: null
         },
       },
     },
+    approval_status:approval_status,
     invoice_Details: invoice_details,
     expenses: {
       type: [expensesSchema],
@@ -272,6 +273,9 @@ export const veneer_invoice_schema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+veneer_invoice_schema.index({ inward_sr_no: 1 });
+veneer_invoice_schema.index({ inward_sr_no: 1, "expensesSchema.expenseType": 1 }, { unique: true });
 
 export const veneer_inventory_items_model = mongoose.model(
   "veneer_inventory_items_details",

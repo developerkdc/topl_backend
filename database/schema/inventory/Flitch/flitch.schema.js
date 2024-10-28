@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import invoice_details from "../../../Utils/invoiceDetails.schema.js";
 import expensesSchema from "../../masters/expenses.schema.js";
+import { approval_status } from "../../../Utils/approvalStatus.schema.js";
 
 export const item_details_schema = new mongoose.Schema(
   {
@@ -224,10 +225,11 @@ export const flitch_invoice_schema = new mongoose.Schema(
         },
         web_url: {
           type: String,
-          // required: [true, "web url is required"],
+          default: null
         },
       },
     },
+    approval_status: approval_status,
     invoice_Details: invoice_details,
     expenses: {
       type: [expensesSchema],
@@ -250,6 +252,7 @@ export const flitch_invoice_schema = new mongoose.Schema(
 );
 
 flitch_invoice_schema.index({ inward_sr_no: 1 });
+flitch_invoice_schema.index({ inward_sr_no: 1, "expensesSchema.expenseType": 1 }, { unique: true });
 
 const flitch_inventory_items_view_schema = new mongoose.Schema(
   {},

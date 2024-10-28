@@ -7,6 +7,7 @@ import mdfApprovalRouter from "../inventory/mdf/mdfApproval.routes.js";
 import faceApprovalRouter from "../inventory/face/faceApproval.routes.js";
 import coreApprovalRouter from "../inventory/core/coreApproval.routes.js";
 import fleeceApprovalRouter from "../inventory/fleece/fleeceApproval.routes.js";
+import otherGoodsApprovalRouter from "../inventory/otherGoods/otherGoodsApproval.routes.js";
 const approvalRouters = express.Router();
 
 approvalRouters.use(logApprovalRouter);
@@ -17,5 +18,6 @@ approvalRouters.use(mdfApprovalRouter);
 approvalRouters.use(faceApprovalRouter);
 approvalRouters.use(coreApprovalRouter);
 approvalRouters.use(fleeceApprovalRouter);
+approvalRouters.use(otherGoodsApprovalRouter);
 
 export default approvalRouters;

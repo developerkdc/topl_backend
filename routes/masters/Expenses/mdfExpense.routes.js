@@ -14,14 +14,14 @@ mdfExpenseRouter.post(
 mdfExpenseRouter.get(
     "/mdf-expense-item-listing-by-invoice/:invoice_id",
     AuthMiddleware,
-    RolesPermissions("expense_master", "edit"),
+    // RolesPermissions("expense_master", "edit"),
     mdfExpenses_item_listing_by_invoice
 );
 
 mdfExpenseRouter.patch(
     "/add-mdf-expenses/:invoice_id",
     AuthMiddleware,
-    RolesPermissions("expense_master", "edit"),
+    // RolesPermissions("expense_master", "edit"),
     add_mdfExpenses
 );
 

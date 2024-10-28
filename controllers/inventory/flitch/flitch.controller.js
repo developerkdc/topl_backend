@@ -11,40 +11,7 @@ import { dynamic_filter } from "../../../utils/dymanicFilter.js";
 import ApiResponse from "../../../utils/ApiResponse.js";
 import { StatusCodes } from "../../../utils/constants.js";
 import { createFlitchLogsExcel } from "../../../config/downloadExcel/Logs/Inventory/flitch/flitchLogs.js";
-
-// export const listing_flitch_inventory = catchAsync(async (req, res, next) => {
-//     const { page = 1, limit = 10, sortBy = "updated_at", sort = "desc" } = req.query;
-
-//     const List_flitch_inventory_details = await flitch_inventory_items_model.aggregate([
-//         {
-//             $lookup: {
-//                 from: "flitch_inventory_invoice_model",
-//                 localField: "invoice_id",
-//                 foreignField: "_id",
-//                 as: "flitch_invoice_details"
-//             }
-//         },
-//         {
-//             $unwind: {
-//                 path: "$flitch_invoice_details",
-//                 preserveNullAndEmptyArrays: true
-//             }
-//         },
-//         {
-//             $skip: (parseInt(page) - 1) * parseInt(limit)
-//         },
-//         {
-//             $limit: parseInt(limit)
-//         },
-//     ]);
-
-//     return res.status(200).json({
-//         statusCode:200,
-//         status: "success",
-//         data:List_flitch_inventory_details,
-//         message:"Data fetched successfully"
-//     })
-// })
+import { flitch_approval_inventory_invoice_model, flitch_approval_inventory_items_model } from "../../../database/schema/inventory/Flitch/flitchApproval.schema.js";
 
 export const listing_flitch_inventory = catchAsync(async (req, res, next) => {
   const {
@@ -407,53 +374,137 @@ export const edit_flitch_item_invoice_inventory = catchAsync(
       const invoice_id = req.params?.invoice_id;
       const items_details = req.body?.inventory_items_details;
       const invoice_details = req.body?.inventory_invoice_details;
+      // const sendForApproval = req.sendForApproval;
+      const sendForApproval = true;
+      const user = req.userDetails;
 
-      const update_invoice_details =
+      if (!sendForApproval) {
+        const update_invoice_details =
+          await flitch_inventory_invoice_model.updateOne(
+            { _id: invoice_id },
+            {
+              $set: {
+                ...invoice_details,
+              },
+            },
+            { session }
+          );
+
+        if (
+          !update_invoice_details.acknowledged ||
+          update_invoice_details.modifiedCount <= 0
+        )
+          return next(new ApiError("Failed to update invoice", 400));
+
+        const all_invoice_items = await flitch_inventory_items_model.deleteMany(
+          { invoice_id: invoice_id },
+          { session }
+        );
+
+        if (
+          !all_invoice_items.acknowledged ||
+          all_invoice_items.deletedCount <= 0
+        )
+          return next(new ApiError("Failed to update invoice items", 400));
+
+        const update_item_details = await flitch_inventory_items_model.insertMany(
+          [...items_details],
+          { session }
+        );
+
+        await session.commitTransaction();
+        session.endSession();
+        return res
+          .status(StatusCodes.OK)
+          .json(
+            new ApiResponse(
+              StatusCodes.OK,
+              "Inventory item updated successfully",
+              update_item_details
+            )
+          );
+      } else {
+        const edited_by = user?.id;
+        // const approval_person = user.approver_id;
+        const approval_person = edited_by;
+        const { _id, ...invoiceDetailsData } = invoice_details;
+
+        const add_invoice_details = await flitch_approval_inventory_invoice_model.create([{
+          ...invoiceDetailsData,
+          invoice_id: invoice_id,
+          approval_status: {
+            sendForApproval: {
+              status: true,
+              remark: "Approval Pending"
+            },
+            approved: {
+              status: false,
+              remark: null
+            },
+            rejected: {
+              status: false,
+              remark: null
+            }
+          },
+          approval: {
+            editedBy: edited_by,
+            approvalPerson: approval_person,
+          }
+        }], { session });
+
+        if (!add_invoice_details?.[0])
+          return next(new ApiError("Failed to add invoice approval", 400));
+
         await flitch_inventory_invoice_model.updateOne(
           { _id: invoice_id },
           {
             $set: {
-              ...invoice_details,
+              approval_status: {
+                sendForApproval: {
+                  status: true,
+                  remark: "Approval Pending"
+                },
+                approved: {
+                  status: false,
+                  remark: null
+                },
+                rejected: {
+                  status: false,
+                  remark: null
+                }
+              }
             },
           },
           { session }
         );
 
-      console.log(update_invoice_details);
+        const itemDetailsData = items_details.map((ele) => {
+          const { _id, ...itemData } = ele;
+          return {
+            ...itemData,
+            flitch_item_id: _id ? _id : new mongoose.Types.ObjectId(),
+            approval_invoice_id: add_invoice_details[0]?._id
+          }
+        })
 
-      if (
-        !update_invoice_details.acknowledged ||
-        update_invoice_details.modifiedCount <= 0
-      )
-        return next(new ApiError("Failed to update invoice", 400));
-
-      const all_invoice_items = await flitch_inventory_items_model.deleteMany(
-        { invoice_id: invoice_id },
-        { session }
-      );
-
-      if (
-        !all_invoice_items.acknowledged ||
-        all_invoice_items.deletedCount <= 0
-      )
-        return next(new ApiError("Failed to update invoice items", 400));
-
-      const update_item_details = await flitch_inventory_items_model.insertMany(
-        [...items_details],
-        { session }
-      );
-
-      await session.commitTransaction();
-      session.endSession();
-      return res
-        .status(StatusCodes.OK)
-        .json(
-          new ApiResponse(
-            StatusCodes.OK,
-            "Inventory item updated successfully",
-            update_item_details
-          )
+        const add_approval_item_details = await flitch_approval_inventory_items_model.insertMany(
+          itemDetailsData,
+          { session }
         );
+
+        await session.commitTransaction();
+        session.endSession();
+        return res
+          .status(StatusCodes.OK)
+          .json(
+            new ApiResponse(
+              StatusCodes.OK,
+              "Inventory item send for approval successfully",
+              add_approval_item_details
+            )
+          );
+      }
+
     } catch (error) {
       console.log(error);
       await session.abortTransaction();

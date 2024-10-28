@@ -213,7 +213,7 @@ export const mdf_invoice_schema = new mongoose.Schema(
         },
         web_url: {
           type: String,
-          // required: [true, "web url is required"],
+          default: null
         },
       },
     },

@@ -1,7 +1,6 @@
 import express from "express";
+import { log_approve_invoice_details, log_reject_invoice_details, logApproval_invoice_listing, logApproval_item_listing_by_invoice } from "../../../controllers/inventory/log/logApproval.controller.js";
 import AuthMiddleware from "../../../middlewares/verifyToken.js";
-import RolesPermissions from "../../../middlewares/permission.js";
-import { approve_invoice_details, logApproval_invoice_listing, logApproval_item_listing_by_invoice, reject_invoice_details } from "../../../controllers/inventory/log/logApproval.controller.js";
 const logApprovalRouter = express.Router();
 
 logApprovalRouter.post(
@@ -17,14 +16,14 @@ logApprovalRouter.get(
 );
 
 logApprovalRouter.post(
-    "/approve_invoice_details/:_id/:invoice_id",
+    "/log-approve_invoice_details/:_id/:invoice_id",
     AuthMiddleware,
-    approve_invoice_details
+    log_approve_invoice_details
 );
 logApprovalRouter.post(
-    "/reject_invoice_details/:_id/:invoice_id",
+    "/log-reject_invoice_details/:_id/:invoice_id",
     AuthMiddleware,
-    reject_invoice_details
+    log_reject_invoice_details
 );
 
 export default logApprovalRouter;

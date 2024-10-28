@@ -14,14 +14,14 @@ coreExpenseRouter.post(
 coreExpenseRouter.get(
     "/core-expense-item-listing-by-invoice/:invoice_id",
     AuthMiddleware,
-    RolesPermissions("expense_master", "edit"),
+    // RolesPermissions("expense_master", "edit"),
     coreExpenses_item_listing_by_invoice
 );
 
 coreExpenseRouter.patch(
     "/add-core-expenses/:invoice_id",
     AuthMiddleware,
-    RolesPermissions("expense_master", "edit"),
+    // RolesPermissions("expense_master", "edit"),
     add_coreExpenses
 );
 
