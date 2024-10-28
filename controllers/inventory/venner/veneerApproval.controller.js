@@ -4,7 +4,7 @@ import { DynamicSearch } from "../../../utils/dynamicSearch/dynamic.js";
 import ApiError from "../../../utils/errors/apiError.js";
 import catchAsync from "../../../utils/errors/catchAsync.js";
 import { veneer_approval_inventory_invoice_model, veneer_approval_inventory_items_model } from "../../../database/schema/inventory/venner/veneerApproval.schema.js";
-import { veneer_inventory_invoice_model } from "../../../database/schema/inventory/venner/venner.schema.js";
+import { veneer_inventory_invoice_model, veneer_inventory_items_model } from "../../../database/schema/inventory/venner/venner.schema.js";
 
 export const veneerApproval_invoice_listing = catchAsync(async function (req, res, next) {
     const {
@@ -175,7 +175,11 @@ export const veneer_approve_invoice_details = catchAsync(async (req, res, next) 
         }).lean();
         if (items_details?.length <= 0) return next(new ApiError("No invoice items found for approval", 404));
 
-        await veneer_approval_inventory_items_model.aggregate([
+        await veneer_inventory_items_model.deleteMany({
+            invoice_id: new mongoose.Types.ObjectId(invoice_id)
+        }, { session });
+
+        const approval_invoice_items_data = await veneer_approval_inventory_items_model.aggregate([
             {
                 $match: {
                     approval_invoice_id: invoice_details?._id,
@@ -188,15 +192,11 @@ export const veneer_approve_invoice_details = catchAsync(async (req, res, next) 
                 },
             },
             {
-                $unset: ["veneer_item_id","approval_invoice_id"]
-            },
-            {
-                $merge: {
-                    into: "veneer_inventory_items_details",
-                    whenMatched: "merge",
-                }
+                $unset: ["veneer_item_id", "approval_invoice_id"]
             }
         ]);
+
+        await veneer_inventory_items_model.insertMany(approval_invoice_items_data, { session })
 
         await session.commitTransaction();
         session.endSession();
@@ -220,7 +220,7 @@ export const veneer_reject_invoice_details = catchAsync(async (req, res, next) =
     try {
         const invoiceId = req.params?.invoice_id;
         const document_id = req.params._id;
-        const remark = req.body?.remark
+        const remark = req.body?.remark || "Rejected"
         const user = req.userDetails;
 
         const invoice_details = await veneer_approval_inventory_invoice_model.findOneAndUpdate({

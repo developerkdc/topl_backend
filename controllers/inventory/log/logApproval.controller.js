@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { log_inventory_invoice_model } from "../../../database/schema/inventory/log/log.schema.js";
+import { log_inventory_invoice_model, log_inventory_items_model } from "../../../database/schema/inventory/log/log.schema.js";
 import { log_approval_inventory_invoice_model, log_approval_inventory_items_model } from "../../../database/schema/inventory/log/logApproval.schema.js";
 import { dynamic_filter } from "../../../utils/dymanicFilter.js";
 import { DynamicSearch } from "../../../utils/dynamicSearch/dynamic.js";
@@ -181,7 +181,11 @@ export const log_approve_invoice_details = catchAsync(async (req, res, next) => 
         }).lean();
         if (items_details?.length <= 0) return next(new ApiError("No invoice items found for approval", 404));
 
-        await log_approval_inventory_items_model.aggregate([
+        await log_inventory_items_model.deleteMany({
+            invoice_id: new mongoose.Types.ObjectId(invoice_id)
+        }, { session });
+
+        const approval_invoice_items_data = await log_approval_inventory_items_model.aggregate([
             {
                 $match: {
                     approval_invoice_id: invoice_details?._id,
@@ -194,15 +198,11 @@ export const log_approve_invoice_details = catchAsync(async (req, res, next) => 
                 },
             },
             {
-                $unset: ["log_item_id","approval_invoice_id"]
-            },
-            {
-                $merge: {
-                    into: "log_inventory_items_details",
-                    whenMatched: "merge",
-                }
+                $unset: ["log_item_id", "approval_invoice_id"]
             }
         ]);
+
+        await log_inventory_items_model.insertMany(approval_invoice_items_data, { session })
 
         await session.commitTransaction();
         session.endSession();
@@ -226,7 +226,7 @@ export const log_reject_invoice_details = catchAsync(async (req, res, next) => {
     try {
         const invoiceId = req.params?.invoice_id;
         const document_id = req.params._id;
-        const remark = req.body?.remark
+        const remark = req.body?.remark || "Rejected"
         const user = req.userDetails;
 
         const invoice_details = await log_approval_inventory_invoice_model.findOneAndUpdate({

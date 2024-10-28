@@ -13,6 +13,7 @@ import {
 } from "../../../controllers/inventory/face/face.controller.js";
 import AuthMiddleware from "../../../middlewares/verifyToken.js";
 import RolesPermissions from "../../../middlewares/permission.js";
+import { verifyApproval } from "../../../middlewares/approval.middleware.js";
 const router = express.Router();
 router.post("/list-inventory", AuthMiddleware, RolesPermissions("face_inventory", "view"), listing_face_inventory);
 router.post("/add-inventory", AuthMiddleware, RolesPermissions("face_inventory", "create"), add_face_inventory);
@@ -34,6 +35,7 @@ router.patch(
   "/edit-invoice-item-inventory/:invoice_id",
   AuthMiddleware,
   RolesPermissions("face_inventory", "edit"),
+  verifyApproval("face_inventory", "edit"),
   edit_face_item_invoice_inventory
 );
 router.post("/download-excel-face", AuthMiddleware, RolesPermissions("face_inventory", "view"), faceLogsCsv);

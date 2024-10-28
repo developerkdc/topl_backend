@@ -210,7 +210,6 @@ export const edit_veneer_item_invoice_inventory = catchAsync(
       const items_details = req.body?.inventory_items_details;
       const invoice_details = req.body?.inventory_invoice_details;
       const sendForApproval = req.sendForApproval;
-      // const sendForApproval = true;
       const user = req.userDetails;
 
       if (!sendForApproval) {
@@ -275,7 +274,6 @@ export const edit_veneer_item_invoice_inventory = catchAsync(
       } else {
         const edited_by = user?.id;
         const approval_person = user.approver_id;
-        // const approval_person = edited_by;
         const { _id, ...invoiceDetailsData } = invoice_details;
 
         const add_invoice_details = await veneer_approval_inventory_invoice_model.create([{
