@@ -12,6 +12,8 @@ export const verifyApproval = function (module, action) {
                 req.sendForApproval = false;
             } else if (users.user_type === "STAFF" && users.approver_user_name !== "Self Approved" && users.approver_id) {
                 req.sendForApproval = true;
+            } else if (users.user_type === "ADMIN" && users.approver_user_name !== "Self Approved" && users.approver_id) {
+                req.sendForApproval = true;
             }
         }
         next();
