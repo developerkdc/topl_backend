@@ -79,6 +79,14 @@ export const plywood_item_details_schema = new mongoose.Schema(
       type: Number,
       required: [true, "Amount is required"],
     },
+    amount_factor: {
+      type: Number,
+      default: 0,
+    },
+    expense_amount: {
+      type: Number,
+      default: 0,
+    },
     remark: {
       type: String,
       default: null,
