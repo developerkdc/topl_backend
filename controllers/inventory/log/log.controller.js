@@ -237,6 +237,9 @@ export const edit_log_item_invoice_inventory = catchAsync(
       const sendForApproval = req.sendForApproval;
       const user = req.userDetails;
 
+      const fetchInvoiceData = await log_inventory_invoice_model.findOne({_id:invoice_details});
+      if(fetchInvoiceData.approval_status?.sendForApproval?.status) return next(new ApiError("Already send for approval"));
+
       if (!sendForApproval) {
         const update_invoice_details =
           await log_inventory_invoice_model.updateOne(

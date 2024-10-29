@@ -326,6 +326,9 @@ export const edit_plywood_item_invoice_inventory = catchAsync(
       const sendForApproval = req.sendForApproval;
       const user = req.userDetails;
 
+      const fetchInvoiceData = await plywood_inventory_invoice_details.findOne({_id:invoice_details});
+      if(fetchInvoiceData.approval_status?.sendForApproval?.status) return next(new ApiError("Already send for approval"));
+
       const get_pallet_no = await plywood_inventory_items_details.aggregate([
         {
           $group: {
@@ -453,13 +456,6 @@ export const edit_plywood_item_invoice_inventory = catchAsync(
 
         const itemDetailsData = items_details.map((ele) => {
           const { _id, ...itemData } = ele;
-          if (
-            !itemData?.pallet_number &&
-            !itemData?.pallet_number > 0
-          ) {
-            itemData.pallet_number = latest_pallet_no;
-            latest_pallet_no += 1;
-          }
           return {
             ...itemData,
             plywood_item_id: _id ? _id : new mongoose.Types.ObjectId(),
