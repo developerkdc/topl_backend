@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { approval_status } from "../../../Utils/approvalStatus.schema";
 
 const flitchingSchema = new mongoose.Schema(
   {
@@ -126,6 +127,7 @@ const flitchingSchema = new mongoose.Schema(
       type: Number,
       required: [true, "expense amount is required"]
     },
+    approval_status: approval_status,
     remarks: {
       type: String,
       default: null,

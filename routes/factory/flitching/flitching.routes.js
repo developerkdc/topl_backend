@@ -31,6 +31,7 @@ router.post("/add-flitching", AuthMiddleware, RolesPermissions("flitching_factor
 router.post(
   "/edit-flitching/:id",
   AuthMiddleware, RolesPermissions("flitching_factory", "edit"),
+  verifyApproval("flitching_factory", "edit"),
   edit_flitching_inventory
 );
 router.post("/list-flitching-done", AuthMiddleware, RolesPermissions("flitching_factory", "view"), listing_flitching_done_inventory);

@@ -1,9 +1,21 @@
 import mongoose from "mongoose";
 import { issues_for_status } from "../../../Utils/constants/constants.js";
 import { approval_status } from "../../../Utils/approvalStatus.schema.js";
+import approvalSchema from "../../../Utils/approval.schema.js";
 
-const crosscutting_done_schema = new mongoose.Schema(
+const crosscutting_approval_schema = new mongoose.Schema(
   {
+    issue_for_crosscutting_data: {
+      type: {},
+    },
+    unique_identifier: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, "Log Croscutting id is required"],
+    },
+    log_crosscutting_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, "Log Croscutting id is required"],
+    },
     issue_for_crosscutting_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "issues_for_crosscutting",
@@ -58,29 +70,29 @@ const crosscutting_done_schema = new mongoose.Schema(
     },
     expense_amount: {
       type: Number,
-      default: 0
+      default: 0,
     },
     sqm_factor: {
       type: Number,
-      required: [true, "factor is required"]
+      required: [true, "factor is required"],
     },
     issue_status: {
       type: String,
       enum: {
         values: [issues_for_status.crosscut_done, issues_for_status.flitching],
-        message: `Invalid status {{VALUE}} Issue Status must either be one of ${issues_for_status.crosscut_done}, ${issues_for_status.flitching}}`
+        message: `Invalid status {{VALUE}} Issue Status must either be one of ${issues_for_status.crosscut_done}, ${issues_for_status.flitching}}`,
       },
-      default: issues_for_status.crosscut_done
+      default: issues_for_status.crosscut_done,
     },
     wastage_info: {
       wastage_sqm: {
         type: Number,
-        required: [true, "wastage_sqm is required"]
+        required: [true, "wastage_sqm is required"],
       },
       wastage_length: {
         type: Number,
-        required: [true, "wastage_length is required"]
-      }
+        required: [true, "wastage_length is required"],
+      },
     },
     worker_details: {
       crosscut_date: {
@@ -102,19 +114,19 @@ const crosscutting_done_schema = new mongoose.Schema(
     },
     required_hours: {
       type: Number,
-      required: [true, "Required hours is required"]
+      required: [true, "Required hours is required"],
     },
     required_workers: {
       type: Number,
-      required: [true, "Required workers is required"]
+      required: [true, "Required workers is required"],
     },
     remarks: {
       type: String,
       default: null,
     },
-    isEditable:{
-      type:Boolean,
-      default:true
+    isEditable: {
+      type: Boolean,
+      default: true,
     },
     approval_status: approval_status,
     created_by: {
@@ -129,19 +141,18 @@ const crosscutting_done_schema = new mongoose.Schema(
   { timestamps: true }
 );
 
-crosscutting_done_schema.index({ issue_for_crosscutting_id: -1 });
-crosscutting_done_schema.index({ code: -1 });
-crosscutting_done_schema.index(
-  { issue_for_crosscutting_id: -1, code: -1 },
-  { unique: true }
+crosscutting_approval_schema.add(approvalSchema);
+
+crosscutting_approval_schema.index({ issue_for_crosscutting_id: -1 });
+crosscutting_approval_schema.index({ code: -1 });
+crosscutting_approval_schema.index({ issue_for_crosscutting_id: -1, code: -1 });
+
+export const crosscutting_done_approval_model = mongoose.model(
+  "crosscutting_done_approval",
+  crosscutting_approval_schema
 );
 
-export const crosscutting_done_model = mongoose.model(
-  "crosscutting_done",
-  crosscutting_done_schema
-);
-
-const crossCuttingsDone_view_schema = new mongoose.Schema(
+const crossCuttingsDone_approval_view_schema = new mongoose.Schema(
   {},
   {
     strict: false,
@@ -150,14 +161,14 @@ const crossCuttingsDone_view_schema = new mongoose.Schema(
   }
 );
 
-export const crossCuttingsDone_view_modal = mongoose.model(
-  "cross_cuttings_done_view",
-  crossCuttingsDone_view_schema
+export const crossCuttingsDone_approval_view_modal = mongoose.model(
+  "cross_cuttings_done_approval_view",
+  crossCuttingsDone_approval_view_schema
 );
 
 (async function () {
-  await crossCuttingsDone_view_modal.createCollection({
-    viewOn: "crosscutting_dones",
+  await crossCuttingsDone_approval_view_modal.createCollection({
+    viewOn: "crosscutting_done_approval",
     pipeline: [
       {
         $sort: {
