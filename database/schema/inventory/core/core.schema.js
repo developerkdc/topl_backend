@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import invoice_details from "../../../Utils/invoiceDetails.schema.js";
 import expensesSchema from "../../masters/expenses.schema.js";
+import { approval_status } from "../../../Utils/approvalStatus.schema.js";
 
 export const item_details_schema = new mongoose.Schema(
   {
@@ -54,7 +55,7 @@ export const item_details_schema = new mongoose.Schema(
       required: [true, "Rate in currency is required"],
     },
     exchange_rate: {
-      type: String || Number,
+      type: Number,
       required: [true, "exchange rate is required"],
     },
     rate_in_inr: {
@@ -205,6 +206,7 @@ export const core_invoice_schema = new mongoose.Schema(
         },
       },
     },
+    approval_status: approval_status,
     invoice_Details: invoice_details,
     expenses: {
       type: [expensesSchema],

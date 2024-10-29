@@ -13,6 +13,7 @@ import {
 } from "../../../controllers/inventory/core/core.controller.js";
 import AuthMiddleware from "../../../middlewares/verifyToken.js";
 import RolesPermissions from "../../../middlewares/permission.js";
+import { verifyApproval } from "../../../middlewares/approval.middleware.js";
 const router = express.Router();
 
 router.post("/list-inventory", AuthMiddleware, RolesPermissions("core_inventory", "view"), listing_core_inventory);
@@ -35,6 +36,7 @@ router.patch(
   "/edit-invoice-item-inventory/:invoice_id",
   AuthMiddleware,
   RolesPermissions("core_inventory", "edit"),
+  verifyApproval("core_inventory", "edit"),
   edit_core_item_invoice_inventory
 );
 router.post("/download-excel-core", AuthMiddleware, RolesPermissions("core_inventory", "view"), coreLogsCsv);

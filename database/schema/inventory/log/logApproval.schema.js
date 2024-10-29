@@ -26,6 +26,10 @@ const log_approval_item_details_schema = new mongoose.Schema({
     type: String,
     default: null,
   },
+  item_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: [true, "Items id is required"],
+  },
   item_name: {
     type: String,
     required: [true, "Item Name is required"],

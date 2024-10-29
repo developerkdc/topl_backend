@@ -13,6 +13,7 @@ import {
 } from "../../../controllers/inventory/mdf/mdf.controller.js";
 import AuthMiddleware from "../../../middlewares/verifyToken.js";
 import RolesPermissions from "../../../middlewares/permission.js";
+import { verifyApproval } from "../../../middlewares/approval.middleware.js";
 
 const router = Router();
 
@@ -41,6 +42,7 @@ router.patch(
   "/edit-invoice-item-inventory/:invoice_id",
   AuthMiddleware,
   RolesPermissions("mdf_inventory", "edit"),
+  verifyApproval("mdf_inventory", "edit"),
   edit_mdf_item_invoice_inventory
 );
 

@@ -15,6 +15,7 @@ import {
 } from "../../../controllers/inventory/fleece/fleece.controller.js";
 import AuthMiddleware from "../../../middlewares/verifyToken.js";
 import RolesPermissions from "../../../middlewares/permission.js";
+import { verifyApproval } from "../../../middlewares/approval.middleware.js";
 
 const fleece_router = Router();
 
@@ -30,6 +31,7 @@ fleece_router.patch(
   "/edit-invoice-item-inventory/:invoice_id",
   AuthMiddleware,
   RolesPermissions("fleece_paper_inventory", "edit"),
+  verifyApproval("fleece_inventory", "edit"),
   edit_fleece_item_invoice_inventory
 );
 fleece_router.patch(

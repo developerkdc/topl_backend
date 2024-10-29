@@ -1,8 +1,9 @@
 import mongoose from "mongoose";
 import invoice_details from "../../../Utils/invoiceDetails.schema.js";
 import expensesSchema from "../../masters/expenses.schema.js";
+import { approval_status } from "../../../Utils/approvalStatus.schema.js";
 
-export const item_details_schema = new mongoose.Schema(
+export const plywood_item_details_schema = new mongoose.Schema(
   {
     supplier_item_name: {
       type: String,
@@ -67,7 +68,7 @@ export const item_details_schema = new mongoose.Schema(
       required: [true, "Rate in currency is required"],
     },
     exchange_rate: {
-      type: String || Number,
+      type: Number,
       required: [true, "exchange rate is required"],
     },
     rate_in_inr: {
@@ -77,6 +78,14 @@ export const item_details_schema = new mongoose.Schema(
     amount: {
       type: Number,
       required: [true, "Amount is required"],
+    },
+    amount_factor: {
+      type: Number,
+      default: 0,
+    },
+    expense_amount: {
+      type: Number,
+      default: 0,
     },
     remark: {
       type: String,
@@ -96,6 +105,12 @@ export const item_details_schema = new mongoose.Schema(
     },
   },
   { timestamps: true }
+);
+
+plywood_item_details_schema.index({ item_sr_no: 1 });
+plywood_item_details_schema.index(
+  { item_sr_no: 1, invoice_id: 1 },
+  { unique: true }
 );
 
 export const plywood_invoice_schema = new mongoose.Schema(
@@ -210,6 +225,7 @@ export const plywood_invoice_schema = new mongoose.Schema(
         },
       },
     },
+    approval_status: approval_status,
     invoice_Details: invoice_details,
     expenses: {
       type: [expensesSchema],
@@ -233,7 +249,10 @@ export const plywood_invoice_schema = new mongoose.Schema(
   }
 );
 
-export const plywood_inventory_items_details = mongoose.model("plywood_inventory_items_details", item_details_schema);
+plywood_invoice_schema.index({ inward_sr_no: 1 });
+plywood_invoice_schema.index({ inward_sr_no: 1, "expensesSchema.expenseType": 1 }, { unique: true });
+
+export const plywood_inventory_items_details = mongoose.model("plywood_inventory_items_details", plywood_item_details_schema);
 export const plywood_inventory_invoice_details =mongoose.model("plywood_inventory_invoice_details", plywood_invoice_schema);
 
 const plywood_inventory_items_view_schema = new mongoose.Schema(

@@ -11,6 +11,7 @@ import { StatusCodes } from "../../../utils/constants.js";
 import { DynamicSearch } from "../../../utils/dynamicSearch/dynamic.js";
 import { dynamic_filter } from "../../../utils/dymanicFilter.js";
 import { GenerateOtherGoodsLogs } from "../../../config/downloadExcel/Logs/Inventory/OtherGoods/otherGoods.js";
+import { otherGoods_approval_inventory_invoice_model, otherGoods_approval_inventory_items_model } from "../../../database/schema/inventory/otherGoods/otherGoodsApproval.schema.js";
 export const listing_otherGodds_inventory = catchAsync(
   async (req, res, next) => {
     const {
@@ -338,78 +339,165 @@ export const edit_othergoods_item_invoice_inventory = catchAsync(
       const invoice_id = req.params?.invoice_id;
       const items_details = req.body?.inventory_items_details;
       const invoice_details = req.body?.inventory_invoice_details;
+      const sendForApproval = req.sendForApproval;
+      const user = req.userDetails;
 
-      const update_invoice_details =
+      const fetchInvoiceData = await othergoods_inventory_invoice_details.findOne({_id:invoice_details});
+      if(fetchInvoiceData.approval_status?.sendForApproval?.status) return next(new ApiError("Already send for approval"));
+
+      if (!sendForApproval) {
+        const update_invoice_details =
+          await othergoods_inventory_invoice_details.updateOne(
+            { _id: invoice_id },
+            {
+              $set: {
+                ...invoice_details,
+              },
+            },
+            { session }
+          );
+  
+        if (
+          !update_invoice_details.acknowledged ||
+          update_invoice_details.modifiedCount <= 0
+        )
+          return next(new ApiError("Failed to update invoice", 400));
+  
+        const all_invoice_items =
+          await othergoods_inventory_items_details.deleteMany(
+            { invoice_id: invoice_id },
+            { session }
+          );
+  
+        if (
+          !all_invoice_items.acknowledged ||
+          all_invoice_items.deletedCount <= 0
+        )
+          return next(new ApiError("Failed to update invoice items", 400));
+        // get latest pallet number for newly added item
+        // const get_pallet_no = await othergoods_inventory_items_details.aggregate([
+        //   {
+        //     $group: {
+        //       _id: null,
+        //       latest_pallet_no: { $max: "$pallet_number" },
+        //     },
+        //   },
+        // ]);
+        // let latest_pallet_no =
+        //   get_pallet_no?.length > 0 && get_pallet_no?.[0]?.latest_pallet_no
+        //     ? get_pallet_no?.[0]?.latest_pallet_no + 1
+        //     : 1;
+  
+        // for (let i = 0; i < items_details.length; i++) {
+        //   if (
+        //     !items_details[i]?.pallet_number &&
+        //     !items_details[i]?.pallet_number > 0
+        //   ) {
+        //     items_details[i].pallet_number = latest_pallet_no;
+        //     latest_pallet_no += 1;
+        //   }
+        // }
+  
+        const update_item_details =
+          await othergoods_inventory_items_details.insertMany(
+            [...items_details],
+            {
+              session,
+            }
+          );
+  
+        await session.commitTransaction();
+        session.endSession();
+        return res
+          .status(StatusCodes.OK)
+          .json(
+            new ApiResponse(
+              StatusCodes.OK,
+              "Inventory item updated successfully",
+              update_item_details
+            )
+          );
+      } else {
+        const edited_by = user?.id;
+        const approval_person = user.approver_id;
+        const { _id, ...invoiceDetailsData } = invoice_details;
+
+        const add_invoice_details = await otherGoods_approval_inventory_invoice_model.create([{
+          ...invoiceDetailsData,
+          invoice_id: invoice_id,
+          approval_status: {
+            sendForApproval: {
+              status: true,
+              remark: "Approval Pending"
+            },
+            approved: {
+              status: false,
+              remark: null
+            },
+            rejected: {
+              status: false,
+              remark: null
+            }
+          },
+          approval: {
+            editedBy: edited_by,
+            approvalPerson: approval_person,
+          }
+        }], { session });
+
+        if (!add_invoice_details?.[0])
+          return next(new ApiError("Failed to add invoice approval", 400));
+
         await othergoods_inventory_invoice_details.updateOne(
           { _id: invoice_id },
           {
             $set: {
-              ...invoice_details,
+              approval_status: {
+                sendForApproval: {
+                  status: true,
+                  remark: "Approval Pending"
+                },
+                approved: {
+                  status: false,
+                  remark: null
+                },
+                rejected: {
+                  status: false,
+                  remark: null
+                }
+              }
             },
           },
           { session }
         );
 
-      if (
-        !update_invoice_details.acknowledged ||
-        update_invoice_details.modifiedCount <= 0
-      )
-        return next(new ApiError("Failed to update invoice", 400));
+        const itemDetailsData = items_details.map((ele) => {
+          const { _id, ...itemData } = ele;
+          return {
+            ...itemData,
+            otherGoods_item_id: _id ? _id : new mongoose.Types.ObjectId(),
+            approval_invoice_id: add_invoice_details[0]?._id
+          }
+        })
 
-      const all_invoice_items =
-        await othergoods_inventory_items_details.deleteMany(
-          { invoice_id: invoice_id },
+        const add_approval_item_details = await otherGoods_approval_inventory_items_model.insertMany(
+          itemDetailsData,
           { session }
         );
 
-      if (
-        !all_invoice_items.acknowledged ||
-        all_invoice_items.deletedCount <= 0
-      )
-        return next(new ApiError("Failed to update invoice items", 400));
-      // get latest pallet number for newly added item
-      const get_pallet_no = await othergoods_inventory_items_details.aggregate([
-        {
-          $group: {
-            _id: null,
-            latest_pallet_no: { $max: "$pallet_number" },
-          },
-        },
-      ]);
-      let latest_pallet_no =
-        get_pallet_no?.length > 0 && get_pallet_no?.[0]?.latest_pallet_no
-          ? get_pallet_no?.[0]?.latest_pallet_no + 1
-          : 1;
-
-      for (let i = 0; i < items_details.length; i++) {
-        if (
-          !items_details[i]?.pallet_number &&
-          !items_details[i]?.pallet_number > 0
-        ) {
-          items_details[i].pallet_number = latest_pallet_no;
-          latest_pallet_no += 1;
-        }
+        await session.commitTransaction();
+        session.endSession();
+        return res
+          .status(StatusCodes.OK)
+          .json(
+            new ApiResponse(
+              StatusCodes.OK,
+              "Inventory item send for approval successfully",
+              add_approval_item_details
+            )
+          );
       }
 
-      const update_item_details =
-        await othergoods_inventory_items_details.insertMany(
-          [...items_details],
-          {
-            session,
-          }
-        );
-
-      await session.commitTransaction();
-      session.endSession();
-      return res
-        .status(StatusCodes.OK)
-        .json(
-          new ApiResponse(
-            StatusCodes.OK,
-            "Inventory item updated successfully",
-            update_item_details
-          )
-        );
     } catch (error) {
       console.log(error);
       await session.abortTransaction();

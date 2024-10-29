@@ -210,8 +210,10 @@ export const edit_veneer_item_invoice_inventory = catchAsync(
       const items_details = req.body?.inventory_items_details;
       const invoice_details = req.body?.inventory_invoice_details;
       const sendForApproval = req.sendForApproval;
-      // const sendForApproval = true;
       const user = req.userDetails;
+
+      const fetchInvoiceData = await veneer_inventory_invoice_model.findOne({_id:invoice_details});
+      if(fetchInvoiceData.approval_status?.sendForApproval?.status) return next(new ApiError("Already send for approval"));
 
       if (!sendForApproval) {
         const update_invoice_details =
@@ -275,7 +277,6 @@ export const edit_veneer_item_invoice_inventory = catchAsync(
       } else {
         const edited_by = user?.id;
         const approval_person = user.approver_id;
-        // const approval_person = edited_by;
         const { _id, ...invoiceDetailsData } = invoice_details;
 
         const add_invoice_details = await veneer_approval_inventory_invoice_model.create([{
