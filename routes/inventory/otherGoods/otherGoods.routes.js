@@ -11,6 +11,7 @@ import {
 } from "../../../controllers/inventory/otherGoods/otherGoods.js";
 import AuthMiddleware from "../../../middlewares/verifyToken.js";
 import RolesPermissions from "../../../middlewares/permission.js";
+import { verifyApproval } from "../../../middlewares/approval.middleware.js";
 const router = express.Router();
 
 router.post("/list-inventory", AuthMiddleware, RolesPermissions("other_goods_inventory", "view"), listing_otherGodds_inventory);
@@ -37,6 +38,7 @@ router.patch(
   "/edit-invoice-item-inventory/:invoice_id",
   AuthMiddleware,
   RolesPermissions("other_goods_inventory", "edit"),
+  verifyApproval("otherGoods_inventory", "edit"),
   edit_othergoods_item_invoice_inventory
 );
 router.get(

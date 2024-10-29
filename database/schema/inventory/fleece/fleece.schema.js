@@ -58,7 +58,7 @@ export const fleece_item_details_schema = new mongoose.Schema(
       required: [true, "Rate in currency is required"],
     },
     exchange_rate: {
-      type: String || Number,
+      type: Number,
       required: [true, "exchange rate is required"],
     },
     rate_in_inr: {

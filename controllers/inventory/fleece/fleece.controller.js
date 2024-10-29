@@ -211,6 +211,9 @@ export const edit_fleece_item_invoice_inventory = catchAsync(
       const sendForApproval = req.sendForApproval;
       const user = req.userDetails;
 
+      const fetchInvoiceData = await fleece_inventory_invoice_modal.findOne({_id:invoice_details});
+      if(fetchInvoiceData.approval_status?.sendForApproval?.status) return next(new ApiError("Already send for approval"));
+
       if (!sendForApproval) {
         const update_invoice_details =
           await fleece_inventory_invoice_modal.updateOne(

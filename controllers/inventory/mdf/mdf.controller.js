@@ -11,6 +11,7 @@ import { DynamicSearch } from "../../../utils/dynamicSearch/dynamic.js";
 import { dynamic_filter } from "../../../utils/dymanicFilter.js";
 import { StatusCodes } from "../../../utils/constants.js";
 import { createMdfLogsExcel } from "../../../config/downloadExcel/Logs/Inventory/mdf/mdf.js";
+import { mdf_approval_inventory_invoice_model, mdf_approval_inventory_items_model } from "../../../database/schema/inventory/mdf/mdfApproval.schema.js";
 
 export const listing_mdf_inventory = catchAsync(async (req, res, next) => {
   const {
@@ -324,34 +325,12 @@ export const edit_mdf_item_invoice_inventory = catchAsync(
       const invoice_id = req.params?.invoice_id;
       const items_details = req.body?.inventory_items_details;
       const invoice_details = req.body?.inventory_invoice_details;
+      const sendForApproval = req.sendForApproval;
+      const user = req.userDetails;
+      console.log(user)
 
-      const update_invoice_details =
-        await mdf_inventory_invoice_details.updateOne(
-          { _id: invoice_id },
-          {
-            $set: {
-              ...invoice_details,
-            },
-          },
-          { session }
-        );
-
-      if (
-        !update_invoice_details.acknowledged ||
-        update_invoice_details.modifiedCount <= 0
-      )
-        return next(new ApiError("Failed to update invoice", 400));
-
-      const all_invoice_items = await mdf_inventory_items_details.deleteMany(
-        { invoice_id: invoice_id },
-        { session }
-      );
-
-      if (
-        !all_invoice_items.acknowledged ||
-        all_invoice_items.deletedCount <= 0
-      )
-        return next(new ApiError("Failed to update invoice items", 400));
+      const fetchInvoiceData = await mdf_inventory_invoice_details.findOne({ _id: invoice_details });
+      if (fetchInvoiceData.approval_status?.sendForApproval?.status) return next(new ApiError("Already send for approval"));
 
       // get latest pallet number for newly added item
       const get_pallet_no = await mdf_inventory_items_details.aggregate([
@@ -364,26 +343,136 @@ export const edit_mdf_item_invoice_inventory = catchAsync(
       ]);
       let latest_pallet_no = get_pallet_no?.length > 0 && get_pallet_no?.[0]?.latest_pallet_no ? get_pallet_no?.[0]?.latest_pallet_no + 1 : 1;
 
-      for (let i = 0; i < items_details.length; i++) {
-        if (!items_details[i]?.pallet_number && !items_details[i]?.pallet_number > 0) {
-          items_details[i].pallet_number = latest_pallet_no;
-          latest_pallet_no += 1;
+      if (!sendForApproval) {
+        const update_invoice_details =
+          await mdf_inventory_invoice_details.updateOne(
+            { _id: invoice_id },
+            {
+              $set: {
+                ...invoice_details,
+              },
+            },
+            { session }
+          );
+
+        if (
+          !update_invoice_details.acknowledged ||
+          update_invoice_details.modifiedCount <= 0
+        )
+          return next(new ApiError("Failed to update invoice", 400));
+
+        const all_invoice_items = await mdf_inventory_items_details.deleteMany(
+          { invoice_id: invoice_id },
+          { session }
+        );
+
+        if (
+          !all_invoice_items.acknowledged ||
+          all_invoice_items.deletedCount <= 0
+        )
+          return next(new ApiError("Failed to update invoice items", 400));
+
+        for (let i = 0; i < items_details.length; i++) {
+          if (!items_details[i]?.pallet_number && !items_details[i]?.pallet_number > 0) {
+            items_details[i].pallet_number = latest_pallet_no;
+            latest_pallet_no += 1;
+          }
         }
+
+        const update_item_details = await mdf_inventory_items_details.insertMany([...items_details], { session });
+
+        await session.commitTransaction();
+        session.endSession();
+        return res
+          .status(StatusCodes.OK)
+          .json(
+            new ApiResponse(
+              StatusCodes.OK,
+              "Inventory item updated successfully",
+              update_item_details
+            )
+          );
+      } else {
+        const edited_by = user?.id;
+        const approval_person = user.approver_id;
+        const { _id, ...invoiceDetailsData } = invoice_details;
+
+        const add_invoice_details = await mdf_approval_inventory_invoice_model.create([{
+          ...invoiceDetailsData,
+          invoice_id: invoice_id,
+          approval_status: {
+            sendForApproval: {
+              status: true,
+              remark: "Approval Pending"
+            },
+            approved: {
+              status: false,
+              remark: null
+            },
+            rejected: {
+              status: false,
+              remark: null
+            }
+          },
+          approval: {
+            editedBy: edited_by,
+            approvalPerson: approval_person,
+          }
+        }], { session });
+
+        if (!add_invoice_details?.[0])
+          return next(new ApiError("Failed to add invoice approval", 400));
+
+        await mdf_inventory_invoice_details.updateOne(
+          { _id: invoice_id },
+          {
+            $set: {
+              approval_status: {
+                sendForApproval: {
+                  status: true,
+                  remark: "Approval Pending"
+                },
+                approved: {
+                  status: false,
+                  remark: null
+                },
+                rejected: {
+                  status: false,
+                  remark: null
+                }
+              }
+            },
+          },
+          { session }
+        );
+
+        const itemDetailsData = items_details.map((ele) => {
+          const { _id, ...itemData } = ele;
+          return {
+            ...itemData,
+            mdf_item_id: _id ? _id : new mongoose.Types.ObjectId(),
+            approval_invoice_id: add_invoice_details[0]?._id
+          }
+        })
+
+        const add_approval_item_details = await mdf_approval_inventory_items_model.insertMany(
+          itemDetailsData,
+          { session }
+        );
+
+        await session.commitTransaction();
+        session.endSession();
+        return res
+          .status(StatusCodes.OK)
+          .json(
+            new ApiResponse(
+              StatusCodes.OK,
+              "Inventory item send for approval successfully",
+              add_approval_item_details
+            )
+          );
       }
 
-      const update_item_details = await mdf_inventory_items_details.insertMany([...items_details], { session });
-
-      await session.commitTransaction();
-      session.endSession();
-      return res
-        .status(StatusCodes.OK)
-        .json(
-          new ApiResponse(
-            StatusCodes.OK,
-            "Inventory item updated successfully",
-            update_item_details
-          )
-        );
     } catch (error) {
       console.log(error);
       await session.abortTransaction();

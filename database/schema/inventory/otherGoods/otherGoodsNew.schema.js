@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import invoice_details from "../../../Utils/invoiceDetails.schema.js";
 import expensesSchema from "../../masters/expenses.schema.js";
+import { approval_status } from "../../../Utils/approvalStatus.schema.js";
 
 export const item_details_schema = new mongoose.Schema(
   {
@@ -64,7 +65,7 @@ export const item_details_schema = new mongoose.Schema(
       required: [true, "Rate in currency is required"],
     },
     exchange_rate: {
-      type: String || Number,
+      type: Number,
       required: [true, "exchange rate is required"],
     },
     rate_in_inr: {
@@ -102,6 +103,9 @@ export const item_details_schema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+item_details_schema.index({ item_sr_no: 1 });
+item_details_schema.index({ item_sr_no: 1, invoice_id: 1 }, { unique: true });
 
 export const othergoods_invoice_schema = new mongoose.Schema(
   {
@@ -215,6 +219,7 @@ export const othergoods_invoice_schema = new mongoose.Schema(
         },
       },
     },
+    approval_status: approval_status,
     invoice_Details: invoice_details,
     expenses: {
       type: [expensesSchema],
@@ -237,6 +242,9 @@ export const othergoods_invoice_schema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+othergoods_invoice_schema.index({ inward_sr_no: 1 });
+othergoods_invoice_schema.index({ inward_sr_no: 1, "expensesSchema.expenseType": 1 }, { unique: true });
 
 export const othergoods_inventory_items_details = mongoose.model(
   "othergoods_inventory_items_details",

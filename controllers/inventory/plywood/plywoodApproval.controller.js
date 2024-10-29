@@ -196,6 +196,30 @@ export const plywood_approve_invoice_details = catchAsync(async (req, res, next)
             }
         ]);
 
+        const get_pallet_no = await plywood_inventory_items_details.aggregate([
+            {
+                $group: {
+                    _id: null,
+                    latest_pallet_no: { $max: "$pallet_number" },
+                },
+            },
+        ]);
+
+        let latest_pallet_no =
+            get_pallet_no?.length > 0 && get_pallet_no?.[0]?.latest_pallet_no
+                ? get_pallet_no?.[0]?.latest_pallet_no + 1
+                : 1;
+
+        for (let i = 0; i < approval_invoice_items_data.length; i++) {
+            if (
+                !approval_invoice_items_data[i]?.pallet_number &&
+                !approval_invoice_items_data[i]?.pallet_number > 0
+            ) {
+                approval_invoice_items_data[i].pallet_number = latest_pallet_no;
+                latest_pallet_no += 1;
+            }
+        }
+
         await plywood_inventory_items_details.insertMany(approval_invoice_items_data, { session })
 
         await session.commitTransaction();
