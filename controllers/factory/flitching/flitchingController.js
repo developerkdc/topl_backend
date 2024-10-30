@@ -21,6 +21,7 @@ import {
 } from "../../../database/schema/factory/flitching/flitching.schema.js";
 import { createFlitchingDoneExcel } from "../../../config/downloadExcel/Logs/Factory/flitching/index.js";
 import { crosscutting_done_model } from "../../../database/schema/factory/crossCutting/crosscutting.schema.js";
+import { flitching_approval_model } from "../../../database/schema/factory/flitching/flitchingApproval.schema.js";
 
 export const listing_issue_for_flitching = catchAsync(
   async (req, res, next) => {
@@ -121,16 +122,20 @@ export const revert_issue_for_flitching = catchAsync(async function (
 
     if (!issue_for_flitching) return next(new ApiError("Item not found", 400));
 
-    if (issue_for_flitching?.crosscut_done_id && mongoose.isValidObjectId(issue_for_flitching?.crosscut_done_id)) {
-      const update_crosscut_done_status = await crosscutting_done_model.updateOne(
-        { _id: issue_for_flitching?.crosscut_done_id },
-        {
-          $set: {
-            issue_status: issues_for_status.crosscut_done,
+    if (
+      issue_for_flitching?.crosscut_done_id &&
+      mongoose.isValidObjectId(issue_for_flitching?.crosscut_done_id)
+    ) {
+      const update_crosscut_done_status =
+        await crosscutting_done_model.updateOne(
+          { _id: issue_for_flitching?.crosscut_done_id },
+          {
+            $set: {
+              issue_status: issues_for_status.crosscut_done,
+            },
           },
-        },
-        { session }
-      );
+          { session }
+        );
 
       if (
         !update_crosscut_done_status.acknowledged ||
@@ -152,22 +157,28 @@ export const revert_issue_for_flitching = catchAsync(async function (
       )
         return next(new ApiError("Unable to revert issue for flitching", 400));
 
-      const issue_for_flitching_crosscut_done_found = await issues_for_flitching_model.find({
-        _id: { $ne: issue_for_flitching?._id },
-        issue_for_crosscutting_id: issue_for_flitching?.issue_for_crosscutting_id,
-        crosscut_done_id: { $ne: null }
-      });
+      const issue_for_flitching_crosscut_done_found =
+        await issues_for_flitching_model.find({
+          _id: { $ne: issue_for_flitching?._id },
+          issue_for_crosscutting_id:
+            issue_for_flitching?.issue_for_crosscutting_id,
+          crosscut_done_id: { $ne: null },
+        });
 
       if (issue_for_flitching_crosscut_done_found?.length <= 0) {
-        await crosscutting_done_model.updateMany({
-          issue_for_crosscutting_id: issue_for_flitching?.issue_for_crosscutting_id
-        }, {
-          $set: {
-            isEditable: true
-          }
-        }, { session });
+        await crosscutting_done_model.updateMany(
+          {
+            issue_for_crosscutting_id:
+              issue_for_flitching?.issue_for_crosscutting_id,
+          },
+          {
+            $set: {
+              isEditable: true,
+            },
+          },
+          { session }
+        );
       }
-
     } else {
       const update_log_item_status = await log_inventory_items_model.updateOne(
         { _id: issue_for_flitching?.log_inventory_item_id },
@@ -300,34 +311,105 @@ export const edit_flitching_inventory = catchAsync(async (req, res, next) => {
     const { id } = req.params;
     const { newData } = req.body;
 
-    const all_items = await flitching_done_model.deleteMany(
-      { issue_for_flitching_id: id },
-      { session }
-    );
+    const sendForApproval = req.sendForApproval;
+    const user = req.userDetails;
 
-    if (!all_items.acknowledged || all_items.deletedCount <= 0) {
-      return next(new ApiError("Failed to update invoice items", 400));
-    }
-    const { _id } = req.userDetails;
-    const updatedData = newData?.map((item) => {
-      item.created_by = _id;
-      return item;
-    });
-    const update_item_details = await flitching_done_model.insertMany(
-      updatedData,
-      { session }
-    );
-    await session.commitTransaction();
-    session.endSession();
-    return res
-      .status(StatusCodes.OK)
-      .json(
-        new ApiResponse(
-          StatusCodes.OK,
-          "Inventory items updated successfully",
-          update_item_details
-        )
+    if (!sendForApproval) {
+      const all_items = await flitching_done_model.deleteMany(
+        { issue_for_flitching_id: id },
+        { session }
       );
+
+      if (!all_items.acknowledged || all_items.deletedCount <= 0) {
+        return next(new ApiError("Failed to update invoice items", 400));
+      }
+      const { _id } = req.userDetails;
+      const updatedData = newData?.map((item) => {
+        item.created_by = _id;
+        return item;
+      });
+      const update_item_details = await flitching_done_model.insertMany(
+        updatedData,
+        { session }
+      );
+      await session.commitTransaction();
+      session.endSession();
+      return res
+        .status(StatusCodes.OK)
+        .json(
+          new ApiResponse(
+            StatusCodes.OK,
+            "Inventory items updated successfully",
+            update_item_details
+          )
+        );
+    } else {
+      const edited_by = user?.id;
+      const approval_person = user.approver_id;
+
+      // creating id for unique identifier ID for items
+      let unique_identifier_for_items = new mongoose.Types.ObjectId();
+
+      const itemDetailsData = newData.map((ele) => {
+        const { _id, ...itemData } = ele;
+        return {
+          ...itemData,
+          unique_identifier: unique_identifier_for_items,
+          log_flitching_done_id: _id ? _id : new mongoose.Types.ObjectId(),
+          approval_status: {
+            sendForApproval: {
+              status: true,
+              remark: "Approval Pending",
+            },
+            approved: {
+              status: false,
+              remark: null,
+            },
+            rejected: {
+              status: false,
+              remark: null,
+            },
+          },
+          approval: {
+            editedBy: edited_by,
+            approvalPerson: approval_person,
+          },
+        };
+      });
+
+      // add data in approval collection
+      const add_approval_item_details =
+        await flitching_approval_model.insertMany(itemDetailsData, {
+          session,
+        });
+
+      if (!add_approval_item_details?.[0])
+        return next(new ApiError("Failed to add invoice approval", 400));
+
+       // update approval status in flitching done collection
+       await flitching_done_model.updateMany(
+        { issue_for_flitching_id: id },
+        {
+          $set: {
+            approval_status: {
+              sendForApproval: {
+                status: true,
+                remark: "Approval Pending",
+              },
+              approved: {
+                status: false,
+                remark: null,
+              },
+              rejected: {
+                status: false,
+                remark: null,
+              },
+            },
+          },
+        },
+        { session, new: true }
+      );
+    }
   } catch (error) {
     console.log(error);
     await session.abortTransaction();
@@ -410,14 +492,12 @@ export const listing_flitching_done_inventory = catchAsync(
 
     const totalPage = Math.ceil(totalCount / limit);
 
-    return res
-      .status(200)
-      .json(
-        new ApiResponse(StatusCodes.OK, "Data fetched successfully...", {
-          flitching_done_list,
-          totalPage,
-        })
-      );
+    return res.status(200).json(
+      new ApiResponse(StatusCodes.OK, "Data fetched successfully...", {
+        flitching_done_list,
+        totalPage,
+      })
+    );
   }
 );
 
@@ -445,7 +525,7 @@ export const fetch_all_flitchings_by_issue_for_flitching_id = catchAsync(
     const pipeline = [
       {
         $match: {
-          "issue_for_flitching_id": new mongoose.Types.ObjectId(id),
+          issue_for_flitching_id: new mongoose.Types.ObjectId(id),
         },
       },
       {

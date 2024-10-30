@@ -16,6 +16,7 @@ import {
 } from "../../../controllers/factory/crossCutting/crossCutting.controller.js";
 import AuthMiddleware from "../../../middlewares/verifyToken.js";
 import RolesPermissions from "../../../middlewares/permission.js";
+import { verifyApproval } from "../../../middlewares/approval.middleware.js";
 const router = express.Router();
 
 //Issue for crosscutting
@@ -41,6 +42,7 @@ router.post("/add-crossCut-done", AuthMiddleware, RolesPermissions("crosscut_fac
 router.post(
   "/edit-crossCutting/:id",
   AuthMiddleware, RolesPermissions("crosscut_factory", "edit"),
+  verifyApproval("crosscut_factory", "edit"),
   edit_cross_cutting_inventory
 );
 router.post(
