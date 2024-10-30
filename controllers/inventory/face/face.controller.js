@@ -375,7 +375,7 @@ export const edit_face_item_invoice_inventory = catchAsync(
         );
 
         const itemDetailsData = items_details.map((ele) => {
-          const { _id, ...itemData } = ele;
+          const { _id, createdAt, updatedAt, ...itemData } = ele;
           return {
             ...itemData,
             face_item_id: _id ? _id : new mongoose.Types.ObjectId(),

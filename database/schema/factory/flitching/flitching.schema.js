@@ -1,13 +1,13 @@
 import mongoose from "mongoose";
-import { approval_status } from "../../../Utils/approvalStatus.schema";
+import { approval_status } from "../../../Utils/approvalStatus.schema.js";
 
 const flitchingSchema = new mongoose.Schema(
   {
     // sr_no: Number,
     issue_for_flitching_id: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "issues_for_crosscutting",
-      default: null,
+      ref: "issues_for_flitching",
+      required: [true, "Issue for flitching Id is required"],
     },
     log_inventory_item_id: {
       type: mongoose.Schema.Types.ObjectId,

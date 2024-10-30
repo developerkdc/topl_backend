@@ -9,14 +9,14 @@ const flitching_approval_schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       required: [true, "Unique Identifier id is required"],
     },
-    log_flitching_done_id: {
+    flitching_done_id: {
       type: mongoose.Schema.Types.ObjectId,
       required: [true, "Log Flitching id is required"],
     },
     issue_for_flitching_id: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "issues_for_crosscutting",
-      default: null,
+      ref: "issues_for_flitching",
+      required: [true, "Issue for flitching Id is required"],
     },
     log_inventory_item_id: {
       type: mongoose.Schema.Types.ObjectId,

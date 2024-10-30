@@ -610,6 +610,23 @@ export const edit_cross_cutting_inventory = catchAsync(
           return next(new ApiError("Failed to update invoice items", 400));
         }
 
+        for (let i = 0; i < newData.length; i++) {
+          newData[i].approval_status = {
+            sendForApproval: {
+              status: false,
+              remark: null
+            },
+            approved: {
+              status: false,
+              remark: null
+            },
+            rejected: {
+              status: false,
+              remark: null
+            }
+          }
+        }
+
         const update_item_details = await crosscutting_done_model.insertMany(
           [...newData],
           { session }
@@ -625,7 +642,6 @@ export const edit_cross_cutting_inventory = catchAsync(
               "available_quantity.sqm_factor": sqm_factor,
               "available_quantity.expense_amount": expense_amount,
               crosscutting_completed: crosscutting_completed,
-
               approval_status: {
                 sendForApproval: {
                   status: false,
@@ -665,11 +681,11 @@ export const edit_cross_cutting_inventory = catchAsync(
         let unique_identifier_for_items = new mongoose.Types.ObjectId();
 
         const itemDetailsData = newData.map((ele) => {
-          const { _id, ...itemData } = ele;
+          const { _id, createdAt, updatedAt, ...itemData } = ele;
           return {
             ...itemData,
             unique_identifier: unique_identifier_for_items,
-            log_crosscutting_id: _id ? _id : new mongoose.Types.ObjectId(),
+            crosscutting_done_id: _id ? _id : new mongoose.Types.ObjectId(),
             issue_for_crosscutting_data: {
               "available_quantity.physical_cmt": available_sqm,
               "available_quantity.physical_length": available_length,

@@ -11,7 +11,7 @@ crossCutApprovalRouter.post(
 );
 
 crossCutApprovalRouter.get(
-    "/crosscut-approval-item-listing-by-unique-id/:_id",
+    "/crosscut-approval-item-listing-by-unique-id/:_id/:issued_for_cutting_id",
     AuthMiddleware,
     crosscutting_approval_item_listing_by_unique_id
 );
@@ -22,7 +22,7 @@ crossCutApprovalRouter.post(
     crosscutting_approve
 );
 crossCutApprovalRouter.post(
-    "/log-reject_invoice_details/:_id/:issued_for_cutting_id",
+    "/crosscut-reject_details/:_id/:issued_for_cutting_id",
     AuthMiddleware,
     crosscut_reject
 );

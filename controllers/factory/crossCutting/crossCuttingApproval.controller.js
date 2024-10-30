@@ -101,14 +101,14 @@ export const crossCuttting_approval_listing = catchAsync(async function (
 
 export const crosscutting_approval_item_listing_by_unique_id = catchAsync(
   async (req, res, next) => {
-    // const invoice_id = req.params.invoice_id;
+    const issued_for_cutting_id = req.params.issued_for_cutting_id;
     const unique_identifier_id = req.params._id;
 
     const aggregate_stage = [
       {
         $match: {
           unique_identifier: new mongoose.Types.ObjectId(unique_identifier_id),
-          // "invoice_id": new mongoose.Types.ObjectId(invoice_id),
+          issue_for_crosscutting_id: new mongoose.Types.ObjectId(issued_for_cutting_id),
         },
       },
       {
@@ -118,25 +118,14 @@ export const crosscutting_approval_item_listing_by_unique_id = catchAsync(
       },
     ];
 
-    const crosscut_item_by_issue_for_crosscutting_id =
-      await crosscutting_done_approval_model.aggregate(aggregate_stage);
-    // const logExpense_invoice =
-    //   await log_approval_inventory_invoice_model.findOne({
-    //     _id: document_id,
-    //     invoice_id: invoice_id,
-    //   });
-
-    // const totalCount = await log_inventory_items_view_model.countDocuments({
-    //   ...match_query,
-    // });
-
-    // const totalPage = Math.ceil(totalCount / limit);
+    const crosscutting_details = await crosscutting_done_approval_model.aggregate(aggregate_stage);
 
     return res.status(200).json({
       statusCode: 200,
       status: "success",
-      data: crosscut_item_by_issue_for_crosscutting_id,
-      // totalPage: totalPage,
+      data: {
+        crosscutting_details: crosscutting_details
+      },
       message: "Data fetched successfully",
     });
   }
@@ -153,18 +142,19 @@ export const crosscutting_approve = catchAsync(async (req, res, next) => {
     const items_details = await crosscutting_done_approval_model
       .find({
         unique_identifier: unique_identifier_id,
+        issue_for_crosscutting_id: issue_for_crosscutting_id,
         "approval.approvalPerson": user._id,
-        //   invoice_id: invoice_id,
       })
       .lean();
     if (items_details?.length <= 0)
-      return next(new ApiError("No invoice items found for approval", 404));
+      return next(new ApiError("No items found for approval", 404));
 
     // update all item's approval status which are approved in approval collection
-    const invoice_details = await crosscutting_done_approval_model
+    const crosscutDone_details = await crosscutting_done_approval_model
       .updateMany(
         {
           unique_identifier: unique_identifier_id,
+          issue_for_crosscutting_id: issue_for_crosscutting_id,
           "approval.approvalPerson": user._id,
         },
         {
@@ -189,31 +179,46 @@ export const crosscutting_approve = catchAsync(async (req, res, next) => {
         { session, new: true }
       )
       .lean();
-    if (!invoice_details)
+    if (!crosscutDone_details)
       return next(new ApiError("No invoice found for approval", 404));
 
+    await crosscutting_done_model.deleteMany({
+      issue_for_crosscutting_id: issue_for_crosscutting_id,
+    }, { session });
+
     // update the approval data in actual crossdone collection
-    await crosscutting_done_approval_model.aggregate([
+    const approval_crosscutDone_items_data = await crosscutting_done_approval_model.aggregate([
       {
         $match: {
           unique_identifier: new mongoose.Types.ObjectId(unique_identifier_id),
+          issue_for_crosscutting_id: new mongoose.Types.ObjectId(issue_for_crosscutting_id),
         },
       },
       {
         $set: {
-          _id: "$log_crosscutting_id",
+          _id: "$crosscutting_done_id",
+          approval_status: {
+            sendForApproval: {
+              status: false,
+              remark: null,
+            },
+            approved: {
+              status: true,
+              remark: null,
+            },
+            rejected: {
+              status: false,
+              remark: null,
+            },
+          }
         },
       },
       {
-        $unset: ["log_crosscutting_id"],
-      },
-      {
-        $merge: {
-          into: "crosscutting_done",
-          whenMatched: "merge",
-        },
+        $unset: ["crosscutting_done_id"],
       },
     ]);
+
+    await crosscutting_done_model.insertMany(approval_crosscutDone_items_data, { session })
 
     // update the available qunatity data in isuue for crosscut collection
     await issues_for_crosscutting_model.findByIdAndUpdate(
@@ -223,17 +228,17 @@ export const crosscutting_approve = catchAsync(async (req, res, next) => {
       {
         $set: {
           "available_quantity.physical_cmt":
-            invoice_details?.[0]?.issue_for_crosscutting_data?.available_sqm,
+            crosscutDone_details?.[0]?.issue_for_crosscutting_data?.available_sqm,
           "available_quantity.physical_length":
-            invoice_details?.[0]?.issue_for_crosscutting_data?.available_length,
+            crosscutDone_details?.[0]?.issue_for_crosscutting_data?.available_length,
           "available_quantity.amount":
-            invoice_details?.[0]?.issue_for_crosscutting_data?.amount,
+            crosscutDone_details?.[0]?.issue_for_crosscutting_data?.amount,
           "available_quantity.sqm_factor":
-            invoice_details?.[0]?.issue_for_crosscutting_data?.sqm_factor,
+            crosscutDone_details?.[0]?.issue_for_crosscutting_data?.sqm_factor,
           "available_quantity.expense_amount":
-            invoice_details?.[0]?.issue_for_crosscutting_data?.expense_amount,
+            crosscutDone_details?.[0]?.issue_for_crosscutting_data?.expense_amount,
           crosscutting_completed:
-            invoice_details?.[0]?.issue_for_crosscutting_data
+            crosscutDone_details?.[0]?.issue_for_crosscutting_data
               ?.crosscutting_completed,
         },
       },
@@ -259,7 +264,6 @@ export const crosscut_reject = catchAsync(async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
-    // const invoiceId = req.params?.invoice_id;
     const unique_identifier_id = req.params._id;
     const issue_for_crosscutting_id = req.params.issued_for_cutting_id;
     const remark = req.body?.remark;
@@ -269,7 +273,7 @@ export const crosscut_reject = catchAsync(async (req, res, next) => {
       .updateMany(
         {
           unique_identifier: unique_identifier_id,
-          //   invoice_id: invoiceId,
+          issue_for_crosscutting_id: issue_for_crosscutting_id,
           "approval.approvalPerson": user._id,
         },
         {

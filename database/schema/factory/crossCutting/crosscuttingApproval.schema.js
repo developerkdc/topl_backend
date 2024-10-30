@@ -12,9 +12,9 @@ const crosscutting_approval_schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       required: [true, "Log Croscutting id is required"],
     },
-    log_crosscutting_id: {
+    crosscutting_done_id: {
       type: mongoose.Schema.Types.ObjectId,
-      required: [true, "Log Croscutting id is required"],
+      required: [true, "Croscutting done id is required"],
     },
     issue_for_crosscutting_id: {
       type: mongoose.Schema.Types.ObjectId,

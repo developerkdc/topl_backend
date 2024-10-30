@@ -351,11 +351,11 @@ export const edit_flitching_inventory = catchAsync(async (req, res, next) => {
       let unique_identifier_for_items = new mongoose.Types.ObjectId();
 
       const itemDetailsData = newData.map((ele) => {
-        const { _id, ...itemData } = ele;
+        const { _id, createdAt, updatedAt, ...itemData } = ele;
         return {
           ...itemData,
           unique_identifier: unique_identifier_for_items,
-          log_flitching_done_id: _id ? _id : new mongoose.Types.ObjectId(),
+          flitching_done_id: _id ? _id : new mongoose.Types.ObjectId(),
           approval_status: {
             sendForApproval: {
               status: true,
@@ -386,8 +386,8 @@ export const edit_flitching_inventory = catchAsync(async (req, res, next) => {
       if (!add_approval_item_details?.[0])
         return next(new ApiError("Failed to add invoice approval", 400));
 
-       // update approval status in flitching done collection
-       await flitching_done_model.updateMany(
+      // update approval status in flitching done collection
+      await flitching_done_model.updateMany(
         { issue_for_flitching_id: id },
         {
           $set: {
@@ -409,6 +409,18 @@ export const edit_flitching_inventory = catchAsync(async (req, res, next) => {
         },
         { session, new: true }
       );
+
+      await session.commitTransaction();
+      session.endSession();
+      return res
+        .status(StatusCodes.OK)
+        .json(
+          new ApiResponse(
+            StatusCodes.OK,
+            "Inventory item send for approval successfully",
+            add_approval_item_details
+          )
+        );
     }
   } catch (error) {
     console.log(error);
