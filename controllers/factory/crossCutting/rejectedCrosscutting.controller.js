@@ -97,14 +97,13 @@ export const revert_rejected_crosscutting = catchAsync(async function (req, res,
     try {
         const rejected_crosscutting_id = req.params?.rejected_crosscutting_id;
 
-        const issues_for_crosscutting_data = await issues_for_crosscutting_model.findOne({ _id: rejected_crosscutting?.issue_for_crosscutting_id }).lean();
-        if(issues_for_crosscutting_data?.approval_status?.sendForApproval?.status) return next(new ApiError("Approval Pending!",400))
-
         const rejected_crosscutting = await rejected_crosscutting_model.findOne({
             _id: rejected_crosscutting_id,
         }).lean();
         if (!rejected_crosscutting) return next(new ApiError("Rejected Item not found", 400));
-
+        
+        const issues_for_crosscutting_data = await issues_for_crosscutting_model.findOne({ _id: rejected_crosscutting?.issue_for_crosscutting_id }).lean();
+        if(issues_for_crosscutting_data?.approval_status?.sendForApproval?.status) return next(new ApiError("Approval Pending!",400))
 
         if (issues_for_crosscutting_data) {
             const { rejected_quantity, ...data } = rejected_crosscutting
@@ -193,6 +192,7 @@ export const add_rejected_issues_for_crosscutting = catchAsync(async function (r
             $set: {
                 is_rejected: true,
                 "available_quantity.physical_length": 0,
+                "available_quantity.physical_diameter": 0,
                 "available_quantity.physical_cmt": 0,
                 "available_quantity.amount": 0,
                 "available_quantity.sqm_factor": 0,

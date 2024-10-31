@@ -237,9 +237,21 @@ export const crosscutting_approve = catchAsync(async (req, res, next) => {
             crosscutDone_details?.[0]?.issue_for_crosscutting_data?.sqm_factor,
           "available_quantity.expense_amount":
             crosscutDone_details?.[0]?.issue_for_crosscutting_data?.expense_amount,
-          crosscutting_completed:
-            crosscutDone_details?.[0]?.issue_for_crosscutting_data
-              ?.crosscutting_completed,
+          crosscutting_completed: crosscutDone_details?.[0]?.issue_for_crosscutting_data?.crosscutting_completed,
+          approval_status: {
+            sendForApproval: {
+              status: false,
+              remark: null,
+            },
+            approved: {
+              status: true,
+              remark: null,
+            },
+            rejected: {
+              status: false,
+              remark: null,
+            },
+          }
         },
       },
       { session, new: true }
@@ -269,7 +281,7 @@ export const crosscut_reject = catchAsync(async (req, res, next) => {
     const remark = req.body?.remark;
     const user = req.userDetails;
 
-    const invoice_details = await crosscutting_done_approval_model
+    const crosscutting_done_approval_details = await crosscutting_done_approval_model
       .updateMany(
         {
           unique_identifier: unique_identifier_id,
@@ -298,10 +310,10 @@ export const crosscut_reject = catchAsync(async (req, res, next) => {
         { session, new: true }
       )
       .lean();
-    if (!invoice_details)
+    if (!crosscutting_done_approval_details.acknowledged || crosscutting_done_approval_details.modifiedCount <= 0)
       return next(new ApiError("No invoice found for approval", 404));
 
-    const update_log_invoice = await crosscutting_done_model.updateMany(
+    const update_crosscutting_done = await crosscutting_done_model.updateMany(
       {
         issue_for_crosscutting_id: issue_for_crosscutting_id,
       },
@@ -326,10 +338,35 @@ export const crosscut_reject = catchAsync(async (req, res, next) => {
       { session }
     );
     if (
-      !update_log_invoice.acknowledged ||
-      update_log_invoice.modifiedCount <= 0
+      !update_crosscutting_done.acknowledged ||
+      update_crosscutting_done.modifiedCount <= 0
     )
       return next(new ApiError("Failed to reject invoice"), 400);
+
+    await issues_for_crosscutting_model.findByIdAndUpdate(
+      {
+        _id: new mongoose.Types.ObjectId(issue_for_crosscutting_id),
+      },
+      {
+        $set: {
+          approval_status: {
+            sendForApproval: {
+              status: false,
+              remark: null,
+            },
+            approved: {
+              status: false,
+              remark: null,
+            },
+            rejected: {
+              status: true,
+              remark: remark,
+            },
+          },
+        },
+      },
+      { session, new: true }
+    );
 
     await session.commitTransaction();
     session.endSession();
