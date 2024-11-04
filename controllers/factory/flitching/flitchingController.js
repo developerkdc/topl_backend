@@ -323,11 +323,27 @@ export const edit_flitching_inventory = catchAsync(async (req, res, next) => {
       if (!all_items.acknowledged || all_items.deletedCount <= 0) {
         return next(new ApiError("Failed to update invoice items", 400));
       }
+
       const { _id } = req.userDetails;
       const updatedData = newData?.map((item) => {
         item.created_by = _id;
+        item.approval_status = {
+          sendForApproval: {
+            status: false,
+            remark: null,
+          },
+          approved: {
+            status: false,
+            remark: null,
+          },
+          rejected: {
+            status: false,
+            remark: null,
+          },
+        }
         return item;
       });
+
       const update_item_details = await flitching_done_model.insertMany(
         updatedData,
         { session }
@@ -374,6 +390,7 @@ export const edit_flitching_inventory = catchAsync(async (req, res, next) => {
             editedBy: edited_by,
             approvalPerson: approval_person,
           },
+          created_by: edited_by
         };
       });
 

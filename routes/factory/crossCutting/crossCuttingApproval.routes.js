@@ -1,7 +1,6 @@
 import express from "express";
-import { log_approve_invoice_details, log_reject_invoice_details, logApproval_invoice_listing, logApproval_item_listing_by_invoice } from "../../../controllers/inventory/log/logApproval.controller.js";
-import AuthMiddleware from "../../../middlewares/verifyToken.js";
 import { crosscut_reject, crosscutting_approval_item_listing_by_unique_id, crosscutting_approve, crossCuttting_approval_listing } from "../../../controllers/factory/crossCutting/crossCuttingApproval.controller.js";
+import AuthMiddleware from "../../../middlewares/verifyToken.js";
 const crossCutApprovalRouter = express.Router();
 
 crossCutApprovalRouter.post(

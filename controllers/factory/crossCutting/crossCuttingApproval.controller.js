@@ -174,8 +174,8 @@ export const crosscutting_approve = catchAsync(async (req, res, next) => {
         { session, new: true }
       )
       .lean();
-    if (!crosscutDone_details)
-      return next(new ApiError("No invoice found for approval", 404));
+    if (!crosscutDone_details.acknowledged || crosscutDone_details.modifiedCount <= 0)
+      return next(new ApiError("Failed to approve data", 404));
 
     await crosscutting_done_model.deleteMany({
       issue_for_crosscutting_id: issue_for_crosscutting_id,
