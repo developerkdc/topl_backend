@@ -68,8 +68,10 @@ export const listing_issue_for_crosscutting = catchAsync(
     const match_query = {
       ...filterData,
       ...search_query,
-      crosscutting_completed: false,
-      is_rejected: false,
+      $or: [
+        { crosscutting_completed: false },
+        { is_rejected: false }
+      ]
     };
 
     const aggregate_stage = [
@@ -587,7 +589,7 @@ export const edit_cross_cutting_inventory = catchAsync(
       const { id } = req.params;
       const { available_data, newData } = req.body;
 
-      const {
+      let {
         available_sqm,
         available_length,
         amount,
@@ -595,6 +597,19 @@ export const edit_cross_cutting_inventory = catchAsync(
         sqm_factor,
         expense_amount,
       } = available_data;
+
+      const rejected_data = await rejected_crosscutting_model.findOne({
+        issue_for_crosscutting_id: id,
+      });
+
+      if (rejected_data) {
+        available_length = Math.abs(available_length - rejected_data?.rejected_quantity?.physical_length);
+        //  = Math.abs(available_length - rejected_data?.rejected_quantity?.physical_diameter);
+        available_sqm = Math.abs(available_sqm - rejected_data?.rejected_quantity?.physical_cmt);
+        amount = Math.abs(amount - rejected_data?.rejected_quantity?.amount);
+        sqm_factor = Math.abs(sqm_factor - rejected_data?.rejected_quantity?.sqm_factor);
+        expense_amount = Math.abs(expense_amount - rejected_data?.rejected_quantity?.expense_amount);
+      }
 
       // logic if approval is not required
       if (!sendForApproval) {
@@ -852,7 +867,6 @@ export const revert_crosscutting_done = catchAsync(async function (
   try {
     const { id } = req.params;
     const { isChecked } = req.body;
-    console.log("body => ", req.body);
     // const issue_forCrossCutting = await issues_for_crosscutting_data.findOne({
     //   _id: id,
     // }).lean();
@@ -867,18 +881,18 @@ export const revert_crosscutting_done = catchAsync(async function (
     });
 
     let updated_physical_length = issues_for_crosscutting_data?.physical_length;
+    let updated_physical_diameter = issues_for_crosscutting_data?.physical_diameter;
     let updated_physical_cmt = issues_for_crosscutting_data?.physical_cmt;
     let updated_amount = issues_for_crosscutting_data?.amount;
     let updated_expense_amount = issues_for_crosscutting_data?.expense_amount;
     let updated_sqm_factor = issues_for_crosscutting_data?.sqm_factor;
 
     if (rejected_data) {
-      updated_physical_length -=
-        rejected_data?.rejected_quantity?.physical_length;
+      updated_physical_length -= rejected_data?.rejected_quantity?.physical_length;
+      updated_physical_diameter -= rejected_data?.rejected_quantity?.physical_diameter;
       updated_physical_cmt -= rejected_data?.rejected_quantity?.physical_cmt;
       updated_amount -= rejected_data?.rejected_quantity?.amount;
-      updated_expense_amount -=
-        rejected_data?.rejected_quantity?.expense_amount;
+      updated_expense_amount -= rejected_data?.rejected_quantity?.expense_amount;
       updated_sqm_factor -= rejected_data?.rejected_quantity?.sqm_factor;
     }
 
@@ -953,6 +967,7 @@ export const revert_crosscutting_done = catchAsync(async function (
           {
             $set: {
               "available_quantity.physical_length": updated_physical_length,
+              // "available_quantity.physical_diameter": updated_physical_diameter,
               "available_quantity.physical_cmt": updated_physical_cmt,
               "available_quantity.amount": updated_amount,
               "available_quantity.expense_amount": updated_expense_amount,

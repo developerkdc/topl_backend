@@ -192,7 +192,7 @@ export const add_rejected_issues_for_crosscutting = catchAsync(async function (r
             $set: {
                 is_rejected: true,
                 "available_quantity.physical_length": 0,
-                "available_quantity.physical_diameter": 0,
+                // "available_quantity.physical_diameter": 0,
                 "available_quantity.physical_cmt": 0,
                 "available_quantity.amount": 0,
                 "available_quantity.sqm_factor": 0,
