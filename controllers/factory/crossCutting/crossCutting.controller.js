@@ -71,7 +71,8 @@ export const listing_issue_for_crosscutting = catchAsync(
       $or: [
         { crosscutting_completed: false },
         { is_rejected: false }
-      ]
+      ],
+      "available_quantity.physical_length": { $gt: 0 }
     };
 
     const aggregate_stage = [
@@ -702,11 +703,11 @@ export const edit_cross_cutting_inventory = catchAsync(
             unique_identifier: unique_identifier_for_items,
             crosscutting_done_id: _id ? _id : new mongoose.Types.ObjectId(),
             issue_for_crosscutting_data: {
-              "available_quantity.physical_cmt": available_sqm,
-              "available_quantity.physical_length": available_length,
-              "available_quantity.amount": amount,
-              "available_quantity.sqm_factor": sqm_factor,
-              "available_quantity.expense_amount": expense_amount,
+              "physical_cmt": available_sqm,
+              "physical_length": available_length,
+              "amount": amount,
+              "sqm_factor": sqm_factor,
+              "expense_amount": expense_amount,
               crosscutting_completed: crosscutting_completed,
             },
             approval_status: {
