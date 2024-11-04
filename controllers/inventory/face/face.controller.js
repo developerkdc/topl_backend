@@ -282,6 +282,20 @@ export const edit_face_item_invoice_inventory = catchAsync(
             {
               $set: {
                 ...invoice_details,
+                approval_status: {
+                  sendForApproval: {
+                    status: false,
+                    remark: null
+                  },
+                  approved: {
+                    status: false,
+                    remark: null
+                  },
+                  rejected: {
+                    status: false,
+                    remark: null
+                  }
+                },
               },
             },
             { session }
@@ -323,7 +337,7 @@ export const edit_face_item_invoice_inventory = catchAsync(
       }else{
         const edited_by = user?.id;
         const approval_person = user.approver_id;
-        const { _id, ...invoiceDetailsData } = invoice_details;
+        const { _id, createdAt, updatedAt, ...invoiceDetailsData } = invoice_details;
 
         const add_invoice_details = await face_approval_inventory_invoice_model.create([{
           ...invoiceDetailsData,

@@ -1,16 +1,11 @@
 import mongoose from "mongoose";
-import { log_inventory_invoice_model } from "../../../database/schema/inventory/log/log.schema.js";
-import {
-  log_approval_inventory_invoice_model,
-  log_approval_inventory_items_model,
-} from "../../../database/schema/inventory/log/logApproval.schema.js";
+import { crosscutting_done_model } from "../../../database/schema/factory/crossCutting/crosscutting.schema.js";
+import { crosscutting_done_approval_model } from "../../../database/schema/factory/crossCutting/crosscuttingApproval.schema.js";
+import { issues_for_crosscutting_model } from "../../../database/schema/factory/crossCutting/issuedForCutting.schema.js";
 import { dynamic_filter } from "../../../utils/dymanicFilter.js";
 import { DynamicSearch } from "../../../utils/dynamicSearch/dynamic.js";
 import ApiError from "../../../utils/errors/apiError.js";
 import catchAsync from "../../../utils/errors/catchAsync.js";
-import { crosscutting_done_approval_model } from "../../../database/schema/factory/crossCutting/crosscuttingApproval.schema.js";
-import { crosscutting_done_model } from "../../../database/schema/factory/crossCutting/crosscutting.schema.js";
-import { issues_for_crosscutting_model } from "../../../database/schema/factory/crossCutting/issuedForCutting.schema.js";
 
 export const crossCuttting_approval_listing = catchAsync(async function (
   req,
