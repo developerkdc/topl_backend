@@ -75,7 +75,7 @@ export const flitching_approval_listing = catchAsync(async function (
     },
   ];
 
-  const List_log_invoice_details =
+  const List_flitching_details =
     await flitching_approval_model.aggregate(aggregate_stage);
 
   const totalCount = await flitching_approval_model.countDocuments({
@@ -87,7 +87,7 @@ export const flitching_approval_listing = catchAsync(async function (
   return res.status(200).json({
     statusCode: 200,
     status: "success",
-    data: List_log_invoice_details,
+    data: List_flitching_details,
     totalPage: totalPage,
     message: "Data fetched successfully",
   });
@@ -95,14 +95,14 @@ export const flitching_approval_listing = catchAsync(async function (
 
 export const flitching_approval_item_listing_by_unique_id = catchAsync(
   async (req, res, next) => {
-    // const invoice_id = req.params.invoice_id;
+    const issue_for_flitching_id = req.params.issue_for_flitching_id;
     const unique_identifier_id = req.params._id;
 
     const aggregate_stage = [
       {
         $match: {
           unique_identifier: new mongoose.Types.ObjectId(unique_identifier_id),
-          // "invoice_id": new mongoose.Types.ObjectId(invoice_id),
+          "issue_for_flitching_id": new mongoose.Types.ObjectId(issue_for_flitching_id),
         },
       },
       {
@@ -112,25 +112,14 @@ export const flitching_approval_item_listing_by_unique_id = catchAsync(
       },
     ];
 
-    const crosscut_item_by_issue_for_crosscutting_id =
-      await flitching_approval_model.aggregate(aggregate_stage);
-    // const logExpense_invoice =
-    //   await log_approval_inventory_invoice_model.findOne({
-    //     _id: document_id,
-    //     invoice_id: invoice_id,
-    //   });
-
-    // const totalCount = await log_inventory_items_view_model.countDocuments({
-    //   ...match_query,
-    // });
-
-    // const totalPage = Math.ceil(totalCount / limit);
+    const flitching_approval_data = await flitching_approval_model.aggregate(aggregate_stage);
 
     return res.status(200).json({
       statusCode: 200,
       status: "success",
-      data: crosscut_item_by_issue_for_crosscutting_id,
-      // totalPage: totalPage,
+      data: {
+        flitching_details: flitching_approval_data
+      },
       message: "Data fetched successfully",
     });
   }
@@ -141,24 +130,25 @@ export const flitching_approve = catchAsync(async (req, res, next) => {
   session.startTransaction();
   try {
     const unique_identifier_id = req.params._id; //_id for finding all time in approval collection
-    const issue_for_crosscutting_id = req.params.issued_for_cutting_id;
+    const issue_for_flitching_id = req.params.issue_for_flitching_id;
     const user = req.userDetails;
 
     const items_details = await flitching_approval_model
       .find({
         unique_identifier: unique_identifier_id,
+        issue_for_flitching_id: issue_for_flitching_id,
         "approval.approvalPerson": user._id,
-        //   invoice_id: invoice_id,
       })
       .lean();
     if (items_details?.length <= 0)
       return next(new ApiError("No invoice items found for approval", 404));
 
     // update all item's approval status which are approved in approval collection
-    const invoice_details = await flitching_approval_model
+    const flitching_details = await flitching_approval_model
       .updateMany(
         {
           unique_identifier: unique_identifier_id,
+          issue_for_flitching_id: issue_for_flitching_id,
           "approval.approvalPerson": user._id,
         },
         {
@@ -183,31 +173,48 @@ export const flitching_approve = catchAsync(async (req, res, next) => {
         { session, new: true }
       )
       .lean();
-    if (!invoice_details)
-      return next(new ApiError("No invoice found for approval", 404));
+    if (!flitching_details.acknowledged || flitching_details.modifiedCount <= 0)
+      return next(new ApiError("Failed to approve data", 404));
 
-    // update the approval data in actual crossdone collection
-    await flitching_approval_model.aggregate([
+    // update the approval data in actual collection
+
+    await flitching_done_model.deleteMany({
+      issue_for_flitching_id: new mongoose.Types.ObjectId(issue_for_flitching_id),
+    }, { session });
+
+
+    const approval_flitchingdone_items_data = await flitching_approval_model.aggregate([
       {
         $match: {
           unique_identifier: new mongoose.Types.ObjectId(unique_identifier_id),
+          issue_for_flitching_id: new mongoose.Types.ObjectId(issue_for_flitching_id),
         },
       },
       {
         $set: {
-          _id: "$log_flitching_done_id",
+          _id: "$flitching_done_id",
+          approval_status: {
+            sendForApproval: {
+              status: false,
+              remark: null,
+            },
+            approved: {
+              status: true,
+              remark: null,
+            },
+            rejected: {
+              status: false,
+              remark: null,
+            },
+          }
         },
       },
       {
-        $unset: ["log_flitching_done_id"],
-      },
-      {
-        $merge: {
-          into: "flitching",
-          whenMatched: "merge",
-        },
+        $unset: ["flitching_done_id"],
       },
     ]);
+
+    await flitching_done_model.insertMany(approval_flitchingdone_items_data, { session })
 
     await session.commitTransaction();
     session.endSession();
@@ -228,17 +235,16 @@ export const flitching_reject = catchAsync(async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
-    // const invoiceId = req.params?.invoice_id;
+    const issue_for_flitching_id = req.params?.issue_for_flitching_id;
     const unique_identifier_id = req.params._id;
-    const issue_for_crosscutting_id = req.params.issued_for_cutting_id;
     const remark = req.body?.remark;
     const user = req.userDetails;
 
-    const invoice_details = await flitching_approval_model
+    const flitching_details = await flitching_approval_model
       .updateMany(
         {
           unique_identifier: unique_identifier_id,
-          //   invoice_id: invoiceId,
+          issue_for_flitching_id: issue_for_flitching_id,
           "approval.approvalPerson": user._id,
         },
         {
@@ -263,12 +269,12 @@ export const flitching_reject = catchAsync(async (req, res, next) => {
         { session, new: true }
       )
       .lean();
-    if (!invoice_details)
-      return next(new ApiError("No invoice found for approval", 404));
+    if (!flitching_details)
+      return next(new ApiError("No Data found for approval", 404));
 
-    const update_log_invoice = await flitching_done_model.updateMany(
+    const update_flitching_details = await flitching_done_model.updateMany(
       {
-        issue_for_crosscutting_id: issue_for_crosscutting_id,
+        issue_for_flitching_id: issue_for_flitching_id,
       },
       {
         $set: {
@@ -291,8 +297,8 @@ export const flitching_reject = catchAsync(async (req, res, next) => {
       { session }
     );
     if (
-      !update_log_invoice.acknowledged ||
-      update_log_invoice.modifiedCount <= 0
+      !update_flitching_details.acknowledged ||
+      update_flitching_details.modifiedCount <= 0
     )
       return next(new ApiError("Failed to reject invoice"), 400);
 
@@ -301,7 +307,7 @@ export const flitching_reject = catchAsync(async (req, res, next) => {
     return res.status(200).json({
       statusCode: 200,
       status: "success",
-      message: "Invoice has rejected successfully",
+      message: "Rejected successfully",
     });
   } catch (error) {
     console.log(error);

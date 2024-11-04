@@ -648,7 +648,7 @@ export const edit_cross_cutting_inventory = catchAsync(
           { session }
         );
 
-        await issues_for_crosscutting_model.findByIdAndUpdate(
+        await issues_for_crosscutting_model.findOneAndUpdate(
           { _id: id },
           {
             $set: {
