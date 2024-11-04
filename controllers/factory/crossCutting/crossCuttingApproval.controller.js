@@ -213,26 +213,23 @@ export const crosscutting_approve = catchAsync(async (req, res, next) => {
       },
     ]);
 
+
     await crosscutting_done_model.insertMany(approval_crosscutDone_items_data, { session })
 
     // update the available qunatity data in isuue for crosscut collection
-    await issues_for_crosscutting_model.findByIdAndUpdate(
+    const available_quantity = approval_crosscutDone_items_data?.[0]
+    await issues_for_crosscutting_model.findOneAndUpdate(
       {
         _id: new mongoose.Types.ObjectId(issue_for_crosscutting_id),
       },
       {
         $set: {
-          "available_quantity.physical_cmt":
-            crosscutDone_details?.[0]?.issue_for_crosscutting_data?.available_sqm,
-          "available_quantity.physical_length":
-            crosscutDone_details?.[0]?.issue_for_crosscutting_data?.available_length,
-          "available_quantity.amount":
-            crosscutDone_details?.[0]?.issue_for_crosscutting_data?.amount,
-          "available_quantity.sqm_factor":
-            crosscutDone_details?.[0]?.issue_for_crosscutting_data?.sqm_factor,
-          "available_quantity.expense_amount":
-            crosscutDone_details?.[0]?.issue_for_crosscutting_data?.expense_amount,
-          crosscutting_completed: crosscutDone_details?.[0]?.issue_for_crosscutting_data?.crosscutting_completed,
+          "available_quantity.physical_cmt": available_quantity?.issue_for_crosscutting_data?.physical_cmt,
+          "available_quantity.physical_length": available_quantity?.issue_for_crosscutting_data?.physical_length,
+          "available_quantity.amount": available_quantity?.issue_for_crosscutting_data?.amount,
+          "available_quantity.sqm_factor": available_quantity?.issue_for_crosscutting_data?.sqm_factor,
+          "available_quantity.expense_amount": available_quantity?.issue_for_crosscutting_data?.expense_amount,
+          crosscutting_completed: available_quantity?.issue_for_crosscutting_data?.crosscutting_completed,
           approval_status: {
             sendForApproval: {
               status: false,
