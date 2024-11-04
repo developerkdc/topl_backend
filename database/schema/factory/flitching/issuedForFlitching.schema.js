@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import invoice_details from "../../../Utils/invoiceDetails.schema.js";
 import { issues_for_status } from "../../../Utils/constants/constants.js";
+import { approval_status } from "../../../Utils/approvalStatus.schema.js";
 
 const issues_for_flitching_details_schema = new mongoose.Schema({
   log_inventory_item_id: {
@@ -135,6 +136,7 @@ const issues_for_flitching_details_schema = new mongoose.Schema({
       required: [true, "Expense Amount is required"],
     },
   },
+  approval_status:approval_status,
   // exchange_rate: {
   //   type: Number,
   //   default: null,

@@ -1,9 +1,18 @@
 import mongoose from "mongoose";
+import { issues_for_status } from "../../../Utils/constants/constants.js";
 import { approval_status } from "../../../Utils/approvalStatus.schema.js";
+import approvalSchema from "../../../Utils/approval.schema.js";
 
-const flitchingSchema = new mongoose.Schema(
+const flitching_approval_schema = new mongoose.Schema(
   {
-    // sr_no: Number,
+    unique_identifier: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, "Unique Identifier id is required"],
+    },
+    flitching_done_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, "Log Flitching id is required"],
+    },
     issue_for_flitching_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "issues_for_flitching",
@@ -27,14 +36,6 @@ const flitchingSchema = new mongoose.Schema(
       type: String,
       required: [true, "machine name is required"],
     },
-    // item_id: {
-    //   type: mongoose.Schema.Types.ObjectId,
-    //   required: [true, "item id is required"],
-    // },
-    // item_name: {
-    //   type: String,
-    //   required: [true, "item name is required"],
-    // },
     log_no: {
       type: String,
       required: [true, "log number is required"],
@@ -127,11 +128,11 @@ const flitchingSchema = new mongoose.Schema(
       type: Number,
       required: [true, "expense amount is required"]
     },
-    approval_status: approval_status,
     remarks: {
       type: String,
       default: null,
     },
+    approval_status: approval_status,
     created_by: {
       type: mongoose.Schema.Types.ObjectId,
       required: [true, "created by is required"],
@@ -144,10 +145,18 @@ const flitchingSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-export const flitching_done_model =
-  mongoose.models.flitchings || mongoose.model("flitching", flitchingSchema);
+flitching_approval_schema.add(approvalSchema);
 
-const flitching_view_schema = new mongoose.Schema(
+// flitching_approval_schema.index({ issue_for_crosscutting_id: -1 });
+// flitching_approval_schema.index({ code: -1 });
+// flitching_approval_schema.index({ issue_for_crosscutting_id: -1, code: -1 });
+
+export const flitching_approval_model = mongoose.model(
+  "flitching_approval",
+  flitching_approval_schema
+);
+
+const flitchingDone_approval_view_schema = new mongoose.Schema(
   {},
   {
     strict: false,
@@ -156,14 +165,14 @@ const flitching_view_schema = new mongoose.Schema(
   }
 );
 
-export const flitching_view_modal = mongoose.model(
-  "flitching_done_view",
-  flitching_view_schema
+export const flitchingDone_approval_view_modal = mongoose.model(
+  "flitching_approval_view",
+  flitchingDone_approval_view_schema
 );
 
 (async function () {
-  await flitching_view_modal.createCollection({
-    viewOn: "flitchings",
+  await flitchingDone_approval_view_modal.createCollection({
+    viewOn: "flitching_approval",
     pipeline: [
       {
         $sort: {
@@ -173,33 +182,33 @@ export const flitching_view_modal = mongoose.model(
       },
       {
         $lookup: {
-          from: "issues_for_flitchings",
-          localField: "issue_for_flitching_id",
+          from: "issues_for_crosscuttings",
+          localField: "issue_for_crosscutting_id",
           foreignField: "_id",
-          as: "issueForFlitchingDetails",
-        },
-      },
-      {
-        $unwind: {
-          path: "$issueForFlitchingDetails",
-          preserveNullAndEmptyArrays: true,
+          as: "issuedCrossCuttingDetails",
         },
       },
 
-      {
-        $lookup: {
-          from: "users",
-          localField: "created_by",
-          foreignField: "_id",
-          as: "created_user",
-        },
-      },
+      // {
+      //   $lookup: {
+      //     from: "log_inventory_items_details",
+      //     localField: "log_inventory_item_id",
+      //     foreignField: "_id",
+      //     as: "logInventoryItemDetails",
+      //   },
+      // },
       {
         $unwind: {
-          path: "$created_user",
+          path: "$issuedCrossCuttingDetails",
           preserveNullAndEmptyArrays: true,
         },
       },
+      // {
+      //   $unwind: {
+      //     path: "$logInventoryItemDetails",
+      //     preserveNullAndEmptyArrays: true,
+      //   },
+      // },
     ],
   });
 })();

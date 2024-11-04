@@ -1,10 +1,8 @@
 import mongoose from "mongoose";
-import invoice_details, { approval_invoice_details } from "../../../Utils/invoiceDetails.schema.js";
-import { issues_for_status } from "../../../Utils/constants/constants.js";
-import expensesSchema, { approvalExpensesSchema } from "../../masters/expenses.schema.js";
-import { mdf_invoice_schema, item_details_schema } from "./mdf.schema.js";
 import approvalSchema from "../../../Utils/approval.schema.js";
 import { approval_status } from "../../../Utils/approvalStatus.schema.js";
+import { approval_invoice_details } from "../../../Utils/invoiceDetails.schema.js";
+import { approvalExpensesSchema } from "../../masters/expenses.schema.js";
 
 const mdf_approval_item_details_schema = new mongoose.Schema(
   {

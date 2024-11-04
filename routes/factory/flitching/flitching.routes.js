@@ -13,6 +13,7 @@ import {
 import CheckRoleAndTokenAccess from "../../../middlewares/permission.js";
 import AuthMiddleware from "../../../middlewares/verifyToken.js";
 import RolesPermissions from "../../../middlewares/permission.js";
+import { verifyApproval } from "../../../middlewares/approval.middleware.js";
 const router = express.Router();
 
 router.post(
@@ -31,6 +32,7 @@ router.post("/add-flitching", AuthMiddleware, RolesPermissions("flitching_factor
 router.post(
   "/edit-flitching/:id",
   AuthMiddleware, RolesPermissions("flitching_factory", "edit"),
+  verifyApproval("flitching_factory", "edit"),
   edit_flitching_inventory
 );
 router.post("/list-flitching-done", AuthMiddleware, RolesPermissions("flitching_factory", "view"), listing_flitching_done_inventory);
