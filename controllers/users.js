@@ -8,6 +8,17 @@ import { IdRequired, SomethingWrong } from "../utils/response/response.js";
 
 import { DynamicSearch } from "../utils/dynamicSearch/dynamic.js";
 import { dynamic_filter } from "../utils/dymanicFilter.js";
+import { log_approval_inventory_invoice_model } from "../database/schema/inventory/log/logApproval.schema.js";
+import { flitch_approval_inventory_invoice_model } from "../database/schema/inventory/Flitch/flitchApproval.schema.js";
+import { plywood_approval_inventory_invoice_model } from "../database/schema/inventory/Plywood/plywoodApproval.schema.js";
+import { veneer_approval_inventory_invoice_model } from "../database/schema/inventory/venner/veneerApproval.schema.js";
+import { core_approval_inventory_invoice_model } from "../database/schema/inventory/core/coreApproval.schema.js";
+import { mdf_approval_inventory_invoice_model } from "../database/schema/inventory/mdf/mdfApproval.schema.js";
+import { face_approval_inventory_invoice_model } from "../database/schema/inventory/face/faceApproval.schema.js";
+import { fleece_approval_inventory_invoice_model } from "../database/schema/inventory/fleece/fleeceApproval.schema.js";
+import { otherGoods_approval_inventory_invoice_model } from "../database/schema/inventory/otherGoods/otherGoodsApproval.schema.js";
+import { crosscutting_done_approval_model } from "../database/schema/factory/crossCutting/crosscuttingApproval.schema.js";
+import { flitching_approval_model } from "../database/schema/factory/flitching/flitchingApproval.schema.js";
 
 export const AddUser = catchAsync(async (req, res) => {
   const authUserDetail = req.userDetails;
@@ -80,6 +91,49 @@ export const UpdateUser = catchAsync(async (req, res) => {
   }
 
   const user = await UserModel.findByIdAndUpdate(userId, { $set: updateData }, { new: true, runValidators: true });
+
+  const previousApproval = actualUserDetails.approver_id
+  const newApproval = user.approver_id;
+
+  if(previousApproval?.toString() !== newApproval?.toString()){
+    const searchQuery = {
+      "approval_status.sendForApproval.status":true,
+      "approval_status.approved.status":false,
+      "approval_status.rejected.status":false,
+      "approval.approvalPerson":previousApproval
+    };
+    const updateQuery = {
+      $set:{
+        "approval.approvalPerson":newApproval
+      }
+    }
+
+    //Inventory
+    //log inventory
+    await log_approval_inventory_invoice_model.updateMany(searchQuery,updateQuery);
+    //flitch inventory
+    await flitch_approval_inventory_invoice_model.updateMany(searchQuery,updateQuery);
+    //plywood inventory
+    await plywood_approval_inventory_invoice_model.updateMany(searchQuery,updateQuery);
+    //veneer inventory
+    await veneer_approval_inventory_invoice_model.updateMany(searchQuery,updateQuery);
+    //mdf inventory
+    await mdf_approval_inventory_invoice_model.updateMany(searchQuery,updateQuery);
+    //face inventory
+    await face_approval_inventory_invoice_model.updateMany(searchQuery,updateQuery);
+    //core inventory
+    await core_approval_inventory_invoice_model.updateMany(searchQuery,updateQuery);
+    //fleece paper inventory
+    await fleece_approval_inventory_invoice_model.updateMany(searchQuery,updateQuery);
+    //other goods inventory
+    await otherGoods_approval_inventory_invoice_model.updateMany(searchQuery,updateQuery);
+    
+    //Factory
+    //crosscutting done
+    await crosscutting_done_approval_model.updateMany(searchQuery,updateQuery);
+    //flitching done
+    await flitching_approval_model.updateMany(searchQuery,updateQuery);
+  }
 
   res.status(200).json({
     result: user,
