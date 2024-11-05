@@ -59,6 +59,27 @@ export const flitching_approval_listing = catchAsync(async function (
 
   const aggregate_stage = [
     {
+      $lookup: {
+        from: "users",
+        localField: "approval.editedBy",
+        foreignField: "_id",
+        pipeline: [
+          {
+            $project: {
+              user_name: 1
+            }
+          }
+        ],
+        as: "user"
+      }
+    },
+    {
+      $unwind: {
+        path: "$user",
+        preserveNullAndEmptyArrays: true
+      }
+    },
+    {
       $match: match_query,
     },
     {
