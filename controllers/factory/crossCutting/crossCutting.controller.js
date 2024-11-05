@@ -68,16 +68,20 @@ export const listing_issue_for_crosscutting = catchAsync(
     const match_query = {
       ...filterData,
       ...search_query,
-      $or: [
-        { crosscutting_completed: false },
-        { is_rejected: false }
-      ],
-      "available_quantity.physical_length": { $gt: 0 }
     };
 
     const aggregate_stage = [
       {
         $match: match_query,
+      },
+      {
+        $match: {
+          $or: [
+            { crosscutting_completed: false },
+            { is_rejected: false }
+          ],
+          "available_quantity.physical_length": { $gt: 0 }
+        },
       },
       {
         $sort: {
