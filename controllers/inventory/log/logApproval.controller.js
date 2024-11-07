@@ -55,24 +55,24 @@ export const logApproval_invoice_listing = catchAsync(async function (req, res, 
 
     const aggregate_stage = [
         {
-            $lookup:{
+            $lookup: {
                 from: "users",
-                localField:"approval.editedBy",
-                foreignField:"_id",
-                pipeline:[
+                localField: "approval.editedBy",
+                foreignField: "_id",
+                pipeline: [
                     {
-                        $project:{
-                            user_name:1
+                        $project: {
+                            user_name: 1
                         }
                     }
                 ],
-                as:"user"
+                as: "user"
             }
         },
         {
-            $unwind:{
-                path:"$user",
-                preserveNullAndEmptyArrays:true
+            $unwind: {
+                path: "$user",
+                preserveNullAndEmptyArrays: true
             }
         },
         {
@@ -115,6 +115,32 @@ export const logApproval_item_listing_by_invoice = catchAsync(
         const invoice_id = req.params.invoice_id;
         const document_id = req.params._id;
 
+        const logExpense_invoice_data = await log_approval_inventory_invoice_model.aggregate([
+            {
+                $match: {
+                    _id: new mongoose.Types.ObjectId(document_id),
+                    invoice_id: new mongoose.Types.ObjectId(invoice_id)
+                }
+            },
+            {
+                $lookup: {
+                    from: "log_inventory_invoice_details",
+                    localField: "invoice_id",
+                    foreignField: "_id",
+                    as: "previous_data"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$previous_data",
+                    preserveNullAndEmptyArrays: true
+                }
+            }
+        ]);
+
+        const logExpense_invoice = logExpense_invoice_data?.[0]
+        const isApprovalPending = logExpense_invoice?.approval_status?.sendForApproval?.status;
+
         const aggregate_stage = [
             {
                 $match: {
@@ -122,6 +148,20 @@ export const logApproval_item_listing_by_invoice = catchAsync(
                     "invoice_id": new mongoose.Types.ObjectId(invoice_id),
                 },
             },
+            ...isApprovalPending ? [{
+                $lookup: {
+                    from: "log_inventory_items_details",
+                    localField: "log_item_id",
+                    foreignField: "_id",
+                    as: "previous_data"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$previous_data",
+                    preserveNullAndEmptyArrays: true
+                }
+            }] : [],
             {
                 $sort: {
                     item_sr_no: 1,
@@ -130,16 +170,6 @@ export const logApproval_item_listing_by_invoice = catchAsync(
         ];
 
         const logExpense_item_by_invoice = await log_approval_inventory_items_model.aggregate(aggregate_stage);
-        const logExpense_invoice = await log_approval_inventory_invoice_model.findOne({
-            _id: document_id,
-            invoice_id: invoice_id
-        });
-
-        // const totalCount = await log_inventory_items_view_model.countDocuments({
-        //   ...match_query,
-        // });
-
-        // const totalPage = Math.ceil(totalCount / limit);
 
         return res.status(200).json({
             statusCode: 200,
@@ -148,7 +178,6 @@ export const logApproval_item_listing_by_invoice = catchAsync(
                 items: logExpense_item_by_invoice,
                 invoice: logExpense_invoice
             },
-            // totalPage: totalPage,
             message: "Data fetched successfully",
         });
     }

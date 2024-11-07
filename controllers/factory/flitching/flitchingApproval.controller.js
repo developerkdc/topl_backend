@@ -119,12 +119,28 @@ export const flitching_approval_item_listing_by_unique_id = catchAsync(
     const issue_for_flitching_id = req.params.issue_for_flitching_id;
     const unique_identifier_id = req.params._id;
 
+    const isApprovalPending = req?.body?.isApprovalPending
+
     const aggregate_stage = [
       {
         $match: {
           unique_identifier: new mongoose.Types.ObjectId(unique_identifier_id),
           "issue_for_flitching_id": new mongoose.Types.ObjectId(issue_for_flitching_id),
         },
+      },
+      {
+        $lookup: {
+          from: "flitchings",
+          localField: "flitching_done_id",
+          foreignField: "_id",
+          as: "previous_data"
+        }
+      },
+      {
+        $unwind: {
+          path: "$previous_data",
+          preserveNullAndEmptyArrays: true
+        }
       },
       {
         $sort: {
