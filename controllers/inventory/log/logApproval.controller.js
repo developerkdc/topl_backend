@@ -115,6 +115,13 @@ export const logApproval_item_listing_by_invoice = catchAsync(
         const invoice_id = req.params.invoice_id;
         const document_id = req.params._id;
 
+        const approval_invoice_details = await log_approval_inventory_invoice_model.findOne({
+            _id: new mongoose.Types.ObjectId(document_id),
+            invoice_id: new mongoose.Types.ObjectId(invoice_id)
+        }).select({ "approval_status.sendForApproval.status": 1 });
+
+        const isApprovalPending = approval_invoice_details?.approval_status?.sendForApproval?.status || false;
+
         const logExpense_invoice_data = await log_approval_inventory_invoice_model.aggregate([
             {
                 $match: {
@@ -122,7 +129,7 @@ export const logApproval_item_listing_by_invoice = catchAsync(
                     invoice_id: new mongoose.Types.ObjectId(invoice_id)
                 }
             },
-            {
+            ...isApprovalPending ? [{
                 $lookup: {
                     from: "log_inventory_invoice_details",
                     localField: "invoice_id",
@@ -135,11 +142,10 @@ export const logApproval_item_listing_by_invoice = catchAsync(
                     path: "$previous_data",
                     preserveNullAndEmptyArrays: true
                 }
-            }
+            }] : []
         ]);
 
         const logExpense_invoice = logExpense_invoice_data?.[0]
-        const isApprovalPending = logExpense_invoice?.approval_status?.sendForApproval?.status;
 
         const aggregate_stage = [
             {
