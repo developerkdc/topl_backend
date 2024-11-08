@@ -119,7 +119,12 @@ export const flitching_approval_item_listing_by_unique_id = catchAsync(
     const issue_for_flitching_id = req.params.issue_for_flitching_id;
     const unique_identifier_id = req.params._id;
 
-    const isApprovalPending = req?.body?.isApprovalPending
+    const approval_crosscutting_data = await flitching_approval_model.findOne({
+      unique_identifier: new mongoose.Types.ObjectId(unique_identifier_id),
+      "issue_for_flitching_id": new mongoose.Types.ObjectId(issue_for_flitching_id),
+    })
+
+    const isApprovalPending = approval_crosscutting_data?.approval_status?.sendForApproval?.status;
 
     const aggregate_stage = [
       {
@@ -128,7 +133,7 @@ export const flitching_approval_item_listing_by_unique_id = catchAsync(
           "issue_for_flitching_id": new mongoose.Types.ObjectId(issue_for_flitching_id),
         },
       },
-      {
+      ...isApprovalPending ? [{
         $lookup: {
           from: "flitchings",
           localField: "flitching_done_id",
@@ -141,7 +146,7 @@ export const flitching_approval_item_listing_by_unique_id = catchAsync(
           path: "$previous_data",
           preserveNullAndEmptyArrays: true
         }
-      },
+      }] : [],
       {
         $sort: {
           code: 1,

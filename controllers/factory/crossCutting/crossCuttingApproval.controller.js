@@ -120,6 +120,13 @@ export const crosscutting_approval_item_listing_by_unique_id = catchAsync(
     const issued_for_cutting_id = req.params.issued_for_cutting_id;
     const unique_identifier_id = req.params._id;
 
+    const approval_crosscutting_data = await crosscutting_done_approval_model.findOne({
+      unique_identifier: new mongoose.Types.ObjectId(unique_identifier_id),
+      issue_for_crosscutting_id: new mongoose.Types.ObjectId(issued_for_cutting_id),
+    })
+
+    const isApprovalPending = approval_crosscutting_data?.approval_status?.sendForApproval?.status;
+
     const aggregate_stage = [
       {
         $match: {
@@ -127,20 +134,20 @@ export const crosscutting_approval_item_listing_by_unique_id = catchAsync(
           issue_for_crosscutting_id: new mongoose.Types.ObjectId(issued_for_cutting_id),
         },
       },
-      {
-        $lookup:{
-          from:"crosscutting_dones",
-          localField:"crosscutting_done_id",
-          foreignField:"_id",
-          as:"previous_data"
+      ...isApprovalPending ? [{
+        $lookup: {
+          from: "crosscutting_dones",
+          localField: "crosscutting_done_id",
+          foreignField: "_id",
+          as: "previous_data"
         }
       },
       {
-        $unwind:{
-          path:"$previous_data",
-          preserveNullAndEmptyArrays:true
+        $unwind: {
+          path: "$previous_data",
+          preserveNullAndEmptyArrays: true
         }
-      },
+      }] : [],
       {
         $sort: {
           code: 1,

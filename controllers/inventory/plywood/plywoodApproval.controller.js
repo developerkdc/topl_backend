@@ -110,10 +110,80 @@ export const plywoodApproval_invoice_listing = catchAsync(async function (req, r
     });
 });
 
+// export const plywoodApproval_item_listing_by_invoice = catchAsync(
+//     async (req, res, next) => {
+//         const invoice_id = req.params.invoice_id;
+//         const document_id = req.params._id;
+
+//         const aggregate_stage = [
+//             {
+//                 $match: {
+//                     approval_invoice_id: new mongoose.Types.ObjectId(document_id),
+//                     "invoice_id": new mongoose.Types.ObjectId(invoice_id),
+//                 },
+//             },
+//             {
+//                 $sort: {
+//                     item_sr_no: 1,
+//                 },
+//             }
+//         ];
+
+//         const plywoodExpense_item_by_invoice = await plywood_approval_inventory_items_model.aggregate(aggregate_stage);
+//         const plywoodExpense_invoice = await plywood_approval_inventory_invoice_model.findOne({
+//             _id: document_id,
+//             invoice_id: invoice_id
+//         });
+
+//         return res.status(200).json({
+//             statusCode: 200,
+//             status: "success",
+//             data: {
+//                 items: plywoodExpense_item_by_invoice,
+//                 invoice: plywoodExpense_invoice
+//             },
+//             // totalPage: totalPage,
+//             message: "Data fetched successfully",
+//         });
+//     }
+// );
+
 export const plywoodApproval_item_listing_by_invoice = catchAsync(
     async (req, res, next) => {
         const invoice_id = req.params.invoice_id;
         const document_id = req.params._id;
+
+        const approval_invoice_details = await plywood_approval_inventory_invoice_model.findOne({
+            _id: new mongoose.Types.ObjectId(document_id),
+            invoice_id: new mongoose.Types.ObjectId(invoice_id)
+        }).select({ "approval_status.sendForApproval.status": 1 });
+
+        const isApprovalPending = approval_invoice_details?.approval_status?.sendForApproval?.status || false;
+
+        const plywoodExpense_invoice_data = await plywood_approval_inventory_invoice_model.aggregate([
+            {
+                $match: {
+                    _id: new mongoose.Types.ObjectId(document_id),
+                    invoice_id: new mongoose.Types.ObjectId(invoice_id)
+                }
+            },
+            ...isApprovalPending ? [{
+                $lookup: {
+                    from: "plywood_inventory_invoice_details",
+                    localField: "invoice_id",
+                    foreignField: "_id",
+                    as: "previous_data"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$previous_data",
+                    preserveNullAndEmptyArrays: true
+                }
+            }] : []
+        ]);
+
+        const plywoodExpense_invoice = plywoodExpense_invoice_data?.[0]
 
         const aggregate_stage = [
             {
@@ -122,6 +192,20 @@ export const plywoodApproval_item_listing_by_invoice = catchAsync(
                     "invoice_id": new mongoose.Types.ObjectId(invoice_id),
                 },
             },
+            ...isApprovalPending ? [{
+                $lookup: {
+                    from: "plywood_inventory_items_details",
+                    localField: "plywood_item_id",
+                    foreignField: "_id",
+                    as: "previous_data"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$previous_data",
+                    preserveNullAndEmptyArrays: true
+                }
+            }] : [],
             {
                 $sort: {
                     item_sr_no: 1,
@@ -130,10 +214,6 @@ export const plywoodApproval_item_listing_by_invoice = catchAsync(
         ];
 
         const plywoodExpense_item_by_invoice = await plywood_approval_inventory_items_model.aggregate(aggregate_stage);
-        const plywoodExpense_invoice = await plywood_approval_inventory_invoice_model.findOne({
-            _id: document_id,
-            invoice_id: invoice_id
-        });
 
         return res.status(200).json({
             statusCode: 200,
@@ -142,7 +222,6 @@ export const plywoodApproval_item_listing_by_invoice = catchAsync(
                 items: plywoodExpense_item_by_invoice,
                 invoice: plywoodExpense_invoice
             },
-            // totalPage: totalPage,
             message: "Data fetched successfully",
         });
     }
