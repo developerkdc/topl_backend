@@ -128,6 +128,20 @@ export const crosscutting_approval_item_listing_by_unique_id = catchAsync(
         },
       },
       {
+        $lookup:{
+          from:"crosscutting_dones",
+          localField:"crosscutting_done_id",
+          foreignField:"_id",
+          as:"previous_data"
+        }
+      },
+      {
+        $unwind:{
+          path:"$previous_data",
+          preserveNullAndEmptyArrays:true
+        }
+      },
+      {
         $sort: {
           code: 1,
         },
