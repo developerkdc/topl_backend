@@ -9,6 +9,7 @@ const invoice_details = new mongoose.Schema({
   invoice_no: {
     type: String,
     unique: true,
+    trim:true,
     required: [true, "Invoice No is required."],
   },
   total_item_amount: {
