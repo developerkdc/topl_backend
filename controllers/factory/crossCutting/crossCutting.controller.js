@@ -100,10 +100,25 @@ export const listing_issue_for_crosscutting = catchAsync(
     const issue_for_crosscutting_details =
       await issues_for_crosscutting_view_model.aggregate(aggregate_stage);
 
-    const totalCount = await issues_for_crosscutting_view_model.countDocuments({
-      ...match_query,
-    });
-
+    const totalCountValue = await issues_for_crosscutting_view_model.aggregate([
+      {
+        $match: match_query,
+      },
+      {
+        $match: {
+          $or: [
+            { crosscutting_completed: false },
+            { is_rejected: false }
+          ],
+          "available_quantity.physical_length": { $gt: 0 }
+        },
+      },
+      {
+        $count: "totalCount",
+      }
+    ]);
+    
+    const totalCount = totalCountValue?.[0]?.totalCount || 0
     const totalPage = Math.ceil(totalCount / limit);
 
     return res.status(200).json({
