@@ -7,8 +7,8 @@ import { AddApprovalConfigMaster, ListApprovalConfigMaster, UpdateApprovalConfig
 const router = express.Router();
 
 router.post("/add-approvalConfig-master", AddApprovalConfigMaster);
-router.post("/update-approvalConfig-master", AuthMiddleware, RolesPermissions("user", "edit"), UpdateApprovalConfigMaster);
-router.get("/list-approvalConfig-master", AuthMiddleware, RolesPermissions("user", "view"), ListApprovalConfigMaster);
+router.post("/update-approvalConfig-master", AuthMiddleware, RolesPermissions("approval_config", "edit"), UpdateApprovalConfigMaster);
+router.get("/list-approvalConfig-master", AuthMiddleware, RolesPermissions("approval_config", "view"), ListApprovalConfigMaster);
 
 
 
