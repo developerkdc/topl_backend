@@ -85,6 +85,10 @@ const invoice_details = new mongoose.Schema({
     type: Number,
     default: 0,
   },
+  gst_value: {
+    type: Number,
+    required: [true, "GST Value is required."],
+  },
   invoice_value_with_gst: {
     type: Number,
     required: [true, "Invoice Value with GST is required."],
@@ -176,6 +180,10 @@ export const approval_invoice_details = new mongoose.Schema({
   cgst_percentage: {
     type: Number,
     default: 0,
+  },
+  gst_value: {
+    type: Number,
+    required: [true, "GST Value is required."],
   },
   invoice_value_with_gst: {
     type: Number,
