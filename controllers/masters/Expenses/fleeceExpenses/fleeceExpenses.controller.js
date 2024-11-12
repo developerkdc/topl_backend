@@ -148,17 +148,23 @@ export const add_fleeceExpenses = catchAsync(async (req, res, next) => {
       {
         $set: {
           amount_factor: {
-            $divide: ["$amount", invoiceAmount],
+            $round: [
+              { $divide: ["$amount", invoiceAmount] },
+              2
+            ]
           },
           expense_amount: {
-            $multiply: [
+            $round: [
               {
-                $divide: ["$amount", invoiceAmount],
+                $multiply: [
+                  { $divide: ["$amount", invoiceAmount] },
+                  totalExpenseAmount
+                ]
               },
-              totalExpenseAmount,
-            ],
-          },
-        },
+              2
+            ]
+          }
+        }
       },
       {
         $merge: {

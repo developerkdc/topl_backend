@@ -138,7 +138,7 @@ export const add_veneerExpenses = catchAsync(async (req, res, next) => {
     await session.commitTransaction();
     session.endSession();
     res.status(200).json(new ApiResponse(StatusCodes.OK, "Expenses Added successfully"));
-  console.log(invoice_id,invoiceAmount,totalExpenseAmount)
+
     const updateVeneerItemsExpenses = await veneer_inventory_items_model.aggregate([
       {
         $match: {
@@ -148,17 +148,23 @@ export const add_veneerExpenses = catchAsync(async (req, res, next) => {
       {
         $set: {
           amount_factor: {
-            $divide: ["$amount", invoiceAmount],
+            $round: [
+              { $divide: ["$amount", invoiceAmount] },
+              2
+            ]
           },
           expense_amount: {
-            $multiply: [
+            $round: [
               {
-                $divide: ["$amount", invoiceAmount],
+                $multiply: [
+                  { $divide: ["$amount", invoiceAmount] },
+                  totalExpenseAmount
+                ]
               },
-              totalExpenseAmount,
-            ],
-          },
-        },
+              2
+            ]
+          }
+        }
       },
       {
         $merge: {

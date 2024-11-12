@@ -163,19 +163,25 @@ export const add_flitchExpenses = catchAsync(async (req, res, next) => {
             },
             {
                 $set: {
-                  amount_factor: {
-                    $divide: ["$amount", invoiceAmount],
-                  },
-                  expense_amount: {
-                    $multiply: [
-                      {
-                        $divide: ["$amount", invoiceAmount],
-                      },
-                      totalExpenseAmount,
-                    ],
-                  },
-                },
-              },
+                    amount_factor: {
+                        $round: [
+                            { $divide: ["$amount", invoiceAmount] },
+                            2
+                        ]
+                    },
+                    expense_amount: {
+                        $round: [
+                            {
+                                $multiply: [
+                                    { $divide: ["$amount", invoiceAmount] },
+                                    totalExpenseAmount
+                                ]
+                            },
+                            2
+                        ]
+                    }
+                }
+            },
             {
                 $merge: {
                     into: "flitch_inventory_items_details",
