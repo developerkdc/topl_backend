@@ -17,6 +17,8 @@ const face_approval_item_details_schema = new mongoose.Schema(
     supplier_item_name: {
       type: String,
       default: null,
+      trim: true,
+      uppercase: true
     },
     item_id: {
       type: mongoose.Schema.Types.ObjectId,
@@ -29,6 +31,8 @@ const face_approval_item_details_schema = new mongoose.Schema(
     item_name: {
       type: String,
       required: [true, "Item Name is required"],
+      trim: true,
+      uppercase: true
     },
     length: {
       type: Number,
@@ -53,6 +57,8 @@ const face_approval_item_details_schema = new mongoose.Schema(
     grade_name: {
       type: String,
       required: [true, "grade name is required"],
+      trim: true,
+      uppercase: true
     },
     grade_id: {
       type: mongoose.Schema.Types.ObjectId,
@@ -124,6 +130,8 @@ const face_approval_invoice_schema = new mongoose.Schema(
     currency: {
       type: String,
       required: [true, "currency is required"],
+      trim: true,
+      uppercase: true
     },
     workers_details: {
       no_of_workers: {
@@ -133,6 +141,8 @@ const face_approval_invoice_schema = new mongoose.Schema(
       shift: {
         type: String,
         required: [true, "Shift is required"],
+        trim: true,
+        uppercase: true
       },
       working_hours: {
         type: Number,
@@ -148,12 +158,15 @@ const face_approval_invoice_schema = new mongoose.Schema(
         supplier_name: {
           type: String,
           required: [true, "Supplier Name is required."],
+          uppercase: true,
           trim: true,
         },
         supplier_type: {
           type: [String],
           required: [true, "Supplier Name is required."],
           trim: true,
+          uppercase: true
+
         },
       },
       branch_detail: {
@@ -164,6 +177,8 @@ const face_approval_invoice_schema = new mongoose.Schema(
         branch_name: {
           type: String,
           required: [true, "Branch name is required"],
+          trim: true,
+          uppercase: true
         },
         contact_person: {
           type: [
@@ -171,7 +186,9 @@ const face_approval_invoice_schema = new mongoose.Schema(
               name: {
                 type: String,
                 required: [true, "Contact person name is required"],
+
                 trim: true,
+                uppercase: true
               },
               email: {
                 type: String,
@@ -185,6 +202,8 @@ const face_approval_invoice_schema = new mongoose.Schema(
               designation: {
                 type: String,
                 required: [true, "Designation is required"],
+                trim: true,
+                uppercase: true
               },
             },
           ],
@@ -197,14 +216,20 @@ const face_approval_invoice_schema = new mongoose.Schema(
         state: {
           type: String,
           required: [true, "State is required"],
+          trim: true,
+          uppercase: true
         },
         country: {
           type: String,
           required: [true, "Country is required"],
+          trim: true,
+          uppercase: true
         },
         city: {
           type: String,
           required: [true, "City is required"],
+          trim: true,
+          uppercase: true
         },
         pincode: {
           type: String,

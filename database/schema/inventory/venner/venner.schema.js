@@ -7,10 +7,14 @@ export const veneer_item_details_schema = new mongoose.Schema({
   supplier_item_name: {
     type: String,
     default: null,
+    trim: true,
+    uppercase: true
   },
   supplier_code: {
     type: String,
     default: null,
+    trim: true,
+    uppercase: true
   },
   item_id: {
     type: mongoose.Schema.Types.ObjectId,
@@ -23,6 +27,8 @@ export const veneer_item_details_schema = new mongoose.Schema({
   item_name: {
     type: String,
     required: [true, "Item Name is required"],
+    trim: true,
+    uppercase: true
   },
   item_sub_category_id: {
     type: mongoose.Schema.Types.ObjectId,
@@ -31,10 +37,14 @@ export const veneer_item_details_schema = new mongoose.Schema({
   item_sub_category_name: {
     type: String,
     required: [true, "Item Sub-Category Name is required"],
+    trim: true,
+    uppercase: true
   },
   log_code: {
     type: String,
     required: [true, "log code is required"],
+    trim: true,
+    uppercase: true
   },
   bundle_number: {
     type: Number,
@@ -72,6 +82,8 @@ export const veneer_item_details_schema = new mongoose.Schema({
   cut_name: {
     type: String,
     required: [true, "cut name is required"],
+    trim: true,
+    uppercase: true
   },
   series_id: {
     type: mongoose.Schema.Types.ObjectId,
@@ -80,6 +92,8 @@ export const veneer_item_details_schema = new mongoose.Schema({
   series_name: {
     type: String,
     required: [true, "series name is required"],
+    trim: true,
+    uppercase: true
   },
   grades_id: {
     type: mongoose.Schema.Types.ObjectId,
@@ -88,6 +102,8 @@ export const veneer_item_details_schema = new mongoose.Schema({
   grades_name: {
     type: String,
     required: [true, "grades name is required"],
+    trim: true,
+    uppercase: true
   },
   rate_in_currency: {
     type: Number,
@@ -145,7 +161,7 @@ export const veneer_invoice_schema = new mongoose.Schema(
   {
     inward_sr_no: {
       type: Number,
-      unique:true,
+      unique: true,
       required: [true, "Inward Sr.No is required. "],
     },
     inward_date: {
@@ -165,6 +181,8 @@ export const veneer_invoice_schema = new mongoose.Schema(
       shift: {
         type: String,
         required: [true, "Shift is required"],
+        trim: true,
+        uppercase: true
       },
       working_hours: {
         type: Number,
@@ -180,12 +198,16 @@ export const veneer_invoice_schema = new mongoose.Schema(
         supplier_name: {
           type: String,
           required: [true, "Supplier Name is required."],
+
           trim: true,
+          uppercase: true
         },
         supplier_type: {
           type: [String],
           required: [true, "Supplier Name is required."],
+
           trim: true,
+          uppercase: true
         },
       },
       branch_detail: {
@@ -196,6 +218,8 @@ export const veneer_invoice_schema = new mongoose.Schema(
         branch_name: {
           type: String,
           required: [true, "Branch name is required"],
+          trim: true,
+          uppercase: true
         },
         contact_person: {
           type: [
@@ -204,6 +228,8 @@ export const veneer_invoice_schema = new mongoose.Schema(
                 type: String,
                 required: [true, "Contact person name is required"],
                 trim: true,
+
+                uppercase: true
               },
               email: {
                 type: String,
@@ -217,6 +243,8 @@ export const veneer_invoice_schema = new mongoose.Schema(
               designation: {
                 type: String,
                 required: [true, "Designation is required"],
+                trim: true,
+                uppercase: true
               },
             },
           ],
@@ -229,14 +257,20 @@ export const veneer_invoice_schema = new mongoose.Schema(
         state: {
           type: String,
           required: [true, "State is required"],
+          trim: true,
+          uppercase: true
         },
         country: {
           type: String,
           required: [true, "Country is required"],
+          trim: true,
+          uppercase: true
         },
         city: {
           type: String,
           required: [true, "City is required"],
+          trim: true,
+          uppercase: true
         },
         pincode: {
           type: String,
@@ -252,7 +286,7 @@ export const veneer_invoice_schema = new mongoose.Schema(
         },
       },
     },
-    approval_status:approval_status,
+    approval_status: approval_status,
     invoice_Details: invoice_details,
     expenses: {
       type: [expensesSchema],

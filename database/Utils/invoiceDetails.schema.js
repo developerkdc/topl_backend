@@ -9,7 +9,8 @@ const invoice_details = new mongoose.Schema({
   invoice_no: {
     type: String,
     unique: true,
-    trim:true,
+    trim: true,
+    uppercase: true,
     required: [true, "Invoice No is required."],
   },
   total_item_amount: {
@@ -19,18 +20,26 @@ const invoice_details = new mongoose.Schema({
   transporter_details: {
     type: String,
     default: null,
+    trim: true,
+    uppercase: true
   },
   port_of_loading: {
     type: String,
     default: null,
+    trim: true,
+    uppercase: true
   },
   port_of_discharge: {
     type: String,
     default: null,
+    trim: true,
+    uppercase: true
   },
   bill_of_landing: {
     type: String,
     default: null,
+    trim: true,
+    uppercase: true
   },
   freight: {
     type: Number,
@@ -107,6 +116,8 @@ export const approval_invoice_details = new mongoose.Schema({
   invoice_no: {
     type: String,
     required: [true, "Invoice No is required."],
+    trim: true,
+    uppercase: true
   },
   total_item_amount: {
     type: Number,
@@ -115,18 +126,26 @@ export const approval_invoice_details = new mongoose.Schema({
   transporter_details: {
     type: String,
     default: null,
+    trim: true,
+    uppercase: true
   },
   port_of_loading: {
     type: String,
     default: null,
+    trim: true,
+    uppercase: true
   },
   port_of_discharge: {
     type: String,
     default: null,
+    trim: true,
+    uppercase: true
   },
   bill_of_landing: {
     type: String,
     default: null,
+    trim: true,
+    uppercase: true
   },
   freight: {
     type: Number,

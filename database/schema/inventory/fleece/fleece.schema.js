@@ -8,6 +8,8 @@ export const fleece_item_details_schema = new mongoose.Schema(
     supplier_item_name: {
       type: String,
       default: null,
+      trim: true,
+      uppercase: true
     },
     item_id: {
       type: mongoose.Schema.Types.ObjectId,
@@ -20,6 +22,8 @@ export const fleece_item_details_schema = new mongoose.Schema(
     item_name: {
       type: String,
       required: [true, "Item Name is required"],
+      trim: true,
+      uppercase: true
     },
     item_sub_category_id: {
       type: mongoose.Schema.Types.ObjectId,
@@ -28,6 +32,8 @@ export const fleece_item_details_schema = new mongoose.Schema(
     item_sub_category_name: {
       type: String,
       required: [true, "Item Sub-Category Name is required"],
+      trim: true,
+      uppercase: true
     },
     number_of_roll: {
       type: Number,
@@ -127,6 +133,8 @@ export const fleece_invoice_schema = new mongoose.Schema(
       shift: {
         type: String,
         required: [true, "Shift is required"],
+        trim: true,
+        uppercase: true
       },
       working_hours: {
         type: Number,
@@ -143,11 +151,14 @@ export const fleece_invoice_schema = new mongoose.Schema(
           type: String,
           required: [true, "Supplier Name is required."],
           trim: true,
+          uppercase: true
         },
         supplier_type: {
           type: [String],
           required: [true, "Supplier Name is required."],
+
           trim: true,
+          uppercase: true
         },
       },
       branch_detail: {
@@ -158,6 +169,8 @@ export const fleece_invoice_schema = new mongoose.Schema(
         branch_name: {
           type: String,
           required: [true, "Branch name is reqiured"],
+          trim: true,
+          uppercase: true
         },
         contact_person: {
           type: [
@@ -165,7 +178,9 @@ export const fleece_invoice_schema = new mongoose.Schema(
               name: {
                 type: String,
                 required: [true, "Contact person name is required"],
+
                 trim: true,
+                uppercase: true
               },
               email: {
                 type: String,
@@ -191,14 +206,20 @@ export const fleece_invoice_schema = new mongoose.Schema(
         state: {
           type: String,
           required: [true, "State is required"],
+          trim: true,
+          uppercase: true
         },
         country: {
           type: String,
           required: [true, "Country is required"],
+          trim: true,
+          uppercase: true
         },
         city: {
           type: String,
           required: [true, "City is required"],
+          trim: true,
+          uppercase: true
         },
         pincode: {
           type: String,
@@ -220,9 +241,9 @@ export const fleece_invoice_schema = new mongoose.Schema(
       type: [expensesSchema],
       default: null
     },
-    totalExpenseAmount:{
+    totalExpenseAmount: {
       type: Number,
-      default:0
+      default: 0
     },
     created_by: {
       type: mongoose.Types.ObjectId,

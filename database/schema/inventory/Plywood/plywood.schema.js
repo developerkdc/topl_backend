@@ -8,6 +8,8 @@ export const plywood_item_details_schema = new mongoose.Schema(
     supplier_item_name: {
       type: String,
       default: null,
+      trim: true,
+      uppercase: true
     },
     item_id: {
       type: mongoose.Schema.Types.ObjectId,
@@ -21,10 +23,14 @@ export const plywood_item_details_schema = new mongoose.Schema(
     item_name: {
       type: String,
       required: [true, "Item Name is required"],
+      trim: true,
+      uppercase: true
     },
     item_sub_category_name: {
       type: String,
       required: [true, "item_sub_category_name is required"],
+      trim: true,
+      uppercase: true
     },
     item_sub_category_id: {
       type: String,
@@ -33,6 +39,8 @@ export const plywood_item_details_schema = new mongoose.Schema(
     plywood_type: {
       type: String,
       required: [true, "Plywood type is required"],
+      trim: true,
+      uppercase: true
     },
     // plywood_sub_type: {
     //   type: String,
@@ -137,6 +145,8 @@ export const plywood_invoice_schema = new mongoose.Schema(
       shift: {
         type: String,
         required: [true, "Shift is required"],
+        trim: true,
+        uppercase: true
       },
       working_hours: {
         type: Number,
@@ -153,11 +163,15 @@ export const plywood_invoice_schema = new mongoose.Schema(
           type: String,
           required: [true, "Supplier Name is required."],
           trim: true,
+
+          uppercase: true
         },
         supplier_type: {
           type: [String],
           required: [true, "Supplier Name is required."],
           trim: true,
+
+          uppercase: true
         },
       },
       branch_detail: {
@@ -168,6 +182,8 @@ export const plywood_invoice_schema = new mongoose.Schema(
         branch_name: {
           type: String,
           required: [true, "branch name is reqiured"],
+          trim: true,
+          uppercase: true
         },
         contact_person: {
           type: [
@@ -176,7 +192,9 @@ export const plywood_invoice_schema = new mongoose.Schema(
                 type: String,
                 required: [true, "contact person name is required"],
                 // unique: [true, "contact person name is required"],
+
                 trim: true,
+                uppercase: true
               },
               email: {
                 type: String,
@@ -202,14 +220,20 @@ export const plywood_invoice_schema = new mongoose.Schema(
         state: {
           type: String,
           required: [true, "state is required"],
+          trim: true,
+          uppercase: true
         },
         country: {
           type: String,
           required: [true, "country is required"],
+          trim: true,
+          uppercase: true
         },
         city: {
           type: String,
           required: [true, "city is required"],
+          trim: true,
+          uppercase: true
         },
         pincode: {
           type: String,
@@ -253,7 +277,7 @@ plywood_invoice_schema.index({ inward_sr_no: 1 });
 plywood_invoice_schema.index({ inward_sr_no: 1, "expensesSchema.expenseType": 1 }, { unique: true });
 
 export const plywood_inventory_items_details = mongoose.model("plywood_inventory_items_details", plywood_item_details_schema);
-export const plywood_inventory_invoice_details =mongoose.model("plywood_inventory_invoice_details", plywood_invoice_schema);
+export const plywood_inventory_invoice_details = mongoose.model("plywood_inventory_invoice_details", plywood_invoice_schema);
 
 const plywood_inventory_items_view_schema = new mongoose.Schema(
   {},
@@ -264,7 +288,7 @@ const plywood_inventory_items_view_schema = new mongoose.Schema(
   }
 );
 
-export const plywood_inventory_items_view_modal =  mongoose.model("plywood_inventory_items_view", plywood_inventory_items_view_schema);
+export const plywood_inventory_items_view_modal = mongoose.model("plywood_inventory_items_view", plywood_inventory_items_view_schema);
 
 (async function () {
   await plywood_inventory_items_view_modal.createCollection({

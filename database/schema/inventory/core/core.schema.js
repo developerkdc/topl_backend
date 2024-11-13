@@ -8,6 +8,8 @@ export const item_details_schema = new mongoose.Schema(
     supplier_item_name: {
       type: String,
       default: null,
+      trim: true,
+      uppercase: true
     },
     item_id: {
       type: mongoose.Schema.Types.ObjectId,
@@ -21,6 +23,8 @@ export const item_details_schema = new mongoose.Schema(
     item_name: {
       type: String,
       required: [true, "Item Name is required"],
+      trim: true,
+      uppercase: true
     },
     length: {
       type: Number,
@@ -45,6 +49,8 @@ export const item_details_schema = new mongoose.Schema(
     grade_name: {
       type: String,
       required: [true, "grade name is required"],
+      trim: true,
+      uppercase: true
     },
     grade_id: {
       type: mongoose.Schema.Types.ObjectId,
@@ -118,6 +124,8 @@ export const core_invoice_schema = new mongoose.Schema(
       shift: {
         type: String,
         required: [true, "Shift is required"],
+        trim: true,
+        uppercase: true
       },
       working_hours: {
         type: Number,
@@ -134,6 +142,7 @@ export const core_invoice_schema = new mongoose.Schema(
           type: String,
           required: [true, "Supplier Name is required."],
           trim: true,
+          uppercase: true
         },
         supplier_type: {
           type: [String],
@@ -149,6 +158,8 @@ export const core_invoice_schema = new mongoose.Schema(
         branch_name: {
           type: String,
           required: [true, "branch name is reqiured"],
+          trim: true,
+          uppercase: true
         },
         contact_person: {
           type: [
@@ -158,6 +169,7 @@ export const core_invoice_schema = new mongoose.Schema(
                 required: [true, "contact person name is required"],
                 // unique: [true, "contact person name is required"],
                 trim: true,
+                uppercase: true
               },
               email: {
                 type: String,
@@ -170,6 +182,8 @@ export const core_invoice_schema = new mongoose.Schema(
               },
               designation: {
                 type: String,
+                trim: true,
+                uppercase: true,
                 required: [true, "designation is required"],
               },
             },
@@ -183,14 +197,18 @@ export const core_invoice_schema = new mongoose.Schema(
         state: {
           type: String,
           required: [true, "state is required"],
+          trim: true,
+          uppercase: true
         },
         country: {
           type: String,
           required: [true, "country is required"],
+          trim: true,
         },
         city: {
           type: String,
           required: [true, "city is required"],
+          uppercase: true
         },
         pincode: {
           type: String,
