@@ -5,8 +5,9 @@ const CutSchema = new mongoose.Schema({
   cut_name: {
     type: String,
     required: [true, "Cut Name is required."],
-    trim: true,
     unique: [true, "Cut Name already exist."],
+    trim: true,
+    uppercase: true,
   },
   cut_remarks: {
     type: String,

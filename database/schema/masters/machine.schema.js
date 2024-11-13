@@ -8,6 +8,7 @@ const machineSchema = new mongoose.Schema(
       required: [true, "Machine name is required"],
       unique: [true, "Machine Name already exist."],
       trim: true,
+      uppercase: true
     },
     department: {
       type: mongoose.Schema.Types.ObjectId,

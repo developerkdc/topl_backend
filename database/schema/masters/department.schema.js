@@ -5,8 +5,9 @@ const departMentSchema = new mongoose.Schema({
   dept_name: {
     type: String,
     required: [true, "department name is required"],
-    trim: true,
     unique: [true, "Department Name already exist."],
+    trim: true,
+    uppercase: true,
   },
   remark: {
     type: String,

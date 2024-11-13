@@ -29,6 +29,7 @@ export const createCoreLogsExcel = async (newData) => {
       { header: "Rate in Currency", key: "rate_in_currency", width: 20 },
       { header: "Rate in INR", key: "rate_in_inr", width: 20 },
       { header: "Exchange Rate", key: "exchange_rate", width: 20 },
+      { header: "GST Value", key: "gst_val", width: 20 },
       { header: "Amount", key: "amount", width: 15 },
       { header: "Remark", key: "remark", width: 20 },
       { header: "Inward Date", key: "inward_date", width: 20 },
@@ -95,10 +96,10 @@ export const createCoreLogsExcel = async (newData) => {
           rate_in_currency: data.rate_in_currency,
           rate_in_inr: data.rate_in_inr,
           exchange_rate: data.exchange_rate,
+          gst_val: data?.core_invoice_details?.invoice_Details?.gst_value,
           amount: data.amount,
           remark: data.remark,
-          createdAt: data.createdAt,
-          updatedAt: data.updatedAt,
+
           inward_sr_no: data.core_invoice_details.inward_sr_no,
           inward_date: data.core_invoice_details.inward_date,
           currency: data.core_invoice_details.currency,
@@ -142,6 +143,8 @@ export const createCoreLogsExcel = async (newData) => {
             data.core_invoice_details.invoice_Details.gst_percentage,
           invoice_value_with_gst:
             data.core_invoice_details.invoice_Details.invoice_value_with_gst,
+          createdAt: data?.createdAt,
+          updatedAt: data?.updatedAt,
         };
 
         worksheet.addRow(rowData);

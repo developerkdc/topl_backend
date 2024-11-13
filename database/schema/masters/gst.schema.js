@@ -7,10 +7,12 @@ const GstSchema = new mongoose.Schema({
     required: [true, "Gst Percentage is required."],
     trim: true,
     unique: [true, "Gst Percentage already exist."],
+
   },
   gst_remarks: {
     type: String,
-    trim: true,
+    // trim: true,
+    // uppercase: true,
   },
   created_employee_id: {
     type: mongoose.Types.ObjectId,
@@ -22,6 +24,8 @@ const GstSchema = new mongoose.Schema({
     type: String,
     enum: ["active", "inactive"],
     default: "active",
+    // trim: true,
+    // uppercase: true
   },
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now },

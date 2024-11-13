@@ -7,6 +7,7 @@ const CurrencySchema = new mongoose.Schema({
     required: [true, "Currency Name is required."],
     trim: true,
     unique: [true, "Currency Name already exist."],
+    uppercase: true,
   },
   currency_remarks: {
     type: String,
