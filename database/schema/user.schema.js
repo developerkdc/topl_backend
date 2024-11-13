@@ -10,7 +10,8 @@ const UserSchema = new mongoose.Schema({
     required: [true, "User Name is required."],
     indexedDB: true,
     unique: [true, "User Name already exist."],
-    trim:true
+    trim: true,
+    uppercase: true
   },
   user_type: {
     type: String,
@@ -47,6 +48,7 @@ const UserSchema = new mongoose.Schema({
     maxlength: 25,
     required: true,
     trim: true,
+    uppercase: true
   },
   last_name: {
     type: String,
@@ -54,6 +56,7 @@ const UserSchema = new mongoose.Schema({
     maxlength: 25,
     required: true,
     trim: true,
+    uppercase: true
   },
   age: {
     type: String,
@@ -62,14 +65,17 @@ const UserSchema = new mongoose.Schema({
   gender: {
     type: String,
     trim: true,
+    uppercase: true
   },
   email_id: {
     type: String,
     trim: true,
+
   },
   pincode: {
     type: Number,
     trim: true,
+
   },
   mobile_no: {
     type: String,
@@ -84,14 +90,17 @@ const UserSchema = new mongoose.Schema({
   address: {
     type: String,
     trim: true,
+
   },
   country: {
     type: String,
     trim: true,
+    uppercase: true
   },
   blood_group: {
     type: String,
     trim: true,
+    uppercase: true
   },
   dob: {
     type: String,
@@ -100,10 +109,12 @@ const UserSchema = new mongoose.Schema({
   city: {
     type: String,
     trim: true,
+    uppercase: true
   },
   state: {
     type: String,
     trim: true,
+    uppercase: true
   },
   status: { type: Boolean, default: true },
   password: { type: String, default: null, trim: true },

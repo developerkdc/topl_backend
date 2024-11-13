@@ -8,6 +8,7 @@ const ItemNameSchema = new mongoose.Schema({
     required: [true, "Item Name is required."],
     trim: true,
     unique: [true, "Item Name already exists."],
+    uppercase: true,
   },
   category: {
     type: [mongoose.Schema.Types.ObjectId],

@@ -1,66 +1,78 @@
 import mongoose from "mongoose"
 
 const expensesSchema = new mongoose.Schema({
-    expenseType:{
-        type:String,
-        required:[true,"expense type is required"],
+    expenseType: {
+        type: String,
+        required: [true, "expense type is required"],
         trim: true,
+        uppercase: true
     },
-    expenseTypeId:{
-        type:mongoose.Schema.Types.ObjectId,
-        required:[true,"expense type Id is required"]
+    expenseTypeId: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: [true, "expense type Id is required"]
     },
-    invoiceDate:{
-        type:String,
-        default:Date.now
+    invoiceDate: {
+        type: Date,
+        default: Date.now
     },
-    invoiceNo:{
-        type:String,
-        default:null
+    invoiceNo: {
+        type: String,
+        default: null,
+        uppercase: true,
+        trim: true
+
     },
-    serviceProviderName:{
-        type:String,
-        default:null
+    serviceProviderName: {
+        type: String,
+        default: null,
+        uppercase: true,
+        trim: true
     },
-    serviceProviderDetails:{
-        type:{},
-        default:null
+    serviceProviderDetails: {
+        type: {},
+        default: null
     },
-    amount:{
-        type:Number,
-        required:[true,"Amount is required"]
+    amount: {
+        type: Number,
+        required: [true, "Amount is required"]
     },
 });
 
 export const approvalExpensesSchema = new mongoose.Schema({
-    expenseType:{
-        type:String,
-        required:[true,"expense type is required"],
+    expenseType: {
+        type: String,
+        required: [true, "expense type is required"],
         trim: true,
+        uppercase: true,
+
     },
-    expenseTypeId:{
-        type:mongoose.Schema.Types.ObjectId,
-        required:[true,"expense type Id is required"]
+    expenseTypeId: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: [true, "expense type Id is required"]
     },
-    invoiceDate:{
-        type:String,
-        default:Date.now
+    invoiceDate: {
+        type: Date,
+        default: Date.now
     },
-    invoiceNo:{
-        type:String,
-        default:null
+    invoiceNo: {
+        type: String,
+        default: null,
+        uppercase: true,
+        trim: true
     },
-    serviceProviderName:{
-        type:String,
-        default:null
+    serviceProviderName: {
+        type: String,
+        default: null,
+        uppercase: true,
+        trim: true
     },
-    serviceProviderDetails:{
-        type:{},
-        default:null
+    serviceProviderDetails: {
+        type: {},
+        default: null
     },
-    amount:{
-        type:Number,
-        required:[true,"Amount is required"]
+    amount: {
+        type: Number,
+        required: [true, "Amount is required"]
     },
 })
 

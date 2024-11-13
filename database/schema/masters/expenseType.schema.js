@@ -5,8 +5,9 @@ const ExpenseTypeSchema = new mongoose.Schema({
   expense_type_name: {
     type: String,
     required: [true, "Expense Type Name is required."],
-    trim: true,
     unique: [true, "Expense Type Name already exist."],
+    uppercase: true,
+    trim: true
   },
   expense_type_remarks: {
     type: String,

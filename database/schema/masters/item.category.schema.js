@@ -11,14 +11,19 @@ const itemCategorySchema = new mongoose.Schema(
       required: [true, "category is required"],
       unique: [true, "Category Name already exist."],
       trim: true,
+      // uppercase: true,
     },
     calculate_unit: {
       type: String,
       required: [true, "calculate unit is required"],
+      trim: true,
+      // uppercase: true,
     },
     product_hsn_code: {
       type: String,
       required: [true, "hsn code is required"],
+      trim: true,
+      uppercase: true,
     },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,

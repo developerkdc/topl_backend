@@ -8,6 +8,7 @@ const seriesSchema = new mongoose.Schema(
       required: [true, "Series name is required"],
       unique: [true, "Series Name already exist."],
       trim: true,
+      uppercase: true
     },
     remark: {
       type: String,

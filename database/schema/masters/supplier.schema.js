@@ -5,8 +5,9 @@ const SupplierSchema = new mongoose.Schema({
   supplier_name: {
     type: String,
     required: [true, "Supplier Name is required."],
-    trim: true,
     unique: [true, "Supplier Name already exist."],
+    uppercase: true,
+    trim: true
   },
   supplier_type: {
     type: [String],
