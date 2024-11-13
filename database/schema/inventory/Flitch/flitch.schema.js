@@ -8,10 +8,14 @@ export const item_details_schema = new mongoose.Schema(
     supplier_item_name: {
       type: String,
       default: null,
+      trim: true,
+      uppercase: true
     },
     supplier_flitch_no: {
       type: String,
       default: null,
+      trim: true,
+      uppercase: true
     },
     item_id: {
       type: mongoose.Schema.Types.ObjectId,
@@ -24,10 +28,14 @@ export const item_details_schema = new mongoose.Schema(
     item_name: {
       type: String,
       required: [true, "Item Name is required"],
+      trim: true,
+      uppercase: true
     },
     item_sub_category_name: {
       type: String,
       required: [true, "item_sub_category_name is required"],
+      trim: true,
+      uppercase: true
     },
     item_sub_category_id: {
       type: String,
@@ -36,10 +44,14 @@ export const item_details_schema = new mongoose.Schema(
     log_no: {
       type: String,
       required: [true, "Log No is required"],
+      trim: true,
+      uppercase: true
     },
     flitch_code: {
       type: String,
       required: [true, "Flitch Code is required"],
+      trim: true,
+      uppercase: true
     },
     flitch_formula: {
       type: String,
@@ -133,6 +145,8 @@ export const flitch_invoice_schema = new mongoose.Schema(
     currency: {
       type: String,
       required: [true, "Currency is required"],
+      trim: true,
+      uppercase: true
     },
     workers_details: {
       no_of_workers: {
@@ -142,6 +156,8 @@ export const flitch_invoice_schema = new mongoose.Schema(
       shift: {
         type: String,
         required: [true, "Shift is required"],
+        trim: true,
+        uppercase: true
       },
       working_hours: {
         type: Number,
@@ -157,12 +173,16 @@ export const flitch_invoice_schema = new mongoose.Schema(
         supplier_name: {
           type: String,
           required: [true, "Supplier Name is required."],
+
           trim: true,
+          uppercase: true
         },
         supplier_type: {
           type: [String],
           required: [true, "Supplier Name is required."],
+
           trim: true,
+          uppercase: true
         },
       },
       branch_detail: {
@@ -173,6 +193,8 @@ export const flitch_invoice_schema = new mongoose.Schema(
         branch_name: {
           type: String,
           required: [true, "branch name is reqiured"],
+          trim: true,
+          uppercase: true
         },
         contact_person: {
           type: [
@@ -181,6 +203,8 @@ export const flitch_invoice_schema = new mongoose.Schema(
                 type: String,
                 required: [true, "contact person name is required"],
                 trim: true,
+
+                uppercase: true
               },
               email: {
                 type: String,
@@ -194,6 +218,8 @@ export const flitch_invoice_schema = new mongoose.Schema(
               designation: {
                 type: String,
                 required: [true, "designation is required"],
+                trim: true,
+                uppercase: true
               },
             },
           ],
@@ -206,14 +232,20 @@ export const flitch_invoice_schema = new mongoose.Schema(
         state: {
           type: String,
           required: [true, "state is required"],
+          trim: true,
+          uppercase: true
         },
         country: {
           type: String,
           required: [true, "country is required"],
+          trim: true,
+          uppercase: true
         },
         city: {
           type: String,
           required: [true, "city is required"],
+          trim: true,
+          uppercase: true
         },
         pincode: {
           type: String,
