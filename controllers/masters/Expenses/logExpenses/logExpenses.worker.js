@@ -65,7 +65,7 @@ const processedExpense = async function () {
         const logItemId = logItems?._id
         const issueForCrosscutting = await issues_for_crosscutting_model.findOne({ log_inventory_item_id: logItemId })
         if (issueForCrosscutting) { // check for isssue for cutting
-            const available_expense_amount = issueForCrosscutting?.available_quantity?.sqm_factor * logItems?.expense_amount
+            const available_expense_amount = Number((issueForCrosscutting?.available_quantity?.sqm_factor * logItems?.expense_amount)?.toFixed(2))
             await issues_for_crosscutting_model.updateOne({ _id: issueForCrosscutting?._id }, {
                 $set: {
                     amount_factor: logItems?.amount_factor,
@@ -76,7 +76,7 @@ const processedExpense = async function () {
             const crosscuttingDone = await crosscutting_done_model.find({ issue_for_crosscutting_id: issueForCrosscutting?._id });
             for (let crosscuttingDoneItem of crosscuttingDone) { // loop through crosscutting done and update the expense amount
                 const crosscuttingDoneId = crosscuttingDoneItem?._id
-                const crosscutExpenseAmount = crosscuttingDoneItem?.sqm_factor * logItems?.expense_amount;
+                const crosscutExpenseAmount = Number((crosscuttingDoneItem?.sqm_factor * logItems?.expense_amount)?.toFixed(2));
                 await crosscutting_done_model.updateOne({ _id: crosscuttingDoneId }, {
                     $set: {
                         expense_amount: crosscutExpenseAmount
@@ -84,7 +84,7 @@ const processedExpense = async function () {
                 });
                 const issueForFlitching = await issues_for_flitching_model.findOne({ crosscut_done_id: crosscuttingDoneId })
                 if (issueForFlitching) { // check for isssue for flitching
-                    const available_expense_amount = issueForFlitching?.available_quantity?.sqm_factor * crosscutExpenseAmount
+                    const available_expense_amount = Number((issueForFlitching?.available_quantity?.sqm_factor * crosscutExpenseAmount)?.toFixed(2))
                     await issues_for_flitching_model.updateOne({ crosscut_done_id: crosscuttingDoneId }, {
                         $set: {
                             amount_factor:crosscuttingDoneItem?.sqm_factor,
@@ -94,7 +94,7 @@ const processedExpense = async function () {
                     });
                     const flitchingDone = await flitching_done_model.find({ issue_for_flitching_id: issueForFlitching?._id });
                     for (let flitchingDoneItem of flitchingDone) { // loop through crosscutting done and update the expense amount
-                        const expenseAmount = flitchingDoneItem?.sqm_factor * crosscutExpenseAmount;
+                        const expenseAmount = Number((flitchingDoneItem?.sqm_factor * crosscutExpenseAmount)?.toFixed(2));
                         const updateExpenseInFlitchingDone = await flitching_done_model.updateOne({ _id: flitchingDoneItem?._id }, {
                             $set: {
                                 expense_amount: expenseAmount
@@ -105,7 +105,7 @@ const processedExpense = async function () {
             }
             const rejected_crosscutting = await rejected_crosscutting_model.findOne({ issue_for_crosscutting_id: issueForCrosscutting?._id });
             if (rejected_crosscutting) {
-                const available_expense_amount = rejected_crosscutting?.rejected_quantity?.sqm_factor * logItems?.expense_amount
+                const available_expense_amount = Number((rejected_crosscutting?.rejected_quantity?.sqm_factor * logItems?.expense_amount)?.toFixed(2))
                 await rejected_crosscutting_model.updateOne({ issue_for_crosscutting_id: issueForCrosscutting?._id }, {
                     $set: {
                         amount_factor: logItems?.amount_factor,
@@ -117,7 +117,7 @@ const processedExpense = async function () {
         } else {
             const issueForFlitching = await issues_for_flitching_model.findOne({ log_inventory_item_id: logItemId })
             if (issueForFlitching) { // check for isssue for flitching
-                const available_expense_amount = issueForFlitching?.available_quantity?.sqm_factor * logItems?.expense_amount
+                const available_expense_amount = Number((issueForFlitching?.available_quantity?.sqm_factor * logItems?.expense_amount)?.toFixed(2))
                 await issues_for_flitching_model.updateOne({ log_inventory_item_id: logItemId }, {
                     $set: {
                         amount_factor: logItems?.amount_factor,
@@ -127,7 +127,7 @@ const processedExpense = async function () {
                 });
                 const flitchingDone = await flitching_done_model.find({ issue_for_flitching_id: issueForFlitching?._id });
                 for (let flitchingDoneItem of flitchingDone) { // loop through crosscutting done and update the expense amount
-                    const expenseAmount = flitchingDoneItem?.sqm_factor * logItems?.expense_amount;
+                    const expenseAmount = Number((flitchingDoneItem?.sqm_factor * logItems?.expense_amount)?.toFixed(2));
                     const updateExpenseInFlitchingDone = await flitching_done_model.updateOne({ _id: flitchingDoneItem?._id }, {
                         $set: {
                             expense_amount: expenseAmount
