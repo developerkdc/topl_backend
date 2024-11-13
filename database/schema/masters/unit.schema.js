@@ -5,18 +5,21 @@ const UnitSchema = new mongoose.Schema({
   unit_name: {
     type: String,
     required: [true, "Unit Name is required."],
-    trim: true,
     unique: [true, "Unit Name already exist."],
+    uppercase: true,
+    trim: true
   },
   unit_symbolic_name: {
     type: String,
     required: [true, "Unit Symbolic Name is required."],
-    trim: true,
+    uppercase: true,
+    trim: true
   },
   unit_gst_code: {
     type: String,
     required: [true, "Unit Name is required."],
-    trim: true,
+    uppercase: true,
+    trim: true
   },
   created_employee_id: {
     type: mongoose.Types.ObjectId,

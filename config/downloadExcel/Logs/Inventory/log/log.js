@@ -112,6 +112,7 @@ export const createLogLogsExcel = async (newData) => {
         exchange_rate: data.exchange_rate,
         rate_in_currency: data.rate_in_currency,
         rate_in_inr: data.rate_in_inr,
+        gst_val: data?.log_invoice_details?.invoice_Details?.gst_value,
         amount: data.amount,
         remark: data.remark,
         inward_date: new Date(

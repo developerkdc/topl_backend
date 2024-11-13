@@ -9,6 +9,7 @@ const RoleSchema = new mongoose.Schema({
     required: [true, "Role name is required."],
     unique: [true, "Role name already exist."],
     trim: true,
+    uppercase: true
   },
   dept_name: {
     type: String,
@@ -189,9 +190,9 @@ const RoleSchema = new mongoose.Schema({
   //   // dispatch_view: { type: Boolean, default: false },
   // },
 
-  permissions:{
-    type:{},
-    required:[true,"Permission Object is required."]
+  permissions: {
+    type: {},
+    required: [true, "Permission Object is required."]
   },
   status: { type: Boolean, default: true },
   created_employee_id: {

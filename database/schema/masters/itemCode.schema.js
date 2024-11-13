@@ -7,6 +7,7 @@ const ItemCodeSchema = new mongoose.Schema({
     required: [true, "Item Code is required."],
     trim: true,
     unique: [true, "Item Code already exist."],
+    uppercase: true,
     set: function (value) {
       return value.replace(/\s+/g, " ").trim();
     },
@@ -31,6 +32,6 @@ const ItemCodeSchema = new mongoose.Schema({
 });
 
 const ItemCodeModel = mongoose.model("item_code", ItemCodeSchema);
-LogSchemaFunction("itemCode", ItemCodeModel,[]);
+LogSchemaFunction("itemCode", ItemCodeModel, []);
 
 export default ItemCodeModel;

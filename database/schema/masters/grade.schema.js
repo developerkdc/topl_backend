@@ -5,8 +5,9 @@ const GradeNameSchema = new mongoose.Schema({
   grade_name: {
     type: String,
     required: [true, "Grade Name is required."],
-    trim: true,
     unique: [true, "Grade Name already exist."],
+    uppercase: true,
+    trim: true
   },
   grade_remarks: {
     type: String,
