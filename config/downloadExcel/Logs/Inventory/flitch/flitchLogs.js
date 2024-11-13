@@ -37,6 +37,7 @@ export const createFlitchLogsExcel = async (newData) => {
       { header: "Rate in INR", key: "rate_in_inr", width: 20 },
       //Todo : add exchange rate
       { header: "Excahange Rate", key: "exchange_rate", width: 20 },
+      { header: "GST Value", key: "gst_val", width: 20 },
       { header: "Amount", key: "amount", width: 15 },
       { header: "Remark", key: "remark", width: 20 },
       //   { header: "Invoice ID", key: "invoice_id", width: 30 },
@@ -193,6 +194,7 @@ export const createFlitchLogsExcel = async (newData) => {
           rate_in_currency: data.rate_in_currency,
           rate_in_inr: data.rate_in_inr,
           exchange_rate: data.exchange_rate,
+
           amount: data.amount,
           remark: data.remark,
           // invoice_id: data.invoice_id,
@@ -242,6 +244,7 @@ export const createFlitchLogsExcel = async (newData) => {
             data.flitch_invoice_details.invoice_Details.transporter_details,
           gst_percentage:
             data.flitch_invoice_details.invoice_Details.gst_percentage,
+          gst_val: data?.flitch_invoice_details?.invoice_Details?.gst_value,
           invoice_value_with_gst:
             data.flitch_invoice_details.invoice_Details.invoice_value_with_gst,
           invoice_remark: data.flitch_invoice_details.invoice_Details.remark,

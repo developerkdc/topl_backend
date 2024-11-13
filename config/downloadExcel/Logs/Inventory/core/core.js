@@ -31,10 +31,8 @@ export const createCoreLogsExcel = async (newData) => {
       { header: "Exchange Rate", key: "exchange_rate", width: 20 },
       { header: "GST Value", key: "gst_val", width: 20 },
       { header: "Amount", key: "amount", width: 15 },
-      { header: "Remark", key: "remark", width: 20 },
+
       { header: "Inward Date", key: "inward_date", width: 20 },
-      { header: "Created Date", key: "createdAt", width: 20 },
-      { header: "Updated Date", key: "updatedAt", width: 20 },
       { header: "Currency", key: "currency", width: 10 },
       { header: "No of Workers", key: "no_of_workers", width: 15 },
       { header: "Shift", key: "shift", width: 10 },
@@ -43,21 +41,6 @@ export const createCoreLogsExcel = async (newData) => {
       { header: "Supplier Type", key: "supplier_type", width: 20 },
       { header: "Branch Name", key: "branch_name", width: 25 },
       { header: "Branch Address", key: "address", width: 25 },
-      { header: "City", key: "city", width: 20 },
-      { header: "State", key: "state", width: 15 },
-      { header: "Country", key: "country", width: 15 },
-      { header: "Pincode", key: "pincode", width: 15 },
-      { header: "GST Number", key: "gst_number", width: 20 },
-      { header: "Web URL", key: "web_url", width: 25 },
-      { header: "Invoice No", key: "invoice_no", width: 20 },
-      { header: "Total Item Amount", key: "total_item_amount", width: 20 },
-      { header: "Transporter Details", key: "transporter_details", width: 30 },
-      { header: "GST Percentage", key: "gst_percentage", width: 20 },
-      {
-        header: "Invoice Value with GST",
-        key: "invoice_value_with_gst",
-        width: 20,
-      },
       { header: "Contact Person Name", key: "contact_person_name", width: 25 },
       {
         header: "Contact Person Email",
@@ -74,6 +57,30 @@ export const createCoreLogsExcel = async (newData) => {
         key: "contact_person_designation",
         width: 25,
       },
+      { header: "City", key: "city", width: 20 },
+      { header: "State", key: "state", width: 15 },
+      { header: "Country", key: "country", width: 15 },
+      { header: "Pincode", key: "pincode", width: 15 },
+      { header: "GST Number", key: "gst_number", width: 20 },
+      { header: "Web URL", key: "web_url", width: 25 },
+      // { header: "Invoice No", key: "invoice_no", width: 20 },
+      // { header: "Total Item Amount", key: "total_item_amount", width: 20 },
+      // { header: "Transporter Details", key: "transporter_details", width: 30 },
+      // { header: "GST Percentage", key: "gst_percentage", width: 20 },
+      { header: "Invoice Date", key: "invoice_date", width: 20 },
+      { header: "Invoice No", key: "invoice_no", width: 20 },
+      { header: "Total Item Amount", key: "total_item_amount", width: 20 },
+      { header: "Transporter Details", key: "transporter_details", width: 30 },
+      { header: "GST Percentage", key: "gst_percentage", width: 20 },
+      { header: "GST Value", key: "gst_val", width: 15 },
+      {
+        header: "Invoice Value with GST",
+        key: "invoice_value_with_gst",
+        width: 20,
+      },
+      { header: "Remark", key: "remark", width: 20 },
+      { header: "Created Date", key: "createdAt", width: 20 },
+      { header: "Updated Date", key: "updatedAt", width: 20 },
     ];
 
     worksheet.columns = columns;
@@ -96,7 +103,7 @@ export const createCoreLogsExcel = async (newData) => {
           rate_in_currency: data.rate_in_currency,
           rate_in_inr: data.rate_in_inr,
           exchange_rate: data.exchange_rate,
-          gst_val: data?.core_invoice_details?.invoice_Details?.gst_value,
+
           amount: data.amount,
           remark: data.remark,
 
@@ -130,17 +137,33 @@ export const createCoreLogsExcel = async (newData) => {
             data.core_invoice_details.supplier_details.branch_detail.gst_number,
           web_url:
             data.core_invoice_details.supplier_details.branch_detail.web_url,
-          contact_person_name: data.core_invoice_details.supplier_details.branch_detail.contact_person[0].name,
-          contact_person_email: data.core_invoice_details.supplier_details.branch_detail.contact_person[0].email,
-          contact_person_designation: data.core_invoice_details.supplier_details.branch_detail.contact_person[0].designation,
-          contact_person_mobile_no: data.core_invoice_details.supplier_details.branch_detail.contact_person[0].mobile_number,
-          invoice_no: data.core_invoice_details.invoice_Details.invoice_no,
-          total_item_amount:
-            data.core_invoice_details.invoice_Details.total_item_amount,
-          transporter_details:
-            data.core_invoice_details.invoice_Details.transporter_details,
-          gst_percentage:
-            data.core_invoice_details.invoice_Details.gst_percentage,
+          contact_person_name:
+            data.core_invoice_details.supplier_details.branch_detail
+              .contact_person[0].name,
+          contact_person_email:
+            data.core_invoice_details.supplier_details.branch_detail
+              .contact_person[0].email,
+          contact_person_designation:
+            data.core_invoice_details.supplier_details.branch_detail
+              .contact_person[0].designation,
+          contact_person_mobile_no:
+            data.core_invoice_details.supplier_details.branch_detail
+              .contact_person[0].mobile_number,
+          // invoice_no: data.core_invoice_details.invoice_Details.invoice_no,
+          // total_item_amount:
+          //   data.core_invoice_details.invoice_Details.total_item_amount,
+          // transporter_details:
+          //   data.core_invoice_details.invoice_Details.transporter_details,
+          // gst_percentage:
+          //   data.core_invoice_details.invoice_Details.gst_percentage,
+          // gst_val: data?.core_invoice_details?.invoice_Details?.gst_value,
+
+          invoice_date: data?.core_invoice_details?.invoice_Details.invoice_date,
+          invoice_no: data?.core_invoice_details?.invoice_Details.invoice_no,
+          total_item_amount: data?.core_invoice_details?.invoice_Details.total_item_amount,
+          transporter_details: data?.core_invoice_details?.invoice_Details.transporter_details,
+          gst_percentage: data?.core_invoice_details?.invoice_Details.gst_percentage,
+          gst_val: data?.core_invoice_details?.invoice_Details?.gst_value,
           invoice_value_with_gst:
             data.core_invoice_details.invoice_Details.invoice_value_with_gst,
           createdAt: data?.createdAt,

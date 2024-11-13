@@ -20,6 +20,8 @@ const otherGoods_approval_item_details_schema = new mongoose.Schema(
     supplier_item_name: {
       type: String,
       default: null,
+      trim: true,
+      uppercase: true
     },
     item_id: {
       type: mongoose.Schema.Types.ObjectId,
@@ -32,10 +34,14 @@ const otherGoods_approval_item_details_schema = new mongoose.Schema(
     item_name: {
       type: String,
       required: [true, "Item Name is required"],
+      trim: true,
+      uppercase: true
     },
     item_sub_category_name: {
       type: String,
       required: [true, "other goods sub category name is required"],
+      trim: true,
+      uppercase: true
     },
     item_sub_category_id: {
       type: String,
@@ -49,6 +55,8 @@ const otherGoods_approval_item_details_schema = new mongoose.Schema(
     department_name: {
       type: String,
       required: [true, "department name is required"],
+      trim: true,
+      uppercase: true
     },
     machine_id: {
       type: String,
@@ -58,10 +66,14 @@ const otherGoods_approval_item_details_schema = new mongoose.Schema(
     machine_name: {
       type: String,
       required: [true, "machine name is required"],
+      trim: true,
+      uppercase: true
     },
     brand_name: {
       type: String,
       default: null,
+      trim: true,
+      uppercase: true
     },
     item_description: {
       type: String,
@@ -136,6 +148,8 @@ const otherGoods_approval_invoice_schema = new mongoose.Schema(
     currency: {
       type: String,
       required: [true, "Currency is required"],
+      trim: true,
+      uppercase: true
     },
     workers_details: {
       no_of_workers: {
@@ -145,6 +159,8 @@ const otherGoods_approval_invoice_schema = new mongoose.Schema(
       shift: {
         type: String,
         required: [true, "Shift is required"],
+        trim: true,
+        uppercase: true
       },
       working_hours: {
         type: Number,
@@ -161,11 +177,15 @@ const otherGoods_approval_invoice_schema = new mongoose.Schema(
           type: String,
           required: [true, "Supplier Name is required."],
           trim: true,
+
+          uppercase: true
         },
         supplier_type: {
           type: [String],
           required: [true, "Supplier Name is required."],
           trim: true,
+
+          uppercase: true
         },
       },
       branch_detail: {
@@ -176,6 +196,8 @@ const otherGoods_approval_invoice_schema = new mongoose.Schema(
         branch_name: {
           type: String,
           required: [true, "branch name is reqiured"],
+          trim: true,
+          uppercase: true
         },
         contact_person: {
           type: [
@@ -184,6 +206,8 @@ const otherGoods_approval_invoice_schema = new mongoose.Schema(
                 type: String,
                 required: [true, "contact person name is required"],
                 trim: true,
+
+                uppercase: true
               },
               email: {
                 type: String,
@@ -197,6 +221,8 @@ const otherGoods_approval_invoice_schema = new mongoose.Schema(
               designation: {
                 type: String,
                 required: [true, "designation is required"],
+                trim: true,
+                uppercase: true
               },
             },
           ],
@@ -209,14 +235,20 @@ const otherGoods_approval_invoice_schema = new mongoose.Schema(
         state: {
           type: String,
           required: [true, "state is required"],
+          trim: true,
+          uppercase: true
         },
         country: {
           type: String,
           required: [true, "country is required"],
+          trim: true,
+          uppercase: true
         },
         city: {
           type: String,
           required: [true, "city is required"],
+          trim: true,
+          uppercase: true
         },
         pincode: {
           type: String,

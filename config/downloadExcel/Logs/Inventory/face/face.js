@@ -29,11 +29,11 @@ export const createFaceLogsExcel = async (newData) => {
       { header: "Rate in Currency", key: "rate_in_currency", width: 20 },
       { header: "Rate in INR", key: "rate_in_inr", width: 20 },
       { header: "Exchange Rate", key: "exchange_rate", width: 20 },
+      { header: "GST Value", key: "gst_val", width: 20 },
       { header: "Amount", key: "amount", width: 15 },
-      { header: "Remark", key: "remark", width: 20 },
+
       { header: "Inward Date", key: "inward_date", width: 20 },
-      { header: "Created Date", key: "createdAt", width: 20 },
-      { header: "Updated Date", key: "updatedAt", width: 20 },
+
       { header: "Currency", key: "currency", width: 10 },
       { header: "No of Workers", key: "no_of_workers", width: 15 },
       { header: "Shift", key: "shift", width: 10 },
@@ -73,6 +73,9 @@ export const createFaceLogsExcel = async (newData) => {
         key: "contact_person_designation",
         width: 25,
       },
+      { header: "Created Date", key: "createdAt", width: 20 },
+      { header: "Updated Date", key: "updatedAt", width: 20 },
+      { header: "Remark", key: "remark", width: 20 },
     ];
 
     worksheet.columns = columns;
@@ -95,6 +98,7 @@ export const createFaceLogsExcel = async (newData) => {
           rate_in_currency: data.rate_in_currency,
           rate_in_inr: data.rate_in_inr,
           exchange_rate: data.exchange_rate,
+
           amount: data.amount,
           remark: data.remark,
           createdAt: data.createdAt,
@@ -133,6 +137,8 @@ export const createFaceLogsExcel = async (newData) => {
           contact_person_email: data.face_invoice_details.supplier_details.branch_detail.contact_person[0].email,
           contact_person_designation: data.face_invoice_details.supplier_details.branch_detail.contact_person[0].designation,
           contact_person_mobile_no: data.face_invoice_details.supplier_details.branch_detail.contact_person[0].mobile_number,
+          invoice_date: data?.face_invoice_details?.invoice_Details.invoice_date,
+          // invoice_no: data?.core_invoice_details?.invoice_Details.invoice_no,
           invoice_no: data.face_invoice_details.invoice_Details.invoice_no,
           total_item_amount:
             data.face_invoice_details.invoice_Details.total_item_amount,
@@ -140,6 +146,7 @@ export const createFaceLogsExcel = async (newData) => {
             data.face_invoice_details.invoice_Details.transporter_details,
           gst_percentage:
             data.face_invoice_details.invoice_Details.gst_percentage,
+          gst_val: data?.face_invoice_details?.invoice_Details?.gst_value,
           invoice_value_with_gst:
             data.face_invoice_details.invoice_Details.invoice_value_with_gst,
         };

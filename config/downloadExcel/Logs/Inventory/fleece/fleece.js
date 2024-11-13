@@ -31,6 +31,7 @@ export const createFleeceLogsExcel = async (newData) => {
       { header: "Rate in Currency", key: "rate_in_currency", width: 20 },
       { header: "Rate in INR", key: "rate_in_inr", width: 20 },
       { header: "Exchange Rate", key: "exchange_rate", width: 20 },
+      { header: "GST Value", key: "gst_val", width: 20 },
       { header: "Amount", key: "amount", width: 15 },
       { header: "Remark", key: "remark", width: 20 },
 
@@ -98,9 +99,10 @@ export const createFleeceLogsExcel = async (newData) => {
           rate_in_currency: data.rate_in_currency,
           rate_in_inr: data.rate_in_inr,
           exchange_rate: data.exchange_rate,
+
           amount: data.amount,
           remark: data.remark,
-          inward_date: data.fleece_invoice_details?.inward_date,
+          inward_date: data?.fleece_invoice_details?.inward_date,
           createdAt: data.createdAt,
           updatedAt: data.updatedAt,
           currency: data.fleece_invoice_details?.currency,
@@ -149,6 +151,7 @@ export const createFleeceLogsExcel = async (newData) => {
             data.fleece_invoice_details?.invoice_Details?.transporter_details,
           gst_percentage:
             data.fleece_invoice_details?.invoice_Details?.gst_percentage,
+          gst_val: data?.fleece_invoice_details?.invoice_Details?.gst_value,
           invoice_value_with_gst:
             data.fleece_invoice_details?.invoice_Details
               ?.invoice_value_with_gst,

@@ -32,6 +32,7 @@ export const createLogLogsExcel = async (newData) => {
       { header: "Exchange Rate", key: "exchange_rate", width: 15 },
       { header: "Rate in Currency", key: "rate_in_currency", width: 20 },
       { header: "Rate in INR", key: "rate_in_inr", width: 20 },
+
       { header: "Amount", key: "amount", width: 20 },
       { header: "Remark", key: "remark", width: 20 },
       { header: "Created Date", key: "createdAt", width: 20 },
@@ -71,6 +72,7 @@ export const createLogLogsExcel = async (newData) => {
       { header: "Total Item Amount", key: "total_item_amount", width: 20 },
       { header: "Transporter Details", key: "transporter_details", width: 30 },
       { header: "GST Percentage", key: "gst_percentage", width: 20 },
+      { header: "GST Value", key: "gst_val", width: 20 },
       {
         header: "Invoice Value with GST",
         key: "invoice_value_with_gst",
@@ -112,7 +114,7 @@ export const createLogLogsExcel = async (newData) => {
         exchange_rate: data.exchange_rate,
         rate_in_currency: data.rate_in_currency,
         rate_in_inr: data.rate_in_inr,
-        gst_val: data?.log_invoice_details?.invoice_Details?.gst_value,
+
         amount: data.amount,
         remark: data.remark,
         inward_date: new Date(
@@ -159,6 +161,7 @@ export const createLogLogsExcel = async (newData) => {
         transporter_details:
           data.log_invoice_details.invoice_Details.transporter_details,
         gst_percentage: data.log_invoice_details.invoice_Details.gst_percentage,
+        gst_val: data?.log_invoice_details?.invoice_Details?.gst_value,
         invoice_value_with_gst:
           data.log_invoice_details.invoice_Details.invoice_value_with_gst,
         invoice_remark: data.log_invoice_details.invoice_Details.remark,

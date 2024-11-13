@@ -17,6 +17,8 @@ const mdf_approval_item_details_schema = new mongoose.Schema(
     supplier_item_name: {
       type: String,
       default: null,
+      trim: true,
+      uppercase: true
     },
     item_id: {
       type: mongoose.Schema.Types.ObjectId,
@@ -30,6 +32,8 @@ const mdf_approval_item_details_schema = new mongoose.Schema(
     item_name: {
       type: String,
       required: [true, "Item Name is required"],
+      trim: true,
+      uppercase: true
     },
     item_sub_category_id: {
       type: mongoose.Schema.Types.ObjectId,
@@ -39,10 +43,14 @@ const mdf_approval_item_details_schema = new mongoose.Schema(
     item_sub_category_name: {
       type: String,
       required: [true, "Item Sub-Category Name is required"],
+      trim: true,
+      uppercase: true
     },
     mdf_type: {
       type: String,
       required: [true, "MDF Type is required"],
+      trim: true,
+      uppercase: true
     },
     pallet_number: {
       type: Number,
@@ -144,6 +152,8 @@ const mdf_approval_invoice_schema = new mongoose.Schema(
       shift: {
         type: String,
         required: [true, "Shift is required"],
+        trim: true,
+        uppercase: true
       },
       working_hours: {
         type: Number,
@@ -160,11 +170,15 @@ const mdf_approval_invoice_schema = new mongoose.Schema(
           type: String,
           required: [true, "Supplier Name is required."],
           trim: true,
+
+          uppercase: true
         },
         supplier_type: {
           type: [String],
           required: [true, "Supplier Name is required."],
           trim: true,
+
+          uppercase: true
         },
       },
       branch_detail: {
@@ -175,6 +189,8 @@ const mdf_approval_invoice_schema = new mongoose.Schema(
         branch_name: {
           type: String,
           required: [true, "branch name is reqiured"],
+          trim: true,
+          uppercase: true
         },
         contact_person: {
           type: [
@@ -183,6 +199,8 @@ const mdf_approval_invoice_schema = new mongoose.Schema(
                 type: String,
                 required: [true, "contact person name is required"],
                 trim: true,
+
+                uppercase: true
               },
               email: {
                 type: String,
@@ -196,6 +214,8 @@ const mdf_approval_invoice_schema = new mongoose.Schema(
               designation: {
                 type: String,
                 required: [true, "designation is required"],
+                trim: true,
+                uppercase: true
               },
             },
           ],
@@ -208,14 +228,20 @@ const mdf_approval_invoice_schema = new mongoose.Schema(
         state: {
           type: String,
           required: [true, "state is required"],
+          trim: true,
+          uppercase: true
         },
         country: {
           type: String,
           required: [true, "country is required"],
+          trim: true,
+          uppercase: true
         },
         city: {
           type: String,
           required: [true, "city is required"],
+          trim: true,
+          uppercase: true
         },
         pincode: {
           type: String,

@@ -1,3 +1,4 @@
+
 import mongoose from "mongoose";
 import approvalSchema from "../../../Utils/approval.schema.js";
 import { issues_for_status } from "../../../Utils/constants/constants.js";
@@ -21,10 +22,14 @@ const log_approval_item_details_schema = new mongoose.Schema({
   supplier_item_name: {
     type: String,
     default: null,
+    trim: true,
+    uppercase: true
   },
   supplier_log_no: {
     type: String,
     default: null,
+    trim: true,
+    uppercase: true
   },
   item_id: {
     type: mongoose.Schema.Types.ObjectId,
@@ -33,6 +38,8 @@ const log_approval_item_details_schema = new mongoose.Schema({
   item_name: {
     type: String,
     required: [true, "Item Name is required"],
+    trim: true,
+    uppercase: true
   },
   item_sub_category_id: {
     type: mongoose.Schema.Types.ObjectId,
@@ -41,10 +48,14 @@ const log_approval_item_details_schema = new mongoose.Schema({
   item_sub_category_name: {
     type: String,
     required: [true, "Item Sub-Category Name is required"],
+    trim: true,
+    uppercase: true
   },
   log_no: {
     type: String,
     required: [true, "Log No is required"],
+    trim: true,
+    uppercase: true
   },
   log_formula: {
     type: String,
@@ -150,6 +161,8 @@ const log_approval_invoice_schema = new mongoose.Schema(
     currency: {
       type: String,
       required: [true, "currency is required"],
+      trim: true,
+      uppercase: true
     },
     workers_details: {
       no_of_workers: {
@@ -159,6 +172,8 @@ const log_approval_invoice_schema = new mongoose.Schema(
       shift: {
         type: String,
         required: [true, "Shift is required"],
+        trim: true,
+        uppercase: true
       },
       working_hours: {
         type: Number,
@@ -175,11 +190,15 @@ const log_approval_invoice_schema = new mongoose.Schema(
           type: String,
           required: [true, "Supplier Name is required."],
           trim: true,
+
+          uppercase: true
         },
         supplier_type: {
           type: [String],
           required: [true, "Supplier Name is required."],
           trim: true,
+
+          uppercase: true
         },
       },
       branch_detail: {
@@ -190,6 +209,8 @@ const log_approval_invoice_schema = new mongoose.Schema(
         branch_name: {
           type: String,
           required: [true, "Branch name is required"],
+          trim: true,
+          uppercase: true
         },
         contact_person: {
           type: [
@@ -198,6 +219,8 @@ const log_approval_invoice_schema = new mongoose.Schema(
                 type: String,
                 required: [true, "Contact person name is required"],
                 trim: true,
+
+                uppercase: true
               },
               email: {
                 type: String,
@@ -211,6 +234,8 @@ const log_approval_invoice_schema = new mongoose.Schema(
               designation: {
                 type: String,
                 required: [true, "Designation is required"],
+                trim: true,
+                uppercase: true
               },
             },
           ],
@@ -223,14 +248,20 @@ const log_approval_invoice_schema = new mongoose.Schema(
         state: {
           type: String,
           required: [true, "State is required"],
+          trim: true,
+          uppercase: true
         },
         country: {
           type: String,
           required: [true, "Country is required"],
+          trim: true,
+          uppercase: true
         },
         city: {
           type: String,
           required: [true, "City is required"],
+          trim: true,
+          uppercase: true
         },
         pincode: {
           type: String,

@@ -28,6 +28,7 @@ export const createPlywoodLogsExcel = async (newData) => {
       { header: "Rate in Currency", key: "rate_in_currency", width: 20 },
       { header: "Rate in INR", key: "rate_in_inr", width: 20 },
       { header: "Exchange Rate", key: "exchange_rate", width: 15 }, // exchange rate added
+      { header: "GST Value", key: "gst_val", width: 15 },
       { header: "Amount", key: "amount", width: 15 },
       { header: "Remark", key: "remark", width: 20 },
       //   { header: "Invoice ID", key: "invoice_id", width: 30 },
@@ -99,6 +100,7 @@ export const createPlywoodLogsExcel = async (newData) => {
           rate_in_currency: data.rate_in_currency,
           exchange_rate: data.exchange_rate,
           rate_in_inr: data.rate_in_inr,
+          gst_val: data?.invoice_Details?.gst_value,
           amount: data.amount,
           remark: data.remark,
           //   invoice_id: data.invoice_id,

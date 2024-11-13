@@ -28,6 +28,7 @@ export const GenerateOtherGoodsLogs = async (newData) => {
       { header: "Rate In Currency", key: "rate_in_currency", width: 20 },
       { header: "Exchange Rate", key: "exchange_rate", width: 15 },
       { header: "Rate in INR", key: "rate_in_inr", width: 15 },
+
       { header: "Amount", key: "amount", width: 20 },
       { header: "Supplier Name", key: "supplier_name", width: 25 },
       { header: "Supplier Type", key: "supplier_type", width: 20 },
@@ -43,10 +44,20 @@ export const GenerateOtherGoodsLogs = async (newData) => {
         key: "contact_person_mobile_no",
         width: 25,
       },
-      { header: "Invoice No", key: "invoice_no", width: 20 },
       { header: "Invoice Date", key: "invoice_date", width: 20 },
+      { header: "Invoice No", key: "invoice_no", width: 20 },
+      { header: "Total Item Amount", key: "total_item_amount", width: 20 },
+      { header: "Transporter Details", key: "transporter_details", width: 30 },
+      { header: "GST Percentage", key: "gst_percentage", width: 20 },
+      { header: "GST Value", key: "gst_val", width: 15 },
+      {
+        header: "Invoice Value with GST",
+        key: "invoice_value_with_gst",
+        width: 20,
+      },
+
       { header: "Remark", key: "remark", width: 20 },
-      { header: "Created By", key: "created_by", width: 25 },
+
     ];
 
     worksheet.columns = OtherGoodsColumns;
@@ -79,14 +90,20 @@ export const GenerateOtherGoodsLogs = async (newData) => {
         contact_person_email: data?.othergoods_invoice_details?.supplier_details?.branch_detail?.contact_person[0]?.email,
         contact_person_designation: data?.othergoods_invoice_details?.supplier_details?.branch_detail?.contact_person[0]?.designation,
         contact_person_mobile_no: data?.othergoods_invoice_details?.supplier_details?.branch_detail?.contact_person[0]?.mobile_number,
-        invoice_no:
-          data?.othergoods_invoice_details?.invoice_Details?.invoice_no,
-        invoice_date: new Date(
-          data?.othergoods_invoice_details?.invoice_Details?.invoice_date
-        ).toLocaleDateString(),
+        // invoice_no:
+        //   data?.othergoods_invoice_details?.invoice_Details?.invoice_no,
+        // invoice_date: new Date(
+        //   data?.othergoods_invoice_details?.invoice_Details?.invoice_date
+        // ).toLocaleDateString(),
+        invoice_date: data?.othergoods_invoice_details?.invoice_Details.invoice_date,
+        invoice_no: data?.othergoods_invoice_details?.invoice_Details.invoice_no,
+        total_item_amount: data?.othergoods_invoice_details?.invoice_Details.total_item_amount,
+        transporter_details: data?.othergoods_invoice_details?.invoice_Details.transporter_details,
+        gst_percentage: data?.othergoods_invoice_details?.invoice_Details.gst_percentage,
+        gst_val: data?.othergoods_invoice_details?.invoice_Details?.gst_value,
+        invoice_value_with_gst: data?.othergoods_invoice_details?.invoice_Details.invoice_value_with_gst,
         remark: data?.remark,
-        created_by:
-          data?.created_user?.first_name + " " + data?.created_user?.last_name,
+
       });
     }
     );
