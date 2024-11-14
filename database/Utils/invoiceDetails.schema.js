@@ -203,6 +203,7 @@ export const approval_invoice_details = new mongoose.Schema({
   gst_value: {
     type: Number,
     required: [true, "GST Value is required."],
+    default:0
   },
   invoice_value_with_gst: {
     type: Number,
