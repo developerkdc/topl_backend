@@ -17,7 +17,7 @@ const contactPersonSchema = new mongoose.Schema({
   },
   mobile_number: {
     type: String,
-    unique: [true, "contact person email must be unique"],
+    unique: [true, "contact person mobile number must be unique"],
     required: [true, "mobile number must be unique is required"],
   },
   designation: {
@@ -52,19 +52,19 @@ const supplierBranchesSchema = new mongoose.Schema({
   state: {
     type: String,
     required: [true, "state is required"],
-    uppercase: true,
+    // uppercase: true,
     trim: true
   },
   country: {
     type: String,
     required: [true, "country is required"],
-    uppercase: true,
+    // uppercase: true,
     trim: true
   },
   city: {
     type: String,
     required: [true, "city is required"],
-    uppercase: true,
+    // uppercase: true,
     trim: true
   },
   pincode: {
