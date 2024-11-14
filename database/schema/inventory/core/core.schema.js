@@ -198,7 +198,7 @@ export const core_invoice_schema = new mongoose.Schema(
           type: String,
           required: [true, "state is required"],
           trim: true,
-          uppercase: true
+          // uppercase: true
         },
         country: {
           type: String,
@@ -208,7 +208,7 @@ export const core_invoice_schema = new mongoose.Schema(
         city: {
           type: String,
           required: [true, "city is required"],
-          uppercase: true
+          // uppercase: true
         },
         pincode: {
           type: String,
