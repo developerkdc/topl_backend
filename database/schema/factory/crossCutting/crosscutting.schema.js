@@ -21,20 +21,28 @@ const crosscutting_done_schema = new mongoose.Schema(
     machine_name: {
       type: String,
       required: [true, "machine name is required"],
+      trim: true,
+      uppercase: true
     },
     log_no: {
       type: String,
       required: [true, "log number is required"],
+      trim: true,
+      uppercase: true
     },
     code: {
       type: String,
       trim: true,
       required: [true, "code is required"],
+      trim: true,
+      uppercase: true
     },
     log_no_code: {
       type: String,
       trim: true,
       required: [true, "code is required"],
+      trim: true,
+      uppercase: true
     },
     length: {
       type: Number,
@@ -94,6 +102,8 @@ const crosscutting_done_schema = new mongoose.Schema(
       shift: {
         type: String,
         required: [true, "shift is required"],
+        trim: true,
+        uppercase: true
       },
       working_hours: {
         type: Number,
@@ -112,9 +122,9 @@ const crosscutting_done_schema = new mongoose.Schema(
       type: String,
       default: null,
     },
-    isEditable:{
-      type:Boolean,
-      default:true
+    isEditable: {
+      type: Boolean,
+      default: true
     },
     approval_status: approval_status,
     created_by: {

@@ -16,10 +16,14 @@ const issues_for_crosscutting_details_schema = new mongoose.Schema({
   supplier_item_name: {
     type: String,
     default: null,
+    trim: true,
+    uppercase: true
   },
   supplier_log_no: {
     type: String,
     default: null,
+    trim: true,
+    uppercase: true
   },
   item_id: {
     type: mongoose.Schema.Types.ObjectId,
@@ -28,6 +32,8 @@ const issues_for_crosscutting_details_schema = new mongoose.Schema({
   item_name: {
     type: String,
     required: [true, "Item Name is required"],
+    trim: true,
+    uppercase: true
   },
   item_sub_category_id: {
     type: mongoose.Schema.Types.ObjectId,
@@ -36,14 +42,20 @@ const issues_for_crosscutting_details_schema = new mongoose.Schema({
   item_sub_category_name: {
     type: String,
     required: [true, "Item Sub-Category Name is required"],
+    trim: true,
+    uppercase: true
   },
   log_no: {
     type: String,
     required: [true, "Log No is required"],
+    trim: true,
+    uppercase: true
   },
   log_formula: {
     type: String,
     required: [true, "Log formula is required"],
+    trim: true,
+    // uppercase: true
   },
   status: {
     type: String,
@@ -130,7 +142,7 @@ const issues_for_crosscutting_details_schema = new mongoose.Schema({
       required: [true, "Expense Amount is required"],
     },
   },
-  approval_status:approval_status,
+  approval_status: approval_status,
   exchange_rate: {
     type: Number,
     default: null,

@@ -35,18 +35,26 @@ const flitching_approval_schema = new mongoose.Schema(
     machine_name: {
       type: String,
       required: [true, "machine name is required"],
+      trim: true,
+      uppercase: true
     },
     log_no: {
       type: String,
       required: [true, "log number is required"],
+      trim: true,
+      uppercase: true
     },
     flitch_code: {
       type: String,
       required: [true, "flitch code is required"],
+      trim: true,
+      uppercase: true
     },
     log_no_code: {
       type: String,
       required: [true, "Log No Code  is required"],
+      trim: true,
+      uppercase: true
     },
     flitch_formula: {
       type: String,
@@ -102,6 +110,8 @@ const flitching_approval_schema = new mongoose.Schema(
       shift: {
         type: String,
         required: [true, "shift is required"],
+        trim: true,
+        uppercase: true
       },
       working_hours: {
         type: Number,

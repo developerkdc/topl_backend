@@ -156,7 +156,7 @@ export const listItemSubCategories = catchAsync(async (req, res) => {
         as: "userDetails",
       },
     },
-    { $unwind: "$userDetails" },
+    { $unwind: { path: "$userDetails", preserveNullAndEmptyArrays: true } },
     { $match: { ...searchQuery } },
     {
       $project: {

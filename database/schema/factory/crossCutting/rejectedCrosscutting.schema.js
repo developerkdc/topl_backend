@@ -18,10 +18,14 @@ const rejected_crosscutting_details_schema = new mongoose.Schema({
     supplier_item_name: {
         type: String,
         default: null,
+        trim: true,
+        uppercase: true
     },
     supplier_log_no: {
         type: String,
         default: null,
+        trim: true,
+        uppercase: true
     },
     item_id: {
         type: mongoose.Schema.Types.ObjectId,
@@ -30,6 +34,8 @@ const rejected_crosscutting_details_schema = new mongoose.Schema({
     item_name: {
         type: String,
         required: [true, "Item Name is required"],
+        trim: true,
+        uppercase: true
     },
     item_sub_category_id: {
         type: mongoose.Schema.Types.ObjectId,
@@ -38,10 +44,14 @@ const rejected_crosscutting_details_schema = new mongoose.Schema({
     item_sub_category_name: {
         type: String,
         required: [true, "Item Sub-Category Name is required"],
+        trim: true,
+        uppercase: true
     },
     log_no: {
         type: String,
         required: [true, "Log No is required"],
+        trim: true,
+        uppercase: true
     },
     log_formula: {
         type: String,
