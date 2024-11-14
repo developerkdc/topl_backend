@@ -201,19 +201,19 @@ export const face_invoice_schema = new mongoose.Schema(
           type: String,
           required: [true, "State is required"],
           trim: true,
-          uppercase: true
+          // uppercase: true
         },
         country: {
           type: String,
           required: [true, "Country is required"],
           trim: true,
-          uppercase: true
+          // uppercase: true
         },
         city: {
           type: String,
           required: [true, "City is required"],
           trim: true,
-          uppercase: true
+          // uppercase: true
         },
         pincode: {
           type: String,

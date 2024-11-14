@@ -65,8 +65,8 @@ export const editItemCatgory = catchAsync(async (req, res) => {
 
   const validateCategory = await itemCategoryModel.findById(id);
   if (!validateCategory) {
-    return res.json(
-      new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Invalid Category id")
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json(
+      new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Invalid Category ")
     );
   }
 
@@ -76,7 +76,7 @@ export const editItemCatgory = catchAsync(async (req, res) => {
     { runValidators: true, new: true }
   );
   if (!updatedData) {
-    return res.json(
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json(
       new ApiResponse(
         StatusCodes.INTERNAL_SERVER_ERROR,
         "Err updating category"
