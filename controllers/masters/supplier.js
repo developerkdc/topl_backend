@@ -1202,3 +1202,242 @@ export const addBranchToSuppliers = catchAsync(async (req, res) => {
   );
 });
 
+
+
+export const AddSupplierMasterNew = catchAsync(async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const { supplier_name, supplier_type, branch_details } = req.body;
+
+
+    const requiredFields = ["supplier_name", "supplier_type"];
+    for (let field of requiredFields) {
+      if (!req.body[field]) {
+        await session.abortTransaction();
+        return res.json(
+          new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, `${field} is missing`)
+        );
+      }
+    }
+    if (!branch_details) {
+      await session.abortTransaction();
+      return res.json(
+        new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, `branch details are required`)
+      );
+    }
+
+    const maxNumber = await SupplierModel.aggregate([
+      {
+        $group: {
+          _id: null,
+          max: { $max: "$sr_no" },
+        },
+      },
+    ]);
+    const newMax = maxNumber.length > 0 ? maxNumber[0].max + 1 : 1;
+
+
+    const newSupplier = new SupplierModel({
+      sr_no: newMax,
+      supplier_name,
+      supplier_type,
+    });
+
+
+    await newSupplier.save({ session });
+
+    // Validate branch details if provided
+    if (branch_details) {
+      const {
+        contact_person,
+        address,
+        state,
+        country,
+        city,
+        pincode,
+        gst_number,
+        web_url,
+        is_main_branch,
+        branch_name,
+      } = branch_details;
+
+      const requiredBranchFields = [
+        "contact_person",
+        "address",
+        "state",
+        "country",
+        "city",
+        "pincode",
+        "gst_number",
+        "branch_name",
+      ];
+
+      for (let field of requiredBranchFields) {
+        if (!branch_details[field]) {
+          await session.abortTransaction();
+          return res.json(
+            new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, `${field} is missing in branch details`)
+          );
+        }
+      }
+
+
+      for (let person of contact_person) {
+        const { name, email, designation, mobile_number } = person;
+        if (!name || !email || !designation || !mobile_number) {
+          await session.abortTransaction();
+          return res.json(
+            new ApiResponse(
+              StatusCodes.INTERNAL_SERVER_ERROR,
+              "Each contact person must have name, email, designation, and mobile number"
+            )
+          );
+        }
+
+        //   const existingContact = await supplierBranchModel.findOne({
+        //     $or: [
+        //       { 'contact_person.email': email },
+        //       { 'contact_person.mobile_number': mobile_number },
+        //     ],
+        //   });
+
+        //   if (existingContact) {
+        //     await session.abortTransaction();
+        //     return res.json(
+        //       new ApiResponse(
+        //         StatusCodes.CONFLICT,
+        //         `Contact person with email ${email} or mobile number ${mobile_number} already exists`
+        //       )
+        //     );
+        //   }
+        // }
+
+        const existingEmail = await supplierBranchModel.findOne(
+          { 'contact_person.email': email },
+          null,
+          { session }
+        );
+        if (existingEmail) {
+          await session.abortTransaction();
+          return res.json(
+            new ApiResponse(
+              StatusCodes.CONFLICT,
+              `Contact person with email ${email} already exists`
+            )
+          );
+        }
+
+        const existingMobile = await supplierBranchModel.findOne(
+          { 'contact_person.mobile_number': mobile_number },
+          null,
+          { session }
+        );
+        if (existingMobile) {
+          await session.abortTransaction();
+          return res.json(
+            new ApiResponse(
+              StatusCodes.CONFLICT,
+              `Contact person with mobile number ${mobile_number} already exists`
+            )
+          );
+        }
+      }
+
+      const newSupplierBranch = new supplierBranchModel({
+        supplier_id: newSupplier?._id,
+        contact_person,
+        address,
+        state,
+        country,
+        city,
+        pincode,
+        gst_number,
+        web_url,
+        is_main_branch,
+        branch_name,
+      });
+
+      await newSupplierBranch.save({ session });
+    }
+
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return res.json(
+      new ApiResponse(
+        StatusCodes.OK,
+        "Supplier and branch details created successfully",
+
+      )
+    );
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    return res.json(
+      new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "An error occurred", error.message)
+    );
+  }
+});
+
+//new edit branch and supplier with session
+export const updateSupplierAndBranch = catchAsync(async (req, res) => {
+  const { supplierId, branchId } = req.query;
+  const { supplierData, branchData } = req.body;
+
+  if (!mongoose.Types.ObjectId.isValid(supplierId) || !mongoose.Types.ObjectId.isValid(branchId)) {
+    return res.json(
+      new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Invalid supplier or branch ID")
+    );
+  }
+
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+
+    // if (supplierData.supplier_type && !Array.isArray(supplierData.supplier_type)) {
+    //   supplierData.supplier_type = [supplierData.supplier_type];
+    // }
+
+    const supplier = await SupplierModel.findByIdAndUpdate(
+      supplierId,
+      { $set: supplierData },
+      { new: true, runValidators: true, session }
+    );
+
+    if (!supplier) {
+      throw new ApiError(StatusCodes.NOT_FOUND, "Supplier not found with given ID");
+    }
+
+
+    const branch = await supplierBranchModel.findByIdAndUpdate(
+      branchId,
+      { $set: branchData },
+      { new: true, runValidators: true, session }
+    );
+
+    if (!branch) {
+      throw new ApiError(StatusCodes.NOT_FOUND, "Supplier branch not found with given ID");
+    }
+
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return res.status(StatusCodes.OK).json(
+      new ApiResponse(StatusCodes.OK, "Supplier and branch updated successfully")
+    );
+  } catch (error) {
+
+    await session.abortTransaction();
+    session.endSession();
+
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json(
+      new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, error.message)
+    );
+  }
+});
