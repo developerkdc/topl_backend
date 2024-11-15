@@ -117,7 +117,7 @@ export const listing_issue_for_crosscutting = catchAsync(
         $count: "totalCount",
       }
     ]);
-    
+
     const totalCount = totalCountValue?.[0]?.totalCount || 0
     const totalPage = Math.ceil(totalCount / limit);
 
@@ -986,11 +986,11 @@ export const revert_crosscutting_done = catchAsync(async function (
           { _id: issues_for_crosscutting_data?._id },
           {
             $set: {
-              "available_quantity.physical_length": updated_physical_length,
+              "available_quantity.physical_length": Number(Number(updated_physical_length)?.toFixed(2)),
               // "available_quantity.physical_diameter": updated_physical_diameter,
-              "available_quantity.physical_cmt": updated_physical_cmt,
-              "available_quantity.amount": updated_amount,
-              "available_quantity.expense_amount": updated_expense_amount,
+              "available_quantity.physical_cmt": Number(Number(updated_physical_cmt)?.toFixed(3)),
+              "available_quantity.amount": Number(Number(updated_amount)?.toFixed(2)),
+              "available_quantity.expense_amount": Number(Number(updated_expense_amount)?.toFixed(2)),
               crosscutting_completed: false,
               "available_quantity.sqm_factor": updated_sqm_factor,
             },
