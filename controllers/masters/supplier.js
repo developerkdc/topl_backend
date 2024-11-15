@@ -240,11 +240,10 @@ export const addBranchToSupplier = catchAsync(async (req, res) => {
       );
     }
 
-
     const existingContact = await supplierBranchModel.findOne({
       $or: [
-        { 'contact_person.email': email },
-        { 'contact_person.mobile_number': mobile_number },
+        { "contact_person.email": email },
+        { "contact_person.mobile_number": mobile_number },
       ],
     });
 
@@ -351,7 +350,13 @@ export const addBranchToSupplier = catchAsync(async (req, res) => {
 //new
 export const fetchAllSupplierWithBranchesDetails = catchAsync(
   async (req, res) => {
-    const { query, sortField = "updated_at", sortOrder = "desc", page, limit } = req.query;
+    const {
+      query,
+      sortField = "updated_at",
+      sortOrder = "desc",
+      page,
+      limit,
+    } = req.query;
     const pageInt = parseInt(page) || 1;
     const limitInt = parseInt(limit) || 10;
     const skipped = (pageInt - 1) * limitInt;
@@ -614,8 +619,6 @@ export const updateSupplierBranchById = catchAsync(async (req, res) => {
       )
     );
 });
-
-
 
 export const fetchAllBranchesBySupplierId = catchAsync(async (req, res) => {
   const { id } = req.params;
@@ -1019,7 +1022,7 @@ export const updateContactPersonInfo = catchAsync(async (req, res) => {
       },
     },
   });
-  console.log(existingEmail, "email")
+  console.log(existingEmail, "email");
   if (existingEmail) {
     return res
       .status(StatusCodes.CONFLICT)
@@ -1044,7 +1047,7 @@ export const updateContactPersonInfo = catchAsync(async (req, res) => {
     },
   });
 
-  console.log(existingMobileNumber, "mobile number")
+  console.log(existingMobileNumber, "mobile number");
 
   if (existingMobileNumber) {
     return res
@@ -1083,9 +1086,6 @@ export const updateContactPersonInfo = catchAsync(async (req, res) => {
       )
     );
 });
-
-
-
 
 export const addBranchToSuppliers = catchAsync(async (req, res) => {
   const { id } = req.params;
@@ -1152,8 +1152,8 @@ export const addBranchToSuppliers = catchAsync(async (req, res) => {
     // Check if email or mobile_number already exists in any branch
     const existingContact = await supplierBranchModel.findOne({
       $or: [
-        { 'contact_person.email': email },
-        { 'contact_person.mobile_number': mobile_number },
+        { "contact_person.email": email },
+        { "contact_person.mobile_number": mobile_number },
       ],
     });
 
@@ -1202,29 +1202,32 @@ export const addBranchToSuppliers = catchAsync(async (req, res) => {
   );
 });
 
-
-
-export const AddSupplierMasterNew = catchAsync(async (req, res) => {
+export const AddSupplierMasterNew = catchAsync(async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
     const { supplier_name, supplier_type, branch_details } = req.body;
 
-
     const requiredFields = ["supplier_name", "supplier_type"];
     for (let field of requiredFields) {
       if (!req.body[field]) {
         await session.abortTransaction();
         return res.json(
-          new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, `${field} is missing`)
+          new ApiResponse(
+            StatusCodes.INTERNAL_SERVER_ERROR,
+            `${field} is missing`
+          )
         );
       }
     }
     if (!branch_details) {
       await session.abortTransaction();
       return res.json(
-        new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, `branch details are required`)
+        new ApiResponse(
+          StatusCodes.INTERNAL_SERVER_ERROR,
+          `branch details are required`
+        )
       );
     }
 
@@ -1238,13 +1241,11 @@ export const AddSupplierMasterNew = catchAsync(async (req, res) => {
     ]);
     const newMax = maxNumber.length > 0 ? maxNumber[0].max + 1 : 1;
 
-
     const newSupplier = new SupplierModel({
       sr_no: newMax,
       supplier_name,
       supplier_type,
     });
-
 
     await newSupplier.save({ session });
 
@@ -1278,11 +1279,13 @@ export const AddSupplierMasterNew = catchAsync(async (req, res) => {
         if (!branch_details[field]) {
           await session.abortTransaction();
           return res.json(
-            new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, `${field} is missing in branch details`)
+            new ApiResponse(
+              StatusCodes.INTERNAL_SERVER_ERROR,
+              `${field} is missing in branch details`
+            )
           );
         }
       }
-
 
       for (let person of contact_person) {
         const { name, email, designation, mobile_number } = person;
@@ -1315,31 +1318,31 @@ export const AddSupplierMasterNew = catchAsync(async (req, res) => {
         // }
 
         const existingEmail = await supplierBranchModel.findOne(
-          { 'contact_person.email': email },
+          { "contact_person.email": email },
           null,
           { session }
         );
         if (existingEmail) {
           await session.abortTransaction();
-          return res.json(
-            new ApiResponse(
-              StatusCodes.CONFLICT,
-              `Contact person with email ${email} already exists`
+          return next(
+            new ApiError(
+              `Contact person with email ${email} already exists`,
+              StatusCodes.INTERNAL_SERVER_ERROR
             )
           );
         }
 
         const existingMobile = await supplierBranchModel.findOne(
-          { 'contact_person.mobile_number': mobile_number },
+          { "contact_person.mobile_number": mobile_number },
           null,
           { session }
         );
         if (existingMobile) {
           await session.abortTransaction();
-          return res.json(
-            new ApiResponse(
-              StatusCodes.CONFLICT,
-              `Contact person with mobile number ${mobile_number} already exists`
+          return next(
+            new ApiError(
+              `Contact person with mobile number ${mobile_number} already exists`,
+              StatusCodes.INTERNAL_SERVER_ERROR
             )
           );
         }
@@ -1362,43 +1365,43 @@ export const AddSupplierMasterNew = catchAsync(async (req, res) => {
       await newSupplierBranch.save({ session });
     }
 
-
     await session.commitTransaction();
     session.endSession();
 
     return res.json(
       new ApiResponse(
         StatusCodes.OK,
-        "Supplier and branch details created successfully",
-
+        "Supplier and branch details created successfully"
       )
     );
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
-    return res.json(
-      new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "An error occurred", error.message)
-    );
+    return next(error);
   }
 });
 
 //new edit branch and supplier with session
-export const updateSupplierAndBranch = catchAsync(async (req, res) => {
+export const updateSupplierAndBranch = catchAsync(async (req, res, next) => {
   const { supplierId, branchId } = req.query;
   const { supplierData, branchData } = req.body;
 
-  if (!mongoose.Types.ObjectId.isValid(supplierId) || !mongoose.Types.ObjectId.isValid(branchId)) {
+  if (
+    !mongoose.Types.ObjectId.isValid(supplierId) ||
+    !mongoose.Types.ObjectId.isValid(branchId)
+  ) {
     return res.json(
-      new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Invalid supplier or branch ID")
+      new ApiResponse(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        "Invalid supplier or branch ID"
+      )
     );
   }
-
 
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
-
     // if (supplierData.supplier_type && !Array.isArray(supplierData.supplier_type)) {
     //   supplierData.supplier_type = [supplierData.supplier_type];
     // }
@@ -1410,9 +1413,11 @@ export const updateSupplierAndBranch = catchAsync(async (req, res) => {
     );
 
     if (!supplier) {
-      throw new ApiError(StatusCodes.NOT_FOUND, "Supplier not found with given ID");
-    }
+      return next(new ApiError(
+        "Supplier not found with given ID", StatusCodes.NOT_FOUND,
 
+      ));
+    }
 
     const branch = await supplierBranchModel.findByIdAndUpdate(
       branchId,
@@ -1421,23 +1426,26 @@ export const updateSupplierAndBranch = catchAsync(async (req, res) => {
     );
 
     if (!branch) {
-      throw new ApiError(StatusCodes.NOT_FOUND, "Supplier branch not found with given ID");
-    }
+      return next(new ApiError(
+        "Supplier branch not found with given ID", StatusCodes.NOT_FOUND,
 
+      ));
+    }
 
     await session.commitTransaction();
     session.endSession();
 
-    return res.status(StatusCodes.OK).json(
-      new ApiResponse(StatusCodes.OK, "Supplier and branch updated successfully")
-    );
+    return res
+      .status(StatusCodes.OK)
+      .json(
+        new ApiResponse(
+          StatusCodes.OK,
+          "Supplier and branch updated successfully"
+        )
+      );
   } catch (error) {
-
     await session.abortTransaction();
     session.endSession();
-
-    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json(
-      new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, error.message)
-    );
+    return next(error);
   }
 });
