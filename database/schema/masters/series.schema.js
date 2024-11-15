@@ -12,6 +12,8 @@ const seriesSchema = new mongoose.Schema(
     },
     remark: {
       type: String,
+      trim: true,
+      uppercase: true
     },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,

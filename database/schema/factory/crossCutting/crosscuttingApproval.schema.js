@@ -131,6 +131,8 @@ const crosscutting_approval_schema = new mongoose.Schema(
     remarks: {
       type: String,
       default: null,
+      trim: true,
+      uppercase: true
     },
     isEditable: {
       type: Boolean,

@@ -540,7 +540,6 @@ export const fetchAllSupplierWithBranchesDetails = catchAsync(
       }
       : {};
 
-    console.log("query -> ", searchQuery);
     const pipeline = [
       {
         $lookup: {

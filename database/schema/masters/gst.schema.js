@@ -11,8 +11,8 @@ const GstSchema = new mongoose.Schema({
   },
   gst_remarks: {
     type: String,
-    // trim: true,
-    // uppercase: true,
+    trim: true,
+    uppercase: true,
   },
   created_employee_id: {
     type: mongoose.Types.ObjectId,

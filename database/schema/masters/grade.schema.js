@@ -12,6 +12,7 @@ const GradeNameSchema = new mongoose.Schema({
   grade_remarks: {
     type: String,
     trim: true,
+    uppercase: true
   },
   created_employee_id: {
     type: mongoose.Types.ObjectId,

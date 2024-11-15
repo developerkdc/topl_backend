@@ -12,6 +12,7 @@ const CutSchema = new mongoose.Schema({
   cut_remarks: {
     type: String,
     trim: true,
+    uppercase: true
   },
   created_employee_id: {
     type: mongoose.Types.ObjectId,

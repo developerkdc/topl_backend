@@ -141,6 +141,8 @@ const flitching_approval_schema = new mongoose.Schema(
     remarks: {
       type: String,
       default: null,
+      trim: true,
+      uppercase: true
     },
     approval_status: approval_status,
     created_by: {

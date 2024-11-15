@@ -17,7 +17,8 @@ const approvalSchema = new mongoose.Schema({
             },
             remark: {
                 type: String,
-                default: null
+                default: null, trim: true,
+                uppercase: true
             }
         },
         rejectedBy: {
@@ -27,7 +28,9 @@ const approvalSchema = new mongoose.Schema({
             },
             remark: {
                 type: String,
-                default: null
+                default: null,
+                trim: true,
+                uppercase: true
             }
         }
     }

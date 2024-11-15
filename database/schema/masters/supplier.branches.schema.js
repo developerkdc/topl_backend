@@ -46,7 +46,7 @@ const supplierBranchesSchema = new mongoose.Schema({
   address: {
     type: String,
     required: [true, "address is required"],
-    // uppercase: true,
+    uppercase: true,
     trim: true
   },
   state: {
