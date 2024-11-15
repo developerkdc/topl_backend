@@ -161,6 +161,11 @@ const mdf_approval_invoice_schema = new mongoose.Schema(
         type: Number,
         required: [true, "Working hours is required"],
       },
+      total_hours:{
+        type:Number,
+        default:0,
+        required:[true,"Total hours required"]
+      }
     },
     supplier_details: {
       company_details: {
