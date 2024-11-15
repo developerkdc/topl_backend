@@ -105,6 +105,8 @@ const plywood_approval_item_details_schema = new mongoose.Schema(
     remark: {
       type: String,
       default: null,
+      trim: true,
+      uppercase: true
     },
     invoice_id: {
       type: mongoose.Schema.Types.ObjectId,
@@ -224,6 +226,8 @@ const plywood_approval_invoice_schema = new mongoose.Schema(
         address: {
           type: String,
           required: [true, "address is required"],
+          trim: true,
+          uppercase: true
         },
         state: {
           type: String,

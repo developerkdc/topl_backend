@@ -141,6 +141,8 @@ const flitchingSchema = new mongoose.Schema(
     remarks: {
       type: String,
       default: null,
+      trim: true,
+      uppercase: true
     },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,

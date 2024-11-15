@@ -11,6 +11,8 @@ const departMentSchema = new mongoose.Schema({
   },
   remark: {
     type: String,
+    trim: true,
+    uppercase: true
   },
   dept_access: {
     type: {},

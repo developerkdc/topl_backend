@@ -12,6 +12,7 @@ const CurrencySchema = new mongoose.Schema({
   currency_remarks: {
     type: String,
     trim: true,
+    uppercase: true
   },
   created_employee_id: {
     type: mongoose.Types.ObjectId,

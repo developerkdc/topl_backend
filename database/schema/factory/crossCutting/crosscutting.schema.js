@@ -121,6 +121,8 @@ const crosscutting_done_schema = new mongoose.Schema(
     remarks: {
       type: String,
       default: null,
+      trim: true,
+      uppercase: true
     },
     isEditable: {
       type: Boolean,

@@ -174,6 +174,8 @@ const issues_for_crosscutting_details_schema = new mongoose.Schema({
   remark: {
     type: String,
     default: null,
+    trim: true,
+    uppercase: true
   },
   invoice_id: {
     type: mongoose.Schema.Types.ObjectId,

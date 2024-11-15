@@ -83,6 +83,8 @@ export const item_details_schema = new mongoose.Schema(
     remark: {
       type: String,
       default: null,
+      trim: true,
+      uppercase: true
     },
     invoice_id: {
       type: mongoose.Schema.Types.ObjectId,
@@ -196,6 +198,8 @@ export const face_invoice_schema = new mongoose.Schema(
         address: {
           type: String,
           required: [true, "Address is required"],
+          trim: true,
+          uppercase: true
         },
         state: {
           type: String,
