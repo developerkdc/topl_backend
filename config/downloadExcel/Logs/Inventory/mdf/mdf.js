@@ -11,7 +11,7 @@ export const createMdfLogsExcel = async (newData) => {
       await fs.mkdir(folderPath, { recursive: true });
     }
     const workbook = new exceljs.Workbook();
-    const worksheet = workbook.addWorksheet("flitch-logs");
+    const worksheet = workbook.addWorksheet("MDF-logs");
     const mdfColumns = [
       { header: "Inward Sr No", key: "inward_sr_no", width: 15 },
       { header: "Inward Date", key: "inward_date", width: 20 },
