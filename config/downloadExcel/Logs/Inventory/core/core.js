@@ -29,7 +29,6 @@ export const createCoreLogsExcel = async (newData) => {
       { header: "Rate in Currency", key: "rate_in_currency", width: 20 },
       { header: "Rate in INR", key: "rate_in_inr", width: 20 },
       { header: "Exchange Rate", key: "exchange_rate", width: 20 },
-      { header: "GST Value", key: "gst_val", width: 20 },
       { header: "Amount", key: "amount", width: 15 },
 
       { header: "Inward Date", key: "inward_date", width: 20 },
@@ -87,6 +86,7 @@ export const createCoreLogsExcel = async (newData) => {
     worksheet.getRow(1).eachCell((cell) => {
       cell.font = { bold: true };
     });
+
 
     newData?.forEach((data) => {
       try {
@@ -168,6 +168,7 @@ export const createCoreLogsExcel = async (newData) => {
             data.core_invoice_details.invoice_Details.invoice_value_with_gst,
           createdAt: data?.createdAt,
           updatedAt: data?.updatedAt,
+
         };
 
         worksheet.addRow(rowData);
