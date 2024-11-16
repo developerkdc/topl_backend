@@ -11,7 +11,7 @@ const contactPersonSchema = new mongoose.Schema({
   },
   email: {
     type: String,
-    required: [true, "email id is required"],
+    // required: [true, "email id is required"],
     // unique: [true, "contact person email must be unique"],
     trim: true
   },

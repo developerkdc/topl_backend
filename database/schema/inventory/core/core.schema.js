@@ -180,7 +180,7 @@ export const core_invoice_schema = new mongoose.Schema(
               },
               email: {
                 type: String,
-                required: [true, "email id is required"],
+                // required: [true, "email id is required"],
                 trim: true,
               },
               mobile_number: {
