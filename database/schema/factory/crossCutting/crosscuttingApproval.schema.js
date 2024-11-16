@@ -119,6 +119,10 @@ const crosscutting_approval_schema = new mongoose.Schema(
         type: Number,
         required: [true, "working hours are required"],
       },
+      no_of_total_hours: {
+        type: Number,
+        required: [true, "No.Total Hours is required"]
+      }
     },
     required_hours: {
       type: Number,
