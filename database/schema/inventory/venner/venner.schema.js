@@ -240,7 +240,7 @@ export const veneer_invoice_schema = new mongoose.Schema(
               },
               email: {
                 type: String,
-                required: [true, "Email id is required"],
+                // required: [true, "Email id is required"],
                 trim: true,
               },
               mobile_number: {
