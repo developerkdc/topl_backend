@@ -98,6 +98,8 @@ const CuttingSchema = new mongoose.Schema({
   },
   cutting_remarks: {
     type: String,
+    uppercase: true,
+    trim: true
   },
 
   issued_for_cutting_date: { type: Date, default: Date.now },
