@@ -116,6 +116,10 @@ const flitchingSchema = new mongoose.Schema(
         type: Number,
         required: [true, "working hours are required"],
       },
+      no_of_total_hours: {
+        type: Number,
+        required: [true, "No.Total Hours is required"]
+      }
     },
     per_cmt_cost: {
       type: Number,

@@ -132,6 +132,8 @@ export const veneer_item_details_schema = new mongoose.Schema({
   remark: {
     type: String,
     default: null,
+    uppercase: true,
+    trim: true
   },
   invoice_id: {
     type: mongoose.Schema.Types.ObjectId,
@@ -188,10 +190,10 @@ export const veneer_invoice_schema = new mongoose.Schema(
         type: Number,
         required: [true, "Working hours is required"],
       },
-      total_hours:{
-        type:Number,
-        default:0,
-        required:[true,"Total hours required"]
+      total_hours: {
+        type: Number,
+        default: 0,
+        required: [true, "Total hours required"]
       }
     },
     supplier_details: {

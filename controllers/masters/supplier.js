@@ -231,11 +231,11 @@ export const addBranchToSupplier = catchAsync(async (req, res) => {
 
   for (let person of contact_person) {
     const { name, email, designation, mobile_number } = person;
-    if (!name || !email || !designation || !mobile_number) {
+    if (!name || !designation || !mobile_number) {
       return res.json(
         new ApiResponse(
           StatusCodes.INTERNAL_SERVER_ERROR,
-          "Each contact person must have name, email, designation, and mobile number"
+          "Each contact person must have name, designation, and mobile number"
         )
       );
     }
@@ -364,113 +364,7 @@ export const fetchAllSupplierWithBranchesDetails = catchAsync(
     const sortDirection = sortOrder === "desc" ? -1 : 1;
     const sortObj = sortField ? { [sortField]: sortDirection } : {};
 
-    // const searchQuery = query
-    //   ? {
-    //       $or: [
-    //         {
-    //           "supplierDetails.contact_person.name": {
-    //             $regex: query,
-    //             $options: "i",
-    //           },
-    //         },
-    //         {
-    //           "supplierDetails.contact_person.email": {
-    //             $regex: query,
-    //             $options: "i",
-    //           },
-    //         },
-    //         {
-    //           "supplierDetails.contact_person.designation": {
-    //             $regex: query,
-    //             $options: "i",
-    //           },
-    //         },
-    //         {
-    //           "supplierDetails.contact_person.mobile_number": {
-    //             $regex: query,
-    //             $options: "i",
-    //           },
-    //         },
-    //         {
-    //           "supplierDetails.state": {
-    //             $regex: query,
-    //             $options: "i",
-    //           },
-    //         },
-    //         {
-    //           "supplierDetails.country": {
-    //             $regex: query,
-    //             $options: "i",
-    //           },
-    //         },
-    //         {
-    //           "supplierDetails.state": {
-    //             $regex: query,
-    //             $options: "i",
-    //           },
-    //         },
-    //         {
-    //           "supplierDetails.city": {
-    //             $regex: query,
-    //             $options: "i",
-    //           },
-    //         },
-    //         {
-    //           "supplier_name": { $regex: query, $options: "i" },
-    //         },
-    //         {
-    //           "sr_no": Number(query),
-    //         },
-    //         {
-    //           "supplier_type": { $regex: query, $options: "i" },
-    //         },
-    //       ],
-    //     }
-    //   : {};
-    // const searchQuery = query
-    //   ? {
-    //       $or: [
-    //         {
-    //           supplierDetails: {
-    //             $elemMatch: {
-    //               contact_person: {
-    //                 $elemMatch: {
-    //                   name: { $regex: query, $options: "i" },
-    //                 },
-    //               },
-    //             },
-    //           },
-    //         },
-    //         {
-    //           supplierDetails: {
-    //             $elemMatch: {
-    //               state: { $regex: query, $options: "i" },
-    //             },
-    //           },
-    //         },
-    //         {
-    //           supplierDetails: {
-    //             $elemMatch: {
-    //               country: { $regex: query, $options: "i" },
-    //             },
-    //           },
-    //         },
-    //         {
-    //           supplierDetails: {
-    //             $elemMatch: {
-    //               city: { $regex: query, $options: "i" },
-    //             },
-    //           },
-    //         },
-    //         {
-    //           supplier_name: { $regex: query, $options: "i" },
-    //         },
-    //         {
-    //           supplier_type: { $regex: query, $options: "i" },
-    //         },
-    //       ],
-    //     }
-    //   : {};
+
     const searchQuery = query
       ? {
         $or: [
@@ -664,7 +558,7 @@ export const fetchAllBranchesBySupplierId = catchAsync(async (req, res) => {
         as: "supplierDetails",
       },
     },
-    { $unwind: "$supplierDetails" },
+    { $unwind: { path: "$supplierDetails", preserveNullAndEmptyArrays: true } },
     {
       $match: {
         ...searchQuery,
@@ -1139,11 +1033,11 @@ export const addBranchToSuppliers = catchAsync(async (req, res) => {
   // Validate each contact person object
   for (let person of contact_person) {
     const { name, email, designation, mobile_number } = person;
-    if (!name || !email || !designation || !mobile_number) {
+    if (!name || !designation || !mobile_number) {
       return res.json(
         new ApiResponse(
           StatusCodes.INTERNAL_SERVER_ERROR,
-          "Each contact person must have name, email, designation, and mobile number"
+          "Each contact person must have name,  designation, and mobile number"
         )
       );
     }
@@ -1288,12 +1182,12 @@ export const AddSupplierMasterNew = catchAsync(async (req, res, next) => {
 
       for (let person of contact_person) {
         const { name, email, designation, mobile_number } = person;
-        if (!name || !email || !designation || !mobile_number) {
+        if (!name || !designation || !mobile_number) {
           await session.abortTransaction();
           return res.json(
             new ApiResponse(
               StatusCodes.INTERNAL_SERVER_ERROR,
-              "Each contact person must have name, email, designation, and mobile number"
+              "Each contact person must have name,  designation, and mobile number"
             )
           );
         }
