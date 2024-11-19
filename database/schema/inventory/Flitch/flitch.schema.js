@@ -217,16 +217,20 @@ export const flitch_invoice_schema = new mongoose.Schema(
                 type: String,
                 // required: [true, "email id is required"],
                 trim: true,
+                default: null
               },
               mobile_number: {
                 type: String,
-                required: [true, "mobile number is required"],
+                // required: [true, "mobile number is required"],
+                default: null
               },
               designation: {
                 type: String,
-                required: [true, "designation is required"],
+                // required: [true, "designation is required"],
+
                 trim: true,
-                uppercase: true
+                uppercase: true,
+                default: null
               },
             },
           ],

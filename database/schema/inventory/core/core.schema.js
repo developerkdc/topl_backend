@@ -181,17 +181,20 @@ export const core_invoice_schema = new mongoose.Schema(
               email: {
                 type: String,
                 // required: [true, "email id is required"],
+                default: null,
                 trim: true,
               },
               mobile_number: {
                 type: String,
-                required: [true, "mobile number is required"],
+                default: null
+                // required: [true, "mobile number is required"],
               },
               designation: {
                 type: String,
                 trim: true,
                 uppercase: true,
-                required: [true, "designation is required"],
+                // required: [true, "designation is required"],
+                default: null
               },
             },
           ],

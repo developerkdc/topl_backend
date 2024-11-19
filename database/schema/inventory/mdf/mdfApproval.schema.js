@@ -212,15 +212,18 @@ const mdf_approval_invoice_schema = new mongoose.Schema(
               email: {
                 type: String,
                 // required: [true, "email id is required"],
+                default: null,
                 trim: true,
               },
               mobile_number: {
                 type: String,
-                required: [true, "mobile number is required"],
+                // required: [true, "mobile number is required"],
+                default: null,
               },
               designation: {
                 type: String,
-                required: [true, "designation is required"],
+                // required: [true, "designation is required"],
+                default: null,
                 trim: true,
                 uppercase: true
               },
