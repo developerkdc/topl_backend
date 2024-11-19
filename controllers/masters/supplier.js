@@ -231,30 +231,30 @@ export const addBranchToSupplier = catchAsync(async (req, res) => {
 
   for (let person of contact_person) {
     const { name, email, designation, mobile_number } = person;
-    if (!name || !designation || !mobile_number) {
+    if (!name) {
       return res.json(
         new ApiResponse(
           StatusCodes.INTERNAL_SERVER_ERROR,
-          "Each contact person must have name, designation, and mobile number"
+          "Each contact person must have name"
         )
       );
     }
 
-    const existingContact = await supplierBranchModel.findOne({
-      $or: [
-        { "contact_person.email": email },
-        { "contact_person.mobile_number": mobile_number },
-      ],
-    });
+    // const existingContact = await supplierBranchModel.findOne({
+    //   $or: [
+    //     { "contact_person.email": email },
+    //     { "contact_person.mobile_number": mobile_number },
+    //   ],
+    // });
 
-    if (existingContact) {
-      return res.json(
-        new ApiResponse(
-          StatusCodes.CONFLICT,
-          `Contact person with email ${email} or mobile number ${mobile_number} already exists`
-        )
-      );
-    }
+    // if (existingContact) {
+    //   return res.json(
+    //     new ApiResponse(
+    //       StatusCodes.CONFLICT,
+    //       `Contact person with email ${email} or mobile number ${mobile_number} already exists`
+    //     )
+    //   );
+    // }
   }
   const newSupplierBranch = new supplierBranchModel({
     supplier_id: id,
@@ -647,37 +647,37 @@ export const addContactPersonToBranch = catchAsync(async (req, res) => {
       )
     );
   }
-  const existingEmail = await supplierBranchModel.findOne({
-    // _id: id, // Ensure we are checking within the same branch
-    "contact_person.email": email, // Search inside contact_person array
-  });
+  // const existingEmail = await supplierBranchModel.findOne({
+  //   // _id: id, // Ensure we are checking within the same branch
+  //   "contact_person.email": email, // Search inside contact_person array
+  // });
 
-  if (existingEmail) {
-    return res
-      .status(StatusCodes.CONFLICT)
-      .json(
-        new ApiResponse(
-          StatusCodes.CONFLICT,
-          "Contact person with the same email already exists."
-        )
-      );
-  }
+  // if (existingEmail) {
+  //   return res
+  //     .status(StatusCodes.CONFLICT)
+  //     .json(
+  //       new ApiResponse(
+  //         StatusCodes.CONFLICT,
+  //         "Contact person with the same email already exists."
+  //       )
+  //     );
+  // }
 
-  const existingMobileNumber = await supplierBranchModel.findOne({
-    // _id: id, // Ensure we are checking within the same branch
-    "contact_person.mobile_number": mobile_number, // Search inside contact_person array
-  });
+  // const existingMobileNumber = await supplierBranchModel.findOne({
+  //   // _id: id, // Ensure we are checking within the same branch
+  //   "contact_person.mobile_number": mobile_number, // Search inside contact_person array
+  // });
 
-  if (existingMobileNumber) {
-    return res
-      .status(StatusCodes.CONFLICT)
-      .json(
-        new ApiResponse(
-          StatusCodes.CONFLICT,
-          "Contact person with the same mobile number already exists."
-        )
-      );
-  }
+  // if (existingMobileNumber) {
+  //   return res
+  //     .status(StatusCodes.CONFLICT)
+  //     .json(
+  //       new ApiResponse(
+  //         StatusCodes.CONFLICT,
+  //         "Contact person with the same mobile number already exists."
+  //       )
+  //     );
+  // }
   const updatedData = await supplierBranchModel.updateOne(
     { _id: id },
     { $push: { contact_person: req.body } },
@@ -907,51 +907,51 @@ export const updateContactPersonInfo = catchAsync(async (req, res) => {
   //   "contact_person.email": email,
   //   "contact_person._id": { $ne: id },
   // });
-  const existingEmail = await supplierBranchModel.findOne({
-    "contact_person": {
-      $elemMatch: {
-        email: email,
-        _id: { $ne: objectId },
-      },
-    },
-  });
-  console.log(existingEmail, "email");
-  if (existingEmail) {
-    return res
-      .status(StatusCodes.CONFLICT)
-      .json(
-        new ApiResponse(
-          StatusCodes.CONFLICT,
-          "Contact person with the same email already exists."
-        )
-      );
-  }
+  // const existingEmail = await supplierBranchModel.findOne({
+  //   "contact_person": {
+  //     $elemMatch: {
+  //       email: email,
+  //       _id: { $ne: objectId },
+  //     },
+  //   },
+  // });
+  // console.log(existingEmail, "email");
+  // if (existingEmail) {
+  //   return res
+  //     .status(StatusCodes.CONFLICT)
+  //     .json(
+  //       new ApiResponse(
+  //         StatusCodes.CONFLICT,
+  //         "Contact person with the same email already exists."
+  //       )
+  //     );
+  // }
 
   // const existingMobileNumber = await supplierBranchModel.findOne({
   //   "contact_person.mobile_number": mobile_number,
   //   "contact_person._id": { $ne: id },
   // });
-  const existingMobileNumber = await supplierBranchModel.findOne({
-    "contact_person": {
-      $elemMatch: {
-        mobile_number: mobile_number,
-        _id: { $ne: objectId },
-      },
-    },
-  });
+  // const existingMobileNumber = await supplierBranchModel.findOne({
+  //   "contact_person": {
+  //     $elemMatch: {
+  //       mobile_number: mobile_number,
+  //       _id: { $ne: objectId },
+  //     },
+  //   },
+  // });
 
-  console.log(existingMobileNumber, "mobile number");
+  // console.log(existingMobileNumber, "mobile number");
 
-  if (existingMobileNumber) {
-    return res
-      .status(StatusCodes.CONFLICT)
-      .json(
-        new ApiResponse(
-          StatusCodes.CONFLICT,
-          "Contact person with the same mobile number already exists."
-        )
-      );
-  }
+  // if (existingMobileNumber) {
+  //   return res
+  //     .status(StatusCodes.CONFLICT)
+  //     .json(
+  //       new ApiResponse(
+  //         StatusCodes.CONFLICT,
+  //         "Contact person with the same mobile number already exists."
+  //       )
+  //     );
+  // }
   const supplier = await supplierBranchModel.findOneAndUpdate(
     { "contact_person._id": objectId },
     {
@@ -1182,12 +1182,12 @@ export const AddSupplierMasterNew = catchAsync(async (req, res, next) => {
 
       for (let person of contact_person) {
         const { name, email, designation, mobile_number } = person;
-        if (!name || !designation || !mobile_number) {
+        if (!name) {
           await session.abortTransaction();
           return res.json(
             new ApiResponse(
               StatusCodes.INTERNAL_SERVER_ERROR,
-              "Each contact person must have name,  designation, and mobile number"
+              "Each contact person must have name"
             )
           );
         }
@@ -1210,35 +1210,35 @@ export const AddSupplierMasterNew = catchAsync(async (req, res, next) => {
         //   }
         // }
 
-        const existingEmail = await supplierBranchModel.findOne(
-          { "contact_person.email": email },
-          null,
-          { session }
-        );
-        if (existingEmail) {
-          await session.abortTransaction();
-          return next(
-            new ApiError(
-              `Contact person with email ${email} already exists`,
-              StatusCodes.INTERNAL_SERVER_ERROR
-            )
-          );
-        }
+        // const existingEmail = await supplierBranchModel.findOne(
+        //   { "contact_person.email": email },
+        //   null,
+        //   { session }
+        // );
+        // if (existingEmail) {
+        //   await session.abortTransaction();
+        //   return next(
+        //     new ApiError(
+        //       `Contact person with email ${email} already exists`,
+        //       StatusCodes.INTERNAL_SERVER_ERROR
+        //     )
+        //   );
+        // }
 
-        const existingMobile = await supplierBranchModel.findOne(
-          { "contact_person.mobile_number": mobile_number },
-          null,
-          { session }
-        );
-        if (existingMobile) {
-          await session.abortTransaction();
-          return next(
-            new ApiError(
-              `Contact person with mobile number ${mobile_number} already exists`,
-              StatusCodes.INTERNAL_SERVER_ERROR
-            )
-          );
-        }
+        // const existingMobile = await supplierBranchModel.findOne(
+        //   { "contact_person.mobile_number": mobile_number },
+        //   null,
+        //   { session }
+        // );
+        // if (existingMobile) {
+        //   await session.abortTransaction();
+        //   return next(
+        //     new ApiError(
+        //       `Contact person with mobile number ${mobile_number} already exists`,
+        //       StatusCodes.INTERNAL_SERVER_ERROR
+        //     )
+        //   );
+        // }
       }
 
       const newSupplierBranch = new supplierBranchModel({

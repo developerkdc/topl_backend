@@ -202,20 +202,24 @@ const fleece_approval_invoice_schema = new mongoose.Schema(
                 required: [true, "Contact person name is required"],
 
                 trim: true,
-                uppercase: true
+                uppercase: true,
+                default: null
               },
               email: {
                 type: String,
                 // required: [true, "Email id is required"],
                 trim: true,
+                default: null
               },
               mobile_number: {
                 type: String,
-                required: [true, "Mobile number is required"],
+                // required: [true, "Mobile number is required"],
+                default: null
               },
               designation: {
                 type: String,
-                required: [true, "Designation is required"],
+                // required: [true, "Designation is required"],
+                default: null
               },
             },
           ],

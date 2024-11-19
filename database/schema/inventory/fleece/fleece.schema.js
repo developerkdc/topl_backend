@@ -185,7 +185,6 @@ export const fleece_invoice_schema = new mongoose.Schema(
               name: {
                 type: String,
                 required: [true, "Contact person name is required"],
-
                 trim: true,
                 uppercase: true
               },
@@ -193,14 +192,17 @@ export const fleece_invoice_schema = new mongoose.Schema(
                 type: String,
                 // required: [true, "Email id is required"],
                 trim: true,
+                default: null
               },
               mobile_number: {
                 type: String,
-                required: [true, "Mobile number is required"],
+                // required: [true, "Mobile number is required"],
+                default: null
               },
               designation: {
                 type: String,
-                required: [true, "Designation is required"],
+                // required: [true, "Designation is required"],
+                default: null
               },
             },
           ],

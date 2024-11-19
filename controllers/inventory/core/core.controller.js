@@ -303,10 +303,10 @@ export const edit_core_item_invoice_inventory = catchAsync(
       const sendForApproval = req.sendForApproval;
       const user = req.userDetails;
 
-      const fetchInvoiceData = await core_inventory_invoice_details.findOne({_id:invoice_details});
-      if(fetchInvoiceData.approval_status?.sendForApproval?.status) return next(new ApiError("Already send for approval"));
+      const fetchInvoiceData = await core_inventory_invoice_details.findOne({ _id: invoice_details });
+      if (fetchInvoiceData.approval_status?.sendForApproval?.status) return next(new ApiError("Already send for approval"));
 
-      if (!sendForApproval) { 
+      if (!sendForApproval) {
         const update_invoice_details =
           await core_inventory_invoice_details.updateOne(
             { _id: invoice_id },
@@ -331,29 +331,29 @@ export const edit_core_item_invoice_inventory = catchAsync(
             },
             { session }
           );
-  
+
         if (
           !update_invoice_details.acknowledged ||
           update_invoice_details.modifiedCount <= 0
         )
           return next(new ApiError("Failed to update invoice", 400));
-  
+
         const all_invoice_items = await core_inventory_items_details.deleteMany(
           { invoice_id: invoice_id },
           { session }
         );
-  
+
         if (
           !all_invoice_items.acknowledged ||
           all_invoice_items.deletedCount <= 0
         )
           return next(new ApiError("Failed to update invoice items", 400));
-  
+
         const update_item_details = await core_inventory_items_details.insertMany(
           [...items_details],
           { session }
         );
-  
+
         await session.commitTransaction();
         session.endSession();
         return res
@@ -365,7 +365,7 @@ export const edit_core_item_invoice_inventory = catchAsync(
               update_item_details
             )
           );
-      } else{
+      } else {
         const edited_by = user?.id;
         const approval_person = user.approver_id;
         const { _id, createdAt, updatedAt, ...invoiceDetailsData } = invoice_details;

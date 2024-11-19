@@ -224,23 +224,26 @@ const flitch_approval_invoice_schema = new mongoose.Schema(
                 type: String,
                 required: [true, "contact person name is required"],
                 trim: true,
-                trim: true,
+                // trim: true,
                 uppercase: true
               },
               email: {
                 type: String,
                 // required: [true, "email id is required"],
                 trim: true,
+                default: null
               },
               mobile_number: {
                 type: String,
-                required: [true, "mobile number is required"],
+                // required: [true, "mobile number is required"],
+                default: null
               },
               designation: {
                 type: String,
-                required: [true, "designation is required"],
+                // required: [true, "designation is required"],
                 trim: true,
-                uppercase: true
+                uppercase: true,
+                default: null
               },
             },
           ],
