@@ -1164,7 +1164,7 @@ export const AddSupplierMasterNew = catchAsync(async (req, res, next) => {
         "country",
         "city",
         "pincode",
-        "gst_number",
+        // "gst_number",
         "branch_name",
       ];
 
