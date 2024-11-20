@@ -20,7 +20,7 @@ export const addMachine = catchAsync(async (req, res) => {
     machine_name: machine_name,
   });
   if (checkIfAlreadyExists.length > 0) {
-    return res.json(new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "machine already exists"));
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json(new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "machine already exists"));
   }
 
   const maxNumber = await machineModel.aggregate([
