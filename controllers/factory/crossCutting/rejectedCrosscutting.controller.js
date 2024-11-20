@@ -101,9 +101,9 @@ export const revert_rejected_crosscutting = catchAsync(async function (req, res,
             _id: rejected_crosscutting_id,
         }).lean();
         if (!rejected_crosscutting) return next(new ApiError("Rejected Item not found", 400));
-        
+
         const issues_for_crosscutting_data = await issues_for_crosscutting_model.findOne({ _id: rejected_crosscutting?.issue_for_crosscutting_id }).lean();
-        if(issues_for_crosscutting_data?.approval_status?.sendForApproval?.status) return next(new ApiError("Approval Pending!",400))
+        if (issues_for_crosscutting_data?.approval_status?.sendForApproval?.status) return next(new ApiError("Approval Pending!", 400))
 
         if (issues_for_crosscutting_data) {
             const { rejected_quantity, ...data } = rejected_crosscutting
@@ -114,11 +114,11 @@ export const revert_rejected_crosscutting = catchAsync(async function (req, res,
                         is_rejected: false
                     },
                     $inc: {
-                        "available_quantity.physical_length": rejected_quantity?.physical_length,
-                        "available_quantity.physical_cmt": rejected_quantity?.physical_cmt,
-                        "available_quantity.amount": rejected_quantity?.amount,
+                        "available_quantity.physical_length": Number(rejected_quantity?.physical_length.toFixed(2)),
+                        "available_quantity.physical_cmt": Number(rejected_quantity?.physical_cmt.toFixed(3)),
+                        "available_quantity.amount": Number(rejected_quantity?.amount.toFixed(2)),
                         "available_quantity.sqm_factor": rejected_quantity?.sqm_factor,
-                        "available_quantity.expense_amount": rejected_quantity?.expense_amount,
+                        "available_quantity.expense_amount": Number(rejected_quantity?.expense_amount.toFixed(2)),
                     },
                 },
                 { session }
