@@ -95,44 +95,44 @@ export const UpdateUser = catchAsync(async (req, res) => {
   const previousApproval = actualUserDetails.approver_id
   const newApproval = user.approver_id;
 
-  if(previousApproval?.toString() !== newApproval?.toString()){
+  if (previousApproval?.toString() !== newApproval?.toString()) {
     const searchQuery = {
-      "approval_status.sendForApproval.status":true,
-      "approval_status.approved.status":false,
-      "approval_status.rejected.status":false,
-      "approval.approvalPerson":previousApproval
+      "approval_status.sendForApproval.status": true,
+      "approval_status.approved.status": false,
+      "approval_status.rejected.status": false,
+      "approval.approvalPerson": previousApproval
     };
     const updateQuery = {
-      $set:{
-        "approval.approvalPerson":newApproval
+      $set: {
+        "approval.approvalPerson": newApproval
       }
     }
 
     //Inventory
     //log inventory
-    await log_approval_inventory_invoice_model.updateMany(searchQuery,updateQuery);
+    await log_approval_inventory_invoice_model.updateMany(searchQuery, updateQuery);
     //flitch inventory
-    await flitch_approval_inventory_invoice_model.updateMany(searchQuery,updateQuery);
+    await flitch_approval_inventory_invoice_model.updateMany(searchQuery, updateQuery);
     //plywood inventory
-    await plywood_approval_inventory_invoice_model.updateMany(searchQuery,updateQuery);
+    await plywood_approval_inventory_invoice_model.updateMany(searchQuery, updateQuery);
     //veneer inventory
-    await veneer_approval_inventory_invoice_model.updateMany(searchQuery,updateQuery);
+    await veneer_approval_inventory_invoice_model.updateMany(searchQuery, updateQuery);
     //mdf inventory
-    await mdf_approval_inventory_invoice_model.updateMany(searchQuery,updateQuery);
+    await mdf_approval_inventory_invoice_model.updateMany(searchQuery, updateQuery);
     //face inventory
-    await face_approval_inventory_invoice_model.updateMany(searchQuery,updateQuery);
+    await face_approval_inventory_invoice_model.updateMany(searchQuery, updateQuery);
     //core inventory
-    await core_approval_inventory_invoice_model.updateMany(searchQuery,updateQuery);
+    await core_approval_inventory_invoice_model.updateMany(searchQuery, updateQuery);
     //fleece paper inventory
-    await fleece_approval_inventory_invoice_model.updateMany(searchQuery,updateQuery);
+    await fleece_approval_inventory_invoice_model.updateMany(searchQuery, updateQuery);
     //other goods inventory
-    await otherGoods_approval_inventory_invoice_model.updateMany(searchQuery,updateQuery);
-    
+    await otherGoods_approval_inventory_invoice_model.updateMany(searchQuery, updateQuery);
+
     //Factory
     //crosscutting done
-    await crosscutting_done_approval_model.updateMany(searchQuery,updateQuery);
+    await crosscutting_done_approval_model.updateMany(searchQuery, updateQuery);
     //flitching done
-    await flitching_approval_model.updateMany(searchQuery,updateQuery);
+    await flitching_approval_model.updateMany(searchQuery, updateQuery);
   }
 
   res.status(200).json({

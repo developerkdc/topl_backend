@@ -205,7 +205,7 @@ export const addBranchToSupplier = catchAsync(async (req, res) => {
     "country",
     "city",
     "pincode",
-    "gst_number",
+    // "gst_number",
     // "web_url",
     "branch_name",
   ];
@@ -1004,7 +1004,7 @@ export const addBranchToSuppliers = catchAsync(async (req, res) => {
     "country",
     "city",
     "pincode",
-    "gst_number",
+    // "gst_number",
     // "web_url",
     "branch_name",
   ];
