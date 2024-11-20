@@ -186,12 +186,17 @@ export const DropdownItemNameMaster = catchAsync(async (req, res) => {
     {
       $match: searchQuery,
     },
+
     {
       $project: {
         item_name: 1,
       },
+
     },
-  ]);
+    {
+      $sort: { item_name: 1 }
+    },
+  ]).collation({ locale: "en", caseLevel: true })
 
   res
     .status(200)
