@@ -19,7 +19,7 @@ export const addSeries = catchAsync(async (req, res) => {
     series_name: series_name,
   });
   if (checkIfAlreadyExists.length > 0) {
-    return res.json(new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Series already exists"));
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json(new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Series already exists"));
   }
 
   const maxNumber = await seriesModel.aggregate([
