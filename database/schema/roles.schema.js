@@ -203,6 +203,8 @@ const RoleSchema = new mongoose.Schema({
   },
   roles_remarks: {
     type: String,
+    uppercase: true,
+    trim: true
   },
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now },

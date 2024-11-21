@@ -19,7 +19,7 @@ export const addItems = catchAsync(async (req, res) => {
   const checkIfAlreadyExists = await itemSubCategoryModel.find({ name: name });
   if (checkIfAlreadyExists.length > 0) {
     return res.json(
-      new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "SubCategory already exists")
+      new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Subcategory already exists")
     );
   }
 

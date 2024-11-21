@@ -95,7 +95,7 @@ const UserSchema = new mongoose.Schema({
   country: {
     type: String,
     trim: true,
-    uppercase: true
+    // uppercase: true
   },
   blood_group: {
     type: String,
@@ -109,12 +109,12 @@ const UserSchema = new mongoose.Schema({
   city: {
     type: String,
     trim: true,
-    uppercase: true
+    // uppercase: true
   },
   state: {
     type: String,
     trim: true,
-    uppercase: true
+    // uppercase: true
   },
   status: { type: Boolean, default: true },
   password: { type: String, default: null, trim: true },
@@ -130,6 +130,8 @@ const UserSchema = new mongoose.Schema({
 
   user_remarks: {
     type: String,
+    uppercase: true,
+    trim: true
   },
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now },
