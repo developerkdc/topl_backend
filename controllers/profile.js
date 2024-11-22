@@ -6,8 +6,8 @@ import mongoose from "mongoose";
 import { FetchUserByUserName } from "../utils/fetchDetails/fetchDetailsByUserName.js";
 
 export const UpdateAuthUserProfile = async (req, res) => {
-  const { first_name, last_name, phone, age, gender, country_code } =
-    req.body;
+  // const { first_name, last_name, phone, age, gender, country_code } =
+  //   req.body;
   const id = req.query.id;
   if (!id) {
     return res.status(400).json({
@@ -16,28 +16,23 @@ export const UpdateAuthUserProfile = async (req, res) => {
       message: IdRequired,
     });
   }
-  const requiredFields = ["first_name", "last_name", "email_id"];
+  // const requiredFields = ["first_name", "last_name", "email_id"];
 
-  for (const field of requiredFields) {
-    if (req.body[field] === "") {
-      return res.status(400).json({
-        result: [],
-        status: false,
-        message: `${field} should not be empty.`,
-      });
-    }
-  }
+  // for (const field of requiredFields) {
+  //   if (req.body[field] === "") {
+  //     return res.status(400).json({
+  //       result: [],
+  //       status: false,
+  //       message: `${field} should not be empty.`,
+  //     });
+  //   }
+  // }
 
   const userUpdate = await UserModel.findOneAndUpdate(
     { _id: id },
     {
       $set: {
-        last_name: last_name,
-        mobile_no: phone,
-        first_name: first_name,
-        age: age,
-        gender: gender,
-        country_code: country_code,
+        ...req.body
       },
     },
     { new: true, useFindAndModify: false }
