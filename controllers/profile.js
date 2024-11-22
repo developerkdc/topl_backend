@@ -31,9 +31,7 @@ export const UpdateAuthUserProfile = async (req, res) => {
   const userUpdate = await UserModel.findOneAndUpdate(
     { _id: id },
     {
-      $set: {
-        ...req.body
-      },
+      $set: req.body,
     },
     { new: true, useFindAndModify: false }
   );
