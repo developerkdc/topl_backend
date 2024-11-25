@@ -128,7 +128,7 @@ export const ListRoles = catchAsync(async (req, res) => {
       },
     },
     {
-      $match: { ...searchQuery,...matchQuery },
+      $match: { ...searchQuery, ...matchQuery },
     },
     {
       $sort: { [sortBy]: sort == "desc" ? -1 : 1 },
@@ -158,6 +158,7 @@ export const DropdownRoleMaster = catchAsync(async (req, res) => {
         status: true,
       },
     },
+    { $sort: { role_name: 1 } },
     {
       $project: {
         role_name: 1,

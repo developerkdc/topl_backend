@@ -198,6 +198,9 @@ export const DropdownMachineNameMaster = catchAsync(async (req, res) => {
       $match: searchQuery,
     },
     {
+      $sort: { machine_name: 1 },
+    },
+    {
       $project: {
         machine_name: 1,
       },
@@ -238,6 +241,9 @@ export const DropdownMachineNameMasterById = catchAsync(async (req, res) => {
     },
     {
       $match: { department: new mongoose.Types.ObjectId(id) },
+    },
+    {
+      $sort: { machine_name: 1 },
     },
     {
       $project: {

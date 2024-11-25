@@ -195,13 +195,16 @@ export const DropdownDepartmentMaster = catchAsync(async (req, res) => {
 
   const searchQuery = type
     ? {
-        $or: [{ dept_name: { $regex: type, $options: "i" } }],
-      }
+      $or: [{ dept_name: { $regex: type, $options: "i" } }],
+    }
     : {};
 
   const list = await departMentModel.aggregate([
     {
       $match: searchQuery,
+    },
+    {
+      $sort: { dept_name: 1 },
     },
     // {
     //   $project: {

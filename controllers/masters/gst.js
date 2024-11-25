@@ -141,6 +141,9 @@ export const DropdownGstMaster = catchAsync(async (req, res) => {
       },
     },
     {
+      $sort: { gst_percentage: 1 },
+    },
+    {
       $project: {
         gst_percentage: 1,
       },

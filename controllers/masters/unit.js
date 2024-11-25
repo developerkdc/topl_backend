@@ -140,6 +140,9 @@ export const DropdownUnitMaster = catchAsync(async (req, res) => {
       },
     },
     {
+      $sort: { unit_name: 1 },
+    },
+    {
       $project: {
         unit_name: 1,
       },

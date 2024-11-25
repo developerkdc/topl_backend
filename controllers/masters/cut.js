@@ -118,6 +118,9 @@ export const DropdownCutMaster = catchAsync(async (req, res) => {
       },
     },
     {
+      $sort: { cut_name: 1 },
+    },
+    {
       $project: {
         cut_name: 1,
       },

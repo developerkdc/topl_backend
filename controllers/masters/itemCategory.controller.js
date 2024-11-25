@@ -208,6 +208,9 @@ export const DropdownItemCategoryNameMaster = catchAsync(async (req, res) => {
       $match: searchQuery,
     },
     {
+      $sort: { category: 1 },
+    },
+    {
       $project: {
         category: 1,
       },
