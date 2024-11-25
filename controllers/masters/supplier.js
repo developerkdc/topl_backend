@@ -782,7 +782,7 @@ export const DropdownSupplierName = catchAsync(async (req, res) => {
     }
     : {};
 
-  const list = await SupplierModel.find(searchQuery);
+  const list = await SupplierModel.find(searchQuery).sort({ supplier_name: 1 });
 
   res
     .status(200)
@@ -877,6 +877,9 @@ export const DropdownSupplierBranches = catchAsync(async (req, res) => {
         foreignField: "_id",
         as: "supplierDetails",
       },
+    },
+    {
+      $sort: { branch_name: 1 },
     },
     { $unwind: "$supplierDetails" },
   ]);

@@ -141,6 +141,9 @@ export const DropdownExpenseTypeMaster = catchAsync(async (req, res) => {
       },
     },
     {
+      $sort: { expense_type_name: 1 },
+    },
+    {
       $project: {
         expense_type_name: 1,
       },

@@ -141,6 +141,9 @@ export const DropdownCurrencyMaster = catchAsync(async (req, res) => {
       },
     },
     {
+      $sort: { currency_name: 1 },
+    },
+    {
       $project: {
         currency_name: 1,
       },

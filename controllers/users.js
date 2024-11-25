@@ -317,7 +317,7 @@ export const AdminChangePassword = catchAsync(async (req, res) => {
 
 export const RoleNameList = catchAsync(async (req, res) => {
   const { dept_name } = req.body;
-  const role = await RolesModel.find({ dept_name: dept_name, status: true }, "_id role_name");
+  const role = await RolesModel.find({ dept_name: dept_name, status: true }, "_id role_name").sort({ role_name: 1 }).collation({ locale: "en", caseLevel: true });
   if (!role) {
     return res.status(401).json({
       result: [],

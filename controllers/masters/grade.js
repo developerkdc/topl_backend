@@ -139,6 +139,9 @@ export const DropdownGradeMaster = catchAsync(async (req, res) => {
       },
     },
     {
+      $sort: { grade_name: 1 },
+    },
+    {
       $project: {
         grade_name: 1,
       },
