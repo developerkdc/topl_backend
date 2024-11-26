@@ -45,7 +45,8 @@ export const log_item_details_schema = new mongoose.Schema({
     type: String,
     required: [true, "Log No is required"],
     trim: true,
-    uppercase: true
+    uppercase: true,
+    unique: [true, "Log Number must be unique"]
   },
   log_formula: {
     type: String,
@@ -270,7 +271,9 @@ export const log_invoice_schema = new mongoose.Schema(
         },
         gst_number: {
           type: String,
-          required: [true, "Gst number is required"],
+          // required: [true, "Gst number is required"],
+          default: null,
+
         },
         web_url: {
           type: String,
