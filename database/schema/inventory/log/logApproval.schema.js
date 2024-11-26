@@ -281,7 +281,8 @@ const log_approval_invoice_schema = new mongoose.Schema(
         },
         gst_number: {
           type: String,
-          required: [true, "Gst number is required"],
+          // required: [true, "Gst number is required"],
+          default: null
         },
         web_url: {
           type: String,

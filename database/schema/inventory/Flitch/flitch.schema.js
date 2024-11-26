@@ -266,7 +266,8 @@ export const flitch_invoice_schema = new mongoose.Schema(
         },
         gst_number: {
           type: String,
-          required: [true, "gst number is required"],
+          // required: [true, "gst number is required"],
+          default: null
         },
         web_url: {
           type: String,
