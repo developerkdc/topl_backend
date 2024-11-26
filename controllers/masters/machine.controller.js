@@ -206,7 +206,6 @@ export const DropdownMachineNameMaster = catchAsync(async (req, res) => {
       },
     },
   ]);
-
   res
     .status(200)
     .json(

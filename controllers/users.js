@@ -336,7 +336,7 @@ export const ListApproverUser = catchAsync(async (req, res) => {
   const { dept_name } = req.body;
   const user = req.userDetails;
 
-  const approverUser = await UserModel.find({ dept_name: dept_name, user_type: "ADMIN" }, "_id user_name");
+  const approverUser = await UserModel.find({ dept_name: dept_name, user_type: "ADMIN" }, "_id user_name").sort({ user_name: 1 }).collation({ locale: "en", caseLevel: true });;
 
   return res.status(200).json({
     result: approverUser,

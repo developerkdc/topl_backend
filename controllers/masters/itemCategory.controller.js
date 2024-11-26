@@ -183,7 +183,7 @@ export const listItemCategories = catchAsync(async (req, res) => {
 });
 
 export const fetchAllCategories = catchAsync(async (req, res) => {
-  const allData = await itemCategoryModel.find();
+  const allData = await itemCategoryModel.find().sort({ category: 1 });
 
   return res.json(
     new ApiResponse(

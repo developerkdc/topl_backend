@@ -185,7 +185,7 @@ export const listDepartmentDetails = catchAsync(async (req, res) => {
 });
 
 export const fetchAllDepartments = catchAsync(async (req, res) => {
-  const allDepts = await departMentModel.find();
+  const allDepts = await departMentModel.find().sort({ dept_name: 1 });
 
   return res.json(new ApiResponse(StatusCodes.OK, "All depts fetched successfully..", allDepts));
 });

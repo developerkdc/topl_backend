@@ -54,6 +54,8 @@ export const veneer_item_details_schema = new mongoose.Schema({
     type: String,
     unique: [true, "pallet number must be unique"],
     required: [true, "pallet_number is required"], //auto increment
+    trim: true,
+    uppercase: true
   },
   length: {
     type: Number,
