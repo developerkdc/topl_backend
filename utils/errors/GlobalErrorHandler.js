@@ -2,7 +2,7 @@ import ApiError from "./apiError.js";
 
 export const globalErrorHandler = (err, req, res, next) => {
   console.log(err);
-  console.log(err.name);
+  // console.log(err.name);
 
   err.statusCode = err.statusCode || 500;
   err.message = err.message || "Internal Server Error";

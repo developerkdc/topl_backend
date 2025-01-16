@@ -1,4 +1,4 @@
-export const DynamicSearch = (search, boolean, numbers, string, arrayField) => {
+export const DynamicSearch = (search = "", boolean = [], numbers = [], string = [], arrayField = []) => {
   if (search != "") {
     let dynamicSearchQueries = [];
     let object = [...string, ...numbers];

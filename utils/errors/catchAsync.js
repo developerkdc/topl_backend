@@ -6,6 +6,7 @@ const catchAsync = (fn) => {
     try {
       await fn(req, res, next);
     } catch (error) {
+      console.log("ppppppppppppppppppppppppppppppp")
       //   if (req.files) {
       //     console.log(req.files);
       //     const { banner_image, images } = req.files;

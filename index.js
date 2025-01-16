@@ -61,6 +61,7 @@ import rejected_crosscutting_router from "./routes/factory/crossCutting/rejected
 import expenseRouter from "./routes/masters/Expenses/index.js";
 import { error } from "console";
 import approvalRouters from "./routes/approval/approval.routes.js";
+import allMasterRouter from "./routes/masters/allMaster.routes.js";
 const Configs = getConfigs();
 mongo_service();
 const app = express();
@@ -96,41 +97,43 @@ app.use(`/api/${Configs.server.version}/profile`, profileRouter);
 app.use(`/api/${Configs.server.version}/approval-config`, approvalConfigRouter);
 
 //master
-app.use(`/api/${Configs.server.version}/supplier-master`, supplierMasterRouter);
-app.use(`/api/${Configs.server.version}/item-category`, itemCategoryRouter);
-app.use(
-  `/api/${Configs.server.version}/item-subcategory`,
-  itemSubCategoryRouter
-);
-app.use(`/api/${Configs.server.version}/unit-master`, unitMasterRouter);
-app.use(`/api/${Configs.server.version}/grade-master`, gradeMasterRouter);
-app.use(`/api/${Configs.server.version}/currency-master`, currencyMasterRouter);
-app.use(`/api/${Configs.server.version}/cut-master`, cutMasterRouter);
-app.use(`/api/${Configs.server.version}/gst-master`, gstMasterRouter);
-app.use(
-  `/api/${Configs.server.version}/expenseType-master`,
-  expenseTypeMasterRouter
-);
-app.use(
-  `/api/${Configs.server.version}/expense-master`,
-  expenseRouter
-);
-// app.use(`/api/${Configs.server.version}/pallete-master`, palleteMasterRouter);
+// app.use(`/api/${Configs.server.version}/supplier-master`, supplierMasterRouter);
+// app.use(`/api/${Configs.server.version}/item-category`, itemCategoryRouter);
 // app.use(
-//   `/api/${Configs.server.version}/party-name-master`,
-//   partyNameMasterRouter
+//   `/api/${Configs.server.version}/item-subcategory`,
+//   itemSubCategoryRouter
 // );
-app.use(
-  `/api/${Configs.server.version}/item-name-master`,
-  itemNameMasterRouter
-);
+// app.use(`/api/${Configs.server.version}/unit-master`, unitMasterRouter);
+// app.use(`/api/${Configs.server.version}/grade-master`, gradeMasterRouter);
+// app.use(`/api/${Configs.server.version}/currency-master`, currencyMasterRouter);
+// app.use(`/api/${Configs.server.version}/cut-master`, cutMasterRouter);
+// app.use(`/api/${Configs.server.version}/gst-master`, gstMasterRouter);
 // app.use(
-//   `/api/${Configs.server.version}/item-code-master`,
-//   itemCodeMasterRouter
+//   `/api/${Configs.server.version}/expenseType-master`,
+//   expenseTypeMasterRouter
 // );
-app.use(`/api/${Configs.server.version}/department-master`, departmentRouter);
-app.use(`/api/${Configs.server.version}/machine-master`, machineRouter);
-app.use(`/api/${Configs.server.version}/series-master`, seriesRouter);
+// app.use(
+//   `/api/${Configs.server.version}/expense-master`,
+//   expenseRouter
+// );
+// // app.use(`/api/${Configs.server.version}/pallete-master`, palleteMasterRouter);
+// // app.use(
+// //   `/api/${Configs.server.version}/party-name-master`,
+// //   partyNameMasterRouter
+// // );
+// app.use(
+//   `/api/${Configs.server.version}/item-name-master`,
+//   itemNameMasterRouter
+// );
+// // app.use(
+// //   `/api/${Configs.server.version}/item-code-master`,
+// //   itemCodeMasterRouter
+// // );
+// app.use(`/api/${Configs.server.version}/department-master`, departmentRouter);
+// app.use(`/api/${Configs.server.version}/machine-master`, machineRouter);
+// app.use(`/api/${Configs.server.version}/series-master`, seriesRouter);
+
+app.use(`/api/${Configs.server.version}`,allMasterRouter)
 
 // inventory
 app.use(`/api/${Configs.server.version}/log-inventory`, logRouter);
