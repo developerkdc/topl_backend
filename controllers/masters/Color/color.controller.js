@@ -222,7 +222,7 @@ export const fetchColorList = catchAsync(async (req, res, next) => {
     const totalDocument = await colorModel.aggregate(totalAggregate);
     console.log(totalDocument)
     
-    const totalPages = parseInt((totalDocument?.[0]?.totalCount || 0) / limit)
+    const totalPages = Math.ceil((totalDocument?.[0]?.totalCount || 0) / limit)
 
     const response = new ApiResponse(
         200,

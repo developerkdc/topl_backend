@@ -18,6 +18,8 @@ import patternRouter from "./Pattern/pattern.routes.js";
 import processRouter from "./Process/process.routes.js";
 import colorRouter from "./Color/color.routes.js";
 import vehicleRouter from "./Vehicle/vehicle.routes.js";
+import transporterRouter from "./Transporter/transporter.routes.js";
+import dispatchAddressRouter from "./DispatchAddress/dispatchAddress.routes.js";
 
 const allMasterRouter = express.Router();
 
@@ -41,6 +43,8 @@ allMasterRouter.use(`/pattern-master`, patternRouter);
 allMasterRouter.use(`/process-master`, processRouter);
 allMasterRouter.use(`/color-master`, colorRouter);
 allMasterRouter.use(`/vehicle-master`, vehicleRouter);
+allMasterRouter.use(`/transporter-master`, transporterRouter);
+allMasterRouter.use(`/dispatchAddress-master`, dispatchAddressRouter);
 
 
 export default allMasterRouter

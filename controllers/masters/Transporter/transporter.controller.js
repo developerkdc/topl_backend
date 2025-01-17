@@ -4,76 +4,98 @@ import ApiError from "../../../utils/errors/apiError.js";
 import catchAsync from "../../../utils/errors/catchAsync.js";
 import { DynamicSearch } from "../../../utils/dynamicSearch/dynamic.js";
 import { dynamic_filter } from "../../../utils/dymanicFilter.js";
-import vehicleModel from "../../../database/schema/masters/vehicle.js";
+import transporterModel, { transporter_type } from "../../../database/schema/masters/transporter.schema.js";
 
-export const addVehicle = catchAsync(async (req, res, next) => {
-    const { vehicle_number } = req.body;
+export const addTransporter = catchAsync(async (req, res, next) => {
+    const {
+        name,
+        branch,
+        transport_id,
+        type,
+    } = req.body;
     const authUserDetail = req.userDetails;
 
-    if (!vehicle_number) {
-        return next(new ApiError("Vehicle Number is required", 400));
+    const requiredField = ["name", "type"]
+
+    for (let field of requiredField) {
+        if (!req.body[field]) {
+            return next(new ApiError(`${field} field is required`, 400))
+        }
     }
 
-    const vehicleData = {
-        vehicle_number: vehicle_number,
+    const transporterData = {
+        name: name,
+        branch: branch,
+        transport_id: transport_id,
+        type: type,
         created_by: authUserDetail?._id,
         updated_by: authUserDetail?._id,
     }
 
-    const saveVehicleData = new vehicleModel(vehicleData);
-    await saveVehicleData.save()
+    const saveTransporterData = new transporterModel(transporterData);
+    await saveTransporterData.save()
 
-    if (!saveVehicleData) {
+    if (!saveTransporterData) {
         return next(new ApiError("Failed to insert data", 400))
     }
 
     const response = new ApiResponse(
         200,
         true,
-        "Vehicle Added Successfully",
-        saveVehicleData
+        "Transporter Added Successfully",
+        saveTransporterData
     )
 
     return res.status(201).json(response)
 });
 
-export const updateVehicle = catchAsync(async (req, res, next) => {
+export const updateTransporter = catchAsync(async (req, res, next) => {
     const { id } = req.params
-    const { vehicle_number, status } = req.body;
+    const {
+        name,
+        branch,
+        transport_id,
+        type,
+        status
+    } = req.body;
     const authUserDetail = req.userDetails;
 
     if (!id || !mongoose.isValidObjectId(id)) {
         return next(new ApiError("Invalid Params Id", 400))
     }
 
-    const vehicleData = {
-        vehicle_number: vehicle_number,
+    const transporterData = {
+        name: name,
+        branch: branch,
+        transport_id: transport_id,
+        type: type,
         status: status,
+        created_by: authUserDetail?._id,
         updated_by: authUserDetail?._id,
     }
 
-    const updateVehicleData = await vehicleModel.updateOne({ _id: id }, {
-        $set: vehicleData
+    const updateTransporterData = await transporterModel.updateOne({ _id: id }, {
+        $set: transporterData
     })
 
-    if (updateVehicleData.matchedCount <= 0) {
+    if (updateTransporterData.matchedCount <= 0) {
         return next(new ApiError("Document not found", 404));
     }
-    if (!updateVehicleData.acknowledged || updateVehicleData.modifiedCount <= 0) {
+    if (!updateTransporterData.acknowledged || updateTransporterData.modifiedCount <= 0) {
         return next(new ApiError("Failed to update document", 400));
     }
 
     const response = new ApiResponse(
         200,
         true,
-        "Vehicle Update Successfully",
-        updateVehicleData
+        "Transporter Update Successfully",
+        updateTransporterData
     )
 
     return res.status(201).json(response)
 })
 
-export const fetchVehicleList = catchAsync(async (req, res, next) => {
+export const fetchTransporterList = catchAsync(async (req, res, next) => {
     const {
         page = 1,
         limit = 10,
@@ -204,7 +226,7 @@ export const fetchVehicleList = catchAsync(async (req, res, next) => {
         aggLimit
     ] // aggregation pipiline
 
-    const vehicleData = await vehicleModel.aggregate(listAggregate);
+    const transporterData = await transporterModel.aggregate(listAggregate);
 
     const aggCount = {
         $count: "totalCount"
@@ -219,23 +241,23 @@ export const fetchVehicleList = catchAsync(async (req, res, next) => {
         aggCount
     ] // total aggregation pipiline
 
-    const totalDocument = await vehicleModel.aggregate(totalAggregate);
-    
+    const totalDocument = await transporterModel.aggregate(totalAggregate);
+
     const totalPages = Math.ceil((totalDocument?.[0]?.totalCount || 0) / limit)
 
     const response = new ApiResponse(
         200,
         true,
-        "Vehicle Data Fetched Successfully",
+        "Transporter Data Fetched Successfully",
         {
-            data:vehicleData,
-            totalPages:totalPages
+            data: transporterData,
+            totalPages: totalPages
         }
     )
     return res.status(200).json(response)
 })
 
-export const fetchSingleVehicle = catchAsync(async (req, res, next) => {
+export const fetchSingleTransporter = catchAsync(async (req, res, next) => {
     const { id } = req.params
 
     if (!id || !mongoose.isValidObjectId(id)) {
@@ -304,32 +326,35 @@ export const fetchSingleVehicle = catchAsync(async (req, res, next) => {
         }
     ]
 
-    const vehicleData = await vehicleModel.aggregate(aggregate);
+    const transporterData = await transporterModel.aggregate(aggregate);
 
-    if (vehicleData && vehicleData?.length <= 0) {
+    if (transporterData && transporterData?.length <= 0) {
         return next(new ApiError("Document Not found", 404))
     }
 
     const response = new ApiResponse(
         200,
         true,
-        "Vehicle Data Fetched Successfully",
-        vehicleData?.[0]
+        "Transporter Data Fetched Successfully",
+        transporterData?.[0]
     )
     return res.status(200).json(response)
 })
 
-export const dropdownVehicle = catchAsync(async (req, res, next) => {
+export const dropdownTransporter = catchAsync(async (req, res, next) => {
 
-    const vehicleList = await vehicleModel.aggregate([
+    const transporterList = await transporterModel.aggregate([
         {
-            $match:{
-                status:true
+            $match: {
+                status: true
             }
         },
         {
             $project: {
-                vehicle_number:1
+                name: 1,
+                branch: 1,
+                transport_id:1,
+                transporter_type:1
             }
         }
     ]);
@@ -337,8 +362,8 @@ export const dropdownVehicle = catchAsync(async (req, res, next) => {
     const response = new ApiResponse(
         200,
         true,
-        "Vehicle Dropdown Fetched Successfully",
-        vehicleList
+        "Transporter Dropdown Fetched Successfully",
+        transporterList
     )
     return res.status(200).json(response)
 })
