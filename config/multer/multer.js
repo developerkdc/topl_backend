@@ -19,6 +19,27 @@ export const MulterFunction = (dist) => {
   return upload;
 };
 
+export const PhotoMulterFunction = (distCallback) => {
+  try {
+    const storage = multer.diskStorage({
+      destination: function (req, file, cb) {
+        const dist = distCallback(req, file, cb)
+        if (!fs.existsSync(dist)) {
+          fs.mkdirSync(dist, { recursive: true });
+        }
+        cb(null, dist);
+      },
+      filename: function (req, file, cb) {
+        cb(null, `${Date.now()}-${file.originalname}`);
+      },
+    });
+    const upload = multer({ storage: storage });
+    return upload;
+  } catch (error) {
+    console.error(error);
+  }
+};
+
 export const deleteImagesFromStorage = async (imagesFolderPath, deletedImages) => {
   try {
     if (!deletedImages || deletedImages.length === 0) {

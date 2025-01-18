@@ -32,7 +32,7 @@ const catchAsync = (fn) => {
         });
       }
 
-      return next(new ApiError(error.message, 400));
+      return next(error);
     }
   };
 };

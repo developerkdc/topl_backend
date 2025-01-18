@@ -20,6 +20,7 @@ import colorRouter from "./Color/color.routes.js";
 import vehicleRouter from "./Vehicle/vehicle.routes.js";
 import transporterRouter from "./Transporter/transporter.routes.js";
 import dispatchAddressRouter from "./DispatchAddress/dispatchAddress.routes.js";
+import photoRouter from "./Photo/photo.routes.js";
 
 const allMasterRouter = express.Router();
 
@@ -45,6 +46,7 @@ allMasterRouter.use(`/color-master`, colorRouter);
 allMasterRouter.use(`/vehicle-master`, vehicleRouter);
 allMasterRouter.use(`/transporter-master`, transporterRouter);
 allMasterRouter.use(`/dispatchAddress-master`, dispatchAddressRouter);
+allMasterRouter.use(`/photo-master`, photoRouter);
 
 
 export default allMasterRouter
