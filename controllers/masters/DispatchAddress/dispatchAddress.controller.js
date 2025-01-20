@@ -81,7 +81,6 @@ export const updateDispatchAddress = catchAsync(async (req, res, next) => {
         pincode: pincode,
         gst_number: gst_number,
         status: status,
-        created_by: authUserDetail?._id,
         updated_by: authUserDetail?._id,
     }
 

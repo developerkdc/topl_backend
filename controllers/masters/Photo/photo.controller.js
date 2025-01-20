@@ -92,7 +92,6 @@ export const updatePhoto = catchAsync(async (req, res, next) => {
         const photoData = {
             photo_number: photo_number,
             status: status,
-            created_by: authUserDetail?._id,
             updated_by: authUserDetail?._id,
         }
 

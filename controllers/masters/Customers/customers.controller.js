@@ -1,100 +1,142 @@
 import mongoose from "mongoose";
-import ApiResponse from "../../../utils/ApiResponse.js";
-import ApiError from "../../../utils/errors/apiError.js";
+import { customer_client_model, customer_model } from "../../../database/schema/masters/customer.schema.js";
 import catchAsync from "../../../utils/errors/catchAsync.js";
-import { DynamicSearch } from "../../../utils/dynamicSearch/dynamic.js";
+import ApiError from "../../../utils/errors/apiError.js";
+import ApiResponse from "../../../utils/ApiResponse.js";
 import { dynamic_filter } from "../../../utils/dymanicFilter.js";
-import transporterModel, { transporter_type } from "../../../database/schema/masters/transporter.schema.js";
+import { DynamicSearch } from "../../../utils/dynamicSearch/dynamic.js";
 
-export const addTransporter = catchAsync(async (req, res, next) => {
-    const {
-        name,
-        branch,
-        transport_id,
-        type,
-    } = req.body;
-    const authUserDetail = req.userDetails;
+export const addCustomer = catchAsync(async (req, res, next) => {
+    const session = await mongoose.startSession();
+    session.startTransaction()
+    try {
+        const { customer, customer_client } = req.body;
 
-    const requiredField = ["name", "type"]
-
-    for (let field of requiredField) {
-        if (!req.body[field]) {
-            return next(new ApiError(`${field} field is required`, 400))
+        if (!customer) {
+            return next(new ApiError("Required customer data", 400))
         }
+
+        if (customer_client && !Array.isArray(customer_client)) {
+            return next(new ApiError("customer client must be array"))
+        }
+
+        const authUserDetail = req.userDetails;
+
+        const customerData = {
+            ...customer,
+            created_by: authUserDetail?._id,
+            updated_by: authUserDetail?._id
+        }
+
+        const addedCustomer = await customer_model.create([customerData], {
+            session: session
+        });
+
+        if (!addedCustomer[0]) {
+            return next(new ApiError("Failed to add customer", 400))
+        }
+
+        let addedCustomerClients = []
+        if (customer_client?.length > 0) {
+            const customerClientData = customer_client?.map((data) => ({
+                ...data,
+                customer_id: addedCustomer?.[0]?._id,
+                created_by: authUserDetail?._id,
+                updated_by: authUserDetail?._id
+            }))
+
+            addedCustomerClients = await customer_client_model.insertMany(customerClientData, {
+                session: session
+            })
+
+            if (addedCustomerClients?.length <= 0) {
+                return next(new ApiError("Failed to add customer client", 400))
+            }
+        }
+
+        await session.commitTransaction()
+
+        const response = new ApiResponse(
+            200,
+            true,
+            "Customer Added Successfully",
+            {
+                customer: addedCustomer[0],
+                customer_client: addedCustomerClients
+            }
+        )
+
+        return res.status(201).json(response)
+
+    } catch (error) {
+        await session.abortTransaction()
+        throw error
+    } finally {
+        await session.endSession()
     }
-
-    const transporterData = {
-        name: name,
-        branch: branch,
-        transport_id: transport_id,
-        type: type,
-        created_by: authUserDetail?._id,
-        updated_by: authUserDetail?._id,
-    }
-
-    const saveTransporterData = new transporterModel(transporterData);
-    await saveTransporterData.save()
-
-    if (!saveTransporterData) {
-        return next(new ApiError("Failed to insert data", 400))
-    }
-
-    const response = new ApiResponse(
-        200,
-        true,
-        "Transporter Added Successfully",
-        saveTransporterData
-    )
-
-    return res.status(201).json(response)
 });
 
-export const updateTransporter = catchAsync(async (req, res, next) => {
+export const editCustomer = catchAsync(async (req, res, next) => {
     const { id } = req.params
-    const {
-        name,
-        branch,
-        transport_id,
-        type,
-        status
-    } = req.body;
+
+    if (!mongoose.isValidObjectId(id)) {
+        return next(new ApiError("Invalid customer id", 400))
+    }
+
     const authUserDetail = req.userDetails;
+    const customer = req.body;
 
-    if (!id || !mongoose.isValidObjectId(id)) {
-        return next(new ApiError("Invalid Params Id", 400))
+    const customerData = {
+        company_name: customer?.company_name,
+        customer_type: customer?.customer_type,
+        owner_name: customer?.owner_name,
+        supplier_type: customer?.supplier_type,
+        dob: customer?.dob,
+        email_id: customer?.email_id,
+        web_url: customer?.web_url,
+        fax_number: customer?.fax_number,
+        gst_number: customer?.gst_number,
+        pan_number: customer?.pan_number,
+        legal_name: customer?.legal_name,
+        ecc_number: customer?.ecc_number,
+        cst_tin_number: customer?.cst_tin_number,
+        gst_tin_number: customer?.gst_tin_number,
+        preferable_transport_for_part_load: customer?.preferable_transport_for_part_load,
+        remark: customer?.remark,
+        status: customer?.status,
+        contact_person: customer?.contact_person,
+        "address.billing_address": customer?.address?.billing_address,
+        "address.delivery_address": customer?.address?.delivery_address,
+        "address.alternate_delivery_address": customer?.address?.alternate_delivery_address,
+        "address.communication_address": customer?.address?.communication_address,
+        "photo_type.photo_type_a": customer?.photo_type?.photo_type_a,
+        "photo_type.photo_type_b": customer?.photo_type?.photo_type_b,
+        "photo_type.photo_type_c": customer?.photo_type?.photo_type_c,
+        updated_by: authUserDetail?._id
     }
 
-    const transporterData = {
-        name: name,
-        branch: branch,
-        transport_id: transport_id,
-        type: type,
-        status: status,
-        updated_by: authUserDetail?._id,
-    }
-
-    const updateTransporterData = await transporterModel.updateOne({ _id: id }, {
-        $set: transporterData
+    const updateCustomerData = await customer_model.updateOne({ _id: id }, {
+        $set: customerData
     })
 
-    if (updateTransporterData.matchedCount <= 0) {
+    if (updateCustomerData.matchedCount <= 0) {
         return next(new ApiError("Document not found", 404));
     }
-    if (!updateTransporterData.acknowledged || updateTransporterData.modifiedCount <= 0) {
+    if (!updateCustomerData.acknowledged || updateCustomerData.modifiedCount <= 0) {
         return next(new ApiError("Failed to update document", 400));
     }
 
     const response = new ApiResponse(
         200,
         true,
-        "Transporter Update Successfully",
-        updateTransporterData
+        "Customer Update Successfully",
+        updateCustomerData
     )
 
     return res.status(201).json(response)
 })
 
-export const fetchTransporterList = catchAsync(async (req, res, next) => {
+export const fetchCustomerList = catchAsync(async (req, res, next) => {
     const {
         page = 1,
         limit = 10,
@@ -197,6 +239,20 @@ export const fetchTransporterList = catchAsync(async (req, res, next) => {
             preserveNullAndEmptyArrays: true
         }
     }
+    const aggTransport = {
+        $lookup: {
+            from: 'transports',
+            localField: "preferable_transport_for_part_load",
+            foreignField: "_id",
+            as: "preferable_transport_for_part_load"
+        }
+    }
+    const aggTransportUnwind = {
+        $unwind: {
+            path: '$preferable_transport_for_part_load',
+            preserveNullAndEmptyArrays: true
+        }
+    }
     const aggMatch = {
         $match: {
             ...match_query
@@ -219,13 +275,15 @@ export const fetchTransporterList = catchAsync(async (req, res, next) => {
         aggCreatedByUnwind,
         aggUpdatedByLookup,
         aggUpdatedByUnwind,
+        aggTransport,
+        aggTransportUnwind,
         aggMatch,
         aggSort,
         aggSkip,
         aggLimit
     ] // aggregation pipiline
 
-    const transporterData = await transporterModel.aggregate(listAggregate);
+    const customerData = await customer_model.aggregate(listAggregate);
 
     const aggCount = {
         $count: "totalCount"
@@ -236,27 +294,29 @@ export const fetchTransporterList = catchAsync(async (req, res, next) => {
         aggCreatedByUnwind,
         aggUpdatedByLookup,
         aggUpdatedByUnwind,
+        aggTransport,
+        aggTransportUnwind,
         aggMatch,
         aggCount
     ] // total aggregation pipiline
 
-    const totalDocument = await transporterModel.aggregate(totalAggregate);
+    const totalDocument = await customer_model.aggregate(totalAggregate);
 
     const totalPages = Math.ceil((totalDocument?.[0]?.totalCount || 0) / limit)
 
     const response = new ApiResponse(
         200,
         true,
-        "Transporter Data Fetched Successfully",
+        "Customer Data Fetched Successfully",
         {
-            data: transporterData,
+            data: customerData,
             totalPages: totalPages
         }
     )
     return res.status(200).json(response)
 })
 
-export const fetchSingleTransporter = catchAsync(async (req, res, next) => {
+export const fetchSingleCustomer = catchAsync(async (req, res, next) => {
     const { id } = req.params
 
     if (!id || !mongoose.isValidObjectId(id)) {
@@ -322,27 +382,35 @@ export const fetchSingleTransporter = catchAsync(async (req, res, next) => {
                 path: '$updated_by',
                 preserveNullAndEmptyArrays: true
             }
+        },
+        {
+            $lookup: {
+                from: "customer_clients",
+                localField: "_id",
+                foreignField: "customer_id",
+                as: "customer_clients",
+            }
         }
     ]
 
-    const transporterData = await transporterModel.aggregate(aggregate);
+    const customerData = await customer_model.aggregate(aggregate);
 
-    if (transporterData && transporterData?.length <= 0) {
+    if (customerData && customerData?.length <= 0) {
         return next(new ApiError("Document Not found", 404))
     }
 
     const response = new ApiResponse(
         200,
         true,
-        "Transporter Data Fetched Successfully",
-        transporterData?.[0]
+        "Customer Data Fetched Successfully",
+        customerData?.[0]
     )
     return res.status(200).json(response)
 })
 
-export const dropdownTransporter = catchAsync(async (req, res, next) => {
+export const dropdownCustomer = catchAsync(async (req, res, next) => {
 
-    const transporterList = await transporterModel.aggregate([
+    const customerList = await customer_model.aggregate([
         {
             $match: {
                 status: true
@@ -350,10 +418,9 @@ export const dropdownTransporter = catchAsync(async (req, res, next) => {
         },
         {
             $project: {
-                name: 1,
-                branch: 1,
-                transport_id:1,
-                transporter_type:1
+                company_name: 1,
+                gst_number: 1,
+                pan_number: 1,
             }
         }
     ]);
@@ -361,8 +428,8 @@ export const dropdownTransporter = catchAsync(async (req, res, next) => {
     const response = new ApiResponse(
         200,
         true,
-        "Transporter Dropdown Fetched Successfully",
-        transporterList
+        "Customer Dropdown Fetched Successfully",
+        customerList
     )
     return res.status(200).json(response)
 })

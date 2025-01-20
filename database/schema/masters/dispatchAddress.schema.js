@@ -9,25 +9,21 @@ const dispatchAddressSchema = new mongoose.Schema({
     },
     country: {
         type: String,
-        uppercase: true,
         trim: true,
         required: [true, "country is required"]
     },
     state: {
         type: String,
-        uppercase: true,
         trim: true,
         required: [true, "state is required"]
     },
     city: {
         type: String,
-        uppercase: true,
         trim: true,
         required: [true, "city is required"]
     },
     pincode: {
         type: String,
-        uppercase: true,
         trim: true,
         required: [true, "pincode is required"]
     },
