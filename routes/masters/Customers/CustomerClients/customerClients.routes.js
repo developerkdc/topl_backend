@@ -5,8 +5,8 @@ import { addCustomerClient, deleteCustomerClient, editCustomerClient, fetchCusto
 const customerClientRouter = express.Router();
 
 customerClientRouter.post("/add-customer-client/:customer_id",AuthMiddleware,addCustomerClient)
-customerClientRouter.patch("/update-customer-client/:id",AuthMiddleware,editCustomerClient)
-customerClientRouter.delete("/delete-customer-client/:id",AuthMiddleware,deleteCustomerClient)
+customerClientRouter.patch("/update-customer-client/:customer_id/:id",AuthMiddleware,editCustomerClient)
+customerClientRouter.delete("/delete-customer-client/:customer_id/:id",AuthMiddleware,deleteCustomerClient)
 customerClientRouter.post("/fetch-customer-client/:customer_id",AuthMiddleware,fetchCustomerClientList)
 
 export default customerClientRouter

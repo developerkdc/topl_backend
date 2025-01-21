@@ -274,6 +274,8 @@ const customerClientSchema = new mongoose.Schema({
         trim: true,
         required: [true, "pincode is required"]
     },
+},{
+    timestamps: true
 })
 
 customerClientSchema.index({ customer_id: 1, email_id: 1 }, { unique: true })

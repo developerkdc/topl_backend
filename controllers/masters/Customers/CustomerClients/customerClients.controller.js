@@ -14,10 +14,18 @@ export const addCustomerClient = catchAsync(async (req, res, next) => {
             return next(new ApiError("Invalid customer id", 400));
         }
 
-        const authUserDetail = req.userDetails;
-        const customerClientData = req.body;
+        const isCustomerExit = await customer_model.findOne({ _id: customer_id });
+        if (!isCustomerExit) {
+            return next(new ApiError("Customer not found", 404));
+        }
 
-        const addedCustomerClient = await customer_client_model.create([customerClientData], { session })
+        const authUserDetail = req.userDetails;
+        const customerClientData = {
+            customer_id: isCustomerExit?._id,
+            ...req.body
+        }
+
+        const addedCustomerClient = await customer_client_model.create([customerClientData], { session });
 
         if (!addedCustomerClient?.[0]) {
             return next(new ApiError("Failed to add customer client", 400))
@@ -30,10 +38,10 @@ export const addCustomerClient = catchAsync(async (req, res, next) => {
         }, { session })
 
         if (updateCustomer.matchedCount <= 0) {
-            return next(new ApiError("Document not found", 404));
+            return next(new ApiError("Document not customer found", 404));
         }
         if (!updateCustomer.acknowledged || updateCustomer.modifiedCount <= 0) {
-            return next(new ApiError("Failed to update document", 400));
+            return next(new ApiError("Failed to update customer document", 400));
         }
 
         await session.commitTransaction();
@@ -58,10 +66,10 @@ export const editCustomerClient = catchAsync(async (req, res, next) => {
     const session = await mongoose.startSession()
     session.startTransaction();
     try {
-        const { id } = req.params
+        const { customer_id, id } = req.params
 
-        if (!mongoose.isValidObjectId(id)) {
-            return next(new ApiError("Invalid customer id", 400));
+        if (!mongoose.isValidObjectId(id) || !mongoose.isValidObjectId(customer_id)) {
+            return next(new ApiError("Invalid customer id or client id", 400));
         }
 
         const authUserDetail = req.userDetails;
@@ -70,15 +78,17 @@ export const editCustomerClient = catchAsync(async (req, res, next) => {
             updated_by: authUserDetail?._id
         };
 
-        const updateCustomerClient = await customer_client_model.updateOne({ _id: id }, {
+        const updateCustomerClient = await customer_client_model.updateOne({ customer_id: customer_id, _id: id }, {
             $set: customerClientData
         }, { session })
 
+        console.log(updateCustomerClient)
+
         if (updateCustomerClient.matchedCount <= 0) {
-            return next(new ApiError("Document not found", 404));
+            return next(new ApiError("Document not client found", 404));
         }
         if (!updateCustomerClient.acknowledged || updateCustomerClient.modifiedCount <= 0) {
-            return next(new ApiError("Failed to update document", 400));
+            return next(new ApiError("Failed to update client document", 400));
         }
 
         // update customer
@@ -89,10 +99,10 @@ export const editCustomerClient = catchAsync(async (req, res, next) => {
         }, { session })
 
         if (updateCustomer.matchedCount <= 0) {
-            return next(new ApiError("Document not found", 404));
+            return next(new ApiError("Document not client found", 404));
         }
         if (!updateCustomer.acknowledged || updateCustomer.modifiedCount <= 0) {
-            return next(new ApiError("Failed to update document", 400));
+            return next(new ApiError("Failed to update customer document", 400));
         }
 
         await session.commitTransaction();
@@ -117,17 +127,15 @@ export const deleteCustomerClient = catchAsync(async (req, res, next) => {
     const session = await mongoose.startSession()
     session.startTransaction();
     try {
-        const { id } = req.params
+        const { customer_id, id } = req.params
+        const authUserDetail = req.userDetails;
 
-        if (!mongoose.isValidObjectId(id)) {
-            return next(new ApiError("Invalid customer id", 400));
+        if (!mongoose.isValidObjectId(id) || !mongoose.isValidObjectId(customer_id)) {
+            return next(new ApiError("Invalid customer id or client id", 400));
         }
 
         const deleteCustomerClient = await customer_client_model.deleteOne({ _id: id }, { session })
 
-        if (deleteCustomerClient.matchedCount <= 0) {
-            return next(new ApiError("Document not found", 404));
-        }
         if (!deleteCustomerClient.acknowledged || deleteCustomerClient.deletedCount <= 0) {
             return next(new ApiError("Failed to delete document", 400));
         }
@@ -178,9 +186,13 @@ export const fetchCustomerClientList = catchAsync(async (req, res, next) => {
         return next(new ApiError("Invalid customer id", 400));
     }
 
+    const matchQuery = { customer_id: mongoose.Types.ObjectId.createFromHexString(customer_id), }
+
     // Aggregation stage
     const aggMatch = {
-        customer_id:  mongoose.Types.ObjectId.createFromHexString(customer_id),
+        $match: {
+            ...matchQuery
+        }
     }
     const aggSort = {
         $sort: {
@@ -203,7 +215,7 @@ export const fetchCustomerClientList = catchAsync(async (req, res, next) => {
 
     const customerClientData = await customer_client_model.aggregate(listAggregate);
 
-    const totalDocument = await customer_client_model.countDocuments(aggMatch);
+    const totalDocument = await customer_client_model.countDocuments(matchQuery);
 
     const totalPages = Math.ceil((totalDocument || 0) / limit)
 
