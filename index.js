@@ -62,13 +62,14 @@ import expenseRouter from "./routes/masters/Expenses/index.js";
 import { error } from "console";
 import approvalRouters from "./routes/approval/approval.routes.js";
 import allMasterRouter from "./routes/masters/allMaster.routes.js";
+import barcodeRouter from "./routes/seriesProductMaster/barcode.routes.js";
 const Configs = getConfigs();
 mongo_service();
 const app = express();
 const server = http.createServer(app);
 export const io = new Server(server, {
   cors: {
-    origin: ['http://localhost:3000','http://localhost:3001','https://topl.kdcstaging.in'], // Adjust according to your needs (e.g., "http://localhost:3000")
+    origin: ['http://localhost:3000', 'http://localhost:3001', 'https://topl.kdcstaging.in'], // Adjust according to your needs (e.g., "http://localhost:3000")
     methods: ['GET', 'POST'],
   },
 });
@@ -133,7 +134,7 @@ app.use(`/api/${Configs.server.version}/approval-config`, approvalConfigRouter);
 // app.use(`/api/${Configs.server.version}/machine-master`, machineRouter);
 // app.use(`/api/${Configs.server.version}/series-master`, seriesRouter);
 
-app.use(`/api/${Configs.server.version}`,allMasterRouter)
+app.use(`/api/${Configs.server.version}`, allMasterRouter)
 
 // inventory
 app.use(`/api/${Configs.server.version}/log-inventory`, logRouter);
@@ -224,6 +225,9 @@ app.use(`/api/${Configs.server.version}/report`, reportRouter);
 
 //Approval
 app.use(`/api/${Configs.server.version}/approval`, approvalRouters);
+
+//Series Product Master
+app.use(`/api/${Configs.server.version}/series-product-master`, [barcodeRouter])
 
 app.use(globalErrorHandler);
 // Error handling for the server

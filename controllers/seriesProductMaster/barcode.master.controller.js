@@ -1,79 +1,72 @@
-import mongoose from "mongoose";
-import characterModel from "../../../database/schema/masters/character.schema.js";
-import ApiResponse from "../../../utils/ApiResponse.js";
-import ApiError from "../../../utils/errors/apiError.js";
-import catchAsync from "../../../utils/errors/catchAsync.js";
-import { DynamicSearch } from "../../../utils/dynamicSearch/dynamic.js";
-import { dynamic_filter } from "../../../utils/dymanicFilter.js";
+import catchAsync from "../../utils/errors/catchAsync.js";
+import ApiError from "../../utils/errors/apiError.js";
+import ApiResponse from '../../utils/ApiResponse.js'
+import { StatusCodes } from '../../utils/constants.js'
+import barcodeModel from "../../database/schema/seriesProductMaster/barcode.master.schema.js";
 
-export const addCharacter = catchAsync(async (req, res, next) => {
-    const { name } = req.body;
-    const authUserDetail = req.userDetails;
+export const addBarcode = catchAsync(async (req, res, next) => {
+    const requiredFields = ["code", "base", "size", "category", "instructions"];
+    const reqBody = req.body;
+    const authUserDetails = req.userDetails
 
-    if (!name) {
-        return next(new ApiError("Character Name is required", 400));
+    for (let field of requiredFields) {
+        if (!reqBody[field]) {
+            return next(new ApiError(`${field} is missing ...`, StatusCodes.NOT_FOUND))
+        }
+    };
+
+    const barcodeDetails = {
+        ...reqBody,
+        created_by: authUserDetails?._id,
+        updated_by: authUserDetails?._id
     }
+    const newBarcode = new barcodeModel(barcodeDetails);
 
-    const characterData = {
-        name: name,
-        created_by: authUserDetail?._id,
-        updated_by: authUserDetail?._id,
-    }
-
-    const saveCharacterData = new characterModel(characterData);
-    await saveCharacterData.save()
-
-    if (!saveCharacterData) {
-        return next(new ApiError("Failed to insert data", 400))
-    }
+    await newBarcode.save()
 
     const response = new ApiResponse(
-        200,
-        true,
-        "Character Added Successfully",
-        saveCharacterData
-    )
+        StatusCodes.CREATED,
+        "Barcode Added Successfully",
+        newBarcode
+    );
 
-    return res.status(201).json(response)
+    return res.status(StatusCodes.CREATED).json(response)
 });
 
-export const updateCharacter = catchAsync(async (req, res, next) => {
-    const { id } = req.params
-    const { name, status } = req.body;
-    const authUserDetail = req.userDetails;
+export const updateBarcodeDetails = catchAsync(async (req, res, next) => {
+    const { id } = req.params;
+    const reqBody = req.body;
+    const authUserDetails = req.userDetails;
 
-    if (!id || !mongoose.isValidObjectId(id)) {
-        return next(new ApiError("Invalid Params Id", 400))
+    if (!id) {
+        return next(new ApiError("Barcode id is missing", StatusCodes.NOT_FOUND))
     }
+    const updatedDetails = {
+        ...reqBody,
+        updated_by: authUserDetails?._id
+    };
 
-    const characterData = {
-        name: name,
-        status: status,
-        updated_by: authUserDetail?._id,
-    }
+    const updateResponse = await barcodeModel.findByIdAndUpdate(id, {
+        $set: updatedDetails,
+    }, { new: true, runValidators: true });
 
-    const updateCharacterData = await characterModel.updateOne({ _id: id }, {
-        $set: characterData
-    })
+    if (updateResponse.matchedCount <= 0) {
+        return next(new ApiError("Document Not Found..", StatusCodes.NOT_FOUND))
+    };
+    if (!updateResponse.acknowledged || updateResponse.modfiedCount <= 0) {
+        return next(new ApiError("Failed to update document", StatusCodes.INTERNAL_SERVER_ERROR))
+    };
 
-    if (updateCharacterData.matchedCount <= 0) {
-        return next(new ApiError("Document not found", 404));
-    }
-    if (!updateCharacterData.acknowledged || updateCharacterData.modifiedCount <= 0) {
-        return next(new ApiError("Failed to update document", 500));
-    }
 
     const response = new ApiResponse(
-        200,
-        true,
-        "Character Update Successfully",
-        updateCharacterData
-    )
+        StatusCodes.OK,
+        "Barcode Updated Successfully",
+        updateResponse
+    );
+    return res.status(StatusCodes.OK).json(response)
+});
 
-    return res.status(201).json(response)
-})
-
-export const fetchCharacterList = catchAsync(async (req, res, next) => {
+export const fetchBarcodeList = catchAsync(async (req, res, next) => {
     const {
         page = 1,
         limit = 10,
@@ -204,7 +197,7 @@ export const fetchCharacterList = catchAsync(async (req, res, next) => {
         aggLimit
     ] // aggregation pipiline
 
-    const characterData = await characterModel.aggregate(listAggregate);
+    const barcodeData = await barcodeModel.aggregate(listAggregate);
 
     const aggCount = {
         $count: "totalCount"
@@ -219,23 +212,24 @@ export const fetchCharacterList = catchAsync(async (req, res, next) => {
         aggCount
     ] // total aggregation pipiline
 
-    const totalDocument = await characterModel.aggregate(totalAggregate);
+    const totalDocument = await barcodeModel.aggregate(totalAggregate);
+    console.log(totalDocument)
 
     const totalPages = Math.ceil((totalDocument?.[0]?.totalCount || 0) / limit)
 
     const response = new ApiResponse(
-        200,
+        StatusCodes.OK,
         true,
-        "Character Data Fetched Successfully",
+        "Barcode Details Fetched Successfully",
         {
-            data: characterData,
+            data: barcodeData,
             totalPages: totalPages
         }
     )
-    return res.status(200).json(response)
-})
+    return res.status(StatusCodes.OK).json(response)
+});
 
-export const fetchSingleCharacter = catchAsync(async (req, res, next) => {
+export const fetchSingleBarcode = catchAsync(async (req, res, next) => {
     const { id } = req.params
 
     if (!id || !mongoose.isValidObjectId(id)) {
@@ -304,41 +298,37 @@ export const fetchSingleCharacter = catchAsync(async (req, res, next) => {
         }
     ]
 
-    const characterData = await characterModel.aggregate(aggregate);
+    const barcodeData = await barcodeModel.aggregate(aggregate);
 
-    if (characterData && characterData?.length <= 0) {
+    if (barcodeData && barcodeData?.length <= 0) {
         return next(new ApiError("Document Not found", 404))
     }
 
     const response = new ApiResponse(
-        200,
+        StatusCodes.OK,
         true,
-        "Character Data Fetched Successfully",
-        characterData?.[0]
+        "Barcode Data Fetched Successfully",
+        colorData?.[0]
     )
-    return res.status(200).json(response)
+    return res.status(StatusCodes.OK).json(response)
 })
 
-export const dropdownCharacter = catchAsync(async (req, res, next) => {
 
-    const characterList = await characterModel.aggregate([
-        {
-            $match: {
-                status: true
-            }
-        },
-        {
-            $project: {
-                name: 1
-            }
+export const dropdownBarcode = catchAsync(async (req, res, next) => {
+    const barcodeList = await barcodeModel.aggregate([{
+        $match: { status: true }
+    }, {
+        $project: {
+            code: 1
         }
-    ]);
+    }]);
 
     const response = new ApiResponse(
         200,
         true,
-        "Character Dropdown Fetched Successfully",
-        characterList
-    )
-    return res.status(200).json(response)
+        "Barcode Dropdown Fetched Successfully",
+        barcodeList
+    );
+
+    return res.status(StatusCodes.OK).json(response)
 })
