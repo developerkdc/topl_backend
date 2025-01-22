@@ -1,12 +1,12 @@
-import { GenerateDashboardReport } from "../../config/downloadExcel/report/dashboard.js";
-import { CuttingModel } from "../../database/schema/cutting/cutting.js";
-import { DispatchModel } from "../../database/schema/dispatch/dispatch.schema.js";
-import { FinishingModel } from "../../database/schema/finishing/finishing.schema.js";
-import { GroupModel } from "../../database/schema/group/groupCreated/groupCreated.schema.js";
-import { PressingModel } from "../../database/schema/pressing/pressing.schema.js";
-import { CreateTappingModel } from "../../database/schema/taping/taping.schema.js";
-import { formatDate } from "../../utils/date/datebyYYMMDD.js";
-import catchAsync from "../../utils/errors/catchAsync.js";
+import { GenerateDashboardReport } from '../../config/downloadExcel/report/dashboard.js';
+import { CuttingModel } from '../../database/schema/cutting/cutting.js';
+import { DispatchModel } from '../../database/schema/dispatch/dispatch.schema.js';
+import { FinishingModel } from '../../database/schema/finishing/finishing.schema.js';
+import { GroupModel } from '../../database/schema/group/groupCreated/groupCreated.schema.js';
+import { PressingModel } from '../../database/schema/pressing/pressing.schema.js';
+import { CreateTappingModel } from '../../database/schema/taping/taping.schema.js';
+import { formatDate } from '../../utils/date/datebyYYMMDD.js';
+import catchAsync from '../../utils/errors/catchAsync.js';
 
 export const DashboardReportExcel = catchAsync(async (req, res, next) => {
   const { ...data } = req?.body?.filters || {};
@@ -15,7 +15,7 @@ export const DashboardReportExcel = catchAsync(async (req, res, next) => {
   if (to && from) {
     const toDate = new Date(to);
     toDate.setDate(toDate.getDate() + 1);
-    matchQuery["created_at"] = {
+    matchQuery['created_at'] = {
       $gte: new Date(from),
       $lte: toDate,
     };
@@ -24,9 +24,9 @@ export const DashboardReportExcel = catchAsync(async (req, res, next) => {
     { $match: matchQuery },
     {
       $group: {
-        _id: { $dateToString: { format: "%Y-%m-%d", date: "$created_at" } },
-        totalGroupPcs: { $sum: "$group_pcs" },
-        totalGroupsqm: { $sum: "$group_sqm_available" },
+        _id: { $dateToString: { format: '%Y-%m-%d', date: '$created_at' } },
+        totalGroupPcs: { $sum: '$group_pcs' },
+        totalGroupsqm: { $sum: '$group_sqm_available' },
       },
     },
   ]);
@@ -54,15 +54,15 @@ export const DashboardReportExcel = catchAsync(async (req, res, next) => {
   const Cutting = await CuttingModel.aggregate([
     { $match: matchQuery },
     {
-      $unwind: "$item_details",
+      $unwind: '$item_details',
     },
     {
       $group: {
-        _id: { $dateToString: { format: "%Y-%m-%d", date: "$created_at" } },
+        _id: { $dateToString: { format: '%Y-%m-%d', date: '$created_at' } },
         totalCuttingPcs: {
-          $sum: "$item_details.cutting_no_of_pattas",
+          $sum: '$item_details.cutting_no_of_pattas',
         },
-        totalCuttingSqm: { $sum: "$item_details.cutting_sqm" },
+        totalCuttingSqm: { $sum: '$item_details.cutting_sqm' },
       },
     },
   ]);
@@ -71,9 +71,9 @@ export const DashboardReportExcel = catchAsync(async (req, res, next) => {
     { $match: matchQuery },
     {
       $group: {
-        _id: { $dateToString: { format: "%Y-%m-%d", date: "$created_at" } },
-        totalTappingPcs: { $sum: "$tapping_no_of_pcs" },
-        totalTappingSqm: { $sum: "$tapping_sqm" },
+        _id: { $dateToString: { format: '%Y-%m-%d', date: '$created_at' } },
+        totalTappingPcs: { $sum: '$tapping_no_of_pcs' },
+        totalTappingSqm: { $sum: '$tapping_sqm' },
       },
     },
   ]);
@@ -81,9 +81,9 @@ export const DashboardReportExcel = catchAsync(async (req, res, next) => {
     { $match: matchQuery },
     {
       $group: {
-        _id: { $dateToString: { format: "%Y-%m-%d", date: "$created_at" } },
-        totalPressingPcs: { $sum: "$pressing_no_of_peices" },
-        totalPressingSqm: { $sum: "$pressing_sqm" },
+        _id: { $dateToString: { format: '%Y-%m-%d', date: '$created_at' } },
+        totalPressingPcs: { $sum: '$pressing_no_of_peices' },
+        totalPressingSqm: { $sum: '$pressing_sqm' },
       },
     },
   ]);
@@ -91,33 +91,33 @@ export const DashboardReportExcel = catchAsync(async (req, res, next) => {
     { $match: matchQuery },
     {
       $group: {
-        _id: { $dateToString: { format: "%Y-%m-%d", date: "$created_at" } },
-        totalFinishingPcs: { $sum: "$finishing_no_of_pcs" },
-        totalFinishingSqm: { $sum: "$finishing_sqm" },
+        _id: { $dateToString: { format: '%Y-%m-%d', date: '$created_at' } },
+        totalFinishingPcs: { $sum: '$finishing_no_of_pcs' },
+        totalFinishingSqm: { $sum: '$finishing_sqm' },
       },
     },
   ]);
   const DispatchGroup = await DispatchModel.aggregate([
     { $match: matchQuery },
-    { $unwind: "$group_dispatch_details" },
+    { $unwind: '$group_dispatch_details' },
     {
       $group: {
-        _id: { $dateToString: { format: "%Y-%m-%d", date: "$created_at" } },
-        totalDispatchGroupPcs: { $sum: "$group_dispatch_details.total_pcs" },
-        totalDispatchGroupSqm: { $sum: "$group_dispatch_details.group_sqm" },
+        _id: { $dateToString: { format: '%Y-%m-%d', date: '$created_at' } },
+        totalDispatchGroupPcs: { $sum: '$group_dispatch_details.total_pcs' },
+        totalDispatchGroupSqm: { $sum: '$group_dispatch_details.group_sqm' },
       },
     },
   ]);
   const DispatchRaw = await DispatchModel.aggregate([
     { $match: matchQuery },
-    { $unwind: "$raw_dispatch_details" },
+    { $unwind: '$raw_dispatch_details' },
     {
       $group: {
-        _id: { $dateToString: { format: "%Y-%m-%d", date: "$created_at" } },
+        _id: { $dateToString: { format: '%Y-%m-%d', date: '$created_at' } },
         totalDispatchRawPcs: {
-          $sum: "$raw_dispatch_details.total_pattas.total",
+          $sum: '$raw_dispatch_details.total_pattas.total',
         },
-        totalDispatchRawSqm: { $sum: "$raw_dispatch_details.item_sqm" },
+        totalDispatchRawSqm: { $sum: '$raw_dispatch_details.item_sqm' },
       },
     },
   ]);
@@ -189,6 +189,6 @@ export const DashboardReportExcel = catchAsync(async (req, res, next) => {
   return res.status(200).json({
     result: exl,
     statusCode: 200,
-    status: "success",
+    status: 'success',
   });
 });

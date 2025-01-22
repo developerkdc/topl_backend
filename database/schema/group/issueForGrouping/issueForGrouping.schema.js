@@ -1,15 +1,15 @@
-import mongoose from "mongoose";
-import LogSchemaFunction from "../../LogsSchema/logs.schema.js";
+import mongoose from 'mongoose';
+import LogSchemaFunction from '../../LogsSchema/logs.schema.js';
 
 const IssuedForGroupingSchema = new mongoose.Schema({
   item_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "raw_material",
+    ref: 'raw_material',
     required: true,
   },
   created_employee_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "user",
+    ref: 'user',
     required: true,
     trim: true,
   },
@@ -22,25 +22,25 @@ const IssuedForGroupingSchema = new mongoose.Schema({
 });
 
 export const IssuedForGroupingModel = mongoose.model(
-  "issued_for_grouping",
+  'issued_for_grouping',
   IssuedForGroupingSchema
 );
 
 const lookup = [
   {
     $lookup: {
-      from: "raw_materials",
-      localField: "item_id",
-      foreignField: "_id",
-      as: "item_id",
+      from: 'raw_materials',
+      localField: 'item_id',
+      foreignField: '_id',
+      as: 'item_id',
     },
   },
   {
     $unwind: {
-      path: "$item_id",
+      path: '$item_id',
       preserveNullAndEmptyArrays: true,
     },
   },
 ];
 
-LogSchemaFunction("issuedForGrouping", IssuedForGroupingModel, lookup);
+LogSchemaFunction('issuedForGrouping', IssuedForGroupingModel, lookup);

@@ -1,16 +1,16 @@
-import mongoose from "mongoose";
-import { OrderModel } from "../../database/schema/order/orders.schema.js";
-import { DispatchModel } from "../../database/schema/dispatch/dispatch.schema.js";
-import catchAsync from "../../utils/errors/catchAsync.js";
-import { DynamicSearch } from "../../utils/dynamicSearch/dynamic.js";
+import mongoose from 'mongoose';
+import { OrderModel } from '../../database/schema/order/orders.schema.js';
+import { DispatchModel } from '../../database/schema/dispatch/dispatch.schema.js';
+import catchAsync from '../../utils/errors/catchAsync.js';
+import { DynamicSearch } from '../../utils/dynamicSearch/dynamic.js';
 
 export const AddOrder = catchAsync(async (req, res, next) => {
-  if (req.body.order_type === "raw" && !req.body.raw_order_details) {
+  if (req.body.order_type === 'raw' && !req.body.raw_order_details) {
     return res.status(400).json({
       errors: [{ msg: "Raw order details are required for 'raw' order type" }],
     });
   }
-  if (req.body.order_type === "group" && !req.body.group_order_details) {
+  if (req.body.order_type === 'group' && !req.body.group_order_details) {
     return res.status(400).json({
       errors: [
         { msg: "Group order details are required for 'group' order type" },
@@ -38,15 +38,15 @@ export const AddOrder = catchAsync(async (req, res, next) => {
 
     res
       .status(201)
-      .json({ message: "Order added successfully", order: newOrder });
+      .json({ message: 'Order added successfully', order: newOrder });
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
 
-    console.error("Error adding order:", error);
+    console.error('Error adding order:', error);
     res
       .status(500)
-      .json({ message: "Failed to add order", error: error.message });
+      .json({ message: 'Failed to add order', error: error.message });
   }
 });
 
@@ -56,15 +56,15 @@ export const ListPendingRawOrders = catchAsync(async (req, res, next) => {
   const {
     page = 1,
     limit = 10,
-    sortBy = "updated_at",
-    sort = "desc",
+    sortBy = 'updated_at',
+    sort = 'desc',
   } = req.query;
   const skip = Math.max((page - 1) * limit, 0);
 
-  const search = req.query.search || "";
+  const search = req.query.search || '';
 
   let searchQuery = {};
-  if (search != "" && req?.body?.searchFields) {
+  if (search != '' && req?.body?.searchFields) {
     const searchdata = DynamicSearch(
       search,
       boolean,
@@ -79,7 +79,7 @@ export const ListPendingRawOrders = catchAsync(async (req, res, next) => {
         data: {
           data: [],
         },
-        message: "Results Not Found",
+        message: 'Results Not Found',
       });
     }
     searchQuery = searchdata;
@@ -90,10 +90,10 @@ export const ListPendingRawOrders = catchAsync(async (req, res, next) => {
 
   if (to && from) {
     console.log(new Date(from));
-    matchQuery["orderDate"] = { $gte: new Date(from), $lte: new Date(to) };
+    matchQuery['orderDate'] = { $gte: new Date(from), $lte: new Date(to) };
   }
   const issuedForFinishingView = mongoose.connection.db.collection(
-    "order_raw_pending_view"
+    'order_raw_pending_view'
   );
 
   const totalDocuments = await issuedForFinishingView.countDocuments({
@@ -112,7 +112,7 @@ export const ListPendingRawOrders = catchAsync(async (req, res, next) => {
       },
       {
         $sort: {
-          [sortBy]: sort == "desc" ? -1 : 1,
+          [sortBy]: sort == 'desc' ? -1 : 1,
         },
       },
       {
@@ -126,7 +126,7 @@ export const ListPendingRawOrders = catchAsync(async (req, res, next) => {
   return res.status(200).json({
     result: issuedForFinishingData,
     statusCode: 200,
-    status: "success",
+    status: 'success',
     totalPages: totalPages,
   });
 });
@@ -137,15 +137,15 @@ export const ListCompleteRawOrders = catchAsync(async (req, res, next) => {
   const {
     page = 1,
     limit = 10,
-    sortBy = "updated_at",
-    sort = "desc",
+    sortBy = 'updated_at',
+    sort = 'desc',
   } = req.query;
   const skip = Math.max((page - 1) * limit, 0);
 
-  const search = req.query.search || "";
+  const search = req.query.search || '';
 
   let searchQuery = {};
-  if (search != "" && req?.body?.searchFields) {
+  if (search != '' && req?.body?.searchFields) {
     const searchdata = DynamicSearch(
       search,
       boolean,
@@ -160,7 +160,7 @@ export const ListCompleteRawOrders = catchAsync(async (req, res, next) => {
         data: {
           data: [],
         },
-        message: "Results Not Found",
+        message: 'Results Not Found',
       });
     }
     searchQuery = searchdata;
@@ -171,10 +171,10 @@ export const ListCompleteRawOrders = catchAsync(async (req, res, next) => {
 
   if (to && from) {
     console.log(new Date(from));
-    matchQuery["orderDate"] = { $gte: new Date(from), $lte: new Date(to) };
+    matchQuery['orderDate'] = { $gte: new Date(from), $lte: new Date(to) };
   }
   const issuedForFinishingView = mongoose.connection.db.collection(
-    "order_raw_complete_view"
+    'order_raw_complete_view'
   );
   const totalDocuments = await issuedForFinishingView.countDocuments({
     ...matchQuery,
@@ -192,7 +192,7 @@ export const ListCompleteRawOrders = catchAsync(async (req, res, next) => {
       },
       {
         $sort: {
-          [sortBy]: sort == "desc" ? -1 : 1,
+          [sortBy]: sort == 'desc' ? -1 : 1,
         },
       },
       {
@@ -206,7 +206,7 @@ export const ListCompleteRawOrders = catchAsync(async (req, res, next) => {
   return res.status(200).json({
     result: issuedForFinishingData,
     statusCode: 200,
-    status: "success",
+    status: 'success',
     totalPages: totalPages,
   });
 });
@@ -217,15 +217,15 @@ export const ListPendingGroupOrders = catchAsync(async (req, res, next) => {
   const {
     page = 1,
     limit = 10,
-    sortBy = "updated_at",
-    sort = "desc",
+    sortBy = 'updated_at',
+    sort = 'desc',
   } = req.query;
   const skip = Math.max((page - 1) * limit, 0);
 
-  const search = req.query.search || "";
+  const search = req.query.search || '';
 
   let searchQuery = {};
-  if (search != "" && req?.body?.searchFields) {
+  if (search != '' && req?.body?.searchFields) {
     const searchdata = DynamicSearch(
       search,
       boolean,
@@ -240,7 +240,7 @@ export const ListPendingGroupOrders = catchAsync(async (req, res, next) => {
         data: {
           data: [],
         },
-        message: "Results Not Found",
+        message: 'Results Not Found',
       });
     }
     searchQuery = searchdata;
@@ -251,10 +251,10 @@ export const ListPendingGroupOrders = catchAsync(async (req, res, next) => {
 
   if (to && from) {
     console.log(new Date(from));
-    matchQuery["orderDate"] = { $gte: new Date(from), $lte: new Date(to) };
+    matchQuery['orderDate'] = { $gte: new Date(from), $lte: new Date(to) };
   }
   const issuedForFinishingView = mongoose.connection.db.collection(
-    "order_group_pending_view"
+    'order_group_pending_view'
   );
   const totalDocuments = await issuedForFinishingView.countDocuments({
     ...matchQuery,
@@ -272,7 +272,7 @@ export const ListPendingGroupOrders = catchAsync(async (req, res, next) => {
       },
       {
         $sort: {
-          [sortBy]: sort == "desc" ? -1 : 1,
+          [sortBy]: sort == 'desc' ? -1 : 1,
         },
       },
       {
@@ -286,7 +286,7 @@ export const ListPendingGroupOrders = catchAsync(async (req, res, next) => {
   return res.status(200).json({
     result: issuedForFinishingData,
     statusCode: 200,
-    status: "success",
+    status: 'success',
     totalPages: totalPages,
   });
 });
@@ -297,15 +297,15 @@ export const ListCompleteGroupOrders = catchAsync(async (req, res, next) => {
   const {
     page = 1,
     limit = 10,
-    sortBy = "updated_at",
-    sort = "desc",
+    sortBy = 'updated_at',
+    sort = 'desc',
   } = req.query;
   const skip = Math.max((page - 1) * limit, 0);
 
-  const search = req.query.search || "";
+  const search = req.query.search || '';
 
   let searchQuery = {};
-  if (search != "" && req?.body?.searchFields) {
+  if (search != '' && req?.body?.searchFields) {
     const searchdata = DynamicSearch(
       search,
       boolean,
@@ -320,7 +320,7 @@ export const ListCompleteGroupOrders = catchAsync(async (req, res, next) => {
         data: {
           data: [],
         },
-        message: "Results Not Found",
+        message: 'Results Not Found',
       });
     }
     searchQuery = searchdata;
@@ -331,10 +331,10 @@ export const ListCompleteGroupOrders = catchAsync(async (req, res, next) => {
 
   if (to && from) {
     console.log(new Date(from));
-    matchQuery["orderDate"] = { $gte: new Date(from), $lte: new Date(to) };
+    matchQuery['orderDate'] = { $gte: new Date(from), $lte: new Date(to) };
   }
   const issuedForFinishingView = mongoose.connection.db.collection(
-    "order_group_complete_view"
+    'order_group_complete_view'
   );
   const totalDocuments = await issuedForFinishingView.countDocuments({
     ...matchQuery,
@@ -352,7 +352,7 @@ export const ListCompleteGroupOrders = catchAsync(async (req, res, next) => {
       },
       {
         $sort: {
-          [sortBy]: sort == "desc" ? -1 : 1,
+          [sortBy]: sort == 'desc' ? -1 : 1,
         },
       },
       {
@@ -366,7 +366,7 @@ export const ListCompleteGroupOrders = catchAsync(async (req, res, next) => {
   return res.status(200).json({
     result: issuedForFinishingData,
     statusCode: 200,
-    status: "success",
+    status: 'success',
     totalPages: totalPages,
   });
 });
@@ -380,7 +380,7 @@ export const updateOrder = catchAsync(async (req, res, next) => {
     if (isOrderDispatched) {
       return res
         .status(400)
-        .json({ message: "Cannot Update Order Already Dispatched" });
+        .json({ message: 'Cannot Update Order Already Dispatched' });
     }
     // Find the order by ID and update it
     const order = await OrderModel.findByIdAndUpdate(id, updates, {
@@ -388,14 +388,14 @@ export const updateOrder = catchAsync(async (req, res, next) => {
     });
 
     if (!order) {
-      return res.status(404).json({ error: "Order not found" });
+      return res.status(404).json({ error: 'Order not found' });
     }
 
     return res.status(200).json(order);
   } catch (error) {
-    console.error("An error occurred while patching the order:", error);
+    console.error('An error occurred while patching the order:', error);
     return res
       .status(500)
-      .json({ error: "An error occurred while patching the order" });
+      .json({ error: 'An error occurred while patching the order' });
   }
 });

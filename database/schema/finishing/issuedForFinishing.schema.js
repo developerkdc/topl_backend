@@ -1,10 +1,10 @@
-import mongoose from "mongoose";
-import LogSchemaFunction from "../LogsSchema/logs.schema.js";
+import mongoose from 'mongoose';
+import LogSchemaFunction from '../LogsSchema/logs.schema.js';
 
 const IssuedForFinishingSchema = new mongoose.Schema({
   issued_for_pressing_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "issued_for_pressing",
+    ref: 'issued_for_pressing',
     required: true,
   },
   group_no: {
@@ -14,23 +14,23 @@ const IssuedForFinishingSchema = new mongoose.Schema({
 
   tapping_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "taping",
+    ref: 'taping',
     required: true,
   },
   ready_sheet_form_inventory_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "ready_sheet_form_inventory",
+    ref: 'ready_sheet_form_inventory',
     required: true,
   },
   ready_sheet_form_history_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "ready_sheet_form_inventory_history",
+    ref: 'ready_sheet_form_inventory_history',
     required: true,
   },
 
   pressing_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "pressing",
+    ref: 'pressing',
     required: true,
   },
 
@@ -42,27 +42,27 @@ const IssuedForFinishingSchema = new mongoose.Schema({
   status: {
     type: String,
     enum: [
-      "pending",
-      "open grain",
-      "sent for open grain",
-      "metallic",
-      "sent for metallic",
-      "sent for rejected",
-      "qc done",
-      "rejected",
+      'pending',
+      'open grain',
+      'sent for open grain',
+      'metallic',
+      'sent for metallic',
+      'sent for rejected',
+      'qc done',
+      'rejected',
     ],
-    default: "pending",
+    default: 'pending',
   },
 
   revert_status: {
     type: String,
-    enum: ["active", "inactive"],
-    default: "active",
+    enum: ['active', 'inactive'],
+    default: 'active',
   },
 
   status_updated_by: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "user",
+    ref: 'user',
     trim: true,
     default: null,
   },
@@ -73,7 +73,7 @@ const IssuedForFinishingSchema = new mongoose.Schema({
 
   created_employee_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "user",
+    ref: 'user',
     trim: true,
   },
 
@@ -83,7 +83,7 @@ const IssuedForFinishingSchema = new mongoose.Schema({
 });
 
 export const IssuedForFinishingModel = mongoose.model(
-  "issued_for_finishing",
+  'issued_for_finishing',
   IssuedForFinishingSchema
 );
-LogSchemaFunction("issuedForFinishing", IssuedForFinishingModel);
+LogSchemaFunction('issuedForFinishing', IssuedForFinishingModel);

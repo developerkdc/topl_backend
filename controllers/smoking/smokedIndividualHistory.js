@@ -1,9 +1,9 @@
-import catchAsync from "../../utils/errors/catchAsync.js";
-import { IndividualSmokeModel } from "../../database/schema/smoking/individualSmoked.js";
-import { DynamicSearch } from "../../utils/dynamicSearch/dynamic.js";
-import mongoose from "mongoose";
-import { IssuedForSmokingIndividualModel } from "../../database/schema/smoking/issuedForSmokingIndividual.js";
-import { RawMaterialModel } from "../../database/schema/inventory/raw/raw.schema.js";
+import catchAsync from '../../utils/errors/catchAsync.js';
+import { IndividualSmokeModel } from '../../database/schema/smoking/individualSmoked.js';
+import { DynamicSearch } from '../../utils/dynamicSearch/dynamic.js';
+import mongoose from 'mongoose';
+import { IssuedForSmokingIndividualModel } from '../../database/schema/smoking/issuedForSmokingIndividual.js';
+import { RawMaterialModel } from '../../database/schema/inventory/raw/raw.schema.js';
 
 export const FetchCreatedIndividualSmoked = catchAsync(
   async (req, res, next) => {
@@ -16,15 +16,15 @@ export const FetchCreatedIndividualSmoked = catchAsync(
     const {
       page,
       limit = 10,
-      sortBy = "updated_at",
-      sort = "desc",
+      sortBy = 'updated_at',
+      sort = 'desc',
     } = req.query;
     const skip = Math.max((page - 1) * limit, 0);
 
-    const search = req.query.search || "";
+    const search = req.query.search || '';
 
     let searchQuery = {};
-    if (search != "" && req?.body?.searchFields) {
+    if (search != '' && req?.body?.searchFields) {
       const searchdata = DynamicSearch(
         search,
         boolean,
@@ -39,7 +39,7 @@ export const FetchCreatedIndividualSmoked = catchAsync(
           data: {
             data: [],
           },
-          message: "Results Not Found",
+          message: 'Results Not Found',
         });
       }
       searchQuery = searchdata;
@@ -50,7 +50,7 @@ export const FetchCreatedIndividualSmoked = catchAsync(
 
     if (to && from) {
       console.log(new Date(from));
-      matchQuery["date_of_smoking"] = {
+      matchQuery['date_of_smoking'] = {
         $gte: new Date(from), // Greater than or equal to "from" date
         $lte: new Date(to), // Less than or equal to "to" date
       };
@@ -59,23 +59,23 @@ export const FetchCreatedIndividualSmoked = catchAsync(
     const totalDocuments = await IndividualSmokeModel.aggregate([
       {
         $lookup: {
-          from: "raw_materials",
-          localField: "item_details",
-          foreignField: "_id",
-          as: "item_details",
+          from: 'raw_materials',
+          localField: 'item_details',
+          foreignField: '_id',
+          as: 'item_details',
         },
       },
       {
         $unwind: {
-          path: "$item_details",
+          path: '$item_details',
           preserveNullAndEmptyArrays: true,
         },
       },
       {
         $lookup: {
-          from: "users",
-          localField: "created_employee_id",
-          foreignField: "_id",
+          from: 'users',
+          localField: 'created_employee_id',
+          foreignField: '_id',
           pipeline: [
             {
               $project: {
@@ -83,12 +83,12 @@ export const FetchCreatedIndividualSmoked = catchAsync(
               },
             },
           ],
-          as: "created_employee_id",
+          as: 'created_employee_id',
         },
       },
       {
         $unwind: {
-          path: "$created_employee_id",
+          path: '$created_employee_id',
           preserveNullAndEmptyArrays: true,
         },
       },
@@ -100,11 +100,11 @@ export const FetchCreatedIndividualSmoked = catchAsync(
       },
       {
         $sort: {
-          [sortBy]: sort == "desc" ? -1 : 1,
+          [sortBy]: sort == 'desc' ? -1 : 1,
         },
       },
       {
-        $count: "totalDocuments",
+        $count: 'totalDocuments',
       },
     ]);
     const totalPages = Math.ceil(totalDocuments?.[0]?.totalDocuments / limit);
@@ -112,23 +112,23 @@ export const FetchCreatedIndividualSmoked = catchAsync(
     const rawVeneerData = await IndividualSmokeModel.aggregate([
       {
         $lookup: {
-          from: "raw_materials",
-          localField: "item_details",
-          foreignField: "_id",
-          as: "item_details",
+          from: 'raw_materials',
+          localField: 'item_details',
+          foreignField: '_id',
+          as: 'item_details',
         },
       },
       {
         $unwind: {
-          path: "$item_details",
+          path: '$item_details',
           preserveNullAndEmptyArrays: true,
         },
       },
       {
         $lookup: {
-          from: "users",
-          localField: "created_employee_id",
-          foreignField: "_id",
+          from: 'users',
+          localField: 'created_employee_id',
+          foreignField: '_id',
           pipeline: [
             {
               $project: {
@@ -136,12 +136,12 @@ export const FetchCreatedIndividualSmoked = catchAsync(
               },
             },
           ],
-          as: "created_employee_id",
+          as: 'created_employee_id',
         },
       },
       {
         $unwind: {
-          path: "$created_employee_id",
+          path: '$created_employee_id',
           preserveNullAndEmptyArrays: true,
         },
       },
@@ -153,7 +153,7 @@ export const FetchCreatedIndividualSmoked = catchAsync(
       },
       {
         $sort: {
-          [sortBy]: sort == "desc" ? -1 : 1,
+          [sortBy]: sort == 'desc' ? -1 : 1,
         },
       },
       {
@@ -167,7 +167,7 @@ export const FetchCreatedIndividualSmoked = catchAsync(
     return res.status(200).json({
       result: rawVeneerData,
       statusCode: 200,
-      status: "success",
+      status: 'success',
       totalPages: totalPages,
     });
   }
@@ -187,16 +187,16 @@ export const RejectIndividualSmoked = catchAsync(async (req, res, next) => {
     }).session(session);
 
     if (issueRecord) {
-      console.log(issueRecord, "issueRecord");
+      console.log(issueRecord, 'issueRecord');
       // Update the status of the corresponding ID in RawMaterialModel to "available"
       await IndividualSmokeModel.updateOne(
         { _id: id },
-        { $set: { status: "rejected" } }
+        { $set: { status: 'rejected' } }
       ).session(session);
 
       await IssuedForSmokingIndividualModel.updateOne(
         { item_id: issueRecord.item_details },
-        { $set: { status: "issued for smoking" } }
+        { $set: { status: 'issued for smoking' } }
       ).session(session);
 
       // const issuedItems = [
@@ -213,7 +213,7 @@ export const RejectIndividualSmoked = catchAsync(async (req, res, next) => {
       // });
     } else {
       // If the record does not exist in IssuedForSmokingIndividualModel, return error
-      throw new Error("Record not found in Issued For Smoking.");
+      throw new Error('Record not found in Issued For Smoking.');
     }
 
     // Commit the transaction
@@ -222,7 +222,7 @@ export const RejectIndividualSmoked = catchAsync(async (req, res, next) => {
 
     return res.json({
       status: true,
-      message: "Rejectd successful.",
+      message: 'Rejectd successful.',
     });
   } catch (error) {
     // Rollback the transaction in case of error
@@ -231,7 +231,7 @@ export const RejectIndividualSmoked = catchAsync(async (req, res, next) => {
 
     return res.status(500).json({
       status: false,
-      message: "Error occurred while cancelling smoking.",
+      message: 'Error occurred while cancelling smoking.',
       error: error.message,
     });
   }
@@ -254,11 +254,11 @@ export const PassIndividualSmoked = catchAsync(async (req, res, next) => {
     }).lean();
     // .select("item_available_quantities")
     if (!issueRecord)
-      throw new Error("Record not found in Issued For Smoking.");
+      throw new Error('Record not found in Issued For Smoking.');
 
     await IndividualSmokeModel.updateOne(
       { _id: id },
-      { $set: { status: "passed" } }
+      { $set: { status: 'passed' } }
     ).session(session);
 
     if (
@@ -302,7 +302,7 @@ export const PassIndividualSmoked = catchAsync(async (req, res, next) => {
             ...updatedQuantities,
             item_received_pattas: updatedQuantities?.item_available_pattas,
             item_received_sqm: updatedQuantities?.item_available_sqm,
-            status: "available",
+            status: 'available',
           },
         }
       ).session(session);
@@ -326,12 +326,12 @@ export const PassIndividualSmoked = catchAsync(async (req, res, next) => {
         [
           {
             ...data,
-            item_code: "SMOKED",
+            item_code: 'SMOKED',
             item_available_pattas: issueRecord?.issued_smoking_quantity,
             item_available_sqm: smokeSqm,
             item_received_pattas: issueRecord?.issued_smoking_quantity,
             item_received_sqm: smokeSqm,
-            status: "available",
+            status: 'available',
           },
         ],
         { session } // Use the session for the transaction
@@ -361,8 +361,8 @@ export const PassIndividualSmoked = catchAsync(async (req, res, next) => {
             item_received_sqm: smokeSqm,
             item_available_pattas: issueRecord?.issued_smoking_quantity,
             item_available_sqm: smokeSqm,
-            item_code: "SMOKED",
-            status: "available",
+            item_code: 'SMOKED',
+            status: 'available',
           },
         }
       ).session(session);
@@ -375,14 +375,14 @@ export const PassIndividualSmoked = catchAsync(async (req, res, next) => {
     await session.commitTransaction();
     session.endSession();
 
-    return res.json({ status: true, message: "Passed successful." });
+    return res.json({ status: true, message: 'Passed successful.' });
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
 
     return res.status(500).json({
       status: false,
-      message: "Error occurred while cancelling smoking.",
+      message: 'Error occurred while cancelling smoking.',
       error: error.message,
     });
   }

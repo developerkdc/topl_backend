@@ -1,7 +1,7 @@
-import mongoose from "mongoose";
-import CutModel from "../../database/schema/masters/cut.schema.js";
-import catchAsync from "../../utils/errors/catchAsync.js";
-import { DynamicSearch } from "../../utils/dynamicSearch/dynamic.js";
+import mongoose from 'mongoose';
+import CutModel from '../../database/schema/masters/cut.schema.js';
+import catchAsync from '../../utils/errors/catchAsync.js';
+import { DynamicSearch } from '../../utils/dynamicSearch/dynamic.js';
 
 export const AddCutMaster = catchAsync(async (req, res) => {
   const authUserDetail = req.userDetails;
@@ -14,7 +14,7 @@ export const AddCutMaster = catchAsync(async (req, res) => {
   return res.status(201).json({
     result: savedCut,
     status: true,
-    message: "Cut created successfully",
+    message: 'Cut created successfully',
   });
 });
 
@@ -22,30 +22,52 @@ export const UpdateCutMaster = catchAsync(async (req, res) => {
   const userId = req.query.id;
   const updateData = req.body;
   if (!mongoose.Types.ObjectId.isValid(userId)) {
-    return res.status(400).json({ result: [], status: false, message: "Invalid Cut ID" });
+    return res
+      .status(400)
+      .json({ result: [], status: false, message: 'Invalid Cut ID' });
   }
-  const user = await CutModel.findByIdAndUpdate(userId, { $set: updateData }, { new: true, runValidators: true });
+  const user = await CutModel.findByIdAndUpdate(
+    userId,
+    { $set: updateData },
+    { new: true, runValidators: true }
+  );
   if (!user) {
     return res.status(404).json({
       result: [],
       status: false,
-      message: "User not found.",
+      message: 'User not found.',
     });
   }
   res.status(200).json({
     result: user,
     status: true,
-    message: "Updated successfully",
+    message: 'Updated successfully',
   });
 });
 
 export const ListCutMaster = catchAsync(async (req, res) => {
-  const { string, boolean, numbers, arrayField = [] } = req?.body?.searchFields || {};
-  const { page = 1, limit = 10, sortBy = "updated_at", sort = "desc" } = req.query;
-  const search = req.query.search || "";
+  const {
+    string,
+    boolean,
+    numbers,
+    arrayField = [],
+  } = req?.body?.searchFields || {};
+  const {
+    page = 1,
+    limit = 10,
+    sortBy = 'updated_at',
+    sort = 'desc',
+  } = req.query;
+  const search = req.query.search || '';
   let searchQuery = {};
-  if (search != "" && req?.body?.searchFields) {
-    const searchdata = DynamicSearch(search, boolean, numbers, string, arrayField);
+  if (search != '' && req?.body?.searchFields) {
+    const searchdata = DynamicSearch(
+      search,
+      boolean,
+      numbers,
+      string,
+      arrayField
+    );
     if (searchdata?.length == 0) {
       return res.status(404).json({
         statusCode: 404,
@@ -53,7 +75,7 @@ export const ListCutMaster = catchAsync(async (req, res) => {
         data: {
           user: [],
         },
-        message: "Results Not Found",
+        message: 'Results Not Found',
       });
     }
     searchQuery = searchdata;
@@ -67,9 +89,9 @@ export const ListCutMaster = catchAsync(async (req, res) => {
   const cutList = await CutModel.aggregate([
     {
       $lookup: {
-        from: "users",
-        localField: "created_employee_id",
-        foreignField: "_id",
+        from: 'users',
+        localField: 'created_employee_id',
+        foreignField: '_id',
         pipeline: [
           {
             $project: {
@@ -77,12 +99,12 @@ export const ListCutMaster = catchAsync(async (req, res) => {
             },
           },
         ],
-        as: "created_employee_id",
+        as: 'created_employee_id',
       },
     },
     {
       $unwind: {
-        path: "$created_employee_id",
+        path: '$created_employee_id',
         preserveNullAndEmptyArrays: true,
       },
     },
@@ -90,7 +112,7 @@ export const ListCutMaster = catchAsync(async (req, res) => {
       $match: { ...searchQuery },
     },
     {
-      $sort: { [sortBy]: sort == "desc" ? -1 : 1 },
+      $sort: { [sortBy]: sort == 'desc' ? -1 : 1 },
     },
     {
       $skip: skip,
@@ -98,14 +120,14 @@ export const ListCutMaster = catchAsync(async (req, res) => {
     {
       $limit: limit,
     },
-  ]).collation({ locale: "en", caseLevel: true });
+  ]).collation({ locale: 'en', caseLevel: true });
 
   if (cutList) {
     return res.status(200).json({
       result: cutList,
       status: true,
       totalPages: totalPages,
-      message: "All Cut List",
+      message: 'All Cut List',
     });
   }
 });
@@ -114,7 +136,7 @@ export const DropdownCutMaster = catchAsync(async (req, res) => {
   const list = await CutModel.aggregate([
     {
       $match: {
-        status: "active",
+        status: 'active',
       },
     },
     {
@@ -129,6 +151,6 @@ export const DropdownCutMaster = catchAsync(async (req, res) => {
   res.status(200).json({
     result: list,
     status: true,
-    message: "Cut Dropdown List",
+    message: 'Cut Dropdown List',
   });
 });

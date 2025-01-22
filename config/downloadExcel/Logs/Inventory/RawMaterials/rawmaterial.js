@@ -1,64 +1,64 @@
-import ExcelJS from "exceljs";
-import convDate from "../../../../../utils/date/date.js";
+import ExcelJS from 'exceljs';
+import convDate from '../../../../../utils/date/date.js';
 
 const GenerateRawMaterialLogs = async (details) => {
   const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet("Raw Material Logs");
+  const worksheet = workbook.addWorksheet('Raw Material Logs');
 
   // Add headers to the worksheet
   const headers = [
-    { header: "Date", key: "date", width: 20 },
-    { header: "Operation Type", key: "operationType", width: 20 },
-    { header: "Done By", key: "created_by", width: 30 },
-    { header: "Invoice No", key: "invoice_no", width: 20 },
-    { header: "Date of Inward", key: "date_of_inward", width: 20 },
-    { header: "Status", key: "status", width: 15 },
-    { header: "Item Name", key: "item_name", width: 30 },
-    { header: "Item Code", key: "item_code", width: 15 },
-    { header: "Item Log No", key: "item_log_no", width: 20 },
-    { header: "Item Bundle No", key: "item_bundle_no", width: 20 },
-    { header: "Item Length", key: "item_length", width: 15 },
-    { header: "Item Width", key: "item_width", width: 15 },
+    { header: 'Date', key: 'date', width: 20 },
+    { header: 'Operation Type', key: 'operationType', width: 20 },
+    { header: 'Done By', key: 'created_by', width: 30 },
+    { header: 'Invoice No', key: 'invoice_no', width: 20 },
+    { header: 'Date of Inward', key: 'date_of_inward', width: 20 },
+    { header: 'Status', key: 'status', width: 15 },
+    { header: 'Item Name', key: 'item_name', width: 30 },
+    { header: 'Item Code', key: 'item_code', width: 15 },
+    { header: 'Item Log No', key: 'item_log_no', width: 20 },
+    { header: 'Item Bundle No', key: 'item_bundle_no', width: 20 },
+    { header: 'Item Length', key: 'item_length', width: 15 },
+    { header: 'Item Width', key: 'item_width', width: 15 },
 
-    { header: "Item Received Pattas", key: "item_received_pattas", width: 20 },
-    { header: "Item Received SQM", key: "item_received_sqm", width: 20 },
+    { header: 'Item Received Pattas', key: 'item_received_pattas', width: 20 },
+    { header: 'Item Received SQM', key: 'item_received_sqm', width: 20 },
     {
-      header: "Item Available Pattas",
-      key: "item_available_pattas",
+      header: 'Item Available Pattas',
+      key: 'item_available_pattas',
       width: 20,
     },
-    { header: "Item Available SQM", key: "item_available_sqm", width: 20 },
-    { header: "Item Rejected Pattas", key: "item_rejected_pattas", width: 20 },
-    { header: "Item Rejected SQM", key: "item_rejected_sqm", width: 20 },
-    { header: "Item Pallete No", key: "item_pallete_no", width: 15 },
+    { header: 'Item Available SQM', key: 'item_available_sqm', width: 20 },
+    { header: 'Item Rejected Pattas', key: 'item_rejected_pattas', width: 20 },
+    { header: 'Item Rejected SQM', key: 'item_rejected_sqm', width: 20 },
+    { header: 'Item Pallete No', key: 'item_pallete_no', width: 15 },
     {
-      header: "Item Physical Location",
-      key: "item_physical_location",
+      header: 'Item Physical Location',
+      key: 'item_physical_location',
       width: 20,
     },
-    { header: "Item Grade", key: "item_grade", width: 15 },
-    { header: "Item Rate Per SQM", key: "item_rate_per_sqm", width: 20 },
-    { header: "Item Remark", key: "item_remark", width: 30 },
-    { header: "Supplier Name", key: "supplier_name", width: 30 },
-    { header: "Supplier Country", key: "supplier_country", width: 20 },
-    { header: "Supplier State", key: "supplier_state", width: 20 },
-    { header: "Supplier City", key: "supplier_city", width: 20 },
-    { header: "Supplier Pincode", key: "supplier_pincode", width: 15 },
-    { header: "Supplier Bill Address", key: "bill_address", width: 40 },
-    { header: "Supplier Delivery Address", key: "delivery_address", width: 40 },
+    { header: 'Item Grade', key: 'item_grade', width: 15 },
+    { header: 'Item Rate Per SQM', key: 'item_rate_per_sqm', width: 20 },
+    { header: 'Item Remark', key: 'item_remark', width: 30 },
+    { header: 'Supplier Name', key: 'supplier_name', width: 30 },
+    { header: 'Supplier Country', key: 'supplier_country', width: 20 },
+    { header: 'Supplier State', key: 'supplier_state', width: 20 },
+    { header: 'Supplier City', key: 'supplier_city', width: 20 },
+    { header: 'Supplier Pincode', key: 'supplier_pincode', width: 15 },
+    { header: 'Supplier Bill Address', key: 'bill_address', width: 40 },
+    { header: 'Supplier Delivery Address', key: 'delivery_address', width: 40 },
     {
-      header: "Supplier Contact Person Name",
-      key: "contact_person_name",
+      header: 'Supplier Contact Person Name',
+      key: 'contact_person_name',
       width: 25,
     },
     {
-      header: " Supplier Contact Person Number",
-      key: "contact_person_number",
+      header: ' Supplier Contact Person Number',
+      key: 'contact_person_number',
       width: 20,
     },
-    { header: "Supplier Email ID", key: "email_id", width: 30 },
-    { header: "Supplier PAN No", key: "pan_no", width: 20 },
-    { header: "Supplier GST No", key: "gst_no", width: 20 },
+    { header: 'Supplier Email ID', key: 'email_id', width: 30 },
+    { header: 'Supplier PAN No', key: 'pan_no', width: 20 },
+    { header: 'Supplier GST No', key: 'gst_no', width: 20 },
   ];
   worksheet.columns = headers.map((header) => {
     return {
@@ -107,7 +107,7 @@ const GenerateRawMaterialLogs = async (details) => {
       gst_no: log.data.fullDocument.supplier_details.gst_no,
     });
     row.eachCell({ includeEmpty: true }, (cell) => {
-      cell.alignment = { horizontal: "left" };
+      cell.alignment = { horizontal: 'left' };
     });
   });
 

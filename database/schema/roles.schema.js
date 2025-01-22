@@ -1,25 +1,25 @@
-import mongoose from "mongoose";
-import LogSchemaFunction from "./LogsSchema/logs.schema.js";
+import mongoose from 'mongoose';
+import LogSchemaFunction from './LogsSchema/logs.schema.js';
 
 const RoleSchema = new mongoose.Schema({
   role_name: {
     type: String,
     minlength: 2,
     maxlength: 25,
-    required: [true, "Role name is required."],
-    unique: [true, "Role name already exist."],
+    required: [true, 'Role name is required.'],
+    unique: [true, 'Role name already exist.'],
     trim: true,
-    uppercase: true
+    uppercase: true,
   },
   dept_name: {
     type: String,
-    required: [true, "Department name is required."],
+    required: [true, 'Department name is required.'],
     trim: true,
   },
   dept_id: {
     type: mongoose.Schema.Types.ObjectId,
-    required: [true, "Department is Required"],
-    ref: "department",
+    required: [true, 'Department is Required'],
+    ref: 'department',
   },
   // permissions: {
   //   user_create: { type: Boolean, default: false },
@@ -192,26 +192,26 @@ const RoleSchema = new mongoose.Schema({
 
   permissions: {
     type: {},
-    required: [true, "Permission Object is required."]
+    required: [true, 'Permission Object is required.'],
   },
   status: { type: Boolean, default: true },
   created_employee_id: {
     type: mongoose.Types.ObjectId,
-    ref: "users",
+    ref: 'users',
     required: true,
     trim: true,
   },
   roles_remarks: {
     type: String,
     uppercase: true,
-    trim: true
+    trim: true,
   },
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now },
   deleted_at: { type: Date, default: null },
 });
 
-const RolesModel = mongoose.model("roles", RoleSchema);
+const RolesModel = mongoose.model('roles', RoleSchema);
 
-LogSchemaFunction("roles", RolesModel, []);
+LogSchemaFunction('roles', RolesModel, []);
 export default RolesModel;

@@ -1,18 +1,18 @@
-import ExcelJS from "exceljs";
-import convDate from "../../../../utils/date/date.js";
+import ExcelJS from 'exceljs';
+import convDate from '../../../../utils/date/date.js';
 
 const GenerateUnitsLogs = async (details) => {
   const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet("Pallet Logs");
+  const worksheet = workbook.addWorksheet('Pallet Logs');
 
   // Add headers to the worksheet
   const headers = [
-    { header: "Date", key: "date", width: 20 },
-    { header: "Operation Type", key: "operationType", width: 20 },
-    { header: "Done By", key: "created_by", width: 30 },
-    { header: "Unit Name", key: "unit_name", width: 20 },
-    { header: "Unit Remarks", key: "unit_remarks", width: 30 },
-    { header: "Status", key: "status", width: 15 },
+    { header: 'Date', key: 'date', width: 20 },
+    { header: 'Operation Type', key: 'operationType', width: 20 },
+    { header: 'Done By', key: 'created_by', width: 30 },
+    { header: 'Unit Name', key: 'unit_name', width: 20 },
+    { header: 'Unit Remarks', key: 'unit_remarks', width: 30 },
+    { header: 'Status', key: 'status', width: 15 },
   ];
   worksheet.columns = headers.map((header) => {
     return {
@@ -31,7 +31,7 @@ const GenerateUnitsLogs = async (details) => {
       unit_remarks: log.data.fullDocument.unit_remarks,
     });
     row.eachCell({ includeEmpty: true }, (cell) => {
-      cell.alignment = { horizontal: "left" };
+      cell.alignment = { horizontal: 'left' };
     });
   });
 

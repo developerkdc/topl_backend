@@ -1,30 +1,30 @@
-import ExcelJS from "exceljs";
-import fs from "fs/promises";
-import convDate from "../../../../utils/date/date.js";
+import ExcelJS from 'exceljs';
+import fs from 'fs/promises';
+import convDate from '../../../../utils/date/date.js';
 
 const GenerateIssueCuttingReport = async (details) => {
   const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet("Issue For Cutting Reports");
+  const worksheet = workbook.addWorksheet('Issue For Cutting Reports');
 
   // Add headers to the worksheet
   const headers = [
-    { header: "Cutting Issued Date", key: "created_at", width: 15 },
-    { header: "Group No", key: "group_no", width: 15 },
-    { header: "Item Name", key: "item_name", width: 15 },
-    { header: "Item Type", key: "item_code", width: 15 },
+    { header: 'Cutting Issued Date', key: 'created_at', width: 15 },
+    { header: 'Group No', key: 'group_no', width: 15 },
+    { header: 'Item Name', key: 'item_name', width: 15 },
+    { header: 'Item Type', key: 'item_code', width: 15 },
 
-    { header: "Group Length", key: "group_length", width: 15 },
-    { header: "Group Width", key: "group_width", width: 15 },
-    { header: "No of Pcs", key: "group_no_of_peices", width: 15 },
-    { header: "Issued Sqm", key: "group_sqm", width: 15 },
-    { header: "Grade", key: "grade", width: 15 },
-    { header: "Pallet No", key: "pallet_no", width: 15 },
-    { header: "Physical Location", key: "physical_location", width: 15 },
-    { header: "Book Type", key: "book_type", width: 15 },
+    { header: 'Group Length', key: 'group_length', width: 15 },
+    { header: 'Group Width', key: 'group_width', width: 15 },
+    { header: 'No of Pcs', key: 'group_no_of_peices', width: 15 },
+    { header: 'Issued Sqm', key: 'group_sqm', width: 15 },
+    { header: 'Grade', key: 'grade', width: 15 },
+    { header: 'Pallet No', key: 'pallet_no', width: 15 },
+    { header: 'Physical Location', key: 'physical_location', width: 15 },
+    { header: 'Book Type', key: 'book_type', width: 15 },
 
-    { header: "Rate Per Sqm", key: "item_rate_per_sqm", width: 15 },
-    { header: "Log No", key: "item_log_no", width: 15 },
-    { header: "Cutting Quantity", key: "cutting_quantity", width: 15 },
+    { header: 'Rate Per Sqm', key: 'item_rate_per_sqm', width: 15 },
+    { header: 'Log No', key: 'item_log_no', width: 15 },
+    { header: 'Cutting Quantity', key: 'cutting_quantity', width: 15 },
     // { header: "Natural", key: "cutting_quantity_natural", width: 15 },
     // { header: "Natural", key: "cutting_quantity_natural", width: 15 },
     // { header: "Dyed", key: "cutting_quantity_dyed", width: 15 },
@@ -68,7 +68,7 @@ const GenerateIssueCuttingReport = async (details) => {
         // cutting_quantity_total: itemData?.cutting_quantity?.total,
       });
       row.eachCell({ includeEmpty: true }, (cell) => {
-        cell.alignment = { horizontal: "left" };
+        cell.alignment = { horizontal: 'left' };
       });
     });
   });
@@ -77,7 +77,7 @@ const GenerateIssueCuttingReport = async (details) => {
   headerRow.font = { bold: true };
   // Generate a temporary file path
   const filePath =
-    "public/reports/Cutting/IssueForCuttingReportExcel/issue_for_cutting_report.xlsx";
+    'public/reports/Cutting/IssueForCuttingReportExcel/issue_for_cutting_report.xlsx';
 
   // Save the workbook to the file
   await workbook.xlsx.writeFile(filePath);

@@ -1,13 +1,13 @@
-import { IssuedForFinishingModel } from "../../database/schema/finishing/issuedForFinishing.schema.js";
-import { IssuedForPressingModel } from "../../database/schema/pressing/issuedForPressing.schema.js";
-import { PressingModel } from "../../database/schema/pressing/pressing.schema.js";
-import catchAsync from "../../utils/errors/catchAsync.js";
-import { DynamicSearch } from "../../utils/dynamicSearch/dynamic.js";
-import mongoose from "mongoose";
-import { CreateReadySheetFormModel } from "../../database/schema/readySheetForm/readySheetForm.schema.js";
-import { ReadySheetFormHistoryModel } from "../../database/schema/readySheetForm/readySheetFormHistory.schema.js";
-import OtherGoodsModel from "../../database/schema/inventory/otherGoods/otherGoods.schema.js";
-import OtherGoodsConsumedModel from "../../database/schema/inventory/otherGoods/otherGoodsConsumed.schema.js";
+import { IssuedForFinishingModel } from '../../database/schema/finishing/issuedForFinishing.schema.js';
+import { IssuedForPressingModel } from '../../database/schema/pressing/issuedForPressing.schema.js';
+import { PressingModel } from '../../database/schema/pressing/pressing.schema.js';
+import catchAsync from '../../utils/errors/catchAsync.js';
+import { DynamicSearch } from '../../utils/dynamicSearch/dynamic.js';
+import mongoose from 'mongoose';
+import { CreateReadySheetFormModel } from '../../database/schema/readySheetForm/readySheetForm.schema.js';
+import { ReadySheetFormHistoryModel } from '../../database/schema/readySheetForm/readySheetFormHistory.schema.js';
+import OtherGoodsModel from '../../database/schema/inventory/otherGoods/otherGoods.schema.js';
+import OtherGoodsConsumedModel from '../../database/schema/inventory/otherGoods/otherGoodsConsumed.schema.js';
 export const FetchIssuedForPressing = catchAsync(async (req, res, next) => {
   const {
     string,
@@ -18,15 +18,15 @@ export const FetchIssuedForPressing = catchAsync(async (req, res, next) => {
   const {
     page = 1,
     limit = 10,
-    sortBy = "updated_at",
-    sort = "desc",
+    sortBy = 'updated_at',
+    sort = 'desc',
   } = req.query;
   const skip = Math.max((page - 1) * limit, 0);
 
-  const search = req.query.search || "";
+  const search = req.query.search || '';
 
   let searchQuery = {};
-  if (search != "" && req?.body?.searchFields) {
+  if (search != '' && req?.body?.searchFields) {
     const searchdata = DynamicSearch(
       search,
       boolean,
@@ -41,7 +41,7 @@ export const FetchIssuedForPressing = catchAsync(async (req, res, next) => {
         data: {
           data: [],
         },
-        message: "Results Not Found",
+        message: 'Results Not Found',
       });
     }
     searchQuery = searchdata;
@@ -51,7 +51,7 @@ export const FetchIssuedForPressing = catchAsync(async (req, res, next) => {
   const matchQuery = data || {};
 
   if (to && from) {
-    matchQuery["created_at"] = {
+    matchQuery['created_at'] = {
       $gte: new Date(from),
       $lte: new Date(to),
     };
@@ -64,7 +64,7 @@ export const FetchIssuedForPressing = catchAsync(async (req, res, next) => {
   const totalPages = Math.ceil(totalDocuments / limit);
 
   const issuedForPressingView = mongoose.connection.db.collection(
-    "issued_for_pressings_view"
+    'issued_for_pressings_view'
   );
   const issuedForPressingData = await issuedForPressingView
     .aggregate([
@@ -76,7 +76,7 @@ export const FetchIssuedForPressing = catchAsync(async (req, res, next) => {
       },
       {
         $sort: {
-          [sortBy]: sort == "desc" ? -1 : 1,
+          [sortBy]: sort == 'desc' ? -1 : 1,
         },
       },
       {
@@ -90,7 +90,7 @@ export const FetchIssuedForPressing = catchAsync(async (req, res, next) => {
   return res.status(200).json({
     result: issuedForPressingData,
     statusCode: 200,
-    status: "success",
+    status: 'success',
     totalPages: totalPages,
   });
 });
@@ -106,11 +106,11 @@ export const createPressing = catchAsync(async (req, res, next) => {
       req.body.issued_for_pressing_id
     );
     if (!isIssued) {
-      throw new Error("Issued For Pressing Done or Not Found");
+      throw new Error('Issued For Pressing Done or Not Found');
     }
     const totalAvailable = await OtherGoodsModel.aggregate([
       { $match: { item_name: req.body.consumed_item_name } },
-      { $group: { _id: "$item_name", total: { $sum: "$available_quantity" } } },
+      { $group: { _id: '$item_name', total: { $sum: '$available_quantity' } } },
     ]);
 
     if (totalAvailable[0].total < req.body.consumed_quantity) {
@@ -118,7 +118,7 @@ export const createPressing = catchAsync(async (req, res, next) => {
         result: [],
         statusCode: 400,
         status: false,
-        message: "Insufficient consumable quantity..",
+        message: 'Insufficient consumable quantity..',
       });
     }
 
@@ -156,7 +156,7 @@ export const createPressing = catchAsync(async (req, res, next) => {
         available_quantity: updatedOtherGoods?.available_quantity,
         date_of_consumption: req.body.date_of_consumption,
         consumption_quantity: consumeFromItem,
-        processes: "Pressing",
+        processes: 'Pressing',
         supplier_details: updatedOtherGoods?.supplier_details,
         other_goods_consumed_remarks: req.body?.consumed_remarks,
         created_employee_id: authUserDetail?._id,
@@ -166,7 +166,7 @@ export const createPressing = catchAsync(async (req, res, next) => {
       const res = await OtherGoodsConsumedModel.create([newConsumedObject], {
         session,
       });
-      console.log(res, "res");
+      console.log(res, 'res');
       const createdDoc = res[0];
       consumedDetails.push({
         other_goods_consumed_id: createdDoc._id,
@@ -215,7 +215,7 @@ export const createPressing = catchAsync(async (req, res, next) => {
 
     await IssuedForPressingModel.findByIdAndUpdate(
       data.issued_for_pressing_id,
-      { $set: { revert_status: "inactive" } },
+      { $set: { revert_status: 'inactive' } },
       { new: true, session: session }
     );
     const ReadySheetFormData = await CreateReadySheetFormModel.findById(
@@ -237,7 +237,7 @@ export const createPressing = catchAsync(async (req, res, next) => {
     //   ReadySheetFormData.ready_sheet_form_sqm
     // ).toFixed(2);
     if (ReadySheetFormData.ready_sheet_form_no_of_pcs_available > 0) {
-      ReadySheetFormData.status = "available";
+      ReadySheetFormData.status = 'available';
     }
     await ReadySheetFormData.save({ session });
     const ReadySheetFormHistoryData = await ReadySheetFormHistoryModel.findById(
@@ -260,7 +260,7 @@ export const createPressing = catchAsync(async (req, res, next) => {
     return res.status(200).json({
       result: pressingDataSaved,
       statusCode: 200,
-      status: "success",
+      status: 'success',
     });
   } catch (error) {
     if (session) {
@@ -269,7 +269,7 @@ export const createPressing = catchAsync(async (req, res, next) => {
     }
     return res.status(500).json({
       status: false,
-      message: "Error occurred while pressing",
+      message: 'Error occurred while pressing',
       error: error.message,
     });
   }
@@ -285,15 +285,15 @@ export const FetchPressingDone = catchAsync(async (req, res, next) => {
   const {
     page = 1,
     limit = 10,
-    sortBy = "updated_at",
-    sort = "desc",
+    sortBy = 'updated_at',
+    sort = 'desc',
   } = req.query;
   const skip = Math.max((page - 1) * limit, 0);
 
-  const search = req.query.search || "";
+  const search = req.query.search || '';
 
   let searchQuery = {};
-  if (search != "" && req?.body?.searchFields) {
+  if (search != '' && req?.body?.searchFields) {
     const searchdata = DynamicSearch(
       search,
       boolean,
@@ -308,7 +308,7 @@ export const FetchPressingDone = catchAsync(async (req, res, next) => {
         data: {
           data: [],
         },
-        message: "Results Not Found",
+        message: 'Results Not Found',
       });
     }
     searchQuery = searchdata;
@@ -319,7 +319,7 @@ export const FetchPressingDone = catchAsync(async (req, res, next) => {
 
   if (to && from) {
     console.log(new Date(from));
-    matchQuery["created_at"] = { $gte: new Date(from), $lte: new Date(to) };
+    matchQuery['created_at'] = { $gte: new Date(from), $lte: new Date(to) };
   }
 
   const totalDocuments = await PressingModel.countDocuments({
@@ -329,7 +329,7 @@ export const FetchPressingDone = catchAsync(async (req, res, next) => {
   const totalPages = Math.ceil(totalDocuments / limit);
 
   const issuedForPressingView =
-    mongoose.connection.db.collection("pressings_view");
+    mongoose.connection.db.collection('pressings_view');
   const issuedForPressingData = await issuedForPressingView
     .aggregate([
       {
@@ -340,7 +340,7 @@ export const FetchPressingDone = catchAsync(async (req, res, next) => {
       },
       {
         $sort: {
-          [sortBy]: sort == "desc" ? -1 : 1,
+          [sortBy]: sort == 'desc' ? -1 : 1,
         },
       },
       {
@@ -354,7 +354,7 @@ export const FetchPressingDone = catchAsync(async (req, res, next) => {
   return res.status(200).json({
     result: issuedForPressingData,
     statusCode: 200,
-    status: "success",
+    status: 'success',
     totalPages: totalPages,
   });
 });
@@ -366,13 +366,13 @@ export const RevertIssuedForPressing = catchAsync(async (req, res, next) => {
     session.startTransaction();
     const { issuedId } = req.query;
     const IssuedForPressingView = mongoose.connection.db.collection(
-      "issued_for_pressings_view"
+      'issued_for_pressings_view'
     );
     const IssuedForPressingDetails = await IssuedForPressingView.findOne({
       _id: new mongoose.Types.ObjectId(issuedId),
     });
     if (!IssuedForPressingDetails) {
-      throw new Error("Issued For Pressing not found");
+      throw new Error('Issued For Pressing not found');
     }
 
     const readySheetForm = await CreateReadySheetFormModel.findById(
@@ -380,7 +380,7 @@ export const RevertIssuedForPressing = catchAsync(async (req, res, next) => {
     ).session(session);
     // console.log(readySheetForm);
     if (!readySheetForm) {
-      throw new Error("Ready Sheet Form Not Found");
+      throw new Error('Ready Sheet Form Not Found');
     }
     const calculation =
       (readySheetForm.ready_sheet_form_length *
@@ -393,7 +393,7 @@ export const RevertIssuedForPressing = catchAsync(async (req, res, next) => {
       IssuedForPressingDetails.ready_sheet_form_history_details.ready_sheet_form_approved_pcs;
     readySheetForm.ready_sheet_form_sqm += parseFloat(calculation.toFixed(2));
 
-    readySheetForm.status = "available";
+    readySheetForm.status = 'available';
 
     const updatedReadySheet = await readySheetForm.save(session);
 
@@ -407,8 +407,8 @@ export const RevertIssuedForPressing = catchAsync(async (req, res, next) => {
     session.endSession();
 
     res.status(200).json({
-      status: "success",
-      message: "Issued for pressing reverted",
+      status: 'success',
+      message: 'Issued for pressing reverted',
     });
   } catch (error) {
     if (session) {
@@ -417,7 +417,7 @@ export const RevertIssuedForPressing = catchAsync(async (req, res, next) => {
     }
     return res.status(500).json({
       status: false,
-      message: "Error occurred while reverting",
+      message: 'Error occurred while reverting',
       error: error.message,
     });
   }

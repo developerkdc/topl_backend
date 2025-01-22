@@ -1,18 +1,18 @@
-import ExcelJS from "exceljs";
-import convDate from "../../../../utils/date/date.js";
+import ExcelJS from 'exceljs';
+import convDate from '../../../../utils/date/date.js';
 
 const GenerateGradeLogs = async (details) => {
   const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet("Grade Logs");
+  const worksheet = workbook.addWorksheet('Grade Logs');
 
   // Add headers to the worksheet
   const headers = [
-    { header: "Date", key: "date", width: 20 },
-    { header: "Operation Type", key: "operationType", width: 20 },
-    { header: "Done By", key: "created_by", width: 30 },
-    { header: "Grade Name", key: "grade_name", width: 20 },
-    { header: "Grade Remarks", key: "grade_remarks", width: 30 },
-    { header: "Status", key: "status", width: 15 },
+    { header: 'Date', key: 'date', width: 20 },
+    { header: 'Operation Type', key: 'operationType', width: 20 },
+    { header: 'Done By', key: 'created_by', width: 30 },
+    { header: 'Grade Name', key: 'grade_name', width: 20 },
+    { header: 'Grade Remarks', key: 'grade_remarks', width: 30 },
+    { header: 'Status', key: 'status', width: 15 },
   ];
   worksheet.columns = headers.map((header) => {
     return {
@@ -31,7 +31,7 @@ const GenerateGradeLogs = async (details) => {
       status: log.data.fullDocument.status,
     });
     row.eachCell({ includeEmpty: true }, (cell) => {
-      cell.alignment = { horizontal: "left" };
+      cell.alignment = { horizontal: 'left' };
     });
   });
 

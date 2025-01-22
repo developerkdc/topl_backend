@@ -1,9 +1,9 @@
-import getConfigs from "../config/config.js";
-import userModel from "../database/schema/user.schema.js";
-import ApiResponse from "../utils/ApiResponse.js";
-import { create, generateOTP, verify } from "../utils/authServices/index.js";
-import { SendOtpEmail } from "../utils/emailServices/otp.js";
-import catchAsync from "../utils/errors/catchAsync.js";
+import getConfigs from '../config/config.js';
+import userModel from '../database/schema/user.schema.js';
+import ApiResponse from '../utils/ApiResponse.js';
+import { create, generateOTP, verify } from '../utils/authServices/index.js';
+import { SendOtpEmail } from '../utils/emailServices/otp.js';
+import catchAsync from '../utils/errors/catchAsync.js';
 import {
   EmailInValid,
   EmailRequired,
@@ -17,12 +17,12 @@ import {
   PasswordInValid,
   PasswordReset,
   UserNotFound,
-} from "../utils/response/response.js";
+} from '../utils/response/response.js';
 
 const Configs = getConfigs();
 
 export const SignIn = catchAsync(async (req, res, next) => {
-  const origin = req.get("Origin");
+  const origin = req.get('Origin');
   const { user_name, password } = req.body;
   if (!user_name)
     return res.status(400).json({
@@ -40,21 +40,21 @@ export const SignIn = catchAsync(async (req, res, next) => {
 
   const user = await userModel
     .findOne({ user_name: user_name })
-    .select("-otp -verify_otp -otp_expiry_date")
-    .populate("role_id");
+    .select('-otp -verify_otp -otp_expiry_date')
+    .populate('role_id');
 
   if (!user) {
     return res.status(401).json({
       result: [],
       status: false,
-      message: "User not found with this User Name.",
+      message: 'User not found with this User Name.',
     });
   }
   if (user.status == false) {
     return res.status(401).json({
       result: [],
       status: false,
-      message: "You are Blocked By Admin",
+      message: 'You are Blocked By Admin',
     });
   }
   const passwordHash = user.password;
@@ -72,17 +72,17 @@ export const SignIn = catchAsync(async (req, res, next) => {
       Date.now() + Configs.cookie.cookie_expire * 24 * 60 * 60 * 1000
     ),
     httpOnly: true,
-    sameSite: "Lax",
+    sameSite: 'Lax',
   };
 
-  res.header("Access-Control-Allow-Origin", origin);
-  res.header("Access-Control-Allow-Credentials", "true");
+  res.header('Access-Control-Allow-Origin', origin);
+  res.header('Access-Control-Allow-Credentials', 'true');
 
-  return res.status(200).cookie("token", token, options).json({
+  return res.status(200).cookie('token', token, options).json({
     token,
     result: user,
     status: true,
-    message: "Login successfully.",
+    message: 'Login successfully.',
   });
 });
 
@@ -99,13 +99,13 @@ export const ForgetPassword = catchAsync(async (req, res) => {
   if (!user) {
     return res
       .status(401)
-      .json({ message: "User not found with this user name." });
+      .json({ message: 'User not found with this user name.' });
   }
 
   if (!user.email_id) {
     return res
       .status(401)
-      .json({ message: "Email id not found. Please contact Admin" });
+      .json({ message: 'Email id not found. Please contact Admin' });
   }
 
   // Generate OTP
@@ -127,7 +127,7 @@ export const ForgetPassword = catchAsync(async (req, res) => {
   );
 
   // Send OTP to the user's email
-  SendOtpEmail(user?.email_id, `Your OTP is: ${otp}`, "Your OTP");
+  SendOtpEmail(user?.email_id, `Your OTP is: ${otp}`, 'Your OTP');
 
   return res
     .status(200)
@@ -153,7 +153,7 @@ export const VerifyOtp = catchAsync(async (req, res) => {
     return res.status(400).json({
       result: [],
       status: false,
-      message: "Invalid username, please try again later.",
+      message: 'Invalid username, please try again later.',
     });
   }
   // Assuming user is the result of your findOneAndUpdate operation
@@ -168,10 +168,10 @@ export const VerifyOtp = catchAsync(async (req, res) => {
     if (Math.abs(Math.round(diffInHours)) > 1) {
       return res
         .status(400)
-        .json({ result: [], status: false, message: "OtpExpired" });
+        .json({ result: [], status: false, message: 'OtpExpired' });
     }
   } else {
-    console.error("Invalid otp expiry date:", user?.otp_expiry_date);
+    console.error('Invalid otp expiry date:', user?.otp_expiry_date);
   }
 
   if (user.otp != otp) {

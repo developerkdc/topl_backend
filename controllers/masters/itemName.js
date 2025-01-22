@@ -1,19 +1,19 @@
-import mongoose from "mongoose";
-import ItemNameModel from "../../database/schema/masters/itemName.schema.js";
-import catchAsync from "../../utils/errors/catchAsync.js";
-import { DynamicSearch } from "../../utils/dynamicSearch/dynamic.js";
+import mongoose from 'mongoose';
+import ItemNameModel from '../../database/schema/masters/itemName.schema.js';
+import catchAsync from '../../utils/errors/catchAsync.js';
+import { DynamicSearch } from '../../utils/dynamicSearch/dynamic.js';
 
-import XLSX from "xlsx";
-import ApiError from "../../utils/errors/apiError.js";
-import ApiResponse from "../../utils/ApiResponse.js";
-import { StatusCodes } from "../../utils/constants.js";
+import XLSX from 'xlsx';
+import ApiError from '../../utils/errors/apiError.js';
+import ApiResponse from '../../utils/ApiResponse.js';
+import { StatusCodes } from '../../utils/constants.js';
 
 export const AddItemNameMaster = catchAsync(async (req, res) => {
   const authUserDetail = req.userDetails;
   const { item_name, category } = req.body;
   if (!item_name || !category) {
     return res.json(
-      new ApiResponse(StatusCodes.NOT_FOUND, "all fields are required")
+      new ApiResponse(StatusCodes.NOT_FOUND, 'all fields are required')
     );
   }
 
@@ -22,7 +22,7 @@ export const AddItemNameMaster = catchAsync(async (req, res) => {
       $group: {
         _id: null,
         max: {
-          $max: "$sr_no",
+          $max: '$sr_no',
         },
       },
     },
@@ -44,7 +44,7 @@ export const AddItemNameMaster = catchAsync(async (req, res) => {
     .json(
       new ApiResponse(
         StatusCodes.OK,
-        "Item created successfully..",
+        'Item created successfully..',
         savedItemName
       )
     );
@@ -56,7 +56,7 @@ export const UpdateItemNameMaster = catchAsync(async (req, res) => {
   if (!mongoose.Types.ObjectId.isValid(ItemNameId)) {
     return res
       .status(400)
-      .json(new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Invalid id"));
+      .json(new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, 'Invalid id'));
   }
   const ItemName = await ItemNameModel.findByIdAndUpdate(
     ItemNameId,
@@ -66,11 +66,11 @@ export const UpdateItemNameMaster = catchAsync(async (req, res) => {
   if (!ItemName) {
     return res
       .status(404)
-      .json(new ApiResponse(StatusCodes.NOT_FOUND, "Item Not found..."));
+      .json(new ApiResponse(StatusCodes.NOT_FOUND, 'Item Not found...'));
   }
   res
     .status(200)
-    .json(new ApiResponse(StatusCodes.OK, "Item Updated successfully..."));
+    .json(new ApiResponse(StatusCodes.OK, 'Item Updated successfully...'));
 });
 
 export const ListItemNameMaster = catchAsync(async (req, res) => {
@@ -85,10 +85,10 @@ export const ListItemNameMaster = catchAsync(async (req, res) => {
   const limitInt = parseInt(limit) || 10;
   const skipped = (pageInt - 1) * limitInt;
 
-  const sortDirection = sortOrder === "desc" ? -1 : 1;
+  const sortDirection = sortOrder === 'desc' ? -1 : 1;
   const sortObj = sortField ? { [sortField]: sortDirection } : {};
   let searchQuery = {};
-  if (query != "" && req?.body?.searchFields) {
+  if (query != '' && req?.body?.searchFields) {
     const searchdata = DynamicSearch(
       query,
       boolean,
@@ -103,7 +103,7 @@ export const ListItemNameMaster = catchAsync(async (req, res) => {
         data: {
           user: [],
         },
-        message: "Results Not Found",
+        message: 'Results Not Found',
       });
     }
     searchQuery = searchdata;
@@ -112,21 +112,21 @@ export const ListItemNameMaster = catchAsync(async (req, res) => {
   const pipeline = [
     {
       $lookup: {
-        from: "users",
-        localField: "created_by",
-        foreignField: "_id",
-        as: "userDetails",
+        from: 'users',
+        localField: 'created_by',
+        foreignField: '_id',
+        as: 'userDetails',
       },
     },
     {
       $lookup: {
-        from: "item_categories",
-        localField: "category",
-        foreignField: "_id",
-        as: "categoryDetails",
+        from: 'item_categories',
+        localField: 'category',
+        foreignField: '_id',
+        as: 'categoryDetails',
       },
     },
-    { $unwind: { path: "$userDetails", preserveNullAndEmptyArrays: true } },
+    { $unwind: { path: '$userDetails', preserveNullAndEmptyArrays: true } },
     // { $unwind: { path: '$categoryDetails', preserveNullAndEmptyArrays: true } },
     { $match: { ...searchQuery } },
 
@@ -136,10 +136,10 @@ export const ListItemNameMaster = catchAsync(async (req, res) => {
         item_name: 1,
         createdAt: 1,
         created_by: 1,
-        "userDetails.first_name": 1,
-        "userDetails.user_name": 1,
-        "categoryDetails._id": 1,
-        "categoryDetails.category": 1,
+        'userDetails.first_name': 1,
+        'userDetails.user_name': 1,
+        'categoryDetails._id': 1,
+        'categoryDetails.category': 1,
       },
     },
     { $skip: skipped },
@@ -152,12 +152,12 @@ export const ListItemNameMaster = catchAsync(async (req, res) => {
   const allDetails = await ItemNameModel.aggregate(pipeline);
 
   if (allDetails.length === 0) {
-    return res.json(new ApiResponse(StatusCodes.OK, "NO Data found..."));
+    return res.json(new ApiResponse(StatusCodes.OK, 'NO Data found...'));
   }
   const totalDocs = await ItemNameModel.countDocuments({ ...searchQuery });
   const totalPage = Math.ceil(totalDocs / limitInt);
   return res.json(
-    new ApiResponse(StatusCodes.OK, "All Details fetched succesfully..", {
+    new ApiResponse(StatusCodes.OK, 'All Details fetched succesfully..', {
       allDetails,
       totalPage,
     })
@@ -167,21 +167,19 @@ export const ListItemNameMaster = catchAsync(async (req, res) => {
 export const DropdownItemNameMaster = catchAsync(async (req, res) => {
   const { type } = req.query;
 
-  const searchQuery = type
-    ? { "categoryDetails.category": type }
-    : {};
+  const searchQuery = type ? { 'categoryDetails.category': type } : {};
 
   const list = await ItemNameModel.aggregate([
     {
       $lookup: {
-        from: "item_categories",
-        localField: "category",
-        foreignField: "_id",
-        as: "categoryDetails",
+        from: 'item_categories',
+        localField: 'category',
+        foreignField: '_id',
+        as: 'categoryDetails',
       },
     },
     {
-      $unwind: "$categoryDetails",
+      $unwind: '$categoryDetails',
     },
     {
       $match: searchQuery,
@@ -193,19 +191,18 @@ export const DropdownItemNameMaster = catchAsync(async (req, res) => {
       $project: {
         item_name: 1,
       },
-
     },
     {
-      $sort: { item_name: 1 }
+      $sort: { item_name: 1 },
     },
-  ]).collation({ locale: "en", caseLevel: true })
+  ]).collation({ locale: 'en', caseLevel: true });
 
   res
     .status(200)
     .json(
       new ApiResponse(
         StatusCodes.OK,
-        "Name dropdown fetched successfully....",
+        'Name dropdown fetched successfully....',
         list
       )
     );
@@ -282,14 +279,14 @@ export const BulkUploadItemMaster = catchAsync(async (req, res, next) => {
 
   try {
     if (data.length === 0) {
-      throw new Error("No items found in the uploaded file.");
+      throw new Error('No items found in the uploaded file.');
     }
 
     const authUserDetail = req.userDetails;
     const bulkInsertData = [];
 
     for (const item of data) {
-      const requiredFields = ["item_name"];
+      const requiredFields = ['item_name'];
 
       for (const field of requiredFields) {
         if (!item[field]) {
@@ -313,7 +310,7 @@ export const BulkUploadItemMaster = catchAsync(async (req, res, next) => {
     return res.status(201).json({
       result: [],
       status: true,
-      message: "Item Master bulk uploaded successfully.",
+      message: 'Item Master bulk uploaded successfully.',
     });
   } catch (error) {
     await session.abortTransaction();
@@ -322,7 +319,7 @@ export const BulkUploadItemMaster = catchAsync(async (req, res, next) => {
       result: [],
       status: false,
       message:
-        error.message || "An error occurred while uploading item master.",
+        error.message || 'An error occurred while uploading item master.',
     });
   }
 });

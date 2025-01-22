@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
 export const dynamic_filter = (filter = {}) => {
   let { range, _ids, ...obj } = filter;
@@ -7,9 +7,9 @@ export const dynamic_filter = (filter = {}) => {
       obj[key] = mongoose.Types.ObjectId.createFromHexString(_ids[key]);
     }
   }
-  if (filter.hasOwnProperty("range") && range) {
+  if (filter.hasOwnProperty('range') && range) {
     const range_obj = JSON.parse(
-      JSON.stringify(range)?.replace(/from/g, "$gte")?.replace(/to/g, "$lte")
+      JSON.stringify(range)?.replace(/from/g, '$gte')?.replace(/to/g, '$lte')
     );
     if (range_obj?.date) {
       for (let i in range_obj?.date) {

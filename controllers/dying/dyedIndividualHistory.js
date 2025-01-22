@@ -1,9 +1,9 @@
-import mongoose from "mongoose";
-import catchAsync from "../../utils/errors/catchAsync.js";
-import { DynamicSearch } from "../../utils/dynamicSearch/dynamic.js";
-import { RawMaterialModel } from "../../database/schema/inventory/raw/raw.schema.js";
-import { IndividualDyingModel } from "../../database/schema/dying/individualDying.js";
-import { IssuedForDyingIndividualModel } from "../../database/schema/dying/issuedForDyingIndividual.js";
+import mongoose from 'mongoose';
+import catchAsync from '../../utils/errors/catchAsync.js';
+import { DynamicSearch } from '../../utils/dynamicSearch/dynamic.js';
+import { RawMaterialModel } from '../../database/schema/inventory/raw/raw.schema.js';
+import { IndividualDyingModel } from '../../database/schema/dying/individualDying.js';
+import { IssuedForDyingIndividualModel } from '../../database/schema/dying/issuedForDyingIndividual.js';
 
 export const FetchCreatedIndividualDyed = catchAsync(async (req, res, next) => {
   const {
@@ -15,15 +15,15 @@ export const FetchCreatedIndividualDyed = catchAsync(async (req, res, next) => {
   const {
     page = 1,
     limit = 10,
-    sortBy = "updated_at",
-    sort = "desc",
+    sortBy = 'updated_at',
+    sort = 'desc',
   } = req.query;
   const skip = Math.max((page - 1) * limit, 0);
 
-  const search = req.query.search || "";
+  const search = req.query.search || '';
 
   let searchQuery = {};
-  if (search != "" && req?.body?.searchFields) {
+  if (search != '' && req?.body?.searchFields) {
     const searchdata = DynamicSearch(
       search,
       boolean,
@@ -38,7 +38,7 @@ export const FetchCreatedIndividualDyed = catchAsync(async (req, res, next) => {
         data: {
           data: [],
         },
-        message: "Results Not Found",
+        message: 'Results Not Found',
       });
     }
     searchQuery = searchdata;
@@ -48,7 +48,7 @@ export const FetchCreatedIndividualDyed = catchAsync(async (req, res, next) => {
   const matchQuery = data || {};
 
   if (to && from) {
-    matchQuery["date_of_dying"] = {
+    matchQuery['date_of_dying'] = {
       $gte: new Date(from),
       $lte: new Date(to),
     };
@@ -57,23 +57,23 @@ export const FetchCreatedIndividualDyed = catchAsync(async (req, res, next) => {
   const totalDocuments = await IndividualDyingModel.aggregate([
     {
       $lookup: {
-        from: "raw_materials",
-        localField: "item_details",
-        foreignField: "_id",
-        as: "item_details",
+        from: 'raw_materials',
+        localField: 'item_details',
+        foreignField: '_id',
+        as: 'item_details',
       },
     },
     {
       $unwind: {
-        path: "$item_details",
+        path: '$item_details',
         preserveNullAndEmptyArrays: true,
       },
     },
     {
       $lookup: {
-        from: "users",
-        localField: "created_employee_id",
-        foreignField: "_id",
+        from: 'users',
+        localField: 'created_employee_id',
+        foreignField: '_id',
         pipeline: [
           {
             $project: {
@@ -81,12 +81,12 @@ export const FetchCreatedIndividualDyed = catchAsync(async (req, res, next) => {
             },
           },
         ],
-        as: "created_employee_id",
+        as: 'created_employee_id',
       },
     },
     {
       $unwind: {
-        path: "$created_employee_id",
+        path: '$created_employee_id',
         preserveNullAndEmptyArrays: true,
       },
     },
@@ -98,11 +98,11 @@ export const FetchCreatedIndividualDyed = catchAsync(async (req, res, next) => {
     },
     {
       $sort: {
-        [sortBy]: sort == "desc" ? -1 : 1,
+        [sortBy]: sort == 'desc' ? -1 : 1,
       },
     },
     {
-      $count: "totalDocuments",
+      $count: 'totalDocuments',
     },
   ]);
   const totalPages = Math.ceil(totalDocuments?.[0]?.totalDocuments / limit);
@@ -110,23 +110,23 @@ export const FetchCreatedIndividualDyed = catchAsync(async (req, res, next) => {
   const rawVeneerData = await IndividualDyingModel.aggregate([
     {
       $lookup: {
-        from: "raw_materials",
-        localField: "item_details",
-        foreignField: "_id",
-        as: "item_details",
+        from: 'raw_materials',
+        localField: 'item_details',
+        foreignField: '_id',
+        as: 'item_details',
       },
     },
     {
       $unwind: {
-        path: "$item_details",
+        path: '$item_details',
         preserveNullAndEmptyArrays: true,
       },
     },
     {
       $lookup: {
-        from: "users",
-        localField: "created_employee_id",
-        foreignField: "_id",
+        from: 'users',
+        localField: 'created_employee_id',
+        foreignField: '_id',
         pipeline: [
           {
             $project: {
@@ -134,12 +134,12 @@ export const FetchCreatedIndividualDyed = catchAsync(async (req, res, next) => {
             },
           },
         ],
-        as: "created_employee_id",
+        as: 'created_employee_id',
       },
     },
     {
       $unwind: {
-        path: "$created_employee_id",
+        path: '$created_employee_id',
         preserveNullAndEmptyArrays: true,
       },
     },
@@ -151,7 +151,7 @@ export const FetchCreatedIndividualDyed = catchAsync(async (req, res, next) => {
     },
     {
       $sort: {
-        [sortBy]: sort == "desc" ? -1 : 1,
+        [sortBy]: sort == 'desc' ? -1 : 1,
       },
     },
     {
@@ -165,7 +165,7 @@ export const FetchCreatedIndividualDyed = catchAsync(async (req, res, next) => {
   return res.status(200).json({
     result: rawVeneerData,
     statusCode: 200,
-    status: "success",
+    status: 'success',
     totalPages: totalPages,
   });
 });
@@ -184,11 +184,11 @@ export const RejectIndividualDyed = catchAsync(async (req, res, next) => {
     }).session(session);
 
     if (issueRecord) {
-      console.log(issueRecord, "issueRecord");
+      console.log(issueRecord, 'issueRecord');
       // Update the status of the corresponding ID in RawMaterialModel to "available"
       await IndividualDyingModel.updateOne(
         { _id: id },
-        { $set: { status: "rejected" } }
+        { $set: { status: 'rejected' } }
       ).session(session);
 
       // await IssuedForDyingIndividualModel.updateOne(
@@ -198,7 +198,7 @@ export const RejectIndividualDyed = catchAsync(async (req, res, next) => {
 
       await IssuedForDyingIndividualModel.updateOne(
         { item_id: issueRecord.item_details },
-        { $set: { status: "issued for dying" } }
+        { $set: { status: 'issued for dying' } }
       ).session(session);
 
       // const issuedItems = [
@@ -215,7 +215,7 @@ export const RejectIndividualDyed = catchAsync(async (req, res, next) => {
       // });
     } else {
       // If the record does not exist in IssuedForDyingIndividualModel, return error
-      throw new Error("Record not found in Issued For Dying.");
+      throw new Error('Record not found in Issued For Dying.');
     }
 
     // Commit the transaction
@@ -224,7 +224,7 @@ export const RejectIndividualDyed = catchAsync(async (req, res, next) => {
 
     return res.json({
       status: true,
-      message: "Rejectd successful.",
+      message: 'Rejectd successful.',
     });
   } catch (error) {
     // Rollback the transaction in case of error
@@ -233,7 +233,7 @@ export const RejectIndividualDyed = catchAsync(async (req, res, next) => {
 
     return res.status(500).json({
       status: false,
-      message: "Error occurred while cancelling Dying.",
+      message: 'Error occurred while cancelling Dying.',
       error: error.message,
     });
   }
@@ -255,11 +255,11 @@ export const PassIndividualDyed = catchAsync(async (req, res, next) => {
     }).lean();
     // .select("item_available_quantities")
 
-    if (!issueRecord) throw new Error("Record not found in Issued For Dying.");
+    if (!issueRecord) throw new Error('Record not found in Issued For Dying.');
 
     await IndividualDyingModel.updateOne(
       { _id: id },
-      { $set: { status: "passed" } }
+      { $set: { status: 'passed' } }
     ).session(session);
 
     if (issueRecord?.issued_dying_quantity !== RawData?.item_available_pattas) {
@@ -309,7 +309,7 @@ export const PassIndividualDyed = catchAsync(async (req, res, next) => {
             //   updatedQuantities?.item_available_quantities,
             item_received_pattas: updatedQuantities?.item_available_pattas,
             item_received_sqm: updatedQuantities?.item_available_sqm,
-            status: "available",
+            status: 'available',
           },
         }
       ).session(session);
@@ -333,14 +333,14 @@ export const PassIndividualDyed = catchAsync(async (req, res, next) => {
         [
           {
             ...data,
-            item_code: "DYED",
+            item_code: 'DYED',
             // item_available_quantities: availableQty,
             item_available_pattas: issueRecord?.issued_dying_quantity,
             item_available_sqm: smokeSqm,
             item_received_quantities: issueRecord?.issued_dying_quantity,
             item_received_pattas: issueRecord?.issued_dying_quantity,
             item_received_sqm: smokeSqm,
-            status: "available",
+            status: 'available',
           },
         ],
         { session } // Use the session for the transaction
@@ -372,8 +372,8 @@ export const PassIndividualDyed = catchAsync(async (req, res, next) => {
             // item_available_quantities: availableQty,
             item_available_pattas: issueRecord?.issued_dying_quantity,
             item_available_sqm: smokeSqm,
-            item_code: "DYED",
-            status: "available",
+            item_code: 'DYED',
+            status: 'available',
           },
         }
       ).session(session);
@@ -387,14 +387,14 @@ export const PassIndividualDyed = catchAsync(async (req, res, next) => {
     await session.commitTransaction();
     session.endSession();
 
-    return res.json({ status: true, message: "Passed successful." });
+    return res.json({ status: true, message: 'Passed successful.' });
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
 
     return res.status(500).json({
       status: false,
-      message: "Error occurred while cancelling dying.",
+      message: 'Error occurred while cancelling dying.',
       error: error.message,
     });
   }

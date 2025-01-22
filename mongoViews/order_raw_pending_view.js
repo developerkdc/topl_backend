@@ -30,13 +30,13 @@
 [
   {
     $match: {
-      order_type: "raw",
+      order_type: 'raw',
       $or: [
         {
-          "raw_order_details.order_status": "pending",
+          'raw_order_details.order_status': 'pending',
         },
         {
-          "raw_order_details.order_status": "open",
+          'raw_order_details.order_status': 'open',
         },
       ],
     },
@@ -48,10 +48,10 @@
   },
   {
     $lookup: {
-      from: "users",
-      localField: "created_employee_id",
-      foreignField: "_id",
-      as: "created_employee_id",
+      from: 'users',
+      localField: 'created_employee_id',
+      foreignField: '_id',
+      as: 'created_employee_id',
     },
   },
 ];

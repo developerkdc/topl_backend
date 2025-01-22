@@ -1,11 +1,11 @@
-import mongoose from "mongoose";
-import catchAsync from "../../utils/errors/catchAsync.js";
-import { IssuedForSmokingGroupModel } from "../../database/schema/smoking/issueForSmokingGroup.js";
-import { GroupSmokeModel } from "../../database/schema/smoking/groupSmoked.js";
-import GroupImagesModel from "../../database/schema/images/groupImages.schema.js";
-import fs from "fs";
-import OtherGoodsModel from "../../database/schema/inventory/otherGoods/otherGoods.schema.js";
-import OtherGoodsConsumedModel from "../../database/schema/inventory/otherGoods/otherGoodsConsumed.schema.js";
+import mongoose from 'mongoose';
+import catchAsync from '../../utils/errors/catchAsync.js';
+import { IssuedForSmokingGroupModel } from '../../database/schema/smoking/issueForSmokingGroup.js';
+import { GroupSmokeModel } from '../../database/schema/smoking/groupSmoked.js';
+import GroupImagesModel from '../../database/schema/images/groupImages.schema.js';
+import fs from 'fs';
+import OtherGoodsModel from '../../database/schema/inventory/otherGoods/otherGoods.schema.js';
+import OtherGoodsConsumedModel from '../../database/schema/inventory/otherGoods/otherGoodsConsumed.schema.js';
 
 export const CreateGroupSmoked = catchAsync(async (req, res, next) => {
   // Start a MongoDB session
@@ -28,7 +28,7 @@ export const CreateGroupSmoked = catchAsync(async (req, res, next) => {
       await IssuedForSmokingGroupModel.find({
         _id: { $in: extracted_group_details },
       })
-        .populate("group_id")
+        .populate('group_id')
         .session(session);
 
     if (
@@ -36,7 +36,7 @@ export const CreateGroupSmoked = catchAsync(async (req, res, next) => {
     ) {
       return res.status(400).json({
         status: false,
-        message: "Item not available",
+        message: 'Item not available',
       });
     }
 
@@ -49,9 +49,9 @@ export const CreateGroupSmoked = catchAsync(async (req, res, next) => {
       },
       {
         $group: {
-          _id: "$item_name",
+          _id: '$item_name',
           totalAvailable: {
-            $sum: "$available_quantity",
+            $sum: '$available_quantity',
           },
         },
       },
@@ -128,7 +128,7 @@ export const CreateGroupSmoked = catchAsync(async (req, res, next) => {
     if (saveData) {
       await IssuedForSmokingGroupModel.updateMany(
         { _id: { $in: extracted_group_details } },
-        { $set: { status: "smoked" } }
+        { $set: { status: 'smoked' } }
       ).session(session);
     }
 
@@ -171,7 +171,7 @@ export const CreateGroupSmoked = catchAsync(async (req, res, next) => {
         available_quantity: updatedOtherGoods?.available_quantity,
         date_of_consumption: bodyData?.date_of_smoking,
         consumption_quantity: consumeFromItem,
-        processes: "Group Smoking",
+        processes: 'Group Smoking',
         supplier_details: updatedOtherGoods?.supplier_details,
         other_goods_consumed_remarks: bodyData?.consumption_remark,
         created_employee_id: authUserDetail?._id,
@@ -192,7 +192,7 @@ export const CreateGroupSmoked = catchAsync(async (req, res, next) => {
 
     return res.json({
       status: true,
-      message: "Create Group smoking successful",
+      message: 'Create Group smoking successful',
     });
   } catch (error) {
     // Rollback the transaction if there is any error

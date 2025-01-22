@@ -1,10 +1,10 @@
-import mongoose from "mongoose";
-import LogSchemaFunction from "../LogsSchema/logs.schema.js";
+import mongoose from 'mongoose';
+import LogSchemaFunction from '../LogsSchema/logs.schema.js';
 
 const IssuedForSmokingIndividualSchema = new mongoose.Schema({
   item_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "raw_material",
+    ref: 'raw_material',
     required: true,
   },
   issued_smoking_quantity: {
@@ -37,15 +37,15 @@ const IssuedForSmokingIndividualSchema = new mongoose.Schema({
   // },
   status: {
     type: String,
-    enum: ["issued for smoking", "smoked"],
-    default: "issued for smoking",
+    enum: ['issued for smoking', 'smoked'],
+    default: 'issued for smoking',
   },
   issued_for_smoking_remarks: {
     type: String,
   },
   created_employee_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "user",
+    ref: 'user',
     required: true,
     trim: true,
   },
@@ -55,27 +55,27 @@ const IssuedForSmokingIndividualSchema = new mongoose.Schema({
 });
 
 export const IssuedForSmokingIndividualModel = mongoose.model(
-  "issued_for_smoking_individual",
+  'issued_for_smoking_individual',
   IssuedForSmokingIndividualSchema
 );
 const lookup = [
   {
     $lookup: {
-      from: "raw_materials",
-      localField: "item_id",
-      foreignField: "_id",
-      as: "item_id",
+      from: 'raw_materials',
+      localField: 'item_id',
+      foreignField: '_id',
+      as: 'item_id',
     },
   },
   {
     $unwind: {
-      path: "$item_id",
+      path: '$item_id',
       preserveNullAndEmptyArrays: true,
     },
   },
 ];
 LogSchemaFunction(
-  "issuedForSmokingIndividual",
+  'issuedForSmokingIndividual',
   IssuedForSmokingIndividualModel,
   lookup
 );

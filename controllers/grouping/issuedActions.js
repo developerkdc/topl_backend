@@ -1,8 +1,8 @@
-import mongoose from "mongoose";
-import { GroupModel } from "../../database/schema/group/groupCreated/groupCreated.schema.js";
-import { DynamicSearch } from "../../utils/dynamicSearch/dynamic.js";
-import catchAsync from "../../utils/errors/catchAsync.js";
-import { IssuedForDyingGroupModel } from "../../database/schema/dying/issueForDyingGroup.js";
+import mongoose from 'mongoose';
+import { GroupModel } from '../../database/schema/group/groupCreated/groupCreated.schema.js';
+import { DynamicSearch } from '../../utils/dynamicSearch/dynamic.js';
+import catchAsync from '../../utils/errors/catchAsync.js';
+import { IssuedForDyingGroupModel } from '../../database/schema/dying/issueForDyingGroup.js';
 
 export const IssueForDyingGroup = catchAsync(async (req, res, next) => {
   const authUserDetail = req.userDetails;
@@ -12,7 +12,7 @@ export const IssueForDyingGroup = catchAsync(async (req, res, next) => {
   const a = await GroupModel.find(
     {
       _id: { $in: issuedForDyingIds },
-      status: { $ne: "issued for dying" },
+      status: { $ne: 'issued for dying' },
     },
     {
       item_received_quantities: 1,
@@ -34,13 +34,13 @@ export const IssueForDyingGroup = catchAsync(async (req, res, next) => {
     },
     {
       $set: {
-        status: "issued for dying",
+        status: 'issued for dying',
       },
     }
   );
   return res.json({
     status: true,
-    message: "Issue for dying successful",
+    message: 'Issue for dying successful',
   });
 });
 
@@ -67,11 +67,11 @@ export const CancelDyingGroup = catchAsync(async (req, res, next) => {
       // Update the status of the corresponding ID in RawMaterialModel to "available"
       await GroupModel.updateOne(
         { _id: issueRecord.group_id },
-        { $set: { status: "available" } }
+        { $set: { status: 'available' } }
       ).session(session);
     } else {
       // If the record does not exist in IssuedForSmokingIndividualModel, return error
-      throw new Error("Record not found in Issued For Dying.");
+      throw new Error('Record not found in Issued For Dying.');
     }
 
     // Commit the transaction
@@ -80,7 +80,7 @@ export const CancelDyingGroup = catchAsync(async (req, res, next) => {
 
     return res.json({
       status: true,
-      message: "Cancellation successful.",
+      message: 'Cancellation successful.',
     });
   } catch (error) {
     // Rollback the transaction in case of error
@@ -89,30 +89,41 @@ export const CancelDyingGroup = catchAsync(async (req, res, next) => {
 
     return res.status(500).json({
       status: false,
-      message: "Error occurred while cancelling smoking.",
+      message: 'Error occurred while cancelling smoking.',
       error: error.message,
     });
   }
 });
 
 export const FetchIssuedForDyingGroup = catchAsync(async (req, res, next) => {
-  const { string, boolean, numbers ,arrayField=[]} = req?.body?.searchFields || {};
- const { page, limit = 10, sortBy = "updated_at", sort = "desc" } = req.query;
+  const {
+    string,
+    boolean,
+    numbers,
+    arrayField = [],
+  } = req?.body?.searchFields || {};
+  const { page, limit = 10, sortBy = 'updated_at', sort = 'desc' } = req.query;
   const skip = Math.max((page - 1) * limit, 0);
 
-  const search = req.query.search || "";
+  const search = req.query.search || '';
 
   let searchQuery = {};
-  if (search != "" && req?.body?.searchFields) {
-    const searchdata = DynamicSearch(search, boolean, numbers, string,arrayField);
-   if (searchdata?.length == 0) {
+  if (search != '' && req?.body?.searchFields) {
+    const searchdata = DynamicSearch(
+      search,
+      boolean,
+      numbers,
+      string,
+      arrayField
+    );
+    if (searchdata?.length == 0) {
       return res.status(404).json({
         statusCode: 404,
         status: false,
         data: {
           data: [],
         },
-        message: "Results Not Found",
+        message: 'Results Not Found',
       });
     }
     searchQuery = searchdata;
@@ -123,34 +134,34 @@ export const FetchIssuedForDyingGroup = catchAsync(async (req, res, next) => {
 
   if (to && from) {
     console.log(new Date(from));
-    matchQuery["created_at"] = { $gte: new Date(from), $lte: new Date(to) };
+    matchQuery['created_at'] = { $gte: new Date(from), $lte: new Date(to) };
   }
 
   const totalDocuments = await IssuedForDyingGroupModel.aggregate([
     {
       $lookup: {
-        from: "groups",
-        localField: "group_id",
-        foreignField: "_id",
-        as: "group_id",
+        from: 'groups',
+        localField: 'group_id',
+        foreignField: '_id',
+        as: 'group_id',
       },
     },
     {
-      $unwind: "$group_id",
+      $unwind: '$group_id',
     },
     {
       $lookup: {
-        from: "raw_materials", // Assuming "items" is the collection name for item details
-        localField: "group_id.item_details",
-        foreignField: "_id",
-        as: "group_id.item_details",
+        from: 'raw_materials', // Assuming "items" is the collection name for item details
+        localField: 'group_id.item_details',
+        foreignField: '_id',
+        as: 'group_id.item_details',
       },
     },
     {
       $lookup: {
-        from: "users",
-        localField: "created_employee_id",
-        foreignField: "_id",
+        from: 'users',
+        localField: 'created_employee_id',
+        foreignField: '_id',
         pipeline: [
           {
             $project: {
@@ -158,12 +169,12 @@ export const FetchIssuedForDyingGroup = catchAsync(async (req, res, next) => {
             },
           },
         ],
-        as: "created_employee_id",
+        as: 'created_employee_id',
       },
     },
     {
       $unwind: {
-        path: "$created_employee_id",
+        path: '$created_employee_id',
         preserveNullAndEmptyArrays: true,
       },
     },
@@ -175,11 +186,11 @@ export const FetchIssuedForDyingGroup = catchAsync(async (req, res, next) => {
     },
     {
       $sort: {
-        [sortBy]: sort == "desc" ? -1 : 1,
+        [sortBy]: sort == 'desc' ? -1 : 1,
       },
     },
     {
-      $count: "totalDocuments",
+      $count: 'totalDocuments',
     },
   ]);
   const totalPages = Math.ceil(totalDocuments?.[0]?.totalDocuments / limit);
@@ -206,28 +217,28 @@ export const FetchIssuedForDyingGroup = catchAsync(async (req, res, next) => {
   const rawVeneerData = await IssuedForDyingGroupModel.aggregate([
     {
       $lookup: {
-        from: "groups",
-        localField: "group_id",
-        foreignField: "_id",
-        as: "group_id",
+        from: 'groups',
+        localField: 'group_id',
+        foreignField: '_id',
+        as: 'group_id',
       },
     },
     {
-      $unwind: "$group_id",
+      $unwind: '$group_id',
     },
     {
       $lookup: {
-        from: "raw_materials", // Assuming "items" is the collection name for item details
-        localField: "group_id.item_details",
-        foreignField: "_id",
-        as: "group_id.item_details",
+        from: 'raw_materials', // Assuming "items" is the collection name for item details
+        localField: 'group_id.item_details',
+        foreignField: '_id',
+        as: 'group_id.item_details',
       },
     },
     {
       $lookup: {
-        from: "users",
-        localField: "created_employee_id",
-        foreignField: "_id",
+        from: 'users',
+        localField: 'created_employee_id',
+        foreignField: '_id',
         pipeline: [
           {
             $project: {
@@ -235,12 +246,12 @@ export const FetchIssuedForDyingGroup = catchAsync(async (req, res, next) => {
             },
           },
         ],
-        as: "created_employee_id",
+        as: 'created_employee_id',
       },
     },
     {
       $unwind: {
-        path: "$created_employee_id",
+        path: '$created_employee_id',
         preserveNullAndEmptyArrays: true,
       },
     },
@@ -252,7 +263,7 @@ export const FetchIssuedForDyingGroup = catchAsync(async (req, res, next) => {
     },
     {
       $sort: {
-        [sortBy]: sort == "desc" ? -1 : 1,
+        [sortBy]: sort == 'desc' ? -1 : 1,
       },
     },
     {
@@ -266,7 +277,7 @@ export const FetchIssuedForDyingGroup = catchAsync(async (req, res, next) => {
   return res.status(200).json({
     result: rawVeneerData,
     statusCode: 200,
-    status: "success",
+    status: 'success',
     totalPages: totalPages,
   });
 });

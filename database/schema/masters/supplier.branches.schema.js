@@ -1,24 +1,24 @@
-import mongoose from "mongoose";
-import LogSchemaFunction from "../LogsSchema/logs.schema.js";
+import mongoose from 'mongoose';
+import LogSchemaFunction from '../LogsSchema/logs.schema.js';
 
 const contactPersonSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: [true, "contact person name is required"],
+    required: [true, 'contact person name is required'],
     // unique: [true, "contact person name must be unique"],
     uppercase: true,
-    trim: true
+    trim: true,
   },
   email: {
     type: String,
     default: null,
     // required: [true, "email id is required"],
     // unique: [true, "contact person email must be unique"],
-    trim: true
+    trim: true,
   },
   mobile_number: {
     type: String,
-    default: null
+    default: null,
     // unique: [true, "contact person mobile number must be unique"],
     // required: [true, "mobile number must be unique is required"],
   },
@@ -26,67 +26,67 @@ const contactPersonSchema = new mongoose.Schema({
     type: String,
     // required: [true, "designation is required"],
     uppercase: true,
-    trim: true
+    trim: true,
   },
 });
 const supplierBranchesSchema = new mongoose.Schema({
   supplier_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "supplier",
-    required: [true, "supplier id is required"],
+    ref: 'supplier',
+    required: [true, 'supplier id is required'],
   },
   branch_name: {
     type: String,
-    required: [true, "branch name is reqiured"],
+    required: [true, 'branch name is reqiured'],
     uppercase: true,
-    trim: true
+    trim: true,
   },
   contact_person: {
     type: [contactPersonSchema],
-    required: [true, "at least one contact person is required"],
+    required: [true, 'at least one contact person is required'],
   },
   address: {
     type: String,
-    required: [true, "address is required"],
+    required: [true, 'address is required'],
     uppercase: true,
-    trim: true
+    trim: true,
   },
   state: {
     type: String,
-    required: [true, "state is required"],
+    required: [true, 'state is required'],
     // uppercase: true,
-    trim: true
+    trim: true,
   },
   country: {
     type: String,
-    required: [true, "country is required"],
+    required: [true, 'country is required'],
     // uppercase: true,
-    trim: true
+    trim: true,
   },
   city: {
     type: String,
-    required: [true, "city is required"],
+    required: [true, 'city is required'],
     // uppercase: true,
-    trim: true
+    trim: true,
   },
   pincode: {
     type: String,
-    required: [true, "pincode is required"],
+    required: [true, 'pincode is required'],
     uppercase: true,
-    trim: true
+    trim: true,
   },
   gst_number: {
     type: String,
     // required: [true, "gst number is required"],
     default: null,
     uppercase: true,
-    trim: true
+    trim: true,
   },
   web_url: {
     type: String,
     default: null,
     // uppercase: true,
-    trim: true
+    trim: true,
   },
   is_main_branch: {
     type: Boolean,
@@ -99,7 +99,7 @@ const supplierBranchesSchema = new mongoose.Schema({
 
 const supplierBranchModel =
   mongoose.models.supplierbranchmodels ||
-  mongoose.model("supplier_branch", supplierBranchesSchema);
+  mongoose.model('supplier_branch', supplierBranchesSchema);
 // LogSchemaFunction("supplier_branch", supplierBranchModel, []);
 
 export default supplierBranchModel;

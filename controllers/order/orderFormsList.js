@@ -1,15 +1,15 @@
-import { GroupModel } from "../../database/schema/group/groupCreated/groupCreated.schema.js";
-import SupplierModel from "../../database/schema/masters/supplier.schema.js";
-import { OrderModel } from "../../database/schema/order/orders.schema.js";
-import { CreateReadySheetFormModel } from "../../database/schema/readySheetForm/readySheetForm.schema.js";
-import catchAsync from "../../utils/errors/catchAsync.js";
-import mongoose from "mongoose";
+import { GroupModel } from '../../database/schema/group/groupCreated/groupCreated.schema.js';
+import SupplierModel from '../../database/schema/masters/supplier.schema.js';
+import { OrderModel } from '../../database/schema/order/orders.schema.js';
+import { CreateReadySheetFormModel } from '../../database/schema/readySheetForm/readySheetForm.schema.js';
+import catchAsync from '../../utils/errors/catchAsync.js';
+import mongoose from 'mongoose';
 
 export const GetLatestOrderNo = catchAsync(async (req, res, next) => {
   try {
     // Find all documents, sort them by order_no in descending order, and limit to 1 document
     const latestorder = await OrderModel.find().sort({ order_no: -1 }).limit(1);
-    console.log(latestorder, "latestorder");
+    console.log(latestorder, 'latestorder');
 
     if (latestorder.length > 0) {
       const latestOrderNo = latestorder[0].order_no + 1;
@@ -17,7 +17,7 @@ export const GetLatestOrderNo = catchAsync(async (req, res, next) => {
     } else {
       res.status(200).json({ latestOrderNo: 1 });
       // If no documents found, return a default value or handle the scenario accordingly
-      res.status(404).json({ message: "No orders found" });
+      res.status(404).json({ message: 'No orders found' });
     }
   } catch (error) {
     // Handle any errors that may occur during the database operation
@@ -66,19 +66,19 @@ export const GetGroupNoBasedOnItemNameAndItemCode = catchAsync(
       const { item_name, item_code } = req.query;
 
       if (!item_code) {
-        return res.status(400).json({ error: "Item Code is required" });
+        return res.status(400).json({ error: 'Item Code is required' });
       }
       if (!item_name) {
-        return res.status(400).json({ error: "Item Name is required" });
+        return res.status(400).json({ error: 'Item Name is required' });
       }
 
-      const GroupView = mongoose.connection.db.collection("groups_view");
+      const GroupView = mongoose.connection.db.collection('groups_view');
 
       const matchedGroups = await GroupView.aggregate([
         {
           $match: {
-            "item_details.item_name": item_name,
-            "item_details.item_code": item_code,
+            'item_details.item_name': item_name,
+            'item_details.item_code': item_code,
           },
         },
         { $project: { group_no: 1, _id: 0 } },
@@ -89,11 +89,11 @@ export const GetGroupNoBasedOnItemNameAndItemCode = catchAsync(
       return res.status(200).json({
         result: groupNos,
         status: true,
-        message: "Matched group numbers",
+        message: 'Matched group numbers',
       });
     } catch (error) {
-      console.error("Error retrieving documents from the view:", error);
-      res.status(500).json({ error: "Internal server error" });
+      console.error('Error retrieving documents from the view:', error);
+      res.status(500).json({ error: 'Internal server error' });
     }
   }
 );
@@ -102,14 +102,14 @@ export const GetViewDetails = catchAsync(async (req, res, next) => {
   try {
     const { group_no } = req.query;
     if (!group_no) {
-      return res.status(400).json({ error: "Group No is required" });
+      return res.status(400).json({ error: 'Group No is required' });
     }
 
     // GROUP  AVAILABLE
-    const GroupAvailableView = mongoose.connection.db.collection("groups_view");
+    const GroupAvailableView = mongoose.connection.db.collection('groups_view');
     const GroupAvailableData = await GroupAvailableView.find({
       group_no: Number(group_no),
-      status: "available",
+      status: 'available',
     }).toArray();
 
     const totalGroupAvailable = GroupAvailableData.reduce((total, group) => {
@@ -117,10 +117,10 @@ export const GetViewDetails = catchAsync(async (req, res, next) => {
     }, 0);
 
     // ISSUE SMOKING
-    const GroupView = mongoose.connection.db.collection("groups_view");
+    const GroupView = mongoose.connection.db.collection('groups_view');
     const groupData = await GroupView.find({
       group_no: Number(group_no),
-      status: "issued for smoking",
+      status: 'issued for smoking',
     }).toArray();
 
     const totalPattasSmokingAvailable = groupData.reduce((total, group) => {
@@ -131,7 +131,7 @@ export const GetViewDetails = catchAsync(async (req, res, next) => {
 
     const groupDyingData = await GroupView.find({
       group_no: Number(group_no),
-      status: "issued for dying",
+      status: 'issued for dying',
     }).toArray();
 
     const totalPattasDyingAvailable = groupDyingData.reduce((total, group) => {
@@ -141,13 +141,13 @@ export const GetViewDetails = catchAsync(async (req, res, next) => {
     // ISSUE FOR CUTTING
 
     const cuttingView = mongoose.connection.db.collection(
-      "issued_for_cuttings_view"
+      'issued_for_cuttings_view'
     );
     const cuttingData = await cuttingView
       .aggregate([
         {
           $match: {
-            "group_id.group_no": Number(group_no),
+            'group_id.group_no': Number(group_no),
           },
         },
       ])
@@ -174,7 +174,7 @@ export const GetViewDetails = catchAsync(async (req, res, next) => {
     // ISSUE FOR PRESSING
 
     const pressingView = mongoose.connection.db.collection(
-      "issued_for_pressings_view"
+      'issued_for_pressings_view'
     );
     const pressingData = await pressingView
       .find({
@@ -196,7 +196,7 @@ export const GetViewDetails = catchAsync(async (req, res, next) => {
     // ISSUE FOR FINISHING
 
     const finishingsView = mongoose.connection.db.collection(
-      "issued_for_finishings_view"
+      'issued_for_finishings_view'
     );
     const finishingsData = await finishingsView
       .find({
@@ -214,13 +214,13 @@ export const GetViewDetails = catchAsync(async (req, res, next) => {
     // ISSUE FOR TAPPING
 
     const tappingView = mongoose.connection.db.collection(
-      "issued_for_tapings_view"
+      'issued_for_tapings_view'
     );
     const tappingData = await tappingView
       .aggregate([
         {
           $match: {
-            "cutting_id.group_history_id.group_id.group_no": Number(group_no),
+            'cutting_id.group_history_id.group_id.group_no': Number(group_no),
           },
         },
       ])
@@ -235,7 +235,7 @@ export const GetViewDetails = catchAsync(async (req, res, next) => {
     // QC DONE INVENTORY
 
     const qcDoneView = mongoose.connection.db.collection(
-      "qc_done_inventories_view"
+      'qc_done_inventories_view'
     );
     const qcDoneData = await qcDoneView
       .find({
@@ -260,11 +260,11 @@ export const GetViewDetails = catchAsync(async (req, res, next) => {
     return res.status(200).json({
       result: data,
       status: true,
-      message: "View Details retrieved successfully",
+      message: 'View Details retrieved successfully',
     });
   } catch (error) {
-    console.error("Error retrieving documents from the view:", error);
-    res.status(500).json({ error: "Internal server error" });
+    console.error('Error retrieving documents from the view:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -272,7 +272,7 @@ export const SupplierMasterListInOrder = catchAsync(async (req, res) => {
   const supplierList = await SupplierModel.aggregate([
     {
       $match: {
-        status: "active",
+        status: 'active',
       },
     },
     {
@@ -286,7 +286,7 @@ export const SupplierMasterListInOrder = catchAsync(async (req, res) => {
   return res.status(201).json({
     result: supplierList,
     status: true,
-    message: "All Supplier List",
+    message: 'All Supplier List',
   });
 });
 
@@ -301,5 +301,5 @@ export const GetAllOrderNoList = catchAsync(async (req, res) => {
   const onlyno = orders.map((item) => {
     return item.order_no;
   });
-  return res.json({ result: onlyno, status: true, message: "Order No List" });
+  return res.json({ result: onlyno, status: true, message: 'Order No List' });
 });

@@ -1,10 +1,10 @@
-import mongoose from "mongoose";
-import LogSchemaFunction from "../LogsSchema/logs.schema.js";
+import mongoose from 'mongoose';
+import LogSchemaFunction from '../LogsSchema/logs.schema.js';
 
 const ReadySheetFormInventorySchema = new mongoose.Schema({
   issued_for_tapping_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "issued_for_taping",
+    ref: 'issued_for_taping',
     required: true,
   },
   group_no: {
@@ -13,7 +13,7 @@ const ReadySheetFormInventorySchema = new mongoose.Schema({
   },
   tapping_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "taping",
+    ref: 'taping',
     required: true,
   },
 
@@ -56,8 +56,8 @@ const ReadySheetFormInventorySchema = new mongoose.Schema({
 
   status: {
     type: String,
-    enum: ["available", "not available"],
-    default: "available",
+    enum: ['available', 'not available'],
+    default: 'available',
   },
 
   remarks: {
@@ -67,7 +67,7 @@ const ReadySheetFormInventorySchema = new mongoose.Schema({
 
   created_employee_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "user",
+    ref: 'user',
     trim: true,
   },
 
@@ -77,7 +77,7 @@ const ReadySheetFormInventorySchema = new mongoose.Schema({
 });
 
 export const CreateReadySheetFormModel = mongoose.model(
-  "ready_sheet_form_inventory",
+  'ready_sheet_form_inventory',
   ReadySheetFormInventorySchema
 );
-LogSchemaFunction("readySheetFormInventory", CreateReadySheetFormModel);
+LogSchemaFunction('readySheetFormInventory', CreateReadySheetFormModel);

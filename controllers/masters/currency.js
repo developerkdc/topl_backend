@@ -1,7 +1,7 @@
-import mongoose from "mongoose";
-import CurrencyModel from "../../database/schema/masters/currency.schema.js";
-import catchAsync from "../../utils/errors/catchAsync.js";
-import { DynamicSearch } from "../../utils/dynamicSearch/dynamic.js";
+import mongoose from 'mongoose';
+import CurrencyModel from '../../database/schema/masters/currency.schema.js';
+import catchAsync from '../../utils/errors/catchAsync.js';
+import { DynamicSearch } from '../../utils/dynamicSearch/dynamic.js';
 
 export const AddCurrencyMaster = catchAsync(async (req, res) => {
   const authUserDetail = req.userDetails;
@@ -14,7 +14,7 @@ export const AddCurrencyMaster = catchAsync(async (req, res) => {
   return res.status(201).json({
     result: savedCurrency,
     status: true,
-    message: "Currency created successfully",
+    message: 'Currency created successfully',
   });
 });
 
@@ -24,7 +24,7 @@ export const UpdateCurrencyMaster = catchAsync(async (req, res) => {
   if (!mongoose.Types.ObjectId.isValid(userId)) {
     return res
       .status(400)
-      .json({ result: [], status: false, message: "Invalid Currency ID" });
+      .json({ result: [], status: false, message: 'Invalid Currency ID' });
   }
   const user = await CurrencyModel.findByIdAndUpdate(
     userId,
@@ -35,13 +35,13 @@ export const UpdateCurrencyMaster = catchAsync(async (req, res) => {
     return res.status(404).json({
       result: [],
       status: false,
-      message: "User not found.",
+      message: 'User not found.',
     });
   }
   res.status(200).json({
     result: user,
     status: true,
-    message: "Updated successfully",
+    message: 'Updated successfully',
   });
 });
 
@@ -55,12 +55,12 @@ export const ListCurrencyMaster = catchAsync(async (req, res) => {
   const {
     page = 1,
     limit = 10,
-    sortBy = "updated_at",
-    sort = "desc",
+    sortBy = 'updated_at',
+    sort = 'desc',
   } = req.query;
-  const search = req.query.search || "";
+  const search = req.query.search || '';
   let searchQuery = {};
-  if (search != "" && req?.body?.searchFields) {
+  if (search != '' && req?.body?.searchFields) {
     const searchdata = DynamicSearch(
       search,
       boolean,
@@ -75,7 +75,7 @@ export const ListCurrencyMaster = catchAsync(async (req, res) => {
         data: {
           user: [],
         },
-        message: "Results Not Found",
+        message: 'Results Not Found',
       });
     }
     searchQuery = searchdata;
@@ -89,9 +89,9 @@ export const ListCurrencyMaster = catchAsync(async (req, res) => {
   const currencyList = await CurrencyModel.aggregate([
     {
       $lookup: {
-        from: "users",
-        localField: "created_employee_id",
-        foreignField: "_id",
+        from: 'users',
+        localField: 'created_employee_id',
+        foreignField: '_id',
         pipeline: [
           {
             $project: {
@@ -99,12 +99,12 @@ export const ListCurrencyMaster = catchAsync(async (req, res) => {
             },
           },
         ],
-        as: "created_employee_id",
+        as: 'created_employee_id',
       },
     },
     {
       $unwind: {
-        path: "$created_employee_id",
+        path: '$created_employee_id',
         preserveNullAndEmptyArrays: true,
       },
     },
@@ -112,7 +112,7 @@ export const ListCurrencyMaster = catchAsync(async (req, res) => {
       $match: { ...searchQuery },
     },
     {
-      $sort: { [sortBy]: sort == "desc" ? -1 : 1 },
+      $sort: { [sortBy]: sort == 'desc' ? -1 : 1 },
     },
     {
       $skip: skip,
@@ -120,7 +120,7 @@ export const ListCurrencyMaster = catchAsync(async (req, res) => {
     {
       $limit: limit,
     },
-  ]).collation({ locale: "en", caseLevel: true });
+  ]).collation({ locale: 'en', caseLevel: true });
 
   if (currencyList) {
     return res.status(200).json({
@@ -128,7 +128,7 @@ export const ListCurrencyMaster = catchAsync(async (req, res) => {
       status: true,
       totalPages: totalPages,
       currentPage: validPage,
-      message: "All Currency List",
+      message: 'All Currency List',
     });
   }
 });
@@ -137,7 +137,7 @@ export const DropdownCurrencyMaster = catchAsync(async (req, res) => {
   const list = await CurrencyModel.aggregate([
     {
       $match: {
-        status: "active",
+        status: 'active',
       },
     },
     {
@@ -152,6 +152,6 @@ export const DropdownCurrencyMaster = catchAsync(async (req, res) => {
   res.status(200).json({
     result: list,
     status: true,
-    message: "Currency Dropdown List",
+    message: 'Currency Dropdown List',
   });
 });

@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
 const GroupImagesSchema = new mongoose.Schema({
   group_no: {
@@ -35,5 +35,5 @@ const GroupImagesSchema = new mongoose.Schema({
   deleted_at: { type: Date, default: null },
 });
 
-const GroupImagesModel = mongoose.model("group_images", GroupImagesSchema);
+const GroupImagesModel = mongoose.model('group_images', GroupImagesSchema);
 export default GroupImagesModel;

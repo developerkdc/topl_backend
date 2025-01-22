@@ -1,12 +1,12 @@
-import jwt from "jsonwebtoken";
-import bcrypt from "bcryptjs";
-import getConfigs from "../../config/config.js";
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
+import getConfigs from '../../config/config.js';
 const Configs = getConfigs();
 
 const generateRandomPassword = (length) => {
   const charset =
-    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  let password = "";
+    'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let password = '';
   for (let i = 0; i < length; i++) {
     const randomIndex = Math.floor(Math.random() * charset.length);
     password += charset[randomIndex];
@@ -31,7 +31,13 @@ const generateAccessToken = (userDetails) => {
   return token;
 };
 const generateOTP = () => {
-    return Math.floor(100000 + Math.random() * 900000).toString();
+  return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
-export { generateRandomPassword, create, verify ,generateAccessToken,generateOTP};
+export {
+  generateRandomPassword,
+  create,
+  verify,
+  generateAccessToken,
+  generateOTP,
+};

@@ -1,9 +1,9 @@
-import mongoose from "mongoose";
-import catchAsync from "../utils/errors/catchAsync.js";
-import { IdRequired } from "../utils/response/response.js";
-import RolesModel from "../database/schema/roles.schema.js";
-import { DynamicSearch } from "../utils/dynamicSearch/dynamic.js";
-import { dynamic_filter } from "../utils/dymanicFilter.js";
+import mongoose from 'mongoose';
+import catchAsync from '../utils/errors/catchAsync.js';
+import { IdRequired } from '../utils/response/response.js';
+import RolesModel from '../database/schema/roles.schema.js';
+import { DynamicSearch } from '../utils/dynamicSearch/dynamic.js';
+import { dynamic_filter } from '../utils/dymanicFilter.js';
 
 export const AddRole = catchAsync(async (req, res) => {
   const authUserDetail = req.userDetails;
@@ -17,7 +17,7 @@ export const AddRole = catchAsync(async (req, res) => {
   return res.status(200).json({
     result: savedRole,
     status: true,
-    message: "Role created successfully",
+    message: 'Role created successfully',
   });
 });
 
@@ -37,7 +37,7 @@ export const UpdateRole = catchAsync(async (req, res) => {
     return res.status(400).json({
       result: [],
       status: false,
-      message: "Role name is required",
+      message: 'Role name is required',
     });
   }
 
@@ -45,7 +45,7 @@ export const UpdateRole = catchAsync(async (req, res) => {
     return res.status(400).json({
       result: [],
       status: false,
-      message: "Invalid role ID",
+      message: 'Invalid role ID',
     });
   }
   const rolesById = await RolesModel.findOne({
@@ -56,36 +56,56 @@ export const UpdateRole = catchAsync(async (req, res) => {
     return res.status(400).json({
       result: [],
       status: false,
-      message: "Role Not exists with this ID.",
+      message: 'Role Not exists with this ID.',
     });
   }
   updateData.updated_at = Date.now();
-  const roles = await RolesModel.findByIdAndUpdate(roleId, { $set: updateData }, { new: true, runValidators: true });
+  const roles = await RolesModel.findByIdAndUpdate(
+    roleId,
+    { $set: updateData },
+    { new: true, runValidators: true }
+  );
   if (!roles) {
     return res.status(404).json({
       result: [],
       status: false,
-      message: "Role not found.",
+      message: 'Role not found.',
     });
   }
   res.status(200).json({
     result: roles,
     status: true,
-    message: "Updated successfully.",
+    message: 'Updated successfully.',
   });
 });
 
 export const ListRoles = catchAsync(async (req, res) => {
-  const { string, boolean, numbers, arrayField = [] } = req?.body?.searchFields || {};
-  const { page = 1, limit = 10, sortBy = "updated_at", sort = "desc" } = req.query;
-  const search = req.query.search || "";
+  const {
+    string,
+    boolean,
+    numbers,
+    arrayField = [],
+  } = req?.body?.searchFields || {};
+  const {
+    page = 1,
+    limit = 10,
+    sortBy = 'updated_at',
+    sort = 'desc',
+  } = req.query;
+  const search = req.query.search || '';
   let searchQuery = {};
 
   const { ...data } = req?.body?.filters || {};
   const matchQuery = dynamic_filter(data);
 
-  if (search != "" && req?.body?.searchFields) {
-    const searchdata = DynamicSearch(search, boolean, numbers, string, arrayField);
+  if (search != '' && req?.body?.searchFields) {
+    const searchdata = DynamicSearch(
+      search,
+      boolean,
+      numbers,
+      string,
+      arrayField
+    );
     if (searchdata?.length == 0) {
       return res.status(404).json({
         statusCode: 404,
@@ -93,14 +113,14 @@ export const ListRoles = catchAsync(async (req, res) => {
         data: {
           user: [],
         },
-        message: "Results Not Found",
+        message: 'Results Not Found',
       });
     }
     searchQuery = searchdata;
   }
   const totalDocument = await RolesModel.countDocuments({
     ...searchQuery,
-    ...matchQuery
+    ...matchQuery,
   });
   const totalPages = Math.ceil(totalDocument / limit);
   const validPage = Math.min(Math.max(page, 1), totalPages);
@@ -108,9 +128,9 @@ export const ListRoles = catchAsync(async (req, res) => {
   const rolesList = await RolesModel.aggregate([
     {
       $lookup: {
-        from: "users",
-        localField: "created_employee_id",
-        foreignField: "_id",
+        from: 'users',
+        localField: 'created_employee_id',
+        foreignField: '_id',
         pipeline: [
           {
             $project: {
@@ -118,12 +138,12 @@ export const ListRoles = catchAsync(async (req, res) => {
             },
           },
         ],
-        as: "created_employee_id",
+        as: 'created_employee_id',
       },
     },
     {
       $unwind: {
-        path: "$created_employee_id",
+        path: '$created_employee_id',
         preserveNullAndEmptyArrays: true,
       },
     },
@@ -131,7 +151,7 @@ export const ListRoles = catchAsync(async (req, res) => {
       $match: { ...searchQuery, ...matchQuery },
     },
     {
-      $sort: { [sortBy]: sort == "desc" ? -1 : 1 },
+      $sort: { [sortBy]: sort == 'desc' ? -1 : 1 },
     },
     {
       $skip: skip,
@@ -139,14 +159,14 @@ export const ListRoles = catchAsync(async (req, res) => {
     {
       $limit: limit,
     },
-  ]).collation({ locale: "en", caseLevel: true });
+  ]).collation({ locale: 'en', caseLevel: true });
   if (rolesList) {
     return res.status(200).json({
       result: rolesList,
       status: true,
       totalPages: totalPages,
       currentPage: validPage,
-      message: "All Roles List",
+      message: 'All Roles List',
     });
   }
 });
@@ -168,6 +188,6 @@ export const DropdownRoleMaster = catchAsync(async (req, res) => {
   res.status(200).json({
     result: list,
     status: true,
-    message: "Roles Dropdown List",
+    message: 'Roles Dropdown List',
   });
 });

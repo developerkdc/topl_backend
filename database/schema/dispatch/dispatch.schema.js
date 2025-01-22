@@ -1,10 +1,10 @@
-import mongoose from "mongoose";
-import LogSchemaFunction from "../LogsSchema/logs.schema.js";
+import mongoose from 'mongoose';
+import LogSchemaFunction from '../LogsSchema/logs.schema.js';
 
 const DispatchSchema = new mongoose.Schema({
   order_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "order",
+    ref: 'order',
     trim: true,
   },
   invoice_no: {
@@ -19,7 +19,7 @@ const DispatchSchema = new mongoose.Schema({
         {
           qc_id: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: "qc_done_inventories",
+            ref: 'qc_done_inventories',
             trim: true,
           },
           total_item_amount: { type: Number, required: true },
@@ -40,7 +40,7 @@ const DispatchSchema = new mongoose.Schema({
         {
           raw_material_id: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: "raw_materials",
+            ref: 'raw_materials',
             trim: true,
           },
           dispatched_quantity: {
@@ -98,7 +98,7 @@ const DispatchSchema = new mongoose.Schema({
   total_amount: { type: Number, required: true },
   created_employee_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "user",
+    ref: 'user',
     trim: true,
   },
   dispatch_remarks: {
@@ -113,5 +113,5 @@ const DispatchSchema = new mongoose.Schema({
   deleted_at: { type: Date, default: null },
 });
 
-export const DispatchModel = mongoose.model("dispatch", DispatchSchema);
-LogSchemaFunction("dispatch", DispatchModel);
+export const DispatchModel = mongoose.model('dispatch', DispatchSchema);
+LogSchemaFunction('dispatch', DispatchModel);

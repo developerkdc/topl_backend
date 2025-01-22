@@ -1,36 +1,41 @@
-import catchAsync from "../../utils/errors/catchAsync.js";
-import ApiError from "../../utils/errors/apiError.js";
-import ApiResponse from '../../utils/ApiResponse.js'
-import { StatusCodes } from '../../utils/constants.js'
-import barcodeModel from "../../database/schema/seriesProductMaster/barcode.master.schema.js";
+import catchAsync from '../../utils/errors/catchAsync.js';
+import ApiError from '../../utils/errors/apiError.js';
+import ApiResponse from '../../utils/ApiResponse.js';
+import { StatusCodes } from '../../utils/constants.js';
+import barcodeModel from '../../database/schema/seriesProductMaster/barcode.master.schema.js';
+import { DynamicSearch } from '../../utils/dynamicSearch/dynamic.js';
+import { dynamic_filter } from '../../utils/dymanicFilter.js';
+import mongoose from 'mongoose';
 
 export const addBarcode = catchAsync(async (req, res, next) => {
-    const requiredFields = ["code", "base", "size", "category", "instructions"];
+    // const requiredFields = ['code', 'base', 'size', 'category', 'instructions'];
     const reqBody = req.body;
-    const authUserDetails = req.userDetails
+    const authUserDetails = req.userDetails;
 
-    for (let field of requiredFields) {
-        if (!reqBody[field]) {
-            return next(new ApiError(`${field} is missing ...`, StatusCodes.NOT_FOUND))
-        }
-    };
+    // for (let field of requiredFields) {
+    //     if (!reqBody[field]) {
+    //         return next(
+    //             new ApiError(`${field} is missing ...`, StatusCodes.NOT_FOUND)
+    //         );
+    //     }
+    // }
 
     const barcodeDetails = {
         ...reqBody,
         created_by: authUserDetails?._id,
-        updated_by: authUserDetails?._id
-    }
+        updated_by: authUserDetails?._id,
+    };
     const newBarcode = new barcodeModel(barcodeDetails);
 
-    await newBarcode.save()
+    await newBarcode.save();
 
     const response = new ApiResponse(
         StatusCodes.CREATED,
-        "Barcode Added Successfully",
+        'Barcode Added Successfully',
         newBarcode
     );
 
-    return res.status(StatusCodes.CREATED).json(response)
+    return res.status(StatusCodes.CREATED).json(response);
 });
 
 export const updateBarcodeDetails = catchAsync(async (req, res, next) => {
@@ -39,40 +44,48 @@ export const updateBarcodeDetails = catchAsync(async (req, res, next) => {
     const authUserDetails = req.userDetails;
 
     if (!id) {
-        return next(new ApiError("Barcode id is missing", StatusCodes.NOT_FOUND))
+        return next(new ApiError('Barcode id is missing', StatusCodes.NOT_FOUND));
     }
     const updatedDetails = {
         ...reqBody,
-        updated_by: authUserDetails?._id
+        updated_by: authUserDetails?._id,
     };
 
-    const updateResponse = await barcodeModel.findByIdAndUpdate(id, {
-        $set: updatedDetails,
-    }, { new: true, runValidators: true });
+    const updateResponse = await barcodeModel.updateOne(
+        { _id: id },
+        {
+            $set: updatedDetails,
+        },
+        { new: true, runValidators: true }
+    );
 
     if (updateResponse.matchedCount <= 0) {
-        return next(new ApiError("Document Not Found..", StatusCodes.NOT_FOUND))
-    };
-    if (!updateResponse.acknowledged || updateResponse.modfiedCount <= 0) {
-        return next(new ApiError("Failed to update document", StatusCodes.INTERNAL_SERVER_ERROR))
-    };
-
+        return next(new ApiError('Document Not Found..', StatusCodes.NOT_FOUND));
+    }
+    if (!updateResponse.acknowledged || updateResponse.modifiedCount <= 0) {
+        return next(
+            new ApiError(
+                'Failed to update document',
+                StatusCodes.INTERNAL_SERVER_ERROR
+            )
+        );
+    }
 
     const response = new ApiResponse(
         StatusCodes.OK,
-        "Barcode Updated Successfully",
+        'Barcode Updated Successfully',
         updateResponse
     );
-    return res.status(StatusCodes.OK).json(response)
+    return res.status(StatusCodes.OK).json(response);
 });
 
 export const fetchBarcodeList = catchAsync(async (req, res, next) => {
     const {
         page = 1,
         limit = 10,
-        sortBy = "createdAt",
-        sort = "desc",
-        search = "",
+        sortBy = 'createdAt',
+        sort = 'desc',
+        search = '',
     } = req.query;
 
     const {
@@ -86,7 +99,7 @@ export const fetchBarcodeList = catchAsync(async (req, res, next) => {
 
     let search_query = {};
 
-    if (search != "" && req?.body?.searchFields) {
+    if (search != '' && req?.body?.searchFields) {
         const search_data = DynamicSearch(
             search,
             boolean,
@@ -101,7 +114,7 @@ export const fetchBarcodeList = catchAsync(async (req, res, next) => {
                 data: {
                     data: [],
                 },
-                message: "Results Not Found",
+                message: 'Results Not Found',
             });
         }
         search_query = search_data;
@@ -130,12 +143,12 @@ export const fetchBarcodeList = catchAsync(async (req, res, next) => {
                         last_name: 1,
                         email_id: 1,
                         mobile_no: 1,
-                    }
-                }
+                    },
+                },
             ],
-            as: 'created_by'
-        }
-    }
+            as: 'created_by',
+        },
+    };
     const aggUpdatedByLookup = {
         $lookup: {
             from: 'users',
@@ -151,40 +164,40 @@ export const fetchBarcodeList = catchAsync(async (req, res, next) => {
                         last_name: 1,
                         email_id: 1,
                         mobile_no: 1,
-                    }
-                }
+                    },
+                },
             ],
-            as: 'updated_by'
-        }
-    }
+            as: 'updated_by',
+        },
+    };
     const aggCreatedByUnwind = {
         $unwind: {
             path: '$created_by',
-            preserveNullAndEmptyArrays: true
-        }
-    }
+            preserveNullAndEmptyArrays: true,
+        },
+    };
     const aggUpdatedByUnwind = {
         $unwind: {
             path: '$updated_by',
-            preserveNullAndEmptyArrays: true
-        }
-    }
+            preserveNullAndEmptyArrays: true,
+        },
+    };
     const aggMatch = {
         $match: {
-            ...match_query
-        }
-    }
+            ...match_query,
+        },
+    };
     const aggSort = {
         $sort: {
-            [sortBy]: sort === "desc" ? -1 : 1
-        }
-    }
+            [sortBy]: sort === 'desc' ? -1 : 1,
+        },
+    };
     const aggSkip = {
-        $skip: (parseInt(page) - 1) * parseInt(limit)
-    }
+        $skip: (parseInt(page) - 1) * parseInt(limit),
+    };
     const aggLimit = {
-        $limit: parseInt(limit)
-    }
+        $limit: parseInt(limit),
+    };
 
     const listAggregate = [
         aggCreatedByLookup,
@@ -194,14 +207,14 @@ export const fetchBarcodeList = catchAsync(async (req, res, next) => {
         aggMatch,
         aggSort,
         aggSkip,
-        aggLimit
-    ] // aggregation pipiline
+        aggLimit,
+    ]; // aggregation pipiline
 
     const barcodeData = await barcodeModel.aggregate(listAggregate);
 
     const aggCount = {
-        $count: "totalCount"
-    } // count aggregation stage
+        $count: 'totalCount',
+    }; // count aggregation stage
 
     const totalAggregate = [
         aggCreatedByLookup,
@@ -209,38 +222,37 @@ export const fetchBarcodeList = catchAsync(async (req, res, next) => {
         aggUpdatedByLookup,
         aggUpdatedByUnwind,
         aggMatch,
-        aggCount
-    ] // total aggregation pipiline
+        aggCount,
+    ]; // total aggregation pipiline
 
     const totalDocument = await barcodeModel.aggregate(totalAggregate);
-    console.log(totalDocument)
+    console.log(totalDocument);
 
-    const totalPages = Math.ceil((totalDocument?.[0]?.totalCount || 0) / limit)
+    const totalPages = Math.ceil((totalDocument?.[0]?.totalCount || 0) / limit);
 
     const response = new ApiResponse(
         StatusCodes.OK,
-        true,
-        "Barcode Details Fetched Successfully",
+        'Barcode Details Fetched Successfully',
         {
             data: barcodeData,
-            totalPages: totalPages
+            totalPages: totalPages,
         }
-    )
-    return res.status(StatusCodes.OK).json(response)
+    );
+    return res.status(StatusCodes.OK).json(response);
 });
 
 export const fetchSingleBarcode = catchAsync(async (req, res, next) => {
-    const { id } = req.params
+    const { id } = req.params;
 
     if (!id || !mongoose.isValidObjectId(id)) {
-        return next(new ApiError("Invalid Params Id", 400))
+        return next(new ApiError('Invalid Params Id', 400));
     }
 
     const aggregate = [
         {
             $match: {
-                _id: mongoose.Types.ObjectId.createFromHexString(id)
-            }
+                _id: mongoose.Types.ObjectId.createFromHexString(id),
+            },
         },
         {
             $lookup: {
@@ -257,11 +269,11 @@ export const fetchSingleBarcode = catchAsync(async (req, res, next) => {
                             last_name: 1,
                             email_id: 1,
                             mobile_no: 1,
-                        }
-                    }
+                        },
+                    },
                 ],
-                as: 'created_by'
-            }
+                as: 'created_by',
+            },
         },
         {
             $lookup: {
@@ -278,57 +290,57 @@ export const fetchSingleBarcode = catchAsync(async (req, res, next) => {
                             last_name: 1,
                             email_id: 1,
                             mobile_no: 1,
-                        }
-                    }
+                        },
+                    },
                 ],
-                as: 'updated_by'
-            }
+                as: 'updated_by',
+            },
         },
         {
             $unwind: {
                 path: '$created_by',
-                preserveNullAndEmptyArrays: true
-            }
+                preserveNullAndEmptyArrays: true,
+            },
         },
         {
             $unwind: {
                 path: '$updated_by',
-                preserveNullAndEmptyArrays: true
-            }
-        }
-    ]
+                preserveNullAndEmptyArrays: true,
+            },
+        },
+    ];
 
     const barcodeData = await barcodeModel.aggregate(aggregate);
 
     if (barcodeData && barcodeData?.length <= 0) {
-        return next(new ApiError("Document Not found", 404))
+        return next(new ApiError('Document Not found', 404));
     }
 
     const response = new ApiResponse(
         StatusCodes.OK,
-        true,
-        "Barcode Data Fetched Successfully",
-        colorData?.[0]
-    )
-    return res.status(StatusCodes.OK).json(response)
-})
-
+        'Barcode Data Fetched Successfully',
+        barcodeData?.[0]
+    );
+    return res.status(StatusCodes.OK).json(response);
+});
 
 export const dropdownBarcode = catchAsync(async (req, res, next) => {
-    const barcodeList = await barcodeModel.aggregate([{
-        $match: { status: true }
-    }, {
-        $project: {
-            code: 1
-        }
-    }]);
+    const barcodeList = await barcodeModel.aggregate([
+        {
+            $match: { status: true },
+        },
+        {
+            $project: {
+                code: 1,
+            },
+        },
+    ]);
 
     const response = new ApiResponse(
-        200,
-        true,
-        "Barcode Dropdown Fetched Successfully",
+        StatusCodes.OK,
+        'Barcode Dropdown Fetched Successfully',
         barcodeList
     );
 
-    return res.status(StatusCodes.OK).json(response)
-})
+    return res.status(StatusCodes.OK).json(response);
+});

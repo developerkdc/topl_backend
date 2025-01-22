@@ -1,5 +1,5 @@
-import nodemailer from "nodemailer";
-import getConfigs from "../../config/config.js";
+import nodemailer from 'nodemailer';
+import getConfigs from '../../config/config.js';
 
 const Configs = getConfigs();
 
@@ -14,7 +14,7 @@ export const SendOtpEmail = (email_id, content, subject) => {
   });
 
   var mailOptions = {
-    from: "maybell.jacobs7@ethereal.email",
+    from: 'maybell.jacobs7@ethereal.email',
     to: email_id,
     subject: subject,
     text: content,
@@ -22,10 +22,10 @@ export const SendOtpEmail = (email_id, content, subject) => {
 
   transporter.sendMail(mailOptions, (error, info) => {
     if (error) {
-      console.error("Error sending email:", error);
+      console.error('Error sending email:', error);
       return error;
     } else {
-      console.log("Email sent successfully.");
+      console.log('Email sent successfully.');
       return info;
     }
   });

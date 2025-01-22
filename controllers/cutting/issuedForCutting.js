@@ -1,11 +1,11 @@
-import mongoose from "mongoose";
-import { IssuedForCuttingModel } from "../../database/schema/cutting/issuedForCutting.js";
-import { DynamicSearch } from "../../utils/dynamicSearch/dynamic.js";
-import catchAsync from "../../utils/errors/catchAsync.js";
-import { RawMaterialModel } from "../../database/schema/inventory/raw/raw.schema.js";
-import { GroupModel } from "../../database/schema/group/groupCreated/groupCreated.schema.js";
-import { GroupHistoryModel } from "../../database/schema/group/groupHistory/groupHistory.schema.js";
-import GroupImagesModel from "../../database/schema/images/groupImages.schema.js";
+import mongoose from 'mongoose';
+import { IssuedForCuttingModel } from '../../database/schema/cutting/issuedForCutting.js';
+import { DynamicSearch } from '../../utils/dynamicSearch/dynamic.js';
+import catchAsync from '../../utils/errors/catchAsync.js';
+import { RawMaterialModel } from '../../database/schema/inventory/raw/raw.schema.js';
+import { GroupModel } from '../../database/schema/group/groupCreated/groupCreated.schema.js';
+import { GroupHistoryModel } from '../../database/schema/group/groupHistory/groupHistory.schema.js';
+import GroupImagesModel from '../../database/schema/images/groupImages.schema.js';
 // import { CuttingModel } from "../../database/schema/cutting/cutting.js";
 
 export const FetchIssuedForCutting = catchAsync(async (req, res, next) => {
@@ -18,15 +18,15 @@ export const FetchIssuedForCutting = catchAsync(async (req, res, next) => {
   const {
     page = 1,
     limit = 10,
-    sortBy = "updated_at",
-    sort = "desc",
+    sortBy = 'updated_at',
+    sort = 'desc',
   } = req.query;
   const skip = Math.max((page - 1) * limit, 0);
 
-  const search = req.query.search || "";
+  const search = req.query.search || '';
 
   let searchQuery = {};
-  if (search != "" && req?.body?.searchFields) {
+  if (search != '' && req?.body?.searchFields) {
     const searchdata = DynamicSearch(
       search,
       boolean,
@@ -41,7 +41,7 @@ export const FetchIssuedForCutting = catchAsync(async (req, res, next) => {
         data: {
           data: [],
         },
-        message: "Results Not Found",
+        message: 'Results Not Found',
       });
     }
     searchQuery = searchdata;
@@ -51,7 +51,7 @@ export const FetchIssuedForCutting = catchAsync(async (req, res, next) => {
   const matchQuery = data || {};
 
   if (to && from) {
-    matchQuery["created_at"] = {
+    matchQuery['created_at'] = {
       $gte: new Date(from),
       $lte: new Date(to),
     };
@@ -60,66 +60,66 @@ export const FetchIssuedForCutting = catchAsync(async (req, res, next) => {
   const totalDocuments = await IssuedForCuttingModel.aggregate([
     {
       $lookup: {
-        from: "group_histories", // Name of the collection you're referencing
-        localField: "group_history_id",
-        foreignField: "_id", // Assuming group_id references the _id field of the GroupModel
-        as: "group_history_id", // Output array will be named "group"
+        from: 'group_histories', // Name of the collection you're referencing
+        localField: 'group_history_id',
+        foreignField: '_id', // Assuming group_id references the _id field of the GroupModel
+        as: 'group_history_id', // Output array will be named "group"
       },
     },
     {
       $unwind: {
-        path: "$group_history_id",
+        path: '$group_history_id',
         preserveNullAndEmptyArrays: true,
       },
     },
     {
       $lookup: {
-        from: "groups",
-        localField: "group_id",
-        foreignField: "_id",
+        from: 'groups',
+        localField: 'group_id',
+        foreignField: '_id',
         pipeline: [
           {
             $lookup: {
-              from: "raw_materials",
-              localField: "item_details",
-              foreignField: "_id",
-              as: "item_details",
+              from: 'raw_materials',
+              localField: 'item_details',
+              foreignField: '_id',
+              as: 'item_details',
             },
           },
         ],
-        as: "group_id",
+        as: 'group_id',
       },
     },
     {
       $unwind: {
-        path: "$group_id",
+        path: '$group_id',
         preserveNullAndEmptyArrays: true,
       },
     },
     {
       $lookup: {
-        from: "raw_materials",
-        localField: "cutting_item_details.item_id",
-        foreignField: "_id",
-        as: "raw_materials_data",
+        from: 'raw_materials',
+        localField: 'cutting_item_details.item_id',
+        foreignField: '_id',
+        as: 'raw_materials_data',
       },
     },
     {
       $addFields: {
         cutting_item_details: {
           $map: {
-            input: "$cutting_item_details",
-            as: "detail",
+            input: '$cutting_item_details',
+            as: 'detail',
             in: {
               $mergeObjects: [
-                "$$detail",
+                '$$detail',
                 {
                   $arrayElemAt: [
                     {
                       $filter: {
-                        input: "$raw_materials_data",
-                        as: "material",
-                        cond: { $eq: ["$$material._id", "$$detail.item_id"] },
+                        input: '$raw_materials_data',
+                        as: 'material',
+                        cond: { $eq: ['$$material._id', '$$detail.item_id'] },
                       },
                     },
                     0,
@@ -138,9 +138,9 @@ export const FetchIssuedForCutting = catchAsync(async (req, res, next) => {
     },
     {
       $lookup: {
-        from: "users",
-        localField: "created_employee_id",
-        foreignField: "_id",
+        from: 'users',
+        localField: 'created_employee_id',
+        foreignField: '_id',
         pipeline: [
           {
             $project: {
@@ -148,12 +148,12 @@ export const FetchIssuedForCutting = catchAsync(async (req, res, next) => {
             },
           },
         ],
-        as: "created_employee_id",
+        as: 'created_employee_id',
       },
     },
     {
       $unwind: {
-        path: "$created_employee_id",
+        path: '$created_employee_id',
         preserveNullAndEmptyArrays: true,
       },
     },
@@ -165,11 +165,11 @@ export const FetchIssuedForCutting = catchAsync(async (req, res, next) => {
     },
     {
       $sort: {
-        [sortBy]: sort == "desc" ? -1 : 1,
+        [sortBy]: sort == 'desc' ? -1 : 1,
       },
     },
     {
-      $count: "totalDocuments",
+      $count: 'totalDocuments',
     },
   ]);
   const totalPages = Math.ceil(totalDocuments?.[0]?.totalDocuments / limit);
@@ -177,66 +177,66 @@ export const FetchIssuedForCutting = catchAsync(async (req, res, next) => {
   const issuedForGroupingData = await IssuedForCuttingModel.aggregate([
     {
       $lookup: {
-        from: "group_histories", // Name of the collection you're referencing
-        localField: "group_history_id",
-        foreignField: "_id", // Assuming group_id references the _id field of the GroupModel
-        as: "group_history_id", // Output array will be named "group"
+        from: 'group_histories', // Name of the collection you're referencing
+        localField: 'group_history_id',
+        foreignField: '_id', // Assuming group_id references the _id field of the GroupModel
+        as: 'group_history_id', // Output array will be named "group"
       },
     },
     {
       $unwind: {
-        path: "$group_history_id",
+        path: '$group_history_id',
         preserveNullAndEmptyArrays: true,
       },
     },
     {
       $lookup: {
-        from: "groups",
-        localField: "group_id",
-        foreignField: "_id",
+        from: 'groups',
+        localField: 'group_id',
+        foreignField: '_id',
         pipeline: [
           {
             $lookup: {
-              from: "raw_materials",
-              localField: "item_details",
-              foreignField: "_id",
-              as: "item_details",
+              from: 'raw_materials',
+              localField: 'item_details',
+              foreignField: '_id',
+              as: 'item_details',
             },
           },
         ],
-        as: "group_id",
+        as: 'group_id',
       },
     },
     {
       $unwind: {
-        path: "$group_id",
+        path: '$group_id',
         preserveNullAndEmptyArrays: true,
       },
     },
     {
       $lookup: {
-        from: "raw_materials",
-        localField: "cutting_item_details.item_id",
-        foreignField: "_id",
-        as: "raw_materials_data",
+        from: 'raw_materials',
+        localField: 'cutting_item_details.item_id',
+        foreignField: '_id',
+        as: 'raw_materials_data',
       },
     },
     {
       $addFields: {
         cutting_item_details: {
           $map: {
-            input: "$cutting_item_details",
-            as: "detail",
+            input: '$cutting_item_details',
+            as: 'detail',
             in: {
               $mergeObjects: [
-                "$$detail",
+                '$$detail',
                 {
                   $arrayElemAt: [
                     {
                       $filter: {
-                        input: "$raw_materials_data",
-                        as: "material",
-                        cond: { $eq: ["$$material._id", "$$detail.item_id"] },
+                        input: '$raw_materials_data',
+                        as: 'material',
+                        cond: { $eq: ['$$material._id', '$$detail.item_id'] },
                       },
                     },
                     0,
@@ -255,9 +255,9 @@ export const FetchIssuedForCutting = catchAsync(async (req, res, next) => {
     },
     {
       $lookup: {
-        from: "users",
-        localField: "created_employee_id",
-        foreignField: "_id",
+        from: 'users',
+        localField: 'created_employee_id',
+        foreignField: '_id',
         pipeline: [
           {
             $project: {
@@ -265,12 +265,12 @@ export const FetchIssuedForCutting = catchAsync(async (req, res, next) => {
             },
           },
         ],
-        as: "created_employee_id",
+        as: 'created_employee_id',
       },
     },
     {
       $unwind: {
-        path: "$created_employee_id",
+        path: '$created_employee_id',
         preserveNullAndEmptyArrays: true,
       },
     },
@@ -282,7 +282,7 @@ export const FetchIssuedForCutting = catchAsync(async (req, res, next) => {
     },
     {
       $sort: {
-        [sortBy]: sort == "desc" ? -1 : 1,
+        [sortBy]: sort == 'desc' ? -1 : 1,
       },
     },
     {
@@ -296,7 +296,7 @@ export const FetchIssuedForCutting = catchAsync(async (req, res, next) => {
   return res.status(200).json({
     result: issuedForGroupingData,
     statusCode: 200,
-    status: "success",
+    status: 'success',
     totalPages: totalPages,
   });
 });
@@ -407,7 +407,7 @@ export const RevertIssuedForCutting = catchAsync(async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   const { issuedId } = req.query;
-  console.log(issuedId, "issuedId");
+  console.log(issuedId, 'issuedId');
 
   try {
     let group_no_of_pattas_available = 0;
@@ -415,16 +415,16 @@ export const RevertIssuedForCutting = catchAsync(async (req, res, next) => {
     // Fetch the group details
 
     const IssuedForCuttingView = mongoose.connection.db.collection(
-      "issued_for_cuttings_view"
+      'issued_for_cuttings_view'
     );
     const IssuedForCuttingDetails = await IssuedForCuttingView.findOne({
       _id: new mongoose.Types.ObjectId(issuedId),
     });
-    console.log(IssuedForCuttingDetails, "IssuedForCuttingDetails");
+    console.log(IssuedForCuttingDetails, 'IssuedForCuttingDetails');
     if (!IssuedForCuttingDetails) {
       return res.json({
         status: false,
-        message: "Issued For Cutting Not Found",
+        message: 'Issued For Cutting Not Found',
       });
     }
     let arr = [];
@@ -434,7 +434,7 @@ export const RevertIssuedForCutting = catchAsync(async (req, res, next) => {
       if (!rawMaterial) {
         return res.json({
           status: false,
-          message: "Invalid item ID",
+          message: 'Invalid item ID',
         });
       }
 
@@ -466,7 +466,7 @@ export const RevertIssuedForCutting = catchAsync(async (req, res, next) => {
         total_item_sqm_available.toFixed(2)
       );
       arr.push(rawMaterial);
-      console.log(arr, "varr");
+      console.log(arr, 'varr');
       await rawMaterial.save({ session, validateBeforeSave: false });
     }
 
@@ -479,7 +479,7 @@ export const RevertIssuedForCutting = catchAsync(async (req, res, next) => {
           total_item_sqm_available: total_item_sqm_available,
         },
         $set: {
-          status: "available",
+          status: 'available',
         },
       },
       { new: true, session }
@@ -498,9 +498,9 @@ export const RevertIssuedForCutting = catchAsync(async (req, res, next) => {
 
     // Send success response
     res.status(200).json({
-      message: "Issued For Cutting Reverted successfully",
+      message: 'Issued For Cutting Reverted successfully',
       statusCode: 200,
-      status: "success",
+      status: 'success',
     });
   } catch (error) {
     await session.abortTransaction();
