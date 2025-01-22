@@ -67,6 +67,9 @@ import bunitoRouter from './routes/seriesProductMaster/bunito.routes.js';
 import mattleRouter from './routes/seriesProductMaster/mattle.routes.js';
 import novelRouter from './routes/seriesProductMaster/novel.routes.js';
 import marvelRouter from './routes/seriesProductMaster/marvel.routes.js';
+import regantoClassicRouter from './routes/seriesProductMaster/reganto.classic.routes.js';
+import regantoPremierRouter from './routes/seriesProductMaster/reganto.premier.routes.js';
+import furrowRouter from './routes/seriesProductMaster/furrow.routes.js';
 const Configs = getConfigs();
 mongo_service();
 const app = express();
@@ -226,9 +229,7 @@ app.use(`/api/${Configs.server.version}/report`, reportRouter);
 app.use(`/api/${Configs.server.version}/approval`, approvalRouters);
 
 //Series Product Master
-app.use(`/api/${Configs.server.version}/series-product-master`, [
-  barcodeRouter, bunitoRouter, mattleRouter, novelRouter, marvelRouter
-]);
+app.use(`/api/${Configs.server.version}/series-product-master`, [barcodeRouter, bunitoRouter, mattleRouter, novelRouter, marvelRouter, regantoClassicRouter, regantoPremierRouter, furrowRouter]);
 
 
 app.use(globalErrorHandler);
