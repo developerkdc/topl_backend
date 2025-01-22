@@ -37,12 +37,12 @@
 [
   {
     $match: {
-      order_type: "raw",
+      order_type: 'raw',
       raw_order_details: {
         $not: {
           $elemMatch: {
             order_status: {
-              $ne: "closed",
+              $ne: 'closed',
             },
           },
         },
@@ -51,15 +51,15 @@
   },
   {
     $lookup: {
-      from: "users",
-      localField: "created_employee_id",
-      foreignField: "_id",
-      as: "created_employee_id",
+      from: 'users',
+      localField: 'created_employee_id',
+      foreignField: '_id',
+      as: 'created_employee_id',
     },
   },
   {
     $unwind: {
-      path: "$created_employee_id",
+      path: '$created_employee_id',
       preserveNullAndEmptyArrays: true,
     },
   },

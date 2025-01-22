@@ -1,27 +1,27 @@
-import mongoose from "mongoose";
-import catchAsync from "../../../utils/errors/catchAsync.js";
-import ApiError from "../../../utils/errors/apiError.js";
-import ApiResponse from "../../../utils/ApiResponse.js";
+import mongoose from 'mongoose';
+import catchAsync from '../../../utils/errors/catchAsync.js';
+import ApiError from '../../../utils/errors/apiError.js';
+import ApiResponse from '../../../utils/ApiResponse.js';
 import {
   issues_for_crosscutting_model,
   issues_for_crosscutting_view_model,
-} from "../../../database/schema/factory/crossCutting/issuedForCutting.schema.js";
+} from '../../../database/schema/factory/crossCutting/issuedForCutting.schema.js';
 import {
   crosscutting_done_model,
   crossCuttingsDone_view_modal,
-} from "../../../database/schema/factory/crossCutting/crosscutting.schema.js";
-import { StatusCodes } from "../../../utils/constants.js";
+} from '../../../database/schema/factory/crossCutting/crosscutting.schema.js';
+import { StatusCodes } from '../../../utils/constants.js';
 import {
   log_inventory_invoice_model,
   log_inventory_items_model,
-} from "../../../database/schema/inventory/log/log.schema.js";
-import { issues_for_status } from "../../../database/Utils/constants/constants.js";
-import { dynamic_filter } from "../../../utils/dymanicFilter.js";
-import { DynamicSearch } from "../../../utils/dynamicSearch/dynamic.js";
-import { issues_for_flitching_model } from "../../../database/schema/factory/flitching/issuedForFlitching.schema.js";
-import { createCrosscuttingDoneExcel } from "../../../config/downloadExcel/Logs/Factory/crossCutting/index.js";
-import { rejected_crosscutting_model } from "../../../database/schema/factory/crossCutting/rejectedCrosscutting.schema.js";
-import { crosscutting_done_approval_model } from "../../../database/schema/factory/crossCutting/crosscuttingApproval.schema.js";
+} from '../../../database/schema/inventory/log/log.schema.js';
+import { issues_for_status } from '../../../database/Utils/constants/constants.js';
+import { dynamic_filter } from '../../../utils/dymanicFilter.js';
+import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
+import { issues_for_flitching_model } from '../../../database/schema/factory/flitching/issuedForFlitching.schema.js';
+import { createCrosscuttingDoneExcel } from '../../../config/downloadExcel/Logs/Factory/crossCutting/index.js';
+import { rejected_crosscutting_model } from '../../../database/schema/factory/crossCutting/rejectedCrosscutting.schema.js';
+import { crosscutting_done_approval_model } from '../../../database/schema/factory/crossCutting/crosscuttingApproval.schema.js';
 
 //Issue for crosscutting
 export const listing_issue_for_crosscutting = catchAsync(
@@ -29,9 +29,9 @@ export const listing_issue_for_crosscutting = catchAsync(
     const {
       page = 1,
       limit = 10,
-      sortBy = "updatedAt",
-      sort = "desc",
-      search = "",
+      sortBy = 'updatedAt',
+      sort = 'desc',
+      search = '',
     } = req.query;
     const {
       string,
@@ -42,7 +42,7 @@ export const listing_issue_for_crosscutting = catchAsync(
     const filter = req.body?.filter;
 
     let search_query = {};
-    if (search != "" && req?.body?.searchFields) {
+    if (search != '' && req?.body?.searchFields) {
       const search_data = DynamicSearch(
         search,
         boolean,
@@ -57,7 +57,7 @@ export const listing_issue_for_crosscutting = catchAsync(
           data: {
             data: [],
           },
-          message: "Results Not Found",
+          message: 'Results Not Found',
         });
       }
       search_query = search_data;
@@ -76,17 +76,14 @@ export const listing_issue_for_crosscutting = catchAsync(
       },
       {
         $match: {
-          $or: [
-            { crosscutting_completed: false },
-            { is_rejected: false }
-          ],
-          "available_quantity.physical_length": { $gt: 0 }
+          $or: [{ crosscutting_completed: false }, { is_rejected: false }],
+          'available_quantity.physical_length': { $gt: 0 },
         },
       },
       {
         $sort: {
-          [sortBy]: sort === "desc" ? -1 : 1,
-          _id: sort === "desc" ? -1 : 1,
+          [sortBy]: sort === 'desc' ? -1 : 1,
+          _id: sort === 'desc' ? -1 : 1,
         },
       },
       {
@@ -106,124 +103,122 @@ export const listing_issue_for_crosscutting = catchAsync(
       },
       {
         $match: {
-          $or: [
-            { crosscutting_completed: false },
-            { is_rejected: false }
-          ],
-          "available_quantity.physical_length": { $gt: 0 }
+          $or: [{ crosscutting_completed: false }, { is_rejected: false }],
+          'available_quantity.physical_length': { $gt: 0 },
         },
       },
       {
-        $count: "totalCount",
-      }
+        $count: 'totalCount',
+      },
     ]);
 
-    const totalCount = totalCountValue?.[0]?.totalCount || 0
+    const totalCount = totalCountValue?.[0]?.totalCount || 0;
     const totalPage = Math.ceil(totalCount / limit);
 
     return res.status(200).json({
       statusCode: 200,
-      status: "success",
+      status: 'success',
       data: issue_for_crosscutting_details,
       totalPage: totalPage,
-      message: "Data fetched successfully",
+      message: 'Data fetched successfully',
     });
   }
 );
 
-export const revert_issue_for_crosscutting = catchAsync(async function (
-  req,
-  res,
-  next
-) {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-  try {
-    const issue_for_crosscutting_id = req.params?.issue_for_crosscutting_id;
-    const issue_for_crosscutting = await issues_for_crosscutting_model.findOne({
-      _id: issue_for_crosscutting_id,
-    });
+export const revert_issue_for_crosscutting = catchAsync(
+  async function (req, res, next) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+      const issue_for_crosscutting_id = req.params?.issue_for_crosscutting_id;
+      const issue_for_crosscutting =
+        await issues_for_crosscutting_model.findOne({
+          _id: issue_for_crosscutting_id,
+        });
 
-    if (!issue_for_crosscutting)
-      return next(new ApiError("Item not found", 400));
-    if (
-      issue_for_crosscutting?.available_quantity?.physical_length !==
-      issue_for_crosscutting?.physical_length
-    )
-      return next(
-        new ApiError(
-          "Cannot revert because original length is not matched",
-          400
-        )
-      );
+      if (!issue_for_crosscutting)
+        return next(new ApiError('Item not found', 400));
+      if (
+        issue_for_crosscutting?.available_quantity?.physical_length !==
+        issue_for_crosscutting?.physical_length
+      )
+        return next(
+          new ApiError(
+            'Cannot revert because original length is not matched',
+            400
+          )
+        );
 
-    const update_log_item_status = await log_inventory_items_model.updateOne(
-      { _id: issue_for_crosscutting?.log_inventory_item_id },
-      {
-        $set: {
-          issue_status: issues_for_status.log,
-        },
-      },
-      { session }
-    );
-
-    if (
-      !update_log_item_status.acknowledged ||
-      update_log_item_status.modifiedCount <= 0
-    )
-      return next(new ApiError("unable to update status", 400));
-
-    const deleted_issues_for_crosscutting =
-      await issues_for_crosscutting_model.deleteOne(
-        {
-          _id: issue_for_crosscutting?._id,
-        },
-        { session }
-      );
-
-    if (
-      !deleted_issues_for_crosscutting.acknowledged ||
-      deleted_issues_for_crosscutting.deletedCount <= 0
-    )
-      return next(new ApiError("Unable to revert issue for crosscutting", 400));
-
-    const issue_for_crosscutting_log_invoice_found =
-      await issues_for_crosscutting_model.find({
-        _id: { $ne: issue_for_crosscutting_id },
-        invoice_id: issue_for_crosscutting?.invoice_id,
-      });
-    const issue_for_crosscutting_flitching_log_invoice_found =
-      await issues_for_flitching_model.find({
-        invoice_id: issue_for_crosscutting?.invoice_id,
-      });
-
-    if (
-      issue_for_crosscutting_log_invoice_found?.length <= 0 &&
-      issue_for_crosscutting_flitching_log_invoice_found?.length <= 0
-    ) {
-      await log_inventory_invoice_model.updateOne(
-        { _id: issue_for_crosscutting?.invoice_id },
+      const update_log_item_status = await log_inventory_items_model.updateOne(
+        { _id: issue_for_crosscutting?.log_inventory_item_id },
         {
           $set: {
-            isEditable: true,
+            issue_status: issues_for_status.log,
           },
         },
         { session }
       );
-    }
 
-    await session.commitTransaction();
-    session.endSession();
-    return res
-      .status(200)
-      .json(new ApiResponse(StatusCodes.OK, "Reverted successfully"));
-  } catch (error) {
-    console.log(error);
-    await session.abortTransaction();
-    session.endSession();
-    return next(error);
+      if (
+        !update_log_item_status.acknowledged ||
+        update_log_item_status.modifiedCount <= 0
+      )
+        return next(new ApiError('unable to update status', 400));
+
+      const deleted_issues_for_crosscutting =
+        await issues_for_crosscutting_model.deleteOne(
+          {
+            _id: issue_for_crosscutting?._id,
+          },
+          { session }
+        );
+
+      if (
+        !deleted_issues_for_crosscutting.acknowledged ||
+        deleted_issues_for_crosscutting.deletedCount <= 0
+      )
+        return next(
+          new ApiError('Unable to revert issue for crosscutting', 400)
+        );
+
+      const issue_for_crosscutting_log_invoice_found =
+        await issues_for_crosscutting_model.find({
+          _id: { $ne: issue_for_crosscutting_id },
+          invoice_id: issue_for_crosscutting?.invoice_id,
+        });
+      const issue_for_crosscutting_flitching_log_invoice_found =
+        await issues_for_flitching_model.find({
+          invoice_id: issue_for_crosscutting?.invoice_id,
+        });
+
+      if (
+        issue_for_crosscutting_log_invoice_found?.length <= 0 &&
+        issue_for_crosscutting_flitching_log_invoice_found?.length <= 0
+      ) {
+        await log_inventory_invoice_model.updateOne(
+          { _id: issue_for_crosscutting?.invoice_id },
+          {
+            $set: {
+              isEditable: true,
+            },
+          },
+          { session }
+        );
+      }
+
+      await session.commitTransaction();
+      session.endSession();
+      return res
+        .status(200)
+        .json(new ApiResponse(StatusCodes.OK, 'Reverted successfully'));
+    } catch (error) {
+      console.log(error);
+      await session.abortTransaction();
+      session.endSession();
+      return next(error);
+    }
   }
-});
+);
 
 export const addCrossCutDone = catchAsync(async (req, res) => {
   const session = await mongoose.startSession();
@@ -239,7 +234,7 @@ export const addCrossCutDone = catchAsync(async (req, res) => {
       return res.json(
         new ApiResponse(
           StatusCodes.INTERNAL_SERVER_ERROR,
-          "Err Inserting Crosscutiing Done Items..."
+          'Err Inserting Crosscutiing Done Items...'
         )
       );
     }
@@ -257,11 +252,11 @@ export const addCrossCutDone = catchAsync(async (req, res) => {
       { _id: id },
       {
         $set: {
-          "available_quantity.physical_cmt": available_sqm,
-          "available_quantity.physical_length": available_length,
-          "available_quantity.amount": amount,
-          "available_quantity.sqm_factor": sqm_factor,
-          "available_quantity.expense_amount": expense_amount,
+          'available_quantity.physical_cmt': available_sqm,
+          'available_quantity.physical_length': available_length,
+          'available_quantity.amount': amount,
+          'available_quantity.sqm_factor': sqm_factor,
+          'available_quantity.expense_amount': expense_amount,
           crosscutting_completed: crosscutting_completed,
         },
       },
@@ -291,7 +286,7 @@ export const addCrossCutDone = catchAsync(async (req, res) => {
     await session.commitTransaction();
     session.endSession();
     return res.json(
-      new ApiResponse(StatusCodes.OK, "Item Added Successfully", result)
+      new ApiResponse(StatusCodes.OK, 'Item Added Successfully', result)
     );
   } catch (error) {
     await session.abortTransaction();
@@ -305,9 +300,9 @@ export const listing_cross_cutting_inventory = catchAsync(
     const {
       page = 1,
       limit = 10,
-      sortBy = "updatedAt",
-      sort = "desc",
-      search = "",
+      sortBy = 'updatedAt',
+      sort = 'desc',
+      search = '',
     } = req.query;
     const {
       string,
@@ -318,7 +313,7 @@ export const listing_cross_cutting_inventory = catchAsync(
     const filter = req.body?.filter;
 
     let search_query = {};
-    if (search != "" && req?.body?.searchFields) {
+    if (search != '' && req?.body?.searchFields) {
       const search_data = DynamicSearch(
         search,
         boolean,
@@ -333,7 +328,7 @@ export const listing_cross_cutting_inventory = catchAsync(
           data: {
             data: [],
           },
-          message: "Results Not Found",
+          message: 'Results Not Found',
         });
       }
       search_query = search_data;
@@ -353,8 +348,8 @@ export const listing_cross_cutting_inventory = catchAsync(
       },
       {
         $sort: {
-          [sortBy]: sort === "desc" ? -1 : 1,
-          _id: sort === "desc" ? -1 : 1,
+          [sortBy]: sort === 'desc' ? -1 : 1,
+          _id: sort === 'desc' ? -1 : 1,
         },
       },
       {
@@ -376,10 +371,10 @@ export const listing_cross_cutting_inventory = catchAsync(
 
     return res.status(200).json({
       statusCode: 200,
-      status: "success",
+      status: 'success',
       data: cross_cutting_done_list,
       totalPage: totalPage,
-      message: "Data fetched successfully",
+      message: 'Data fetched successfully',
     });
   }
 );
@@ -399,7 +394,7 @@ export const add_cross_cutting_inventory = catchAsync(
         _id: issued_crosscutting_id,
       });
     if (!issues_for_crosscutting_data)
-      return next(new ApiError("Invalid Issued crosscutting Id", 400));
+      return next(new ApiError('Invalid Issued crosscutting Id', 400));
 
     const crossCuttingLatestCode = await crosscutting_done_model.aggregate([
       {
@@ -424,7 +419,7 @@ export const add_cross_cutting_inventory = catchAsync(
 
     //Logic for autoincrement code
     const crosscuttingCode = crossCuttingLatestCode?.[0]?.code;
-    let newCode = "A";
+    let newCode = 'A';
     let newLogCode = `${issues_for_crosscutting_data?.log_no}${newCode}`;
     let asciiCode = newCode?.charCodeAt();
 
@@ -445,7 +440,7 @@ export const add_cross_cutting_inventory = catchAsync(
 
       //Comparing avaible physical length should not be less then 0
       if (issued_crosscuting_avaiable_physical_length < 0)
-        return next(new ApiError("Invaild input of length", 400));
+        return next(new ApiError('Invaild input of length', 400));
 
       //insert crosscutting single item data
       const addCrosscutting = await crosscutting_done_model.create({
@@ -464,7 +459,7 @@ export const add_cross_cutting_inventory = catchAsync(
         { _id: issued_crosscutting_id },
         {
           $set: {
-            "available_quantity.physical_length":
+            'available_quantity.physical_length':
               issued_crosscuting_avaiable_physical_length,
             crosscutting_completed: is_crosscutting_completed,
           },
@@ -481,7 +476,7 @@ export const add_cross_cutting_inventory = catchAsync(
     return res
       .status(201)
       .json(
-        new ApiResponse(StatusCodes.CREATED, "Crosscutting done successfully")
+        new ApiResponse(StatusCodes.CREATED, 'Crosscutting done successfully')
       );
     // } catch (error) {
     //   console.log(error);
@@ -555,48 +550,46 @@ export const add_cross_cutting_inventory = catchAsync(
 //   }
 // });
 
-export const latest_crosscutting_code = catchAsync(async function (
-  req,
-  res,
-  next
-) {
-  const issued_crosscutting_id = req.params?.issued_crosscutting_id;
+export const latest_crosscutting_code = catchAsync(
+  async function (req, res, next) {
+    const issued_crosscutting_id = req.params?.issued_crosscutting_id;
 
-  const crossCuttingLatestCode = await crosscutting_done_model.aggregate([
-    {
-      $match: {
-        issue_for_crosscutting_id: new mongoose.Types.ObjectId(
-          issued_crosscutting_id
-        ),
+    const crossCuttingLatestCode = await crosscutting_done_model.aggregate([
+      {
+        $match: {
+          issue_for_crosscutting_id: new mongoose.Types.ObjectId(
+            issued_crosscutting_id
+          ),
+        },
       },
-    },
-    {
-      $sort: {
-        code: -1,
+      {
+        $sort: {
+          code: -1,
+        },
       },
-    },
-    {
-      $project: {
-        code: 1,
-        issued_crosscutting_id: 1,
+      {
+        $project: {
+          code: 1,
+          issued_crosscutting_id: 1,
+        },
       },
-    },
-  ]);
+    ]);
 
-  const latestCode = crossCuttingLatestCode?.[0] || {
-    code: null,
-  };
+    const latestCode = crossCuttingLatestCode?.[0] || {
+      code: null,
+    };
 
-  return res
-    .status(201)
-    .json(
-      new ApiResponse(
-        StatusCodes.CREATED,
-        "Latest Crosscutting code",
-        latestCode
-      )
-    );
-});
+    return res
+      .status(201)
+      .json(
+        new ApiResponse(
+          StatusCodes.CREATED,
+          'Latest Crosscutting code',
+          latestCode
+        )
+      );
+  }
+);
 
 export const edit_cross_cutting_inventory = catchAsync(
   async (req, res, next) => {
@@ -623,12 +616,20 @@ export const edit_cross_cutting_inventory = catchAsync(
       });
 
       if (rejected_data) {
-        available_length = Math.abs(available_length - rejected_data?.rejected_quantity?.physical_length);
+        available_length = Math.abs(
+          available_length - rejected_data?.rejected_quantity?.physical_length
+        );
         //  = Math.abs(available_length - rejected_data?.rejected_quantity?.physical_diameter);
-        available_sqm = Math.abs(available_sqm - rejected_data?.rejected_quantity?.physical_cmt);
+        available_sqm = Math.abs(
+          available_sqm - rejected_data?.rejected_quantity?.physical_cmt
+        );
         amount = Math.abs(amount - rejected_data?.rejected_quantity?.amount);
-        sqm_factor = Math.abs(sqm_factor - rejected_data?.rejected_quantity?.sqm_factor);
-        expense_amount = Math.abs(expense_amount - rejected_data?.rejected_quantity?.expense_amount);
+        sqm_factor = Math.abs(
+          sqm_factor - rejected_data?.rejected_quantity?.sqm_factor
+        );
+        expense_amount = Math.abs(
+          expense_amount - rejected_data?.rejected_quantity?.expense_amount
+        );
       }
 
       // logic if approval is not required
@@ -642,24 +643,24 @@ export const edit_cross_cutting_inventory = catchAsync(
           !all_invoice_items.acknowledged ||
           all_invoice_items.deletedCount <= 0
         ) {
-          return next(new ApiError("Failed to update invoice items", 400));
+          return next(new ApiError('Failed to update invoice items', 400));
         }
 
         for (let i = 0; i < newData.length; i++) {
           newData[i].approval_status = {
             sendForApproval: {
               status: false,
-              remark: null
+              remark: null,
             },
             approved: {
               status: false,
-              remark: null
+              remark: null,
             },
             rejected: {
               status: false,
-              remark: null
-            }
-          }
+              remark: null,
+            },
+          };
         }
 
         const update_item_details = await crosscutting_done_model.insertMany(
@@ -671,25 +672,25 @@ export const edit_cross_cutting_inventory = catchAsync(
           { _id: id },
           {
             $set: {
-              "available_quantity.physical_cmt": available_sqm,
-              "available_quantity.physical_length": available_length,
-              "available_quantity.amount": amount,
-              "available_quantity.sqm_factor": sqm_factor,
-              "available_quantity.expense_amount": expense_amount,
+              'available_quantity.physical_cmt': available_sqm,
+              'available_quantity.physical_length': available_length,
+              'available_quantity.amount': amount,
+              'available_quantity.sqm_factor': sqm_factor,
+              'available_quantity.expense_amount': expense_amount,
               crosscutting_completed: crosscutting_completed,
               approval_status: {
                 sendForApproval: {
                   status: false,
-                  remark: null
+                  remark: null,
                 },
                 approved: {
                   status: false,
-                  remark: null
+                  remark: null,
                 },
                 rejected: {
                   status: false,
-                  remark: null
-                }
+                  remark: null,
+                },
               },
             },
           },
@@ -702,7 +703,7 @@ export const edit_cross_cutting_inventory = catchAsync(
           .json(
             new ApiResponse(
               StatusCodes.OK,
-              "Inventory item updated successfully",
+              'Inventory item updated successfully',
               update_item_details
             )
           );
@@ -722,17 +723,17 @@ export const edit_cross_cutting_inventory = catchAsync(
             unique_identifier: unique_identifier_for_items,
             crosscutting_done_id: _id ? _id : new mongoose.Types.ObjectId(),
             issue_for_crosscutting_data: {
-              "physical_cmt": available_sqm,
-              "physical_length": available_length,
-              "amount": amount,
-              "sqm_factor": sqm_factor,
-              "expense_amount": expense_amount,
+              physical_cmt: available_sqm,
+              physical_length: available_length,
+              amount: amount,
+              sqm_factor: sqm_factor,
+              expense_amount: expense_amount,
               crosscutting_completed: crosscutting_completed,
             },
             approval_status: {
               sendForApproval: {
                 status: true,
-                remark: "Approval Pending",
+                remark: 'Approval Pending',
               },
               approved: {
                 status: false,
@@ -757,7 +758,7 @@ export const edit_cross_cutting_inventory = catchAsync(
           });
 
         if (!add_approval_item_details?.[0])
-          return next(new ApiError("Failed to add invoice approval", 400));
+          return next(new ApiError('Failed to add invoice approval', 400));
 
         // update approval status in issue for crosscut collection
         await issues_for_crosscutting_model.findByIdAndUpdate(
@@ -767,7 +768,7 @@ export const edit_cross_cutting_inventory = catchAsync(
               approval_status: {
                 sendForApproval: {
                   status: true,
-                  remark: "Approval Pending",
+                  remark: 'Approval Pending',
                 },
                 approved: {
                   status: false,
@@ -791,7 +792,7 @@ export const edit_cross_cutting_inventory = catchAsync(
               approval_status: {
                 sendForApproval: {
                   status: true,
-                  remark: "Approval Pending",
+                  remark: 'Approval Pending',
                 },
                 approved: {
                   status: false,
@@ -814,7 +815,7 @@ export const edit_cross_cutting_inventory = catchAsync(
           .json(
             new ApiResponse(
               StatusCodes.OK,
-              "Inventory item send for approval successfully",
+              'Inventory item send for approval successfully',
               add_approval_item_details
             )
           );
@@ -835,7 +836,7 @@ export const fetch_all_crosscuts_by_issue_for_crosscut_id = catchAsync(
     if (!id) {
       throw new ApiError(
         StatusCodes.NOT_FOUND,
-        "Issue for crosscut id is missing..."
+        'Issue for crosscut id is missing...'
       );
     }
 
@@ -854,13 +855,13 @@ export const fetch_all_crosscuts_by_issue_for_crosscut_id = catchAsync(
 
     if (allDetails.length === 0) {
       return res.json(
-        new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "No Data Found....")
+        new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, 'No Data Found....')
       );
     }
     return res.json(
       new ApiResponse(
         StatusCodes.OK,
-        "All Crosscuts fetched successfully....",
+        'All Crosscuts fetched successfully....',
         allDetails
       )
     );
@@ -868,169 +869,183 @@ export const fetch_all_crosscuts_by_issue_for_crosscut_id = catchAsync(
 );
 
 export const log_no_dropdown = catchAsync(async (req, res, next) => {
-  const log_no = await crosscutting_done_model.distinct("log_no");
+  const log_no = await crosscutting_done_model.distinct('log_no');
   return res.status(200).json({
     statusCode: 200,
-    status: "success",
+    status: 'success',
     data: log_no,
-    message: "Log No Dropdown fetched successfully",
+    message: 'Log No Dropdown fetched successfully',
   });
 });
 
-export const revert_crosscutting_done = catchAsync(async function (
-  req,
-  res,
-  next
-) {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-  try {
-    const { id } = req.params;
-    const { isChecked } = req.body;
-    // const issue_forCrossCutting = await issues_for_crosscutting_data.findOne({
-    //   _id: id,
-    // }).lean();
-    const issues_for_crosscutting_data = await issues_for_crosscutting_model
-      .findOne({ _id: id })
-      .lean();
-    if (!issues_for_crosscutting_data)
-      return next(new ApiError("Crosscutting Done Item not found", 400));
+export const revert_crosscutting_done = catchAsync(
+  async function (req, res, next) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+      const { id } = req.params;
+      const { isChecked } = req.body;
+      // const issue_forCrossCutting = await issues_for_crosscutting_data.findOne({
+      //   _id: id,
+      // }).lean();
+      const issues_for_crosscutting_data = await issues_for_crosscutting_model
+        .findOne({ _id: id })
+        .lean();
+      if (!issues_for_crosscutting_data)
+        return next(new ApiError('Crosscutting Done Item not found', 400));
 
-    const rejected_data = await rejected_crosscutting_model.findOne({
-      issue_for_crosscutting_id: id,
-    });
+      const rejected_data = await rejected_crosscutting_model.findOne({
+        issue_for_crosscutting_id: id,
+      });
 
-    let updated_physical_length = issues_for_crosscutting_data?.physical_length;
-    let updated_physical_diameter = issues_for_crosscutting_data?.physical_diameter;
-    let updated_physical_cmt = issues_for_crosscutting_data?.physical_cmt;
-    let updated_amount = issues_for_crosscutting_data?.amount;
-    let updated_expense_amount = issues_for_crosscutting_data?.expense_amount;
-    let updated_sqm_factor = issues_for_crosscutting_data?.sqm_factor;
+      let updated_physical_length =
+        issues_for_crosscutting_data?.physical_length;
+      let updated_physical_diameter =
+        issues_for_crosscutting_data?.physical_diameter;
+      let updated_physical_cmt = issues_for_crosscutting_data?.physical_cmt;
+      let updated_amount = issues_for_crosscutting_data?.amount;
+      let updated_expense_amount = issues_for_crosscutting_data?.expense_amount;
+      let updated_sqm_factor = issues_for_crosscutting_data?.sqm_factor;
 
-    if (rejected_data) {
-      updated_physical_length -= rejected_data?.rejected_quantity?.physical_length;
-      updated_physical_diameter -= rejected_data?.rejected_quantity?.physical_diameter;
-      updated_physical_cmt -= rejected_data?.rejected_quantity?.physical_cmt;
-      updated_amount -= rejected_data?.rejected_quantity?.amount;
-      updated_expense_amount -= rejected_data?.rejected_quantity?.expense_amount;
-      updated_sqm_factor -= rejected_data?.rejected_quantity?.sqm_factor;
-    }
+      if (rejected_data) {
+        updated_physical_length -=
+          rejected_data?.rejected_quantity?.physical_length;
+        updated_physical_diameter -=
+          rejected_data?.rejected_quantity?.physical_diameter;
+        updated_physical_cmt -= rejected_data?.rejected_quantity?.physical_cmt;
+        updated_amount -= rejected_data?.rejected_quantity?.amount;
+        updated_expense_amount -=
+          rejected_data?.rejected_quantity?.expense_amount;
+        updated_sqm_factor -= rejected_data?.rejected_quantity?.sqm_factor;
+      }
 
-    if (issues_for_crosscutting_data) {
-      let updateData = {};
+      if (issues_for_crosscutting_data) {
+        let updateData = {};
 
-      // if (isChecked) {
+        // if (isChecked) {
 
-      //   const {
-      //     physical_length,
-      //     physical_cmt,
-      //     amount,
-      //     expense_amount,
-      //   } = issues_for_crosscutting_data;
+        //   const {
+        //     physical_length,
+        //     physical_cmt,
+        //     amount,
+        //     expense_amount,
+        //   } = issues_for_crosscutting_data;
 
-      //   updateData = {
-      //     $set: {
-      //       crosscutting_completed: false,
-      //       "available_quantity.sqm_factor": 1,
-      //       "available_quantity.physical_length": physical_length,
-      //       "available_quantity.physical_cmt": physical_cmt,
-      //       "available_quantity.amount": amount,
-      //       "available_quantity.expense_amount": expense_amount,
-      //     },
-      //   };
-      // } else {
-      //   const aggregatedTotal = await crosscutting_done_model.aggregate([
-      //     {
-      //       $match: {
-      //         issue_for_crosscutting_id: new mongoose.Types.ObjectId(id)
-      //       }
-      //     },
-      //     {
-      //       $group: {
-      //         _id: null,
-      //         total_length: { $sum: { $add: ["$length", "$wastage_info.wastage_length"] } },
-      //         sqm_factor: { $sum: "$sqm_factor" },
-      //         // total_crosscut_cmt: { $sum: "$crosscut_cmt" },
-      //         total_crosscut_cmt: { $sum: { $add: ["$crosscut_cmt", "$wastage_info.wastage_sqm"] } },
-      //         total_cost_amount: { $sum: "$cost_amount" },
-      //         total_expense_amount: { $sum: "$expense_amount" }
-      //       }
-      //     }
-      //   ]);
+        //   updateData = {
+        //     $set: {
+        //       crosscutting_completed: false,
+        //       "available_quantity.sqm_factor": 1,
+        //       "available_quantity.physical_length": physical_length,
+        //       "available_quantity.physical_cmt": physical_cmt,
+        //       "available_quantity.amount": amount,
+        //       "available_quantity.expense_amount": expense_amount,
+        //     },
+        //   };
+        // } else {
+        //   const aggregatedTotal = await crosscutting_done_model.aggregate([
+        //     {
+        //       $match: {
+        //         issue_for_crosscutting_id: new mongoose.Types.ObjectId(id)
+        //       }
+        //     },
+        //     {
+        //       $group: {
+        //         _id: null,
+        //         total_length: { $sum: { $add: ["$length", "$wastage_info.wastage_length"] } },
+        //         sqm_factor: { $sum: "$sqm_factor" },
+        //         // total_crosscut_cmt: { $sum: "$crosscut_cmt" },
+        //         total_crosscut_cmt: { $sum: { $add: ["$crosscut_cmt", "$wastage_info.wastage_sqm"] } },
+        //         total_cost_amount: { $sum: "$cost_amount" },
+        //         total_expense_amount: { $sum: "$expense_amount" }
+        //       }
+        //     }
+        //   ]);
 
-      //   // Check if any aggregation result was returned
-      //   const total = aggregatedTotal?.length > 0 ? aggregatedTotal[0] : {
-      //     total_length: 0,
-      //     sqm_factor: 0,
-      //     total_crosscut_cmt: 0,
-      //     total_cost_amount: 0,
-      //     total_expense_amount: 0
-      //   };
+        //   // Check if any aggregation result was returned
+        //   const total = aggregatedTotal?.length > 0 ? aggregatedTotal[0] : {
+        //     total_length: 0,
+        //     sqm_factor: 0,
+        //     total_crosscut_cmt: 0,
+        //     total_cost_amount: 0,
+        //     total_expense_amount: 0
+        //   };
 
-      //   updateData = {
-      //     $set: {
-      //       crosscutting_completed: false,
-      //     },
-      //     $inc: {
-      //       "available_quantity.physical_length": total.total_length,
-      //       "available_quantity.sqm_factor": total.sqm_factor,
-      //       "available_quantity.physical_cmt": total.total_crosscut_cmt,
-      //       "available_quantity.amount": total.total_cost_amount,
-      //       "available_quantity.expense_amount": total.total_expense_amount,
-      //     },
-      //   };
-      // }
+        //   updateData = {
+        //     $set: {
+        //       crosscutting_completed: false,
+        //     },
+        //     $inc: {
+        //       "available_quantity.physical_length": total.total_length,
+        //       "available_quantity.sqm_factor": total.sqm_factor,
+        //       "available_quantity.physical_cmt": total.total_crosscut_cmt,
+        //       "available_quantity.amount": total.total_cost_amount,
+        //       "available_quantity.expense_amount": total.total_expense_amount,
+        //     },
+        //   };
+        // }
 
-      const update_issues_for_crosscutting_item_quantity =
-        await issues_for_crosscutting_model.updateOne(
-          { _id: issues_for_crosscutting_data?._id },
-          {
-            $set: {
-              "available_quantity.physical_length": Number(Number(updated_physical_length)?.toFixed(2)),
-              // "available_quantity.physical_diameter": updated_physical_diameter,
-              "available_quantity.physical_cmt": Number(Number(updated_physical_cmt)?.toFixed(3)),
-              "available_quantity.amount": Number(Number(updated_amount)?.toFixed(2)),
-              "available_quantity.expense_amount": Number(Number(updated_expense_amount)?.toFixed(2)),
-              crosscutting_completed: false,
-              "available_quantity.sqm_factor": updated_sqm_factor,
+        const update_issues_for_crosscutting_item_quantity =
+          await issues_for_crosscutting_model.updateOne(
+            { _id: issues_for_crosscutting_data?._id },
+            {
+              $set: {
+                'available_quantity.physical_length': Number(
+                  Number(updated_physical_length)?.toFixed(2)
+                ),
+                // "available_quantity.physical_diameter": updated_physical_diameter,
+                'available_quantity.physical_cmt': Number(
+                  Number(updated_physical_cmt)?.toFixed(3)
+                ),
+                'available_quantity.amount': Number(
+                  Number(updated_amount)?.toFixed(2)
+                ),
+                'available_quantity.expense_amount': Number(
+                  Number(updated_expense_amount)?.toFixed(2)
+                ),
+                crosscutting_completed: false,
+                'available_quantity.sqm_factor': updated_sqm_factor,
+              },
             },
-          },
+            { session }
+          );
+
+        if (
+          !update_issues_for_crosscutting_item_quantity.acknowledged ||
+          update_issues_for_crosscutting_item_quantity.modifiedCount <= 0
+        )
+          return next(
+            new ApiError('Unable to update available quantities', 400)
+          );
+      }
+
+      const deleted_crosscutting_done =
+        await crosscutting_done_model.deleteMany(
+          { issue_for_crosscutting_id: id },
           { session }
         );
 
       if (
-        !update_issues_for_crosscutting_item_quantity.acknowledged ||
-        update_issues_for_crosscutting_item_quantity.modifiedCount <= 0
+        !deleted_crosscutting_done.acknowledged ||
+        deleted_crosscutting_done.deletedCount <= 0
       )
-        return next(new ApiError("Unable to update available quantities", 400));
+        return next(new ApiError('Unable to revert crosscutting item', 400));
+
+      await session.commitTransaction();
+      session.endSession();
+      return res
+        .status(200)
+        .json(new ApiResponse(StatusCodes.OK, 'Reverted successfully'));
+    } catch (error) {
+      console.log(error);
+      await session.abortTransaction();
+      session.endSession();
+      return next(error);
     }
-
-    const deleted_crosscutting_done = await crosscutting_done_model.deleteMany(
-      { issue_for_crosscutting_id: id },
-      { session }
-    );
-
-    if (
-      !deleted_crosscutting_done.acknowledged ||
-      deleted_crosscutting_done.deletedCount <= 0
-    )
-      return next(new ApiError("Unable to revert crosscutting item", 400));
-
-    await session.commitTransaction();
-    session.endSession();
-    return res
-      .status(200)
-      .json(new ApiResponse(StatusCodes.OK, "Reverted successfully"));
-  } catch (error) {
-    console.log(error);
-    await session.abortTransaction();
-    session.endSession();
-    return next(error);
   }
-});
+);
 
 export const crossCuttingDoneExcel = catchAsync(async (req, res) => {
-  const { search = "" } = req.query;
+  const { search = '' } = req.query;
   const {
     string,
     boolean,
@@ -1040,7 +1055,7 @@ export const crossCuttingDoneExcel = catchAsync(async (req, res) => {
   const filter = req.body?.filter;
 
   let search_query = {};
-  if (search != "" && req?.body?.searchFields) {
+  if (search != '' && req?.body?.searchFields) {
     const search_data = DynamicSearch(
       search,
       boolean,
@@ -1055,7 +1070,7 @@ export const crossCuttingDoneExcel = catchAsync(async (req, res) => {
         data: {
           data: [],
         },
-        message: "Results Not Found",
+        message: 'Results Not Found',
       });
     }
     search_query = search_data;
@@ -1072,24 +1087,24 @@ export const crossCuttingDoneExcel = catchAsync(async (req, res) => {
   const allData = await crosscutting_done_model.find(match_query);
 
   const excelLink = await createCrosscuttingDoneExcel(allData);
-  console.log("link => ", excelLink);
+  console.log('link => ', excelLink);
 
   return res.json(
-    new ApiResponse(StatusCodes.OK, "Csv downloaded successfully...", excelLink)
+    new ApiResponse(StatusCodes.OK, 'Csv downloaded successfully...', excelLink)
   );
 });
 
 export const add_crosscut_issue_for_flitching = catchAsync(
   async (req, res, next) => {
     const crosscut_id = req.params?.crosscut_id;
-    if (!crosscut_id) return next(new ApiError("crosscut id is required", 400));
+    if (!crosscut_id) return next(new ApiError('crosscut id is required', 400));
     const created_by = req.userDetails.id; //extract userid from req.userDetails
 
     const crosscut_done_details = await crosscutting_done_model.findOne({
       _id: crosscut_id,
     });
     if (!crosscut_done_details)
-      return next(new ApiError("Item not found", 404));
+      return next(new ApiError('Item not found', 404));
 
     const update_crosscut_done_status =
       await crosscutting_done_model.updateMany(
@@ -1105,7 +1120,7 @@ export const add_crosscut_issue_for_flitching = catchAsync(
       !update_crosscut_done_status?.acknowledged &&
       update_crosscut_done_status.modifiedCount <= 0
     )
-      return next(new ApiError("Failed to update", 400));
+      return next(new ApiError('Failed to update', 400));
 
     const log_details = await log_inventory_items_model
       .findOne({
@@ -1141,9 +1156,8 @@ export const add_crosscut_issue_for_flitching = catchAsync(
       created_by: created_by,
     };
 
-    const issue_for_flitching_data = await issues_for_flitching_model.create(
-      issue_for_flitching
-    );
+    const issue_for_flitching_data =
+      await issues_for_flitching_model.create(issue_for_flitching);
 
     await crosscutting_done_model.updateMany(
       {
@@ -1160,7 +1174,7 @@ export const add_crosscut_issue_for_flitching = catchAsync(
     return res.status(200).json(
       new ApiResponse(
         StatusCodes.CREATED,
-        "Issue for flitching done successfully",
+        'Issue for flitching done successfully',
         {
           issue_for_flitching_data,
         }

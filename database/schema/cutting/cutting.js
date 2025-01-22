@@ -1,20 +1,20 @@
-import mongoose from "mongoose";
-import LogSchemaFunction from "../LogsSchema/logs.schema.js";
+import mongoose from 'mongoose';
+import LogSchemaFunction from '../LogsSchema/logs.schema.js';
 
 const CuttingSchema = new mongoose.Schema({
   issued_for_cutting_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "issued_for_cutting",
+    ref: 'issued_for_cutting',
     required: true,
   },
   group_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "group",
+    ref: 'group',
     required: true,
   },
   group_history_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "group_history",
+    ref: 'group_history',
     required: true,
   },
 
@@ -22,7 +22,7 @@ const CuttingSchema = new mongoose.Schema({
     {
       item_id: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "raw_material",
+        ref: 'raw_material',
       },
       final_cutting_quantity: {
         type: Number,
@@ -93,13 +93,13 @@ const CuttingSchema = new mongoose.Schema({
   ], //in this i want same schema like raw_material schema
   created_employee_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "user",
+    ref: 'user',
     trim: true,
   },
   cutting_remarks: {
     type: String,
     uppercase: true,
-    trim: true
+    trim: true,
   },
 
   issued_for_cutting_date: { type: Date, default: Date.now },
@@ -109,5 +109,5 @@ const CuttingSchema = new mongoose.Schema({
   deleted_at: { type: Date, default: null },
 });
 
-export const CuttingModel = mongoose.model("cutting", CuttingSchema);
-LogSchemaFunction("cutting", CuttingModel);
+export const CuttingModel = mongoose.model('cutting', CuttingSchema);
+LogSchemaFunction('cutting', CuttingModel);

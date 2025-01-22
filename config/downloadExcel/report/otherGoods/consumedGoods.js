@@ -1,23 +1,22 @@
-import ExcelJS from "exceljs";
-import fs from "fs/promises";
+import ExcelJS from 'exceljs';
+import fs from 'fs/promises';
 
 const GenerateConsumedGoodsReport = async (data) => {
-
   const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet("Consumed Goods Reports");
+  const worksheet = workbook.addWorksheet('Consumed Goods Reports');
 
   const columns = [
-    { header: "ITEM NAME", key: "cons_item_name", width: 20 },
-    { header: "UNITS", key: "units", width: 20 },
-    { header: "OPENING", key: "available_quantity", width: 10 },
-    { header: "ADDITIONS", key: "received_quantity", width: 10 },
+    { header: 'ITEM NAME', key: 'cons_item_name', width: 20 },
+    { header: 'UNITS', key: 'units', width: 20 },
+    { header: 'OPENING', key: 'available_quantity', width: 10 },
+    { header: 'ADDITIONS', key: 'received_quantity', width: 10 },
     ...Object.keys(data[0].dailyConsumption).map((date) => {
-      const [year, month, day] = date.split("-");
+      const [year, month, day] = date.split('-');
       const formattedDate = `${day}/${month}/${year.slice(-2)}`;
       return { header: formattedDate, key: date, width: 10 };
     }),
 
-    { header: "CLOSING", key: "closing", width: 10 },
+    { header: 'CLOSING', key: 'closing', width: 10 },
   ];
 
   worksheet.columns = columns;
@@ -42,7 +41,7 @@ const GenerateConsumedGoodsReport = async (data) => {
   });
 
   const filePath =
-    "public/reports/OtherGoods/ConsumedReportExcel/other_goods_report.xlsx";
+    'public/reports/OtherGoods/ConsumedReportExcel/other_goods_report.xlsx';
 
   await workbook.xlsx.writeFile(filePath);
 

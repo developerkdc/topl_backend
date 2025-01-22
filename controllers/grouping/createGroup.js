@@ -1,20 +1,20 @@
-import mongoose from "mongoose";
-import { GroupModel } from "../../database/schema/group/groupCreated/groupCreated.schema.js";
-import { GroupHistoryModel } from "../../database/schema/group/groupHistory/groupHistory.schema.js";
-import { RawMaterialModel } from "../../database/schema/inventory/raw/raw.schema.js";
-import { IssuedForSmokingGroupModel } from "../../database/schema/smoking/issueForSmokingGroup.js";
-import catchAsync from "../../utils/errors/catchAsync.js";
-import { IssuedForGroupingModel } from "../../database/schema/group/issueForGrouping/issueForGrouping.schema.js";
-import { IssuedForCuttingModel } from "../../database/schema/cutting/issuedForCutting.js";
-import ApiError from "../../utils/errors/apiError.js";
-import { DynamicSearch } from "../../utils/dynamicSearch/dynamic.js";
-import fs from "fs";
-import GroupImagesModel from "../../database/schema/images/groupImages.schema.js";
-import { deleteImagesFromStorage } from "../../config/multer/multer.js";
-import { GroupSmokeModel } from "../../database/schema/smoking/groupSmoked.js";
-import { IssuedForDyingGroupModel } from "../../database/schema/dying/issueForDyingGroup.js";
-import { GroupDyingModel } from "../../database/schema/dying/groupDying.js";
-import NodeCache from "node-cache";
+import mongoose from 'mongoose';
+import { GroupModel } from '../../database/schema/group/groupCreated/groupCreated.schema.js';
+import { GroupHistoryModel } from '../../database/schema/group/groupHistory/groupHistory.schema.js';
+import { RawMaterialModel } from '../../database/schema/inventory/raw/raw.schema.js';
+import { IssuedForSmokingGroupModel } from '../../database/schema/smoking/issueForSmokingGroup.js';
+import catchAsync from '../../utils/errors/catchAsync.js';
+import { IssuedForGroupingModel } from '../../database/schema/group/issueForGrouping/issueForGrouping.schema.js';
+import { IssuedForCuttingModel } from '../../database/schema/cutting/issuedForCutting.js';
+import ApiError from '../../utils/errors/apiError.js';
+import { DynamicSearch } from '../../utils/dynamicSearch/dynamic.js';
+import fs from 'fs';
+import GroupImagesModel from '../../database/schema/images/groupImages.schema.js';
+import { deleteImagesFromStorage } from '../../config/multer/multer.js';
+import { GroupSmokeModel } from '../../database/schema/smoking/groupSmoked.js';
+import { IssuedForDyingGroupModel } from '../../database/schema/dying/issueForDyingGroup.js';
+import { GroupDyingModel } from '../../database/schema/dying/groupDying.js';
+import NodeCache from 'node-cache';
 
 const cache = new NodeCache({ stdTTL: 5 });
 export const CreateGroup = catchAsync(async (req, res, next) => {
@@ -26,7 +26,7 @@ export const CreateGroup = catchAsync(async (req, res, next) => {
     session.startTransaction();
     const authUserDetail = req.userDetails;
     const bodyData = req.body;
-    console.log(bodyData, "bodyData");
+    console.log(bodyData, 'bodyData');
     const imageFilenames = req?.files?.group_images?.map(
       (file) => file?.filename
     );
@@ -100,7 +100,7 @@ export const CreateGroup = catchAsync(async (req, res, next) => {
 
     const issuedForGroupingItems = await RawMaterialModel.find({
       _id: { $in: item_details },
-      status: "issued for grouping",
+      status: 'issued for grouping',
     }).session(session);
 
     console.log(issuedForGroupingItems);
@@ -108,13 +108,13 @@ export const CreateGroup = catchAsync(async (req, res, next) => {
       return res.status(400).json({
         status: false,
         message:
-          "Cannot create group because some items are not issued for grouping or already grouped.",
+          'Cannot create group because some items are not issued for grouping or already grouped.',
       });
     }
 
     const groupedItems = await RawMaterialModel.find({
       _id: { $in: item_details },
-      status: "grouped",
+      status: 'grouped',
     }).session(session);
 
     if (groupedItems.length > 0) {
@@ -122,7 +122,7 @@ export const CreateGroup = catchAsync(async (req, res, next) => {
       session.endSession();
       return res.status(400).json({
         status: false,
-        message: "Cannot create group because some items are already grouped.",
+        message: 'Cannot create group because some items are already grouped.',
       });
     }
 
@@ -136,14 +136,14 @@ export const CreateGroup = catchAsync(async (req, res, next) => {
 
     const createdData = await GroupModel.findById(savedGroupData._id)
       .populate({
-        path: "item_details",
+        path: 'item_details',
       })
       .lean()
       .session(session);
 
     const createdGroup = await RawMaterialModel.updateMany(
       { _id: { $in: item_details } },
-      { status: "grouped" }
+      { status: 'grouped' }
     ).session(session);
 
     if (createdGroup) {
@@ -158,7 +158,7 @@ export const CreateGroup = catchAsync(async (req, res, next) => {
     return res.status(201).json({
       result: savedGroupData,
       status: true,
-      message: "Group created successfully",
+      message: 'Group created successfully',
     });
   } catch (error) {
     // Rollback the transaction if there is any error
@@ -177,7 +177,7 @@ export const CreateGroup = catchAsync(async (req, res, next) => {
     }
     return res.status(500).json({
       status: false,
-      message: "Error occurred while creating group.",
+      message: 'Error occurred while creating group.',
       error: error.message,
     });
   }
@@ -198,15 +198,15 @@ export const FetchCreatedGroups = catchAsync(async (req, res, next) => {
   const {
     page = 1,
     limit = 10,
-    sortBy = "updated_at",
-    sort = "desc",
+    sortBy = 'updated_at',
+    sort = 'desc',
   } = req.query;
   const skip = Math.max((page - 1) * limit, 0);
 
-  const search = req.query.search || "";
+  const search = req.query.search || '';
 
   let searchQuery = {};
-  if (search != "" && req?.body?.searchFields) {
+  if (search != '' && req?.body?.searchFields) {
     const searchdata = DynamicSearch(
       search,
       boolean,
@@ -221,7 +221,7 @@ export const FetchCreatedGroups = catchAsync(async (req, res, next) => {
         data: {
           data: [],
         },
-        message: "Results Not Found",
+        message: 'Results Not Found',
       });
     }
     searchQuery = searchdata;
@@ -231,7 +231,7 @@ export const FetchCreatedGroups = catchAsync(async (req, res, next) => {
   const matchQuery = data || {};
 
   if (to && from) {
-    matchQuery["date_of_grouping"] = {
+    matchQuery['date_of_grouping'] = {
       $gte: new Date(from), // Greater than or equal to "from" date
       $lte: new Date(to), // Less than or equal to "to" date
     };
@@ -240,17 +240,17 @@ export const FetchCreatedGroups = catchAsync(async (req, res, next) => {
   const totalDocuments = await GroupModel.aggregate([
     {
       $lookup: {
-        from: "raw_materials",
-        localField: "item_details",
-        foreignField: "_id",
-        as: "item_details",
+        from: 'raw_materials',
+        localField: 'item_details',
+        foreignField: '_id',
+        as: 'item_details',
       },
     },
     {
       $lookup: {
-        from: "users",
-        localField: "created_employee_id",
-        foreignField: "_id",
+        from: 'users',
+        localField: 'created_employee_id',
+        foreignField: '_id',
         pipeline: [
           {
             $project: {
@@ -258,12 +258,12 @@ export const FetchCreatedGroups = catchAsync(async (req, res, next) => {
             },
           },
         ],
-        as: "created_employee_id",
+        as: 'created_employee_id',
       },
     },
     {
       $unwind: {
-        path: "$created_employee_id",
+        path: '$created_employee_id',
         preserveNullAndEmptyArrays: true,
       },
     },
@@ -275,11 +275,11 @@ export const FetchCreatedGroups = catchAsync(async (req, res, next) => {
     },
     {
       $sort: {
-        [sortBy]: sort == "desc" ? -1 : 1,
+        [sortBy]: sort == 'desc' ? -1 : 1,
       },
     },
     {
-      $count: "totalDocuments",
+      $count: 'totalDocuments',
     },
   ]);
   const totalPages = Math.ceil(totalDocuments?.[0]?.totalDocuments / limit);
@@ -287,17 +287,17 @@ export const FetchCreatedGroups = catchAsync(async (req, res, next) => {
   const rawVeneerData = await GroupModel.aggregate([
     {
       $lookup: {
-        from: "raw_materials",
-        localField: "item_details",
-        foreignField: "_id",
-        as: "item_details",
+        from: 'raw_materials',
+        localField: 'item_details',
+        foreignField: '_id',
+        as: 'item_details',
       },
     },
     {
       $lookup: {
-        from: "users",
-        localField: "created_employee_id",
-        foreignField: "_id",
+        from: 'users',
+        localField: 'created_employee_id',
+        foreignField: '_id',
         pipeline: [
           {
             $project: {
@@ -305,12 +305,12 @@ export const FetchCreatedGroups = catchAsync(async (req, res, next) => {
             },
           },
         ],
-        as: "created_employee_id",
+        as: 'created_employee_id',
       },
     },
     {
       $unwind: {
-        path: "$created_employee_id",
+        path: '$created_employee_id',
         preserveNullAndEmptyArrays: true,
       },
     },
@@ -322,7 +322,7 @@ export const FetchCreatedGroups = catchAsync(async (req, res, next) => {
     },
     {
       $sort: {
-        [sortBy]: sort == "desc" ? -1 : 1,
+        [sortBy]: sort == 'desc' ? -1 : 1,
       },
     },
     {
@@ -335,7 +335,7 @@ export const FetchCreatedGroups = catchAsync(async (req, res, next) => {
   const responseData = {
     result: rawVeneerData,
     statusCode: 200,
-    status: "success",
+    status: 'success',
     totalPages: totalPages,
   };
 
@@ -356,7 +356,7 @@ export const GetLatestGroupNo = catchAsync(async (req, res, next) => {
     } else {
       res.status(200).json({ latestGroupNo: 1 });
       // If no documents found, return a default value or handle the scenario accordingly
-      res.status(404).json({ message: "No groups found" });
+      res.status(404).json({ message: 'No groups found' });
     }
   } catch (error) {
     // Handle any errors that may occur during the database operation
@@ -372,14 +372,14 @@ export const IssueForSmokingGroup = catchAsync(async (req, res, next) => {
   const a = await GroupModel.find(
     {
       _id: { $in: issuedForSmokingIds },
-      status: { $ne: "issued for smoking" },
+      status: { $ne: 'issued for smoking' },
     },
     {
       item_received_quantities: 1,
     }
   );
   if (a.length != issuedForSmokingIds.length) {
-    throw new Error("Already Issued");
+    throw new Error('Already Issued');
   }
   await IssuedForSmokingGroupModel.insertMany(
     a?.map((e) => {
@@ -396,13 +396,13 @@ export const IssueForSmokingGroup = catchAsync(async (req, res, next) => {
     },
     {
       $set: {
-        status: "issued for smoking",
+        status: 'issued for smoking',
       },
     }
   );
   return res.json({
     status: true,
-    message: "Issue for smoking successful",
+    message: 'Issue for smoking successful',
   });
 });
 
@@ -429,11 +429,11 @@ export const CancelSmokingGroup = catchAsync(async (req, res, next) => {
       // Update the status of the corresponding ID in RawMaterialModel to "available"
       await GroupModel.updateOne(
         { _id: issueRecord.group_id },
-        { $set: { status: "available" } }
+        { $set: { status: 'available' } }
       ).session(session);
     } else {
       // If the record does not exist in IssuedForSmokingIndividualModel, return error
-      throw new Error("Record not found in Issued For Smoking.");
+      throw new Error('Record not found in Issued For Smoking.');
     }
 
     // Commit the transaction
@@ -442,7 +442,7 @@ export const CancelSmokingGroup = catchAsync(async (req, res, next) => {
 
     return res.json({
       status: true,
-      message: "Cancellation successful.",
+      message: 'Cancellation successful.',
     });
   } catch (error) {
     // Rollback the transaction in case of error
@@ -451,7 +451,7 @@ export const CancelSmokingGroup = catchAsync(async (req, res, next) => {
 
     return res.status(500).json({
       status: false,
-      message: "Error occurred while cancelling smoking.",
+      message: 'Error occurred while cancelling smoking.',
       error: error.message,
     });
   }
@@ -467,15 +467,15 @@ export const FetchIssuedForSmokingGroup = catchAsync(async (req, res, next) => {
   const {
     page = 1,
     limit = 10,
-    sortBy = "updated_at",
-    sort = "desc",
+    sortBy = 'updated_at',
+    sort = 'desc',
   } = req.query;
   const skip = Math.max((page - 1) * limit, 0);
 
-  const search = req.query.search || "";
+  const search = req.query.search || '';
 
   let searchQuery = {};
-  if (search != "" && req?.body?.searchFields) {
+  if (search != '' && req?.body?.searchFields) {
     const searchdata = DynamicSearch(
       search,
       boolean,
@@ -490,7 +490,7 @@ export const FetchIssuedForSmokingGroup = catchAsync(async (req, res, next) => {
         data: {
           data: [],
         },
-        message: "Results Not Found",
+        message: 'Results Not Found',
       });
     }
     searchQuery = searchdata;
@@ -501,7 +501,7 @@ export const FetchIssuedForSmokingGroup = catchAsync(async (req, res, next) => {
 
   if (to && from) {
     console.log(new Date(from));
-    matchQuery["created_at"] = {
+    matchQuery['created_at'] = {
       $gte: new Date(from), // Greater than or equal to "from" date
       $lte: new Date(to), // Less than or equal to "to" date
     };
@@ -510,28 +510,28 @@ export const FetchIssuedForSmokingGroup = catchAsync(async (req, res, next) => {
   const totalDocuments = await IssuedForSmokingGroupModel.aggregate([
     {
       $lookup: {
-        from: "groups",
-        localField: "group_id",
-        foreignField: "_id",
-        as: "group_id",
+        from: 'groups',
+        localField: 'group_id',
+        foreignField: '_id',
+        as: 'group_id',
       },
     },
     {
-      $unwind: "$group_id",
+      $unwind: '$group_id',
     },
     {
       $lookup: {
-        from: "raw_materials", // Assuming "items" is the collection name for item details
-        localField: "group_id.item_details",
-        foreignField: "_id",
-        as: "group_id.item_details",
+        from: 'raw_materials', // Assuming "items" is the collection name for item details
+        localField: 'group_id.item_details',
+        foreignField: '_id',
+        as: 'group_id.item_details',
       },
     },
     {
       $lookup: {
-        from: "users",
-        localField: "created_employee_id",
-        foreignField: "_id",
+        from: 'users',
+        localField: 'created_employee_id',
+        foreignField: '_id',
         pipeline: [
           {
             $project: {
@@ -539,12 +539,12 @@ export const FetchIssuedForSmokingGroup = catchAsync(async (req, res, next) => {
             },
           },
         ],
-        as: "created_employee_id",
+        as: 'created_employee_id',
       },
     },
     {
       $unwind: {
-        path: "$created_employee_id",
+        path: '$created_employee_id',
         preserveNullAndEmptyArrays: true,
       },
     },
@@ -556,11 +556,11 @@ export const FetchIssuedForSmokingGroup = catchAsync(async (req, res, next) => {
     },
     {
       $sort: {
-        [sortBy]: sort == "desc" ? -1 : 1,
+        [sortBy]: sort == 'desc' ? -1 : 1,
       },
     },
     {
-      $count: "totalDocuments",
+      $count: 'totalDocuments',
     },
   ]);
   const totalPages = Math.ceil(totalDocuments?.[0]?.totalDocuments / limit);
@@ -568,28 +568,28 @@ export const FetchIssuedForSmokingGroup = catchAsync(async (req, res, next) => {
   const rawVeneerData = await IssuedForSmokingGroupModel.aggregate([
     {
       $lookup: {
-        from: "groups",
-        localField: "group_id",
-        foreignField: "_id",
-        as: "group_id",
+        from: 'groups',
+        localField: 'group_id',
+        foreignField: '_id',
+        as: 'group_id',
       },
     },
     {
-      $unwind: "$group_id",
+      $unwind: '$group_id',
     },
     {
       $lookup: {
-        from: "raw_materials", // Assuming "items" is the collection name for item details
-        localField: "group_id.item_details",
-        foreignField: "_id",
-        as: "group_id.item_details",
+        from: 'raw_materials', // Assuming "items" is the collection name for item details
+        localField: 'group_id.item_details',
+        foreignField: '_id',
+        as: 'group_id.item_details',
       },
     },
     {
       $lookup: {
-        from: "users",
-        localField: "created_employee_id",
-        foreignField: "_id",
+        from: 'users',
+        localField: 'created_employee_id',
+        foreignField: '_id',
         pipeline: [
           {
             $project: {
@@ -597,12 +597,12 @@ export const FetchIssuedForSmokingGroup = catchAsync(async (req, res, next) => {
             },
           },
         ],
-        as: "created_employee_id",
+        as: 'created_employee_id',
       },
     },
     {
       $unwind: {
-        path: "$created_employee_id",
+        path: '$created_employee_id',
         preserveNullAndEmptyArrays: true,
       },
     },
@@ -614,7 +614,7 @@ export const FetchIssuedForSmokingGroup = catchAsync(async (req, res, next) => {
     },
     {
       $sort: {
-        [sortBy]: sort == "desc" ? -1 : 1,
+        [sortBy]: sort == 'desc' ? -1 : 1,
       },
     },
     {
@@ -627,7 +627,7 @@ export const FetchIssuedForSmokingGroup = catchAsync(async (req, res, next) => {
   return res.status(200).json({
     result: rawVeneerData,
     statusCode: 200,
-    status: "success",
+    status: 'success',
     totalPages: totalPages,
   });
 });
@@ -659,18 +659,17 @@ export const IssueForCuttingGroup = catchAsync(async (req, res, next) => {
     ) {
       return res.json({
         status: false,
-        message: "Missing required fields",
+        message: 'Missing required fields',
       });
     }
 
     // Fetch the group details
-    const groupDetails = await GroupModel.findById(group_id).populate(
-      "item_details"
-    );
+    const groupDetails =
+      await GroupModel.findById(group_id).populate('item_details');
     if (!groupDetails) {
       return res.json({
         status: false,
-        message: "Group not found",
+        message: 'Group not found',
       });
     }
 
@@ -680,7 +679,7 @@ export const IssueForCuttingGroup = catchAsync(async (req, res, next) => {
       if (!rawMaterial) {
         return res.json({
           status: false,
-          message: "Invalid item ID",
+          message: 'Invalid item ID',
         });
       }
 
@@ -688,7 +687,7 @@ export const IssueForCuttingGroup = catchAsync(async (req, res, next) => {
       if (item.cutting_quantity > rawMaterial.item_available_pattas) {
         return res.json({
           status: false,
-          message: "Cutting quantities exceed available quantities",
+          message: 'Cutting quantities exceed available quantities',
         });
       }
       // if (
@@ -733,9 +732,9 @@ export const IssueForCuttingGroup = catchAsync(async (req, res, next) => {
       // throw new Error("Trial");
       await rawMaterial.save({ validateBeforeSave: false });
     }
-    let status = "available";
+    let status = 'available';
     if (group_no_of_pattas_available == 0) {
-      status = "not available";
+      status = 'not available';
     }
     // Update group data
     const updatedGroupData = await GroupModel.findOneAndUpdate(
@@ -777,7 +776,7 @@ export const IssueForCuttingGroup = catchAsync(async (req, res, next) => {
     session.endSession();
 
     // Send success response
-    res.status(201).json({ message: "Issued for cutting added successfully" });
+    res.status(201).json({ message: 'Issued for cutting added successfully' });
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
@@ -791,10 +790,10 @@ export const UpdateGroupVeneer = catchAsync(async (req, res, next) => {
 
   // Construct update object based on provided values
   const updateObj = {};
-  if (group_pallete_no !== undefined && group_pallete_no !== "") {
+  if (group_pallete_no !== undefined && group_pallete_no !== '') {
     updateObj.group_pallete_no = group_pallete_no;
   }
-  if (group_physical_location !== undefined && group_physical_location !== "") {
+  if (group_physical_location !== undefined && group_physical_location !== '') {
     updateObj.group_physical_location = group_physical_location;
   }
 
@@ -803,7 +802,7 @@ export const UpdateGroupVeneer = catchAsync(async (req, res, next) => {
     return res.status(400).json({
       statusCode: 400,
       status: false,
-      message: "No fields provided for update.",
+      message: 'No fields provided for update.',
     });
   }
 
@@ -818,14 +817,14 @@ export const UpdateGroupVeneer = catchAsync(async (req, res, next) => {
   );
 
   if (!updatedVeneer) {
-    return next(new ApiError("Veneer Not Found", 404));
+    return next(new ApiError('Veneer Not Found', 404));
   }
 
   return res.status(200).json({
     statusCode: 200,
     status: true,
     data: updatedVeneer,
-    message: "Veneer Updated",
+    message: 'Veneer Updated',
   });
 });
 
@@ -846,14 +845,14 @@ export const RevertCreatedGroup = catchAsync(async (req, res, next) => {
       (await IssuedForDyingGroupModel.findOne({ group_id: groupId })) ||
       (await GroupDyingModel.findOne({ group_id: groupId }))
     ) {
-      throw new Error("Group cannot be reverted");
+      throw new Error('Group cannot be reverted');
     }
 
     const rawMaterialIds = groupDetails.item_details.map((item) => item);
     console.log(rawMaterialIds);
     await RawMaterialModel.updateMany(
       { _id: { $in: rawMaterialIds } },
-      { $set: { status: "issued for grouping" } },
+      { $set: { status: 'issued for grouping' } },
       { session }
     );
 
@@ -880,8 +879,8 @@ export const RevertCreatedGroup = catchAsync(async (req, res, next) => {
     session.endSession();
 
     res.json({
-      message: "Success",
-      result: "Group reverted successfully",
+      message: 'Success',
+      result: 'Group reverted successfully',
     });
   } catch (error) {
     if (session) {
@@ -890,7 +889,7 @@ export const RevertCreatedGroup = catchAsync(async (req, res, next) => {
     }
     return res.status(500).json({
       status: false,
-      message: "Error occurred while reverting group",
+      message: 'Error occurred while reverting group',
       error: error.message,
     });
   }

@@ -1,11 +1,11 @@
-import mongoose from "mongoose";
-import { IssuedForDyingIndividualModel } from "../../database/schema/dying/issuedForDyingIndividual.js";
-import catchAsync from "../../utils/errors/catchAsync.js";
-import { IndividualDyingModel } from "../../database/schema/dying/individualDying.js";
-import RawImagesModel from "../../database/schema/images/rawImages.schema.js";
-import fs from "fs";
-import OtherGoodsModel from "../../database/schema/inventory/otherGoods/otherGoods.schema.js";
-import OtherGoodsConsumedModel from "../../database/schema/inventory/otherGoods/otherGoodsConsumed.schema.js";
+import mongoose from 'mongoose';
+import { IssuedForDyingIndividualModel } from '../../database/schema/dying/issuedForDyingIndividual.js';
+import catchAsync from '../../utils/errors/catchAsync.js';
+import { IndividualDyingModel } from '../../database/schema/dying/individualDying.js';
+import RawImagesModel from '../../database/schema/images/rawImages.schema.js';
+import fs from 'fs';
+import OtherGoodsModel from '../../database/schema/inventory/otherGoods/otherGoods.schema.js';
+import OtherGoodsConsumedModel from '../../database/schema/inventory/otherGoods/otherGoodsConsumed.schema.js';
 // export const CreateIndividualDyed = catchAsync(async (req, res, next) => {
 //   // Start a MongoDB session
 //   const session = await mongoose.startSession();
@@ -141,7 +141,7 @@ export const CreateIndividualDyed = catchAsync(async (req, res, next) => {
     if (issuedForDyingIndividualItemsExist.length != item_details.length) {
       return res.status(400).json({
         status: false,
-        message: "Item not available",
+        message: 'Item not available',
       });
     }
 
@@ -154,9 +154,9 @@ export const CreateIndividualDyed = catchAsync(async (req, res, next) => {
       },
       {
         $group: {
-          _id: "$item_name",
+          _id: '$item_name',
           totalAvailable: {
-            $sum: "$available_quantity",
+            $sum: '$available_quantity',
           },
         },
       },
@@ -244,7 +244,7 @@ export const CreateIndividualDyed = catchAsync(async (req, res, next) => {
     if (saveData) {
       await IssuedForDyingIndividualModel.updateMany(
         { item_id: { $in: item_details } },
-        { $set: { status: "dyed" } }
+        { $set: { status: 'dyed' } }
       ).session(session);
     }
 
@@ -287,7 +287,7 @@ export const CreateIndividualDyed = catchAsync(async (req, res, next) => {
         available_quantity: updatedOtherGoods?.available_quantity,
         date_of_consumption: bodyData?.date_of_dying,
         consumption_quantity: consumeFromItem,
-        processes: "Individual Dying",
+        processes: 'Individual Dying',
         supplier_details: updatedOtherGoods?.supplier_details,
         other_goods_consumed_remarks: bodyData?.consumption_remark,
         created_employee_id: authUserDetail?._id,
@@ -312,7 +312,7 @@ export const CreateIndividualDyed = catchAsync(async (req, res, next) => {
 
     return res.json({
       status: true,
-      message: "create individual dying successful",
+      message: 'create individual dying successful',
     });
   } catch (error) {
     // Rollback the transaction if there is any error

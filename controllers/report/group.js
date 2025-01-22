@@ -1,22 +1,22 @@
-import { GroupModel } from "../../database/schema/group/groupCreated/groupCreated.schema.js";
-import catchAsync from "../../utils/errors/catchAsync.js";
-import { GenerateIssuedForDyingGroupsReport } from "../../config/downloadExcel/report/grouping/IssuedForDyingGroups.js";
-import { GenerateIssuedForSmokingGroupsReport } from "../../config/downloadExcel/report/grouping/IssuedForSmoking.js";
-import { IssuedForSmokingGroupModel } from "../../database/schema/smoking/issueForSmokingGroup.js";
-import { IssuedForDyingGroupModel } from "../../database/schema/dying/issueForDyingGroup.js";
-import { GenerateGroupingReport } from "../../config/downloadExcel/report/grouping/createdGroup.js";
-import { GroupHistoryModel } from "../../database/schema/group/groupHistory/groupHistory.schema.js";
-import { GenerateGroupingHistoryReport } from "../../config/downloadExcel/report/grouping/createdGroupHistory.js";
-import { GenerateGroupingHistoryNormalReport } from "../../config/downloadExcel/report/grouping/createdGroupHistoryNormal.js";
+import { GroupModel } from '../../database/schema/group/groupCreated/groupCreated.schema.js';
+import catchAsync from '../../utils/errors/catchAsync.js';
+import { GenerateIssuedForDyingGroupsReport } from '../../config/downloadExcel/report/grouping/IssuedForDyingGroups.js';
+import { GenerateIssuedForSmokingGroupsReport } from '../../config/downloadExcel/report/grouping/IssuedForSmoking.js';
+import { IssuedForSmokingGroupModel } from '../../database/schema/smoking/issueForSmokingGroup.js';
+import { IssuedForDyingGroupModel } from '../../database/schema/dying/issueForDyingGroup.js';
+import { GenerateGroupingReport } from '../../config/downloadExcel/report/grouping/createdGroup.js';
+import { GroupHistoryModel } from '../../database/schema/group/groupHistory/groupHistory.schema.js';
+import { GenerateGroupingHistoryReport } from '../../config/downloadExcel/report/grouping/createdGroupHistory.js';
+import { GenerateGroupingHistoryNormalReport } from '../../config/downloadExcel/report/grouping/createdGroupHistoryNormal.js';
 
 export const CreatedGroupReportExcel = catchAsync(async (req, res, next) => {
-  const { sortBy = "updated_at", sort = "desc" } = req.query;
+  const { sortBy = 'updated_at', sort = 'desc' } = req.query;
 
   const { to, from, ...data } = req?.body?.filters || {};
   const matchQuery = data || {};
 
   if (to && from) {
-    matchQuery["date_of_grouping"] = {
+    matchQuery['date_of_grouping'] = {
       $gte: new Date(from), // Greater than or equal to "from" date
       $lte: new Date(to), // Less than or equal to "to" date
     };
@@ -25,17 +25,17 @@ export const CreatedGroupReportExcel = catchAsync(async (req, res, next) => {
   const rawVeneerData = await GroupModel.aggregate([
     {
       $lookup: {
-        from: "raw_materials",
-        localField: "item_details",
-        foreignField: "_id",
-        as: "item_details",
+        from: 'raw_materials',
+        localField: 'item_details',
+        foreignField: '_id',
+        as: 'item_details',
       },
     },
     {
       $lookup: {
-        from: "users",
-        localField: "created_employee_id",
-        foreignField: "_id",
+        from: 'users',
+        localField: 'created_employee_id',
+        foreignField: '_id',
         pipeline: [
           {
             $project: {
@@ -43,12 +43,12 @@ export const CreatedGroupReportExcel = catchAsync(async (req, res, next) => {
             },
           },
         ],
-        as: "created_employee_id",
+        as: 'created_employee_id',
       },
     },
     {
       $unwind: {
-        path: "$created_employee_id",
+        path: '$created_employee_id',
         preserveNullAndEmptyArrays: true,
       },
     },
@@ -59,7 +59,7 @@ export const CreatedGroupReportExcel = catchAsync(async (req, res, next) => {
     },
     {
       $sort: {
-        [sortBy]: sort == "desc" ? -1 : 1,
+        [sortBy]: sort == 'desc' ? -1 : 1,
       },
     },
   ]);
@@ -67,18 +67,18 @@ export const CreatedGroupReportExcel = catchAsync(async (req, res, next) => {
   return res.status(200).json({
     result: exl,
     statusCode: 200,
-    status: "success",
+    status: 'success',
   });
 });
 
 export const GroupsHistoryReportExcel = catchAsync(async (req, res, next) => {
-  const { sortBy = "updated_at", sort = "desc" } = req.query;
+  const { sortBy = 'updated_at', sort = 'desc' } = req.query;
 
   const { to, from, ...data } = req?.body?.filters || {};
   const matchQuery = data || {};
 
   if (to && from) {
-    matchQuery["group_id.date_of_grouping"] = {
+    matchQuery['group_id.date_of_grouping'] = {
       $gte: new Date(from), // Greater than or equal to "from" date
       $lte: new Date(to), // Less than or equal to "to" date
     };
@@ -87,28 +87,28 @@ export const GroupsHistoryReportExcel = catchAsync(async (req, res, next) => {
   const rawVeneerData = await GroupHistoryModel.aggregate([
     {
       $lookup: {
-        from: "raw_materials",
-        localField: "cutting_item_details.item_id",
-        foreignField: "_id",
-        as: "raw_materials_data",
+        from: 'raw_materials',
+        localField: 'cutting_item_details.item_id',
+        foreignField: '_id',
+        as: 'raw_materials_data',
       },
     },
     {
       $addFields: {
         cutting_item_details: {
           $map: {
-            input: "$cutting_item_details",
-            as: "detail",
+            input: '$cutting_item_details',
+            as: 'detail',
             in: {
               $mergeObjects: [
-                "$$detail",
+                '$$detail',
                 {
                   $arrayElemAt: [
                     {
                       $filter: {
-                        input: "$raw_materials_data",
-                        as: "material",
-                        cond: { $eq: ["$$material._id", "$$detail.item_id"] },
+                        input: '$raw_materials_data',
+                        as: 'material',
+                        cond: { $eq: ['$$material._id', '$$detail.item_id'] },
                       },
                     },
                     0,
@@ -127,9 +127,9 @@ export const GroupsHistoryReportExcel = catchAsync(async (req, res, next) => {
     },
     {
       $lookup: {
-        from: "users",
-        localField: "created_employee_id",
-        foreignField: "_id",
+        from: 'users',
+        localField: 'created_employee_id',
+        foreignField: '_id',
         pipeline: [
           {
             $project: {
@@ -137,12 +137,12 @@ export const GroupsHistoryReportExcel = catchAsync(async (req, res, next) => {
             },
           },
         ],
-        as: "created_employee_id",
+        as: 'created_employee_id',
       },
     },
     {
       $unwind: {
-        path: "$created_employee_id",
+        path: '$created_employee_id',
         preserveNullAndEmptyArrays: true,
       },
     },
@@ -153,7 +153,7 @@ export const GroupsHistoryReportExcel = catchAsync(async (req, res, next) => {
     },
     {
       $sort: {
-        [sortBy]: sort == "desc" ? -1 : 1,
+        [sortBy]: sort == 'desc' ? -1 : 1,
       },
     },
   ]);
@@ -161,18 +161,18 @@ export const GroupsHistoryReportExcel = catchAsync(async (req, res, next) => {
   return res.status(200).json({
     result: exl,
     statusCode: 200,
-    status: "success",
+    status: 'success',
   });
 });
 export const GroupsHistoryNormalReportExcel = catchAsync(
   async (req, res, next) => {
-    const { sortBy = "updated_at", sort = "desc" } = req.query;
+    const { sortBy = 'updated_at', sort = 'desc' } = req.query;
 
     const { to, from, ...data } = req?.body?.filters || {};
     const matchQuery = data || {};
 
     if (to && from) {
-      matchQuery["group_id.date_of_grouping"] = {
+      matchQuery['group_id.date_of_grouping'] = {
         $gte: new Date(from), // Greater than or equal to "from" date
         $lte: new Date(to), // Less than or equal to "to" date
       };
@@ -181,28 +181,28 @@ export const GroupsHistoryNormalReportExcel = catchAsync(
     const rawVeneerData = await GroupHistoryModel.aggregate([
       {
         $lookup: {
-          from: "raw_materials",
-          localField: "cutting_item_details.item_id",
-          foreignField: "_id",
-          as: "raw_materials_data",
+          from: 'raw_materials',
+          localField: 'cutting_item_details.item_id',
+          foreignField: '_id',
+          as: 'raw_materials_data',
         },
       },
       {
         $addFields: {
           cutting_item_details: {
             $map: {
-              input: "$cutting_item_details",
-              as: "detail",
+              input: '$cutting_item_details',
+              as: 'detail',
               in: {
                 $mergeObjects: [
-                  "$$detail",
+                  '$$detail',
                   {
                     $arrayElemAt: [
                       {
                         $filter: {
-                          input: "$raw_materials_data",
-                          as: "material",
-                          cond: { $eq: ["$$material._id", "$$detail.item_id"] },
+                          input: '$raw_materials_data',
+                          as: 'material',
+                          cond: { $eq: ['$$material._id', '$$detail.item_id'] },
                         },
                       },
                       0,
@@ -221,9 +221,9 @@ export const GroupsHistoryNormalReportExcel = catchAsync(
       },
       {
         $lookup: {
-          from: "users",
-          localField: "created_employee_id",
-          foreignField: "_id",
+          from: 'users',
+          localField: 'created_employee_id',
+          foreignField: '_id',
           pipeline: [
             {
               $project: {
@@ -231,12 +231,12 @@ export const GroupsHistoryNormalReportExcel = catchAsync(
               },
             },
           ],
-          as: "created_employee_id",
+          as: 'created_employee_id',
         },
       },
       {
         $unwind: {
-          path: "$created_employee_id",
+          path: '$created_employee_id',
           preserveNullAndEmptyArrays: true,
         },
       },
@@ -247,7 +247,7 @@ export const GroupsHistoryNormalReportExcel = catchAsync(
       },
       {
         $sort: {
-          [sortBy]: sort == "desc" ? -1 : 1,
+          [sortBy]: sort == 'desc' ? -1 : 1,
         },
       },
     ]);
@@ -255,20 +255,20 @@ export const GroupsHistoryNormalReportExcel = catchAsync(
     return res.status(200).json({
       result: exl,
       statusCode: 200,
-      status: "success",
+      status: 'success',
     });
   }
 );
 
 export const IssuedForSmokingGroupsReportExcel = catchAsync(
   async (req, res, next) => {
-    const { sortBy = "updated_at", sort = "desc" } = req.query;
+    const { sortBy = 'updated_at', sort = 'desc' } = req.query;
 
     const { to, from, ...data } = req?.body?.filters || {};
     const matchQuery = data || {};
 
     if (to && from) {
-      matchQuery["created_at"] = {
+      matchQuery['created_at'] = {
         $gte: new Date(from), // Greater than or equal to "from" date
         $lte: new Date(to), // Less than or equal to "to" date
       };
@@ -277,28 +277,28 @@ export const IssuedForSmokingGroupsReportExcel = catchAsync(
     const rawVeneerData = await IssuedForSmokingGroupModel.aggregate([
       {
         $lookup: {
-          from: "groups",
-          localField: "group_id",
-          foreignField: "_id",
-          as: "group_id",
+          from: 'groups',
+          localField: 'group_id',
+          foreignField: '_id',
+          as: 'group_id',
         },
       },
       {
-        $unwind: "$group_id",
+        $unwind: '$group_id',
       },
       {
         $lookup: {
-          from: "raw_materials", // Assuming "items" is the collection name for item details
-          localField: "group_id.item_details",
-          foreignField: "_id",
-          as: "group_id.item_details",
+          from: 'raw_materials', // Assuming "items" is the collection name for item details
+          localField: 'group_id.item_details',
+          foreignField: '_id',
+          as: 'group_id.item_details',
         },
       },
       {
         $lookup: {
-          from: "users",
-          localField: "created_employee_id",
-          foreignField: "_id",
+          from: 'users',
+          localField: 'created_employee_id',
+          foreignField: '_id',
           pipeline: [
             {
               $project: {
@@ -306,12 +306,12 @@ export const IssuedForSmokingGroupsReportExcel = catchAsync(
               },
             },
           ],
-          as: "created_employee_id",
+          as: 'created_employee_id',
         },
       },
       {
         $unwind: {
-          path: "$created_employee_id",
+          path: '$created_employee_id',
           preserveNullAndEmptyArrays: true,
         },
       },
@@ -322,7 +322,7 @@ export const IssuedForSmokingGroupsReportExcel = catchAsync(
       },
       {
         $sort: {
-          [sortBy]: sort == "desc" ? -1 : 1,
+          [sortBy]: sort == 'desc' ? -1 : 1,
         },
       },
     ]);
@@ -330,47 +330,47 @@ export const IssuedForSmokingGroupsReportExcel = catchAsync(
     return res.status(200).json({
       result: exl,
       statusCode: 200,
-      status: "success",
+      status: 'success',
     });
   }
 );
 
 export const IssuedForDyingGroupsReportExcel = catchAsync(
   async (req, res, next) => {
-    const { sortBy = "updated_at", sort = "desc" } = req.query;
+    const { sortBy = 'updated_at', sort = 'desc' } = req.query;
 
     const { to, from, ...data } = req?.body?.filters || {};
     const matchQuery = data || {};
 
     if (to && from) {
-      matchQuery["created_at"] = { $gte: new Date(from), $lte: new Date(to) };
+      matchQuery['created_at'] = { $gte: new Date(from), $lte: new Date(to) };
     }
 
     const rawVeneerData = await IssuedForDyingGroupModel.aggregate([
       {
         $lookup: {
-          from: "groups",
-          localField: "group_id",
-          foreignField: "_id",
-          as: "group_id",
+          from: 'groups',
+          localField: 'group_id',
+          foreignField: '_id',
+          as: 'group_id',
         },
       },
       {
-        $unwind: "$group_id",
+        $unwind: '$group_id',
       },
       {
         $lookup: {
-          from: "raw_materials", // Assuming "items" is the collection name for item details
-          localField: "group_id.item_details",
-          foreignField: "_id",
-          as: "group_id.item_details",
+          from: 'raw_materials', // Assuming "items" is the collection name for item details
+          localField: 'group_id.item_details',
+          foreignField: '_id',
+          as: 'group_id.item_details',
         },
       },
       {
         $lookup: {
-          from: "users",
-          localField: "created_employee_id",
-          foreignField: "_id",
+          from: 'users',
+          localField: 'created_employee_id',
+          foreignField: '_id',
           pipeline: [
             {
               $project: {
@@ -378,12 +378,12 @@ export const IssuedForDyingGroupsReportExcel = catchAsync(
               },
             },
           ],
-          as: "created_employee_id",
+          as: 'created_employee_id',
         },
       },
       {
         $unwind: {
-          path: "$created_employee_id",
+          path: '$created_employee_id',
           preserveNullAndEmptyArrays: true,
         },
       },
@@ -394,7 +394,7 @@ export const IssuedForDyingGroupsReportExcel = catchAsync(
       },
       {
         $sort: {
-          [sortBy]: sort == "desc" ? -1 : 1,
+          [sortBy]: sort == 'desc' ? -1 : 1,
         },
       },
     ]);
@@ -402,7 +402,7 @@ export const IssuedForDyingGroupsReportExcel = catchAsync(
     return res.status(200).json({
       result: exl,
       statusCode: 200,
-      status: "success",
+      status: 'success',
     });
   }
 );

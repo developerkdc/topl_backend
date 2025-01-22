@@ -1,14 +1,14 @@
-import mongoose from "mongoose";
-import { CuttingModel } from "../../database/schema/cutting/cutting.js";
-import { GroupModel } from "../../database/schema/group/groupCreated/groupCreated.schema.js";
-import { GroupHistoryModel } from "../../database/schema/group/groupHistory/groupHistory.schema.js";
-import { RawMaterialModel } from "../../database/schema/inventory/raw/raw.schema.js";
-import catchAsync from "../../utils/errors/catchAsync.js";
-import { IssuedForCuttingModel } from "../../database/schema/cutting/issuedForCutting.js";
-import { IssueForTapingModel } from "../../database/schema/taping/issuedTaping.schema.js";
-import { DynamicSearch } from "../../utils/dynamicSearch/dynamic.js";
-import GroupImagesModel from "../../database/schema/images/groupImages.schema.js";
-import fs from "fs";
+import mongoose from 'mongoose';
+import { CuttingModel } from '../../database/schema/cutting/cutting.js';
+import { GroupModel } from '../../database/schema/group/groupCreated/groupCreated.schema.js';
+import { GroupHistoryModel } from '../../database/schema/group/groupHistory/groupHistory.schema.js';
+import { RawMaterialModel } from '../../database/schema/inventory/raw/raw.schema.js';
+import catchAsync from '../../utils/errors/catchAsync.js';
+import { IssuedForCuttingModel } from '../../database/schema/cutting/issuedForCutting.js';
+import { IssueForTapingModel } from '../../database/schema/taping/issuedTaping.schema.js';
+import { DynamicSearch } from '../../utils/dynamicSearch/dynamic.js';
+import GroupImagesModel from '../../database/schema/images/groupImages.schema.js';
+import fs from 'fs';
 // export const CreateCutting = catchAsync(async (req, res, next) => {
 //   const session = await mongoose.startSession();
 //   session.startTransaction();
@@ -156,15 +156,15 @@ export const FetchCuttingDone = catchAsync(async (req, res, next) => {
   const {
     page = 1,
     limit = 10,
-    sortBy = "updated_at",
-    sort = "desc",
+    sortBy = 'updated_at',
+    sort = 'desc',
   } = req.query;
   const skip = Math.max((page - 1) * limit, 0);
 
-  const search = req.query.search || "";
+  const search = req.query.search || '';
 
   let searchQuery = {};
-  if (search != "" && req?.body?.searchFields) {
+  if (search != '' && req?.body?.searchFields) {
     const searchdata = DynamicSearch(
       search,
       boolean,
@@ -179,7 +179,7 @@ export const FetchCuttingDone = catchAsync(async (req, res, next) => {
         data: {
           data: [],
         },
-        message: "Results Not Found",
+        message: 'Results Not Found',
       });
     }
     searchQuery = searchdata;
@@ -190,7 +190,7 @@ export const FetchCuttingDone = catchAsync(async (req, res, next) => {
 
   if (to && from) {
     console.log(new Date(from));
-    matchQuery["cutting_date"] = {
+    matchQuery['cutting_date'] = {
       $gte: new Date(from),
       $lte: new Date(to),
     };
@@ -199,40 +199,40 @@ export const FetchCuttingDone = catchAsync(async (req, res, next) => {
   const totalDocuments = await CuttingModel.aggregate([
     {
       $lookup: {
-        from: "group_histories", // Name of the collection you're referencing
-        localField: "group_history_id",
-        foreignField: "_id", // Assuming group_id references the _id field of the GroupModel
-        as: "group_history_id", // Output array will be named "group"
+        from: 'group_histories', // Name of the collection you're referencing
+        localField: 'group_history_id',
+        foreignField: '_id', // Assuming group_id references the _id field of the GroupModel
+        as: 'group_history_id', // Output array will be named "group"
       },
     },
     {
       $unwind: {
-        path: "$group_history_id",
+        path: '$group_history_id',
         preserveNullAndEmptyArrays: true,
       },
     },
     {
       $lookup: {
-        from: "raw_materials", // Name of the collection you're referencing
-        localField: "group_history_id.cutting_item_details.item_id",
-        foreignField: "_id", // Assuming item_id references the _id field of the raw_materials collection
-        as: "raw_materials", // Output array will be named "raw_materials"
+        from: 'raw_materials', // Name of the collection you're referencing
+        localField: 'group_history_id.cutting_item_details.item_id',
+        foreignField: '_id', // Assuming item_id references the _id field of the raw_materials collection
+        as: 'raw_materials', // Output array will be named "raw_materials"
       },
     },
     {
       $addFields: {
-        "group_history_id.cutting_item_details": {
+        'group_history_id.cutting_item_details': {
           $map: {
-            input: "$group_history_id.cutting_item_details",
-            as: "detail",
+            input: '$group_history_id.cutting_item_details',
+            as: 'detail',
             in: {
               $mergeObjects: [
-                "$$detail",
+                '$$detail',
                 {
                   $arrayElemAt: [
-                    "$raw_materials",
+                    '$raw_materials',
                     {
-                      $indexOfArray: ["$raw_materials._id", "$$detail.item_id"],
+                      $indexOfArray: ['$raw_materials._id', '$$detail.item_id'],
                     },
                   ],
                 },
@@ -243,13 +243,13 @@ export const FetchCuttingDone = catchAsync(async (req, res, next) => {
       },
     },
     {
-      $unset: "raw_materials", // Remove the temporary field after reshaping
+      $unset: 'raw_materials', // Remove the temporary field after reshaping
     },
     {
       $lookup: {
-        from: "users",
-        localField: "created_employee_id",
-        foreignField: "_id",
+        from: 'users',
+        localField: 'created_employee_id',
+        foreignField: '_id',
         pipeline: [
           {
             $project: {
@@ -257,12 +257,12 @@ export const FetchCuttingDone = catchAsync(async (req, res, next) => {
             },
           },
         ],
-        as: "created_employee_id",
+        as: 'created_employee_id',
       },
     },
     {
       $unwind: {
-        path: "$created_employee_id",
+        path: '$created_employee_id',
         preserveNullAndEmptyArrays: true,
       },
     },
@@ -274,11 +274,11 @@ export const FetchCuttingDone = catchAsync(async (req, res, next) => {
     },
     {
       $sort: {
-        [sortBy]: sort == "desc" ? -1 : 1,
+        [sortBy]: sort == 'desc' ? -1 : 1,
       },
     },
     {
-      $count: "totalDocuments",
+      $count: 'totalDocuments',
     },
   ]);
   const totalPages = Math.ceil(totalDocuments?.[0]?.totalDocuments / limit);
@@ -286,40 +286,40 @@ export const FetchCuttingDone = catchAsync(async (req, res, next) => {
   const rawVeneerData = await CuttingModel.aggregate([
     {
       $lookup: {
-        from: "group_histories", // Name of the collection you're referencing
-        localField: "group_history_id",
-        foreignField: "_id", // Assuming group_id references the _id field of the GroupModel
-        as: "group_history_id", // Output array will be named "group"
+        from: 'group_histories', // Name of the collection you're referencing
+        localField: 'group_history_id',
+        foreignField: '_id', // Assuming group_id references the _id field of the GroupModel
+        as: 'group_history_id', // Output array will be named "group"
       },
     },
     {
       $unwind: {
-        path: "$group_history_id",
+        path: '$group_history_id',
         preserveNullAndEmptyArrays: true,
       },
     },
     {
       $lookup: {
-        from: "raw_materials", // Name of the collection you're referencing
-        localField: "group_history_id.cutting_item_details.item_id",
-        foreignField: "_id", // Assuming item_id references the _id field of the raw_materials collection
-        as: "raw_materials", // Output array will be named "raw_materials"
+        from: 'raw_materials', // Name of the collection you're referencing
+        localField: 'group_history_id.cutting_item_details.item_id',
+        foreignField: '_id', // Assuming item_id references the _id field of the raw_materials collection
+        as: 'raw_materials', // Output array will be named "raw_materials"
       },
     },
     {
       $addFields: {
-        "group_history_id.cutting_item_details": {
+        'group_history_id.cutting_item_details': {
           $map: {
-            input: "$group_history_id.cutting_item_details",
-            as: "detail",
+            input: '$group_history_id.cutting_item_details',
+            as: 'detail',
             in: {
               $mergeObjects: [
-                "$$detail",
+                '$$detail',
                 {
                   $arrayElemAt: [
-                    "$raw_materials",
+                    '$raw_materials',
                     {
-                      $indexOfArray: ["$raw_materials._id", "$$detail.item_id"],
+                      $indexOfArray: ['$raw_materials._id', '$$detail.item_id'],
                     },
                   ],
                 },
@@ -330,13 +330,13 @@ export const FetchCuttingDone = catchAsync(async (req, res, next) => {
       },
     },
     {
-      $unset: "raw_materials", // Remove the temporary field after reshaping
+      $unset: 'raw_materials', // Remove the temporary field after reshaping
     },
     {
       $lookup: {
-        from: "users",
-        localField: "created_employee_id",
-        foreignField: "_id",
+        from: 'users',
+        localField: 'created_employee_id',
+        foreignField: '_id',
         pipeline: [
           {
             $project: {
@@ -344,12 +344,12 @@ export const FetchCuttingDone = catchAsync(async (req, res, next) => {
             },
           },
         ],
-        as: "created_employee_id",
+        as: 'created_employee_id',
       },
     },
     {
       $unwind: {
-        path: "$created_employee_id",
+        path: '$created_employee_id',
         preserveNullAndEmptyArrays: true,
       },
     },
@@ -361,7 +361,7 @@ export const FetchCuttingDone = catchAsync(async (req, res, next) => {
     },
     {
       $sort: {
-        [sortBy]: sort == "desc" ? -1 : 1,
+        [sortBy]: sort == 'desc' ? -1 : 1,
       },
     },
     {
@@ -374,7 +374,7 @@ export const FetchCuttingDone = catchAsync(async (req, res, next) => {
   return res.status(200).json({
     result: rawVeneerData,
     statusCode: 200,
-    status: "success",
+    status: 'success',
     totalPages: totalPages,
   });
 });
@@ -596,7 +596,7 @@ export const CreateCutting = catchAsync(async (req, res, next) => {
     ).session(session);
 
     if (!checkIfIssued) {
-      throw new Error("Issued for cutting not found");
+      throw new Error('Issued for cutting not found');
     }
 
     const GroupHistoryData = await GroupHistoryModel.findById(
@@ -636,10 +636,10 @@ export const CreateCutting = catchAsync(async (req, res, next) => {
         session
       );
       const finalCuttingQuantity =
-        bodyData["item_details"][index]?.final_cutting_quantity;
+        bodyData['item_details'][index]?.final_cutting_quantity;
 
       const wasteCuttingQuantity =
-        bodyData["item_details"][index]?.waste_cutting_quantity;
+        bodyData['item_details'][index]?.waste_cutting_quantity;
 
       const cuttingQuantity = item.cutting_quantity;
 
@@ -651,7 +651,7 @@ export const CreateCutting = catchAsync(async (req, res, next) => {
         cuttingQuantity -
         finalCuttingQuantity -
         wasteCuttingQuantity.waste_pattas;
-      console.log(total, "total");
+      console.log(total, 'total');
 
       // if (natural > 0) {
       //   natural -= wasteCuttingQuantity.waste_pattas;
@@ -675,12 +675,12 @@ export const CreateCutting = catchAsync(async (req, res, next) => {
           rawMaterial.item_width *
           rawMaterial.item_available_pattas) /
         10000;
-      console.log(calculation, "calculation");
+      console.log(calculation, 'calculation');
       rawMaterial.item_available_sqm = calculation;
       rawMaterial.item_available_sqm = parseFloat(
         rawMaterial.item_available_sqm
       ).toFixed(2);
-      console.log(rawMaterial, "rawMaterial");
+      console.log(rawMaterial, 'rawMaterial');
 
       // throw new Error("Trial");
       await rawMaterial.save({ validateBeforeSave: false });
@@ -706,7 +706,7 @@ export const CreateCutting = catchAsync(async (req, res, next) => {
     );
     let status;
     if (totalPattas > 0) {
-      status = "available";
+      status = 'available';
     }
     const updatedGroup = await GroupModel.findByIdAndUpdate(
       { _id: bodyData.group_id },
@@ -721,14 +721,13 @@ export const CreateCutting = catchAsync(async (req, res, next) => {
     ).session(session);
 
     for (const item of bodyData.item_details) {
-
       const updateGroupHistory = await GroupHistoryModel.findByIdAndUpdate(
         { _id: bodyData.group_history_id },
         {
           $set: {
-            "group_id.group_no_of_pattas_available": totalPattas,
-            "item_details.cutting_quantity": item.final_cutting_quantity,
-            "group_id.total_item_sqm_available": totalsqm,
+            'group_id.group_no_of_pattas_available': totalPattas,
+            'item_details.cutting_quantity': item.final_cutting_quantity,
+            'group_id.total_item_sqm_available': totalsqm,
             updated_at: Date.now(),
           },
         },
@@ -743,7 +742,7 @@ export const CreateCutting = catchAsync(async (req, res, next) => {
       { _id: bodyData.issued_for_cutting_id },
       {
         $set: {
-          revert_status: "inactive",
+          revert_status: 'inactive',
         },
       },
       { new: true }
@@ -761,9 +760,9 @@ export const CreateCutting = catchAsync(async (req, res, next) => {
     session.endSession();
 
     return res.status(201).json({
-      result: "cutting",
+      result: 'cutting',
       status: true,
-      message: "Cutting done successfully",
+      message: 'Cutting done successfully',
     });
   } catch (error) {
     await session.abortTransaction();
@@ -781,7 +780,7 @@ export const CreateCutting = catchAsync(async (req, res, next) => {
     }
     return res.status(500).json({
       status: false,
-      message: "Error occurred while cutting",
+      message: 'Error occurred while cutting',
       error: error.message,
     });
   }

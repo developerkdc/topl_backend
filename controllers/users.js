@@ -1,24 +1,24 @@
-import mongoose from "mongoose";
-import RolesModel from "../database/schema/roles.schema.js";
-import UserModel from "../database/schema/user.schema.js";
-import { create, generateRandomPassword } from "../utils/authServices/index.js";
-import { SendOtpEmail } from "../utils/emailServices/otp.js";
-import catchAsync from "../utils/errors/catchAsync.js";
-import { IdRequired, SomethingWrong } from "../utils/response/response.js";
+import mongoose from 'mongoose';
+import RolesModel from '../database/schema/roles.schema.js';
+import UserModel from '../database/schema/user.schema.js';
+import { create, generateRandomPassword } from '../utils/authServices/index.js';
+import { SendOtpEmail } from '../utils/emailServices/otp.js';
+import catchAsync from '../utils/errors/catchAsync.js';
+import { IdRequired, SomethingWrong } from '../utils/response/response.js';
 
-import { DynamicSearch } from "../utils/dynamicSearch/dynamic.js";
-import { dynamic_filter } from "../utils/dymanicFilter.js";
-import { log_approval_inventory_invoice_model } from "../database/schema/inventory/log/logApproval.schema.js";
-import { flitch_approval_inventory_invoice_model } from "../database/schema/inventory/Flitch/flitchApproval.schema.js";
-import { plywood_approval_inventory_invoice_model } from "../database/schema/inventory/Plywood/plywoodApproval.schema.js";
-import { veneer_approval_inventory_invoice_model } from "../database/schema/inventory/venner/veneerApproval.schema.js";
-import { core_approval_inventory_invoice_model } from "../database/schema/inventory/core/coreApproval.schema.js";
-import { mdf_approval_inventory_invoice_model } from "../database/schema/inventory/mdf/mdfApproval.schema.js";
-import { face_approval_inventory_invoice_model } from "../database/schema/inventory/face/faceApproval.schema.js";
-import { fleece_approval_inventory_invoice_model } from "../database/schema/inventory/fleece/fleeceApproval.schema.js";
-import { otherGoods_approval_inventory_invoice_model } from "../database/schema/inventory/otherGoods/otherGoodsApproval.schema.js";
-import { crosscutting_done_approval_model } from "../database/schema/factory/crossCutting/crosscuttingApproval.schema.js";
-import { flitching_approval_model } from "../database/schema/factory/flitching/flitchingApproval.schema.js";
+import { DynamicSearch } from '../utils/dynamicSearch/dynamic.js';
+import { dynamic_filter } from '../utils/dymanicFilter.js';
+import { log_approval_inventory_invoice_model } from '../database/schema/inventory/log/logApproval.schema.js';
+import { flitch_approval_inventory_invoice_model } from '../database/schema/inventory/Flitch/flitchApproval.schema.js';
+import { plywood_approval_inventory_invoice_model } from '../database/schema/inventory/Plywood/plywoodApproval.schema.js';
+import { veneer_approval_inventory_invoice_model } from '../database/schema/inventory/venner/veneerApproval.schema.js';
+import { core_approval_inventory_invoice_model } from '../database/schema/inventory/core/coreApproval.schema.js';
+import { mdf_approval_inventory_invoice_model } from '../database/schema/inventory/mdf/mdfApproval.schema.js';
+import { face_approval_inventory_invoice_model } from '../database/schema/inventory/face/faceApproval.schema.js';
+import { fleece_approval_inventory_invoice_model } from '../database/schema/inventory/fleece/fleeceApproval.schema.js';
+import { otherGoods_approval_inventory_invoice_model } from '../database/schema/inventory/otherGoods/otherGoodsApproval.schema.js';
+import { crosscutting_done_approval_model } from '../database/schema/factory/crossCutting/crosscuttingApproval.schema.js';
+import { flitching_approval_model } from '../database/schema/factory/flitching/flitchingApproval.schema.js';
 
 export const AddUser = catchAsync(async (req, res) => {
   const authUserDetail = req.userDetails;
@@ -36,7 +36,7 @@ export const AddUser = catchAsync(async (req, res) => {
     return res.status(400).json({
       result: [],
       status: true,
-      message: "Role is Inactive",
+      message: 'Role is Inactive',
     });
   }
 
@@ -46,7 +46,7 @@ export const AddUser = catchAsync(async (req, res) => {
   return res.status(201).json({
     result: savedUser,
     status: true,
-    message: "User created successfully",
+    message: 'User created successfully',
   });
 });
 
@@ -56,13 +56,13 @@ export const UpdateUser = catchAsync(async (req, res) => {
     return res.status(400).json({
       result: [],
       status: false,
-      message: userId ? "Invalid user ID" : IdRequired,
+      message: userId ? 'Invalid user ID' : IdRequired,
     });
   }
-  const requiredFields = ["user_name", "first_name", "last_name", "role_name"];
+  const requiredFields = ['user_name', 'first_name', 'last_name', 'role_name'];
 
   for (const field of requiredFields) {
-    if (req.body[field] === "") {
+    if (req.body[field] === '') {
       return res.status(400).json({
         result: [],
         status: false,
@@ -77,10 +77,15 @@ export const UpdateUser = catchAsync(async (req, res) => {
   if (!actualUserDetails) {
     return res.status(404).json({
       status: false,
-      message: "User not found.",
+      message: 'User not found.',
     });
-  } else if (actualUserDetails?.user_type === "ADMIN" && updateData?.user_type === "STAFF") {
-    let UserWithApprover = await UserModel.find({ approver_user_name: actualUserDetails?.user_name });
+  } else if (
+    actualUserDetails?.user_type === 'ADMIN' &&
+    updateData?.user_type === 'STAFF'
+  ) {
+    let UserWithApprover = await UserModel.find({
+      approver_user_name: actualUserDetails?.user_name,
+    });
     if (UserWithApprover.length > 0) {
       return res.status(404).json({
         status: false,
@@ -90,43 +95,74 @@ export const UpdateUser = catchAsync(async (req, res) => {
     }
   }
 
-  const user = await UserModel.findByIdAndUpdate(userId, { $set: updateData }, { new: true, runValidators: true });
+  const user = await UserModel.findByIdAndUpdate(
+    userId,
+    { $set: updateData },
+    { new: true, runValidators: true }
+  );
 
-  const previousApproval = actualUserDetails.approver_id
+  const previousApproval = actualUserDetails.approver_id;
   const newApproval = user.approver_id;
 
   if (previousApproval?.toString() !== newApproval?.toString()) {
     const searchQuery = {
-      "approval_status.sendForApproval.status": true,
-      "approval_status.approved.status": false,
-      "approval_status.rejected.status": false,
-      "approval.approvalPerson": previousApproval
+      'approval_status.sendForApproval.status': true,
+      'approval_status.approved.status': false,
+      'approval_status.rejected.status': false,
+      'approval.approvalPerson': previousApproval,
     };
     const updateQuery = {
       $set: {
-        "approval.approvalPerson": newApproval
-      }
-    }
+        'approval.approvalPerson': newApproval,
+      },
+    };
 
     //Inventory
     //log inventory
-    await log_approval_inventory_invoice_model.updateMany(searchQuery, updateQuery);
+    await log_approval_inventory_invoice_model.updateMany(
+      searchQuery,
+      updateQuery
+    );
     //flitch inventory
-    await flitch_approval_inventory_invoice_model.updateMany(searchQuery, updateQuery);
+    await flitch_approval_inventory_invoice_model.updateMany(
+      searchQuery,
+      updateQuery
+    );
     //plywood inventory
-    await plywood_approval_inventory_invoice_model.updateMany(searchQuery, updateQuery);
+    await plywood_approval_inventory_invoice_model.updateMany(
+      searchQuery,
+      updateQuery
+    );
     //veneer inventory
-    await veneer_approval_inventory_invoice_model.updateMany(searchQuery, updateQuery);
+    await veneer_approval_inventory_invoice_model.updateMany(
+      searchQuery,
+      updateQuery
+    );
     //mdf inventory
-    await mdf_approval_inventory_invoice_model.updateMany(searchQuery, updateQuery);
+    await mdf_approval_inventory_invoice_model.updateMany(
+      searchQuery,
+      updateQuery
+    );
     //face inventory
-    await face_approval_inventory_invoice_model.updateMany(searchQuery, updateQuery);
+    await face_approval_inventory_invoice_model.updateMany(
+      searchQuery,
+      updateQuery
+    );
     //core inventory
-    await core_approval_inventory_invoice_model.updateMany(searchQuery, updateQuery);
+    await core_approval_inventory_invoice_model.updateMany(
+      searchQuery,
+      updateQuery
+    );
     //fleece paper inventory
-    await fleece_approval_inventory_invoice_model.updateMany(searchQuery, updateQuery);
+    await fleece_approval_inventory_invoice_model.updateMany(
+      searchQuery,
+      updateQuery
+    );
     //other goods inventory
-    await otherGoods_approval_inventory_invoice_model.updateMany(searchQuery, updateQuery);
+    await otherGoods_approval_inventory_invoice_model.updateMany(
+      searchQuery,
+      updateQuery
+    );
 
     //Factory
     //crosscutting done
@@ -138,22 +174,38 @@ export const UpdateUser = catchAsync(async (req, res) => {
   res.status(200).json({
     result: user,
     status: true,
-    message: "User updated successfully",
+    message: 'User updated successfully',
   });
 });
 
 export const ListUser = catchAsync(async (req, res) => {
-  const { string, boolean, numbers, arrayField = [] } = req?.body?.searchFields || {};
-  const { page = 1, limit = 10, sortBy = "updated_at", sort = "desc" } = req.query;
-  const search = req.query.search || "";
+  const {
+    string,
+    boolean,
+    numbers,
+    arrayField = [],
+  } = req?.body?.searchFields || {};
+  const {
+    page = 1,
+    limit = 10,
+    sortBy = 'updated_at',
+    sort = 'desc',
+  } = req.query;
+  const search = req.query.search || '';
   let searchQuery = {};
 
   const { ...data } = req?.body?.filters || {};
   const matchQuery = dynamic_filter(data);
   console.log(matchQuery);
 
-  if (search != "" && req?.body?.searchFields) {
-    const searchdata = DynamicSearch(search, boolean, numbers, string, arrayField);
+  if (search != '' && req?.body?.searchFields) {
+    const searchdata = DynamicSearch(
+      search,
+      boolean,
+      numbers,
+      string,
+      arrayField
+    );
     if (searchdata?.length == 0) {
       return res.status(404).json({
         statusCode: 404,
@@ -161,7 +213,7 @@ export const ListUser = catchAsync(async (req, res) => {
         data: {
           user: [],
         },
-        message: "Results Not Found",
+        message: 'Results Not Found',
       });
     }
     searchQuery = searchdata;
@@ -177,9 +229,9 @@ export const ListUser = catchAsync(async (req, res) => {
   const user = await UserModel.aggregate([
     {
       $lookup: {
-        from: "roles",
-        localField: "role_id",
-        foreignField: "_id",
+        from: 'roles',
+        localField: 'role_id',
+        foreignField: '_id',
         pipeline: [
           {
             $project: {
@@ -187,20 +239,20 @@ export const ListUser = catchAsync(async (req, res) => {
             },
           },
         ],
-        as: "role_id",
+        as: 'role_id',
       },
     },
     {
       $unwind: {
-        path: "$role_id",
+        path: '$role_id',
         preserveNullAndEmptyArrays: true,
       },
     },
     {
       $lookup: {
-        from: "users",
-        localField: "created_employee_id",
-        foreignField: "_id",
+        from: 'users',
+        localField: 'created_employee_id',
+        foreignField: '_id',
         pipeline: [
           {
             $project: {
@@ -208,12 +260,12 @@ export const ListUser = catchAsync(async (req, res) => {
             },
           },
         ],
-        as: "created_employee_id",
+        as: 'created_employee_id',
       },
     },
     {
       $unwind: {
-        path: "$created_employee_id",
+        path: '$created_employee_id',
         preserveNullAndEmptyArrays: true,
       },
     },
@@ -221,7 +273,7 @@ export const ListUser = catchAsync(async (req, res) => {
       $match: { ...searchQuery, ...matchQuery },
     },
     {
-      $sort: { [sortBy]: sort == "desc" ? -1 : 1 },
+      $sort: { [sortBy]: sort == 'desc' ? -1 : 1 },
     },
     {
       $skip: skip,
@@ -237,14 +289,14 @@ export const ListUser = catchAsync(async (req, res) => {
         verify_otp: 0,
       },
     },
-  ]).collation({ locale: "en", caseLevel: true });
+  ]).collation({ locale: 'en', caseLevel: true });
   if (user) {
     return res.status(200).json({
       result: user,
       status: true,
       totalPages: totalPages,
       currentPage: validPage,
-      message: "All Users List",
+      message: 'All Users List',
     });
   }
 });
@@ -256,14 +308,14 @@ export const DeleteUser = catchAsync(async (req, res) => {
     return res.status(401).json({
       result: [],
       status: false,
-      message: "User Id does not exist.",
+      message: 'User Id does not exist.',
     });
   }
 
   return res.status(200).json({
     result: [],
     status: true,
-    message: "User deleted successfully.",
+    message: 'User deleted successfully.',
   });
 });
 
@@ -281,7 +333,7 @@ export const AdminChangePassword = catchAsync(async (req, res) => {
       return res.status(400).json({
         result: [],
         status: false,
-        message: "New password is required.",
+        message: 'New password is required.',
       });
     }
 
@@ -299,7 +351,7 @@ export const AdminChangePassword = catchAsync(async (req, res) => {
     if (!userUpdate) {
       return res.status(404).json({
         status: false,
-        message: "User not found.",
+        message: 'User not found.',
       });
     }
     const authUserDetail = req.userDetails;
@@ -307,28 +359,35 @@ export const AdminChangePassword = catchAsync(async (req, res) => {
     return res.status(200).json({
       result: [],
       status: true,
-      message: "Password updated successfully.",
+      message: 'Password updated successfully.',
     });
   } catch (error) {
-    console.error("Error updating user password:", error);
-    return res.status(500).json({ result: [], status: false, message: SomethingWrong });
+    console.error('Error updating user password:', error);
+    return res
+      .status(500)
+      .json({ result: [], status: false, message: SomethingWrong });
   }
 });
 
 export const RoleNameList = catchAsync(async (req, res) => {
   const { dept_name } = req.body;
-  const role = await RolesModel.find({ dept_name: dept_name, status: true }, "_id role_name").sort({ role_name: 1 }).collation({ locale: "en", caseLevel: true });
+  const role = await RolesModel.find(
+    { dept_name: dept_name, status: true },
+    '_id role_name'
+  )
+    .sort({ role_name: 1 })
+    .collation({ locale: 'en', caseLevel: true });
   if (!role) {
     return res.status(401).json({
       result: [],
       status: false,
-      message: "Role not found.",
+      message: 'Role not found.',
     });
   }
   return res.status(200).json({
     result: role,
     status: true,
-    message: "List Role name for department.",
+    message: 'List Role name for department.',
   });
 });
 
@@ -336,11 +395,16 @@ export const ListApproverUser = catchAsync(async (req, res) => {
   const { dept_name } = req.body;
   const user = req.userDetails;
 
-  const approverUser = await UserModel.find({ dept_name: dept_name, user_type: "ADMIN" }, "_id user_name").sort({ user_name: 1 }).collation({ locale: "en", caseLevel: true });;
+  const approverUser = await UserModel.find(
+    { dept_name: dept_name, user_type: 'ADMIN' },
+    '_id user_name'
+  )
+    .sort({ user_name: 1 })
+    .collation({ locale: 'en', caseLevel: true });
 
   return res.status(200).json({
     result: approverUser,
     status: true,
-    message: "All Approver Users List",
+    message: 'All Approver Users List',
   });
 });

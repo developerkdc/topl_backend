@@ -1,5 +1,5 @@
-import mongoose from "mongoose";
-import LogSchemaFunction from "../LogsSchema/logs.schema.js";
+import mongoose from 'mongoose';
+import LogSchemaFunction from '../LogsSchema/logs.schema.js';
 
 const ReadySheetFormInventoryHistorySchema = new mongoose.Schema({
   group_no: {
@@ -8,7 +8,7 @@ const ReadySheetFormInventoryHistorySchema = new mongoose.Schema({
   },
   tapping_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "taping",
+    ref: 'taping',
     required: true,
   },
 
@@ -63,7 +63,7 @@ const ReadySheetFormInventoryHistorySchema = new mongoose.Schema({
 
   created_employee_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "user",
+    ref: 'user',
     trim: true,
   },
 
@@ -73,7 +73,7 @@ const ReadySheetFormInventoryHistorySchema = new mongoose.Schema({
 });
 
 export const ReadySheetFormHistoryModel = mongoose.model(
-  "ready_sheet_form_inventory_history",
+  'ready_sheet_form_inventory_history',
   ReadySheetFormInventoryHistorySchema
 );
-LogSchemaFunction("readySheetFormInventoryHistory", ReadySheetFormHistoryModel);
+LogSchemaFunction('readySheetFormInventoryHistory', ReadySheetFormHistoryModel);

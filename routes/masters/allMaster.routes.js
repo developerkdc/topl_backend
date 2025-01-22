@@ -1,28 +1,28 @@
-import express from "express";
-import currencyMasterRouter from "./currency.routes.js";
-import cutMasterRouter from "./cut.routes.js";
-import departmentRouter from "./department.routes.js";
-import expenseRouter from "./Expenses/index.js";
-import expenseTypeMasterRouter from "./expenseType.routes.js";
-import gradeMasterRouter from "./grade.routes.js";
-import gstMasterRouter from "./gst.routes.js";
-import itemCategoryRouter from "./item.cateory.routes.js";
-import itemSubCategoryRouter from "./item.subcategory.routes.js";
-import itemNameMasterRouter from "./itemName.routes.js";
-import machineRouter from "./machine.routes.js";
-import seriesRouter from "./series.routes.js";
-import supplierMasterRouter from "./supplier.routes.js";
-import unitMasterRouter from "./unit.routes.js";
-import characterRouter from "./Character/character.routes.js";
-import patternRouter from "./Pattern/pattern.routes.js";
-import processRouter from "./Process/process.routes.js";
-import colorRouter from "./Color/color.routes.js";
-import vehicleRouter from "./Vehicle/vehicle.routes.js";
-import transporterRouter from "./Transporter/transporter.routes.js";
-import dispatchAddressRouter from "./DispatchAddress/dispatchAddress.routes.js";
-import photoRouter from "./Photo/photo.routes.js";
-import customerRouter from "./Customers/customers.routes.js";
-import customerClientRouter from "./Customers/CustomerClients/customerClients.routes.js";
+import express from 'express';
+import currencyMasterRouter from './currency.routes.js';
+import cutMasterRouter from './cut.routes.js';
+import departmentRouter from './department.routes.js';
+import expenseRouter from './Expenses/index.js';
+import expenseTypeMasterRouter from './expenseType.routes.js';
+import gradeMasterRouter from './grade.routes.js';
+import gstMasterRouter from './gst.routes.js';
+import itemCategoryRouter from './item.cateory.routes.js';
+import itemSubCategoryRouter from './item.subcategory.routes.js';
+import itemNameMasterRouter from './itemName.routes.js';
+import machineRouter from './machine.routes.js';
+import seriesRouter from './series.routes.js';
+import supplierMasterRouter from './supplier.routes.js';
+import unitMasterRouter from './unit.routes.js';
+import characterRouter from './Character/character.routes.js';
+import patternRouter from './Pattern/pattern.routes.js';
+import processRouter from './Process/process.routes.js';
+import colorRouter from './Color/color.routes.js';
+import vehicleRouter from './Vehicle/vehicle.routes.js';
+import transporterRouter from './Transporter/transporter.routes.js';
+import dispatchAddressRouter from './DispatchAddress/dispatchAddress.routes.js';
+import photoRouter from './Photo/photo.routes.js';
+import customerRouter from './Customers/customers.routes.js';
+import customerClientRouter from './Customers/CustomerClients/customerClients.routes.js';
 
 const allMasterRouter = express.Router();
 
@@ -49,7 +49,6 @@ allMasterRouter.use(`/vehicle-master`, vehicleRouter);
 allMasterRouter.use(`/transporter-master`, transporterRouter);
 allMasterRouter.use(`/dispatchAddress-master`, dispatchAddressRouter);
 allMasterRouter.use(`/photo-master`, photoRouter);
-allMasterRouter.use(`/customer-master`, [customerRouter,customerClientRouter]);
+allMasterRouter.use(`/customer-master`, [customerRouter, customerClientRouter]);
 
-
-export default allMasterRouter
+export default allMasterRouter;

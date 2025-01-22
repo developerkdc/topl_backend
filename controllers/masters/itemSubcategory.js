@@ -1,10 +1,10 @@
-import ApiError from "../../utils/errors/apiError.js";
-import catchAsync from "../../utils/errors/catchAsync.js";
-import ApiResponse from "../../utils/ApiResponse.js";
-import { StatusCodes } from "../../utils/constants.js";
-import itemCategoryModel from "../../database/schema/masters/item.category.schema.js";
-import itemSubCategoryModel from "../../database/schema/masters/item.subcategory.schema.js";
-import { DynamicSearch } from "../../utils/dynamicSearch/dynamic.js";
+import ApiError from '../../utils/errors/apiError.js';
+import catchAsync from '../../utils/errors/catchAsync.js';
+import ApiResponse from '../../utils/ApiResponse.js';
+import { StatusCodes } from '../../utils/constants.js';
+import itemCategoryModel from '../../database/schema/masters/item.category.schema.js';
+import itemSubCategoryModel from '../../database/schema/masters/item.subcategory.schema.js';
+import { DynamicSearch } from '../../utils/dynamicSearch/dynamic.js';
 export const addItems = catchAsync(async (req, res) => {
   const { name, remark } = req.body;
 
@@ -12,14 +12,17 @@ export const addItems = catchAsync(async (req, res) => {
     return res.json(
       new ApiResponse(
         StatusCodes.INTERNAL_SERVER_ERROR,
-        "Subcategory name is missing"
+        'Subcategory name is missing'
       )
     );
   }
   const checkIfAlreadyExists = await itemSubCategoryModel.find({ name: name });
   if (checkIfAlreadyExists.length > 0) {
     return res.json(
-      new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Subcategory already exists")
+      new ApiResponse(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        'Subcategory already exists'
+      )
     );
   }
 
@@ -28,7 +31,7 @@ export const addItems = catchAsync(async (req, res) => {
       $group: {
         _id: null,
         max: {
-          $max: "$sr_no",
+          $max: '$sr_no',
         },
       },
     },
@@ -49,7 +52,7 @@ export const addItems = catchAsync(async (req, res) => {
   return res.json(
     new ApiResponse(
       StatusCodes.OK,
-      "Item subcategory created successfully",
+      'Item subcategory created successfully',
       newItemCatgory
     )
   );
@@ -60,7 +63,7 @@ export const editItemSubCategory = catchAsync(async (req, res) => {
 
   if (!id) {
     return res.json(
-      new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Id is missing")
+      new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, 'Id is missing')
     );
   }
 
@@ -69,7 +72,7 @@ export const editItemSubCategory = catchAsync(async (req, res) => {
     return res.json(
       new ApiResponse(
         StatusCodes.INTERNAL_SERVER_ERROR,
-        "Invalid SubCategory id"
+        'Invalid SubCategory id'
       )
     );
   }
@@ -83,14 +86,14 @@ export const editItemSubCategory = catchAsync(async (req, res) => {
     return res.json(
       new ApiResponse(
         StatusCodes.INTERNAL_SERVER_ERROR,
-        "Err updating subcategory"
+        'Err updating subcategory'
       )
     );
   }
   return res.json(
     new ApiResponse(
       StatusCodes.OK,
-      "subcategory updated successfully",
+      'subcategory updated successfully',
       updatedData
     )
   );
@@ -108,7 +111,7 @@ export const listItemSubCategories = catchAsync(async (req, res) => {
   const limitInt = parseInt(limit) || 10;
   const skipped = (pageInt - 1) * limitInt;
 
-  const sortDirection = sortOrder === "desc" ? -1 : 1;
+  const sortDirection = sortOrder === 'desc' ? -1 : 1;
   const sortObj = sortField ? { [sortField]: sortDirection } : {};
   // const searchQuery = query
   //   ? {
@@ -116,7 +119,7 @@ export const listItemSubCategories = catchAsync(async (req, res) => {
   //     }
   //   : {};
   let searchQuery = {};
-  if (query != "" && req?.body?.searchFields) {
+  if (query != '' && req?.body?.searchFields) {
     const searchdata = DynamicSearch(
       query,
       boolean,
@@ -131,7 +134,7 @@ export const listItemSubCategories = catchAsync(async (req, res) => {
         data: {
           user: [],
         },
-        message: "Results Not Found",
+        message: 'Results Not Found',
       });
     }
     searchQuery = searchdata;
@@ -150,13 +153,13 @@ export const listItemSubCategories = catchAsync(async (req, res) => {
   const pipeline = [
     {
       $lookup: {
-        from: "users",
-        localField: "created_by",
-        foreignField: "_id",
-        as: "userDetails",
+        from: 'users',
+        localField: 'created_by',
+        foreignField: '_id',
+        as: 'userDetails',
       },
     },
-    { $unwind: { path: "$userDetails", preserveNullAndEmptyArrays: true } },
+    { $unwind: { path: '$userDetails', preserveNullAndEmptyArrays: true } },
     { $match: { ...searchQuery } },
     {
       $project: {
@@ -165,8 +168,8 @@ export const listItemSubCategories = catchAsync(async (req, res) => {
         remark: 1,
         createdAt: 1,
         created_by: 1,
-        "userDetails.first_name": 1,
-        "userDetails.user_name": 1,
+        'userDetails.first_name': 1,
+        'userDetails.user_name': 1,
       },
     },
     { $skip: skipped },
@@ -179,7 +182,7 @@ export const listItemSubCategories = catchAsync(async (req, res) => {
   const allDetails = await itemSubCategoryModel.aggregate(pipeline);
 
   if (allDetails.length === 0) {
-    return res.json(new ApiResponse(StatusCodes.OK, "NO Data found..."));
+    return res.json(new ApiResponse(StatusCodes.OK, 'NO Data found...'));
   }
   // const totalPage = allDetails.length;
   const totalDocs = await itemSubCategoryModel.countDocuments({
@@ -187,7 +190,7 @@ export const listItemSubCategories = catchAsync(async (req, res) => {
   });
   const totalPage = Math.ceil(totalDocs / limitInt);
   return res.json(
-    new ApiResponse(StatusCodes.OK, "All Details fetched successfully..", {
+    new ApiResponse(StatusCodes.OK, 'All Details fetched successfully..', {
       allDetails,
       totalPage,
     })
@@ -199,8 +202,8 @@ export const DropdownSubcategoryNameMaster = catchAsync(async (req, res) => {
 
   const searchQuery = type
     ? {
-      $or: [{ "name": { $regex: type, $options: "i" } }],
-    }
+        $or: [{ name: { $regex: type, $options: 'i' } }],
+      }
     : {};
 
   const list = await itemSubCategoryModel.aggregate([
@@ -222,7 +225,7 @@ export const DropdownSubcategoryNameMaster = catchAsync(async (req, res) => {
     .json(
       new ApiResponse(
         StatusCodes.OK,
-        "Subcategory dropdown fetched successfully....",
+        'Subcategory dropdown fetched successfully....',
         list
       )
     );

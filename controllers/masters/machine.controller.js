@@ -1,9 +1,9 @@
-import catchAsync from "../../utils/errors/catchAsync.js";
-import ApiResponse from "../../utils/ApiResponse.js";
-import { StatusCodes } from "../../utils/constants.js";
-import machineModel from "../../database/schema/masters/machine.schema.js";
-import { DynamicSearch } from "../../utils/dynamicSearch/dynamic.js";
-import mongoose from "mongoose";
+import catchAsync from '../../utils/errors/catchAsync.js';
+import ApiResponse from '../../utils/ApiResponse.js';
+import { StatusCodes } from '../../utils/constants.js';
+import machineModel from '../../database/schema/masters/machine.schema.js';
+import { DynamicSearch } from '../../utils/dynamicSearch/dynamic.js';
+import mongoose from 'mongoose';
 
 export const addMachine = catchAsync(async (req, res) => {
   const { machine_name, department } = req.body;
@@ -12,7 +12,7 @@ export const addMachine = catchAsync(async (req, res) => {
     return res.json(
       new ApiResponse(
         StatusCodes.INTERNAL_SERVER_ERROR,
-        "all fields are required"
+        'all fields are required'
       )
     );
   }
@@ -20,7 +20,14 @@ export const addMachine = catchAsync(async (req, res) => {
     machine_name: machine_name,
   });
   if (checkIfAlreadyExists.length > 0) {
-    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json(new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Machine Name already exists"));
+    return res
+      .status(StatusCodes.INTERNAL_SERVER_ERROR)
+      .json(
+        new ApiResponse(
+          StatusCodes.INTERNAL_SERVER_ERROR,
+          'Machine Name already exists'
+        )
+      );
   }
 
   const maxNumber = await machineModel.aggregate([
@@ -28,7 +35,7 @@ export const addMachine = catchAsync(async (req, res) => {
       $group: {
         _id: null,
         max: {
-          $max: "$sr_no",
+          $max: '$sr_no',
         },
       },
     },
@@ -46,7 +53,7 @@ export const addMachine = catchAsync(async (req, res) => {
   await newMachine.save();
 
   return res.json(
-    new ApiResponse(StatusCodes.OK, "Machine created successfully", newMachine)
+    new ApiResponse(StatusCodes.OK, 'Machine created successfully', newMachine)
   );
 });
 
@@ -55,14 +62,14 @@ export const editMachineDetails = catchAsync(async (req, res) => {
 
   if (!id) {
     return res.json(
-      new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Id is missing")
+      new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, 'Id is missing')
     );
   }
 
   const validateMachine = await machineModel.findById(id);
   if (!validateMachine) {
     return res.json(
-      new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Invalid machine id")
+      new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, 'Invalid machine id')
     );
   }
 
@@ -73,11 +80,11 @@ export const editMachineDetails = catchAsync(async (req, res) => {
   );
   if (!updatedData) {
     return res.json(
-      new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Err updating machine")
+      new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, 'Err updating machine')
     );
   }
   return res.json(
-    new ApiResponse(StatusCodes.OK, "department updated successfully")
+    new ApiResponse(StatusCodes.OK, 'department updated successfully')
   );
 });
 
@@ -93,10 +100,10 @@ export const MachineDetails = catchAsync(async (req, res) => {
   const limitInt = parseInt(limit) || 10;
   const skipped = (pageInt - 1) * limitInt;
 
-  const sortDirection = sortOrder === "desc" ? -1 : 1;
+  const sortDirection = sortOrder === 'desc' ? -1 : 1;
   const sortObj = sortField ? { [sortField]: sortDirection } : {};
   let searchQuery = {};
-  if (query != "" && req?.body?.searchFields) {
+  if (query != '' && req?.body?.searchFields) {
     const searchdata = DynamicSearch(
       query,
       boolean,
@@ -111,7 +118,7 @@ export const MachineDetails = catchAsync(async (req, res) => {
         data: {
           user: [],
         },
-        message: "Results Not Found",
+        message: 'Results Not Found',
       });
     }
     searchQuery = searchdata;
@@ -120,23 +127,23 @@ export const MachineDetails = catchAsync(async (req, res) => {
   const pipeline = [
     {
       $lookup: {
-        from: "users",
-        localField: "created_by",
-        foreignField: "_id",
-        as: "userDetails",
+        from: 'users',
+        localField: 'created_by',
+        foreignField: '_id',
+        as: 'userDetails',
       },
     },
     {
       $lookup: {
-        from: "departments",
-        localField: "department",
-        foreignField: "_id",
-        as: "departmentDetails",
+        from: 'departments',
+        localField: 'department',
+        foreignField: '_id',
+        as: 'departmentDetails',
       },
     },
-    { $unwind: { path: "$userDetails", preserveNullAndEmptyArrays: true } },
+    { $unwind: { path: '$userDetails', preserveNullAndEmptyArrays: true } },
     {
-      $unwind: { path: "$departmentDetails", preserveNullAndEmptyArrays: true },
+      $unwind: { path: '$departmentDetails', preserveNullAndEmptyArrays: true },
     },
     { $match: { ...searchQuery } },
     {
@@ -145,10 +152,10 @@ export const MachineDetails = catchAsync(async (req, res) => {
         machine_name: 1,
         createdAt: 1,
         created_by: 1,
-        "userDetails.first_name": 1,
-        "userDetails.user_name": 1,
-        "departmentDetails._id": 1,
-        "departmentDetails.dept_name": 1,
+        'userDetails.first_name': 1,
+        'userDetails.user_name': 1,
+        'departmentDetails._id': 1,
+        'departmentDetails.dept_name': 1,
       },
     },
     { $skip: skipped },
@@ -160,13 +167,13 @@ export const MachineDetails = catchAsync(async (req, res) => {
   }
   const allDetails = await machineModel.aggregate(pipeline);
   if (allDetails.length === 0) {
-    return res.json(new ApiResponse(StatusCodes.OK, "NO Data found..."));
+    return res.json(new ApiResponse(StatusCodes.OK, 'NO Data found...'));
   }
 
   const totalDocs = await machineModel.countDocuments({ ...searchQuery });
   const totalPage = Math.ceil(totalDocs / limitInt);
   return res.json(
-    new ApiResponse(StatusCodes.OK, "All Details fetched succesfully..", {
+    new ApiResponse(StatusCodes.OK, 'All Details fetched succesfully..', {
       allDetails,
       totalPage,
     })
@@ -178,21 +185,21 @@ export const DropdownMachineNameMaster = catchAsync(async (req, res) => {
 
   const searchQuery = type
     ? {
-      $or: [{ "deptDetails.dept_name": { $regex: type, $options: "i" } }],
-    }
+        $or: [{ 'deptDetails.dept_name': { $regex: type, $options: 'i' } }],
+      }
     : {};
 
   const list = await machineModel.aggregate([
     {
       $lookup: {
-        from: "departments",
-        localField: "department",
-        foreignField: "_id",
-        as: "deptDetails",
+        from: 'departments',
+        localField: 'department',
+        foreignField: '_id',
+        as: 'deptDetails',
       },
     },
     {
-      $unwind: "$deptDetails",
+      $unwind: '$deptDetails',
     },
     {
       $match: searchQuery,
@@ -211,7 +218,7 @@ export const DropdownMachineNameMaster = catchAsync(async (req, res) => {
     .json(
       new ApiResponse(
         StatusCodes.OK,
-        "Machine Name dropdown fetched successfully....",
+        'Machine Name dropdown fetched successfully....',
         list
       )
     );
@@ -229,14 +236,14 @@ export const DropdownMachineNameMasterById = catchAsync(async (req, res) => {
   const list = await machineModel.aggregate([
     {
       $lookup: {
-        from: "departments",
-        localField: "department",
-        foreignField: "_id",
-        as: "deptDetails",
+        from: 'departments',
+        localField: 'department',
+        foreignField: '_id',
+        as: 'deptDetails',
       },
     },
     {
-      $unwind: "$deptDetails",
+      $unwind: '$deptDetails',
     },
     {
       $match: { department: new mongoose.Types.ObjectId(id) },
@@ -256,7 +263,7 @@ export const DropdownMachineNameMasterById = catchAsync(async (req, res) => {
     .json(
       new ApiResponse(
         StatusCodes.OK,
-        "Machine Name dropdown fetched successfully....",
+        'Machine Name dropdown fetched successfully....',
         list
       )
     );

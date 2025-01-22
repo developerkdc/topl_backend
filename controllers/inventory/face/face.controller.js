@@ -1,26 +1,29 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 import {
   face_inventory_invoice_details,
   face_inventory_items_details,
   face_inventory_items_view_modal,
-} from "../../../database/schema/inventory/face/face.schema.js";
-import catchAsync from "../../../utils/errors/catchAsync.js";
-import ApiError from "../../../utils/errors/apiError.js";
-import ApiResponse from "../../../utils/ApiResponse.js";
+} from '../../../database/schema/inventory/face/face.schema.js';
+import catchAsync from '../../../utils/errors/catchAsync.js';
+import ApiError from '../../../utils/errors/apiError.js';
+import ApiResponse from '../../../utils/ApiResponse.js';
 
-import { StatusCodes } from "../../../utils/constants.js";
-import { DynamicSearch } from "../../../utils/dynamicSearch/dynamic.js";
-import { dynamic_filter } from "../../../utils/dymanicFilter.js";
-import { createFaceLogsExcel } from "../../../config/downloadExcel/Logs/Inventory/face/face.js";
-import { face_approval_inventory_invoice_model, face_approval_inventory_items_model } from "../../../database/schema/inventory/face/faceApproval.schema.js";
+import { StatusCodes } from '../../../utils/constants.js';
+import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
+import { dynamic_filter } from '../../../utils/dymanicFilter.js';
+import { createFaceLogsExcel } from '../../../config/downloadExcel/Logs/Inventory/face/face.js';
+import {
+  face_approval_inventory_invoice_model,
+  face_approval_inventory_items_model,
+} from '../../../database/schema/inventory/face/faceApproval.schema.js';
 
 export const listing_face_inventory = catchAsync(async (req, res, next) => {
   const {
     page = 1,
     limit = 10,
-    sortBy = "updatedAt",
-    sort = "desc",
-    search = "",
+    sortBy = 'updatedAt',
+    sort = 'desc',
+    search = '',
   } = req.query;
   const {
     string,
@@ -31,7 +34,7 @@ export const listing_face_inventory = catchAsync(async (req, res, next) => {
   const filter = req.body?.filter;
 
   let search_query = {};
-  if (search != "" && req?.body?.searchFields) {
+  if (search != '' && req?.body?.searchFields) {
     const search_data = DynamicSearch(
       search,
       boolean,
@@ -46,7 +49,7 @@ export const listing_face_inventory = catchAsync(async (req, res, next) => {
         data: {
           data: [],
         },
-        message: "Results Not Found",
+        message: 'Results Not Found',
       });
     }
     search_query = search_data;
@@ -65,8 +68,8 @@ export const listing_face_inventory = catchAsync(async (req, res, next) => {
     },
     {
       $sort: {
-        [sortBy]: sort === "desc" ? -1 : 1,
-        _id: sort === "desc" ? -1 : 1,
+        [sortBy]: sort === 'desc' ? -1 : 1,
+        _id: sort === 'desc' ? -1 : 1,
       },
     },
     {
@@ -88,10 +91,10 @@ export const listing_face_inventory = catchAsync(async (req, res, next) => {
 
   return res.status(200).json({
     statusCode: 200,
-    status: "success",
+    status: 'success',
     data: List_face_inventory_details,
     totalPage: totalPage,
-    message: "Data fetched successfully",
+    message: 'Data fetched successfully',
   });
 
   // return res
@@ -115,7 +118,7 @@ export const add_face_inventory = catchAsync(async (req, res, next) => {
       {
         $group: {
           _id: null,
-          latest_inward_sr_no: { $max: "$inward_sr_no" },
+          latest_inward_sr_no: { $max: '$inward_sr_no' },
         },
       },
     ]);
@@ -136,7 +139,7 @@ export const add_face_inventory = catchAsync(async (req, res, next) => {
     );
 
     if (add_invoice_details && add_invoice_details?.length < 0) {
-      return next(new ApiError("Failed to add invoice", 400));
+      return next(new ApiError('Failed to add invoice', 400));
     }
 
     const invoice_details_id = add_invoice_details?.[0]?._id;
@@ -155,13 +158,13 @@ export const add_face_inventory = catchAsync(async (req, res, next) => {
     );
 
     if (add_items_details && add_items_details?.length < 0) {
-      return next(new ApiError("Failed to add Items Details", 400));
+      return next(new ApiError('Failed to add Items Details', 400));
     }
 
     await session.commitTransaction();
     session.endSession();
     return res.status(200).json(
-      new ApiResponse(StatusCodes.OK, "Inventory has added successfully", {
+      new ApiResponse(StatusCodes.OK, 'Inventory has added successfully', {
         add_invoice_details,
         add_items_details,
       })
@@ -180,7 +183,7 @@ export const add_single_face_item_inventory = catchAsync(
     const invoice_id = item_details?.invoice_id;
 
     if (!invoice_id || !mongoose.isValidObjectId(invoice_id)) {
-      return next(new ApiError("Please provide valid invoice id", 400));
+      return next(new ApiError('Please provide valid invoice id', 400));
     }
 
     const add_item_details = await face_inventory_items_details.create({
@@ -192,7 +195,7 @@ export const add_single_face_item_inventory = catchAsync(
       .json(
         new ApiResponse(
           StatusCodes.OK,
-          "Inventory Item has added successfully",
+          'Inventory Item has added successfully',
           add_item_details
         )
       );
@@ -216,7 +219,7 @@ export const edit_face_item_inventory = catchAsync(async (req, res, next) => {
     !update_item_details?.acknowledged &&
     update_item_details?.modifiedCount <= 0
   ) {
-    return next(new ApiError("Failed to update item details", 400));
+    return next(new ApiError('Failed to update item details', 400));
   }
 
   return res
@@ -224,7 +227,7 @@ export const edit_face_item_inventory = catchAsync(async (req, res, next) => {
     .json(
       new ApiResponse(
         StatusCodes.OK,
-        "Inventory Item has updated successfully",
+        'Inventory Item has updated successfully',
         update_item_details
       )
     );
@@ -246,7 +249,7 @@ export const edit_face_invoice_inventory = catchAsync(
       !update_voice_details?.acknowledged &&
       update_voice_details?.modifiedCount <= 0
     ) {
-      return next(new ApiError("Failed to update item details", 400));
+      return next(new ApiError('Failed to update item details', 400));
     }
 
     return res
@@ -254,7 +257,7 @@ export const edit_face_invoice_inventory = catchAsync(
       .json(
         new ApiResponse(
           StatusCodes.OK,
-          "Inventory Invoice has updated successfully",
+          'Inventory Invoice has updated successfully',
           update_voice_details
         )
       );
@@ -272,8 +275,11 @@ export const edit_face_item_invoice_inventory = catchAsync(
       const sendForApproval = req.sendForApproval;
       const user = req.userDetails;
 
-      const fetchInvoiceData = await face_inventory_invoice_details.findOne({_id:invoice_details});
-      if(fetchInvoiceData.approval_status?.sendForApproval?.status) return next(new ApiError("Already send for approval"));
+      const fetchInvoiceData = await face_inventory_invoice_details.findOne({
+        _id: invoice_details,
+      });
+      if (fetchInvoiceData.approval_status?.sendForApproval?.status)
+        return next(new ApiError('Already send for approval'));
 
       if (!sendForApproval) {
         const update_invoice_details =
@@ -285,44 +291,44 @@ export const edit_face_item_invoice_inventory = catchAsync(
                 approval_status: {
                   sendForApproval: {
                     status: false,
-                    remark: null
+                    remark: null,
                   },
                   approved: {
                     status: false,
-                    remark: null
+                    remark: null,
                   },
                   rejected: {
                     status: false,
-                    remark: null
-                  }
+                    remark: null,
+                  },
                 },
               },
             },
             { session }
           );
-  
+
         if (
           !update_invoice_details.acknowledged ||
           update_invoice_details.modifiedCount <= 0
         )
-          return next(new ApiError("Failed to update invoice", 400));
-  
+          return next(new ApiError('Failed to update invoice', 400));
+
         const all_invoice_items = await face_inventory_items_details.deleteMany(
           { invoice_id: invoice_id },
           { session }
         );
-  
+
         if (
           !all_invoice_items.acknowledged ||
           all_invoice_items.deletedCount <= 0
         )
-          return next(new ApiError("Failed to update invoice items", 400));
-  
-        const update_item_details = await face_inventory_items_details.insertMany(
-          [...items_details],
-          { session }
-        );
-  
+          return next(new ApiError('Failed to update invoice items', 400));
+
+        const update_item_details =
+          await face_inventory_items_details.insertMany([...items_details], {
+            session,
+          });
+
         await session.commitTransaction();
         session.endSession();
         return res
@@ -330,40 +336,47 @@ export const edit_face_item_invoice_inventory = catchAsync(
           .json(
             new ApiResponse(
               StatusCodes.OK,
-              "Inventory item updated successfully",
+              'Inventory item updated successfully',
               update_item_details
             )
           );
-      }else{
+      } else {
         const edited_by = user?.id;
         const approval_person = user.approver_id;
-        const { _id, createdAt, updatedAt, ...invoiceDetailsData } = invoice_details;
+        const { _id, createdAt, updatedAt, ...invoiceDetailsData } =
+          invoice_details;
 
-        const add_invoice_details = await face_approval_inventory_invoice_model.create([{
-          ...invoiceDetailsData,
-          invoice_id: invoice_id,
-          approval_status: {
-            sendForApproval: {
-              status: true,
-              remark: "Approval Pending"
-            },
-            approved: {
-              status: false,
-              remark: null
-            },
-            rejected: {
-              status: false,
-              remark: null
-            }
-          },
-          approval: {
-            editedBy: edited_by,
-            approvalPerson: approval_person,
-          }
-        }], { session });
+        const add_invoice_details =
+          await face_approval_inventory_invoice_model.create(
+            [
+              {
+                ...invoiceDetailsData,
+                invoice_id: invoice_id,
+                approval_status: {
+                  sendForApproval: {
+                    status: true,
+                    remark: 'Approval Pending',
+                  },
+                  approved: {
+                    status: false,
+                    remark: null,
+                  },
+                  rejected: {
+                    status: false,
+                    remark: null,
+                  },
+                },
+                approval: {
+                  editedBy: edited_by,
+                  approvalPerson: approval_person,
+                },
+              },
+            ],
+            { session }
+          );
 
         if (!add_invoice_details?.[0])
-          return next(new ApiError("Failed to add invoice approval", 400));
+          return next(new ApiError('Failed to add invoice approval', 400));
 
         await face_inventory_invoice_details.updateOne(
           { _id: invoice_id },
@@ -372,17 +385,17 @@ export const edit_face_item_invoice_inventory = catchAsync(
               approval_status: {
                 sendForApproval: {
                   status: true,
-                  remark: "Approval Pending"
+                  remark: 'Approval Pending',
                 },
                 approved: {
                   status: false,
-                  remark: null
+                  remark: null,
                 },
                 rejected: {
                   status: false,
-                  remark: null
-                }
-              }
+                  remark: null,
+                },
+              },
             },
           },
           { session }
@@ -393,14 +406,15 @@ export const edit_face_item_invoice_inventory = catchAsync(
           return {
             ...itemData,
             face_item_id: _id ? _id : new mongoose.Types.ObjectId(),
-            approval_invoice_id: add_invoice_details[0]?._id
-          }
-        })
+            approval_invoice_id: add_invoice_details[0]?._id,
+          };
+        });
 
-        const add_approval_item_details = await face_approval_inventory_items_model.insertMany(
-          itemDetailsData,
-          { session }
-        );
+        const add_approval_item_details =
+          await face_approval_inventory_items_model.insertMany(
+            itemDetailsData,
+            { session }
+          );
 
         await session.commitTransaction();
         session.endSession();
@@ -409,12 +423,11 @@ export const edit_face_item_invoice_inventory = catchAsync(
           .json(
             new ApiResponse(
               StatusCodes.OK,
-              "Inventory item send for approval successfully",
+              'Inventory item send for approval successfully',
               add_approval_item_details
             )
           );
       }
-
     } catch (error) {
       console.log(error);
       await session.abortTransaction();
@@ -431,7 +444,7 @@ export const face_item_listing_by_invoice = catchAsync(
     const aggregate_stage = [
       {
         $match: {
-          "face_invoice_details._id": new mongoose.Types.ObjectId(invoice_id),
+          'face_invoice_details._id': new mongoose.Types.ObjectId(invoice_id),
         },
       },
       {
@@ -457,39 +470,38 @@ export const face_item_listing_by_invoice = catchAsync(
 
     return res.status(200).json({
       statusCode: 200,
-      status: "success",
+      status: 'success',
       data: single_invoice_list_face_inventory_details,
       // totalPage: totalPage,
-      message: "Data fetched successfully",
+      message: 'Data fetched successfully',
     });
   }
 );
 
 export const item_sr_no_dropdown = catchAsync(async (req, res, next) => {
-  const item_sr_no = await face_inventory_items_details.distinct("item_sr_no");
+  const item_sr_no = await face_inventory_items_details.distinct('item_sr_no');
   return res.status(200).json({
     statusCode: 200,
-    status: "success",
+    status: 'success',
     data: item_sr_no,
-    message: "Item Sr No Dropdown fetched successfully",
+    message: 'Item Sr No Dropdown fetched successfully',
   });
 });
 
 export const inward_sr_no_dropdown = catchAsync(async (req, res, next) => {
-  const item_sr_no = await face_inventory_invoice_details.distinct(
-    "inward_sr_no"
-  );
+  const item_sr_no =
+    await face_inventory_invoice_details.distinct('inward_sr_no');
   return res.status(200).json({
     statusCode: 200,
-    status: "success",
+    status: 'success',
     data: item_sr_no,
-    message: "Inward Sr No Dropdown fetched successfully",
+    message: 'Inward Sr No Dropdown fetched successfully',
   });
 });
 
 export const faceLogsCsv = catchAsync(async (req, res) => {
-  console.log("called");
-  const { search = "" } = req.query;
+  console.log('called');
+  const { search = '' } = req.query;
   const {
     string,
     boolean,
@@ -499,7 +511,7 @@ export const faceLogsCsv = catchAsync(async (req, res) => {
   const filter = req.body?.filter;
 
   let search_query = {};
-  if (search != "" && req?.body?.searchFields) {
+  if (search != '' && req?.body?.searchFields) {
     const search_data = DynamicSearch(
       search,
       boolean,
@@ -514,7 +526,7 @@ export const faceLogsCsv = catchAsync(async (req, res) => {
         data: {
           data: [],
         },
-        message: "Results Not Found",
+        message: 'Results Not Found',
       });
     }
     search_query = search_data;
@@ -530,9 +542,9 @@ export const faceLogsCsv = catchAsync(async (req, res) => {
   const allData = await face_inventory_items_view_modal.find(match_query);
 
   const excelLink = await createFaceLogsExcel(allData);
-  console.log("link => ", excelLink);
+  console.log('link => ', excelLink);
 
   return res.json(
-    new ApiResponse(StatusCodes.OK, "Csv downloaded successfully...", excelLink)
+    new ApiResponse(StatusCodes.OK, 'Csv downloaded successfully...', excelLink)
   );
 });

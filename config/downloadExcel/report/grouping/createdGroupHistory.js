@@ -1,50 +1,52 @@
-import ExcelJS from "exceljs";
-import fs from "fs/promises";
-import convDate from "../../../../utils/date/date.js";
+import ExcelJS from 'exceljs';
+import fs from 'fs/promises';
+import convDate from '../../../../utils/date/date.js';
 
 const GenerateGroupingHistoryReport = async (details) => {
-
   const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet("Group History Reports");
+  const worksheet = workbook.addWorksheet('Group History Reports');
 
   const headers = [
-    { header: "Date", key: "created_at", width: 25 },
-    { header: "Item Name", key: "item_name", width: 25 },
-    { header: "Group No.", key: "group_no", width: 15 },
-    { header: "Item Type", key: "item_code", width: 25 },
+    { header: 'Date', key: 'created_at', width: 25 },
+    { header: 'Item Name', key: 'item_name', width: 25 },
+    { header: 'Group No.', key: 'group_no', width: 15 },
+    { header: 'Item Type', key: 'item_code', width: 25 },
 
-    { header: "Group Length", key: "group_length", width: 15 },
-    { header: "Group Width", key: "group_width", width: 15 },
-    { header: "No. of Pcs", key: "group_pcs", width: 15 },
+    { header: 'Group Length', key: 'group_length', width: 15 },
+    { header: 'Group Width', key: 'group_width', width: 15 },
+    { header: 'No. of Pcs', key: 'group_pcs', width: 15 },
     {
-      header: "Available Pattas.",
-      key: "group_no_of_pattas_available",
+      header: 'Available Pattas.',
+      key: 'group_no_of_pattas_available',
       width: 15,
     },
-    { header: "Group Sqm", key: "group_sqm_available", width: 15 },
-    { header: "Total Item Sqm", key: "total_item_sqm_available", width: 15 },
-    { header: "Grade ", key: "group_grade", width: 15 },
-    { header: "Orientation", key: "orientation", width: 15 },
-    { header: "Formation type ", key: "book_type", width: 15 },
-    { header: "Pallet No. ", key: "group_pallete_no", width: 15 },
-    { header: "Physical Location ", key: "group_physical_location", width: 15 },
-    { header: "Rate Per Sqm", key: "item_rate_per_sqm", width: 15 },
-    { header: "Log No", key: "log_no", width: 15 },
-    { header: "Bundle No", key: "bundle_no", width: 15 },
-    { header: "Item Available pattas", key: "item_available_pattas", width: 15 },
+    { header: 'Group Sqm', key: 'group_sqm_available', width: 15 },
+    { header: 'Total Item Sqm', key: 'total_item_sqm_available', width: 15 },
+    { header: 'Grade ', key: 'group_grade', width: 15 },
+    { header: 'Orientation', key: 'orientation', width: 15 },
+    { header: 'Formation type ', key: 'book_type', width: 15 },
+    { header: 'Pallet No. ', key: 'group_pallete_no', width: 15 },
+    { header: 'Physical Location ', key: 'group_physical_location', width: 15 },
+    { header: 'Rate Per Sqm', key: 'item_rate_per_sqm', width: 15 },
+    { header: 'Log No', key: 'log_no', width: 15 },
+    { header: 'Bundle No', key: 'bundle_no', width: 15 },
+    {
+      header: 'Item Available pattas',
+      key: 'item_available_pattas',
+      width: 15,
+    },
     // { header: "Avl Dyed", key: "avl_dyed", width: 15 },
     // { header: "Avl Smoked", key: "avl_smoked", width: 15 },
     // { header: "Total", key: "total", width: 15 },
   ];
   worksheet.columns = headers.map((header) => {
     return {
-      header: header.header.toUpperCase(), 
+      header: header.header.toUpperCase(),
       key: header.key,
       width: header.width,
     };
   });
   details.forEach((order) => {
-
     order.cutting_item_details.forEach((item) => {
       const row = worksheet.addRow({
         created_at: convDate(order.created_at),
@@ -52,7 +54,8 @@ const GenerateGroupingHistoryReport = async (details) => {
         item_code: item.item_code,
         group_no: order.group_id.group_no,
         group_pcs: order.group_id.group_pcs,
-        group_no_of_pattas_available: order.group_id.group_no_of_pattas_available,
+        group_no_of_pattas_available:
+          order.group_id.group_no_of_pattas_available,
         group_length: order.group_id.group_length,
         group_width: order.group_id.group_width,
         group_sqm_available: order.group_id.group_sqm_available,
@@ -69,10 +72,9 @@ const GenerateGroupingHistoryReport = async (details) => {
         // avl_dyed: item?.cutting_quantity?.dyed,
         // avl_smoked: item?.cutting_quantity?.smoked,
         // total: item?.cutting_quantity?.total,
-   
       });
       row.eachCell({ includeEmpty: true }, (cell) => {
-        cell.alignment = { horizontal: "left" };
+        cell.alignment = { horizontal: 'left' };
       });
     });
   });
@@ -82,7 +84,7 @@ const GenerateGroupingHistoryReport = async (details) => {
   headerRow.font = { bold: true };
   // Generate a temporary file path
   const filePath =
-    "public/reports/Group/GroupHistoryReportExcel/group_history_report.xlsx";
+    'public/reports/Group/GroupHistoryReportExcel/group_history_report.xlsx';
 
   // Save the workbook to the file
   await workbook.xlsx.writeFile(filePath);

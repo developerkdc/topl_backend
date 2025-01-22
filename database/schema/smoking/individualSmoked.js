@@ -1,5 +1,5 @@
-import mongoose from "mongoose";
-import LogSchemaFunction from "../LogsSchema/logs.schema.js";
+import mongoose from 'mongoose';
+import LogSchemaFunction from '../LogsSchema/logs.schema.js';
 
 const IndividualSmokeSchema = new mongoose.Schema({
   issued_smoking_quantity: {
@@ -31,8 +31,8 @@ const IndividualSmokeSchema = new mongoose.Schema({
   // },
   item_details: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "raw_material",
-    required: [true, "Item ID is required."],
+    ref: 'raw_material',
+    required: [true, 'Item ID is required.'],
   },
   // issued_individual_smoking_id: {
   //   type: mongoose.Schema.Types.ObjectId,
@@ -47,32 +47,32 @@ const IndividualSmokeSchema = new mongoose.Schema({
   // },
   date_of_smoking: {
     type: Date,
-    required: [true, "Date of Smoking is required."],
+    required: [true, 'Date of Smoking is required.'],
   },
   in_time: {
     type: Date,
-    required: [true, "In Time is required."],
+    required: [true, 'In Time is required.'],
   },
   process_time: {
     type: Number,
-    required: [true, "Out Time is required."],
+    required: [true, 'Out Time is required.'],
   },
   out_time: {
     type: Date,
-    required: [true, "Date of Grouping is required."],
+    required: [true, 'Date of Grouping is required.'],
   },
   consumed_item_name_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "item_name",
-    required: [true, "Consumed Item Name ID is required."],
+    ref: 'item_name',
+    required: [true, 'Consumed Item Name ID is required.'],
   },
   consumed_item_name: {
     type: String,
-    required: [true, "Consumed Item Name is required."],
+    required: [true, 'Consumed Item Name is required.'],
   },
   liters_of_ammonia_used: {
     type: Number,
-    required: [true, "Liters of Ammonia used is required."],
+    required: [true, 'Liters of Ammonia used is required.'],
   },
   created_employee_id: {
     type: String,
@@ -81,8 +81,8 @@ const IndividualSmokeSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ["smoked", "passed", "rejected"],
-    default: "smoked",
+    enum: ['smoked', 'passed', 'rejected'],
+    default: 'smoked',
   },
   individual_smoked_remarks: {
     type: String,
@@ -93,24 +93,24 @@ const IndividualSmokeSchema = new mongoose.Schema({
 });
 
 export const IndividualSmokeModel = mongoose.model(
-  "individual_smoke",
+  'individual_smoke',
   IndividualSmokeSchema
 );
 
 const lookup = [
   {
     $lookup: {
-      from: "raw_materials",
-      localField: "item_details",
-      foreignField: "_id",
-      as: "item_details",
+      from: 'raw_materials',
+      localField: 'item_details',
+      foreignField: '_id',
+      as: 'item_details',
     },
   },
   {
     $unwind: {
-      path: "$item_details",
+      path: '$item_details',
       preserveNullAndEmptyArrays: true,
     },
   },
 ];
-LogSchemaFunction("individualSmoke", IndividualSmokeModel, lookup);
+LogSchemaFunction('individualSmoke', IndividualSmokeModel, lookup);

@@ -1,29 +1,29 @@
-import ExcelJS from "exceljs";
-import fs from "fs/promises";
-import convDate from "../../../../utils/date/date.js";
+import ExcelJS from 'exceljs';
+import fs from 'fs/promises';
+import convDate from '../../../../utils/date/date.js';
 const GeneratePendingGroupOrdersReport = async (details) => {
   const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet("Pending Group Orders Reports");
+  const worksheet = workbook.addWorksheet('Pending Group Orders Reports');
 
   worksheet.columns = [
-    { header: "Order Date", key: "orderDate", width: 15 },
-    { header: "Purchase Order No", key: "purchase_order_no", width: 15 },
-    { header: "Customer Name", key: "customer_name", width: 15 },
-    { header: "City", key: "place", width: 15 }, // Assuming "place" refers to the city
-    { header: "Order Mode", key: "order_mode", width: 15 },
-    { header: "Order No", key: "order_no", width: 15 },
-    { header: "Group No", key: "group_no", width: 15 },
-    { header: "Item No", key: "item_no", width: 30 },
-    { header: "Item Name", key: "order_item_name", width: 30 }, // Adjusted to match data structure
-    { header: "Item Type", key: "order_item_code", width: 15 }, // Adjusted to match data structure
-    { header: "Required Pcs", key: "order_required_pcs", width: 15 }, // Adjusted to match data structure
-    { header: "Balance", key: "order_balance_pcs_qty", width: 15 }, // Adjusted to match data structure
-    { header: "Length", key: "order_length", width: 15 }, // Adjusted to match data structure
-    { header: "Width", key: "order_width", width: 15 }, // Adjusted to match data structure
-    { header: "Sqm", key: "order_required_sqm", width: 15 }, // Adjusted to match data structure
-    { header: "Rate", key: "order_rate", width: 30 }, // Adjusted to match data structure
-    { header: "Total Amount", key: "total_order_amount", width: 30 }, // Adjusted to match data structure
-    { header: "Status", key: "order_status", width: 30 }, // Adjusted to match data structure
+    { header: 'Order Date', key: 'orderDate', width: 15 },
+    { header: 'Purchase Order No', key: 'purchase_order_no', width: 15 },
+    { header: 'Customer Name', key: 'customer_name', width: 15 },
+    { header: 'City', key: 'place', width: 15 }, // Assuming "place" refers to the city
+    { header: 'Order Mode', key: 'order_mode', width: 15 },
+    { header: 'Order No', key: 'order_no', width: 15 },
+    { header: 'Group No', key: 'group_no', width: 15 },
+    { header: 'Item No', key: 'item_no', width: 30 },
+    { header: 'Item Name', key: 'order_item_name', width: 30 }, // Adjusted to match data structure
+    { header: 'Item Type', key: 'order_item_code', width: 15 }, // Adjusted to match data structure
+    { header: 'Required Pcs', key: 'order_required_pcs', width: 15 }, // Adjusted to match data structure
+    { header: 'Balance', key: 'order_balance_pcs_qty', width: 15 }, // Adjusted to match data structure
+    { header: 'Length', key: 'order_length', width: 15 }, // Adjusted to match data structure
+    { header: 'Width', key: 'order_width', width: 15 }, // Adjusted to match data structure
+    { header: 'Sqm', key: 'order_required_sqm', width: 15 }, // Adjusted to match data structure
+    { header: 'Rate', key: 'order_rate', width: 30 }, // Adjusted to match data structure
+    { header: 'Total Amount', key: 'total_order_amount', width: 30 }, // Adjusted to match data structure
+    { header: 'Status', key: 'order_status', width: 30 }, // Adjusted to match data structure
   ];
 
   details.forEach((item) => {
@@ -49,7 +49,7 @@ const GeneratePendingGroupOrdersReport = async (details) => {
         order_status: groupOrder.order_status,
       });
       row.eachCell({ includeEmpty: true }, (cell) => {
-        cell.alignment = { horizontal: "left" };
+        cell.alignment = { horizontal: 'left' };
       });
     });
   });
@@ -58,7 +58,7 @@ const GeneratePendingGroupOrdersReport = async (details) => {
   headerRow.font = { bold: true };
 
   const filePath =
-    "public/reports/Dispatch/PendingGroupOrdersReportExcel/pending_group_orders.xlsx";
+    'public/reports/Dispatch/PendingGroupOrdersReportExcel/pending_group_orders.xlsx';
   await workbook.xlsx.writeFile(filePath);
 
   const timestamp = new Date().getTime();

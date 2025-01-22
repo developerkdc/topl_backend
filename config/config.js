@@ -1,23 +1,27 @@
-import dotenv from "dotenv";
+import dotenv from 'dotenv';
 dotenv.config();
 
 const getConfigs = () => {
   return {
     morgan: {
-      logStyle: "dev",
+      logStyle: 'dev',
     },
     cors: {
-      origin: ["http://localhost:3001", "http://localhost:3000","https://topl.kdcstaging.in"],
+      origin: [
+        'http://localhost:3001',
+        'http://localhost:3000',
+        'https://topl.kdcstaging.in',
+      ],
       credentials: true,
     },
     server: {
-      name: "TOPL",
+      name: 'TOPL',
       port: process.env.PORT || 2001,
-      baseURl: "/",
+      baseURl: '/',
       APP_URL: process.env.APP_URL,
-      serverId: "1",
-      version: "V1",
-      appBaseUrl: "/auth",
+      serverId: '1',
+      version: 'V1',
+      appBaseUrl: '/auth',
     },
     mongo: {
       url: process.env.MONGO_URL,

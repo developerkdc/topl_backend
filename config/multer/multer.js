@@ -1,7 +1,7 @@
-import fs from "fs";
-import multer from "multer";
-import { promises as fsPromises } from "fs";
-import { join } from "path";
+import fs from 'fs';
+import multer from 'multer';
+import { promises as fsPromises } from 'fs';
+import { join } from 'path';
 
 export const MulterFunction = (dist) => {
   const storage = multer.diskStorage({
@@ -23,7 +23,7 @@ export const PhotoMulterFunction = (distCallback) => {
   try {
     const storage = multer.diskStorage({
       destination: function (req, file, cb) {
-        const dist = distCallback(req, file, cb)
+        const dist = distCallback(req, file, cb);
         if (!fs.existsSync(dist)) {
           fs.mkdirSync(dist, { recursive: true });
         }
@@ -40,10 +40,13 @@ export const PhotoMulterFunction = (distCallback) => {
   }
 };
 
-export const deleteImagesFromStorage = async (imagesFolderPath, deletedImages) => {
+export const deleteImagesFromStorage = async (
+  imagesFolderPath,
+  deletedImages
+) => {
   try {
     if (!deletedImages || deletedImages.length === 0) {
-      throw new Error("Please provide at least one image to delete.");
+      throw new Error('Please provide at least one image to delete.');
     }
 
     let flag = true;

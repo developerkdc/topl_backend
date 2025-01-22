@@ -1,25 +1,36 @@
-import catchAsync from "../../utils/errors/catchAsync.js";
-import { DynamicSearch } from "../../utils/dynamicSearch/dynamic.js";
-import { IssuedForSmokingGroupModel } from "../../database/schema/smoking/issueForSmokingGroup.js";
+import catchAsync from '../../utils/errors/catchAsync.js';
+import { DynamicSearch } from '../../utils/dynamicSearch/dynamic.js';
+import { IssuedForSmokingGroupModel } from '../../database/schema/smoking/issueForSmokingGroup.js';
 
 export const FetchIssuedForSmokingGroup = catchAsync(async (req, res, next) => {
-  const { string, boolean, numbers ,arrayField=[]} = req?.body?.searchFields || {};
- const { page, limit = 10, sortBy = "updated_at", sort = "desc" } = req.query;
+  const {
+    string,
+    boolean,
+    numbers,
+    arrayField = [],
+  } = req?.body?.searchFields || {};
+  const { page, limit = 10, sortBy = 'updated_at', sort = 'desc' } = req.query;
   const skip = Math.max((page - 1) * limit, 0);
 
-  const search = req.query.search || "";
+  const search = req.query.search || '';
 
   let searchQuery = {};
-  if (search != "" && req?.body?.searchFields) {
-    const searchdata = DynamicSearch(search, boolean, numbers, string,arrayField);
-   if (searchdata?.length == 0) {
+  if (search != '' && req?.body?.searchFields) {
+    const searchdata = DynamicSearch(
+      search,
+      boolean,
+      numbers,
+      string,
+      arrayField
+    );
+    if (searchdata?.length == 0) {
       return res.status(404).json({
         statusCode: 404,
         status: false,
         data: {
           data: [],
         },
-        message: "Results Not Found",
+        message: 'Results Not Found',
       });
     }
     searchQuery = searchdata;
@@ -30,8 +41,8 @@ export const FetchIssuedForSmokingGroup = catchAsync(async (req, res, next) => {
 
   if (to && from) {
     console.log(new Date(from));
-    matchQuery["date_of_smoking"] = { $gte: new Date(from) };
-    matchQuery["date_of_smoking"] = { $lte: new Date(to) };
+    matchQuery['date_of_smoking'] = { $gte: new Date(from) };
+    matchQuery['date_of_smoking'] = { $lte: new Date(to) };
   }
 
   const totalDocuments = await IssuedForSmokingGroupModel.countDocuments({
@@ -45,10 +56,10 @@ export const FetchIssuedForSmokingGroup = catchAsync(async (req, res, next) => {
     ...searchQuery,
   })
     .populate({
-      path: "created_employee_id",
-      select: "_id user_name first_name last_name",
+      path: 'created_employee_id',
+      select: '_id user_name first_name last_name',
     })
-    .populate("item_details")
+    .populate('item_details')
     .skip(skip)
     .limit(limit)
     .sort({ [sortBy]: sort })
@@ -57,7 +68,7 @@ export const FetchIssuedForSmokingGroup = catchAsync(async (req, res, next) => {
   return res.status(200).json({
     result: rawVeneerData,
     statusCode: 200,
-    status: "success",
+    status: 'success',
     totalPages: totalPages,
   });
 });

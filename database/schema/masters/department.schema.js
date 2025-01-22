@@ -1,25 +1,25 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
 const departMentSchema = new mongoose.Schema({
   sr_no: Number,
   dept_name: {
     type: String,
-    required: [true, "department name is required"],
-    unique: [true, "Department Name already exist."],
+    required: [true, 'department name is required'],
+    unique: [true, 'Department Name already exist.'],
     trim: true,
     uppercase: true,
   },
   remark: {
     type: String,
     trim: true,
-    uppercase: true
+    uppercase: true,
   },
   dept_access: {
     type: {},
   },
   created_employee_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "user",
+    ref: 'user',
     required: true,
     default: null,
   },
@@ -31,5 +31,6 @@ const departMentSchema = new mongoose.Schema({
   deleted_at: { type: Date, default: null },
 });
 
-const departMentModel = mongoose.models.department || mongoose.model("department", departMentSchema);
+const departMentModel =
+  mongoose.models.department || mongoose.model('department', departMentSchema);
 export default departMentModel;

@@ -1,15 +1,15 @@
-import mongoose from "mongoose";
-import { IssueForTapingModel } from "../../database/schema/taping/issuedTaping.schema.js";
-import { CreateTappingModel } from "../../database/schema/taping/taping.schema.js";
-import catchAsync from "../../utils/errors/catchAsync.js";
-import { CreateReadySheetFormModel } from "../../database/schema/readySheetForm/readySheetForm.schema.js";
-import GroupImagesModel from "../../database/schema/images/groupImages.schema.js";
-import fs from "fs";
-import { DynamicSearch } from "../../utils/dynamicSearch/dynamic.js";
-import { IssuedForCuttingModel } from "../../database/schema/cutting/issuedForCutting.js";
-import { CuttingModel } from "../../database/schema/cutting/cutting.js";
-import { GroupModel } from "../../database/schema/group/groupCreated/groupCreated.schema.js";
-import { RawMaterialModel } from "../../database/schema/inventory/raw/raw.schema.js";
+import mongoose from 'mongoose';
+import { IssueForTapingModel } from '../../database/schema/taping/issuedTaping.schema.js';
+import { CreateTappingModel } from '../../database/schema/taping/taping.schema.js';
+import catchAsync from '../../utils/errors/catchAsync.js';
+import { CreateReadySheetFormModel } from '../../database/schema/readySheetForm/readySheetForm.schema.js';
+import GroupImagesModel from '../../database/schema/images/groupImages.schema.js';
+import fs from 'fs';
+import { DynamicSearch } from '../../utils/dynamicSearch/dynamic.js';
+import { IssuedForCuttingModel } from '../../database/schema/cutting/issuedForCutting.js';
+import { CuttingModel } from '../../database/schema/cutting/cutting.js';
+import { GroupModel } from '../../database/schema/group/groupCreated/groupCreated.schema.js';
+import { RawMaterialModel } from '../../database/schema/inventory/raw/raw.schema.js';
 
 export const FetchIssuedForTapping = catchAsync(async (req, res, next) => {
   const {
@@ -22,15 +22,15 @@ export const FetchIssuedForTapping = catchAsync(async (req, res, next) => {
   const {
     page = 1,
     limit = 10,
-    sortBy = "updated_at",
-    sort = "desc",
+    sortBy = 'updated_at',
+    sort = 'desc',
   } = req.query;
   const skip = Math.max((page - 1) * limit, 0);
 
-  const search = req.query.search || "";
+  const search = req.query.search || '';
 
   let searchQuery = {};
-  if (search != "" && req?.body?.searchFields) {
+  if (search != '' && req?.body?.searchFields) {
     const searchdata = DynamicSearch(
       search,
       boolean,
@@ -45,20 +45,20 @@ export const FetchIssuedForTapping = catchAsync(async (req, res, next) => {
         data: {
           data: [],
         },
-        message: "Results Not Found",
+        message: 'Results Not Found',
       });
     }
     searchQuery = searchdata;
   }
 
   const { to, from, ...data } = req?.body?.filters || {};
-  console.log(req?.body?.filters, "req?.body?.filters");
+  console.log(req?.body?.filters, 'req?.body?.filters');
   const matchQuery = data || {};
 
-  console.log(matchQuery, "matchQuery");
+  console.log(matchQuery, 'matchQuery');
   if (to && from) {
     console.log(new Date(from));
-    matchQuery["issued_for_taping_date"] = {
+    matchQuery['issued_for_taping_date'] = {
       $gte: new Date(from),
       $lte: new Date(to),
     };
@@ -73,36 +73,36 @@ export const FetchIssuedForTapping = catchAsync(async (req, res, next) => {
   const issuedForGroupingData = await IssueForTapingModel.aggregate([
     {
       $lookup: {
-        from: "cuttings",
-        localField: "cutting_id",
-        foreignField: "_id",
+        from: 'cuttings',
+        localField: 'cutting_id',
+        foreignField: '_id',
         pipeline: [
           {
-            $unwind: "$item_details", // Unwind to access each item_detail individually
+            $unwind: '$item_details', // Unwind to access each item_detail individually
           },
           {
             $lookup: {
-              from: "raw_materials",
-              localField: "item_details.item_id",
-              foreignField: "_id",
-              as: "item_details.item_data", // Populate item_data field with data from raw_materials
+              from: 'raw_materials',
+              localField: 'item_details.item_id',
+              foreignField: '_id',
+              as: 'item_details.item_data', // Populate item_data field with data from raw_materials
             },
           },
           {
             $group: {
-              _id: "$_id",
-              cutting_id: { $push: "$$ROOT" }, // Push back the modified cuttings documents into cutting_id array
+              _id: '$_id',
+              cutting_id: { $push: '$$ROOT' }, // Push back the modified cuttings documents into cutting_id array
             },
           },
         ],
-        as: "cutting_id",
+        as: 'cutting_id',
       },
     },
     {
       $lookup: {
-        from: "groups",
-        localField: "cutting_id.cutting_id.group_id",
-        foreignField: "_id",
+        from: 'groups',
+        localField: 'cutting_id.cutting_id.group_id',
+        foreignField: '_id',
         // pipeline: [
         //   {
         //     $project: {
@@ -110,20 +110,20 @@ export const FetchIssuedForTapping = catchAsync(async (req, res, next) => {
         //     },
         //   },
         // ],
-        as: "group_data",
+        as: 'group_data',
       },
     },
     {
       $unwind: {
-        path: "$group_data",
+        path: '$group_data',
         preserveNullAndEmptyArrays: true,
       },
     },
     {
       $lookup: {
-        from: "users",
-        localField: "created_employee_id",
-        foreignField: "_id",
+        from: 'users',
+        localField: 'created_employee_id',
+        foreignField: '_id',
         pipeline: [
           {
             $project: {
@@ -131,12 +131,12 @@ export const FetchIssuedForTapping = catchAsync(async (req, res, next) => {
             },
           },
         ],
-        as: "created_employee_id",
+        as: 'created_employee_id',
       },
     },
     {
       $unwind: {
-        path: "$created_employee_id",
+        path: '$created_employee_id',
         preserveNullAndEmptyArrays: true,
       },
     },
@@ -148,7 +148,7 @@ export const FetchIssuedForTapping = catchAsync(async (req, res, next) => {
     },
     {
       $sort: {
-        [sortBy]: sort == "desc" ? -1 : 1,
+        [sortBy]: sort == 'desc' ? -1 : 1,
       },
     },
     {
@@ -158,11 +158,11 @@ export const FetchIssuedForTapping = catchAsync(async (req, res, next) => {
       $limit: limit,
     },
   ]);
-  console.log(issuedForGroupingData, "issuedForGroupingData");
+  console.log(issuedForGroupingData, 'issuedForGroupingData');
   return res.status(200).json({
     result: issuedForGroupingData,
     statusCode: 200,
-    status: "success",
+    status: 'success',
     totalPages: totalPages,
   });
 });
@@ -179,27 +179,27 @@ export const CreateTapping = catchAsync(async (req, res, next) => {
       ...req.body,
       created_employee_id: authUserDetail._id,
     };
-    console.log(data, "data");
+    console.log(data, 'data');
     const imageFilenames = req?.files?.tapping_images?.map(
       (file) => file?.filename
     );
 
     // console.log("Received body data:", req.body);
-    console.log("Image filenames:", imageFilenames);
+    console.log('Image filenames:', imageFilenames);
 
     // Check if cutting_id already exists in tapping collection
     const existingTapping = await CreateTappingModel.findOne({
       cutting_id: data.cutting_id,
     }).session(session);
     if (existingTapping) {
-      throw new Error("Tapping with the same cutting_id already exists");
+      throw new Error('Tapping with the same cutting_id already exists');
     }
 
     if (imageFilenames?.length > 0) {
       const existingDocument = await GroupImagesModel.findOne({
         group_no: req.body.group_no,
       }).session(session);
-      console.log(existingDocument, "existingDocument");
+      console.log(existingDocument, 'existingDocument');
       if (existingDocument) {
         await GroupImagesModel.findOneAndUpdate(
           { group_no: req.body.group_no },
@@ -216,7 +216,7 @@ export const CreateTapping = catchAsync(async (req, res, next) => {
           ],
           { session }
         );
-        console.log(updae, "updae");
+        console.log(updae, 'updae');
       }
     }
     const tappingDocuments = [];
@@ -314,7 +314,7 @@ export const CreateTapping = catchAsync(async (req, res, next) => {
     // await IssueForTapingModel.findByIdAndDelete(data.issued_for_taping_id);
     await IssueForTapingModel.findByIdAndUpdate(
       data.issued_for_tapping_id,
-      { $set: { revert_status: "inactive" } },
+      { $set: { revert_status: 'inactive' } },
       { new: true, session: session }
     );
     await session.commitTransaction();
@@ -323,10 +323,10 @@ export const CreateTapping = catchAsync(async (req, res, next) => {
     return res.json({
       result: tappingSaveData,
       status: true,
-      message: "Tapping Done Successfully",
+      message: 'Tapping Done Successfully',
     });
   } catch (error) {
-    console.error("Error occurred while tapping:", error);
+    console.error('Error occurred while tapping:', error);
 
     await session.abortTransaction();
     session.endSession();
@@ -344,7 +344,7 @@ export const CreateTapping = catchAsync(async (req, res, next) => {
 
     return res.status(500).json({
       status: false,
-      message: "Error occurred while tapping",
+      message: 'Error occurred while tapping',
       error: error.message,
     });
   }
@@ -356,15 +356,15 @@ export const FetchTappingDone = catchAsync(async (req, res, next) => {
   const {
     page = 1,
     limit = 10,
-    sortBy = "updated_at",
-    sort = "desc",
+    sortBy = 'updated_at',
+    sort = 'desc',
   } = req.query;
   const skip = Math.max((page - 1) * limit, 0);
 
-  const search = req.query.search || "";
+  const search = req.query.search || '';
 
   let searchQuery = {};
-  if (search != "" && req?.body?.searchFields) {
+  if (search != '' && req?.body?.searchFields) {
     const searchdata = DynamicSearch(
       search,
       boolean,
@@ -379,7 +379,7 @@ export const FetchTappingDone = catchAsync(async (req, res, next) => {
         data: {
           data: [],
         },
-        message: "Results Not Found",
+        message: 'Results Not Found',
       });
     }
     searchQuery = searchdata;
@@ -390,7 +390,7 @@ export const FetchTappingDone = catchAsync(async (req, res, next) => {
 
   if (to && from) {
     console.log(new Date(from));
-    matchQuery["taping_done_date"] = {
+    matchQuery['taping_done_date'] = {
       $gte: new Date(from),
       $lte: new Date(to),
     };
@@ -405,36 +405,36 @@ export const FetchTappingDone = catchAsync(async (req, res, next) => {
   const issuedForGroupingData = await CreateTappingModel.aggregate([
     {
       $lookup: {
-        from: "cuttings",
-        localField: "cutting_id",
-        foreignField: "_id",
+        from: 'cuttings',
+        localField: 'cutting_id',
+        foreignField: '_id',
         pipeline: [
           {
-            $unwind: "$item_details", // Unwind to access each item_detail individually
+            $unwind: '$item_details', // Unwind to access each item_detail individually
           },
           {
             $lookup: {
-              from: "raw_materials",
-              localField: "item_details.item_id",
-              foreignField: "_id",
-              as: "item_details.item_data", // Populate item_data field with data from raw_materials
+              from: 'raw_materials',
+              localField: 'item_details.item_id',
+              foreignField: '_id',
+              as: 'item_details.item_data', // Populate item_data field with data from raw_materials
             },
           },
           {
             $group: {
-              _id: "$_id",
-              cutting_id: { $push: "$$ROOT" }, // Push back the modified cuttings documents into cutting_id array
+              _id: '$_id',
+              cutting_id: { $push: '$$ROOT' }, // Push back the modified cuttings documents into cutting_id array
             },
           },
         ],
-        as: "cutting_id",
+        as: 'cutting_id',
       },
     },
     {
       $lookup: {
-        from: "groups",
-        localField: "cutting_id.cutting_id.group_id",
-        foreignField: "_id",
+        from: 'groups',
+        localField: 'cutting_id.cutting_id.group_id',
+        foreignField: '_id',
         pipeline: [
           {
             $project: {
@@ -442,20 +442,20 @@ export const FetchTappingDone = catchAsync(async (req, res, next) => {
             },
           },
         ],
-        as: "group_data",
+        as: 'group_data',
       },
     },
     {
       $unwind: {
-        path: "$group_data",
+        path: '$group_data',
         preserveNullAndEmptyArrays: true,
       },
     },
     {
       $lookup: {
-        from: "users",
-        localField: "created_employee_id",
-        foreignField: "_id",
+        from: 'users',
+        localField: 'created_employee_id',
+        foreignField: '_id',
         pipeline: [
           {
             $project: {
@@ -463,12 +463,12 @@ export const FetchTappingDone = catchAsync(async (req, res, next) => {
             },
           },
         ],
-        as: "created_employee_id",
+        as: 'created_employee_id',
       },
     },
     {
       $unwind: {
-        path: "$created_employee_id",
+        path: '$created_employee_id',
         preserveNullAndEmptyArrays: true,
       },
     },
@@ -480,7 +480,7 @@ export const FetchTappingDone = catchAsync(async (req, res, next) => {
     },
     {
       $sort: {
-        [sortBy]: sort == "desc" ? -1 : 1,
+        [sortBy]: sort == 'desc' ? -1 : 1,
       },
     },
     {
@@ -494,7 +494,7 @@ export const FetchTappingDone = catchAsync(async (req, res, next) => {
   return res.status(200).json({
     result: issuedForGroupingData,
     statusCode: 200,
-    status: "success",
+    status: 'success',
     totalPages: totalPages,
   });
 });
@@ -596,14 +596,14 @@ export const RevertIssuedForTapping = catchAsync(async (req, res, next) => {
 
     const { issuedId } = req.query;
     const IssuedForTappingsView = mongoose.connection.db.collection(
-      "issued_for_tapings_view"
+      'issued_for_tapings_view'
     );
     const IssuedForTappingDetails = await IssuedForTappingsView.findOne({
       _id: new mongoose.Types.ObjectId(issuedId),
     });
 
     if (!IssuedForTappingDetails) {
-      throw new Error("Issued for taping not found");
+      throw new Error('Issued for taping not found');
     }
 
     const issuedForCuttingData = await IssuedForCuttingModel.findById(
@@ -615,11 +615,11 @@ export const RevertIssuedForTapping = catchAsync(async (req, res, next) => {
     ).session(session);
 
     const groupData = await GroupModel.findById(issuedForCuttingData.group_id)
-      .populate("item_details")
+      .populate('item_details')
       .session(session);
 
     const IssuedForCuttingView = mongoose.connection.db.collection(
-      "issued_for_cuttings_view"
+      'issued_for_cuttings_view'
     );
 
     issuedForCuttingData.cutting_item_details.forEach((issuedItem) => {
@@ -632,7 +632,7 @@ export const RevertIssuedForTapping = catchAsync(async (req, res, next) => {
       );
 
       if (!cuttingItem) {
-        throw new Error("Cannot revert");
+        throw new Error('Cannot revert');
       }
 
       const issuedCuttingQuantity = issuedItem.cutting_quantity;
@@ -645,12 +645,12 @@ export const RevertIssuedForTapping = catchAsync(async (req, res, next) => {
           wasteCuttingQuantity?.waste_pattas +
           groupRawItem?.[0]?.item_available_pattas
       ) {
-        throw new Error("Cannot revert");
+        throw new Error('Cannot revert');
       }
     });
     await IssuedForCuttingModel.findByIdAndUpdate(
       IssuedForTappingDetails.issued_for_cutting_id,
-      { $set: { revert_status: "active" } },
+      { $set: { revert_status: 'active' } },
       { session, new: true }
     );
 
@@ -747,8 +747,8 @@ export const RevertIssuedForTapping = catchAsync(async (req, res, next) => {
     session.endSession();
 
     return res.json({
-      message: "success",
-      result: "Reverted Successfully",
+      message: 'success',
+      result: 'Reverted Successfully',
     });
   } catch (error) {
     if (session) {
@@ -758,7 +758,7 @@ export const RevertIssuedForTapping = catchAsync(async (req, res, next) => {
 
     return res.status(500).json({
       status: false,
-      message: "Error occurred while reverting",
+      message: 'Error occurred while reverting',
       error: error.message,
     });
   }
