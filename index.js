@@ -75,6 +75,9 @@ import chromaRibbedRouter from './routes/seriesProductMaster/chromaRibbed.routes
 import chromaCompositeRouter from './routes/seriesProductMaster/chromaComposite.routes.js';
 import canvasRouter from './routes/seriesProductMaster/canvas.routes.js';
 import regantoDezinerRouter from './routes/seriesProductMaster/regantoDeziner.routes.js';
+import furrowLiteRouter from './routes/seriesProductMaster/furrow.lite.routes.js';
+import furrowRegantoRouter from './routes/seriesProductMaster/furrow.reganto.routes.js';
+import accoRouter from './routes/seriesProductMaster/acco.routes.js';
 const Configs = getConfigs();
 mongo_service();
 const app = express();
@@ -247,7 +250,7 @@ app.use(`/api/${Configs.server.version}/series-product-master`, [
   marvelRouter,
   regantoClassicRouter,
   regantoPremierRouter,
-  furrowRouter,
+  furrowRouter, furrowLiteRouter, furrowRegantoRouter, accoRouter
 ]);
 
 app.use(globalErrorHandler);

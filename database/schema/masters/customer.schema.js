@@ -51,6 +51,11 @@ const addressSchema = new mongoose.Schema({
 
 const customerSchema = new mongoose.Schema(
   {
+    sr_no: {
+      type: Number,
+      required: [true, "Sr.No is required"],
+      // unique: [true, "Sr.No must be unique"]
+    },
     company_name: {
       type: String,
       uppercase: true,
@@ -215,10 +220,14 @@ const customerSchema = new mongoose.Schema(
 customerSchema.index({ company_name: 1 }, { unique: true });
 customerSchema.index({ gst_number: 1 }, { unique: true });
 customerSchema.index({ pan_number: 1 }, { unique: true });
+customerSchema.index({ sr_no: 1 }, { unique: true });
+customerSchema.index({ created_by: 1 })
+customerSchema.index({ updated_by: 1 })
 
 //customer client
 const customerClientSchema = new mongoose.Schema(
   {
+
     customer_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Customer',
@@ -283,6 +292,7 @@ const customerClientSchema = new mongoose.Schema(
 
 customerClientSchema.index({ customer_id: 1, email_id: 1 }, { unique: true });
 customerClientSchema.index({ customer_id: 1, gst_number: 1 }, { unique: true });
+
 
 export const customer_model = mongoose.model(
   'customers',

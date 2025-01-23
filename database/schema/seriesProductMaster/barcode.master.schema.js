@@ -101,6 +101,10 @@ import mongoose from 'mongoose';
 
 const barcodeSchema = new mongoose.Schema(
   {
+    sr_no: {
+      type: Number,
+      required: [true, "Sr.No is required"],
+    },
     default_item_name: {
       type: String,
       uppercase: true,
@@ -216,6 +220,9 @@ const barcodeSchema = new mongoose.Schema(
 );
 
 barcodeSchema.index({ code: 1 }, { unique: true });
+barcodeSchema.index({ sr_no: 1 }, { unique: true });
+barcodeSchema.index({ created_by: 1 })
+barcodeSchema.index({ updated_by: 1 })
 
 const barcodeModel = mongoose.model('barocde', barcodeSchema);
 export default barcodeModel;

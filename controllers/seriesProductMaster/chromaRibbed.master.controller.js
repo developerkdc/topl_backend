@@ -11,8 +11,18 @@ export const addChromaRibbed = catchAsync(async (req, res, next) => {
   const reqBody = req.body;
   const authUserDetails = req.userDetails;
 
+  const maxNumber = await chromaRibbedModel.aggregate([{
+    $group: {
+      _id: null,
+      max: { $max: "$sr_no" }
+    }
+  }]);
+
+  const maxSrNo = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1
+
   const chromaRibbedDetails = {
     ...reqBody,
+    sr_no: maxSrNo,
     created_by: authUserDetails?._id,
     updated_by: authUserDetails?._id,
   };

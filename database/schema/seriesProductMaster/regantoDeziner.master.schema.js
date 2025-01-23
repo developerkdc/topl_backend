@@ -2,6 +2,11 @@ import mongoose from 'mongoose';
 
 const regantoDezinerSchema = new mongoose.Schema(
   {
+    sr_no: {
+      type: Number,
+      required: [true, "Sr.No is required"],
+      // unique: [true, "Sr.No must be unique"]
+    },
     code: {
       type: String,
       uppercase: true,
@@ -107,6 +112,9 @@ const regantoDezinerSchema = new mongoose.Schema(
 );
 
 regantoDezinerSchema.index({ code: 1 }, { unique: true });
+regantoDezinerSchema.index({ sr_no: 1 }, { unique: true });
+regantoDezinerSchema.index({ created_by: 1 })
+regantoDezinerSchema.index({ updated_by: 1 })
 
 const regantoDezinerModel = mongoose.model(
   'reganto_deziner',

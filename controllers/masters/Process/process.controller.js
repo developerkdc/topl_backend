@@ -14,8 +14,17 @@ export const addProcess = catchAsync(async (req, res, next) => {
     return next(new ApiError('Process Name is required', 400));
   }
 
+  const maxNumber = await barcodeModel.aggregate([{
+    $group: {
+      _id: null,
+      max: { $max: "$sr_no" }
+    }
+  }]);
+
+  const maxSrNo = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1
   const processData = {
     name: name,
+    sr_no: maxSrNo,
     created_by: authUserDetail?._id,
     updated_by: authUserDetail?._id,
   };

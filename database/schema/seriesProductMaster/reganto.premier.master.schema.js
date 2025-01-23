@@ -2,6 +2,11 @@ import mongoose from 'mongoose';
 
 const regantoPremierSchema = new mongoose.Schema(
   {
+    sr_no: {
+      type: Number,
+      required: [true, "Sr.No is required"],
+      // unique: [true, "Sr.No must be unique"]
+    },
     default_item_name: {
       type: String,
       uppercase: true,
@@ -116,6 +121,9 @@ const regantoPremierSchema = new mongoose.Schema(
 );
 
 regantoPremierSchema.index({ code: 1 }, { unique: true });
+regantoPremierSchema.index({ sr_no: 1 }, { unique: true });
+regantoPremierSchema.index({ created_by: 1 })
+regantoPremierSchema.index({ updated_by: 1 })
 
 const regantoPremierModel = mongoose.model(
   'reganto_premier',

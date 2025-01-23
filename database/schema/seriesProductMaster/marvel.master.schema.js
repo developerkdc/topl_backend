@@ -2,6 +2,11 @@ import mongoose, { set } from 'mongoose';
 
 const marvelSchema = new mongoose.Schema(
   {
+    sr_no: {
+      type: Number,
+      required: [true, "Sr.No is required"],
+      // unique: [true, "Sr.No must be unique"]
+    },
     default_item_name: {
       type: String,
       uppercase: true,
@@ -116,6 +121,9 @@ const marvelSchema = new mongoose.Schema(
 );
 
 marvelSchema.index({ code: 1 }, { unique: true });
+marvelSchema.index({ sr_no: 1 }, { unique: true });
+marvelSchema.index({ created_by: 1 })
+marvelSchema.index({ updated_by: 1 })
 
 const marvelModel = mongoose.model('marvel', marvelSchema);
 export default marvelModel;
