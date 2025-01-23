@@ -63,6 +63,11 @@ import { error } from "console";
 import approvalRouters from "./routes/approval/approval.routes.js";
 import allMasterRouter from "./routes/masters/allMaster.routes.js";
 import barcodeRouter from "./routes/seriesProductMaster/barcode.routes.js";
+import chromaCollectionRouter from "./routes/seriesProductMaster/chromaCollection.routes.js";
+import chromaRibbedRouter from "./routes/seriesProductMaster/chromaRibbed.routes.js";
+import chromaCompositeRouter from "./routes/seriesProductMaster/chromaComposite.routes.js";
+import canvasRouter from "./routes/seriesProductMaster/canvas.routes.js";
+import regantoDezinerRouter from "./routes/seriesProductMaster/regantoDeziner.routes.js";
 const Configs = getConfigs();
 mongo_service();
 const app = express();
@@ -227,7 +232,7 @@ app.use(`/api/${Configs.server.version}/report`, reportRouter);
 app.use(`/api/${Configs.server.version}/approval`, approvalRouters);
 
 //Series Product Master
-app.use(`/api/${Configs.server.version}/series-product-master`, [barcodeRouter])
+app.use(`/api/${Configs.server.version}/series-product-master`, [barcodeRouter,chromaCollectionRouter,chromaRibbedRouter,chromaCompositeRouter,canvasRouter,regantoDezinerRouter])
 
 app.use(globalErrorHandler);
 // Error handling for the server
