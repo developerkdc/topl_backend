@@ -17,15 +17,22 @@ export const addPhoto = catchAsync(async (req, res, next) => {
       return next(new ApiError('Photo number is required', 400));
     }
 
-    const photoImages = req.files;
+    const photoImagesFiles = req.files?.images;
     let images = [];
-    if (photoImages.length > 0) {
-      images = photoImages?.map((e) => e);
+    if (photoImagesFiles.length > 0) {
+      images = photoImagesFiles?.map((e) => e);
+    }
+
+    const bannerImagesFile = req.files?.banner_image
+    let bannerImage;
+    if(bannerImagesFile?.length > 0 && bannerImagesFile?.[0]){
+      bannerImage = bannerImagesFile?.[0]
     }
 
     const photoData = {
       photo_number: photo_number,
       images: images,
+      banner_image: bannerImage,
       created_by: authUserDetail?._id,
       updated_by: authUserDetail?._id,
     };
@@ -45,21 +52,27 @@ export const addPhoto = catchAsync(async (req, res, next) => {
 
     return res.status(201).json(response);
   } catch (error) {
-    if (req.files && req.files?.length > 0) {
-      req.files.forEach((file) => {
-        if (fs.existsSync(file.path)) {
-          fs.unlinkSync(file.path);
-        }
-      });
-    }
+    // if (req.files?.images) {
+    //   req.files?.images?.forEach((file) => {
+    //     if (fs.existsSync(file.path)) {
+    //       fs.unlinkSync(file.path);
+    //     }
+    //   });
+    // }
+    // if(req.files?.banner_image){
+    //   req.files?.banner_image?.forEach((file) => {
+    //     if (fs.existsSync(file.path)) {
+    //       fs.unlinkSync(file.path);
+    //     }
+    //   });
+    // }
     throw error;
   }
 });
 
 export const updatePhoto = catchAsync(async (req, res, next) => {
-  let { photo_number, status } = req.body;
   try {
-    photo_number = photo_number?.toUpperCase();
+    let { photo_number, status } = req.body;
     const { id } = req.params;
     const authUserDetail = req.userDetails;
 
@@ -71,6 +84,12 @@ export const updatePhoto = catchAsync(async (req, res, next) => {
     let newPhotoImages = [];
     if (photoImages.length > 0) {
       newPhotoImages = photoImages?.map((e) => e);
+    }
+
+    const bannerImagesFile = req.files?.banner_image
+    let bannerImage;
+    if(bannerImagesFile?.length > 0 && bannerImagesFile?.[0]){
+      bannerImage = bannerImagesFile?.[0]
     }
 
     let removeImages = [];
@@ -90,11 +109,20 @@ export const updatePhoto = catchAsync(async (req, res, next) => {
       throw error;
     }
 
+    const fetchPhotoData = await photoModel.findOne({_id:id})
+
     const photoData = {
       photo_number: photo_number,
       status: status,
       updated_by: authUserDetail?._id,
     };
+
+    if(bannerImage){
+      photoData.banner_image = bannerImage;
+      if (fs.existsSync(fetchPhotoData?.banner_image?.path)) {
+        fs.unlinkSync(fetchPhotoData?.banner_image?.path);
+      }
+    }
 
     const updatePhotoData = await photoModel.updateOne(
       { _id: id },
@@ -143,13 +171,20 @@ export const updatePhoto = catchAsync(async (req, res, next) => {
 
     return res.status(201).json(response);
   } catch (error) {
-    if (req.files && req.files?.length > 0) {
-      req.files.forEach((file) => {
-        if (fs.existsSync(file.path)) {
-          fs.unlinkSync(file.path);
-        }
-      });
-    }
+    // if (req.files?.images) {
+    //   req.files?.images?.forEach((file) => {
+    //     if (fs.existsSync(file.path)) {
+    //       fs.unlinkSync(file.path);
+    //     }
+    //   });
+    // }
+    // if(req.files?.banner_image){
+    //   req.files?.banner_image?.forEach((file) => {
+    //     if (fs.existsSync(file.path)) {
+    //       fs.unlinkSync(file.path);
+    //     }
+    //   });
+    // }
     throw error;
   }
 });
