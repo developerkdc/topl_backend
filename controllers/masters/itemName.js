@@ -10,7 +10,7 @@ import { StatusCodes } from '../../utils/constants.js';
 
 export const AddItemNameMaster = catchAsync(async (req, res) => {
   const authUserDetail = req.userDetails;
-  const { item_name, category } = req.body;
+  const { item_name, category, color } = req.body;
   if (!item_name || !category) {
     return res.json(
       new ApiResponse(StatusCodes.NOT_FOUND, 'all fields are required')
@@ -34,6 +34,7 @@ export const AddItemNameMaster = catchAsync(async (req, res) => {
   const itemNameData = {
     sr_no: newMax,
     item_name,
+    color,
     category,
     created_by,
   };
@@ -190,7 +191,8 @@ export const DropdownItemNameMaster = catchAsync(async (req, res) => {
     {
       $project: {
         item_name: 1,
-        category:1
+        category: 1,
+        color:1
       },
     },
     {
