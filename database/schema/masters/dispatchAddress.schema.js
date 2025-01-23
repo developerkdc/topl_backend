@@ -2,6 +2,11 @@ import mongoose from 'mongoose';
 
 const dispatchAddressSchema = new mongoose.Schema(
   {
+    sr_no: {
+      type: Number,
+      required: [true, "Sr.No is required"],
+      // unique: [true, "Sr.No must be unique"]
+    },
     address: {
       type: String,
       uppercase: true,
@@ -50,6 +55,13 @@ const dispatchAddressSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+dispatchAddressSchema.index({ sr_no: 1 }, { unique: true });
+dispatchAddressSchema.index({ created_by: 1 })
+dispatchAddressSchema.index({ updated_by: 1 })
+dispatchAddressSchema.index({ pincode: 1 })
+dispatchAddressSchema.index({ gst_number: 1 })
+
 
 const dispatchAddressModel = mongoose.model(
   'dispathAddresses',

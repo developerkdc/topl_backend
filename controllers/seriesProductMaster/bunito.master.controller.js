@@ -8,20 +8,22 @@ import mongoose from 'mongoose';
 import bunitoModel from '../../database/schema/seriesProductMaster/bunito.master.schema.js';
 
 export const addBunito = catchAsync(async (req, res, next) => {
-  // const requiredFields = ['code', 'base', 'size', 'category', 'instructions', "default_item_name", "category_id"];
+
   const reqBody = req.body;
   const authUserDetails = req.userDetails;
 
-  // for (let field of requiredFields) {
-  //     if (!reqBody[field]) {
-  //         return next(
-  //             new ApiError(`${field} is missing ...`, StatusCodes.NOT_FOUND)
-  //         );
-  //     }
-  // }
+  const maxNumber = await bunitoModel.aggregate([{
+    $group: {
+      _id: null,
+      max: { $max: "$sr_no" }
+    }
+  }]);
+
+  const maxSrNo = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1
 
   const bunitoDetails = {
     ...reqBody,
+    sr_no: maxSrNo,
     created_by: authUserDetails?._id,
     updated_by: authUserDetails?._id,
   };

@@ -25,8 +25,18 @@ export const addCustomer = catchAsync(async (req, res, next) => {
 
     const authUserDetail = req.userDetails;
 
+    const maxNumber = await customer_model.aggregate([{
+      $group: {
+        _id: null,
+        max: { $max: "$sr_no" }
+      }
+    }]);
+
+    const maxSrNo = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1
+
     const customerData = {
       ...customer,
+      sr_no: maxSrNo,
       created_by: authUserDetail?._id,
       updated_by: authUserDetail?._id,
     };
@@ -44,8 +54,8 @@ export const addCustomer = catchAsync(async (req, res, next) => {
       const customerClientData = customer_client?.map((data) => ({
         ...data,
         customer_id: addedCustomer?.[0]?._id,
-        created_by: authUserDetail?._id,
-        updated_by: authUserDetail?._id,
+        // created_by: authUserDetail?._id,
+        // updated_by: authUserDetail?._id,
       }));
 
       addedCustomerClients = await customer_client_model.insertMany(

@@ -2,6 +2,11 @@ import mongoose from 'mongoose';
 
 const novelSchema = new mongoose.Schema(
   {
+    sr_no: {
+      type: Number,
+      required: [true, "Sr.No is required"],
+      // unique: [true, "Sr.No must be unique"]
+    },
     default_item_name: {
       type: String,
       uppercase: true,
@@ -116,6 +121,8 @@ const novelSchema = new mongoose.Schema(
 );
 
 novelSchema.index({ code: 1 }, { unique: true });
-
+novelSchema.index({ sr_no: 1 }, { unique: true });
+novelSchema.index({ created_by: 1 })
+novelSchema.index({ updated_by: 1 })
 const novelModel = mongoose.model('novel', novelSchema);
 export default novelModel;

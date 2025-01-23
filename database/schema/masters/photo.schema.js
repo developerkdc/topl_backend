@@ -2,6 +2,11 @@ import mongoose, { Schema } from 'mongoose';
 
 const photoSchema = new mongoose.Schema(
   {
+    sr_no: {
+      type: Number,
+      required: [true, "Sr.No is required"],
+      // unique: [true, "Sr.No must be unique"]
+    },
     photo_number: {
       type: String,
       uppercase: true,
@@ -36,6 +41,10 @@ const photoSchema = new mongoose.Schema(
 );
 
 photoSchema.index({ photo_number: 1 }, { unique: true });
+photoSchema.index({ sr_no: 1 }, { unique: true });
+photoSchema.index({ created_by: 1 })
+photoSchema.index({ updated_by: 1 })
+
 
 const photoModel = mongoose.model('photos', photoSchema, 'photos');
 export default photoModel;

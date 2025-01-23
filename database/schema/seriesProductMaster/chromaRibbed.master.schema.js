@@ -2,6 +2,11 @@ import mongoose from 'mongoose';
 
 const chromaRibbedSchema = new mongoose.Schema(
   {
+    sr_no: {
+      type: Number,
+      required: [true, "Sr.No is required"],
+      // unique: [true, "Sr.No must be unique"]
+    },
     code: {
       type: String,
       uppercase: true,
@@ -108,6 +113,9 @@ const chromaRibbedSchema = new mongoose.Schema(
 );
 
 chromaRibbedSchema.index({ code: 1 }, { unique: true });
+chromaRibbedSchema.index({ sr_no: 1 }, { unique: true });
+chromaRibbedSchema.index({ created_by: 1 })
+chromaRibbedSchema.index({ updated_by: 1 })
 
 const chromaRibbedModel = mongoose.model('chroma_ribbed', chromaRibbedSchema);
 export default chromaRibbedModel;

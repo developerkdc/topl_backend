@@ -2,6 +2,11 @@ import mongoose from 'mongoose';
 
 const canvasSchema = new mongoose.Schema(
   {
+    sr_no: {
+      type: Number,
+      required: [true, "Sr.No is required"],
+      // unique: [true, "Sr.No must be unique"]
+    },
     code: {
       type: String,
       uppercase: true,
@@ -107,6 +112,9 @@ const canvasSchema = new mongoose.Schema(
 );
 
 canvasSchema.index({ code: 1 }, { unique: true });
+canvasSchema.index({ sr_no: 1 }, { unique: true });
+canvasSchema.index({ created_by: 1 })
+canvasSchema.index({ updated_by: 1 })
 
 const canvasModel = mongoose.model('canvas', canvasSchema);
 export default canvasModel;

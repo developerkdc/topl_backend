@@ -20,7 +20,18 @@ export const addTransporter = catchAsync(async (req, res, next) => {
     }
   }
 
+
+  const maxNumber = await barcodeModel.aggregate([{
+    $group: {
+      _id: null,
+      max: { $max: "$sr_no" }
+    }
+  }]);
+
+  const maxSrNo = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1
+
   const transporterData = {
+    sr_no: maxSrNo,
     name: name,
     branch: branch,
     transport_id: transport_id,

@@ -2,6 +2,11 @@ import mongoose from 'mongoose';
 
 const bunitoSchema = new mongoose.Schema(
   {
+    sr_no: {
+      type: Number,
+      required: [true, "Sr.No is required"],
+      // unique: [true, "Sr.No must be unique"]
+    },
     default_item_name: {
       type: String,
       uppercase: true,
@@ -116,6 +121,9 @@ const bunitoSchema = new mongoose.Schema(
 );
 
 bunitoSchema.index({ code: 1 }, { unique: true });
+bunitoSchema.index({ sr_no: 1 }, { unique: true });
+bunitoSchema.index({ created_by: 1 })
+bunitoSchema.index({ updated_by: 1 })
 
 const bunitoModel = mongoose.model('bunito', bunitoSchema);
 export default bunitoModel;

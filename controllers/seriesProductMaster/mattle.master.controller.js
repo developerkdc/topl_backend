@@ -10,8 +10,17 @@ import mattleModel from '../../database/schema/seriesProductMaster/mattle.master
 export const addMattle = catchAsync(async (req, res, next) => {
   const reqBody = req.body;
   const authUserDetails = req.userDetails;
+  const maxNumber = await mattleModel.aggregate([{
+    $group: {
+      _id: null,
+      max: { $max: "$sr_no" }
+    }
+  }]);
+
+  const maxSrNo = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1
   const itemDetails = {
     ...reqBody,
+    sr_no: maxSrNo,
     created_by: authUserDetails?._id,
     updated_by: authUserDetails?._id,
   };

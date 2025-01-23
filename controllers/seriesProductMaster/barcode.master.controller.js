@@ -19,9 +19,17 @@ export const addBarcode = catchAsync(async (req, res, next) => {
   //         );
   //     }
   // }
+  const maxNumber = await barcodeModel.aggregate([{
+    $group: {
+      _id: null,
+      max: { $max: "$sr_no" }
+    }
+  }]);
 
+  const maxSrNo = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1
   const barcodeDetails = {
     ...reqBody,
+    sr_no: maxNumber,
     created_by: authUserDetails?._id,
     updated_by: authUserDetails?._id,
   };

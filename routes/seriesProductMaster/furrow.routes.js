@@ -1,11 +1,11 @@
 import { Router } from 'express';
 import AuthMiddleware from '../../middlewares/verifyToken.js';
 import {
-  addFurrow,
-  dropdownFurrow,
-  fetchFurrowList,
-  fetchSingleFurrow,
-  updateFurrowDetails,
+    addFurrow,
+    dropdownFurrow,
+    fetchFurrowList,
+    fetchSingleFurrow,
+    updateFurrowDetails,
 } from '../../controllers/seriesProductMaster/furrow.master.controller.js';
 const router = Router();
 
