@@ -10,7 +10,7 @@ import novelModel from '../../database/schema/seriesProductMaster/novel.master.s
 export const addNovel = catchAsync(async (req, res, next) => {
   const reqBody = req.body;
   const authUserDetails = req.userDetails;
-  const maxNumber = await accoSchema.aggregate([{
+  const maxNumber = await novelModel.aggregate([{
     $group: {
       _id: null,
       max: { $max: "$sr_no" }

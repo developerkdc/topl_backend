@@ -29,7 +29,7 @@ export const addBarcode = catchAsync(async (req, res, next) => {
   const maxSrNo = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1
   const barcodeDetails = {
     ...reqBody,
-    sr_no: maxNumber,
+    sr_no: maxSrNo,
     created_by: authUserDetails?._id,
     updated_by: authUserDetails?._id,
   };
