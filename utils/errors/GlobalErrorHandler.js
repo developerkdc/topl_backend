@@ -49,6 +49,7 @@ export const globalErrorHandler = (err, req, res, next) => {
   }
 
   return res.status(err.statusCode).json({
+    statusCode: err?.statusCode,
     status: false,
     message: err.message,
   });
