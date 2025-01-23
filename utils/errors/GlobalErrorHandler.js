@@ -77,9 +77,7 @@ const extractValidationDetails = (errorMessage) => {
     let key = string.split(':')[0].trim().replace('0.', '');
     let value = string.split(':')[1].trim();
     messageObject[key] = value;
-  };
-
-
+  }
 
   return messageObject;
 };

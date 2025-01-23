@@ -225,14 +225,10 @@ export const fetchColorList = catchAsync(async (req, res, next) => {
 
   const totalPages = Math.ceil((totalDocument?.[0]?.totalCount || 0) / limit);
 
-  const response = new ApiResponse(
-    200,
-    'Color Data Fetched Successfully',
-    {
-      data: colorData,
-      totalPages: totalPages,
-    }
-  );
+  const response = new ApiResponse(200, 'Color Data Fetched Successfully', {
+    data: colorData,
+    totalPages: totalPages,
+  });
   return res.status(200).json(response);
 });
 

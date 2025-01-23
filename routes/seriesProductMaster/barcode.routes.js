@@ -14,7 +14,6 @@ router.post('/update-barcode/:id', AuthMiddleware, updateBarcodeDetails);
 router.post('/list-barcode', AuthMiddleware, fetchBarcodeList);
 router.get('/list-single-barcode/:id', AuthMiddleware, fetchSingleBarcode);
 
-
 //Without Permission
 router.get('/dropdown-barcode', AuthMiddleware, dropdownBarcode);
 

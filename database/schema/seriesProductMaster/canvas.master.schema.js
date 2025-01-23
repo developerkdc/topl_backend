@@ -1,7 +1,19 @@
-import mongoose, { set } from 'mongoose';
+import mongoose from 'mongoose';
 
-const marvelSchema = new mongoose.Schema(
+const canvasSchema = new mongoose.Schema(
   {
+    code: {
+      type: String,
+      uppercase: true,
+      trim: true,
+      required: [true, 'Code is required'],
+    },
+    base: {
+      type: [String],
+      uppercase: true,
+      trim: true,
+      required: [true, 'Base is required'],
+    },
     default_item_name: {
       type: String,
       uppercase: true,
@@ -12,18 +24,6 @@ const marvelSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'item_name',
       default: null,
-    },
-    code: {
-      type: String,
-      uppercase: true,
-      trim: true,
-      required: [true, 'Code  is required'],
-    },
-    base: {
-      type: [String],
-      uppercase: true,
-      trim: true,
-      required: [true, 'Base is required'],
     },
     size: {
       type: [
@@ -40,8 +40,8 @@ const marvelSchema = new mongoose.Schema(
           },
           time: {
             type: Number,
-            default: null,
             trim: true,
+            default: null,
           },
         },
       ],
@@ -51,18 +51,17 @@ const marvelSchema = new mongoose.Schema(
         {
           sub_category_name: {
             type: String,
-            required: [true, 'Sub Category Name is required'],
+            required: [true, 'Category Name is required'],
             trim: true,
             uppercase: true,
           },
           sub_category_id: {
             type: mongoose.Schema.Types.ObjectId,
-            required: [true, 'Sub Category ID is required'],
+            required: [true, 'Category ID is required'],
           },
         },
       ],
     },
-
     base_min_thickness: {
       type: Number,
       default: 0,
@@ -75,21 +74,13 @@ const marvelSchema = new mongoose.Schema(
       type: [String],
       default: null,
       trim: true,
-      set: (values) => {
-        return Array.isArray(values)
-          ? values?.map((val) => val?.toUpperCase())
-          : values;
-      },
+      uppercase: true,
     },
     process_flow: {
       type: [String],
       default: null,
       trim: true,
-      set: (values) => {
-        return Array.isArray(values)
-          ? values?.map((val) => val?.toUpperCase())
-          : values;
-      },
+      uppercase: true,
     },
     status: {
       type: Boolean,
@@ -103,11 +94,11 @@ const marvelSchema = new mongoose.Schema(
     },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,
-      required: [true, 'created by is required'],
+      required: [true, 'Created by is required'],
     },
     updated_by: {
       type: mongoose.Schema.Types.ObjectId,
-      required: [true, 'updated by is required'],
+      required: [true, 'Updated by is required'],
     },
   },
   {
@@ -115,7 +106,7 @@ const marvelSchema = new mongoose.Schema(
   }
 );
 
-marvelSchema.index({ code: 1 }, { unique: true });
+canvasSchema.index({ code: 1 }, { unique: true });
 
-const marvelModel = mongoose.model('marvel', marvelSchema);
-export default marvelModel;
+const canvasModel = mongoose.model('canvas', canvasSchema);
+export default canvasModel;

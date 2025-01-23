@@ -1,80 +1,80 @@
+import catchAsync from '../../utils/errors/catchAsync.js';
+import ApiError from '../../utils/errors/apiError.js';
+import ApiResponse from '../../utils/ApiResponse.js';
+import { StatusCodes } from '../../utils/constants.js';
+import chromaCompositeModel from '../../database/schema/seriesProductMaster/chromaComposite.master.schema.js';
+import { DynamicSearch } from '../../utils/dynamicSearch/dynamic.js';
+import { dynamic_filter } from '../../utils/dymanicFilter.js';
 import mongoose from 'mongoose';
-import ApiResponse from '../../../utils/ApiResponse.js';
-import ApiError from '../../../utils/errors/apiError.js';
-import catchAsync from '../../../utils/errors/catchAsync.js';
-import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
-import { dynamic_filter } from '../../../utils/dymanicFilter.js';
-import patternModel from '../../../database/schema/masters/pattern.schema.js';
 
-export const addPattern = catchAsync(async (req, res, next) => {
-  const { name } = req.body;
-  const authUserDetail = req.userDetails;
+export const addChromaComposite = catchAsync(async (req, res, next) => {
+  const reqBody = req.body;
+  const authUserDetails = req.userDetails;
 
-  if (!name) {
-    return next(new ApiError('Pattern Name is required', 400));
-  }
-
-  const patternData = {
-    name: name,
-    created_by: authUserDetail?._id,
-    updated_by: authUserDetail?._id,
+  const chromaCompositeDetails = {
+    ...reqBody,
+    created_by: authUserDetails?._id,
+    updated_by: authUserDetails?._id,
   };
+  const newChromaComposite = new chromaCompositeModel(chromaCompositeDetails);
 
-  const savePatternData = new patternModel(patternData);
-  await savePatternData.save();
-
-  if (!savePatternData) {
-    return next(new ApiError('Failed to insert data', 400));
-  }
+  await newChromaComposite.save();
 
   const response = new ApiResponse(
-    201,
-    'Pattern Added Successfully',
-    savePatternData
+    StatusCodes.CREATED,
+    'ChromaComposite Added Successfully',
+    newChromaComposite
   );
 
-  return res.status(201).json(response);
+  return res.status(StatusCodes.CREATED).json(response);
 });
 
-export const updatePattern = catchAsync(async (req, res, next) => {
-  const { id } = req.params;
-  const { name, status } = req.body;
-  const authUserDetail = req.userDetails;
+export const updateChromaCompositeDetails = catchAsync(
+  async (req, res, next) => {
+    const { id } = req.params;
+    const reqBody = req.body;
+    const authUserDetails = req.userDetails;
 
-  if (!id || !mongoose.isValidObjectId(id)) {
-    return next(new ApiError('Invalid Params Id', 400));
-  }
-
-  const patternData = {
-    name: name,
-    status: status,
-    updated_by: authUserDetail?._id,
-  };
-
-  const updatePatternData = await patternModel.updateOne(
-    { _id: id },
-    {
-      $set: patternData,
+    if (!id) {
+      return next(
+        new ApiError('ChromaComposite id is missing', StatusCodes.NOT_FOUND)
+      );
     }
-  );
+    const updatedDetails = {
+      ...reqBody,
+      updated_by: authUserDetails?._id,
+    };
 
-  if (updatePatternData.matchedCount <= 0) {
-    return next(new ApiError('Document not found', 404));
+    const updateResponse = await chromaCompositeModel.updateOne(
+      { _id: id },
+      {
+        $set: updatedDetails,
+      },
+      { new: true, runValidators: true }
+    );
+
+    if (updateResponse.matchedCount <= 0) {
+      return next(new ApiError('Document Not Found..', StatusCodes.NOT_FOUND));
+    }
+    if (!updateResponse.acknowledged || updateResponse.modifiedCount <= 0) {
+      return next(
+        new ApiError(
+          'Failed to update document',
+          StatusCodes.INTERNAL_SERVER_ERROR
+        )
+      );
+    }
+
+    const response = new ApiResponse(
+      StatusCodes.OK,
+      'ChromaComposite Updated Successfully',
+      updateResponse
+    );
+    return res.status(StatusCodes.OK).json(response);
   }
-  if (!updatePatternData.acknowledged || updatePatternData.modifiedCount <= 0) {
-    return next(new ApiError('Failed to update document', 400));
-  }
+);
 
-  const response = new ApiResponse(
-    201,
-    'Pattern Update Successfully',
-    updatePatternData
-  );
-
-  return res.status(201).json(response);
-});
-
-export const fetchPatternList = catchAsync(async (req, res, next) => {
+export const fetchChromaCompositeList = catchAsync(async (req, res, next) => {
   const {
     page = 1,
     limit = 10,
@@ -205,7 +205,8 @@ export const fetchPatternList = catchAsync(async (req, res, next) => {
     aggLimit,
   ]; // aggregation pipiline
 
-  const patternData = await patternModel.aggregate(listAggregate);
+  const chromaCompositeData =
+    await chromaCompositeModel.aggregate(listAggregate);
 
   const aggCount = {
     $count: 'totalCount',
@@ -220,18 +221,23 @@ export const fetchPatternList = catchAsync(async (req, res, next) => {
     aggCount,
   ]; // total aggregation pipiline
 
-  const totalDocument = await patternModel.aggregate(totalAggregate);
+  const totalDocument = await chromaCompositeModel.aggregate(totalAggregate);
+  console.log(totalDocument);
 
   const totalPages = Math.ceil((totalDocument?.[0]?.totalCount || 0) / limit);
 
-  const response = new ApiResponse(200, 'Pattern Data Fetched Successfully', {
-    data: patternData,
-    totalPages: totalPages,
-  });
-  return res.status(200).json(response);
+  const response = new ApiResponse(
+    StatusCodes.OK,
+    'ChromaComposite Details Fetched Successfully',
+    {
+      data: chromaCompositeData,
+      totalPages: totalPages,
+    }
+  );
+  return res.status(StatusCodes.OK).json(response);
 });
 
-export const fetchSinglePattern = catchAsync(async (req, res, next) => {
+export const fetchSingleChromaComposite = catchAsync(async (req, res, next) => {
   const { id } = req.params;
 
   if (!id || !mongoose.isValidObjectId(id)) {
@@ -300,38 +306,37 @@ export const fetchSinglePattern = catchAsync(async (req, res, next) => {
     },
   ];
 
-  const patternData = await patternModel.aggregate(aggregate);
+  const chromaCompositeData = await chromaCompositeModel.aggregate(aggregate);
 
-  if (patternData && patternData?.length <= 0) {
+  if (chromaCompositeData && chromaCompositeData?.length <= 0) {
     return next(new ApiError('Document Not found', 404));
   }
 
   const response = new ApiResponse(
-    200,
-    'Pattern Data Fetched Successfully',
-    patternData?.[0]
+    StatusCodes.OK,
+    'ChromaComposite Data Fetched Successfully',
+    chromaCompositeData?.[0]
   );
-  return res.status(200).json(response);
+  return res.status(StatusCodes.OK).json(response);
 });
 
-export const dropdownPattern = catchAsync(async (req, res, next) => {
-  const patternList = await patternModel.aggregate([
+export const dropdownChromaComposite = catchAsync(async (req, res, next) => {
+  const chromaCompositeList = await chromaCompositeModel.aggregate([
     {
-      $match: {
-        status: true,
-      },
+      $match: { status: true },
     },
     {
       $project: {
-        name: 1,
+        code: 1,
       },
     },
   ]);
 
   const response = new ApiResponse(
     200,
-    'Pattern Dropdown Fetched Successfully',
-    patternList
+    'ChromaComposite Dropdown Fetched Successfully',
+    chromaCompositeList
   );
-  return res.status(200).json(response);
+
+  return res.status(StatusCodes.OK).json(response);
 });

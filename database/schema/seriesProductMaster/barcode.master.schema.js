@@ -105,12 +105,12 @@ const barcodeSchema = new mongoose.Schema(
       type: String,
       uppercase: true,
       trim: true,
-      default: null
+      default: null,
     },
     default_item_name_id: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "item_name",
-      default: null
+      ref: 'item_name',
+      default: null,
     },
     code: {
       type: String,
@@ -150,37 +150,45 @@ const barcodeSchema = new mongoose.Schema(
         {
           sub_category_name: {
             type: String,
-            required: [true, "Sub Category Name is required"],
+            required: [true, 'Sub Category Name is required'],
             trim: true,
-            uppercase: true
+            uppercase: true,
           },
           sub_category_id: {
             type: mongoose.Schema.Types.ObjectId,
-            required: [true, "Sub Category ID is required"]
-          }
-        }
-      ]
+            required: [true, 'Sub Category ID is required'],
+          },
+        },
+      ],
     },
 
     base_min_thickness: {
       type: Number,
-      default: 0
+      default: 0,
     },
     veneer_min_thickness: {
       type: Number,
-      default: 0
+      default: 0,
     },
     instructions: {
       type: [String],
       default: null,
       trim: true,
-      set: (values) => { return Array.isArray(values) ? values?.map(val => val?.toUpperCase()) : values }
+      set: (values) => {
+        return Array.isArray(values)
+          ? values?.map((val) => val?.toUpperCase())
+          : values;
+      },
     },
     process_flow: {
       type: [String],
       default: null,
       trim: true,
-      set: (values) => { return Array.isArray(values) ? values?.map(val => val?.toUpperCase()) : values }
+      set: (values) => {
+        return Array.isArray(values)
+          ? values?.map((val) => val?.toUpperCase())
+          : values;
+      },
     },
 
     status: {

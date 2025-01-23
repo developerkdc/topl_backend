@@ -62,13 +62,11 @@ const AuthMiddleware = async (req, res, next) => {
     }
 
     if (userDetails?.status == false || userDetails?.deleted_at !== null) {
-      return res
-        .status(403)
-        .json({
-          result: [],
-          status: false,
-          message: 'Your account has been suspended. Please contact admin.',
-        });
+      return res.status(403).json({
+        result: [],
+        status: false,
+        message: 'Your account has been suspended. Please contact admin.',
+      });
       // return next(new ApiError("Your account has been suspended. Please contact admin.", 403));
     }
 

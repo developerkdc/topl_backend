@@ -83,13 +83,11 @@ const RolesPermissions = (name, key) => {
         user?.role_id?.deleted_at !== null
       ) {
         // return next(new ApiError("User role not found or disabled.", 403));
-        return res
-          .status(403)
-          .json({
-            result: [],
-            status: false,
-            message: 'User role not found or role is disabled.',
-          });
+        return res.status(403).json({
+          result: [],
+          status: false,
+          message: 'User role not found or role is disabled.',
+        });
       }
 
       const isAuthorized = user?.role_id?.permissions?.[name]?.[key];

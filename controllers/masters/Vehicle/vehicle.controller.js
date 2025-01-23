@@ -224,14 +224,10 @@ export const fetchVehicleList = catchAsync(async (req, res, next) => {
 
   const totalPages = Math.ceil((totalDocument?.[0]?.totalCount || 0) / limit);
 
-  const response = new ApiResponse(
-    200,
-    'Vehicle Data Fetched Successfully',
-    {
-      data: vehicleData,
-      totalPages: totalPages,
-    }
-  );
+  const response = new ApiResponse(200, 'Vehicle Data Fetched Successfully', {
+    data: vehicleData,
+    totalPages: totalPages,
+  });
   return res.status(200).json(response);
 });
 

@@ -224,14 +224,10 @@ export const fetchProcessList = catchAsync(async (req, res, next) => {
 
   const totalPages = Math.ceil((totalDocument?.[0]?.totalCount || 0) / limit);
 
-  const response = new ApiResponse(
-    200,
-    'Process Data Fetched Successfully',
-    {
-      data: processData,
-      totalPages: totalPages,
-    }
-  );
+  const response = new ApiResponse(200, 'Process Data Fetched Successfully', {
+    data: processData,
+    totalPages: totalPages,
+  });
   return res.status(200).json(response);
 });
 

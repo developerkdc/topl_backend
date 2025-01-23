@@ -70,6 +70,11 @@ import marvelRouter from './routes/seriesProductMaster/marvel.routes.js';
 import regantoClassicRouter from './routes/seriesProductMaster/reganto.classic.routes.js';
 import regantoPremierRouter from './routes/seriesProductMaster/reganto.premier.routes.js';
 import furrowRouter from './routes/seriesProductMaster/furrow.routes.js';
+import chromaCollectionRouter from './routes/seriesProductMaster/chromaCollection.routes.js';
+import chromaRibbedRouter from './routes/seriesProductMaster/chromaRibbed.routes.js';
+import chromaCompositeRouter from './routes/seriesProductMaster/chromaComposite.routes.js';
+import canvasRouter from './routes/seriesProductMaster/canvas.routes.js';
+import regantoDezinerRouter from './routes/seriesProductMaster/regantoDeziner.routes.js';
 const Configs = getConfigs();
 mongo_service();
 const app = express();
@@ -229,11 +234,23 @@ app.use(`/api/${Configs.server.version}/report`, reportRouter);
 app.use(`/api/${Configs.server.version}/approval`, approvalRouters);
 
 //Series Product Master
-app.use(`/api/${Configs.server.version}/series-product-master`, [barcodeRouter, bunitoRouter, mattleRouter, novelRouter, marvelRouter, regantoClassicRouter, regantoPremierRouter, furrowRouter]);
-
+app.use(`/api/${Configs.server.version}/series-product-master`, [
+  barcodeRouter,
+  chromaCollectionRouter,
+  chromaRibbedRouter,
+  chromaCompositeRouter,
+  canvasRouter,
+  regantoDezinerRouter,
+  bunitoRouter,
+  mattleRouter,
+  novelRouter,
+  marvelRouter,
+  regantoClassicRouter,
+  regantoPremierRouter,
+  furrowRouter,
+]);
 
 app.use(globalErrorHandler);
-
 
 // Error handling for the server
 server.on('error', (error) => {

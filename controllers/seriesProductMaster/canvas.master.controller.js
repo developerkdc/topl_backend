@@ -1,80 +1,76 @@
+import catchAsync from '../../utils/errors/catchAsync.js';
+import ApiError from '../../utils/errors/apiError.js';
+import ApiResponse from '../../utils/ApiResponse.js';
+import { StatusCodes } from '../../utils/constants.js';
+import canvasModel from '../../database/schema/seriesProductMaster/canvas.master.schema.js';
+import { DynamicSearch } from '../../utils/dynamicSearch/dynamic.js';
+import { dynamic_filter } from '../../utils/dymanicFilter.js';
 import mongoose from 'mongoose';
-import ApiResponse from '../../../utils/ApiResponse.js';
-import ApiError from '../../../utils/errors/apiError.js';
-import catchAsync from '../../../utils/errors/catchAsync.js';
-import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
-import { dynamic_filter } from '../../../utils/dymanicFilter.js';
-import patternModel from '../../../database/schema/masters/pattern.schema.js';
 
-export const addPattern = catchAsync(async (req, res, next) => {
-  const { name } = req.body;
-  const authUserDetail = req.userDetails;
+export const addCanvas = catchAsync(async (req, res, next) => {
+  const reqBody = req.body;
+  const authUserDetails = req.userDetails;
 
-  if (!name) {
-    return next(new ApiError('Pattern Name is required', 400));
-  }
-
-  const patternData = {
-    name: name,
-    created_by: authUserDetail?._id,
-    updated_by: authUserDetail?._id,
+  const canvasDetails = {
+    ...reqBody,
+    created_by: authUserDetails?._id,
+    updated_by: authUserDetails?._id,
   };
+  const newCanvas = new canvasModel(canvasDetails);
 
-  const savePatternData = new patternModel(patternData);
-  await savePatternData.save();
-
-  if (!savePatternData) {
-    return next(new ApiError('Failed to insert data', 400));
-  }
+  await newCanvas.save();
 
   const response = new ApiResponse(
-    201,
-    'Pattern Added Successfully',
-    savePatternData
+    StatusCodes.CREATED,
+    'Canvas Added Successfully',
+    newCanvas
   );
 
-  return res.status(201).json(response);
+  return res.status(StatusCodes.CREATED).json(response);
 });
 
-export const updatePattern = catchAsync(async (req, res, next) => {
+export const updateCanvasDetails = catchAsync(async (req, res, next) => {
   const { id } = req.params;
-  const { name, status } = req.body;
-  const authUserDetail = req.userDetails;
+  const reqBody = req.body;
+  const authUserDetails = req.userDetails;
 
-  if (!id || !mongoose.isValidObjectId(id)) {
-    return next(new ApiError('Invalid Params Id', 400));
+  if (!id) {
+    return next(new ApiError('Canvas id is missing', StatusCodes.NOT_FOUND));
   }
-
-  const patternData = {
-    name: name,
-    status: status,
-    updated_by: authUserDetail?._id,
+  const updatedDetails = {
+    ...reqBody,
+    updated_by: authUserDetails?._id,
   };
 
-  const updatePatternData = await patternModel.updateOne(
+  const updateResponse = await canvasModel.updateOne(
     { _id: id },
     {
-      $set: patternData,
-    }
+      $set: updatedDetails,
+    },
+    { new: true, runValidators: true }
   );
 
-  if (updatePatternData.matchedCount <= 0) {
-    return next(new ApiError('Document not found', 404));
+  if (updateResponse.matchedCount <= 0) {
+    return next(new ApiError('Document Not Found..', StatusCodes.NOT_FOUND));
   }
-  if (!updatePatternData.acknowledged || updatePatternData.modifiedCount <= 0) {
-    return next(new ApiError('Failed to update document', 400));
+  if (!updateResponse.acknowledged || updateResponse.modifiedCount <= 0) {
+    return next(
+      new ApiError(
+        'Failed to update document',
+        StatusCodes.INTERNAL_SERVER_ERROR
+      )
+    );
   }
 
   const response = new ApiResponse(
-    201,
-    'Pattern Update Successfully',
-    updatePatternData
+    StatusCodes.OK,
+    'Canvas Updated Successfully',
+    updateResponse
   );
-
-  return res.status(201).json(response);
+  return res.status(StatusCodes.OK).json(response);
 });
 
-export const fetchPatternList = catchAsync(async (req, res, next) => {
+export const fetchCanvasList = catchAsync(async (req, res, next) => {
   const {
     page = 1,
     limit = 10,
@@ -205,7 +201,7 @@ export const fetchPatternList = catchAsync(async (req, res, next) => {
     aggLimit,
   ]; // aggregation pipiline
 
-  const patternData = await patternModel.aggregate(listAggregate);
+  const canvasData = await canvasModel.aggregate(listAggregate);
 
   const aggCount = {
     $count: 'totalCount',
@@ -220,18 +216,23 @@ export const fetchPatternList = catchAsync(async (req, res, next) => {
     aggCount,
   ]; // total aggregation pipiline
 
-  const totalDocument = await patternModel.aggregate(totalAggregate);
+  const totalDocument = await canvasModel.aggregate(totalAggregate);
+  console.log(totalDocument);
 
   const totalPages = Math.ceil((totalDocument?.[0]?.totalCount || 0) / limit);
 
-  const response = new ApiResponse(200, 'Pattern Data Fetched Successfully', {
-    data: patternData,
-    totalPages: totalPages,
-  });
-  return res.status(200).json(response);
+  const response = new ApiResponse(
+    StatusCodes.OK,
+    'Canvas Details Fetched Successfully',
+    {
+      data: canvasData,
+      totalPages: totalPages,
+    }
+  );
+  return res.status(StatusCodes.OK).json(response);
 });
 
-export const fetchSinglePattern = catchAsync(async (req, res, next) => {
+export const fetchSingleCanvas = catchAsync(async (req, res, next) => {
   const { id } = req.params;
 
   if (!id || !mongoose.isValidObjectId(id)) {
@@ -300,38 +301,37 @@ export const fetchSinglePattern = catchAsync(async (req, res, next) => {
     },
   ];
 
-  const patternData = await patternModel.aggregate(aggregate);
+  const canvasData = await canvasModel.aggregate(aggregate);
 
-  if (patternData && patternData?.length <= 0) {
+  if (canvasData && canvasData?.length <= 0) {
     return next(new ApiError('Document Not found', 404));
   }
 
   const response = new ApiResponse(
-    200,
-    'Pattern Data Fetched Successfully',
-    patternData?.[0]
+    StatusCodes.OK,
+    'Canvas Data Fetched Successfully',
+    canvasData?.[0]
   );
-  return res.status(200).json(response);
+  return res.status(StatusCodes.OK).json(response);
 });
 
-export const dropdownPattern = catchAsync(async (req, res, next) => {
-  const patternList = await patternModel.aggregate([
+export const dropdownCanvas = catchAsync(async (req, res, next) => {
+  const canvasList = await canvasModel.aggregate([
     {
-      $match: {
-        status: true,
-      },
+      $match: { status: true },
     },
     {
       $project: {
-        name: 1,
+        code: 1,
       },
     },
   ]);
 
   const response = new ApiResponse(
     200,
-    'Pattern Dropdown Fetched Successfully',
-    patternList
+    'Canvas Dropdown Fetched Successfully',
+    canvasList
   );
-  return res.status(200).json(response);
+
+  return res.status(StatusCodes.OK).json(response);
 });

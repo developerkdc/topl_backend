@@ -2,52 +2,57 @@ import catchAsync from '../../utils/errors/catchAsync.js';
 import ApiError from '../../utils/errors/apiError.js';
 import ApiResponse from '../../utils/ApiResponse.js';
 import { StatusCodes } from '../../utils/constants.js';
+import chromaCollectionModel from '../../database/schema/seriesProductMaster/chromaCollection.master.schema.js';
 import { DynamicSearch } from '../../utils/dynamicSearch/dynamic.js';
 import { dynamic_filter } from '../../utils/dymanicFilter.js';
 import mongoose from 'mongoose';
-import regantoPremierModel from '../../database/schema/seriesProductMaster/reganto.premier.master.schema.js';
 
-export const addRegantoPremier = catchAsync(async (req, res, next) => {
+export const addChromaCollection = catchAsync(async (req, res, next) => {
   const reqBody = req.body;
   const authUserDetails = req.userDetails;
-  const itemDetails = {
+
+  const chromaCollectionDetails = {
     ...reqBody,
     created_by: authUserDetails?._id,
     updated_by: authUserDetails?._id,
   };
-  const newData = new regantoPremierModel(itemDetails);
+  const newChromaCollection = new chromaCollectionModel(
+    chromaCollectionDetails
+  );
 
-  await newData.save();
+  await newChromaCollection.save();
 
   const response = new ApiResponse(
     StatusCodes.CREATED,
-    'Item Added Successfully',
-    newData
+    'Chroma Collection Added Successfully',
+    newChromaCollection
   );
 
   return res.status(StatusCodes.CREATED).json(response);
 });
 
-export const updateRegantoPremierDetails = catchAsync(
+export const updateChromaCollectionDetails = catchAsync(
   async (req, res, next) => {
     const { id } = req.params;
     const reqBody = req.body;
     const authUserDetails = req.userDetails;
 
     if (!id) {
-      return next(new ApiError('Id is missing', StatusCodes.NOT_FOUND));
+      return next(
+        new ApiError('ChromaCollection id is missing', StatusCodes.NOT_FOUND)
+      );
     }
     const updatedDetails = {
       ...reqBody,
       updated_by: authUserDetails?._id,
     };
 
-    const updateResponse = await regantoPremierModel.updateOne(
+    const updateResponse = await chromaCollectionModel.updateOne(
       { _id: id },
       {
         $set: updatedDetails,
       },
-      { runValidators: true }
+      { new: true, runValidators: true }
     );
 
     if (updateResponse.matchedCount <= 0) {
@@ -64,14 +69,14 @@ export const updateRegantoPremierDetails = catchAsync(
 
     const response = new ApiResponse(
       StatusCodes.OK,
-      'Item Updated Successfully',
+      'ChromaCollection Updated Successfully',
       updateResponse
     );
     return res.status(StatusCodes.OK).json(response);
   }
 );
 
-export const fetchRegantoPremierList = catchAsync(async (req, res, next) => {
+export const fetchChromaCollectionList = catchAsync(async (req, res, next) => {
   const {
     page = 1,
     limit = 10,
@@ -202,7 +207,8 @@ export const fetchRegantoPremierList = catchAsync(async (req, res, next) => {
     aggLimit,
   ]; // aggregation pipiline
 
-  const result = await regantoPremierModel.aggregate(listAggregate);
+  const chromaCollectionData =
+    await chromaCollectionModel.aggregate(listAggregate);
 
   const aggCount = {
     $count: 'totalCount',
@@ -217,106 +223,110 @@ export const fetchRegantoPremierList = catchAsync(async (req, res, next) => {
     aggCount,
   ]; // total aggregation pipiline
 
-  const totalDocument = await regantoPremierModel.aggregate(totalAggregate);
+  const totalDocument = await chromaCollectionModel.aggregate(totalAggregate);
+  console.log(totalDocument);
 
   const totalPages = Math.ceil((totalDocument?.[0]?.totalCount || 0) / limit);
 
   const response = new ApiResponse(
     StatusCodes.OK,
-    'Reganto Premier Details Fetched Successfully',
+    'ChromaCollection Details Fetched Successfully',
     {
-      data: result,
+      data: chromaCollectionData,
       totalPages: totalPages,
     }
   );
   return res.status(StatusCodes.OK).json(response);
 });
 
-export const fetchSingleRegantoPremier = catchAsync(async (req, res, next) => {
-  const { id } = req.params;
+export const fetchSingleChromaCollection = catchAsync(
+  async (req, res, next) => {
+    const { id } = req.params;
 
-  if (!id || !mongoose.isValidObjectId(id)) {
-    return next(new ApiError('Invalid Params Id', 400));
-  }
+    if (!id || !mongoose.isValidObjectId(id)) {
+      return next(new ApiError('Invalid Params Id', 400));
+    }
 
-  const aggregate = [
-    {
-      $match: {
-        _id: mongoose.Types.ObjectId.createFromHexString(id),
+    const aggregate = [
+      {
+        $match: {
+          _id: mongoose.Types.ObjectId.createFromHexString(id),
+        },
       },
-    },
-    {
-      $lookup: {
-        from: 'users',
-        localField: 'created_by',
-        foreignField: '_id',
-        pipeline: [
-          {
-            $project: {
-              user_name: 1,
-              user_type: 1,
-              dept_name: 1,
-              first_name: 1,
-              last_name: 1,
-              email_id: 1,
-              mobile_no: 1,
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'created_by',
+          foreignField: '_id',
+          pipeline: [
+            {
+              $project: {
+                user_name: 1,
+                user_type: 1,
+                dept_name: 1,
+                first_name: 1,
+                last_name: 1,
+                email_id: 1,
+                mobile_no: 1,
+              },
             },
-          },
-        ],
-        as: 'created_by',
+          ],
+          as: 'created_by',
+        },
       },
-    },
-    {
-      $lookup: {
-        from: 'users',
-        localField: 'updated_by',
-        foreignField: '_id',
-        pipeline: [
-          {
-            $project: {
-              user_name: 1,
-              user_type: 1,
-              dept_name: 1,
-              first_name: 1,
-              last_name: 1,
-              email_id: 1,
-              mobile_no: 1,
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'updated_by',
+          foreignField: '_id',
+          pipeline: [
+            {
+              $project: {
+                user_name: 1,
+                user_type: 1,
+                dept_name: 1,
+                first_name: 1,
+                last_name: 1,
+                email_id: 1,
+                mobile_no: 1,
+              },
             },
-          },
-        ],
-        as: 'updated_by',
+          ],
+          as: 'updated_by',
+        },
       },
-    },
-    {
-      $unwind: {
-        path: '$created_by',
-        preserveNullAndEmptyArrays: true,
+      {
+        $unwind: {
+          path: '$created_by',
+          preserveNullAndEmptyArrays: true,
+        },
       },
-    },
-    {
-      $unwind: {
-        path: '$updated_by',
-        preserveNullAndEmptyArrays: true,
+      {
+        $unwind: {
+          path: '$updated_by',
+          preserveNullAndEmptyArrays: true,
+        },
       },
-    },
-  ];
+    ];
 
-  const result = await regantoPremierModel.aggregate(aggregate);
+    const chromaCollectionData =
+      await chromaCollectionModel.aggregate(aggregate);
 
-  if (result && result?.length <= 0) {
-    return next(new ApiError('Document Not found', 404));
+    if (chromaCollectionData && chromaCollectionData?.length <= 0) {
+      return next(new ApiError('Document Not found', 404));
+    }
+
+    const response = new ApiResponse(
+      StatusCodes.OK,
+      'ChromaCollection Data Fetched Successfully',
+      chromaCollectionData?.[0]
+    );
+    return res.status(StatusCodes.OK).json(response);
   }
+);
 
-  const response = new ApiResponse(
-    StatusCodes.OK,
-    'Data Fetched Successfully',
-    result?.[0]
-  );
-  return res.status(StatusCodes.OK).json(response);
-});
-
-export const dropdownRegantoPremier = catchAsync(async (req, res, next) => {
-  const result = await regantoPremierModel.aggregate([
+export const dropdownChromaCollection = catchAsync(async (req, res, next) => {
+  const chromaCollectionList = await chromaCollectionModel.aggregate([
     {
       $match: { status: true },
     },
@@ -328,9 +338,9 @@ export const dropdownRegantoPremier = catchAsync(async (req, res, next) => {
   ]);
 
   const response = new ApiResponse(
-    StatusCodes.OK,
-    'Reganto Premier Dropdown Fetched Successfully',
-    result
+    200,
+    'ChromaCollection Dropdown Fetched Successfully',
+    chromaCollectionList
   );
 
   return res.status(StatusCodes.OK).json(response);

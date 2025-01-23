@@ -55,13 +55,11 @@ export const UpdateApprovalConfigMaster = catchAsync(async (req, res) => {
   const Id = req.query.id;
   const updateData = req.body;
   if (!mongoose.Types.ObjectId.isValid(Id)) {
-    return res
-      .status(400)
-      .json({
-        result: [],
-        status: false,
-        message: 'Invalid ApprovalConfig ID',
-      });
+    return res.status(400).json({
+      result: [],
+      status: false,
+      message: 'Invalid ApprovalConfig ID',
+    });
   }
   const user = await ApprovalConfigModel.findByIdAndUpdate(
     Id,
