@@ -17,6 +17,15 @@ export const addPhoto = catchAsync(async (req, res, next) => {
       return next(new ApiError('Photo number is required', 400));
     }
 
+    const maxNumber = await photoModel.aggregate([{
+      $group: {
+        _id: null,
+        max: { $max: "$sr_no" }
+      }
+    }]);
+
+    const maxSrNo = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1
+
     const photoImagesFiles = req.files?.images;
     let images = [];
     if (photoImagesFiles.length > 0) {
@@ -25,11 +34,12 @@ export const addPhoto = catchAsync(async (req, res, next) => {
 
     const bannerImagesFile = req.files?.banner_image
     let bannerImage;
-    if(bannerImagesFile?.length > 0 && bannerImagesFile?.[0]){
+    if (bannerImagesFile?.length > 0 && bannerImagesFile?.[0]) {
       bannerImage = bannerImagesFile?.[0]
     }
 
     const photoData = {
+      sr_no: maxSrNo,
       photo_number: photo_number,
       images: images,
       banner_image: bannerImage,
@@ -88,7 +98,7 @@ export const updatePhoto = catchAsync(async (req, res, next) => {
 
     const bannerImagesFile = req.files?.banner_image
     let bannerImage;
-    if(bannerImagesFile?.length > 0 && bannerImagesFile?.[0]){
+    if (bannerImagesFile?.length > 0 && bannerImagesFile?.[0]) {
       bannerImage = bannerImagesFile?.[0]
     }
 
@@ -109,7 +119,7 @@ export const updatePhoto = catchAsync(async (req, res, next) => {
       throw error;
     }
 
-    const fetchPhotoData = await photoModel.findOne({_id:id})
+    const fetchPhotoData = await photoModel.findOne({ _id: id })
 
     const photoData = {
       photo_number: photo_number,
@@ -117,7 +127,7 @@ export const updatePhoto = catchAsync(async (req, res, next) => {
       updated_by: authUserDetail?._id,
     };
 
-    if(bannerImage){
+    if (bannerImage) {
       photoData.banner_image = bannerImage;
       if (fs.existsSync(fetchPhotoData?.banner_image?.path)) {
         fs.unlinkSync(fetchPhotoData?.banner_image?.path);
