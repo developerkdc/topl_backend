@@ -8,14 +8,13 @@ const photoSchema = new mongoose.Schema(
       trim: true,
       required: [true, 'Pattern Name is required'],
     },
+    banner_image: {
+      type: Schema.Types.Mixed,
+      required:[true,"Banner Images is required"]
+    },
     images: {
       type: [Schema.Types.Mixed],
-      validate: {
-        validator: function (v) {
-          return v.length > 0;
-        },
-        message: 'Atleast one image is required',
-      },
+      default:null
     },
     status: {
       type: Boolean,
