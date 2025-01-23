@@ -1,7 +1,7 @@
-import mongoose from "mongoose";
-import invoice_details from "../../../Utils/invoiceDetails.schema.js";
-import expensesSchema from "../../masters/expenses.schema.js";
-import { approval_status } from "../../../Utils/approvalStatus.schema.js";
+import mongoose from 'mongoose';
+import invoice_details from '../../../Utils/invoiceDetails.schema.js';
+import expensesSchema from '../../masters/expenses.schema.js';
+import { approval_status } from '../../../Utils/approvalStatus.schema.js';
 
 export const item_details_schema = new mongoose.Schema(
   {
@@ -9,86 +9,86 @@ export const item_details_schema = new mongoose.Schema(
       type: String,
       default: null,
       trim: true,
-      uppercase: true
+      uppercase: true,
     },
     item_id: {
       type: mongoose.Schema.Types.ObjectId,
-      required: [true, "Items id is required"],
+      required: [true, 'Items id is required'],
     },
     item_sr_no: {
       type: Number,
       //   unique: true,
-      required: [true, "item Sr No is required"],
+      required: [true, 'item Sr No is required'],
     },
     item_name: {
       type: String,
-      required: [true, "Item Name is required"],
+      required: [true, 'Item Name is required'],
       trim: true,
-      uppercase: true
+      uppercase: true,
     },
     item_sub_category_name: {
       type: String,
-      required: [true, "other goods sub category name is required"],
+      required: [true, 'other goods sub category name is required'],
       trim: true,
-      uppercase: true
+      uppercase: true,
     },
     item_sub_category_id: {
       type: String,
-      required: [true, "other goods sub category id is required"],
-      ref: "item_subcategory",
+      required: [true, 'other goods sub category id is required'],
+      ref: 'item_subcategory',
     },
     department_id: {
       type: String,
-      required: [true, "department id is required"],
+      required: [true, 'department id is required'],
     },
     department_name: {
       type: String,
-      required: [true, "department name is required"],
+      required: [true, 'department name is required'],
       trim: true,
-      uppercase: true
+      uppercase: true,
     },
     machine_id: {
       type: String,
-      required: [true, "machine id is required"],
-      ref: "machine",
+      required: [true, 'machine id is required'],
+      ref: 'machine',
     },
     machine_name: {
       type: String,
-      required: [true, "machine name is required"],
+      required: [true, 'machine name is required'],
       trim: true,
-      uppercase: true
+      uppercase: true,
     },
     brand_name: {
       type: String,
       default: null,
       trim: true,
-      uppercase: true
+      uppercase: true,
     },
     item_description: {
       type: String,
-      required: [true, "description is required"],
+      required: [true, 'description is required'],
       uppercase: true,
-      trim: true
+      trim: true,
     },
     total_quantity: {
       type: Number,
-      required: [true, "total_quantity is required"],
+      required: [true, 'total_quantity is required'],
     },
     rate_in_currency: {
       type: Number,
-      required: [true, "Rate in currency is required"],
+      required: [true, 'Rate in currency is required'],
     },
     exchange_rate: {
       type: Number,
-      required: [true, "exchange rate is required"],
+      required: [true, 'exchange rate is required'],
     },
     rate_in_inr: {
       type: Number,
-      required: [true, "Rate in inr is required"],
+      required: [true, 'Rate in inr is required'],
     },
     amount: {
       type: Number,
-      required: [true, "Amount is required"],
+      required: [true, 'Amount is required'],
     },
     amount_factor: {
       type: Number,
@@ -102,15 +102,15 @@ export const item_details_schema = new mongoose.Schema(
       type: String,
       default: null,
       trim: true,
-      uppercase: true
+      uppercase: true,
     },
     invoice_id: {
       type: mongoose.Schema.Types.ObjectId,
-      required: [true, "Invioce Id is required"],
+      required: [true, 'Invioce Id is required'],
     },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,
-      required: [true, "created by is required field"],
+      required: [true, 'created by is required field'],
     },
     deleted_at: {
       type: Date,
@@ -128,54 +128,54 @@ export const othergoods_invoice_schema = new mongoose.Schema(
     inward_sr_no: {
       type: Number,
       unique: true,
-      required: [true, "Invoice Sr No is required"],
+      required: [true, 'Invoice Sr No is required'],
     },
     inward_date: {
       type: Date,
       default: Date.now,
-      required: [true, "Inwrad Date is required"],
+      required: [true, 'Inwrad Date is required'],
     },
     currency: {
       type: String,
-      required: [true, "Currency is required"],
+      required: [true, 'Currency is required'],
     },
     workers_details: {
       no_of_workers: {
         type: Number,
-        required: [true, "No of worker is required"],
+        required: [true, 'No of worker is required'],
       },
       shift: {
         type: String,
-        required: [true, "Shift is required"],
+        required: [true, 'Shift is required'],
         trim: true,
-        uppercase: true
+        uppercase: true,
       },
       working_hours: {
         type: Number,
-        required: [true, "Working hours is required"],
+        required: [true, 'Working hours is required'],
       },
       total_hours: {
         type: Number,
         default: 0,
-        required: [true, "Total hours required"]
-      }
+        required: [true, 'Total hours required'],
+      },
     },
     supplier_details: {
       company_details: {
         supplier_company_id: {
           type: mongoose.Schema.Types.ObjectId,
-          required: [true, "company id is required"],
+          required: [true, 'company id is required'],
         },
         supplier_name: {
           type: String,
-          required: [true, "Supplier Name is required."],
+          required: [true, 'Supplier Name is required.'],
 
           uppercase: true,
           trim: true,
         },
         supplier_type: {
           type: [String],
-          required: [true, "Supplier Name is required."],
+          required: [true, 'Supplier Name is required.'],
 
           uppercase: true,
           trim: true,
@@ -184,21 +184,21 @@ export const othergoods_invoice_schema = new mongoose.Schema(
       branch_detail: {
         branch_id: {
           type: mongoose.Schema.Types.ObjectId,
-          required: [true, "company id is required"],
+          required: [true, 'company id is required'],
         },
         branch_name: {
           type: String,
-          required: [true, "branch name is reqiured"],
+          required: [true, 'branch name is reqiured'],
         },
         contact_person: {
           type: [
             {
               name: {
                 type: String,
-                required: [true, "contact person name is required"],
+                required: [true, 'contact person name is required'],
                 // unique: [true, "contact person name is required"],
                 trim: true,
-                uppercase: true
+                uppercase: true,
               },
               email: {
                 type: String,
@@ -216,49 +216,49 @@ export const othergoods_invoice_schema = new mongoose.Schema(
                 // required: [true, "designation is required"],
                 default: null,
                 trim: true,
-                uppercase: true
+                uppercase: true,
               },
             },
           ],
-          required: [true, "at least one contact person is required"],
+          required: [true, 'at least one contact person is required'],
         },
         address: {
           type: String,
-          required: [true, "address is required"],
+          required: [true, 'address is required'],
           trim: true,
-          uppercase: true
+          uppercase: true,
         },
         state: {
           type: String,
-          required: [true, "state is required"],
+          required: [true, 'state is required'],
           trim: true,
           // uppercase: true
         },
         country: {
           type: String,
-          required: [true, "country is required"],
+          required: [true, 'country is required'],
           trim: true,
           // uppercase: true
         },
         city: {
           type: String,
-          required: [true, "city is required"],
+          required: [true, 'city is required'],
           trim: true,
           // uppercase: true
         },
         pincode: {
           type: String,
-          required: [true, "pincode is required"],
+          required: [true, 'pincode is required'],
         },
         gst_number: {
           type: String,
           // required: [true, "gst number is required"],
 
-          default: null
+          default: null,
         },
         web_url: {
           type: String,
-          default: null
+          default: null,
         },
       },
     },
@@ -266,15 +266,15 @@ export const othergoods_invoice_schema = new mongoose.Schema(
     invoice_Details: invoice_details,
     expenses: {
       type: [expensesSchema],
-      default: null
+      default: null,
     },
     totalExpenseAmount: {
       type: Number,
-      default: 0
+      default: 0,
     },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,
-      required: [true, "created by is required field"],
+      required: [true, 'created by is required field'],
     },
     deleted_at: {
       type: Date,
@@ -287,14 +287,17 @@ export const othergoods_invoice_schema = new mongoose.Schema(
 );
 
 othergoods_invoice_schema.index({ inward_sr_no: 1 });
-othergoods_invoice_schema.index({ inward_sr_no: 1, "expensesSchema.expenseType": 1 }, { unique: true });
+othergoods_invoice_schema.index(
+  { inward_sr_no: 1, 'expensesSchema.expenseType': 1 },
+  { unique: true }
+);
 
 export const othergoods_inventory_items_details = mongoose.model(
-  "othergoods_inventory_items_details",
+  'othergoods_inventory_items_details',
   item_details_schema
 );
 export const othergoods_inventory_invoice_details = mongoose.model(
-  "othergoods_inventory_invoice_details",
+  'othergoods_inventory_invoice_details',
   othergoods_invoice_schema
 );
 
@@ -308,13 +311,13 @@ const othergoods_inventory_items_view_schema = new mongoose.Schema(
 );
 
 export const othergoods_inventory_items_view_modal = mongoose.model(
-  "othergoods_inventory_items_view",
+  'othergoods_inventory_items_view',
   othergoods_inventory_items_view_schema
 );
 
 (async function () {
   await othergoods_inventory_items_view_modal.createCollection({
-    viewOn: "othergoods_inventory_items_details",
+    viewOn: 'othergoods_inventory_items_details',
     pipeline: [
       {
         $sort: {
@@ -324,37 +327,37 @@ export const othergoods_inventory_items_view_modal = mongoose.model(
       },
       {
         $lookup: {
-          from: "othergoods_inventory_invoice_details",
-          localField: "invoice_id",
-          foreignField: "_id",
-          as: "othergoods_invoice_details",
+          from: 'othergoods_inventory_invoice_details',
+          localField: 'invoice_id',
+          foreignField: '_id',
+          as: 'othergoods_invoice_details',
         },
       },
       {
         $unwind: {
-          path: "$othergoods_invoice_details",
+          path: '$othergoods_invoice_details',
           preserveNullAndEmptyArrays: true,
         },
       },
       {
         $lookup: {
-          from: "users",
-          localField: "created_by",
-          foreignField: "_id",
+          from: 'users',
+          localField: 'created_by',
+          foreignField: '_id',
           pipeline: [
             {
               $project: {
                 // "_id" : 1,
-                "user_name": 1,
+                user_name: 1,
               },
             },
           ],
-          as: "created_user",
+          as: 'created_user',
         },
       },
       {
         $unwind: {
-          path: "$created_user",
+          path: '$created_user',
           preserveNullAndEmptyArrays: true,
         },
       },

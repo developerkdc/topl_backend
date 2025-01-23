@@ -1,5 +1,5 @@
-import mongoose from "mongoose";
-import LogSchemaFunction from "../LogsSchema/logs.schema.js";
+import mongoose from 'mongoose';
+import LogSchemaFunction from '../LogsSchema/logs.schema.js';
 
 const IndividualDyingSchema = new mongoose.Schema({
   issued_dying_quantity: {
@@ -31,8 +31,8 @@ const IndividualDyingSchema = new mongoose.Schema({
   // },
   item_details: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "raw_material",
-    required: [true, "Item ID is required"],
+    ref: 'raw_material',
+    required: [true, 'Item ID is required'],
   },
   // issued_individual_dying_id: {
   //   type: mongoose.Schema.Types.ObjectId,
@@ -47,32 +47,32 @@ const IndividualDyingSchema = new mongoose.Schema({
   // },
   date_of_dying: {
     type: Date,
-    required: [true, "Date of dying is required"],
+    required: [true, 'Date of dying is required'],
   },
   in_time: {
     type: Date,
-    required: [true, "In Time is required"],
+    required: [true, 'In Time is required'],
   },
   process_time: {
     type: Number,
-    required: [true, "Out Time is required"],
+    required: [true, 'Out Time is required'],
   },
   out_time: {
     type: Date,
-    required: [true, "Date of Grouping is required"],
+    required: [true, 'Date of Grouping is required'],
   },
   consumed_item_name_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "item_name",
-    required: [true, "Consumed Item Name ID is required."],
+    ref: 'item_name',
+    required: [true, 'Consumed Item Name ID is required.'],
   },
   consumed_item_name: {
     type: String,
-    required: [true, "Consumed Item Name is required."],
+    required: [true, 'Consumed Item Name is required.'],
   },
   liters_of_ammonia_used: {
     type: Number,
-    required: [true, "Liters of Ammonia used is required"],
+    required: [true, 'Liters of Ammonia used is required'],
   },
   created_employee_id: {
     type: String,
@@ -84,8 +84,8 @@ const IndividualDyingSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ["dyed", "passed", "rejected"],
-    default: "dyed",
+    enum: ['dyed', 'passed', 'rejected'],
+    default: 'dyed',
   },
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now },
@@ -93,8 +93,8 @@ const IndividualDyingSchema = new mongoose.Schema({
 });
 
 export const IndividualDyingModel = mongoose.model(
-  "individual_dying",
+  'individual_dying',
   IndividualDyingSchema
 );
 
-LogSchemaFunction("individualDying", IndividualDyingModel);
+LogSchemaFunction('individualDying', IndividualDyingModel);

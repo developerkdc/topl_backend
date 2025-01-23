@@ -1,5 +1,5 @@
-import mongoose from "mongoose";
-import LogSchemaFunction from "../../LogsSchema/logs.schema.js";
+import mongoose from 'mongoose';
+import LogSchemaFunction from '../../LogsSchema/logs.schema.js';
 
 const OtherGoodsSchema = new mongoose.Schema({
   date_of_inward: {
@@ -9,7 +9,7 @@ const OtherGoodsSchema = new mongoose.Schema({
   },
   item_name: {
     type: String,
-    required: [true, "Item Name is required."],
+    required: [true, 'Item Name is required.'],
     trim: true,
   },
   units: {
@@ -50,7 +50,7 @@ const OtherGoodsSchema = new mongoose.Schema({
   supplier_details: {
     supplier_name: {
       type: String,
-      required: [true, "Supplier Name is required."],
+      required: [true, 'Supplier Name is required.'],
       trim: true,
     },
     country: {
@@ -104,7 +104,7 @@ const OtherGoodsSchema = new mongoose.Schema({
       type: String,
       minlength: 5,
       maxlength: 50,
-      required: [true, "Email ID is Required"],
+      required: [true, 'Email ID is Required'],
       trim: true,
     },
     pan_no: {
@@ -121,7 +121,7 @@ const OtherGoodsSchema = new mongoose.Schema({
   },
   created_employee_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "user",
+    ref: 'user',
   },
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now },
@@ -129,10 +129,10 @@ const OtherGoodsSchema = new mongoose.Schema({
 });
 
 const OtherGoodsConsumedModel = mongoose.model(
-  "other_goods_issued",
+  'other_goods_issued',
   OtherGoodsSchema
 );
 
-LogSchemaFunction("otherGoodsIssued", OtherGoodsConsumedModel,[]);
+LogSchemaFunction('otherGoodsIssued', OtherGoodsConsumedModel, []);
 
 export default OtherGoodsConsumedModel;

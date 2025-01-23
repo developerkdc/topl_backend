@@ -1,10 +1,10 @@
-import fs from "fs";
-import multer from "multer";
-import path from "path";
+import fs from 'fs';
+import multer from 'multer';
+import path from 'path';
 
 const multerFunction = (destination) => {
-  if (!fs.existsSync("public/upload")) {
-    fs.mkdirSync("public/upload", { recursive: true });
+  if (!fs.existsSync('public/upload')) {
+    fs.mkdirSync('public/upload', { recursive: true });
   }
   const storage = multer.diskStorage({
     destination: function (req, file, cb) {
@@ -30,12 +30,12 @@ const multerFunction = (destination) => {
   const fileFilter = function (req, file, cb) {
     if (
       file.mimetype ===
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     ) {
       cb(null, true);
     } else {
       cb(
-        new Error("Invalid file type. Only Excel files (xlsx) are allowed."),
+        new Error('Invalid file type. Only Excel files (xlsx) are allowed.'),
         false
       );
     }

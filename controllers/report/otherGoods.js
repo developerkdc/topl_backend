@@ -1,8 +1,8 @@
-import catchAsync from "../../utils/errors/catchAsync.js";
-import OtherGoodsModel from "../../database/schema/inventory/otherGoods/otherGoods.schema.js";
-import OtherGoodsConsumedModel from "../../database/schema/inventory/otherGoods/otherGoodsConsumed.schema.js";
-import { GenerateConsumedGoodsReport } from "../../config/downloadExcel/report/otherGoods/consumedGoods.js";
-import { GenerateOtherGoodsReport } from "../../config/downloadExcel/report/otherGoods/otherGoods.js";
+import catchAsync from '../../utils/errors/catchAsync.js';
+import OtherGoodsModel from '../../database/schema/inventory/otherGoods/otherGoods.schema.js';
+import OtherGoodsConsumedModel from '../../database/schema/inventory/otherGoods/otherGoodsConsumed.schema.js';
+import { GenerateConsumedGoodsReport } from '../../config/downloadExcel/report/otherGoods/consumedGoods.js';
+import { GenerateOtherGoodsReport } from '../../config/downloadExcel/report/otherGoods/otherGoods.js';
 
 export const ConsumedGoodsReportExcel = catchAsync(async (req, res, next) => {
   const { year, month } = req.query;
@@ -11,7 +11,7 @@ export const ConsumedGoodsReportExcel = catchAsync(async (req, res, next) => {
 
   try {
     // Get all distinct item names
-    const itemNames = await OtherGoodsModel.distinct("item_name");
+    const itemNames = await OtherGoodsModel.distinct('item_name');
 
     // Calculate opening stock for each item
     const stockData = {};
@@ -34,7 +34,7 @@ export const ConsumedGoodsReportExcel = catchAsync(async (req, res, next) => {
         {
           $group: {
             _id: null,
-            totalAvailable: { $sum: "$available_quantity" },
+            totalAvailable: { $sum: '$available_quantity' },
           },
         },
       ]);
@@ -51,7 +51,7 @@ export const ConsumedGoodsReportExcel = catchAsync(async (req, res, next) => {
           {
             $group: {
               _id: null,
-              totalInwarded: { $sum: "$received_quantity" },
+              totalInwarded: { $sum: '$received_quantity' },
             },
           },
         ]);
@@ -73,7 +73,7 @@ export const ConsumedGoodsReportExcel = catchAsync(async (req, res, next) => {
         {
           $group: {
             _id: null,
-            totalInwarded: { $sum: "$received_quantity" },
+            totalInwarded: { $sum: '$received_quantity' },
           },
         },
       ]);
@@ -94,11 +94,11 @@ export const ConsumedGoodsReportExcel = catchAsync(async (req, res, next) => {
           $group: {
             _id: {
               $dateToString: {
-                format: "%Y-%m-%d",
-                date: "$date_of_consumption",
+                format: '%Y-%m-%d',
+                date: '$date_of_consumption',
               },
             },
-            totalConsumption: { $sum: "$consumption_quantity" },
+            totalConsumption: { $sum: '$consumption_quantity' },
           },
         },
       ]);
@@ -113,7 +113,7 @@ export const ConsumedGoodsReportExcel = catchAsync(async (req, res, next) => {
         (_, i) => new Date(year, month - 1, i + 1)
       );
       allDates.forEach((date) => {
-        const dateString = date.toISOString().split("T")[0];
+        const dateString = date.toISOString().split('T')[0];
         if (!stockData[itemName].dailyConsumption[dateString]) {
           stockData[itemName].dailyConsumption[dateString] = 0;
         }
@@ -165,18 +165,18 @@ export const ConsumedGoodsReportExcel = catchAsync(async (req, res, next) => {
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
 export const OtherGoodsReportExcel = catchAsync(async (req, res, next) => {
-  const { sortBy = "updated_at", sort = "desc" } = req.query;
+  const { sortBy = 'updated_at', sort = 'desc' } = req.query;
 
   const { to, from, ...data } = req?.body?.filters || {};
   const matchQuery = data || {};
 
   if (to && from) {
-    matchQuery["date_of_inward"] = {
+    matchQuery['date_of_inward'] = {
       $gte: new Date(from), // Greater than or equal to "from" date
       $lte: new Date(to), // Less than or equal to "to" date
     };
@@ -185,9 +185,9 @@ export const OtherGoodsReportExcel = catchAsync(async (req, res, next) => {
   const otherGoodsData = await OtherGoodsModel.aggregate([
     {
       $lookup: {
-        from: "users",
-        localField: "created_employee_id",
-        foreignField: "_id",
+        from: 'users',
+        localField: 'created_employee_id',
+        foreignField: '_id',
         pipeline: [
           {
             $project: {
@@ -195,12 +195,12 @@ export const OtherGoodsReportExcel = catchAsync(async (req, res, next) => {
             },
           },
         ],
-        as: "created_employee_id",
+        as: 'created_employee_id',
       },
     },
     {
       $unwind: {
-        path: "$created_employee_id",
+        path: '$created_employee_id',
         preserveNullAndEmptyArrays: true,
       },
     },
@@ -211,7 +211,7 @@ export const OtherGoodsReportExcel = catchAsync(async (req, res, next) => {
     },
     {
       $sort: {
-        [sortBy]: sort == "desc" ? -1 : 1,
+        [sortBy]: sort == 'desc' ? -1 : 1,
       },
     },
   ]);
@@ -219,6 +219,6 @@ export const OtherGoodsReportExcel = catchAsync(async (req, res, next) => {
   return res.status(200).json({
     result: exl,
     statusCode: 200,
-    status: "success",
+    status: 'success',
   });
 });

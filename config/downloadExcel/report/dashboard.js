@@ -1,30 +1,30 @@
-import ExcelJS from "exceljs";
-import fs from "fs/promises";
-import convDate from "../../../utils/date/date.js";
+import ExcelJS from 'exceljs';
+import fs from 'fs/promises';
+import convDate from '../../../utils/date/date.js';
 
 const GenerateDashboardReport = async (details) => {
   const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet("Dashboard Reports");
+  const worksheet = workbook.addWorksheet('Dashboard Reports');
   // Add headers to the worksheet for both pcs and sqm
 
   const headers = [
-    { header: "Date (Pcs)", key: "pcs_date", width: 15 },
-    { header: "GROUPING (Pcs)", key: "group_pcs", width: 15 },
-    { header: "CUTTING (Pcs)", key: "cutting_pcs", width: 15 },
-    { header: "TAPPING (Pcs)", key: "tapping_pcs", width: 15 },
-    { header: "PRESSING (Pcs)", key: "pressing_pcs", width: 15 },
-    { header: "FINISHING (Pcs)", key: "finishing_pcs", width: 15 },
-    { header: "DISPATCH RAW (Pcs)", key: "dispatch_raw_pcs", width: 15 },
-    { header: "DISPATCH GROUP (Pcs)", key: "dispatch_group_pcs", width: 15 },
-    { header: "", key: "", width: 15 }, // Spacer column
-    { header: "Date (SQM)", key: "sqm_date", width: 15 },
-    { header: "GROUPING (SQM)", key: "group_sqm", width: 15 },
-    { header: "CUTTING (SQM)", key: "cutting_sqm", width: 15 },
-    { header: "TAPPING (SQM)", key: "tapping_sqm", width: 15 },
-    { header: "PRESSING (SQM)", key: "pressing_sqm", width: 15 },
-    { header: "FINISHING (SQM)", key: "finishing_sqm", width: 15 },
-    { header: "DISPATCH RAW (SQM)", key: "dispatch_raw_sqm", width: 15 },
-    { header: "DISPATCH GROUP (SQM)", key: "dispatch_group_sqm", width: 15 },
+    { header: 'Date (Pcs)', key: 'pcs_date', width: 15 },
+    { header: 'GROUPING (Pcs)', key: 'group_pcs', width: 15 },
+    { header: 'CUTTING (Pcs)', key: 'cutting_pcs', width: 15 },
+    { header: 'TAPPING (Pcs)', key: 'tapping_pcs', width: 15 },
+    { header: 'PRESSING (Pcs)', key: 'pressing_pcs', width: 15 },
+    { header: 'FINISHING (Pcs)', key: 'finishing_pcs', width: 15 },
+    { header: 'DISPATCH RAW (Pcs)', key: 'dispatch_raw_pcs', width: 15 },
+    { header: 'DISPATCH GROUP (Pcs)', key: 'dispatch_group_pcs', width: 15 },
+    { header: '', key: '', width: 15 }, // Spacer column
+    { header: 'Date (SQM)', key: 'sqm_date', width: 15 },
+    { header: 'GROUPING (SQM)', key: 'group_sqm', width: 15 },
+    { header: 'CUTTING (SQM)', key: 'cutting_sqm', width: 15 },
+    { header: 'TAPPING (SQM)', key: 'tapping_sqm', width: 15 },
+    { header: 'PRESSING (SQM)', key: 'pressing_sqm', width: 15 },
+    { header: 'FINISHING (SQM)', key: 'finishing_sqm', width: 15 },
+    { header: 'DISPATCH RAW (SQM)', key: 'dispatch_raw_sqm', width: 15 },
+    { header: 'DISPATCH GROUP (SQM)', key: 'dispatch_group_sqm', width: 15 },
   ];
 
   worksheet.columns = headers.map((header) => ({
@@ -33,13 +33,13 @@ const GenerateDashboardReport = async (details) => {
     width: header.width,
     style: {
       border: {
-        top: { style: "thin" },
-        right: { style: "thin" },
-        bottom: { style: "thin" },
-        left: { style: "thin" },
+        top: { style: 'thin' },
+        right: { style: 'thin' },
+        bottom: { style: 'thin' },
+        left: { style: 'thin' },
       },
       // Remove bottom border for spacer column
-      ...(header.key === "" && { border: { bottom: { style: "none" } } }),
+      ...(header.key === '' && { border: { bottom: { style: 'none' } } }),
     },
   }));
 
@@ -76,7 +76,7 @@ const GenerateDashboardReport = async (details) => {
       finishing_pcs: pcsOrder.finishing_pcs,
       dispatch_raw_pcs: pcsOrder.dispatch_raw_pcs,
       dispatch_group_pcs: pcsOrder.dispatch_group_pcs,
-      spacer: "", // Spacer column
+      spacer: '', // Spacer column
       sqm_date: convDate(sqmOrder.sqm_date),
       group_sqm: sqmOrder.group_sqm,
       cutting_sqm: sqmOrder.cutting_sqm,
@@ -133,7 +133,7 @@ const GenerateDashboardReport = async (details) => {
 
   worksheet
     .addRow([
-      "Total",
+      'Total',
       totalGroupPcs,
       totalCuttingPcs,
       totalTappingPcs,
@@ -141,8 +141,8 @@ const GenerateDashboardReport = async (details) => {
       totalFinishingPcs,
       totalDispatchRawPcs,
       totalDispatchGroupPcs,
-      "", // Spacer column
-      "Total",
+      '', // Spacer column
+      'Total',
       totalGroupSqm,
       totalCuttingSqm,
       totalTappingSqm,
@@ -153,16 +153,16 @@ const GenerateDashboardReport = async (details) => {
     ])
     .eachCell({ includeEmpty: true }, function (cell) {
       cell.font = { bold: true };
-      if (cell.value === "Total" || cell.value === "AVERAGE") {
-        cell.alignment = { horizontal: "left" };
+      if (cell.value === 'Total' || cell.value === 'AVERAGE') {
+        cell.alignment = { horizontal: 'left' };
       } else {
-        cell.alignment = { horizontal: "right" };
+        cell.alignment = { horizontal: 'right' };
       }
     });
 
   worksheet
     .addRow([
-      "AVERAGE",
+      'AVERAGE',
       avgGroupPcs,
       avgCuttingPcs,
       avgTappingPcs,
@@ -170,8 +170,8 @@ const GenerateDashboardReport = async (details) => {
       avgFinishingPcs,
       avgDispatchRawPcs,
       avgDispatchGroupPcs,
-      "", // Spacer column
-      "AVERAGE",
+      '', // Spacer column
+      'AVERAGE',
       avgGroupSqm,
       avgCuttingSqm,
       avgTappingSqm,
@@ -182,10 +182,10 @@ const GenerateDashboardReport = async (details) => {
     ])
     .eachCell({ includeEmpty: true }, function (cell) {
       cell.font = { bold: true };
-      if (cell.value === "Total" || cell.value === "AVERAGE") {
-        cell.alignment = { horizontal: "left" };
+      if (cell.value === 'Total' || cell.value === 'AVERAGE') {
+        cell.alignment = { horizontal: 'left' };
       } else {
-        cell.alignment = { horizontal: "right" };
+        cell.alignment = { horizontal: 'right' };
       }
     });
 
@@ -195,7 +195,7 @@ const GenerateDashboardReport = async (details) => {
 
   // Generate a temporary file path
   const filePath =
-    "public/reports/DashboardReportExcel/dashboardReportExcel_report.xlsx";
+    'public/reports/DashboardReportExcel/dashboardReportExcel_report.xlsx';
 
   // Save the workbook to the file
   await workbook.xlsx.writeFile(filePath);

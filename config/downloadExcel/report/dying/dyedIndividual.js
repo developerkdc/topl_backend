@@ -1,40 +1,44 @@
-import ExcelJS from "exceljs";
-import fs from "fs/promises";
-import convDate from "../../../../utils/date/date.js";
-import { formatDateWithTime } from "../../../../utils/date/dateAndTime.js";
+import ExcelJS from 'exceljs';
+import fs from 'fs/promises';
+import convDate from '../../../../utils/date/date.js';
+import { formatDateWithTime } from '../../../../utils/date/dateAndTime.js';
 
 const GenerateDyedIndividualReport = async (details) => {
   const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet("Dyed Individual Reports");
+  const worksheet = workbook.addWorksheet('Dyed Individual Reports');
 
   // Add headers to the worksheet
 
   worksheet.columns = [
-    { header: "DATE", key: "date_of_dying", width: 15 },
-    { header: "ITEM NAME", key: "item_name", width: 30 },
-    { header: "ITEM TYPE", key: "item_code", width: 15 },
-    { header: "Log No", key: "item_log_no", width: 20 },
-    { header: "Bundle No", key: "item_bundle_no", width: 20 },
-    { header: "L", key: "item_length", width: 15 },
-    { header: "W", key: "item_width", width: 15 },
-    { header: "Avl Pattas", key: "item_available_pattas", width: 20 },
-    { header: "Avl Total Sqm", key: "item_available_sqm", width: 20 },
-    { header: "In Time", key: "in_time", width: 15 },
-    { header: "Out Time", key: "out_time", width: 15 },
-    { header: "Processed Time (HR)", key: "process_time", width: 15 },
-    { header: "Consumed Item", key: "consumed_item_name", width: 25 },
-    { header: "Consumed Quantity Ltr", key: "liters_of_ammonia_used", width: 25 },
-    { header: "GRADE", key: "item_grade", width: 15 },
-    { header: "Pallet No", key: "item_pallete_no", width: 20 },
+    { header: 'DATE', key: 'date_of_dying', width: 15 },
+    { header: 'ITEM NAME', key: 'item_name', width: 30 },
+    { header: 'ITEM TYPE', key: 'item_code', width: 15 },
+    { header: 'Log No', key: 'item_log_no', width: 20 },
+    { header: 'Bundle No', key: 'item_bundle_no', width: 20 },
+    { header: 'L', key: 'item_length', width: 15 },
+    { header: 'W', key: 'item_width', width: 15 },
+    { header: 'Avl Pattas', key: 'item_available_pattas', width: 20 },
+    { header: 'Avl Total Sqm', key: 'item_available_sqm', width: 20 },
+    { header: 'In Time', key: 'in_time', width: 15 },
+    { header: 'Out Time', key: 'out_time', width: 15 },
+    { header: 'Processed Time (HR)', key: 'process_time', width: 15 },
+    { header: 'Consumed Item', key: 'consumed_item_name', width: 25 },
     {
-      header: "Physical Location",
-      key: "item_physical_location",
+      header: 'Consumed Quantity Ltr',
+      key: 'liters_of_ammonia_used',
+      width: 25,
+    },
+    { header: 'GRADE', key: 'item_grade', width: 15 },
+    { header: 'Pallet No', key: 'item_pallete_no', width: 20 },
+    {
+      header: 'Physical Location',
+      key: 'item_physical_location',
       width: 20,
     },
 
     {
-      header: "Issued Dying Quantity",
-      key: "issued_dying_quantity",
+      header: 'Issued Dying Quantity',
+      key: 'issued_dying_quantity',
       width: 20,
     },
     // { header: "Issued Dying Quantity Dyed	", key: "Issued_dyed", width: 20 },
@@ -45,7 +49,7 @@ const GenerateDyedIndividualReport = async (details) => {
     // },
     // { header: "Issued Dying Quantity Total", key: "Issued_total", width: 20 },
 
-    { header: "Received Quantity", key: "item_received_pattas", width: 20 },
+    { header: 'Received Quantity', key: 'item_received_pattas', width: 20 },
     // { header: "Received Quantity Dyed	", key: "Received_dyed", width: 20 },
     // { header: "Received Quantity Smoked", key: "Received_smoked", width: 20 },
     // { header: "Received Quantity Total", key: "Received_total", width: 20 },
@@ -59,12 +63,12 @@ const GenerateDyedIndividualReport = async (details) => {
     // { header: "Available Quantity Smoked", key: "Available_smoked", width: 20 },
     // { header: "Available Quantity Total", key: "Available_total", width: 20 },
 
-    { header: "Rejected Quantity", key: "item_rejected_pattas", width: 20 },
+    { header: 'Rejected Quantity', key: 'item_rejected_pattas', width: 20 },
     // { header: "Rejected Quantity Dyed	", key: "Rejected_dyed", width: 20 },
     // { header: "Rejected Quantity Smoked", key: "Rejected_smoked", width: 20 },
     // { header: "Rejected Quantity Total", key: "Rejected_total", width: 20 },
-    { header: "SUPPLIER", key: "supplier", width: 20 },
-    { header: "Remark", key: "individual_dying_remarks", width: 20 },
+    { header: 'SUPPLIER', key: 'supplier', width: 20 },
+    { header: 'Remark', key: 'individual_dying_remarks', width: 20 },
   ];
 
   details.forEach((order) => {
@@ -114,7 +118,7 @@ const GenerateDyedIndividualReport = async (details) => {
       // Received_total: order?.item_details?.item_received_quantities.total,
     });
     row.eachCell({ includeEmpty: true }, (cell) => {
-      cell.alignment = { horizontal: "left" };
+      cell.alignment = { horizontal: 'left' };
     });
   });
   //   });
@@ -123,7 +127,8 @@ const GenerateDyedIndividualReport = async (details) => {
   const headerRow = worksheet.getRow(1);
   headerRow.font = { bold: true };
   // Generate a temporary file path
-  const filePath = "public/reports/Dying/DyedIndividualReportExcel/dyed_individual_reports.xlsx";
+  const filePath =
+    'public/reports/Dying/DyedIndividualReportExcel/dyed_individual_reports.xlsx';
 
   // Save the workbook to the file
   await workbook.xlsx.writeFile(filePath);

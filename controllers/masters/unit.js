@@ -1,7 +1,7 @@
-import mongoose from "mongoose";
-import UnitModel from "../../database/schema/masters/unit.schema.js";
-import catchAsync from "../../utils/errors/catchAsync.js";
-import { DynamicSearch } from "../../utils/dynamicSearch/dynamic.js";
+import mongoose from 'mongoose';
+import UnitModel from '../../database/schema/masters/unit.schema.js';
+import catchAsync from '../../utils/errors/catchAsync.js';
+import { DynamicSearch } from '../../utils/dynamicSearch/dynamic.js';
 
 export const AddUnitMaster = catchAsync(async (req, res) => {
   const authUserDetail = req.userDetails;
@@ -14,7 +14,7 @@ export const AddUnitMaster = catchAsync(async (req, res) => {
   return res.status(201).json({
     result: savedUnit,
     status: true,
-    message: "Unit created successfully",
+    message: 'Unit created successfully',
   });
 });
 
@@ -24,7 +24,7 @@ export const UpdateUnitMaster = catchAsync(async (req, res) => {
   if (!mongoose.Types.ObjectId.isValid(unitId)) {
     return res
       .status(400)
-      .json({ result: [], status: false, message: "Invalid unit ID" });
+      .json({ result: [], status: false, message: 'Invalid unit ID' });
   }
   const unit = await UnitModel.findByIdAndUpdate(
     unitId,
@@ -35,13 +35,13 @@ export const UpdateUnitMaster = catchAsync(async (req, res) => {
     return res.status(404).json({
       result: [],
       status: false,
-      message: "Unit not found.",
+      message: 'Unit not found.',
     });
   }
   res.status(200).json({
     result: unit,
     status: true,
-    message: "Updated successfully",
+    message: 'Updated successfully',
   });
 });
 
@@ -55,12 +55,12 @@ export const ListUnitMaster = catchAsync(async (req, res) => {
   const {
     page = 1,
     limit = 10,
-    sortBy = "updated_at",
-    sort = "desc",
+    sortBy = 'updated_at',
+    sort = 'desc',
   } = req.query;
-  const search = req.query.search || "";
+  const search = req.query.search || '';
   let searchQuery = {};
-  if (search != "" && req?.body?.searchFields) {
+  if (search != '' && req?.body?.searchFields) {
     const searchdata = DynamicSearch(
       search,
       boolean,
@@ -75,7 +75,7 @@ export const ListUnitMaster = catchAsync(async (req, res) => {
         data: {
           user: [],
         },
-        message: "Results Not Found",
+        message: 'Results Not Found',
       });
     }
     searchQuery = searchdata;
@@ -89,9 +89,9 @@ export const ListUnitMaster = catchAsync(async (req, res) => {
   const unitList = await UnitModel.aggregate([
     {
       $lookup: {
-        from: "users",
-        localField: "created_employee_id",
-        foreignField: "_id",
+        from: 'users',
+        localField: 'created_employee_id',
+        foreignField: '_id',
         pipeline: [
           {
             $project: {
@@ -99,12 +99,12 @@ export const ListUnitMaster = catchAsync(async (req, res) => {
             },
           },
         ],
-        as: "created_employee_id",
+        as: 'created_employee_id',
       },
     },
     {
       $unwind: {
-        path: "$created_employee_id",
+        path: '$created_employee_id',
         preserveNullAndEmptyArrays: true,
       },
     },
@@ -112,7 +112,7 @@ export const ListUnitMaster = catchAsync(async (req, res) => {
       $match: { ...searchQuery },
     },
     {
-      $sort: { [sortBy]: sort == "desc" ? -1 : 1 },
+      $sort: { [sortBy]: sort == 'desc' ? -1 : 1 },
     },
     {
       $skip: skip,
@@ -120,14 +120,14 @@ export const ListUnitMaster = catchAsync(async (req, res) => {
     {
       $limit: limit,
     },
-  ]).collation({ locale: "en", caseLevel: true });
+  ]).collation({ locale: 'en', caseLevel: true });
   if (unitList) {
     return res.status(200).json({
       result: unitList,
       status: true,
       totalPages: totalPages,
       currentPage: validPage,
-      message: "All UnitList List",
+      message: 'All UnitList List',
     });
   }
 });
@@ -136,7 +136,7 @@ export const DropdownUnitMaster = catchAsync(async (req, res) => {
   const list = await UnitModel.aggregate([
     {
       $match: {
-        status: "active",
+        status: 'active',
       },
     },
     {
@@ -151,6 +151,6 @@ export const DropdownUnitMaster = catchAsync(async (req, res) => {
   res.status(200).json({
     result: list,
     status: true,
-    message: "Unit Dropdown List",
+    message: 'Unit Dropdown List',
   });
 });

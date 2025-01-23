@@ -1,16 +1,16 @@
-import mongoose from "mongoose";
-import LogSchemaFunction from "../LogsSchema/logs.schema.js";
+import mongoose from 'mongoose';
+import LogSchemaFunction from '../LogsSchema/logs.schema.js';
 
 const PartyNameSchema = new mongoose.Schema({
   customer_name: {
     type: String,
-    required: [true, "Customer Name is required."],
+    required: [true, 'Customer Name is required.'],
     trim: true,
-    unique: [true, "Customer Name already exist."],
+    unique: [true, 'Customer Name already exist.'],
   },
   customer_place: {
     type: String,
-    required: [true, "Customer Place is required."],
+    required: [true, 'Customer Place is required.'],
     trim: true,
   },
   party_remarks: {
@@ -18,12 +18,12 @@ const PartyNameSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ["active", "inactive"],
-    default: "active",
+    enum: ['active', 'inactive'],
+    default: 'active',
   },
   created_employee_id: {
     type: mongoose.Types.ObjectId,
-    ref: "users",
+    ref: 'users',
     required: true,
     trim: true,
   },
@@ -32,7 +32,7 @@ const PartyNameSchema = new mongoose.Schema({
   deleted_at: { type: Date, default: null },
 });
 
-const PartyModel = mongoose.model("party", PartyNameSchema);
-LogSchemaFunction("party", PartyModel);
+const PartyModel = mongoose.model('party', PartyNameSchema);
+LogSchemaFunction('party', PartyModel);
 
 export default PartyModel;

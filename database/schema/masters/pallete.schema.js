@@ -1,20 +1,20 @@
-import mongoose from "mongoose";
-import LogSchemaFunction from "../LogsSchema/logs.schema.js";
+import mongoose from 'mongoose';
+import LogSchemaFunction from '../LogsSchema/logs.schema.js';
 
 const PalleteNameSchema = new mongoose.Schema({
   pallete_no: {
     type: String,
-    required: [true, "Pallete Number is required."],
+    required: [true, 'Pallete Number is required.'],
     trim: true,
-    unique: [true, "Pallete Number already exist."],
+    unique: [true, 'Pallete Number already exist.'],
   },
   pallete_remarks: {
     type: String,
   },
   status: {
     type: String,
-    enum: ["active", "inactive"],
-    default: "active",
+    enum: ['active', 'inactive'],
+    default: 'active',
   },
   item_physical_location: {
     type: String,
@@ -23,7 +23,7 @@ const PalleteNameSchema = new mongoose.Schema({
   },
   created_employee_id: {
     type: mongoose.Types.ObjectId,
-    ref: "users",
+    ref: 'users',
     required: true,
     trim: true,
   },
@@ -32,7 +32,7 @@ const PalleteNameSchema = new mongoose.Schema({
   deleted_at: { type: Date, default: null },
 });
 
-const PalleteModel = mongoose.model("pallete", PalleteNameSchema);
-LogSchemaFunction("pallete", PalleteModel,[]);
+const PalleteModel = mongoose.model('pallete', PalleteNameSchema);
+LogSchemaFunction('pallete', PalleteModel, []);
 
 export default PalleteModel;

@@ -1,15 +1,15 @@
-import { FinishingModel } from "../../database/schema/finishing/finishing.schema.js";
-import { IssuedForFinishingModel } from "../../database/schema/finishing/issuedForFinishing.schema.js";
-import GroupImagesModel from "../../database/schema/images/groupImages.schema.js";
-import { QcDoneInventoryModel } from "../../database/schema/qcDone.js/qcDone.schema.js";
-import { DynamicSearch } from "../../utils/dynamicSearch/dynamic.js";
-import catchAsync from "../../utils/errors/catchAsync.js";
-import mongoose from "mongoose";
-import fs from "fs";
-import { IssuedForPressingModel } from "../../database/schema/pressing/issuedForPressing.schema.js";
-import { PressingModel } from "../../database/schema/pressing/pressing.schema.js";
-import OtherGoodsModel from "../../database/schema/inventory/otherGoods/otherGoods.schema.js";
-import OtherGoodsConsumedModel from "../../database/schema/inventory/otherGoods/otherGoodsConsumed.schema.js";
+import { FinishingModel } from '../../database/schema/finishing/finishing.schema.js';
+import { IssuedForFinishingModel } from '../../database/schema/finishing/issuedForFinishing.schema.js';
+import GroupImagesModel from '../../database/schema/images/groupImages.schema.js';
+import { QcDoneInventoryModel } from '../../database/schema/qcDone.js/qcDone.schema.js';
+import { DynamicSearch } from '../../utils/dynamicSearch/dynamic.js';
+import catchAsync from '../../utils/errors/catchAsync.js';
+import mongoose from 'mongoose';
+import fs from 'fs';
+import { IssuedForPressingModel } from '../../database/schema/pressing/issuedForPressing.schema.js';
+import { PressingModel } from '../../database/schema/pressing/pressing.schema.js';
+import OtherGoodsModel from '../../database/schema/inventory/otherGoods/otherGoods.schema.js';
+import OtherGoodsConsumedModel from '../../database/schema/inventory/otherGoods/otherGoodsConsumed.schema.js';
 
 export const FetchIssuedForFinishing = catchAsync(async (req, res, next) => {
   const {
@@ -21,15 +21,15 @@ export const FetchIssuedForFinishing = catchAsync(async (req, res, next) => {
   const {
     page = 1,
     limit = 10,
-    sortBy = "updated_at",
-    sort = "desc",
+    sortBy = 'updated_at',
+    sort = 'desc',
   } = req.query;
   const skip = Math.max((page - 1) * limit, 0);
 
-  const search = req.query.search || "";
+  const search = req.query.search || '';
 
   let searchQuery = {};
-  if (search != "" && req?.body?.searchFields) {
+  if (search != '' && req?.body?.searchFields) {
     const searchdata = DynamicSearch(
       search,
       boolean,
@@ -44,7 +44,7 @@ export const FetchIssuedForFinishing = catchAsync(async (req, res, next) => {
         data: {
           data: [],
         },
-        message: "Results Not Found",
+        message: 'Results Not Found',
       });
     }
     searchQuery = searchdata;
@@ -55,7 +55,7 @@ export const FetchIssuedForFinishing = catchAsync(async (req, res, next) => {
 
   if (to && from) {
     console.log(new Date(from));
-    matchQuery["updated_at"] = { $gte: new Date(from), $lte: new Date(to) };
+    matchQuery['updated_at'] = { $gte: new Date(from), $lte: new Date(to) };
   }
 
   const totalDocuments = await IssuedForFinishingModel.countDocuments({
@@ -65,7 +65,7 @@ export const FetchIssuedForFinishing = catchAsync(async (req, res, next) => {
   const totalPages = Math.ceil(totalDocuments / limit);
 
   const issuedForFinishingView = mongoose.connection.db.collection(
-    "issued_for_finishings_view"
+    'issued_for_finishings_view'
   );
 
   const issuedForFinishingData = await issuedForFinishingView
@@ -78,7 +78,7 @@ export const FetchIssuedForFinishing = catchAsync(async (req, res, next) => {
       },
       {
         $sort: {
-          [sortBy]: sort == "desc" ? -1 : 1,
+          [sortBy]: sort == 'desc' ? -1 : 1,
         },
       },
       {
@@ -92,7 +92,7 @@ export const FetchIssuedForFinishing = catchAsync(async (req, res, next) => {
   return res.status(200).json({
     result: issuedForFinishingData,
     statusCode: 200,
-    status: "success",
+    status: 'success',
     totalPages: totalPages,
   });
 });
@@ -107,24 +107,24 @@ export const UpdateFinishingStatus = catchAsync(async (req, res, next) => {
     if (!req.body.issued_for_finishing_id || !req.body.status) {
       return res.status(400).json({
         status: false,
-        message: "Missing required fields in the request body.",
+        message: 'Missing required fields in the request body.',
       });
     }
 
     // Validate status against the enum defined in your schema
     const validStatusValues = [
-      "pending",
-      "open grain",
-      "sent for open grain",
-      "metallic",
-      "sent for metallic",
-      "sent for rejected",
-      "rejected",
+      'pending',
+      'open grain',
+      'sent for open grain',
+      'metallic',
+      'sent for metallic',
+      'sent for rejected',
+      'rejected',
     ]; // Replace with your enum values
     if (!validStatusValues.includes(req.body.status)) {
       return res.status(400).json({
         status: false,
-        message: "Invalid status value.",
+        message: 'Invalid status value.',
       });
     }
 
@@ -143,7 +143,7 @@ export const UpdateFinishingStatus = catchAsync(async (req, res, next) => {
     if (!updateFinishing) {
       return res.status(404).json({
         status: false,
-        message: "Document not found with the provided ID.",
+        message: 'Document not found with the provided ID.',
       });
     }
 
@@ -153,17 +153,17 @@ export const UpdateFinishingStatus = catchAsync(async (req, res, next) => {
     return res.status(200).json({
       result: updateFinishing,
       statusCode: 200,
-      status: "success",
+      status: 'success',
     });
   } catch (error) {
     if (session) {
       await session.abortTransaction();
       session.endSession();
     }
-    console.error("Error:", error);
+    console.error('Error:', error);
     return res.status(500).json({
       status: false,
-      message: "Internal server error occurred while processing the request.",
+      message: 'Internal server error occurred while processing the request.',
       error: error.message,
     });
   }
@@ -305,7 +305,7 @@ export const createFinishing = catchAsync(async (req, res, next) => {
       data.issued_for_finishing_id
     );
     if (!isIssued) {
-      throw new Error("Issued For Finishing not found");
+      throw new Error('Issued For Finishing not found');
     }
 
     if (imageFilenames?.length > 0) {
@@ -380,7 +380,7 @@ export const createFinishing = catchAsync(async (req, res, next) => {
     );
 
     if (IssuedForFinishingDetails.available_pressed_pcs - noOfPieces == 0) {
-      IssuedForFinishingDetails.revert_status = "inactive";
+      IssuedForFinishingDetails.revert_status = 'inactive';
     }
     IssuedForFinishingDetails.available_pressed_pcs =
       IssuedForFinishingDetails.available_pressed_pcs - Number(noOfPieces);
@@ -394,7 +394,7 @@ export const createFinishing = catchAsync(async (req, res, next) => {
 
     res.status(200).json({
       status: true,
-      message: "Finishing created successfully.",
+      message: 'Finishing created successfully.',
       data: { finishingSaved, qcDoneSaved },
     });
   } catch (error) {
@@ -413,10 +413,10 @@ export const createFinishing = catchAsync(async (req, res, next) => {
         });
       }
     }
-    console.error("Error:", error);
+    console.error('Error:', error);
     return res.status(500).json({
       status: false,
-      message: "Internal server error occurred while processing the request.",
+      message: 'Internal server error occurred while processing the request.',
       error: error.message,
     });
   }
@@ -432,15 +432,15 @@ export const ListFinishingDone = catchAsync(async (req, res, next) => {
   const {
     page = 1,
     limit = 10,
-    sortBy = "updated_at",
-    sort = "desc",
+    sortBy = 'updated_at',
+    sort = 'desc',
   } = req.query;
   const skip = Math.max((page - 1) * limit, 0);
 
-  const search = req.query.search || "";
+  const search = req.query.search || '';
 
   let searchQuery = {};
-  if (search != "" && req?.body?.searchFields) {
+  if (search != '' && req?.body?.searchFields) {
     const searchdata = DynamicSearch(
       search,
       boolean,
@@ -455,7 +455,7 @@ export const ListFinishingDone = catchAsync(async (req, res, next) => {
         data: {
           data: [],
         },
-        message: "Results Not Found",
+        message: 'Results Not Found',
       });
     }
     searchQuery = searchdata;
@@ -466,7 +466,7 @@ export const ListFinishingDone = catchAsync(async (req, res, next) => {
 
   if (to && from) {
     console.log(new Date(from));
-    matchQuery["created_at"] = { $gte: new Date(from), $lte: new Date(to) };
+    matchQuery['created_at'] = { $gte: new Date(from), $lte: new Date(to) };
   }
 
   const totalDocuments = await FinishingModel.countDocuments({
@@ -476,7 +476,7 @@ export const ListFinishingDone = catchAsync(async (req, res, next) => {
   const totalPages = Math.ceil(totalDocuments / limit);
 
   const issuedForFinishingView =
-    mongoose.connection.db.collection("finishings_view");
+    mongoose.connection.db.collection('finishings_view');
   const issuedForFinishingData = await issuedForFinishingView
     .aggregate([
       {
@@ -487,7 +487,7 @@ export const ListFinishingDone = catchAsync(async (req, res, next) => {
       },
       {
         $sort: {
-          [sortBy]: sort == "desc" ? -1 : 1,
+          [sortBy]: sort == 'desc' ? -1 : 1,
         },
       },
       {
@@ -501,7 +501,7 @@ export const ListFinishingDone = catchAsync(async (req, res, next) => {
   return res.status(200).json({
     result: issuedForFinishingData,
     statusCode: 200,
-    status: "success",
+    status: 'success',
     totalPages: totalPages,
   });
 });
@@ -513,7 +513,7 @@ export const RevertIssuedForFinishing = catchAsync(async (req, res, next) => {
     session.startTransaction();
     const { issuedId } = req.query;
     const IssuedForFinishingView = mongoose.connection.db.collection(
-      "issued_for_finishings_view"
+      'issued_for_finishings_view'
     );
     const IssuedForFinishingDetails = await IssuedForFinishingView.findOne({
       _id: new mongoose.Types.ObjectId(issuedId),
@@ -522,7 +522,7 @@ export const RevertIssuedForFinishing = catchAsync(async (req, res, next) => {
       IssuedForFinishingDetails.available_pressed_pcs !=
       IssuedForFinishingDetails.pressing_details.pressing_no_of_peices
     ) {
-      throw new Error("Revert cannot be done");
+      throw new Error('Revert cannot be done');
     }
     const pressingDetails = await PressingModel.findOne({
       _id: IssuedForFinishingDetails.pressing_id,
@@ -540,7 +540,7 @@ export const RevertIssuedForFinishing = catchAsync(async (req, res, next) => {
 
     await IssuedForPressingModel.findByIdAndUpdate(
       IssuedForFinishingDetails.issued_for_pressing_id, // ID of the document to update
-      { $set: { revert_status: "active" } }, // Update object
+      { $set: { revert_status: 'active' } }, // Update object
       { session, new: true } // Options object to return the updated document
     );
 
@@ -554,8 +554,8 @@ export const RevertIssuedForFinishing = catchAsync(async (req, res, next) => {
     await session.commitTransaction();
     session.endSession();
     return res.json({
-      message: "success",
-      result: "Reverted Successfully",
+      message: 'success',
+      result: 'Reverted Successfully',
     });
   } catch (error) {
     if (session) {
@@ -564,7 +564,7 @@ export const RevertIssuedForFinishing = catchAsync(async (req, res, next) => {
     }
     return res.status(500).json({
       status: false,
-      message: "Error occurred while reverting",
+      message: 'Error occurred while reverting',
       error: error.message,
     });
   }

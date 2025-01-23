@@ -1,13 +1,12 @@
-import mongoose from "mongoose";
-import LogSchemaFunction from "../LogsSchema/logs.schema.js";
+import mongoose from 'mongoose';
+import LogSchemaFunction from '../LogsSchema/logs.schema.js';
 
 const GstSchema = new mongoose.Schema({
   gst_percentage: {
     type: Number,
-    required: [true, "Gst Percentage is required."],
+    required: [true, 'Gst Percentage is required.'],
     trim: true,
-    unique: [true, "Gst Percentage already exist."],
-
+    unique: [true, 'Gst Percentage already exist.'],
   },
   gst_remarks: {
     type: String,
@@ -16,14 +15,14 @@ const GstSchema = new mongoose.Schema({
   },
   created_employee_id: {
     type: mongoose.Types.ObjectId,
-    ref: "users",
+    ref: 'users',
     required: true,
     trim: true,
   },
   status: {
     type: String,
-    enum: ["active", "inactive"],
-    default: "active",
+    enum: ['active', 'inactive'],
+    default: 'active',
     // trim: true,
     // uppercase: true
   },
@@ -33,6 +32,6 @@ const GstSchema = new mongoose.Schema({
 });
 
 GstSchema.index({ gst_name: 1 }, { unique: true });
-const GstModel = mongoose.model("gst", GstSchema);
-LogSchemaFunction("gst", GstModel, []);
+const GstModel = mongoose.model('gst', GstSchema);
+LogSchemaFunction('gst', GstModel, []);
 export default GstModel;

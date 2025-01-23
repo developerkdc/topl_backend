@@ -1,5 +1,5 @@
-import mongoose from "mongoose";
-import LogSchemaFunction from "../../LogsSchema/logs.schema.js";
+import mongoose from 'mongoose';
+import LogSchemaFunction from '../../LogsSchema/logs.schema.js';
 
 const GroupHistorySchema = new mongoose.Schema({
   group_id: {
@@ -10,7 +10,7 @@ const GroupHistorySchema = new mongoose.Schema({
     {
       item_id: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "raw_materials",
+        ref: 'raw_materials',
         required: true,
       },
       cutting_quantity: {
@@ -62,7 +62,7 @@ const GroupHistorySchema = new mongoose.Schema({
   ],
   created_employee_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "user",
+    ref: 'user',
     trim: true,
   },
   group_history_remarks: {
@@ -74,34 +74,34 @@ const GroupHistorySchema = new mongoose.Schema({
 });
 
 export const GroupHistoryModel = mongoose.model(
-  "group_history",
+  'group_history',
   GroupHistorySchema
 );
 const lookup = [
   {
     $lookup: {
-      from: "raw_materials",
-      localField: "cutting_item_details.item_id",
-      foreignField: "_id",
-      as: "raw_materials_data",
+      from: 'raw_materials',
+      localField: 'cutting_item_details.item_id',
+      foreignField: '_id',
+      as: 'raw_materials_data',
     },
   },
   {
     $addFields: {
       cutting_item_details: {
         $map: {
-          input: "$cutting_item_details",
-          as: "detail",
+          input: '$cutting_item_details',
+          as: 'detail',
           in: {
             $mergeObjects: [
-              "$$detail",
+              '$$detail',
               {
                 $arrayElemAt: [
                   {
                     $filter: {
-                      input: "$raw_materials_data",
-                      as: "material",
-                      cond: { $eq: ["$$material._id", "$$detail.item_id"] },
+                      input: '$raw_materials_data',
+                      as: 'material',
+                      cond: { $eq: ['$$material._id', '$$detail.item_id'] },
                     },
                   },
                   0,
@@ -119,4 +119,4 @@ const lookup = [
     },
   },
 ];
-LogSchemaFunction("grouphistory", GroupHistoryModel, lookup);
+LogSchemaFunction('grouphistory', GroupHistoryModel, lookup);

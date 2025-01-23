@@ -1,18 +1,18 @@
-import ExcelJS from "exceljs";
-import convDate from "../../../../utils/date/date.js";
+import ExcelJS from 'exceljs';
+import convDate from '../../../../utils/date/date.js';
 
 const GenerateItemNameLogs = async (details) => {
   const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet("Item Name Logs");
+  const worksheet = workbook.addWorksheet('Item Name Logs');
 
   // Add headers to the worksheet
   const headers = [
-    { header: "Date", key: "date", width: 20 },
-    { header: "Operation Type", key: "operationType", width: 20 },
-    { header: "Done By", key: "created_by", width: 30 },
-    { header: "Item Name", key: "item_name", width: 30 },
-    { header: "Item Name Remarks", key: "item_name_remarks", width: 40 },
-    { header: "Status", key: "status", width: 15 },
+    { header: 'Date', key: 'date', width: 20 },
+    { header: 'Operation Type', key: 'operationType', width: 20 },
+    { header: 'Done By', key: 'created_by', width: 30 },
+    { header: 'Item Name', key: 'item_name', width: 30 },
+    { header: 'Item Name Remarks', key: 'item_name_remarks', width: 40 },
+    { header: 'Status', key: 'status', width: 15 },
   ];
   worksheet.columns = headers.map((header) => {
     return {
@@ -31,7 +31,7 @@ const GenerateItemNameLogs = async (details) => {
       status: log.data.fullDocument.status,
     });
     row.eachCell({ includeEmpty: true }, (cell) => {
-      cell.alignment = { horizontal: "left" };
+      cell.alignment = { horizontal: 'left' };
     });
   });
 

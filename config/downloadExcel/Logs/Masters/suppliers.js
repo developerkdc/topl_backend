@@ -1,34 +1,33 @@
-import ExcelJS from "exceljs";
-import convDate from "../../../../utils/date/date.js";
-
+import ExcelJS from 'exceljs';
+import convDate from '../../../../utils/date/date.js';
 
 const GenerateSuppliersLogs = async (details) => {
   const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet("Suppliers Logs");
+  const worksheet = workbook.addWorksheet('Suppliers Logs');
 
   // Add headers to the worksheet
   const headers = [
-    { header: "Date", key: "date", width: 20 },
-    { header: "Operation Type", key: "operationType", width: 20 },
-    { header: "Done By", key: "created_by", width: 30 },
-    { header: "Supplier Name", key: "supplier_name", width: 30 },
-    { header: "Country", key: "country", width: 20 },
-    { header: "State", key: "state", width: 20 },
-    { header: "City", key: "city", width: 20 },
-    { header: "Pincode", key: "pincode", width: 15 },
-    { header: "Billing Address", key: "bill_address", width: 40 },
-    { header: "Delivery Address", key: "delivery_address", width: 40 },
-    { header: "Contact Person Name", key: "contact_person_name", width: 30 },
+    { header: 'Date', key: 'date', width: 20 },
+    { header: 'Operation Type', key: 'operationType', width: 20 },
+    { header: 'Done By', key: 'created_by', width: 30 },
+    { header: 'Supplier Name', key: 'supplier_name', width: 30 },
+    { header: 'Country', key: 'country', width: 20 },
+    { header: 'State', key: 'state', width: 20 },
+    { header: 'City', key: 'city', width: 20 },
+    { header: 'Pincode', key: 'pincode', width: 15 },
+    { header: 'Billing Address', key: 'bill_address', width: 40 },
+    { header: 'Delivery Address', key: 'delivery_address', width: 40 },
+    { header: 'Contact Person Name', key: 'contact_person_name', width: 30 },
     {
-      header: "Contact Person Number",
-      key: "contact_person_number",
+      header: 'Contact Person Number',
+      key: 'contact_person_number',
       width: 20,
     },
-    { header: "Email ID", key: "email_id", width: 30 },
-    { header: "PAN Number", key: "pan_no", width: 20 },
-    { header: "GST Number", key: "gst_no", width: 20 },
-    { header: "Status", key: "status", width: 15 },
-    { header: "Remarks", key: "supplier_remarks", width: 30 },
+    { header: 'Email ID', key: 'email_id', width: 30 },
+    { header: 'PAN Number', key: 'pan_no', width: 20 },
+    { header: 'GST Number', key: 'gst_no', width: 20 },
+    { header: 'Status', key: 'status', width: 15 },
+    { header: 'Remarks', key: 'supplier_remarks', width: 30 },
   ];
   worksheet.columns = headers.map((header) => {
     return {
@@ -58,7 +57,7 @@ const GenerateSuppliersLogs = async (details) => {
       supplier_remarks: log.data?.fullDocument.supplier_remarks,
     });
     row.eachCell({ includeEmpty: true }, (cell) => {
-      cell.alignment = { horizontal: "left" };
+      cell.alignment = { horizontal: 'left' };
     });
   });
 

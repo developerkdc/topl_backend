@@ -1,9 +1,9 @@
-import catchAsync from "../../../utils/errors/catchAsync.js";
-import { RawMaterialModel } from "../../../database/schema/inventory/raw/raw.schema.js";
+import catchAsync from '../../../utils/errors/catchAsync.js';
+import { RawMaterialModel } from '../../../database/schema/inventory/raw/raw.schema.js';
 
-import mongoose from "mongoose";
-import { IssuedForDyingIndividualModel } from "../../../database/schema/dying/issuedForDyingIndividual.js";
-import { DynamicSearch } from "../../../utils/dynamicSearch/dynamic.js";
+import mongoose from 'mongoose';
+import { IssuedForDyingIndividualModel } from '../../../database/schema/dying/issuedForDyingIndividual.js';
+import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 
 export const IssueForDyingRaw = catchAsync(async (req, res, next) => {
   // Start a MongoDB session
@@ -20,7 +20,7 @@ export const IssueForDyingRaw = catchAsync(async (req, res, next) => {
     const rawMaterials = await RawMaterialModel.find(
       {
         _id: { $in: issuedForDyingIds },
-        status: { $ne: "issued for dying" },
+        status: { $ne: 'issued for dying' },
       },
       {
         item_available_pattas: 1,
@@ -44,7 +44,7 @@ export const IssueForDyingRaw = catchAsync(async (req, res, next) => {
       },
       {
         $set: {
-          status: "issued for dying",
+          status: 'issued for dying',
         },
       }
     ).session(session);
@@ -55,7 +55,7 @@ export const IssueForDyingRaw = catchAsync(async (req, res, next) => {
 
     return res.json({
       status: true,
-      message: "Issue for dying successful",
+      message: 'Issue for dying successful',
     });
   } catch (error) {
     // Rollback the transaction if there is any error
@@ -88,11 +88,11 @@ export const CancelDyingRaw = catchAsync(async (req, res, next) => {
       // Update the status of the corresponding ID in RawMaterialModel to "available"
       await RawMaterialModel.updateOne(
         { _id: issueRecord.item_id },
-        { $set: { status: "available" } }
+        { $set: { status: 'available' } }
       ).session(session);
     } else {
       // If the record does not exist in IssuedForDyingIndividualModel, return error
-      throw new Error("Record not found in Issued For Dying.");
+      throw new Error('Record not found in Issued For Dying.');
     }
 
     // Commit the transaction
@@ -101,7 +101,7 @@ export const CancelDyingRaw = catchAsync(async (req, res, next) => {
 
     return res.json({
       status: true,
-      message: "Cancellation successful.",
+      message: 'Cancellation successful.',
     });
   } catch (error) {
     // Rollback the transaction in case of error
@@ -110,7 +110,7 @@ export const CancelDyingRaw = catchAsync(async (req, res, next) => {
 
     return res.status(500).json({
       status: false,
-      message: "Error occurred while cancelling smoking.",
+      message: 'Error occurred while cancelling smoking.',
       error: error.message,
     });
   }
@@ -129,13 +129,13 @@ export const IssueForDyingRawPattas = catchAsync(async (req, res, next) => {
 
     const isIssued = await RawMaterialModel.findById(req.body.item_id);
     console.log(isIssued);
-    if (isIssued.status == "issued for dying") {
+    if (isIssued.status == 'issued for dying') {
       // Rollback the transaction if the material is already issued for dying
       await session.abortTransaction();
       session.endSession();
       return res.json({
         status: false,
-        message: "Issue for dying failed",
+        message: 'Issue for dying failed',
       });
     }
 
@@ -148,7 +148,7 @@ export const IssueForDyingRawPattas = catchAsync(async (req, res, next) => {
       },
       {
         $set: {
-          status: "issued for dying",
+          status: 'issued for dying',
         },
       },
       { session }
@@ -160,7 +160,7 @@ export const IssueForDyingRawPattas = catchAsync(async (req, res, next) => {
 
     return res.json({
       status: true,
-      message: "Issue for smoking successful",
+      message: 'Issue for smoking successful',
       result: savedIssuedForSmoking,
     });
   } catch (error) {
@@ -172,23 +172,34 @@ export const IssueForDyingRawPattas = catchAsync(async (req, res, next) => {
 });
 
 export const IssuedForDyingRawList = catchAsync(async (req, res, next) => {
-  const { string, boolean, numbers ,arrayField=[]} = req?.body?.searchFields || {};
- const { page, limit = 10, sortBy = "updated_at", sort = "desc" } = req.query;
+  const {
+    string,
+    boolean,
+    numbers,
+    arrayField = [],
+  } = req?.body?.searchFields || {};
+  const { page, limit = 10, sortBy = 'updated_at', sort = 'desc' } = req.query;
   const skip = Math.max((page - 1) * limit, 0);
 
-  const search = req.query.search || "";
+  const search = req.query.search || '';
 
   let searchQuery = {};
-  if (search != "" && req?.body?.searchFields) {
-    const searchdata = DynamicSearch(search, boolean, numbers, string,arrayField);
-   if (searchdata?.length == 0) {
+  if (search != '' && req?.body?.searchFields) {
+    const searchdata = DynamicSearch(
+      search,
+      boolean,
+      numbers,
+      string,
+      arrayField
+    );
+    if (searchdata?.length == 0) {
       return res.status(404).json({
         statusCode: 404,
         status: false,
         data: {
           data: [],
         },
-        message: "Results Not Found",
+        message: 'Results Not Found',
       });
     }
     searchQuery = searchdata;
@@ -198,7 +209,7 @@ export const IssuedForDyingRawList = catchAsync(async (req, res, next) => {
   const matchQuery = data || {};
 
   if (to && from) {
-    matchQuery["created_at"] = {
+    matchQuery['created_at'] = {
       $gte: new Date(from), // Greater than or equal to "from" date
       $lte: new Date(to), // Less than or equal to "to" date
     };
@@ -213,23 +224,23 @@ export const IssuedForDyingRawList = catchAsync(async (req, res, next) => {
   const rawVeneerData = await IssuedForDyingIndividualModel.aggregate([
     {
       $lookup: {
-        from: "raw_materials",
-        localField: "item_id",
-        foreignField: "_id",
-        as: "item_id",
+        from: 'raw_materials',
+        localField: 'item_id',
+        foreignField: '_id',
+        as: 'item_id',
       },
     },
     {
       $unwind: {
-        path: "$item_id",
+        path: '$item_id',
         preserveNullAndEmptyArrays: true,
       },
     },
     {
       $lookup: {
-        from: "users",
-        localField: "created_employee_id",
-        foreignField: "_id",
+        from: 'users',
+        localField: 'created_employee_id',
+        foreignField: '_id',
         pipeline: [
           {
             $project: {
@@ -237,12 +248,12 @@ export const IssuedForDyingRawList = catchAsync(async (req, res, next) => {
             },
           },
         ],
-        as: "created_employee_id",
+        as: 'created_employee_id',
       },
     },
     {
       $unwind: {
-        path: "$created_employee_id",
+        path: '$created_employee_id',
         preserveNullAndEmptyArrays: true,
       },
     },
@@ -254,7 +265,7 @@ export const IssuedForDyingRawList = catchAsync(async (req, res, next) => {
     },
     {
       $sort: {
-        [sortBy]: sort == "desc" ? -1 : 1,
+        [sortBy]: sort == 'desc' ? -1 : 1,
       },
     },
     {
@@ -268,7 +279,7 @@ export const IssuedForDyingRawList = catchAsync(async (req, res, next) => {
   return res.status(200).json({
     result: rawVeneerData,
     statusCode: 200,
-    status: "success",
+    status: 'success',
     totalPages: totalPages,
   });
 });

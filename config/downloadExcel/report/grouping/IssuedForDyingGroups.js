@@ -1,51 +1,50 @@
-import ExcelJS from "exceljs";
-import fs from "fs/promises";
-import convDate from "../../../../utils/date/date.js";
+import ExcelJS from 'exceljs';
+import fs from 'fs/promises';
+import convDate from '../../../../utils/date/date.js';
 
 const GenerateIssuedForDyingGroupsReport = async (details) => {
-
   const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet("Issued For Dying Groups Reports");
+  const worksheet = workbook.addWorksheet('Issued For Dying Groups Reports');
 
   // Add headers to the worksheet
 
   worksheet.columns = [
-    { header: "DATE", key: "created_at", width: 15 },
-    { header: "GROUP NO", key: "group_no", width: 15 },
-    { header: "ITEM NAME", key: "item_name", width: 30 },
-    { header: "ITEM TYPE", key: "item_code", width: 15 },
-    { header: "GROUP L", key: "group_length", width: 15 },
-    { header: "GROUP W", key: "group_width", width: 15 },
-    { header: "NO OF PATTAS", key: "group_no_of_pattas_available", width: 15 },
-    { header: "NO PCS", key: "group_pcs", width: 15 },
-    { header: "GROUP SQM", key: "group_sqm_available", width: 15 },
+    { header: 'DATE', key: 'created_at', width: 15 },
+    { header: 'GROUP NO', key: 'group_no', width: 15 },
+    { header: 'ITEM NAME', key: 'item_name', width: 30 },
+    { header: 'ITEM TYPE', key: 'item_code', width: 15 },
+    { header: 'GROUP L', key: 'group_length', width: 15 },
+    { header: 'GROUP W', key: 'group_width', width: 15 },
+    { header: 'NO OF PATTAS', key: 'group_no_of_pattas_available', width: 15 },
+    { header: 'NO PCS', key: 'group_pcs', width: 15 },
+    { header: 'GROUP SQM', key: 'group_sqm_available', width: 15 },
     {
-      header: "TOTAL ITEM SQM AVAILABLE",
-      key: "total_item_sqm_available",
+      header: 'TOTAL ITEM SQM AVAILABLE',
+      key: 'total_item_sqm_available',
       width: 15,
     },
-    { header: "GRADE", key: "group_grade", width: 15 },
-    { header: "orientation", key: "orientation", width: 15 },
-    { header: "book_type", key: "book_type", width: 15 },
-    { header: "GROUP PALLET NO", key: "group_pallete_no", width: 20 },
+    { header: 'GRADE', key: 'group_grade', width: 15 },
+    { header: 'orientation', key: 'orientation', width: 15 },
+    { header: 'book_type', key: 'book_type', width: 15 },
+    { header: 'GROUP PALLET NO', key: 'group_pallete_no', width: 20 },
     {
-      header: "GROUP physical_location",
-      key: "group_physical_location",
+      header: 'GROUP physical_location',
+      key: 'group_physical_location',
       width: 20,
     },
-    { header: "Log No", key: "item_log_no", width: 20 },
-    { header: "Bundle No", key: "item_bundle_no", width: 20 },
-    { header: "ITEM Length", key: "item_length", width: 20 },
-    { header: "ITEM Width", key: "item_width", width: 20 },
-    { header: "Original Pattas", key: "item_received_pattas", width: 20 },
-    { header: "Original Sqm	", key: "item_received_sqm", width: 20 },
-    { header: "Avl Pattas", key: "item_available_pattas", width: 20 },
-    { header: "Avl Total Sqm", key: "item_available_sqm", width: 20 },
-    { header: "ITEM Grade", key: "item_grade", width: 20 },
-    { header: "ITEM Pallet No", key: "item_pallete_no", width: 20 },
+    { header: 'Log No', key: 'item_log_no', width: 20 },
+    { header: 'Bundle No', key: 'item_bundle_no', width: 20 },
+    { header: 'ITEM Length', key: 'item_length', width: 20 },
+    { header: 'ITEM Width', key: 'item_width', width: 20 },
+    { header: 'Original Pattas', key: 'item_received_pattas', width: 20 },
+    { header: 'Original Sqm	', key: 'item_received_sqm', width: 20 },
+    { header: 'Avl Pattas', key: 'item_available_pattas', width: 20 },
+    { header: 'Avl Total Sqm', key: 'item_available_sqm', width: 20 },
+    { header: 'ITEM Grade', key: 'item_grade', width: 20 },
+    { header: 'ITEM Pallet No', key: 'item_pallete_no', width: 20 },
     {
-      header: "ITEM Physical Location",
-      key: "item_physical_location",
+      header: 'ITEM Physical Location',
+      key: 'item_physical_location',
       width: 20,
     },
     // { header: "Avl Qty	", key: "avl_qty", width: 20 },
@@ -90,7 +89,7 @@ const GenerateIssuedForDyingGroupsReport = async (details) => {
         // total: Item.item_available_quantities.total,
       });
       row.eachCell({ includeEmpty: true }, (cell) => {
-        cell.alignment = { horizontal: "left" };
+        cell.alignment = { horizontal: 'left' };
       });
     });
   });
@@ -100,7 +99,7 @@ const GenerateIssuedForDyingGroupsReport = async (details) => {
   headerRow.font = { bold: true };
   // Generate a temporary file path
   const filePath =
-    "public/reports/Dying/IssuedForDyingGroupsReportExcel/issue_for_dying_groups_reports.xlsx";
+    'public/reports/Dying/IssuedForDyingGroupsReportExcel/issue_for_dying_groups_reports.xlsx';
 
   // Save the workbook to the file
   await workbook.xlsx.writeFile(filePath);

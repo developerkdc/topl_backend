@@ -1,19 +1,19 @@
-import catchAsync from "../../../utils/errors/catchAsync.js";
+import catchAsync from '../../../utils/errors/catchAsync.js';
 import {
   RawHistoryModel,
   RawMaterialModel,
-} from "../../../database/schema/inventory/raw/raw.schema.js";
+} from '../../../database/schema/inventory/raw/raw.schema.js';
 
-import XLSX from "xlsx";
-import mongoose from "mongoose";
-import { DynamicSearch } from "../../../utils/dynamicSearch/dynamic.js";
-import ApiError from "../../../utils/errors/apiError.js";
-import { IssuedForGroupingModel } from "../../../database/schema/group/issueForGrouping/issueForGrouping.schema.js";
-import { IssuedForSmokingIndividualModel } from "../../../database/schema/smoking/issuedForSmokingIndividual.js";
-import { GroupModel } from "../../../database/schema/group/groupCreated/groupCreated.schema.js";
-import SupplierModel from "../../../database/schema/masters/supplier.schema.js";
-import NodeCache from "node-cache";
-import { SomethingWrong } from "../../../utils/response/response.js";
+import XLSX from 'xlsx';
+import mongoose from 'mongoose';
+import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
+import ApiError from '../../../utils/errors/apiError.js';
+import { IssuedForGroupingModel } from '../../../database/schema/group/issueForGrouping/issueForGrouping.schema.js';
+import { IssuedForSmokingIndividualModel } from '../../../database/schema/smoking/issuedForSmokingIndividual.js';
+import { GroupModel } from '../../../database/schema/group/groupCreated/groupCreated.schema.js';
+import SupplierModel from '../../../database/schema/masters/supplier.schema.js';
+import NodeCache from 'node-cache';
+import { SomethingWrong } from '../../../utils/response/response.js';
 
 const cache = new NodeCache({ stdTTL: 5 });
 
@@ -23,7 +23,7 @@ export const BulkUploadRawMaterial = catchAsync(async (req, res, next) => {
     return res.status(400).json({
       result: [],
       status: false,
-      message: "No file uploaded or file path not found.",
+      message: 'No file uploaded or file path not found.',
     });
   }
 
@@ -34,7 +34,7 @@ export const BulkUploadRawMaterial = catchAsync(async (req, res, next) => {
     const workbook = XLSX.readFile(file.path);
     const worksheet = workbook.Sheets[workbook.SheetNames[0]];
     const data = XLSX.utils.sheet_to_json(worksheet, {
-      dateNF: "dd-mm-yyyy",
+      dateNF: 'dd-mm-yyyy',
       raw: false,
     });
 
@@ -42,36 +42,36 @@ export const BulkUploadRawMaterial = catchAsync(async (req, res, next) => {
       return res.status(400).json({
         result: [],
         status: false,
-        message: "No items found in the uploaded file.",
+        message: 'No items found in the uploaded file.',
       });
     }
 
-    const requiredRawFields = ["date_of_inward", "invoice_no", "supplier_id"];
+    const requiredRawFields = ['date_of_inward', 'invoice_no', 'supplier_id'];
     const requiredrRawItemFields = [
-      "item_name",
-      "item_code",
-      "item_log_no",
-      "item_bundle_no",
-      "item_length",
-      "item_width",
+      'item_name',
+      'item_code',
+      'item_log_no',
+      'item_bundle_no',
+      'item_length',
+      'item_width',
       // "item_received_quantities",
       // "item_received_quantities_natural",
       // "item_received_quantities_dyed",
       // "item_received_quantities_smoked",
       // "item_received_quantities_total",
-      "item_received_pattas",
-      "item_received_sqm",
+      'item_received_pattas',
+      'item_received_sqm',
       // "item_available_quantities",
       // "item_available_quantities_natural",
       // "item_available_quantities_dyed",
       // "item_available_quantities_smoked",
       // "item_available_quantities_total",
-      "item_available_pattas",
-      "item_available_sqm",
-      "item_pallete_no",
-      "item_physical_location",
-      "item_grade",
-      "item_rate_per_sqm",
+      'item_available_pattas',
+      'item_available_sqm',
+      'item_pallete_no',
+      'item_physical_location',
+      'item_grade',
+      'item_rate_per_sqm',
     ];
 
     const supplierIds = new Set(data.map((item) => item.supplier_id));
@@ -91,7 +91,7 @@ export const BulkUploadRawMaterial = catchAsync(async (req, res, next) => {
       }
 
       for (const field of requiredrRawItemFields) {
-        if (item[field] === "") {
+        if (item[field] === '') {
           return res.status(400).json({
             result: [],
             status: false,
@@ -187,7 +187,7 @@ export const BulkUploadRawMaterial = catchAsync(async (req, res, next) => {
     return res.status(201).json({
       result: [],
       status: true,
-      message: "Raw Material Inventory Bulk uploaded successfully.",
+      message: 'Raw Material Inventory Bulk uploaded successfully.',
     });
   } catch (error) {
     await session.abortTransaction();
@@ -240,14 +240,14 @@ export const AddRawVeneer = catchAsync(async (req, res, next) => {
     return res.json({
       result: newRaw,
       status: true,
-      message: "Raw Material Inventory added successfully.",
+      message: 'Raw Material Inventory added successfully.',
     });
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
     return res.status(500).json({
       status: false,
-      message: "Error occurred while adding Raw Material Inventory.",
+      message: 'Error occurred while adding Raw Material Inventory.',
       error: error.message,
     });
   }
@@ -328,13 +328,13 @@ export const FetchRawVeneer = catchAsync(async (req, res, next) => {
     numbers,
     arrayField = [],
   } = req?.body?.searchFields || {};
-  const { page, limit = 10, sortBy = "updated_at", sort = "desc" } = req.query;
+  const { page, limit = 10, sortBy = 'updated_at', sort = 'desc' } = req.query;
   const skip = Math.max((page - 1) * limit, 0);
 
-  const search = req.query.search || "";
+  const search = req.query.search || '';
 
   let searchQuery = {};
-  if (search != "" && req?.body?.searchFields) {
+  if (search != '' && req?.body?.searchFields) {
     const searchdata = DynamicSearch(
       search,
       boolean,
@@ -349,7 +349,7 @@ export const FetchRawVeneer = catchAsync(async (req, res, next) => {
         data: {
           data: [],
         },
-        message: "Results Not Found",
+        message: 'Results Not Found',
       });
     }
     searchQuery = searchdata;
@@ -359,7 +359,7 @@ export const FetchRawVeneer = catchAsync(async (req, res, next) => {
   const matchQuery = data || {};
 
   if (to && from) {
-    matchQuery["date_of_inward"] = {
+    matchQuery['date_of_inward'] = {
       $gte: new Date(from), // Greater than or equal to "from" date
       $lte: new Date(to), // Less than or equal to "to" date
     };
@@ -369,15 +369,15 @@ export const FetchRawVeneer = catchAsync(async (req, res, next) => {
     [
       {
         $lookup: {
-          from: "users", // Assuming the collection name is "employees"
-          localField: "created_employee_id",
-          foreignField: "_id",
-          as: "created_employee_id",
+          from: 'users', // Assuming the collection name is "employees"
+          localField: 'created_employee_id',
+          foreignField: '_id',
+          as: 'created_employee_id',
         },
       },
       {
         $unwind: {
-          path: "$created_employee_id",
+          path: '$created_employee_id',
           preserveNullAndEmptyArrays: true,
         },
       },
@@ -388,7 +388,7 @@ export const FetchRawVeneer = catchAsync(async (req, res, next) => {
         },
       },
       {
-        $count: "totalDocuments",
+        $count: 'totalDocuments',
       },
     ],
     { allowDiskUse: true }
@@ -400,15 +400,15 @@ export const FetchRawVeneer = catchAsync(async (req, res, next) => {
     [
       {
         $lookup: {
-          from: "users", // Assuming the collection name is "employees"
-          localField: "created_employee_id",
-          foreignField: "_id",
-          as: "created_employee_id",
+          from: 'users', // Assuming the collection name is "employees"
+          localField: 'created_employee_id',
+          foreignField: '_id',
+          as: 'created_employee_id',
         },
       },
       {
         $unwind: {
-          path: "$created_employee_id",
+          path: '$created_employee_id',
           preserveNullAndEmptyArrays: true,
         },
       },
@@ -420,8 +420,8 @@ export const FetchRawVeneer = catchAsync(async (req, res, next) => {
       },
       {
         $sort: {
-          [sortBy]: sort == "desc" ? -1 : 1,
-          _id: sort == "desc" ? -1 : 1,
+          [sortBy]: sort == 'desc' ? -1 : 1,
+          _id: sort == 'desc' ? -1 : 1,
         },
       },
       {
@@ -437,7 +437,7 @@ export const FetchRawVeneer = catchAsync(async (req, res, next) => {
   const responseData = {
     result: rawVeneerData,
     statusCode: 200,
-    status: "success",
+    status: 'success',
     totalPages: totalPages,
   };
 
@@ -509,9 +509,9 @@ export const rejectRawVeneer = catchAsync(async (req, res, next) => {
 
   let status;
   if (item_available_pattas <= 0) {
-    status = "not available";
+    status = 'not available';
   }
-  console.log(status, "rrrrrrrr");
+  console.log(status, 'rrrrrrrr');
   const updateVeneer = await RawMaterialModel.findOneAndUpdate(
     { _id: id }, // Assuming 'id' is the unique identifier field
     {
@@ -528,13 +528,13 @@ export const rejectRawVeneer = catchAsync(async (req, res, next) => {
     },
     { new: true } // This option returns the updated document
   );
-  if (!updateVeneer) return next(new ApiError("Veneer Not Found", 404));
+  if (!updateVeneer) return next(new ApiError('Veneer Not Found', 404));
 
   return res.status(200).json({
     statusCode: 200,
     status: true,
     data: updateVeneer,
-    message: "Veneer Updated",
+    message: 'Veneer Updated',
   });
 });
 
@@ -544,10 +544,10 @@ export const UpdateRawVeneer = catchAsync(async (req, res, next) => {
 
   // Construct update object based on provided values
   const updateObj = {};
-  if (item_pallete_no !== undefined && item_pallete_no !== "") {
+  if (item_pallete_no !== undefined && item_pallete_no !== '') {
     updateObj.item_pallete_no = item_pallete_no;
   }
-  if (item_physical_location !== undefined && item_physical_location !== "") {
+  if (item_physical_location !== undefined && item_physical_location !== '') {
     updateObj.item_physical_location = item_physical_location;
   }
 
@@ -556,7 +556,7 @@ export const UpdateRawVeneer = catchAsync(async (req, res, next) => {
     return res.status(400).json({
       statusCode: 400,
       status: false,
-      message: "No fields provided for update.",
+      message: 'No fields provided for update.',
     });
   }
 
@@ -568,14 +568,14 @@ export const UpdateRawVeneer = catchAsync(async (req, res, next) => {
   );
 
   if (!updatedVeneer) {
-    return next(new ApiError("Veneer Not Found", 404));
+    return next(new ApiError('Veneer Not Found', 404));
   }
 
   return res.status(200).json({
     statusCode: 200,
     status: true,
     data: updatedVeneer,
-    message: "Veneer Updated",
+    message: 'Veneer Updated',
   });
 });
 
@@ -646,13 +646,13 @@ export const FetchRawVeneerHistory = catchAsync(async (req, res, next) => {
     numbers,
     arrayField = [],
   } = req?.body?.searchFields || {};
-  const { page, limit = 10, sortBy = "updated_at", sort = "desc" } = req.query;
+  const { page, limit = 10, sortBy = 'updated_at', sort = 'desc' } = req.query;
   const skip = Math.max((page - 1) * limit, 0);
 
-  const search = req.query.search || "";
+  const search = req.query.search || '';
 
   let searchQuery = {};
-  if (search != "" && req?.body?.searchFields) {
+  if (search != '' && req?.body?.searchFields) {
     const searchdata = DynamicSearch(
       search,
       boolean,
@@ -667,7 +667,7 @@ export const FetchRawVeneerHistory = catchAsync(async (req, res, next) => {
         data: {
           data: [],
         },
-        message: "Results Not Found",
+        message: 'Results Not Found',
       });
     }
     searchQuery = searchdata;
@@ -677,7 +677,7 @@ export const FetchRawVeneerHistory = catchAsync(async (req, res, next) => {
   const matchQuery = data || {};
 
   if (to && from) {
-    matchQuery["date_of_inward"] = {
+    matchQuery['date_of_inward'] = {
       $gte: new Date(from), // Greater than or equal to "from" date
       $lte: new Date(to), // Less than or equal to "to" date
     };
@@ -686,15 +686,15 @@ export const FetchRawVeneerHistory = catchAsync(async (req, res, next) => {
   const totalDocuments = await RawHistoryModel.aggregate([
     {
       $lookup: {
-        from: "users", // Assuming the collection name is "employees"
-        localField: "created_employee_id",
-        foreignField: "_id",
-        as: "created_employee_id",
+        from: 'users', // Assuming the collection name is "employees"
+        localField: 'created_employee_id',
+        foreignField: '_id',
+        as: 'created_employee_id',
       },
     },
     {
       $unwind: {
-        path: "$created_employee_id",
+        path: '$created_employee_id',
         preserveNullAndEmptyArrays: true,
       },
     },
@@ -706,11 +706,11 @@ export const FetchRawVeneerHistory = catchAsync(async (req, res, next) => {
     },
     {
       $sort: {
-        [sortBy]: sort == "desc" ? -1 : 1,
+        [sortBy]: sort == 'desc' ? -1 : 1,
       },
     },
     {
-      $count: "totalDocuments",
+      $count: 'totalDocuments',
     },
   ]);
   const totalPages = Math.ceil(totalDocuments?.[0]?.totalDocuments / limit);
@@ -718,15 +718,15 @@ export const FetchRawVeneerHistory = catchAsync(async (req, res, next) => {
   const rawVeneerData = await RawHistoryModel.aggregate([
     {
       $lookup: {
-        from: "users", // Assuming the collection name is "employees"
-        localField: "created_employee_id",
-        foreignField: "_id",
-        as: "created_employee_id",
+        from: 'users', // Assuming the collection name is "employees"
+        localField: 'created_employee_id',
+        foreignField: '_id',
+        as: 'created_employee_id',
       },
     },
     {
       $unwind: {
-        path: "$created_employee_id",
+        path: '$created_employee_id',
         preserveNullAndEmptyArrays: true,
       },
     },
@@ -738,7 +738,7 @@ export const FetchRawVeneerHistory = catchAsync(async (req, res, next) => {
     },
     {
       $sort: {
-        [sortBy]: sort == "desc" ? -1 : 1,
+        [sortBy]: sort == 'desc' ? -1 : 1,
       },
     },
     {
@@ -752,7 +752,7 @@ export const FetchRawVeneerHistory = catchAsync(async (req, res, next) => {
   return res.status(200).json({
     result: rawVeneerData,
     statusCode: 200,
-    status: "success",
+    status: 'success',
     totalPages: totalPages,
   });
 });
@@ -779,7 +779,7 @@ export const IssueForGrouping = catchAsync(async (req, res, next) => {
     if (existingGrouping) {
       return res.json({
         status: false,
-        message: "One or more items are already issued for grouping.",
+        message: 'One or more items are already issued for grouping.',
       });
     }
 
@@ -791,7 +791,7 @@ export const IssueForGrouping = catchAsync(async (req, res, next) => {
     // Update status field in RawMaterialModel for the provided IDs
     await RawMaterialModel.updateMany(
       { _id: { $in: data.item_details } }, // Update documents with IDs in item_details array
-      { $set: { status: "issued for grouping" } }, // Set the status field to "issued for grouping"
+      { $set: { status: 'issued for grouping' } }, // Set the status field to "issued for grouping"
       { session }
     );
 
@@ -801,7 +801,7 @@ export const IssueForGrouping = catchAsync(async (req, res, next) => {
     return res.json({
       result: grouping,
       status: true,
-      message: "Issued for grouping successful.",
+      message: 'Issued for grouping successful.',
     });
   } catch (error) {
     await session.abortTransaction();
@@ -834,13 +834,13 @@ export const CancelGrouping = catchAsync(async (req, res, next) => {
       // Update the status of the corresponding ID in RawMaterialModel to "available"
       await RawMaterialModel.updateOne(
         { _id: issueRecord.item_id },
-        { $set: { status: "available" } }
+        { $set: { status: 'available' } }
       ).session(session);
     } else {
       // If the record does not exist in IssueForGroupingModel, return error
       return res.json({
         status: false,
-        message: "Record not found in Issued For Grouping.",
+        message: 'Record not found in Issued For Grouping.',
       });
     }
 
@@ -850,7 +850,7 @@ export const CancelGrouping = catchAsync(async (req, res, next) => {
 
     return res.json({
       status: true,
-      message: "Cancellation successful.",
+      message: 'Cancellation successful.',
     });
   } catch (error) {
     // Rollback the transaction in case of error
@@ -859,7 +859,7 @@ export const CancelGrouping = catchAsync(async (req, res, next) => {
 
     return res.status(500).json({
       status: false,
-      message: "Error occurred while cancelling grouping.",
+      message: 'Error occurred while cancelling grouping.',
       error: error.message,
     });
   }
@@ -874,14 +874,14 @@ export const IssueForSmokingRaw = catchAsync(async (req, res, next) => {
     session.startTransaction();
     const authUserDetail = req.userDetails;
     const data = req.body;
-    console.log(data, "data");
+    console.log(data, 'data');
     const issuedForSmokingIds = [...data.item_details];
 
     // Find raw materials that are not already issued for smoking
     const rawMaterials = await RawMaterialModel.find(
       {
         _id: { $in: issuedForSmokingIds },
-        status: { $ne: "issued for smoking" },
+        status: { $ne: 'issued for smoking' },
       },
       {
         item_available_pattas: 1,
@@ -905,7 +905,7 @@ export const IssueForSmokingRaw = catchAsync(async (req, res, next) => {
       },
       {
         $set: {
-          status: "issued for smoking",
+          status: 'issued for smoking',
         },
       }
     ).session(session);
@@ -916,7 +916,7 @@ export const IssueForSmokingRaw = catchAsync(async (req, res, next) => {
 
     return res.json({
       status: true,
-      message: "Issue for smoking successful",
+      message: 'Issue for smoking successful',
     });
   } catch (error) {
     // Rollback the transaction if there is any error
@@ -939,13 +939,13 @@ export const IssueForSmokingRawPattas = catchAsync(async (req, res, next) => {
 
     const isIssued = await RawMaterialModel.findById(req.body.item_id);
     console.log(isIssued);
-    if (isIssued.status == "issued for smoking") {
+    if (isIssued.status == 'issued for smoking') {
       // Rollback the transaction if the material is already issued for smoking
       await session.abortTransaction();
       session.endSession();
       return res.json({
         status: false,
-        message: "Issue for smoking failed",
+        message: 'Issue for smoking failed',
       });
     }
 
@@ -958,7 +958,7 @@ export const IssueForSmokingRawPattas = catchAsync(async (req, res, next) => {
       },
       {
         $set: {
-          status: "issued for smoking",
+          status: 'issued for smoking',
         },
       },
       { session }
@@ -970,7 +970,7 @@ export const IssueForSmokingRawPattas = catchAsync(async (req, res, next) => {
 
     return res.json({
       status: true,
-      message: "Issue for smoking successful",
+      message: 'Issue for smoking successful',
       result: savedIssuedForSmoking,
     });
   } catch (error) {
@@ -1003,13 +1003,13 @@ export const CancelSmokingRaw = catchAsync(async (req, res, next) => {
       // Update the status of the corresponding ID in RawMaterialModel to "available"
       await RawMaterialModel.updateOne(
         { _id: issueRecord.item_id },
-        { $set: { status: "available" } }
+        { $set: { status: 'available' } }
       ).session(session);
     } else {
       // If the record does not exist in IssuedForSmokingIndividualModel, return error
       return res.json({
         status: false,
-        message: "Record not found in Issued For Smoking.",
+        message: 'Record not found in Issued For Smoking.',
       });
     }
 
@@ -1019,7 +1019,7 @@ export const CancelSmokingRaw = catchAsync(async (req, res, next) => {
 
     return res.json({
       status: true,
-      message: "Cancellation successful.",
+      message: 'Cancellation successful.',
     });
   } catch (error) {
     // Rollback the transaction in case of error
@@ -1028,7 +1028,7 @@ export const CancelSmokingRaw = catchAsync(async (req, res, next) => {
 
     return res.status(500).json({
       status: false,
-      message: "Error occurred while cancelling smoking.",
+      message: 'Error occurred while cancelling smoking.',
       error: error.message,
     });
   }
@@ -1041,13 +1041,13 @@ export const IssuedForSmokingRawList = catchAsync(async (req, res, next) => {
     numbers,
     arrayField = [],
   } = req?.body?.searchFields || {};
-  const { page, limit = 10, sortBy = "updated_at", sort = "desc" } = req.query;
+  const { page, limit = 10, sortBy = 'updated_at', sort = 'desc' } = req.query;
   const skip = Math.max((page - 1) * limit, 0);
 
-  const search = req.query.search || "";
+  const search = req.query.search || '';
 
   let searchQuery = {};
-  if (search != "" && req?.body?.searchFields) {
+  if (search != '' && req?.body?.searchFields) {
     const searchdata = DynamicSearch(
       search,
       boolean,
@@ -1062,7 +1062,7 @@ export const IssuedForSmokingRawList = catchAsync(async (req, res, next) => {
         data: {
           data: [],
         },
-        message: "Results Not Found",
+        message: 'Results Not Found',
       });
     }
     searchQuery = searchdata;
@@ -1072,7 +1072,7 @@ export const IssuedForSmokingRawList = catchAsync(async (req, res, next) => {
   const matchQuery = data || {};
 
   if (to && from) {
-    matchQuery["created_at"] = {
+    matchQuery['created_at'] = {
       $gte: new Date(from), // Greater than or equal to "from" date
       $lte: new Date(to), // Less than or equal to "to" date
     };
@@ -1081,23 +1081,23 @@ export const IssuedForSmokingRawList = catchAsync(async (req, res, next) => {
   const totalDocuments = await IssuedForSmokingIndividualModel.aggregate([
     {
       $lookup: {
-        from: "raw_materials",
-        localField: "item_id",
-        foreignField: "_id",
-        as: "item_id",
+        from: 'raw_materials',
+        localField: 'item_id',
+        foreignField: '_id',
+        as: 'item_id',
       },
     },
     {
       $unwind: {
-        path: "$item_id",
+        path: '$item_id',
         preserveNullAndEmptyArrays: true,
       },
     },
     {
       $lookup: {
-        from: "users",
-        localField: "created_employee_id",
-        foreignField: "_id",
+        from: 'users',
+        localField: 'created_employee_id',
+        foreignField: '_id',
         pipeline: [
           {
             $project: {
@@ -1105,12 +1105,12 @@ export const IssuedForSmokingRawList = catchAsync(async (req, res, next) => {
             },
           },
         ],
-        as: "created_employee_id",
+        as: 'created_employee_id',
       },
     },
     {
       $unwind: {
-        path: "$created_employee_id",
+        path: '$created_employee_id',
         preserveNullAndEmptyArrays: true,
       },
     },
@@ -1122,11 +1122,11 @@ export const IssuedForSmokingRawList = catchAsync(async (req, res, next) => {
     },
     {
       $sort: {
-        [sortBy]: sort == "desc" ? -1 : 1,
+        [sortBy]: sort == 'desc' ? -1 : 1,
       },
     },
     {
-      $count: "totalDocuments",
+      $count: 'totalDocuments',
     },
   ]);
   const totalPages = Math.ceil(totalDocuments?.[0]?.totalDocuments / limit);
@@ -1148,23 +1148,23 @@ export const IssuedForSmokingRawList = catchAsync(async (req, res, next) => {
   const rawVeneerData = await IssuedForSmokingIndividualModel.aggregate([
     {
       $lookup: {
-        from: "raw_materials",
-        localField: "item_id",
-        foreignField: "_id",
-        as: "item_id",
+        from: 'raw_materials',
+        localField: 'item_id',
+        foreignField: '_id',
+        as: 'item_id',
       },
     },
     {
       $unwind: {
-        path: "$item_id",
+        path: '$item_id',
         preserveNullAndEmptyArrays: true,
       },
     },
     {
       $lookup: {
-        from: "users",
-        localField: "created_employee_id",
-        foreignField: "_id",
+        from: 'users',
+        localField: 'created_employee_id',
+        foreignField: '_id',
         pipeline: [
           {
             $project: {
@@ -1172,12 +1172,12 @@ export const IssuedForSmokingRawList = catchAsync(async (req, res, next) => {
             },
           },
         ],
-        as: "created_employee_id",
+        as: 'created_employee_id',
       },
     },
     {
       $unwind: {
-        path: "$created_employee_id",
+        path: '$created_employee_id',
         preserveNullAndEmptyArrays: true,
       },
     },
@@ -1189,7 +1189,7 @@ export const IssuedForSmokingRawList = catchAsync(async (req, res, next) => {
     },
     {
       $sort: {
-        [sortBy]: sort == "desc" ? -1 : 1,
+        [sortBy]: sort == 'desc' ? -1 : 1,
       },
     },
     {
@@ -1203,7 +1203,7 @@ export const IssuedForSmokingRawList = catchAsync(async (req, res, next) => {
   return res.status(200).json({
     result: rawVeneerData,
     statusCode: 200,
-    status: "success",
+    status: 'success',
     totalPages: totalPages,
   });
 });
@@ -1299,7 +1299,7 @@ export const rejectRawVeneerMultiple = catchAsync(async (req, res, next) => {
         ) {
           await session.abortTransaction();
           session.endSession();
-          return next(new ApiError("Veneer Not Updated, Check Data", 400));
+          return next(new ApiError('Veneer Not Updated, Check Data', 400));
         }
 
         const updateVeneer = await RawMaterialModel.findOneAndUpdate(
@@ -1320,14 +1320,14 @@ export const rejectRawVeneerMultiple = catchAsync(async (req, res, next) => {
         if (!updateVeneer) {
           await session.abortTransaction();
           session.endSession();
-          return next(new ApiError("Veneer Not Found", 404));
+          return next(new ApiError('Veneer Not Found', 404));
         }
       }
       const { item_details, ...groupdata } = req.body;
-      console.log(groupdata, "rgrfgfdgfyudf");
-      let status = "available";
+      console.log(groupdata, 'rgrfgfdgfyudf');
+      let status = 'available';
       if (groupdata.group_no_of_pattas_available == 0) {
-        status = "not available";
+        status = 'not available';
       }
       const updatedGroupData = await GroupModel.findOneAndUpdate(
         { _id: req.body._id },
@@ -1349,21 +1349,21 @@ export const rejectRawVeneerMultiple = catchAsync(async (req, res, next) => {
     return res.status(200).json({
       statusCode: 200,
       status: true,
-      message: "Veneer Updated",
+      message: 'Veneer Updated',
     });
   } catch (error) {
     // Handle errors
-    console.error("Transaction aborted due to an error:", error);
+    console.error('Transaction aborted due to an error:', error);
     // End the session in case of an error
     session.endSession();
-    return next(new ApiError("Transaction Failed", 500));
+    return next(new ApiError('Transaction Failed', 500));
   }
 });
 
 export const UpdateRawVeneerData = catchAsync(async (req, res, next) => {
   const { id } = req.query;
   const updateObj = req.body;
-  console.log(updateObj, "updateObj");
+  console.log(updateObj, 'updateObj');
 
   const existingItem = await RawMaterialModel.findOne({
     item_name: updateObj.item_details.item_name,
@@ -1380,7 +1380,7 @@ export const UpdateRawVeneerData = catchAsync(async (req, res, next) => {
     });
   }
 
-  const requiredFields = ["date_of_inward", "invoice_no"];
+  const requiredFields = ['date_of_inward', 'invoice_no'];
 
   // Validate required fields
   for (const field of requiredFields) {
@@ -1395,7 +1395,7 @@ export const UpdateRawVeneerData = catchAsync(async (req, res, next) => {
 
   function validateItem(item, requiredFields) {
     for (const field of requiredFields) {
-      if (item[field] === undefined || item[field] === "") {
+      if (item[field] === undefined || item[field] === '') {
         return {
           isValid: false,
           message: `${field} is required.`,
@@ -1405,16 +1405,16 @@ export const UpdateRawVeneerData = catchAsync(async (req, res, next) => {
     return { isValid: true };
   }
   const requiredFieldsItem = [
-    "item_name",
-    "item_code",
-    "item_log_no",
-    "item_bundle_no",
-    "item_length",
-    "item_width",
-    "item_pallete_no",
-    "item_physical_location",
-    "item_grade",
-    "item_rate_per_sqm",
+    'item_name',
+    'item_code',
+    'item_log_no',
+    'item_bundle_no',
+    'item_length',
+    'item_width',
+    'item_pallete_no',
+    'item_physical_location',
+    'item_grade',
+    'item_rate_per_sqm',
   ];
 
   const itemValidation = validateItem(
@@ -1440,14 +1440,14 @@ export const UpdateRawVeneerData = catchAsync(async (req, res, next) => {
     { new: true }
   );
   if (!updatedVeneer) {
-    return next(new ApiError("Veneer Not Found", 404));
+    return next(new ApiError('Veneer Not Found', 404));
   }
-  console.log(updatedVeneer, "updatedVeneer");
+  console.log(updatedVeneer, 'updatedVeneer');
   return res.status(200).json({
     statusCode: 200,
     status: true,
     data: updatedVeneer,
-    message: "Veneer Updated",
+    message: 'Veneer Updated',
   });
 });
 
@@ -1456,13 +1456,12 @@ export const DeleteRawVeneer = catchAsync(async (req, res, next) => {
   try {
     session.startTransaction();
     const { id } = req.query;
-    const deletedVeneer = await RawMaterialModel.findByIdAndDelete(id).session(
-      session
-    );
+    const deletedVeneer =
+      await RawMaterialModel.findByIdAndDelete(id).session(session);
     if (!deletedVeneer) {
       await session.abortTransaction();
       session.endSession();
-      return next(new ApiError("Veneer Not Found", 404));
+      return next(new ApiError('Veneer Not Found', 404));
     }
     await session.commitTransaction();
     session.endSession();
@@ -1470,14 +1469,14 @@ export const DeleteRawVeneer = catchAsync(async (req, res, next) => {
       statusCode: 200,
       status: true,
       data: [],
-      message: "Veneer Deleted Successfully",
+      message: 'Veneer Deleted Successfully',
     });
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
     return res.status(500).json({
       status: false,
-      message: "Error occurred while deleteing Raw Material Inventory.",
+      message: 'Error occurred while deleteing Raw Material Inventory.',
       error: error.message,
     });
   }
@@ -1485,13 +1484,13 @@ export const DeleteRawVeneer = catchAsync(async (req, res, next) => {
 
 export const IssuedForDyingRawList = catchAsync(async (req, res, next) => {
   const { string, boolean, numbers } = req?.body?.searchFields || {};
-  const { page, limit = 10, sortBy = "updated_at", sort = "desc" } = req.query;
+  const { page, limit = 10, sortBy = 'updated_at', sort = 'desc' } = req.query;
   const skip = Math.max((page - 1) * limit, 0);
 
-  const search = req.query.search || "";
+  const search = req.query.search || '';
 
   let searchQuery = {};
-  if (search != "" && req?.body?.searchFields) {
+  if (search != '' && req?.body?.searchFields) {
     const searchdata = DynamicSearch(search, boolean, numbers, string);
     if (searchdata?.length == 0) {
       return res.status(404).json({
@@ -1500,7 +1499,7 @@ export const IssuedForDyingRawList = catchAsync(async (req, res, next) => {
         data: {
           data: [],
         },
-        message: "Results Not Found",
+        message: 'Results Not Found',
       });
     }
     searchQuery = searchdata;
@@ -1510,7 +1509,7 @@ export const IssuedForDyingRawList = catchAsync(async (req, res, next) => {
   const matchQuery = data || {};
 
   if (to && from) {
-    matchQuery["created_at"] = {
+    matchQuery['created_at'] = {
       $gte: new Date(from), // Greater than or equal to "from" date
       $lte: new Date(to), // Less than or equal to "to" date
     };
@@ -1525,23 +1524,23 @@ export const IssuedForDyingRawList = catchAsync(async (req, res, next) => {
   const rawVeneerData = await IssuedForDyingIndividualModel.aggregate([
     {
       $lookup: {
-        from: "raw_materials",
-        localField: "item_id",
-        foreignField: "_id",
-        as: "item_id",
+        from: 'raw_materials',
+        localField: 'item_id',
+        foreignField: '_id',
+        as: 'item_id',
       },
     },
     {
       $unwind: {
-        path: "$item_id",
+        path: '$item_id',
         preserveNullAndEmptyArrays: true,
       },
     },
     {
       $lookup: {
-        from: "users",
-        localField: "created_employee_id",
-        foreignField: "_id",
+        from: 'users',
+        localField: 'created_employee_id',
+        foreignField: '_id',
         pipeline: [
           {
             $project: {
@@ -1549,12 +1548,12 @@ export const IssuedForDyingRawList = catchAsync(async (req, res, next) => {
             },
           },
         ],
-        as: "created_employee_id",
+        as: 'created_employee_id',
       },
     },
     {
       $unwind: {
-        path: "$created_employee_id",
+        path: '$created_employee_id',
         preserveNullAndEmptyArrays: true,
       },
     },
@@ -1566,7 +1565,7 @@ export const IssuedForDyingRawList = catchAsync(async (req, res, next) => {
     },
     {
       $sort: {
-        [sortBy]: sort == "desc" ? -1 : 1,
+        [sortBy]: sort == 'desc' ? -1 : 1,
       },
     },
     {
@@ -1580,7 +1579,7 @@ export const IssuedForDyingRawList = catchAsync(async (req, res, next) => {
   return res.status(200).json({
     result: rawVeneerData,
     statusCode: 200,
-    status: "success",
+    status: 'success',
     totalPages: totalPages,
   });
 });
@@ -1590,7 +1589,7 @@ export const RawTotalSqmList = catchAsync(async (req, res, next) => {
     {
       $group: {
         _id: null,
-        totalSqm: { $sum: "$item_available_sqm" },
+        totalSqm: { $sum: '$item_available_sqm' },
       },
     },
   ]);
@@ -1600,12 +1599,12 @@ export const RawTotalSqmList = catchAsync(async (req, res, next) => {
   totalSqmValue = totalSqmValue.toFixed(2);
   res
     .status(200)
-    .json({ totalSqm: totalSqmValue, statusCode: 200, status: "success" });
+    .json({ totalSqm: totalSqmValue, statusCode: 200, status: 'success' });
 });
 
 export const RawItemBundleNoExist = catchAsync(async (req, res) => {
   const { item_name, item_code, item_log_no, item_bundle_no } = req.body;
-  console.log(req.body, "req.body");
+  console.log(req.body, 'req.body');
 
   const rawItems = await RawMaterialModel.aggregate([
     {
@@ -1617,20 +1616,20 @@ export const RawItemBundleNoExist = catchAsync(async (req, res) => {
       },
     },
   ]);
-  console.log(rawItems, "rawItems");
+  console.log(rawItems, 'rawItems');
   if (!rawItems.length) {
     res.status(200).json({
       statusCode: 200,
       status: true,
       data: [],
-      message: "Items do not exist",
+      message: 'Items do not exist',
     });
   } else {
     res.status(400).json({
       statusCode: 400,
       status: false,
       data: [],
-      message: "Items exist",
+      message: 'Items exist',
     });
   }
 });

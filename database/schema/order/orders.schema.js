@@ -1,5 +1,5 @@
-import mongoose from "mongoose";
-import LogSchemaFunction from "../LogsSchema/logs.schema.js";
+import mongoose from 'mongoose';
+import LogSchemaFunction from '../LogsSchema/logs.schema.js';
 
 const OrderSchema = new mongoose.Schema({
   purchase_order_no: {
@@ -13,7 +13,7 @@ const OrderSchema = new mongoose.Schema({
   },
   order_type: {
     type: String,
-    enum: ["raw", "group"],
+    enum: ['raw', 'group'],
     required: true,
   },
   customer_name: {
@@ -28,12 +28,12 @@ const OrderSchema = new mongoose.Schema({
   },
   order_mode: {
     type: String,
-    enum: ["whatsapp", "offline"],
+    enum: ['whatsapp', 'offline'],
     required: true,
   },
   order_status: {
     type: String,
-    enum: ["pending", "complete"],
+    enum: ['pending', 'complete'],
   },
   group_order_details: [
     {
@@ -92,7 +92,7 @@ const OrderSchema = new mongoose.Schema({
       },
       order_status: {
         type: String,
-        enum: ["pending", "open", "closed"],
+        enum: ['pending', 'open', 'closed'],
       },
       item_remarks: {
         type: String,
@@ -206,7 +206,7 @@ const OrderSchema = new mongoose.Schema({
       // },
       order_status: {
         type: String,
-        enum: ["pending", "open", "closed"],
+        enum: ['pending', 'open', 'closed'],
       },
       item_remarks: {
         type: String,
@@ -216,7 +216,7 @@ const OrderSchema = new mongoose.Schema({
 
   created_employee_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "user",
+    ref: 'user',
     trim: true,
   },
   order_remarks: {
@@ -228,5 +228,5 @@ const OrderSchema = new mongoose.Schema({
   deleted_at: { type: Date, default: null },
 });
 
-export const OrderModel = mongoose.model("orders", OrderSchema);
-LogSchemaFunction("orders", OrderModel);
+export const OrderModel = mongoose.model('orders', OrderSchema);
+LogSchemaFunction('orders', OrderModel);

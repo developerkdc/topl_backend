@@ -1,31 +1,42 @@
-import { GroupModel } from "../../database/schema/group/groupCreated/groupCreated.schema.js";
-import { GroupHistoryModel } from "../../database/schema/group/groupHistory/groupHistory.schema.js";
-import { DynamicSearch } from "../../utils/dynamicSearch/dynamic.js";
-import catchAsync from "../../utils/errors/catchAsync.js";
+import { GroupModel } from '../../database/schema/group/groupCreated/groupCreated.schema.js';
+import { GroupHistoryModel } from '../../database/schema/group/groupHistory/groupHistory.schema.js';
+import { DynamicSearch } from '../../utils/dynamicSearch/dynamic.js';
+import catchAsync from '../../utils/errors/catchAsync.js';
 
 export const FetchCreatedGroupsHistory = catchAsync(async (req, res, next) => {
-  const { string, boolean, numbers ,arrayField=[]} = req?.body?.searchFields || {};
- const {
+  const {
+    string,
+    boolean,
+    numbers,
+    arrayField = [],
+  } = req?.body?.searchFields || {};
+  const {
     page = 1,
     limit = 10,
-    sortBy = "updated_at",
-    sort = "desc",
+    sortBy = 'updated_at',
+    sort = 'desc',
   } = req.query;
   const skip = Math.max((page - 1) * limit, 0);
 
-  const search = req.query.search || "";
+  const search = req.query.search || '';
 
   let searchQuery = {};
-  if (search != "" && req?.body?.searchFields) {
-    const searchdata = DynamicSearch(search, boolean, numbers, string,arrayField);
-   if (searchdata?.length == 0) {
+  if (search != '' && req?.body?.searchFields) {
+    const searchdata = DynamicSearch(
+      search,
+      boolean,
+      numbers,
+      string,
+      arrayField
+    );
+    if (searchdata?.length == 0) {
       return res.status(404).json({
         statusCode: 404,
         status: false,
         data: {
           data: [],
         },
-        message: "Results Not Found",
+        message: 'Results Not Found',
       });
     }
     searchQuery = searchdata;
@@ -35,7 +46,7 @@ export const FetchCreatedGroupsHistory = catchAsync(async (req, res, next) => {
   const matchQuery = data || {};
 
   if (to && from) {
-    matchQuery["group_id.date_of_grouping"] = {
+    matchQuery['group_id.date_of_grouping'] = {
       $gte: new Date(from), // Greater than or equal to "from" date
       $lte: new Date(to), // Less than or equal to "to" date
     };
@@ -44,28 +55,28 @@ export const FetchCreatedGroupsHistory = catchAsync(async (req, res, next) => {
   const totalDocuments = await GroupHistoryModel.aggregate([
     {
       $lookup: {
-        from: "raw_materials",
-        localField: "cutting_item_details.item_id",
-        foreignField: "_id",
-        as: "raw_materials_data",
+        from: 'raw_materials',
+        localField: 'cutting_item_details.item_id',
+        foreignField: '_id',
+        as: 'raw_materials_data',
       },
     },
     {
       $addFields: {
         cutting_item_details: {
           $map: {
-            input: "$cutting_item_details",
-            as: "detail",
+            input: '$cutting_item_details',
+            as: 'detail',
             in: {
               $mergeObjects: [
-                "$$detail",
+                '$$detail',
                 {
                   $arrayElemAt: [
                     {
                       $filter: {
-                        input: "$raw_materials_data",
-                        as: "material",
-                        cond: { $eq: ["$$material._id", "$$detail.item_id"] },
+                        input: '$raw_materials_data',
+                        as: 'material',
+                        cond: { $eq: ['$$material._id', '$$detail.item_id'] },
                       },
                     },
                     0,
@@ -84,9 +95,9 @@ export const FetchCreatedGroupsHistory = catchAsync(async (req, res, next) => {
     },
     {
       $lookup: {
-        from: "users",
-        localField: "created_employee_id",
-        foreignField: "_id",
+        from: 'users',
+        localField: 'created_employee_id',
+        foreignField: '_id',
         pipeline: [
           {
             $project: {
@@ -94,12 +105,12 @@ export const FetchCreatedGroupsHistory = catchAsync(async (req, res, next) => {
             },
           },
         ],
-        as: "created_employee_id",
+        as: 'created_employee_id',
       },
     },
     {
       $unwind: {
-        path: "$created_employee_id",
+        path: '$created_employee_id',
         preserveNullAndEmptyArrays: true,
       },
     },
@@ -111,11 +122,11 @@ export const FetchCreatedGroupsHistory = catchAsync(async (req, res, next) => {
     },
     {
       $sort: {
-        [sortBy]: sort == "desc" ? -1 : 1,
+        [sortBy]: sort == 'desc' ? -1 : 1,
       },
     },
     {
-      $count: "totalDocuments",
+      $count: 'totalDocuments',
     },
   ]);
   const totalPages = Math.ceil(totalDocuments?.[0]?.totalDocuments / limit);
@@ -123,28 +134,28 @@ export const FetchCreatedGroupsHistory = catchAsync(async (req, res, next) => {
   const rawVeneerData = await GroupHistoryModel.aggregate([
     {
       $lookup: {
-        from: "raw_materials",
-        localField: "cutting_item_details.item_id",
-        foreignField: "_id",
-        as: "raw_materials_data",
+        from: 'raw_materials',
+        localField: 'cutting_item_details.item_id',
+        foreignField: '_id',
+        as: 'raw_materials_data',
       },
     },
     {
       $addFields: {
         cutting_item_details: {
           $map: {
-            input: "$cutting_item_details",
-            as: "detail",
+            input: '$cutting_item_details',
+            as: 'detail',
             in: {
               $mergeObjects: [
-                "$$detail",
+                '$$detail',
                 {
                   $arrayElemAt: [
                     {
                       $filter: {
-                        input: "$raw_materials_data",
-                        as: "material",
-                        cond: { $eq: ["$$material._id", "$$detail.item_id"] },
+                        input: '$raw_materials_data',
+                        as: 'material',
+                        cond: { $eq: ['$$material._id', '$$detail.item_id'] },
                       },
                     },
                     0,
@@ -163,9 +174,9 @@ export const FetchCreatedGroupsHistory = catchAsync(async (req, res, next) => {
     },
     {
       $lookup: {
-        from: "users",
-        localField: "created_employee_id",
-        foreignField: "_id",
+        from: 'users',
+        localField: 'created_employee_id',
+        foreignField: '_id',
         pipeline: [
           {
             $project: {
@@ -173,12 +184,12 @@ export const FetchCreatedGroupsHistory = catchAsync(async (req, res, next) => {
             },
           },
         ],
-        as: "created_employee_id",
+        as: 'created_employee_id',
       },
     },
     {
       $unwind: {
-        path: "$created_employee_id",
+        path: '$created_employee_id',
         preserveNullAndEmptyArrays: true,
       },
     },
@@ -190,7 +201,7 @@ export const FetchCreatedGroupsHistory = catchAsync(async (req, res, next) => {
     },
     {
       $sort: {
-        [sortBy]: sort == "desc" ? -1 : 1,
+        [sortBy]: sort == 'desc' ? -1 : 1,
       },
     },
     {
@@ -204,16 +215,16 @@ export const FetchCreatedGroupsHistory = catchAsync(async (req, res, next) => {
   return res.status(200).json({
     result: rawVeneerData,
     statusCode: 200,
-    status: "success",
+    status: 'success',
     totalPages: totalPages,
   });
 });
 
 export const DropdownGroupingNo = catchAsync(async (req, res) => {
-  const list = await GroupModel.distinct("group_no");
+  const list = await GroupModel.distinct('group_no');
   res.status(200).json({
     result: list,
     status: true,
-    message: "Group No Dropdown List",
+    message: 'Group No Dropdown List',
   });
 });

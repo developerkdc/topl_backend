@@ -1,10 +1,10 @@
-import mongoose from "mongoose";
-import { OrderModel } from "../../database/schema/order/orders.schema.js";
-import { QcDoneInventoryModel } from "../../database/schema/qcDone.js/qcDone.schema.js";
-import catchAsync from "../../utils/errors/catchAsync.js";
-import { DynamicSearch } from "../../utils/dynamicSearch/dynamic.js";
-import { DispatchModel } from "../../database/schema/dispatch/dispatch.schema.js";
-import { RawMaterialModel } from "../../database/schema/inventory/raw/raw.schema.js";
+import mongoose from 'mongoose';
+import { OrderModel } from '../../database/schema/order/orders.schema.js';
+import { QcDoneInventoryModel } from '../../database/schema/qcDone.js/qcDone.schema.js';
+import catchAsync from '../../utils/errors/catchAsync.js';
+import { DynamicSearch } from '../../utils/dynamicSearch/dynamic.js';
+import { DispatchModel } from '../../database/schema/dispatch/dispatch.schema.js';
+import { RawMaterialModel } from '../../database/schema/inventory/raw/raw.schema.js';
 
 export const CreateDispatch = catchAsync(async (req, res, next) => {
   const session = await mongoose.startSession();
@@ -17,26 +17,26 @@ export const CreateDispatch = catchAsync(async (req, res, next) => {
     const order = await OrderModel.findById(data.order_id).session(session);
 
     if (!order) {
-      throw new Error("Order Not Found");
+      throw new Error('Order Not Found');
     }
-    if (order.order_type == "group") {
+    if (order.order_type == 'group') {
       for (const dispatchDetail of data.group_dispatch_details) {
         for (const item of dispatchDetail.dispatch) {
           const updateQc = await QcDoneInventoryModel.findById(
             item.qc_id
           ).session(session);
-          console.log(updateQc, "updateQc");
+          console.log(updateQc, 'updateQc');
           if (
             !updateQc ||
             updateQc.qc_no_of_pcs_available < item.qc_dispatched_qty
           ) {
-            throw new Error("Qc inventory out of stock");
+            throw new Error('Qc inventory out of stock');
           }
           updateQc.qc_no_of_pcs_available -= item.qc_dispatched_qty;
           updateQc.qc_sqm -= item.dispatch_sqm;
           updateQc.qc_sqm = parseFloat(updateQc.qc_sqm).toFixed(2);
           if (updateQc.qc_no_of_pcs_available === 0) {
-            updateQc.status = "not available";
+            updateQc.status = 'not available';
           }
           await updateQc.save();
         }
@@ -45,7 +45,7 @@ export const CreateDispatch = catchAsync(async (req, res, next) => {
           (detail) => detail.item_no === dispatchDetail.item_no
         );
         if (index === -1) {
-          throw new Error("Item not found in group_order_details");
+          throw new Error('Item not found in group_order_details');
         }
 
         let updatedFields = {
@@ -58,7 +58,7 @@ export const CreateDispatch = catchAsync(async (req, res, next) => {
         };
 
         if (updatedFields.order_balance_pcs_qty === 0) {
-          updatedFields.order_status = "closed";
+          updatedFields.order_status = 'closed';
         }
 
         const objData = JSON.parse(
@@ -73,14 +73,14 @@ export const CreateDispatch = catchAsync(async (req, res, next) => {
       }
     }
 
-    if (order.order_type == "raw") {
+    if (order.order_type == 'raw') {
       for (const dispatchDetail of data.raw_dispatch_details) {
         for (const item of dispatchDetail.dispatch) {
           const rawData = await RawMaterialModel.findById(item.raw_material_id);
           const dispatchedQuantity = item.dispatched_quantity;
           const availableQuantity = rawData.item_available_pattas;
           if (dispatchedQuantity > availableQuantity) {
-            console.log("innnnnnnnn");
+            console.log('innnnnnnnn');
             throw new Error(
               `Dispatch quantity for ${item} exceeds available quantity.`
             );
@@ -128,7 +128,7 @@ export const CreateDispatch = catchAsync(async (req, res, next) => {
           ).toFixed(2);
 
           if (rawData.item_available_pattas == 0) {
-            rawData.status = "not available";
+            rawData.status = 'not available';
           }
           rawData.save({ validateBeforeSave: false });
         }
@@ -136,7 +136,7 @@ export const CreateDispatch = catchAsync(async (req, res, next) => {
           (detail) => detail.item_no === dispatchDetail.item_no
         );
         if (index === -1) {
-          throw new Error("Item not found in raw_order_details");
+          throw new Error('Item not found in raw_order_details');
         }
 
         let updatedFields = {
@@ -184,7 +184,7 @@ export const CreateDispatch = catchAsync(async (req, res, next) => {
           // updatedFields.balance_quantity.smoked === 0 &&
           // updatedFields.balance_quantity.total === 0
         ) {
-          updatedFields.order_status = "closed";
+          updatedFields.order_status = 'closed';
         }
 
         const objData = JSON.parse(
@@ -205,13 +205,13 @@ export const CreateDispatch = catchAsync(async (req, res, next) => {
     await session.commitTransaction();
     session.endSession();
 
-    return res.json({ msg: "Dispatch Created" });
+    return res.json({ msg: 'Dispatch Created' });
   } catch (error) {
-    console.error("Error processing dispatch:", error);
+    console.error('Error processing dispatch:', error);
     await session.abortTransaction();
     session.endSession();
     return res.status(500).json({
-      error: "An error occurred while processing the dispatch",
+      error: 'An error occurred while processing the dispatch',
       msg: error.message,
     });
   }
@@ -227,15 +227,15 @@ export const ListRawDispatchCreated = catchAsync(async (req, res, next) => {
   const {
     page = 1,
     limit = 10,
-    sortBy = "updated_at",
-    sort = "desc",
+    sortBy = 'updated_at',
+    sort = 'desc',
   } = req.query;
   const skip = Math.max((page - 1) * limit, 0);
 
-  const search = req.query.search || "";
+  const search = req.query.search || '';
 
   let searchQuery = {};
-  if (search != "" && req?.body?.searchFields) {
+  if (search != '' && req?.body?.searchFields) {
     const searchdata = DynamicSearch(
       search,
       boolean,
@@ -250,7 +250,7 @@ export const ListRawDispatchCreated = catchAsync(async (req, res, next) => {
         data: {
           data: [],
         },
-        message: "Results Not Found",
+        message: 'Results Not Found',
       });
     }
     searchQuery = searchdata;
@@ -261,13 +261,13 @@ export const ListRawDispatchCreated = catchAsync(async (req, res, next) => {
 
   if (to && from) {
     console.log(new Date(from));
-    matchQuery["dispatched_date"] = {
+    matchQuery['dispatched_date'] = {
       $gte: new Date(from),
       $lte: new Date(to),
     };
   }
   const issuedForFinishingView =
-    mongoose.connection.db.collection("dispatch_raw_view");
+    mongoose.connection.db.collection('dispatch_raw_view');
   const totalDocuments = await issuedForFinishingView.countDocuments({
     ...matchQuery,
     ...searchQuery,
@@ -284,7 +284,7 @@ export const ListRawDispatchCreated = catchAsync(async (req, res, next) => {
       },
       {
         $sort: {
-          [sortBy]: sort == "desc" ? -1 : 1,
+          [sortBy]: sort == 'desc' ? -1 : 1,
         },
       },
       {
@@ -298,7 +298,7 @@ export const ListRawDispatchCreated = catchAsync(async (req, res, next) => {
   return res.status(200).json({
     result: issuedForFinishingData,
     statusCode: 200,
-    status: "success",
+    status: 'success',
     totalPages: totalPages,
   });
 });
@@ -313,15 +313,15 @@ export const ListGroupDispatchCreated = catchAsync(async (req, res, next) => {
   const {
     page = 1,
     limit = 10,
-    sortBy = "updated_at",
-    sort = "desc",
+    sortBy = 'updated_at',
+    sort = 'desc',
   } = req.query;
   const skip = Math.max((page - 1) * limit, 0);
 
-  const search = req.query.search || "";
+  const search = req.query.search || '';
 
   let searchQuery = {};
-  if (search != "" && req?.body?.searchFields) {
+  if (search != '' && req?.body?.searchFields) {
     const searchdata = DynamicSearch(
       search,
       boolean,
@@ -336,7 +336,7 @@ export const ListGroupDispatchCreated = catchAsync(async (req, res, next) => {
         data: {
           data: [],
         },
-        message: "Results Not Found",
+        message: 'Results Not Found',
       });
     }
     searchQuery = searchdata;
@@ -347,13 +347,13 @@ export const ListGroupDispatchCreated = catchAsync(async (req, res, next) => {
 
   if (to && from) {
     console.log(new Date(from));
-    matchQuery["dispatched_date"] = {
+    matchQuery['dispatched_date'] = {
       $gte: new Date(from),
       $lte: new Date(to),
     };
   }
   const issuedForFinishingView = mongoose.connection.db.collection(
-    "dispatch_group_view"
+    'dispatch_group_view'
   );
   const totalDocuments = await issuedForFinishingView.countDocuments({
     ...matchQuery,
@@ -371,7 +371,7 @@ export const ListGroupDispatchCreated = catchAsync(async (req, res, next) => {
       },
       {
         $sort: {
-          [sortBy]: sort == "desc" ? -1 : 1,
+          [sortBy]: sort == 'desc' ? -1 : 1,
         },
       },
       {
@@ -385,7 +385,7 @@ export const ListGroupDispatchCreated = catchAsync(async (req, res, next) => {
   return res.status(200).json({
     result: issuedForFinishingData,
     statusCode: 200,
-    status: "success",
+    status: 'success',
     totalPages: totalPages,
   });
 });
@@ -394,14 +394,14 @@ export const AvailableGroupData = catchAsync(async (req, res, next) => {
   const { group_no } = req.query;
   console.log(group_no);
   const groupData = await QcDoneInventoryModel.find({
-    status: "available",
+    status: 'available',
     group_no: group_no,
   });
   console.log(groupData);
   if (groupData.length <= 0) {
-    throw new Error("Group Not Available In Inventory For Dispatch");
+    throw new Error('Group Not Available In Inventory For Dispatch');
   }
-  return res.json({ message: "success", result: groupData });
+  return res.json({ message: 'success', result: groupData });
 });
 
 // export const AvailableRawData = catchAsync(async (req, res, next) => {
@@ -426,8 +426,8 @@ export const AvailableRawData = catchAsync(async (req, res, next) => {
   const {
     page = 1,
     limit = 10,
-    sortBy = "updated_at",
-    sort = "desc",
+    sortBy = 'updated_at',
+    sort = 'desc',
     item_pallete_no,
   } = req.query;
   const skip = Math.max((page - 1) * limit, 0);
@@ -437,12 +437,12 @@ export const AvailableRawData = catchAsync(async (req, res, next) => {
 
   // Check if either item_name or item_code is provided
   if (!item_name && !item_code) {
-    throw new Error("Provide item name or item code");
+    throw new Error('Provide item name or item code');
   }
 
   // Construct the filter object
   const filter = {
-    status: "available",
+    status: 'available',
   };
 
   // Add item_name and item_code to the filter if provided
@@ -466,7 +466,7 @@ export const AvailableRawData = catchAsync(async (req, res, next) => {
 
   // Check if any data is found
   if (availableData.length <= 0) {
-    throw new Error("Data not available");
+    throw new Error('Data not available');
   }
 
   // Calculate total documents matching the filter
@@ -479,7 +479,7 @@ export const AvailableRawData = catchAsync(async (req, res, next) => {
   return res.status(200).json({
     result: availableData,
     statusCode: 200,
-    status: "success",
+    status: 'success',
     totalPages: totalPages,
   });
 });
@@ -490,7 +490,7 @@ export const DeleteRawDispatch = catchAsync(async (req, res, next) => {
 
   try {
     const { dispatchId } = req.query;
-    const dispatch = mongoose.connection.db.collection("dispatch_raw_view");
+    const dispatch = mongoose.connection.db.collection('dispatch_raw_view');
     const dispatchDetails = await dispatch.findOne({
       _id: new mongoose.Types.ObjectId(dispatchId),
     });
@@ -500,8 +500,8 @@ export const DeleteRawDispatch = catchAsync(async (req, res, next) => {
     for (const dispatchDetail of dispatchDetails.raw_dispatch_details) {
       for (const item of dispatchDetail.dispatch) {
         const rawData = await RawMaterialModel.findById(item.raw_material_id);
-        console.log(item, "ittttttttttttttt");
-        console.log(rawData, "rawwwwwwwwww");
+        console.log(item, 'ittttttttttttttt');
+        console.log(rawData, 'rawwwwwwwwww');
         const dispatch_quantities = {
           natural: item.natural,
           dyed: item.dyed,
@@ -534,7 +534,7 @@ export const DeleteRawDispatch = catchAsync(async (req, res, next) => {
         ).toFixed(2);
 
         if (rawData.item_available_pattas !== 0) {
-          rawData.status = "available";
+          rawData.status = 'available';
         }
         rawData.save({ validateBeforeSave: false });
       }
@@ -542,7 +542,7 @@ export const DeleteRawDispatch = catchAsync(async (req, res, next) => {
         (detail) => detail.item_no === dispatchDetail.item_no
       );
       if (index === -1) {
-        throw new Error("Item not found in raw_order_details");
+        throw new Error('Item not found in raw_order_details');
       }
 
       let updatedFields = {
@@ -583,7 +583,7 @@ export const DeleteRawDispatch = catchAsync(async (req, res, next) => {
         updatedFields.balance_quantity.smoked !== 0 ||
         updatedFields.balance_quantity.total !== 0
       ) {
-        updatedFields.order_status = "open";
+        updatedFields.order_status = 'open';
       }
 
       const objData = JSON.parse(
@@ -601,16 +601,16 @@ export const DeleteRawDispatch = catchAsync(async (req, res, next) => {
     await session.commitTransaction();
     session.endSession();
     return res.json({
-      message: "success",
-      result: "Dispatch Deleted Successfully",
+      message: 'success',
+      result: 'Dispatch Deleted Successfully',
     });
     // Handle dispatchDetails...
   } catch (error) {
-    console.error("Error processing dispatch:", error);
+    console.error('Error processing dispatch:', error);
     await session.abortTransaction();
     session.endSession();
     return res.status(500).json({
-      error: "An error occurred while processing the delete dispatch",
+      error: 'An error occurred while processing the delete dispatch',
       msg: error.message,
     });
   }
@@ -622,7 +622,7 @@ export const DeleteGroupDispatch = catchAsync(async (req, res, next) => {
 
   try {
     const { dispatchId } = req.query;
-    const dispatch = mongoose.connection.db.collection("dispatch_group_view");
+    const dispatch = mongoose.connection.db.collection('dispatch_group_view');
     const dispatchDetails = await dispatch.findOne({
       _id: new mongoose.Types.ObjectId(dispatchId),
     });
@@ -639,7 +639,7 @@ export const DeleteGroupDispatch = catchAsync(async (req, res, next) => {
         updateQc.qc_sqm += item.dispatch_sqm;
         updateQc.qc_sqm = parseFloat(updateQc.qc_sqm).toFixed(2);
         if (updateQc.qc_no_of_pcs_available !== 0) {
-          updateQc.status = "available";
+          updateQc.status = 'available';
         }
         await updateQc.save();
       }
@@ -648,7 +648,7 @@ export const DeleteGroupDispatch = catchAsync(async (req, res, next) => {
         (detail) => detail.item_no === dispatchDetail.item_no
       );
       if (index === -1) {
-        throw new Error("Item not found in group_order_details");
+        throw new Error('Item not found in group_order_details');
       }
 
       let updatedFields = {
@@ -661,7 +661,7 @@ export const DeleteGroupDispatch = catchAsync(async (req, res, next) => {
       };
 
       if (updatedFields.order_balance_pcs_qty !== 0) {
-        updatedFields.order_status = "open";
+        updatedFields.order_status = 'open';
       }
 
       const objData = JSON.parse(
@@ -678,16 +678,16 @@ export const DeleteGroupDispatch = catchAsync(async (req, res, next) => {
     await session.commitTransaction();
     session.endSession();
     return res.json({
-      message: "success",
-      result: "Dispatch Deleted Successfully",
+      message: 'success',
+      result: 'Dispatch Deleted Successfully',
     });
     // Handle dispatchDetails...
   } catch (error) {
-    console.error("Error processing dispatch:", error);
+    console.error('Error processing dispatch:', error);
     await session.abortTransaction();
     session.endSession();
     return res.status(500).json({
-      error: "An error occurred while processing the delete dispatch",
+      error: 'An error occurred while processing the delete dispatch',
       msg: error.message,
     });
   }
@@ -704,9 +704,9 @@ export const ListItemPallete = catchAsync(async (req, res, next) => {
 
     res
       .status(200)
-      .json({ result: paletteNumbers, statusCode: 200, status: "success" });
+      .json({ result: paletteNumbers, statusCode: 200, status: 'success' });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });

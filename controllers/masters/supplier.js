@@ -1,15 +1,15 @@
-import mongoose from "mongoose";
-import SupplierModel from "../../database/schema/masters/supplier.schema.js";
-import catchAsync from "../../utils/errors/catchAsync.js";
-import { DynamicSearch } from "../../utils/dynamicSearch/dynamic.js";
-import ApiError from "../../utils/errors/apiError.js";
-import { StatusCodes } from "../../utils/constants.js";
-import ApiResponse from "../../utils/ApiResponse.js";
-import supplierBranchModel from "../../database/schema/masters/supplier.branches.schema.js";
-import path from "path";
+import mongoose from 'mongoose';
+import SupplierModel from '../../database/schema/masters/supplier.schema.js';
+import catchAsync from '../../utils/errors/catchAsync.js';
+import { DynamicSearch } from '../../utils/dynamicSearch/dynamic.js';
+import ApiError from '../../utils/errors/apiError.js';
+import { StatusCodes } from '../../utils/constants.js';
+import ApiResponse from '../../utils/ApiResponse.js';
+import supplierBranchModel from '../../database/schema/masters/supplier.branches.schema.js';
+import path from 'path';
 export const AddSupplierMaster = catchAsync(async (req, res) => {
   const { supplier_name, supplier_type } = req.body;
-  const requiredFiedls = ["supplier_name", "supplier_type"];
+  const requiredFiedls = ['supplier_name', 'supplier_type'];
   for (let field of requiredFiedls) {
     if (!req.body[field]) {
       return res.json(
@@ -25,7 +25,7 @@ export const AddSupplierMaster = catchAsync(async (req, res) => {
       $group: {
         _id: null,
         max: {
-          $max: "$sr_no",
+          $max: '$sr_no',
         },
       },
     },
@@ -42,7 +42,7 @@ export const AddSupplierMaster = catchAsync(async (req, res) => {
   return res.json(
     new ApiResponse(
       StatusCodes.OK,
-      "Supplier Created successfully..",
+      'Supplier Created successfully..',
       newSupplier
     )
   );
@@ -53,7 +53,7 @@ export const UpdateSupplierMaster = catchAsync(async (req, res) => {
   const updateData = req.body;
   if (!mongoose.Types.ObjectId.isValid(supplierId)) {
     return res.json(
-      new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Invalid id")
+      new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, 'Invalid id')
     );
   }
   if (updateData.supplier_type) {
@@ -72,7 +72,7 @@ export const UpdateSupplierMaster = catchAsync(async (req, res) => {
       .json(
         new ApiResponse(
           StatusCodes.NOT_FOUND,
-          "Supplier not found with given Id"
+          'Supplier not found with given Id'
         )
       );
   }
@@ -80,7 +80,7 @@ export const UpdateSupplierMaster = catchAsync(async (req, res) => {
     statusCode: StatusCodes.OK,
     result: supplier,
     status: true,
-    message: "Updated successfully",
+    message: 'Updated successfully',
   });
 });
 
@@ -94,12 +94,12 @@ export const ListSupplierMaster = catchAsync(async (req, res) => {
   const {
     page = 1,
     limit = 10,
-    sortBy = "updated_at",
-    sort = "desc",
+    sortBy = 'updated_at',
+    sort = 'desc',
   } = req.query;
-  const search = req.query.search || "";
+  const search = req.query.search || '';
   let searchQuery = {};
-  if (search != "" && req?.body?.searchFields) {
+  if (search != '' && req?.body?.searchFields) {
     const searchdata = DynamicSearch(
       search,
       boolean,
@@ -114,7 +114,7 @@ export const ListSupplierMaster = catchAsync(async (req, res) => {
         data: {
           user: [],
         },
-        message: "Results Not Found",
+        message: 'Results Not Found',
       });
     }
     searchQuery = searchdata;
@@ -128,9 +128,9 @@ export const ListSupplierMaster = catchAsync(async (req, res) => {
   const supplierList = await SupplierModel.aggregate([
     {
       $lookup: {
-        from: "users",
-        localField: "created_employee_id",
-        foreignField: "_id",
+        from: 'users',
+        localField: 'created_employee_id',
+        foreignField: '_id',
         pipeline: [
           {
             $project: {
@@ -138,12 +138,12 @@ export const ListSupplierMaster = catchAsync(async (req, res) => {
             },
           },
         ],
-        as: "created_employee_id",
+        as: 'created_employee_id',
       },
     },
     {
       $unwind: {
-        path: "$created_employee_id",
+        path: '$created_employee_id',
         preserveNullAndEmptyArrays: true,
       },
     },
@@ -151,7 +151,7 @@ export const ListSupplierMaster = catchAsync(async (req, res) => {
       $match: { ...searchQuery },
     },
     {
-      $sort: { [sortBy]: sort == "desc" ? -1 : 1 },
+      $sort: { [sortBy]: sort == 'desc' ? -1 : 1 },
     },
     {
       $skip: skip,
@@ -166,18 +166,18 @@ export const ListSupplierMaster = catchAsync(async (req, res) => {
       status: true,
       totalPages: totalPages,
       currentPage: validPage,
-      message: "All Supplier List",
+      message: 'All Supplier List',
     });
   }
 });
 
 export const ListSupplierMasterWithOutPermission = catchAsync(
   async (req, res) => {
-    const supplierList = await SupplierModel.find({ status: "active" });
+    const supplierList = await SupplierModel.find({ status: 'active' });
     return res.status(201).json({
       result: supplierList,
       status: true,
-      message: "All Supplier List",
+      message: 'All Supplier List',
     });
   }
 );
@@ -196,18 +196,18 @@ export const addBranchToSupplier = catchAsync(async (req, res) => {
     is_main_branch,
     branch_name,
   } = req.body;
-  console.log("req body => ", req.body);
+  console.log('req body => ', req.body);
 
   const requiredFields = [
-    "contact_person",
-    "address",
-    "state",
-    "country",
-    "city",
-    "pincode",
+    'contact_person',
+    'address',
+    'state',
+    'country',
+    'city',
+    'pincode',
     // "gst_number",
     // "web_url",
-    "branch_name",
+    'branch_name',
   ];
   for (let field of requiredFields) {
     if (!req.body[field]) {
@@ -225,7 +225,7 @@ export const addBranchToSupplier = catchAsync(async (req, res) => {
   const validateSupplierId = await SupplierModel.findById(id);
   if (!validateSupplierId) {
     return res.json(
-      new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Invalid supplier_id")
+      new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, 'Invalid supplier_id')
     );
   }
 
@@ -235,7 +235,7 @@ export const addBranchToSupplier = catchAsync(async (req, res) => {
       return res.json(
         new ApiResponse(
           StatusCodes.INTERNAL_SERVER_ERROR,
-          "Each contact person must have name"
+          'Each contact person must have name'
         )
       );
     }
@@ -274,7 +274,7 @@ export const addBranchToSupplier = catchAsync(async (req, res) => {
   return res.json(
     new ApiResponse(
       StatusCodes.OK,
-      "New branch created successfully...",
+      'New branch created successfully...',
       newSupplierBranch
     )
   );
@@ -352,8 +352,8 @@ export const fetchAllSupplierWithBranchesDetails = catchAsync(
   async (req, res) => {
     const {
       query,
-      sortField = "updated_at",
-      sortOrder = "desc",
+      sortField = 'updated_at',
+      sortOrder = 'desc',
       page,
       limit,
     } = req.query;
@@ -361,93 +361,92 @@ export const fetchAllSupplierWithBranchesDetails = catchAsync(
     const limitInt = parseInt(limit) || 10;
     const skipped = (pageInt - 1) * limitInt;
 
-    const sortDirection = sortOrder === "desc" ? -1 : 1;
+    const sortDirection = sortOrder === 'desc' ? -1 : 1;
     const sortObj = sortField ? { [sortField]: sortDirection } : {};
-
 
     const searchQuery = query
       ? {
-        $or: [
-          {
-            "supplierDetails.contact_person.name": {
-              $regex: query,
-              $options: "i",
-            },
-          },
-          {
-            "supplierDetails.contact_person.email": {
-              $regex: query,
-              $options: "i",
-            },
-          },
-          {
-            "supplierDetails.contact_person.designation": {
-              $regex: query,
-              $options: "i",
-            },
-          },
-          {
-            "supplierDetails.contact_person.mobile_number": {
-              $regex: query,
-              $options: "i",
-            },
-          },
-          {
-            "supplierDetails.state": {
-              $regex: query,
-              $options: "i",
-            },
-          },
-          {
-            "supplierDetails.country": {
-              $regex: query,
-              $options: "i",
-            },
-          },
-          {
-            "supplierDetails.city": {
-              $regex: query,
-              $options: "i",
-            },
-          },
-          {
-            "supplierDetails.address": {
-              $regex: query,
-              $options: "i",
-            },
-          },
-          {
-            "supplier_name": { $regex: query, $options: "i" },
-          },
-          {
-            "supplier_type": { $regex: query, $options: "i" },
-          },
-          // Only search sr_no if query is a number
-          ...(isNaN(Number(query))
-            ? []
-            : [
-              {
-                "sr_no": Number(query),
+          $or: [
+            {
+              'supplierDetails.contact_person.name': {
+                $regex: query,
+                $options: 'i',
               },
-            ]),
-        ],
-      }
+            },
+            {
+              'supplierDetails.contact_person.email': {
+                $regex: query,
+                $options: 'i',
+              },
+            },
+            {
+              'supplierDetails.contact_person.designation': {
+                $regex: query,
+                $options: 'i',
+              },
+            },
+            {
+              'supplierDetails.contact_person.mobile_number': {
+                $regex: query,
+                $options: 'i',
+              },
+            },
+            {
+              'supplierDetails.state': {
+                $regex: query,
+                $options: 'i',
+              },
+            },
+            {
+              'supplierDetails.country': {
+                $regex: query,
+                $options: 'i',
+              },
+            },
+            {
+              'supplierDetails.city': {
+                $regex: query,
+                $options: 'i',
+              },
+            },
+            {
+              'supplierDetails.address': {
+                $regex: query,
+                $options: 'i',
+              },
+            },
+            {
+              supplier_name: { $regex: query, $options: 'i' },
+            },
+            {
+              supplier_type: { $regex: query, $options: 'i' },
+            },
+            // Only search sr_no if query is a number
+            ...(isNaN(Number(query))
+              ? []
+              : [
+                  {
+                    sr_no: Number(query),
+                  },
+                ]),
+          ],
+        }
       : {};
 
     const pipeline = [
       {
         $lookup: {
-          from: "supplier_branches",
-          localField: "_id",
-          foreignField: "supplier_id",
-          as: "supplierDetails",
+          from: 'supplier_branches',
+          localField: '_id',
+          foreignField: 'supplier_id',
+          as: 'supplierDetails',
         },
       },
 
       // {
       //   $unwind: "$supplierDetails",
       // },
-      { $sort: { [sortField]: sortOrder === "desc" ? -1 : 1 } },
+      { $sort: { [sortField]: sortOrder === 'desc' ? -1 : 1 } },
       { $match: searchQuery },
       { $skip: skipped },
       { $limit: limitInt },
@@ -458,13 +457,13 @@ export const fetchAllSupplierWithBranchesDetails = catchAsync(
     // }
 
     const allDetails = await SupplierModel.aggregate(pipeline).collation({
-      locale: "en",
+      locale: 'en',
       // caseLevel: true,
       strength: 1,
     });
 
     if (allDetails.length === 0) {
-      return res.json(new ApiResponse(StatusCodes.OK, "NO Data found..."));
+      return res.json(new ApiResponse(StatusCodes.OK, 'NO Data found...'));
     }
     // const totalPage = allDetails.length;
     const totalDocs = await SupplierModel.countDocuments({
@@ -472,7 +471,7 @@ export const fetchAllSupplierWithBranchesDetails = catchAsync(
     });
     const totalPage = Math.ceil(totalDocs / limitInt);
     return res.json(
-      new ApiResponse(StatusCodes.OK, "All Details fetched succesfully..", {
+      new ApiResponse(StatusCodes.OK, 'All Details fetched succesfully..', {
         allDetails,
         totalPage,
       })
@@ -484,7 +483,7 @@ export const updateSupplierBranchById = catchAsync(async (req, res) => {
   const updateData = req.body;
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.json(
-      new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Invalid id")
+      new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, 'Invalid id')
     );
   }
   const supplier = await supplierBranchModel.findByIdAndUpdate(
@@ -498,7 +497,7 @@ export const updateSupplierBranchById = catchAsync(async (req, res) => {
       .json(
         new ApiResponse(
           StatusCodes.NOT_FOUND,
-          "Supplier Branch not found with given Id"
+          'Supplier Branch not found with given Id'
         )
       );
   }
@@ -507,7 +506,7 @@ export const updateSupplierBranchById = catchAsync(async (req, res) => {
     .json(
       new ApiResponse(
         StatusCodes.OK,
-        "Branch updated successfully...",
+        'Branch updated successfully...',
         supplier
       )
     );
@@ -519,46 +518,46 @@ export const fetchAllBranchesBySupplierId = catchAsync(async (req, res) => {
 
   if (!id) {
     return res.json(
-      new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Id is missing")
+      new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, 'Id is missing')
     );
   }
   const pageInt = parseInt(page) || 1;
   const limitInt = parseInt(limit) || 10;
   const skipped = (pageInt - 1) * limitInt;
 
-  const sortDirection = sortOrder === "desc" ? -1 : 1;
+  const sortDirection = sortOrder === 'desc' ? -1 : 1;
   const sortObj = sortField ? { [sortField]: sortDirection } : {};
   const searchQuery = query
     ? {
-      $or: [
-        { "branch_name": { $regex: query, $options: "i" } },
-        { "address": { $regex: query, $options: "i" } },
-        { "country": { $regex: query, $options: "i" } },
-        { "city": { $regex: query, $options: "i" } },
-        { "pincode": { $regex: query, $options: "i" } },
-        { "gst_number": { $regex: query, $options: "i" } },
-        { "contact_person.name": { $regex: query, $options: "i" } },
-        { "supplierDetails.supplier_name": { $regex: query, $options: "i" } },
-        { "supplierDetails.supplier_type": { $regex: query, $options: "i" } },
-      ],
-    }
+        $or: [
+          { branch_name: { $regex: query, $options: 'i' } },
+          { address: { $regex: query, $options: 'i' } },
+          { country: { $regex: query, $options: 'i' } },
+          { city: { $regex: query, $options: 'i' } },
+          { pincode: { $regex: query, $options: 'i' } },
+          { gst_number: { $regex: query, $options: 'i' } },
+          { 'contact_person.name': { $regex: query, $options: 'i' } },
+          { 'supplierDetails.supplier_name': { $regex: query, $options: 'i' } },
+          { 'supplierDetails.supplier_type': { $regex: query, $options: 'i' } },
+        ],
+      }
     : {};
 
   const validateId = await SupplierModel.findById(id);
   if (!validateId) {
-    return res.json(new ApiResponse(StatusCodes.NOT_FOUND, "Invalid Id"));
+    return res.json(new ApiResponse(StatusCodes.NOT_FOUND, 'Invalid Id'));
   }
 
   const pipeline = [
     {
       $lookup: {
-        from: "suppliers",
-        localField: "supplier_id",
-        foreignField: "_id",
-        as: "supplierDetails",
+        from: 'suppliers',
+        localField: 'supplier_id',
+        foreignField: '_id',
+        as: 'supplierDetails',
       },
     },
-    { $unwind: { path: "$supplierDetails", preserveNullAndEmptyArrays: true } },
+    { $unwind: { path: '$supplierDetails', preserveNullAndEmptyArrays: true } },
     {
       $match: {
         ...searchQuery,
@@ -586,11 +585,11 @@ export const fetchAllBranchesBySupplierId = catchAsync(async (req, res) => {
   const allDetails = await supplierBranchModel.aggregate(pipeline);
 
   if (allDetails.length === 0) {
-    return res.json(new ApiResponse(StatusCodes.OK, "NO Data found..."));
+    return res.json(new ApiResponse(StatusCodes.OK, 'NO Data found...'));
   }
   const totalPage = allDetails.length;
   return res.json(
-    new ApiResponse(StatusCodes.OK, "All Details fetched succesfully..", {
+    new ApiResponse(StatusCodes.OK, 'All Details fetched succesfully..', {
       allDetails,
       totalPage,
     })
@@ -602,18 +601,18 @@ export const fetchContactPersonById = catchAsync(async (req, res) => {
 
   if (!id) {
     return res.json(
-      new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "id is misssing")
+      new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, 'id is misssing')
     );
   }
   const contactPersonData = await supplierBranchModel.findOne({
-    "contact_person._id": id,
+    'contact_person._id': id,
   });
 
   if (!contactPersonData) {
     return res.json(
       new ApiResponse(
         StatusCodes.INTERNAL_SERVER_ERROR,
-        "No user found with given id"
+        'No user found with given id'
       )
     );
   }
@@ -623,7 +622,7 @@ export const fetchContactPersonById = catchAsync(async (req, res) => {
   return res.json(
     new ApiResponse(
       StatusCodes.OK,
-      "Contact Person fetched successfully",
+      'Contact Person fetched successfully',
       contactPerson
     )
   );
@@ -634,7 +633,7 @@ export const addContactPersonToBranch = catchAsync(async (req, res) => {
   const { name, email, mobile_number, designation } = req.body;
   if (!id) {
     return res.json(
-      new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "branch id is missing")
+      new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, 'branch id is missing')
     );
   }
 
@@ -643,7 +642,7 @@ export const addContactPersonToBranch = catchAsync(async (req, res) => {
     return res.json(
       new ApiResponse(
         StatusCodes.INTERNAL_SERVER_ERROR,
-        "Branch not found with given id"
+        'Branch not found with given id'
       )
     );
   }
@@ -685,11 +684,11 @@ export const addContactPersonToBranch = catchAsync(async (req, res) => {
   );
   if (updatedData.modifiedCount === 0 && !updatedData.upsertedCount === 0) {
     return res.json(
-      new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Err adding data... ")
+      new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, 'Err adding data... ')
     );
   }
   return res.json(
-    new ApiResponse(StatusCodes.OK, "Contact Person Added Successfully")
+    new ApiResponse(StatusCodes.OK, 'Contact Person Added Successfully')
   );
 });
 
@@ -699,7 +698,7 @@ export const fetchAllSupplierWithBranchesDetailsBySupplierId = catchAsync(
     const { id } = req.params;
     if (!id) {
       return res.json(
-        new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Id is missing")
+        new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, 'Id is missing')
       );
     }
     console.log(
@@ -709,35 +708,35 @@ export const fetchAllSupplierWithBranchesDetailsBySupplierId = catchAsync(
     const limitInt = parseInt(limit) || 10;
     const skipped = (pageInt - 1) * limitInt;
 
-    const sortDirection = sortOrder === "desc" ? -1 : 1;
+    const sortDirection = sortOrder === 'desc' ? -1 : 1;
     const sortObj = sortField ? { [sortField]: sortDirection } : {};
-    console.log("sort obj => ", sortObj);
+    console.log('sort obj => ', sortObj);
     const searchQuery = query
       ? {
-        $or: [
-          { "contact_person.name": { $regex: query, $options: "i" } },
-          {
-            "supplierDetails.supplier_name": { $regex: query, $options: "i" },
-          },
-          {
-            "supplierDetails.supplier_type": { $regex: query, $options: "i" },
-          },
-        ],
-      }
+          $or: [
+            { 'contact_person.name': { $regex: query, $options: 'i' } },
+            {
+              'supplierDetails.supplier_name': { $regex: query, $options: 'i' },
+            },
+            {
+              'supplierDetails.supplier_type': { $regex: query, $options: 'i' },
+            },
+          ],
+        }
       : {};
 
     const pipeline = [
       { $match: { supplier_id: id } },
       {
         $lookup: {
-          from: "suppliers",
-          localField: "supplier_id",
-          foreignField: "_id",
-          as: "supplierDetails",
+          from: 'suppliers',
+          localField: 'supplier_id',
+          foreignField: '_id',
+          as: 'supplierDetails',
         },
       },
       { $match: searchQuery },
-      { $unwind: "$supplierDetails" },
+      { $unwind: '$supplierDetails' },
       { $skip: skipped },
       { $limit: limitInt },
       // { $sort: sortObj }
@@ -749,11 +748,11 @@ export const fetchAllSupplierWithBranchesDetailsBySupplierId = catchAsync(
     const allDetails = await supplierBranchModel.aggregate(pipeline);
 
     if (allDetails.length === 0) {
-      return res.json(new ApiResponse(StatusCodes.OK, "NO Data found..."));
+      return res.json(new ApiResponse(StatusCodes.OK, 'NO Data found...'));
     }
     const totalPage = allDetails.length;
     return res.json(
-      new ApiResponse(StatusCodes.OK, "All Details fetched succesfully..", {
+      new ApiResponse(StatusCodes.OK, 'All Details fetched succesfully..', {
         allDetails,
         totalPage,
       })
@@ -767,7 +766,7 @@ export const fetchAllSuppliers = catchAsync(async (req, res) => {
   return res.json(
     new ApiResponse(
       StatusCodes.OK,
-      "All Suppliers fetched successfully..",
+      'All Suppliers fetched successfully..',
       allSuppliers
     )
   );
@@ -778,8 +777,8 @@ export const DropdownSupplierName = catchAsync(async (req, res) => {
 
   const searchQuery = type
     ? {
-      supplier_type: { $elemMatch: { $regex: type, $options: "i" } },
-    }
+        supplier_type: { $elemMatch: { $regex: type, $options: 'i' } },
+      }
     : {};
 
   const list = await SupplierModel.find(searchQuery).sort({ supplier_name: 1 });
@@ -789,7 +788,7 @@ export const DropdownSupplierName = catchAsync(async (req, res) => {
     .json(
       new ApiResponse(
         StatusCodes.OK,
-        "SupplierName dropdown fetched successfully....",
+        'SupplierName dropdown fetched successfully....',
         list
       )
     );
@@ -800,7 +799,7 @@ export const fetchSupplierMainBranchBySupplierId = catchAsync(
     const { id } = req.params;
     if (!id) {
       return res.json(
-        new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Id is missing")
+        new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, 'Id is missing')
       );
     }
     // const supplierList = await SupplierModel.aggregate([
@@ -839,15 +838,15 @@ export const fetchSupplierMainBranchBySupplierId = catchAsync(
       },
       {
         $lookup: {
-          from: "suppliers",
-          localField: "supplier_id",
-          foreignField: "_id",
-          as: "supplierDetails",
+          from: 'suppliers',
+          localField: 'supplier_id',
+          foreignField: '_id',
+          as: 'supplierDetails',
         },
       },
       {
         $unwind: {
-          path: "$supplierDetails",
+          path: '$supplierDetails',
           preserveNullAndEmptyArrays: true,
         },
       },
@@ -855,7 +854,7 @@ export const fetchSupplierMainBranchBySupplierId = catchAsync(
     return res.json(
       new ApiResponse(
         StatusCodes.OK,
-        "Main branch fetched successfully",
+        'Main branch fetched successfully',
         supplierMainBranch
       )
     );
@@ -872,23 +871,23 @@ export const DropdownSupplierBranches = catchAsync(async (req, res) => {
     },
     {
       $lookup: {
-        from: "suppliers",
-        localField: "supplier_id",
-        foreignField: "_id",
-        as: "supplierDetails",
+        from: 'suppliers',
+        localField: 'supplier_id',
+        foreignField: '_id',
+        as: 'supplierDetails',
       },
     },
     {
       $sort: { branch_name: 1 },
     },
-    { $unwind: "$supplierDetails" },
+    { $unwind: '$supplierDetails' },
   ]);
   res
     .status(200)
     .json(
       new ApiResponse(
         StatusCodes.OK,
-        "SupplierBranchs dropdown fetched successfully....",
+        'SupplierBranchs dropdown fetched successfully....',
         list
       )
     );
@@ -900,7 +899,7 @@ export const updateContactPersonInfo = catchAsync(async (req, res) => {
   const { name, email, mobile_number, designation } = req.body;
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.json(
-      new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Invalid id")
+      new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, 'Invalid id')
     );
   }
 
@@ -956,9 +955,9 @@ export const updateContactPersonInfo = catchAsync(async (req, res) => {
   //     );
   // }
   const supplier = await supplierBranchModel.findOneAndUpdate(
-    { "contact_person._id": objectId },
+    { 'contact_person._id': objectId },
     {
-      $set: { "contact_person.$": { email, name, mobile_number, designation } },
+      $set: { 'contact_person.$': { email, name, mobile_number, designation } },
     },
     { new: true, runValidators: true }
   );
@@ -968,7 +967,7 @@ export const updateContactPersonInfo = catchAsync(async (req, res) => {
       .json(
         new ApiResponse(
           StatusCodes.NOT_FOUND,
-          "Supplier Branch not found with given Id"
+          'Supplier Branch not found with given Id'
         )
       );
   }
@@ -977,7 +976,7 @@ export const updateContactPersonInfo = catchAsync(async (req, res) => {
     .json(
       new ApiResponse(
         StatusCodes.OK,
-        "Contact Person updated successfully...",
+        'Contact Person updated successfully...',
         supplier
       )
     );
@@ -997,19 +996,19 @@ export const addBranchToSuppliers = catchAsync(async (req, res) => {
     is_main_branch,
     branch_name,
   } = req.body;
-  console.log("req body => ", req.body);
+  console.log('req body => ', req.body);
 
   // Check if required fields are present
   const requiredFields = [
-    "contact_person",
-    "address",
-    "state",
-    "country",
-    "city",
-    "pincode",
+    'contact_person',
+    'address',
+    'state',
+    'country',
+    'city',
+    'pincode',
     // "gst_number",
     // "web_url",
-    "branch_name",
+    'branch_name',
   ];
 
   for (let field of requiredFields) {
@@ -1028,7 +1027,7 @@ export const addBranchToSuppliers = catchAsync(async (req, res) => {
     return res.json(
       new ApiResponse(
         StatusCodes.INTERNAL_SERVER_ERROR,
-        "Contact person details are missing or not in array format"
+        'Contact person details are missing or not in array format'
       )
     );
   }
@@ -1040,7 +1039,7 @@ export const addBranchToSuppliers = catchAsync(async (req, res) => {
       return res.json(
         new ApiResponse(
           StatusCodes.INTERNAL_SERVER_ERROR,
-          "Each contact person must have name,  designation, and mobile number"
+          'Each contact person must have name,  designation, and mobile number'
         )
       );
     }
@@ -1048,8 +1047,8 @@ export const addBranchToSuppliers = catchAsync(async (req, res) => {
     // Check if email or mobile_number already exists in any branch
     const existingContact = await supplierBranchModel.findOne({
       $or: [
-        { "contact_person.email": email },
-        { "contact_person.mobile_number": mobile_number },
+        { 'contact_person.email': email },
+        { 'contact_person.mobile_number': mobile_number },
       ],
     });
 
@@ -1067,7 +1066,7 @@ export const addBranchToSuppliers = catchAsync(async (req, res) => {
   const validateSupplierId = await SupplierModel.findById(id);
   if (!validateSupplierId) {
     return res.json(
-      new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, "Invalid supplier_id")
+      new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, 'Invalid supplier_id')
     );
   }
 
@@ -1092,7 +1091,7 @@ export const addBranchToSuppliers = catchAsync(async (req, res) => {
   return res.json(
     new ApiResponse(
       StatusCodes.OK,
-      "New branch created successfully...",
+      'New branch created successfully...',
       newSupplierBranch
     )
   );
@@ -1105,7 +1104,7 @@ export const AddSupplierMasterNew = catchAsync(async (req, res, next) => {
   try {
     const { supplier_name, supplier_type, branch_details } = req.body;
 
-    const requiredFields = ["supplier_name", "supplier_type"];
+    const requiredFields = ['supplier_name', 'supplier_type'];
     for (let field of requiredFields) {
       if (!req.body[field]) {
         await session.abortTransaction();
@@ -1131,7 +1130,7 @@ export const AddSupplierMasterNew = catchAsync(async (req, res, next) => {
       {
         $group: {
           _id: null,
-          max: { $max: "$sr_no" },
+          max: { $max: '$sr_no' },
         },
       },
     ]);
@@ -1161,14 +1160,14 @@ export const AddSupplierMasterNew = catchAsync(async (req, res, next) => {
       } = branch_details;
 
       const requiredBranchFields = [
-        "contact_person",
-        "address",
-        "state",
-        "country",
-        "city",
-        "pincode",
+        'contact_person',
+        'address',
+        'state',
+        'country',
+        'city',
+        'pincode',
         // "gst_number",
-        "branch_name",
+        'branch_name',
       ];
 
       for (let field of requiredBranchFields) {
@@ -1190,7 +1189,7 @@ export const AddSupplierMasterNew = catchAsync(async (req, res, next) => {
           return res.json(
             new ApiResponse(
               StatusCodes.INTERNAL_SERVER_ERROR,
-              "Each contact person must have name"
+              'Each contact person must have name'
             )
           );
         }
@@ -1267,7 +1266,7 @@ export const AddSupplierMasterNew = catchAsync(async (req, res, next) => {
     return res.json(
       new ApiResponse(
         StatusCodes.OK,
-        "Supplier and branch details created successfully"
+        'Supplier and branch details created successfully'
       )
     );
   } catch (error) {
@@ -1289,7 +1288,7 @@ export const updateSupplierAndBranch = catchAsync(async (req, res, next) => {
     return res.json(
       new ApiResponse(
         StatusCodes.INTERNAL_SERVER_ERROR,
-        "Invalid supplier or branch ID"
+        'Invalid supplier or branch ID'
       )
     );
   }
@@ -1309,10 +1308,9 @@ export const updateSupplierAndBranch = catchAsync(async (req, res, next) => {
     );
 
     if (!supplier) {
-      return next(new ApiError(
-        "Supplier not found with given ID", StatusCodes.NOT_FOUND,
-
-      ));
+      return next(
+        new ApiError('Supplier not found with given ID', StatusCodes.NOT_FOUND)
+      );
     }
 
     const branch = await supplierBranchModel.findByIdAndUpdate(
@@ -1322,10 +1320,12 @@ export const updateSupplierAndBranch = catchAsync(async (req, res, next) => {
     );
 
     if (!branch) {
-      return next(new ApiError(
-        "Supplier branch not found with given ID", StatusCodes.NOT_FOUND,
-
-      ));
+      return next(
+        new ApiError(
+          'Supplier branch not found with given ID',
+          StatusCodes.NOT_FOUND
+        )
+      );
     }
 
     await session.commitTransaction();
@@ -1336,7 +1336,7 @@ export const updateSupplierAndBranch = catchAsync(async (req, res, next) => {
       .json(
         new ApiResponse(
           StatusCodes.OK,
-          "Supplier and branch updated successfully"
+          'Supplier and branch updated successfully'
         )
       );
   } catch (error) {

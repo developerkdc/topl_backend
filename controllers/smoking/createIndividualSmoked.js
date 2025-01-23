@@ -1,11 +1,11 @@
-import mongoose from "mongoose";
-import { IssuedForSmokingIndividualModel } from "../../database/schema/smoking/issuedForSmokingIndividual.js";
-import catchAsync from "../../utils/errors/catchAsync.js";
-import { IndividualSmokeModel } from "../../database/schema/smoking/individualSmoked.js";
-import RawImagesModel from "../../database/schema/images/rawImages.schema.js";
-import fs from "fs";
-import OtherGoodsModel from "../../database/schema/inventory/otherGoods/otherGoods.schema.js";
-import OtherGoodsConsumedModel from "../../database/schema/inventory/otherGoods/otherGoodsConsumed.schema.js";
+import mongoose from 'mongoose';
+import { IssuedForSmokingIndividualModel } from '../../database/schema/smoking/issuedForSmokingIndividual.js';
+import catchAsync from '../../utils/errors/catchAsync.js';
+import { IndividualSmokeModel } from '../../database/schema/smoking/individualSmoked.js';
+import RawImagesModel from '../../database/schema/images/rawImages.schema.js';
+import fs from 'fs';
+import OtherGoodsModel from '../../database/schema/inventory/otherGoods/otherGoods.schema.js';
+import OtherGoodsConsumedModel from '../../database/schema/inventory/otherGoods/otherGoodsConsumed.schema.js';
 // export const CreateIndividualSmoked = catchAsync(async (req, res, next) => {
 //   // Start a MongoDB session
 //   const session = await mongoose.startSession();
@@ -141,7 +141,7 @@ export const CreateIndividualSmoked = catchAsync(async (req, res, next) => {
     if (issuedForSmokingIndividualItemsExist?.length != item_details?.length) {
       return res.status(400).json({
         status: false,
-        message: "Item not available",
+        message: 'Item not available',
       });
     }
 
@@ -154,9 +154,9 @@ export const CreateIndividualSmoked = catchAsync(async (req, res, next) => {
       },
       {
         $group: {
-          _id: "$item_name",
+          _id: '$item_name',
           totalAvailable: {
-            $sum: "$available_quantity",
+            $sum: '$available_quantity',
           },
         },
       },
@@ -249,7 +249,7 @@ export const CreateIndividualSmoked = catchAsync(async (req, res, next) => {
         {
           item_id: { $in: item_details },
         },
-        { $set: { status: "smoked" } }
+        { $set: { status: 'smoked' } }
       ).session(session);
     }
 
@@ -292,7 +292,7 @@ export const CreateIndividualSmoked = catchAsync(async (req, res, next) => {
         available_quantity: updatedOtherGoods?.available_quantity,
         date_of_consumption: bodyData?.date_of_smoking,
         consumption_quantity: consumeFromItem,
-        processes: "Individual Smoking",
+        processes: 'Individual Smoking',
         supplier_details: updatedOtherGoods?.supplier_details,
         other_goods_consumed_remarks: bodyData?.consumption_remark,
         created_employee_id: authUserDetail?._id,
@@ -317,7 +317,7 @@ export const CreateIndividualSmoked = catchAsync(async (req, res, next) => {
 
     return res.json({
       status: true,
-      message: "Create individual smoking successful",
+      message: 'Create individual smoking successful',
     });
   } catch (error) {
     // Rollback the transaction if there is any error

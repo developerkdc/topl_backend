@@ -1,9 +1,9 @@
-import { FinishingModel } from "../../database/schema/finishing/finishing.schema.js";
-import { IssuedForFinishingModel } from "../../database/schema/finishing/issuedForFinishing.schema.js";
-import { QcDoneInventoryModel } from "../../database/schema/qcDone.js/qcDone.schema.js";
-import { DynamicSearch } from "../../utils/dynamicSearch/dynamic.js";
-import catchAsync from "../../utils/errors/catchAsync.js";
-import mongoose from "mongoose";
+import { FinishingModel } from '../../database/schema/finishing/finishing.schema.js';
+import { IssuedForFinishingModel } from '../../database/schema/finishing/issuedForFinishing.schema.js';
+import { QcDoneInventoryModel } from '../../database/schema/qcDone.js/qcDone.schema.js';
+import { DynamicSearch } from '../../utils/dynamicSearch/dynamic.js';
+import catchAsync from '../../utils/errors/catchAsync.js';
+import mongoose from 'mongoose';
 export const ListReadyForDispatch = catchAsync(async (req, res, next) => {
   const {
     string,
@@ -14,15 +14,15 @@ export const ListReadyForDispatch = catchAsync(async (req, res, next) => {
   const {
     page = 1,
     limit = 10,
-    sortBy = "updated_at",
-    sort = "desc",
+    sortBy = 'updated_at',
+    sort = 'desc',
   } = req.query;
   const skip = Math.max((page - 1) * limit, 0);
 
-  const search = req.query.search || "";
+  const search = req.query.search || '';
 
   let searchQuery = {};
-  if (search != "" && req?.body?.searchFields) {
+  if (search != '' && req?.body?.searchFields) {
     const searchdata = DynamicSearch(
       search,
       boolean,
@@ -37,7 +37,7 @@ export const ListReadyForDispatch = catchAsync(async (req, res, next) => {
         data: {
           data: [],
         },
-        message: "Results Not Found",
+        message: 'Results Not Found',
       });
     }
     searchQuery = searchdata;
@@ -48,7 +48,7 @@ export const ListReadyForDispatch = catchAsync(async (req, res, next) => {
 
   if (to && from) {
     console.log(new Date(from));
-    matchQuery["created_at"] = { $gte: new Date(from), $lte: new Date(to) };
+    matchQuery['created_at'] = { $gte: new Date(from), $lte: new Date(to) };
   }
 
   const totalDocuments = await QcDoneInventoryModel.countDocuments({
@@ -58,7 +58,7 @@ export const ListReadyForDispatch = catchAsync(async (req, res, next) => {
   const totalPages = Math.ceil(totalDocuments / limit);
 
   const issuedForFinishingView = mongoose.connection.db.collection(
-    "qc_done_inventories_view"
+    'qc_done_inventories_view'
   );
   const issuedForFinishingData = await issuedForFinishingView
     .aggregate([
@@ -70,7 +70,7 @@ export const ListReadyForDispatch = catchAsync(async (req, res, next) => {
       },
       {
         $sort: {
-          [sortBy]: sort == "desc" ? -1 : 1,
+          [sortBy]: sort == 'desc' ? -1 : 1,
         },
       },
       {
@@ -84,7 +84,7 @@ export const ListReadyForDispatch = catchAsync(async (req, res, next) => {
   return res.status(200).json({
     result: issuedForFinishingData,
     statusCode: 200,
-    status: "success",
+    status: 'success',
     totalPages: totalPages,
   });
 });
@@ -96,9 +96,9 @@ export const RevertReadyForDispatch = catchAsync(async (req, res, next) => {
     session.startTransaction();
     const { id } = req.query;
 
-    console.log(req.body, "bodyyy");
+    console.log(req.body, 'bodyyy');
     const QcDoneView = mongoose.connection.db.collection(
-      "qc_done_inventories_view"
+      'qc_done_inventories_view'
     );
     const QcDoneDetails = await QcDoneView.findOne({
       _id: new mongoose.Types.ObjectId(id),
@@ -107,7 +107,7 @@ export const RevertReadyForDispatch = catchAsync(async (req, res, next) => {
       QcDoneDetails.qc_no_of_pcs_available !=
       QcDoneDetails.finishing_details.finishing_no_of_pcs
     ) {
-      throw new Error("Edit cannot be done");
+      throw new Error('Edit cannot be done');
     }
 
     const issuedForFinishingDetails = await IssuedForFinishingModel.findById(
@@ -115,7 +115,7 @@ export const RevertReadyForDispatch = catchAsync(async (req, res, next) => {
     );
     issuedForFinishingDetails.available_pressed_pcs +=
       QcDoneDetails.qc_no_of_pcs_available;
-    issuedForFinishingDetails.revert_status = "active";
+    issuedForFinishingDetails.revert_status = 'active';
     issuedForFinishingDetails.save();
 
     const FinishingDetails = await FinishingModel.findByIdAndDelete(
@@ -127,8 +127,8 @@ export const RevertReadyForDispatch = catchAsync(async (req, res, next) => {
     await session.commitTransaction();
     session.endSession();
     return res.json({
-      message: "success",
-      result: "Reverted Successfully",
+      message: 'success',
+      result: 'Reverted Successfully',
     });
   } catch (error) {
     if (session) {
@@ -137,7 +137,7 @@ export const RevertReadyForDispatch = catchAsync(async (req, res, next) => {
     }
     return res.status(500).json({
       status: false,
-      message: "Error occurred while reverting",
+      message: 'Error occurred while reverting',
       error: error.message,
     });
   }
@@ -152,7 +152,7 @@ export const UpdateReadyForDispatch = catchAsync(async (req, res, next) => {
     if (!id) {
       return res.json({
         status: false,
-        message: "Missing Id ",
+        message: 'Missing Id ',
       });
     }
     const updateData = { ...req.body };
@@ -168,7 +168,7 @@ export const UpdateReadyForDispatch = catchAsync(async (req, res, next) => {
       session.endSession();
       return res.json({
         status: false,
-        message: "Ready Sheet Form not found",
+        message: 'Ready Sheet Form not found',
       });
     }
     const AllreadySheetForm = await QcDoneInventoryModel.find();
@@ -176,9 +176,9 @@ export const UpdateReadyForDispatch = catchAsync(async (req, res, next) => {
     session.endSession();
 
     res.status(200).json({
-      status: "success",
+      status: 'success',
       data: {
-        message: "Ready sheet form updated successfully",
+        message: 'Ready sheet form updated successfully',
         updatedData: AllreadySheetForm,
       },
     });

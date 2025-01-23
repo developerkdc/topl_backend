@@ -1,45 +1,45 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
 const invoice_details = new mongoose.Schema({
   invoice_date: {
     type: Date,
     default: Date.now,
-    required: [true, "Invoice Date is required."],
+    required: [true, 'Invoice Date is required.'],
   },
   invoice_no: {
     type: String,
     unique: true,
     trim: true,
     uppercase: true,
-    required: [true, "Invoice No is required."],
+    required: [true, 'Invoice No is required.'],
   },
   total_item_amount: {
     type: Number,
-    required: [true, "Total Item Amount is required."],
+    required: [true, 'Total Item Amount is required.'],
   },
   transporter_details: {
     type: String,
     default: null,
     trim: true,
-    uppercase: true
+    uppercase: true,
   },
   port_of_loading: {
     type: String,
     default: null,
     trim: true,
-    uppercase: true
+    uppercase: true,
   },
   port_of_discharge: {
     type: String,
     default: null,
     trim: true,
-    uppercase: true
+    uppercase: true,
   },
   bill_of_landing: {
     type: String,
     default: null,
     trim: true,
-    uppercase: true
+    uppercase: true,
   },
   freight: {
     type: Number,
@@ -79,7 +79,7 @@ const invoice_details = new mongoose.Schema({
   },
   gst_percentage: {
     type: Number,
-    required: [true, "GST Percentage is required."],
+    required: [true, 'GST Percentage is required.'],
     default: 0, // You can set a default like 18
   },
   igst_percentage: {
@@ -96,58 +96,58 @@ const invoice_details = new mongoose.Schema({
   },
   gst_value: {
     type: Number,
-    required: [true, "GST Value is required."],
+    required: [true, 'GST Value is required.'],
   },
   invoice_value_with_gst: {
     type: Number,
-    required: [true, "Invoice Value with GST is required."],
+    required: [true, 'Invoice Value with GST is required.'],
   },
   remark: {
     type: String,
     default: null,
     uppercase: true,
-    trim: true
+    trim: true,
   },
 });
 export const approval_invoice_details = new mongoose.Schema({
   invoice_date: {
     type: Date,
     default: Date.now,
-    required: [true, "Invoice Date is required."],
+    required: [true, 'Invoice Date is required.'],
   },
   invoice_no: {
     type: String,
-    required: [true, "Invoice No is required."],
+    required: [true, 'Invoice No is required.'],
     trim: true,
-    uppercase: true
+    uppercase: true,
   },
   total_item_amount: {
     type: Number,
-    required: [true, "Total Item Amount is required."],
+    required: [true, 'Total Item Amount is required.'],
   },
   transporter_details: {
     type: String,
     default: null,
     trim: true,
-    uppercase: true
+    uppercase: true,
   },
   port_of_loading: {
     type: String,
     default: null,
     trim: true,
-    uppercase: true
+    uppercase: true,
   },
   port_of_discharge: {
     type: String,
     default: null,
     trim: true,
-    uppercase: true
+    uppercase: true,
   },
   bill_of_landing: {
     type: String,
     default: null,
     trim: true,
-    uppercase: true
+    uppercase: true,
   },
   freight: {
     type: Number,
@@ -187,7 +187,7 @@ export const approval_invoice_details = new mongoose.Schema({
   },
   gst_percentage: {
     type: Number,
-    required: [true, "GST Percentage is required."],
+    required: [true, 'GST Percentage is required.'],
     default: 0, // You can set a default like 18
   },
   igst_percentage: {
@@ -204,18 +204,18 @@ export const approval_invoice_details = new mongoose.Schema({
   },
   gst_value: {
     type: Number,
-    required: [true, "GST Value is required."],
-    default: 0
+    required: [true, 'GST Value is required.'],
+    default: 0,
   },
   invoice_value_with_gst: {
     type: Number,
-    required: [true, "Invoice Value with GST is required."],
+    required: [true, 'Invoice Value with GST is required.'],
   },
   remark: {
     type: String,
     default: null,
     uppercase: true,
-    trim: true
+    trim: true,
   },
 });
 

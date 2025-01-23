@@ -1,21 +1,21 @@
-import mongoose from "mongoose";
-import LogSchemaFunction from "../LogsSchema/logs.schema.js";
+import mongoose from 'mongoose';
+import LogSchemaFunction from '../LogsSchema/logs.schema.js';
 
 const IssuedTapingSchema = new mongoose.Schema({
   issued_for_cutting_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "issued_for_cutting",
+    ref: 'issued_for_cutting',
     required: true,
   },
   cutting_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "cutting",
+    ref: 'cutting',
     required: true,
   },
 
   created_employee_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "user",
+    ref: 'user',
     trim: true,
   },
   issued_for_taping_remarks: {
@@ -23,8 +23,8 @@ const IssuedTapingSchema = new mongoose.Schema({
   },
   revert_status: {
     type: String,
-    enum: ["active", "inactive"],
-    default: "active",
+    enum: ['active', 'inactive'],
+    default: 'active',
   },
   issued_for_taping_date: {
     type: Date,
@@ -36,7 +36,7 @@ const IssuedTapingSchema = new mongoose.Schema({
 });
 
 export const IssueForTapingModel = mongoose.model(
-  "issued_for_taping",
+  'issued_for_taping',
   IssuedTapingSchema
 );
-LogSchemaFunction("issuedForTaping", IssueForTapingModel);
+LogSchemaFunction('issuedForTaping', IssueForTapingModel);

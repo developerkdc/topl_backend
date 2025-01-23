@@ -1,6 +1,6 @@
-import mongoose from "mongoose";
-import DynamicModel from "./dynamicModel.js";
-import UserModel from "../user.schema.js";
+import mongoose from 'mongoose';
+import DynamicModel from './dynamicModel.js';
+import UserModel from '../user.schema.js';
 
 const LogSchema = new mongoose.Schema({
   created_user_id: {
@@ -15,7 +15,6 @@ const LogSchema = new mongoose.Schema({
 
 const LogSchemaFunction = function (modelName, collectionToWatch, lookup) {
   // const Model = DynamicModel(`${modelName}logs`, LogSchema);
-
   // const pipeline = [
   //   {
   //     $match: {
@@ -23,20 +22,16 @@ const LogSchemaFunction = function (modelName, collectionToWatch, lookup) {
   //     },
   //   },
   // ];
-
   // const changeStream = collectionToWatch.watch(pipeline, {
   //   fullDocument: "updateLookup",
   // });
-
   // changeStream.on("change", async (change) => {
   //   // console.log("Change event triggered:", change.documentKey._id);
-
   //   try {
   //     // Find user data
   //     const userData = await UserModel.findOne({
   //       _id: change?.fullDocument?.created_employee_id,
   //     });
-
   //     // Aggregate lookup data
   //     let lookupdata = [];
   //     if (lookup.length !== 0) {
@@ -49,10 +44,8 @@ const LogSchemaFunction = function (modelName, collectionToWatch, lookup) {
   //         ...lookup,
   //       ]);
   //     }
-
   //     // console.log(userData, "userData");
   //     // console.log(lookupdata?.[0], "lookupdata");
-
   //     // Create log entry
   //     const user = userData; // Assuming you want to store user _id
   //     const dataToLog =
@@ -62,18 +55,15 @@ const LogSchemaFunction = function (modelName, collectionToWatch, lookup) {
   //             fullDocument: lookupdata[0],
   //           }
   //         : change;
-
   //     const DataLog = await Model.create({
   //       created_user_id: user,
   //       data: dataToLog,
   //     });
-
   //     // console.log("DataLog created:", DataLog);
   //   } catch (error) {
   //     console.error("Error processing change:", error);
   //   }
   // });
-
   // // Optionally return the changeStream or close it if needed
   // // return changeStream;
   // // changeStream.close();

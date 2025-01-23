@@ -1,15 +1,15 @@
-import mongoose from "mongoose";
-import LogSchemaFunction from "../LogsSchema/logs.schema.js";
+import mongoose from 'mongoose';
+import LogSchemaFunction from '../LogsSchema/logs.schema.js';
 
 const CreateTappingSchema = new mongoose.Schema({
   issued_for_tapping_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "issued_for_taping",
+    ref: 'issued_for_taping',
     required: true,
   },
   cutting_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "cutting",
+    ref: 'cutting',
     required: true,
   },
   tapping_no_of_pcs: {
@@ -21,7 +21,7 @@ const CreateTappingSchema = new mongoose.Schema({
     required: true,
   },
   tapping_width: {
-    type: Number, 
+    type: Number,
     required: true,
   },
 
@@ -31,21 +31,21 @@ const CreateTappingSchema = new mongoose.Schema({
   },
   tapping_waste_sqm: {
     type: Number,
-    required: [true, "Waste Sqm is required"],
+    required: [true, 'Waste Sqm is required'],
   },
-  
+
   tapping_waste_sqm_percentage: {
     type: Number,
-    required: [true, "Waste Sqm Percentage is required"],
+    required: [true, 'Waste Sqm Percentage is required'],
   },
   total_tapping_waste_sqm: {
     type: Number,
-    required: [true, "Waste Sqm is required"],
+    required: [true, 'Waste Sqm is required'],
   },
-  
+
   total_tapping_waste_sqm_percentage: {
     type: Number,
-    required: [true, "Waste Sqm Percentage is required"],
+    required: [true, 'Waste Sqm Percentage is required'],
   },
 
   tapping_remarks: {
@@ -61,7 +61,7 @@ const CreateTappingSchema = new mongoose.Schema({
   },
   created_employee_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "user",
+    ref: 'user',
     trim: true,
   },
 
@@ -73,7 +73,7 @@ const CreateTappingSchema = new mongoose.Schema({
 });
 
 export const CreateTappingModel = mongoose.model(
-  "tapping",
+  'tapping',
   CreateTappingSchema
 );
-LogSchemaFunction("tapping", CreateTappingModel);
+LogSchemaFunction('tapping', CreateTappingModel);

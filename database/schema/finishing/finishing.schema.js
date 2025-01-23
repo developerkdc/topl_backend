@@ -1,10 +1,10 @@
-import mongoose from "mongoose";
-import LogSchemaFunction from "../LogsSchema/logs.schema.js";
+import mongoose from 'mongoose';
+import LogSchemaFunction from '../LogsSchema/logs.schema.js';
 
 const FinishingSchema = new mongoose.Schema({
   issued_for_finishing_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "issued_for_finishing",
+    ref: 'issued_for_finishing',
     required: true,
   },
   group_no: {
@@ -36,29 +36,29 @@ const FinishingSchema = new mongoose.Schema({
   },
   tapping_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "taping",
+    ref: 'taping',
     required: true,
   },
   ready_sheet_form_inventory_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "ready_sheet_form_inventory",
+    ref: 'ready_sheet_form_inventory',
     required: true,
   },
   ready_sheet_form_history_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "ready_sheet_form_inventory_history",
+    ref: 'ready_sheet_form_inventory_history',
     required: true,
   },
 
   pressing_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "pressing",
+    ref: 'pressing',
     required: true,
   },
 
   final_finishing_status: {
     type: String,
-    default: "qc done",
+    default: 'qc done',
   },
 
   status: {
@@ -68,17 +68,17 @@ const FinishingSchema = new mongoose.Schema({
   finishing_waste_sqm: {
     waste_sqm: {
       type: Number,
-      required: [true, "Waste Sqm is required"],
+      required: [true, 'Waste Sqm is required'],
     },
     waste_sqm_percentage: {
       type: Number,
-      required: [true, "Waste Sqm is required"],
+      required: [true, 'Waste Sqm is required'],
     },
   },
 
   created_employee_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "user",
+    ref: 'user',
     trim: true,
   },
 
@@ -87,5 +87,5 @@ const FinishingSchema = new mongoose.Schema({
   deleted_at: { type: Date, default: null },
 });
 
-export const FinishingModel = mongoose.model("finishing", FinishingSchema);
-LogSchemaFunction("finishing", FinishingModel);
+export const FinishingModel = mongoose.model('finishing', FinishingSchema);
+LogSchemaFunction('finishing', FinishingModel);
