@@ -10,7 +10,7 @@ import regantoPremierModel from '../../database/schema/seriesProductMaster/regan
 export const addRegantoPremier = catchAsync(async (req, res, next) => {
   const reqBody = req.body;
   const authUserDetails = req.userDetails;
-  const maxNumber = await accoSchema.aggregate([{
+  const maxNumber = await regantoPremierModel.aggregate([{
     $group: {
       _id: null,
       max: { $max: "$sr_no" }
