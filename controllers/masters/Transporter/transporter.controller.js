@@ -21,7 +21,7 @@ export const addTransporter = catchAsync(async (req, res, next) => {
   }
 
 
-  const maxNumber = await barcodeModel.aggregate([{
+  const maxNumber = await transporterModel.aggregate([{
     $group: {
       _id: null,
       max: { $max: "$sr_no" }
