@@ -14,7 +14,7 @@ export const addVehicle = catchAsync(async (req, res, next) => {
     return next(new ApiError('Vehicle Number is required', 400));
   }
 
-  const maxNumber = await barcodeModel.aggregate([{
+  const maxNumber = await vehicleModel.aggregate([{
     $group: {
       _id: null,
       max: { $max: "$sr_no" }
