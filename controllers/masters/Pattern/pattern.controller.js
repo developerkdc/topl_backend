@@ -80,7 +80,7 @@ export const updatePattern = catchAsync(async (req, res, next) => {
     updatePatternData
   );
 
-  return res.status(201).json(response);
+  return res.status(200).json(response);
 });
 
 export const fetchPatternList = catchAsync(async (req, res, next) => {

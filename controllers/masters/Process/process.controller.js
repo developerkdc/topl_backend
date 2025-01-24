@@ -80,7 +80,7 @@ export const updateProcess = catchAsync(async (req, res, next) => {
     updateProcessData
   );
 
-  return res.status(201).json(response);
+  return res.status(200).json(response);
 });
 
 export const fetchProcessList = catchAsync(async (req, res, next) => {

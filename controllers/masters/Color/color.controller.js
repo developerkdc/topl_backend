@@ -79,7 +79,7 @@ export const updateColor = catchAsync(async (req, res, next) => {
     updateColorData
   );
 
-  return res.status(201).json(response);
+  return res.status(200).json(response);
 });
 
 export const fetchColorList = catchAsync(async (req, res, next) => {

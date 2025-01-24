@@ -78,12 +78,12 @@ export const updateCharacter = catchAsync(async (req, res, next) => {
   }
 
   const response = new ApiResponse(
-    201,
+    200,
     'Character Update Successfully',
     updateCharacterData
   );
 
-  return res.status(201).json(response);
+  return res.status(200).json(response);
 });
 
 export const fetchCharacterList = catchAsync(async (req, res, next) => {
