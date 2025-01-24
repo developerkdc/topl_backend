@@ -75,7 +75,7 @@ export const updateProcess = catchAsync(async (req, res, next) => {
   }
 
   const response = new ApiResponse(
-    201,
+    200,
     'Process Update Successfully',
     updateProcessData
   );
