@@ -97,7 +97,7 @@ export const updateTransporter = catchAsync(async (req, res, next) => {
     updateTransporterData
   );
 
-  return res.status(201).json(response);
+  return res.status(200).json(response);
 });
 
 export const fetchTransporterList = catchAsync(async (req, res, next) => {

@@ -150,7 +150,7 @@ export const editCustomer = catchAsync(async (req, res, next) => {
     updateCustomerData
   );
 
-  return res.status(201).json(response);
+  return res.status(200).json(response);
 });
 
 export const fetchCustomerList = catchAsync(async (req, res, next) => {

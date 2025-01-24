@@ -136,7 +136,7 @@ export const editCustomerClient = catchAsync(async (req, res, next) => {
       updateCustomerClient
     );
 
-    return res.status(201).json(response);
+    return res.status(200).json(response);
   } catch (error) {
     await session.abortTransaction();
     throw error;
