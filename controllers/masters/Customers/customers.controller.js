@@ -72,7 +72,7 @@ export const addCustomer = catchAsync(async (req, res, next) => {
 
     await session.commitTransaction();
 
-    const response = new ApiResponse(200, 'Customer Added Successfully', {
+    const response = new ApiResponse(201, 'Customer Added Successfully', {
       customer: addedCustomer[0],
       customer_client: addedCustomerClients,
     });

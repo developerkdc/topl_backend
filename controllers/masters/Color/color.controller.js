@@ -36,7 +36,7 @@ export const addColor = catchAsync(async (req, res, next) => {
   }
 
   const response = new ApiResponse(
-    200,
+    201,
     'Color Added Successfully',
     saveColorData
   );

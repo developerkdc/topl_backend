@@ -37,7 +37,7 @@ export const addCharacter = catchAsync(async (req, res, next) => {
   }
 
   const response = new ApiResponse(
-    200,
+    201,
     'Character Added Successfully',
     saveCharacterData
   );
