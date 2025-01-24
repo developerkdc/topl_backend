@@ -109,7 +109,7 @@ export const updateDispatchAddress = catchAsync(async (req, res, next) => {
     updateDispatchAddressData
   );
 
-  return res.status(201).json(response);
+  return res.status(200).json(response);
 });
 
 export const fetchDispatchAddressList = catchAsync(async (req, res, next) => {

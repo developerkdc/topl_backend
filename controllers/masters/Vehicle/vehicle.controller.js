@@ -81,7 +81,7 @@ export const updateVehicle = catchAsync(async (req, res, next) => {
     updateVehicleData
   );
 
-  return res.status(201).json(response);
+  return res.status(200).json(response);
 });
 
 export const fetchVehicleList = catchAsync(async (req, res, next) => {
