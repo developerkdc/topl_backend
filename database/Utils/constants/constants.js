@@ -3,4 +3,5 @@ export const issues_for_status = {
   crosscut_done: 'crosscut_done',
   flitching: 'flitching',
   log: 'log',
+  peeling:"peeling"
 };

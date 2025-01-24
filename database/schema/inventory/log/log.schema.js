@@ -70,8 +70,9 @@ export const log_item_details_schema = new mongoose.Schema(
           issues_for_status.crosscutting,
           issues_for_status.flitching,
           issues_for_status.log,
+          issues_for_status.peeling
         ],
-        message: `Invalid status {{VALUE}} Issue Status must either be one of ${issues_for_status.crosscutting}, ${issues_for_status.flitching}, ${issues_for_status.log}}`,
+        message: `Invalid status {{VALUE}} Issue Status must either be one of ${issues_for_status.crosscutting}, ${issues_for_status.flitching}, ${issues_for_status.log}}, ${issues_for_status.peeling}`,
       },
       default: issues_for_status.log,
     },
