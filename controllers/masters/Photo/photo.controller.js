@@ -174,7 +174,7 @@ export const updatePhoto = catchAsync(async (req, res, next) => {
     }
 
     const response = new ApiResponse(
-      201,
+      200,
       'Photo Update Successfully',
       updatePhotoData
     );

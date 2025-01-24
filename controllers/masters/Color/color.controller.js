@@ -13,7 +13,7 @@ export const addColor = catchAsync(async (req, res, next) => {
   if (!name) {
     return next(new ApiError('Color Name is required', 400));
   }
-  const maxNumber = await barcodeModel.aggregate([{
+  const maxNumber = await colorModel.aggregate([{
     $group: {
       _id: null,
       max: { $max: "$sr_no" }
