@@ -12,18 +12,32 @@ import crossCutApprovalRouter from '../factory/crossCutting/crossCuttingApproval
 import flitchingApprovalRouter from '../factory/flitching/flitchingApproval.routes.js';
 const approvalRouters = express.Router();
 
-approvalRouters.use(logApprovalRouter);
-approvalRouters.use(flitchApprovalRouter);
-approvalRouters.use(plywoodApprovalRouter);
-approvalRouters.use(veneerApprovalRouter);
-approvalRouters.use(mdfApprovalRouter);
-approvalRouters.use(faceApprovalRouter);
-approvalRouters.use(coreApprovalRouter);
-approvalRouters.use(fleeceApprovalRouter);
-approvalRouters.use(otherGoodsApprovalRouter);
+approvalRouters.use('/approval', [
+    logApprovalRouter,
+    flitchApprovalRouter,
+    plywoodApprovalRouter,
+    veneerApprovalRouter,
+    mdfApprovalRouter,
+    faceApprovalRouter,
+    coreApprovalRouter,
+    fleeceApprovalRouter,
+    otherGoodsApprovalRouter,
+    //factory
+    crossCutApprovalRouter,
+    flitchingApprovalRouter
+]);
+// approvalRouters.use(logApprovalRouter);
+// approvalRouters.use(flitchApprovalRouter);
+// approvalRouters.use(plywoodApprovalRouter);
+// approvalRouters.use(veneerApprovalRouter);
+// approvalRouters.use(mdfApprovalRouter);
+// approvalRouters.use(faceApprovalRouter);
+// approvalRouters.use(coreApprovalRouter);
+// approvalRouters.use(fleeceApprovalRouter);
+// approvalRouters.use(otherGoodsApprovalRouter);
 
-// factory routes
-approvalRouters.use(crossCutApprovalRouter);
-approvalRouters.use(flitchingApprovalRouter);
+// // factory routes
+// approvalRouters.use(crossCutApprovalRouter);
+// approvalRouters.use(flitchingApprovalRouter);
 
 export default approvalRouters;

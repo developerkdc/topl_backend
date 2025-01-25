@@ -10,6 +10,28 @@ const issue_for_peeling_schema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         default: null
     },
+    inward_sr_no: {
+        type: Number,
+        unique: true,
+        required: [true, 'Inward Sr.No is required. '],
+    },
+    inward_date: {
+        type: Date,
+        default: Date.now,
+        required: [true, 'Inward Date is required.'],
+    },
+    invoice_date: {
+        type: Date,
+        default: Date.now,
+        required: [true, 'Invoice Date is required.'],
+    },
+    invoice_no: {
+        type: String,
+        unique: true,
+        trim: true,
+        uppercase: true,
+        required: [true, 'Invoice No is required.'],
+    },
     item_sr_no: {
         type: Number,
         required: [true, 'Items Sr.No is required'],
