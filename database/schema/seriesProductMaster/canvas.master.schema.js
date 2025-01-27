@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import mongoose, { Schema } from 'mongoose';
 
 const canvasSchema = new mongoose.Schema(
   {
@@ -6,6 +6,10 @@ const canvasSchema = new mongoose.Schema(
       type: Number,
       required: [true, "Sr.No is required"],
       // unique: [true, "Sr.No must be unique"]
+    },
+    image: {
+      type: Schema.Types.Mixed,
+      default: null
     },
     code: {
       type: String,

@@ -97,13 +97,17 @@
 
 // const barcodeModel = mongoose.model('barcode', barcodeSchema);
 // export default barcodeModel;
-import mongoose from 'mongoose';
+import mongoose, { Schema } from 'mongoose';
 
 const barcodeSchema = new mongoose.Schema(
   {
     sr_no: {
       type: Number,
       required: [true, "Sr.No is required"],
+    },
+    image: {
+      type: Schema.Types.Mixed,
+      default: null
     },
     default_item_name: {
       type: String,

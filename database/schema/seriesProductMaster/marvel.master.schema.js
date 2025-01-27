@@ -1,4 +1,4 @@
-import mongoose, { set } from 'mongoose';
+import mongoose, { Schema, set } from 'mongoose';
 
 const marvelSchema = new mongoose.Schema(
   {
@@ -6,6 +6,10 @@ const marvelSchema = new mongoose.Schema(
       type: Number,
       required: [true, "Sr.No is required"],
       // unique: [true, "Sr.No must be unique"]
+    },
+    image: {
+      type: Schema.Types.Mixed,
+      default: null
     },
     default_item_name: {
       type: String,
