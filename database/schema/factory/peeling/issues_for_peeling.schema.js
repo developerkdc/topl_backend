@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { issues_for_status } from "../../../Utils/constants/constants";
+import { issues_for_status } from "../../../Utils/constants/constants.js";
 
 const issue_for_peeling_schema = new mongoose.Schema({
     log_inventory_item_id: {
@@ -120,6 +120,10 @@ const issue_for_peeling_schema = new mongoose.Schema({
         },
         required: [true, "Issued from is required"]
     },
+    invoice_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: [true, 'Invoice Id is required'],
+    },
     remark: {
         type: String,
         default: null,
@@ -142,8 +146,8 @@ const issue_for_peeling_schema = new mongoose.Schema({
     timestamps: true,
 })
 
-issue_for_peeling.index({ log_inventory_item_id: 1 })
-issue_for_peeling.index({ crosscut_done_id: 1 })
+issue_for_peeling_schema.index({ log_inventory_item_id: 1 })
+issue_for_peeling_schema.index({ crosscut_done_id: 1 })
 
 const issue_for_peeling_model = mongoose.model("issue_for_peelings", issue_for_peeling_schema, "issue_for_peelings")
 

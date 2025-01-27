@@ -229,7 +229,6 @@ export const fetchColorList = catchAsync(async (req, res, next) => {
   ]; // total aggregation pipiline
 
   const totalDocument = await colorModel.aggregate(totalAggregate);
-  console.log(totalDocument);
 
   const totalPages = Math.ceil((totalDocument?.[0]?.totalCount || 0) / limit);
 
