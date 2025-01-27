@@ -14,14 +14,16 @@ export const addVehicle = catchAsync(async (req, res, next) => {
     return next(new ApiError('Vehicle Number is required', 400));
   }
 
-  const maxNumber = await vehicleModel.aggregate([{
-    $group: {
-      _id: null,
-      max: { $max: "$sr_no" }
-    }
-  }]);
+  const maxNumber = await vehicleModel.aggregate([
+    {
+      $group: {
+        _id: null,
+        max: { $max: '$sr_no' },
+      },
+    },
+  ]);
 
-  const maxSrNo = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1
+  const maxSrNo = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1;
 
   const vehicleData = {
     sr_no: maxSrNo,

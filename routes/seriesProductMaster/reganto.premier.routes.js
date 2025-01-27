@@ -7,12 +7,24 @@ import {
   fetchSingleRegantoPremier,
   updateRegantoPremierDetails,
 } from '../../controllers/seriesProductMaster/reganto.premier.controller.js';
+import { MulterFunction } from '../../config/multer/multer.js';
+
 const router = Router();
 
-router.post('/add-reganto-premier', AuthMiddleware, addRegantoPremier);
+router.post(
+  '/add-reganto-premier',
+  AuthMiddleware,
+  MulterFunction(
+    `public/upload/images/series_product_master/reganto_premier`
+  ).single('image'),
+  addRegantoPremier
+);
 router.post(
   '/update-reganto-premier/:id',
   AuthMiddleware,
+  MulterFunction(
+    `public/upload/images/series_product_master/reganto_premier`
+  ).single('image'),
   updateRegantoPremierDetails
 );
 router.post('/list-reganto-premier', AuthMiddleware, fetchRegantoPremierList);

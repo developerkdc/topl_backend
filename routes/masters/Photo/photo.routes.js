@@ -14,13 +14,19 @@ const photoRouter = express.Router();
 photoRouter.post(
   '/add-photo',
   AuthMiddleware,
-  MulterFunction(`public/upload/images/photo_no`).fields([{name:"images"},{name:"banner_image",maxCount:1}]),
+  MulterFunction(`public/upload/images/photo_no`).fields([
+    { name: 'images' },
+    { name: 'banner_image', maxCount: 1 },
+  ]),
   addPhoto
 );
 photoRouter.patch(
   '/update-photo/:id',
   AuthMiddleware,
-  MulterFunction(`public/upload/images/photo_no`).fields([{name:"images"},{name:"banner_image",maxCount:1}]),
+  MulterFunction(`public/upload/images/photo_no`).fields([
+    { name: 'images' },
+    { name: 'banner_image', maxCount: 1 },
+  ]),
   updatePhoto
 );
 

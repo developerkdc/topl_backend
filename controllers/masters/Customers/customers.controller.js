@@ -25,14 +25,16 @@ export const addCustomer = catchAsync(async (req, res, next) => {
 
     const authUserDetail = req.userDetails;
 
-    const maxNumber = await customer_model.aggregate([{
-      $group: {
-        _id: null,
-        max: { $max: "$sr_no" }
-      }
-    }]);
+    const maxNumber = await customer_model.aggregate([
+      {
+        $group: {
+          _id: null,
+          max: { $max: '$sr_no' },
+        },
+      },
+    ]);
 
-    const maxSrNo = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1
+    const maxSrNo = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1;
 
     const customerData = {
       ...customer,

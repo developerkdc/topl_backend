@@ -4,7 +4,7 @@ const vehicleSchema = new mongoose.Schema(
   {
     sr_no: {
       type: Number,
-      required: [true, "Sr.No is required"],
+      required: [true, 'Sr.No is required'],
       // unique: [true, "Sr.No must be unique"]
     },
     vehicle_number: {
@@ -33,8 +33,8 @@ const vehicleSchema = new mongoose.Schema(
 
 vehicleSchema.index({ vehicle_number: 1 }, { unique: true });
 vehicleSchema.index({ sr_no: 1 }, { unique: true });
-vehicleSchema.index({ created_by: 1 })
-vehicleSchema.index({ updated_by: 1 })
+vehicleSchema.index({ created_by: 1 });
+vehicleSchema.index({ updated_by: 1 });
 
 const vehicleModel = mongoose.model('vehicles', vehicleSchema);
 export default vehicleModel;

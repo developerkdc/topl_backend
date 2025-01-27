@@ -10,19 +10,49 @@ import mongoose from 'mongoose';
 export const addChromaRibbed = catchAsync(async (req, res, next) => {
   const reqBody = req.body;
   const authUserDetails = req.userDetails;
-
-  const maxNumber = await chromaRibbedModel.aggregate([{
-    $group: {
-      _id: null,
-      max: { $max: "$sr_no" }
+  const image = req?.file;
+  const required_array_fields = [
+    'size',
+    'sub_category',
+    'instructions',
+    'base',
+    'process_flow',
+  ];
+  let field;
+  try {
+    for (field of required_array_fields) {
+      reqBody[field] = JSON.parse(reqBody[field]);
+      console.dir(reqBody[field]);
+      if (!Array.isArray(reqBody[field])) {
+        return next(
+          new ApiError(
+            `Invalid Data Type : ${field} Must be an array`,
+            StatusCodes.BAD_REQUEST
+          )
+        );
+      }
     }
-  }]);
+  } catch (error) {
+    throw new ApiError(
+      `Invalid Data Type : ${field} Must be an array`,
+      StatusCodes.BAD_REQUEST
+    );
+  }
+  const maxNumber = await chromaRibbedModel.aggregate([
+    {
+      $group: {
+        _id: null,
+        max: { $max: '$sr_no' },
+      },
+    },
+  ]);
 
-  const maxSrNo = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1
+  const maxSrNo = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1;
 
   const chromaRibbedDetails = {
     ...reqBody,
     sr_no: maxSrNo,
+    image: image,
     created_by: authUserDetails?._id,
     updated_by: authUserDetails?._id,
   };
@@ -49,8 +79,36 @@ export const updateChromaRibbedDetails = catchAsync(async (req, res, next) => {
       new ApiError('Chroma Ribbed id is missing', StatusCodes.NOT_FOUND)
     );
   }
+  const image = req?.file ? req.file : reqBody?.image;
+  const required_array_fields = [
+    'size',
+    'sub_category',
+    'instructions',
+    'base',
+    'process_flow',
+  ];
+  let field;
+  try {
+    for (field of required_array_fields) {
+      reqBody[field] = JSON.parse(reqBody[field]);
+      if (!Array.isArray(reqBody[field])) {
+        return next(
+          new ApiError(
+            `Invalid Data Type : ${field} Must be an array`,
+            StatusCodes.BAD_REQUEST
+          )
+        );
+      }
+    }
+  } catch (error) {
+    throw new ApiError(
+      `Invalid Data Type : ${field} Must be an array`,
+      StatusCodes.BAD_REQUEST
+    );
+  }
   const updatedDetails = {
     ...reqBody,
+    image: image,
     updated_by: authUserDetails?._id,
   };
 

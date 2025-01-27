@@ -4,7 +4,7 @@ const photoSchema = new mongoose.Schema(
   {
     sr_no: {
       type: Number,
-      required: [true, "Sr.No is required"],
+      required: [true, 'Sr.No is required'],
       // unique: [true, "Sr.No must be unique"]
     },
     photo_number: {
@@ -15,11 +15,11 @@ const photoSchema = new mongoose.Schema(
     },
     banner_image: {
       type: Schema.Types.Mixed,
-      required:[true,"Banner Images is required"]
+      required: [true, 'Banner Images is required'],
     },
     images: {
       type: [Schema.Types.Mixed],
-      default:null
+      default: null,
     },
     status: {
       type: Boolean,
@@ -41,9 +41,8 @@ const photoSchema = new mongoose.Schema(
 
 photoSchema.index({ photo_number: 1 }, { unique: true });
 photoSchema.index({ sr_no: 1 }, { unique: true });
-photoSchema.index({ created_by: 1 })
-photoSchema.index({ updated_by: 1 })
-
+photoSchema.index({ created_by: 1 });
+photoSchema.index({ updated_by: 1 });
 
 const photoModel = mongoose.model('photos', photoSchema, 'photos');
 export default photoModel;

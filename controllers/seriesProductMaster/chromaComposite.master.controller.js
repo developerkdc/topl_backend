@@ -8,20 +8,51 @@ import { dynamic_filter } from '../../utils/dymanicFilter.js';
 import mongoose from 'mongoose';
 
 export const addChromaComposite = catchAsync(async (req, res, next) => {
-  const reqBody = req.body;
+  const reqBody = { ...req.body };
   const authUserDetails = req.userDetails;
 
-  const maxNumber = await chromaCompositeModel.aggregate([{
-    $group: {
-      _id: null,
-      max: { $max: "$sr_no" }
-    }
-  }]);
+  const image = req?.file;
+  console.log('reqBody => ', reqBody.sub_category);
+  const required_array_fields = [
+    'size',
+    'sub_category',
+    'instructions',
+    'base',
+    'process_flow',
+  ];
+  let field;
+  try {
+    for (field of required_array_fields) {
+      reqBody[field] = JSON.parse(reqBody[field]);
 
-  const maxSrNo = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1
+      if (!Array.isArray(reqBody[field])) {
+        return next(
+          new ApiError(
+            `Invalid Data Type : ${field} Must be an array`,
+            StatusCodes.BAD_REQUEST
+          )
+        );
+      }
+    }
+  } catch (error) {
+    console.log('err ocuured => ', error);
+    return next(new ApiError(error.message, StatusCodes.INTERNAL_SERVER_ERROR));
+  }
+
+  const maxNumber = await chromaCompositeModel.aggregate([
+    {
+      $group: {
+        _id: null,
+        max: { $max: '$sr_no' },
+      },
+    },
+  ]);
+
+  const maxSrNo = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1;
   const chromaCompositeDetails = {
     ...reqBody,
     sr_no: maxSrNo,
+    image: image,
     created_by: authUserDetails?._id,
     updated_by: authUserDetails?._id,
   };
@@ -49,8 +80,38 @@ export const updateChromaCompositeDetails = catchAsync(
         new ApiError('ChromaComposite id is missing', StatusCodes.NOT_FOUND)
       );
     }
+
+    const image = req?.file ? req?.file : reqBody?.image;
+    const required_array_fields = [
+      'size',
+      'sub_category',
+      'instructions',
+      'base',
+      'process_flow',
+    ];
+    let field;
+    try {
+      for (field of required_array_fields) {
+        reqBody[field] = JSON.parse(reqBody[field]);
+        console.dir(reqBody[field]);
+        if (!Array.isArray(reqBody[field])) {
+          return next(
+            new ApiError(
+              `Invalid Data Type : ${field} Must be an array`,
+              StatusCodes.BAD_REQUEST
+            )
+          );
+        }
+      }
+    } catch (error) {
+      throw new ApiError(
+        `Invalid Data Type : ${field} Must be an array`,
+        StatusCodes.BAD_REQUEST
+      );
+    }
     const updatedDetails = {
       ...reqBody,
+      image: image,
       updated_by: authUserDetails?._id,
     };
 

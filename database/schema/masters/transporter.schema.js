@@ -10,7 +10,7 @@ const transporterSchema = new mongoose.Schema(
   {
     sr_no: {
       type: Number,
-      required: [true, "Sr.No is required"],
+      required: [true, 'Sr.No is required'],
       // unique: [true, "Sr.No must be unique"]
     },
     name: {
@@ -64,8 +64,8 @@ const transporterSchema = new mongoose.Schema(
 
 transporterSchema.index({ name: 1 }, { unique: true });
 transporterSchema.index({ sr_no: 1 }, { unique: true });
-transporterSchema.index({ created_by: 1 })
-transporterSchema.index({ updated_by: 1 })
+transporterSchema.index({ created_by: 1 });
+transporterSchema.index({ updated_by: 1 });
 
 const transporterModel = mongoose.model(
   'transporters',

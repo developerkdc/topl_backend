@@ -4,7 +4,7 @@ const dispatchAddressSchema = new mongoose.Schema(
   {
     sr_no: {
       type: Number,
-      required: [true, "Sr.No is required"],
+      required: [true, 'Sr.No is required'],
       // unique: [true, "Sr.No must be unique"]
     },
     address: {
@@ -57,11 +57,10 @@ const dispatchAddressSchema = new mongoose.Schema(
 );
 
 dispatchAddressSchema.index({ sr_no: 1 }, { unique: true });
-dispatchAddressSchema.index({ created_by: 1 })
-dispatchAddressSchema.index({ updated_by: 1 })
-dispatchAddressSchema.index({ pincode: 1 })
-dispatchAddressSchema.index({ gst_number: 1 })
-
+dispatchAddressSchema.index({ created_by: 1 });
+dispatchAddressSchema.index({ updated_by: 1 });
+dispatchAddressSchema.index({ pincode: 1 });
+dispatchAddressSchema.index({ gst_number: 1 });
 
 const dispatchAddressModel = mongoose.model(
   'dispathAddresses',

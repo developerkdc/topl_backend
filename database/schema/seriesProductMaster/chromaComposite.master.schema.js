@@ -1,11 +1,15 @@
-import mongoose from 'mongoose';
+import mongoose, { Schema } from 'mongoose';
 
 const chromaCompositeSchema = new mongoose.Schema(
   {
     sr_no: {
       type: Number,
-      required: [true, "Sr.No is required"],
+      required: [true, 'Sr.No is required'],
       // unique: [true, "Sr.No must be unique"]
+    },
+    image: {
+      type: Schema.Types.Mixed,
+      default: null,
     },
     code: {
       type: String,
@@ -113,8 +117,8 @@ const chromaCompositeSchema = new mongoose.Schema(
 
 chromaCompositeSchema.index({ code: 1 }, { unique: true });
 chromaCompositeSchema.index({ sr_no: 1 }, { unique: true });
-chromaCompositeSchema.index({ created_by: 1 })
-chromaCompositeSchema.index({ updated_by: 1 })
+chromaCompositeSchema.index({ created_by: 1 });
+chromaCompositeSchema.index({ updated_by: 1 });
 
 const chromaCompositeModel = mongoose.model(
   'chroma_composite',

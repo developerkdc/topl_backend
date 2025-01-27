@@ -63,6 +63,7 @@ export const listing_log_inventory = catchAsync(async (req, res, next) => {
   const match_query = {
     ...filterData,
     ...search_query,
+    issue_status: issues_for_status.log,
   };
 
   const aggregate_stage = [

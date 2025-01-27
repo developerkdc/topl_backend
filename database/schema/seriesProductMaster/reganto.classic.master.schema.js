@@ -1,11 +1,15 @@
-import mongoose from 'mongoose';
+import mongoose, { Schema } from 'mongoose';
 
 const regantoClassicSchema = new mongoose.Schema(
   {
     sr_no: {
       type: Number,
-      required: [true, "Sr.No is required"],
+      required: [true, 'Sr.No is required'],
       // unique: [true, "Sr.No must be unique"]
+    },
+    image: {
+      type: Schema.Types.Mixed,
+      default: null,
     },
     default_item_name: {
       type: String,
@@ -122,8 +126,8 @@ const regantoClassicSchema = new mongoose.Schema(
 
 regantoClassicSchema.index({ code: 1 }, { unique: true });
 regantoClassicSchema.index({ sr_no: 1 }, { unique: true });
-regantoClassicSchema.index({ created_by: 1 })
-regantoClassicSchema.index({ updated_by: 1 })
+regantoClassicSchema.index({ created_by: 1 });
+regantoClassicSchema.index({ updated_by: 1 });
 
 const regantoClassicModel = mongoose.model(
   'reganto_classic',

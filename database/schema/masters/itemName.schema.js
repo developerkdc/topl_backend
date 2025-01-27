@@ -11,15 +11,15 @@ const ItemNameSchema = new mongoose.Schema(
       unique: [true, 'Item Name already exists.'],
       uppercase: true,
     },
-    color:{
-      color_id:{
-        type:mongoose.Schema.Types.ObjectId,
-        required:[true,"color id is required"]
+    color: {
+      color_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: [true, 'color id is required'],
       },
-      color_name:{
-        type:String,
-        required:[true,"color name is required"]
-      }
+      color_name: {
+        type: String,
+        required: [true, 'color name is required'],
+      },
     },
     category: {
       type: [mongoose.Schema.Types.ObjectId],

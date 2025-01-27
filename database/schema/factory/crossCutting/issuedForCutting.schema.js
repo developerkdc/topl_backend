@@ -36,6 +36,16 @@ const issues_for_crosscutting_details_schema = new mongoose.Schema(
       trim: true,
       uppercase: true,
     },
+    color: {
+      color_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: [true, 'color id is required'],
+      },
+      color_name: {
+        type: String,
+        required: [true, 'color name is required'],
+      },
+    },
     item_sub_category_id: {
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Items Sub-Category Id is required'],
