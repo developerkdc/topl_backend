@@ -129,7 +129,7 @@ export const revert_issue_for_flitching = catchAsync(
             { _id: issue_for_flitching?.crosscut_done_id },
             {
               $set: {
-                issue_status: issues_for_status.crosscut_done,
+                issue_status: null,
               },
             },
             { session }
@@ -185,7 +185,7 @@ export const revert_issue_for_flitching = catchAsync(
             { _id: issue_for_flitching?.log_inventory_item_id },
             {
               $set: {
-                issue_status: issues_for_status.log,
+                issue_status: null,
               },
             },
             { session }

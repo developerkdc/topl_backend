@@ -1,24 +1,23 @@
 import mongoose from 'mongoose';
+import { createLogLogsExcel } from '../../../config/downloadExcel/Logs/Inventory/log/log.js';
+import { issues_for_crosscutting_model } from '../../../database/schema/factory/crossCutting/issuedForCutting.schema.js';
+import { issues_for_flitching_model } from '../../../database/schema/factory/flitching/issuedForFlitching.schema.js';
 import {
   log_inventory_invoice_model,
   log_inventory_items_model,
   log_inventory_items_view_model,
 } from '../../../database/schema/inventory/log/log.schema.js';
-import catchAsync from '../../../utils/errors/catchAsync.js';
-import ApiError from '../../../utils/errors/apiError.js';
-import ApiResponse from '../../../utils/ApiResponse.js';
-import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
-import { dynamic_filter } from '../../../utils/dymanicFilter.js';
-import { StatusCodes } from '../../../utils/constants.js';
-import { createMdfLogsExcel } from '../../../config/downloadExcel/Logs/Inventory/mdf/mdf.js';
-import { createLogLogsExcel } from '../../../config/downloadExcel/Logs/Inventory/log/log.js';
-import { issues_for_crosscutting_model } from '../../../database/schema/factory/crossCutting/issuedForCutting.schema.js';
-import { issues_for_status } from '../../../database/Utils/constants/constants.js';
-import { issues_for_flitching_model } from '../../../database/schema/factory/flitching/issuedForFlitching.schema.js';
 import {
   log_approval_inventory_invoice_model,
   log_approval_inventory_items_model,
 } from '../../../database/schema/inventory/log/logApproval.schema.js';
+import { issues_for_status } from '../../../database/Utils/constants/constants.js';
+import ApiResponse from '../../../utils/ApiResponse.js';
+import { StatusCodes } from '../../../utils/constants.js';
+import { dynamic_filter } from '../../../utils/dymanicFilter.js';
+import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
+import ApiError from '../../../utils/errors/apiError.js';
+import catchAsync from '../../../utils/errors/catchAsync.js';
 
 export const listing_log_inventory = catchAsync(async (req, res, next) => {
   const {
@@ -63,7 +62,7 @@ export const listing_log_inventory = catchAsync(async (req, res, next) => {
   const match_query = {
     ...filterData,
     ...search_query,
-    issue_status: issues_for_status.log,
+    issue_status: null,
   };
 
   const aggregate_stage = [
@@ -173,8 +172,7 @@ export const add_log_inventory = catchAsync(async (req, res, next) => {
   }
 });
 
-export const add_single_log_item_inventory = catchAsync(
-  async (req, res, next) => {
+export const add_single_log_item_inventory = catchAsync(async (req, res, next) => {
     const item_details = req.body?.item_details;
 
     const invoice_id = item_details?.invoice_id;
@@ -815,7 +813,7 @@ export const listing_log_history_inventory = catchAsync(
     const match_query = {
       ...filterData,
       ...search_query,
-      issue_status: { $ne: issues_for_status?.log },
+      issue_status: { $ne: null },
     };
 
     const aggregate_stage = [

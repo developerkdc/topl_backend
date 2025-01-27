@@ -14,11 +14,11 @@ const ItemNameSchema = new mongoose.Schema(
     color: {
       color_id: {
         type: mongoose.Schema.Types.ObjectId,
-        required: [true, 'color id is required'],
+        default:null,
       },
       color_name: {
         type: String,
-        required: [true, 'color name is required'],
+        default:null,
       },
     },
     category: {

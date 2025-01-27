@@ -85,10 +85,10 @@ const crosscutting_approval_schema = new mongoose.Schema(
     issue_status: {
       type: String,
       enum: {
-        values: [issues_for_status.crosscut_done, issues_for_status.flitching],
-        message: `Invalid status {{VALUE}} Issue Status must either be one of ${issues_for_status.crosscut_done}, ${issues_for_status.flitching}}`,
+        values: [issues_for_status.flitching, issues_for_status.peeling],
+        message: `Invalid status {{VALUE}} Issue Status must either be one of ${issues_for_status.flitching}},${issues_for_status.peeling}`,
       },
-      default: issues_for_status.crosscut_done,
+      default: null,
     },
     wastage_info: {
       wastage_sqm: {
