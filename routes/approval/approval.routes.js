@@ -13,18 +13,18 @@ import flitchingApprovalRouter from '../factory/flitching/flitchingApproval.rout
 const approvalRouters = express.Router();
 
 approvalRouters.use('/approval', [
-    logApprovalRouter,
-    flitchApprovalRouter,
-    plywoodApprovalRouter,
-    veneerApprovalRouter,
-    mdfApprovalRouter,
-    faceApprovalRouter,
-    coreApprovalRouter,
-    fleeceApprovalRouter,
-    otherGoodsApprovalRouter,
-    //factory
-    crossCutApprovalRouter,
-    flitchingApprovalRouter
+  logApprovalRouter,
+  flitchApprovalRouter,
+  plywoodApprovalRouter,
+  veneerApprovalRouter,
+  mdfApprovalRouter,
+  faceApprovalRouter,
+  coreApprovalRouter,
+  fleeceApprovalRouter,
+  otherGoodsApprovalRouter,
+  //factory
+  crossCutApprovalRouter,
+  flitchingApprovalRouter,
 ]);
 // approvalRouters.use(logApprovalRouter);
 // approvalRouters.use(flitchApprovalRouter);

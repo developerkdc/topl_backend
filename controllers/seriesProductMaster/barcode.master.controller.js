@@ -8,31 +8,44 @@ import { dynamic_filter } from '../../utils/dymanicFilter.js';
 import mongoose from 'mongoose';
 
 export const addBarcode = catchAsync(async (req, res, next) => {
-
   const reqBody = req.body;
   const authUserDetails = req.userDetails;
   const image = req?.file;
-  const required_array_fields = ["size", "sub_category", "instructions", "base", "process_flow"];
+  const required_array_fields = [
+    'size',
+    'sub_category',
+    'instructions',
+    'base',
+    'process_flow',
+  ];
   let field;
   try {
     for (field of required_array_fields) {
       reqBody[field] = JSON.parse(reqBody[field]);
       if (!Array.isArray(reqBody[field])) {
-        return next(new ApiError(`Invalid Data Type : ${field} Must be an array`, StatusCodes.BAD_REQUEST))
+        return next(
+          new ApiError(
+            `Invalid Data Type : ${field} Must be an array`,
+            StatusCodes.BAD_REQUEST
+          )
+        );
       }
-
     }
   } catch (error) {
-    throw new ApiError(`Invalid Data Type : ${field} Must be an array`, StatusCodes.BAD_REQUEST)
+    throw new ApiError(
+      `Invalid Data Type : ${field} Must be an array`,
+      StatusCodes.BAD_REQUEST
+    );
   }
 
-
-  const maxNumber = await barcodeModel.aggregate([{
-    $group: {
-      _id: null,
-      max: { $max: "$sr_no" }
-    }
-  }]);
+  const maxNumber = await barcodeModel.aggregate([
+    {
+      $group: {
+        _id: null,
+        max: { $max: '$sr_no' },
+      },
+    },
+  ]);
 
   const maxSrNo = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1;
   const barcodeDetails = {
@@ -64,20 +77,33 @@ export const updateBarcodeDetails = catchAsync(async (req, res, next) => {
 
   if (!id) {
     return next(new ApiError('Barcode id is missing', StatusCodes.NOT_FOUND));
-  };
+  }
 
-  const required_array_fields = ["size", "sub_category", "instructions", "base", "process_flow"];
+  const required_array_fields = [
+    'size',
+    'sub_category',
+    'instructions',
+    'base',
+    'process_flow',
+  ];
   let field;
   try {
     for (field of required_array_fields) {
       reqBody[field] = JSON.parse(reqBody[field]);
       if (!Array.isArray(reqBody[field])) {
-        return next(new ApiError(`Invalid Data Type : ${field} Must be an array`, StatusCodes.BAD_REQUEST))
+        return next(
+          new ApiError(
+            `Invalid Data Type : ${field} Must be an array`,
+            StatusCodes.BAD_REQUEST
+          )
+        );
       }
-
     }
   } catch (error) {
-    throw new ApiError(`Invalid Data Type : ${field} Must be an array`, StatusCodes.BAD_REQUEST)
+    throw new ApiError(
+      `Invalid Data Type : ${field} Must be an array`,
+      StatusCodes.BAD_REQUEST
+    );
   }
   const updatedDetails = {
     ...reqBody,

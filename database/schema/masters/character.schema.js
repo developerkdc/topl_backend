@@ -4,7 +4,7 @@ const chararterSchema = new mongoose.Schema(
   {
     sr_no: {
       type: Number,
-      required: [true, "Sr.No is required"],
+      required: [true, 'Sr.No is required'],
       // unique: [true, "Sr.No must be unique"]
     },
     name: {
@@ -33,7 +33,7 @@ const chararterSchema = new mongoose.Schema(
 
 chararterSchema.index({ name: 1 }, { unique: true });
 chararterSchema.index({ sr_no: 1 }, { unique: true });
-chararterSchema.index({ created_by: 1 })
-chararterSchema.index({ updated_by: 1 })
+chararterSchema.index({ created_by: 1 });
+chararterSchema.index({ updated_by: 1 });
 const characterModel = mongoose.model('characters', chararterSchema);
 export default characterModel;

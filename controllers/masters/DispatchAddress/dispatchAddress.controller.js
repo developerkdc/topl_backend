@@ -26,14 +26,16 @@ export const addDispatchAddress = catchAsync(async (req, res, next) => {
     }
   }
 
-  const maxNumber = dispatchAddressModel.aggregate([{
-    $group: {
-      _id: null,
-      max: { $max: "$sr_no" }
-    }
-  }]);
+  const maxNumber = dispatchAddressModel.aggregate([
+    {
+      $group: {
+        _id: null,
+        max: { $max: '$sr_no' },
+      },
+    },
+  ]);
 
-  const maxSrNo = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1
+  const maxSrNo = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1;
 
   const dispatchAddressData = {
     sr_no: maxSrNo,

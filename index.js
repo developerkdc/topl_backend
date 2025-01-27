@@ -28,6 +28,7 @@ export const io = new Server(server, {
       'http://localhost:3000',
       'http://localhost:3001',
       'https://topl.kdcstaging.in',
+      'https://kdctopl.kdcstaging.in',
     ], // Adjust according to your needs (e.g., "http://localhost:3000")
     methods: ['GET', 'POST'],
   },
@@ -63,7 +64,7 @@ app.use(`/api/${Configs.server.version}`, allSeriesProductMasterRouter);
 // inventory
 app.use(`/api/${Configs.server.version}`, allInventoryRouter);
 //factory - routes
-app.use(`/api/${Configs.server.version}`,factoryRouter)
+app.use(`/api/${Configs.server.version}`, factoryRouter);
 //Approval
 app.use(`/api/${Configs.server.version}`, approvalRouters);
 

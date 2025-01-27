@@ -10,10 +10,20 @@ import {
 import { MulterFunction } from '../../config/multer/multer.js';
 const router = Router();
 
-router.post('/add-chromaComposite', AuthMiddleware, MulterFunction(`public/upload/images/series_product_master/chroma_composite`).single('image'), addChromaComposite);
+router.post(
+  '/add-chromaComposite',
+  AuthMiddleware,
+  MulterFunction(
+    `public/upload/images/series_product_master/chroma_composite`
+  ).single('image'),
+  addChromaComposite
+);
 router.post(
   '/update-chromaComposite/:id',
-  AuthMiddleware, MulterFunction(`public/upload/images/series_product_master/chroma_composite`).single('image'),
+  AuthMiddleware,
+  MulterFunction(
+    `public/upload/images/series_product_master/chroma_composite`
+  ).single('image'),
   updateChromaCompositeDetails
 );
 router.post('/list-chromaComposite', AuthMiddleware, fetchChromaCompositeList);

@@ -4,12 +4,12 @@ const chromaCollectionSchema = new mongoose.Schema(
   {
     sr_no: {
       type: Number,
-      required: [true, "Sr.No is required"],
+      required: [true, 'Sr.No is required'],
       // unique: [true, "Sr.No must be unique"]
     },
     image: {
       type: Schema.Types.Mixed,
-      default: null
+      default: null,
     },
     code: {
       type: String,
@@ -117,8 +117,8 @@ const chromaCollectionSchema = new mongoose.Schema(
 
 chromaCollectionSchema.index({ code: 1 }, { unique: true });
 chromaCollectionSchema.index({ sr_no: 1 }, { unique: true });
-chromaCollectionSchema.index({ created_by: 1 })
-chromaCollectionSchema.index({ updated_by: 1 })
+chromaCollectionSchema.index({ created_by: 1 });
+chromaCollectionSchema.index({ updated_by: 1 });
 
 const chromaCollectionModel = mongoose.model(
   'chroma_collection',

@@ -4,7 +4,7 @@ const processSchema = new mongoose.Schema(
   {
     sr_no: {
       type: Number,
-      required: [true, "Sr.No is required"],
+      required: [true, 'Sr.No is required'],
       // unique: [true, "Sr.No must be unique"]
     },
     name: {
@@ -33,9 +33,8 @@ const processSchema = new mongoose.Schema(
 
 processSchema.index({ name: 1 }, { unique: true });
 processSchema.index({ sr_no: 1 }, { unique: true });
-processSchema.index({ created_by: 1 })
-processSchema.index({ updated_by: 1 })
-
+processSchema.index({ created_by: 1 });
+processSchema.index({ updated_by: 1 });
 
 const processModel = mongoose.model('process', processSchema);
 export default processModel;

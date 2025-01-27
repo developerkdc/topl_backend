@@ -1,7 +1,7 @@
-import express from "express";
-import flitch_router from "./flitch/flitch.routes.js";
-import veneer_router from "./veener/venner.routes.js";
-import fleece_router from "./fleece/fleece.routes.js";
+import express from 'express';
+import flitch_router from './flitch/flitch.routes.js';
+import veneer_router from './veener/venner.routes.js';
+import fleece_router from './fleece/fleece.routes.js';
 import coreInventoryRoutes from './core/core.routes.js';
 import faceInventoryRoutes from './face/face.routes.js';
 import logRouter from './log/log.routes.js';
@@ -20,4 +20,4 @@ allInventoryRouter.use(`/face-inventory`, faceInventoryRoutes);
 allInventoryRouter.use(`/core-inventory`, coreInventoryRoutes);
 allInventoryRouter.use(`/fleece-inventory`, fleece_router);
 
-export default allInventoryRouter
+export default allInventoryRouter;

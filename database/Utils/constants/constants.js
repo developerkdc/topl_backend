@@ -4,5 +4,5 @@ export const issues_for_status = {
   flitching: 'flitching',
   flitching_done: 'flitching_done',
   log: 'log',
-  peeling:"peeling"
+  peeling: 'peeling',
 };

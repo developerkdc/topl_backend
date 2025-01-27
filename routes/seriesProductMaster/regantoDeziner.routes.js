@@ -7,14 +7,24 @@ import {
   fetchSingleRegantoDeziner,
   updateRegantoDezinerDetails,
 } from '../../controllers/seriesProductMaster/regantoDeziner.master.controller.js';
-import { MulterFunction } from '../../config/multer/multer.js'
+import { MulterFunction } from '../../config/multer/multer.js';
 
 const router = Router();
 
-router.post('/add-regantoDeziner', AuthMiddleware, MulterFunction(`public/upload/images/series_product_master/reganto_deziner`).single('image'), addRegantoDeziner);
+router.post(
+  '/add-regantoDeziner',
+  AuthMiddleware,
+  MulterFunction(
+    `public/upload/images/series_product_master/reganto_deziner`
+  ).single('image'),
+  addRegantoDeziner
+);
 router.post(
   '/update-regantoDeziner/:id',
-  AuthMiddleware, MulterFunction(`public/upload/images/series_product_master/reganto_deziner`).single('image'),
+  AuthMiddleware,
+  MulterFunction(
+    `public/upload/images/series_product_master/reganto_deziner`
+  ).single('image'),
   updateRegantoDezinerDetails
 );
 router.post('/list-regantoDeziner', AuthMiddleware, fetchRegantoDezinerList);

@@ -1,4 +1,4 @@
-import express from "express"
+import express from 'express';
 import accoRouter from './acco.routes.js';
 import barcodeRouter from './barcode.routes.js';
 import bunitoRouter from './bunito.routes.js';
@@ -18,20 +18,23 @@ import regantoDezinerRouter from './regantoDeziner.routes.js';
 
 const allSeriesProductMasterRouter = express.Router();
 
-allSeriesProductMasterRouter.use(`/series-product-master`,[
-    barcodeRouter,
-    chromaCollectionRouter,
-    chromaRibbedRouter,
-    chromaCompositeRouter,
-    canvasRouter,
-    regantoDezinerRouter,
-    bunitoRouter,
-    mattleRouter,
-    novelRouter,
-    marvelRouter,
-    regantoClassicRouter,
-    regantoPremierRouter,
-    furrowRouter, furrowLiteRouter, furrowRegantoRouter, accoRouter
-  ])
+allSeriesProductMasterRouter.use(`/series-product-master`, [
+  barcodeRouter,
+  chromaCollectionRouter,
+  chromaRibbedRouter,
+  chromaCompositeRouter,
+  canvasRouter,
+  regantoDezinerRouter,
+  bunitoRouter,
+  mattleRouter,
+  novelRouter,
+  marvelRouter,
+  regantoClassicRouter,
+  regantoPremierRouter,
+  furrowRouter,
+  furrowLiteRouter,
+  furrowRegantoRouter,
+  accoRouter,
+]);
 
 export default allSeriesProductMasterRouter;

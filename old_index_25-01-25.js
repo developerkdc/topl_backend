@@ -251,7 +251,10 @@ app.use(`/api/${Configs.server.version}/series-product-master`, [
   marvelRouter,
   regantoClassicRouter,
   regantoPremierRouter,
-  furrowRouter, furrowLiteRouter, furrowRegantoRouter, accoRouter
+  furrowRouter,
+  furrowLiteRouter,
+  furrowRegantoRouter,
+  accoRouter,
 ]);
 
 app.use(globalErrorHandler);

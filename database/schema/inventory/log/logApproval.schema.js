@@ -44,12 +44,12 @@ const log_approval_item_details_schema = new mongoose.Schema(
     color: {
       color_id: {
         type: mongoose.Schema.Types.ObjectId,
-        required: [true, "color id is required"]
+        required: [true, 'color id is required'],
       },
       color_name: {
         type: String,
-        required: [true, "color name is required"]
-      }
+        required: [true, 'color name is required'],
+      },
     },
     item_sub_category_id: {
       type: mongoose.Schema.Types.ObjectId,

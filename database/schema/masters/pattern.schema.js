@@ -4,7 +4,7 @@ const patternSchema = new mongoose.Schema(
   {
     sr_no: {
       type: Number,
-      required: [true, "Sr.No is required"],
+      required: [true, 'Sr.No is required'],
       // unique: [true, "Sr.No must be unique"]
     },
     name: {
@@ -33,8 +33,8 @@ const patternSchema = new mongoose.Schema(
 
 patternSchema.index({ name: 1 }, { unique: true });
 patternSchema.index({ sr_no: 1 }, { unique: true });
-patternSchema.index({ created_by: 1 })
-patternSchema.index({ updated_by: 1 })
+patternSchema.index({ created_by: 1 });
+patternSchema.index({ updated_by: 1 });
 
 const patternModel = mongoose.model('patterns', patternSchema);
 export default patternModel;

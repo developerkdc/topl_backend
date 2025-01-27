@@ -4,12 +4,12 @@ const furrowSchema = new mongoose.Schema(
   {
     sr_no: {
       type: Number,
-      required: [true, "Sr.No is required"],
+      required: [true, 'Sr.No is required'],
       // unique: [true, "Sr.No must be unique"]
     },
     image: {
       type: Schema.Types.Mixed,
-      default: null
+      default: null,
     },
     default_item_name: {
       type: String,
@@ -126,8 +126,8 @@ const furrowSchema = new mongoose.Schema(
 
 furrowSchema.index({ code: 1 }, { unique: true });
 furrowSchema.index({ sr_no: 1 }, { unique: true });
-furrowSchema.index({ created_by: 1 })
-furrowSchema.index({ updated_by: 1 })
+furrowSchema.index({ created_by: 1 });
+furrowSchema.index({ updated_by: 1 });
 
 const furrowModel = mongoose.model('furrow', furrowSchema);
 export default furrowModel;
