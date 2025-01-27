@@ -7,12 +7,13 @@ import {
   fetchSingleChromaComposite,
   updateChromaCompositeDetails,
 } from '../../controllers/seriesProductMaster/chromaComposite.master.controller.js';
+import { MulterFunction } from '../../config/multer/multer.js';
 const router = Router();
 
-router.post('/add-chromaComposite', AuthMiddleware, addChromaComposite);
+router.post('/add-chromaComposite', AuthMiddleware, MulterFunction(`public/upload/images/series_product_master/chroma_composite`).single('image'), addChromaComposite);
 router.post(
   '/update-chromaComposite/:id',
-  AuthMiddleware,
+  AuthMiddleware, MulterFunction(`public/upload/images/series_product_master/chroma_composite`).single('image'),
   updateChromaCompositeDetails
 );
 router.post('/list-chromaComposite', AuthMiddleware, fetchChromaCompositeList);

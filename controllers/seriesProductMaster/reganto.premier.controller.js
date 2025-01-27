@@ -10,6 +10,20 @@ import regantoPremierModel from '../../database/schema/seriesProductMaster/regan
 export const addRegantoPremier = catchAsync(async (req, res, next) => {
   const reqBody = req.body;
   const authUserDetails = req.userDetails;
+  const image = req.file
+  const required_array_fields = ["size", "sub_category", "instructions", "base", "process_flow"];
+  let field;
+  try {
+    for (field of required_array_fields) {
+      reqBody[field] = JSON.parse(reqBody[field]);
+      if (!Array.isArray(reqBody[field])) {
+        return next(new ApiError(`Invalid Data Type : ${field} Must be an array`, StatusCodes.BAD_REQUEST))
+      }
+
+    }
+  } catch (error) {
+    throw new ApiError(`Invalid Data Type : ${field} Must be an array`, StatusCodes.BAD_REQUEST)
+  }
   const maxNumber = await regantoPremierModel.aggregate([{
     $group: {
       _id: null,
@@ -21,6 +35,7 @@ export const addRegantoPremier = catchAsync(async (req, res, next) => {
   const itemDetails = {
     ...reqBody,
     sr_no: maxSrNo,
+    image: image,
     created_by: authUserDetails?._id,
     updated_by: authUserDetails?._id,
   };
@@ -42,12 +57,27 @@ export const updateRegantoPremierDetails = catchAsync(
     const { id } = req.params;
     const reqBody = req.body;
     const authUserDetails = req.userDetails;
+    const image = req.file ? req.file : reqBody?.image
 
     if (!id) {
       return next(new ApiError('Id is missing', StatusCodes.NOT_FOUND));
+    };
+    const required_array_fields = ["size", "sub_category", "instructions", "base", "process_flow"];
+    let field;
+    try {
+      for (field of required_array_fields) {
+        reqBody[field] = JSON.parse(reqBody[field]);
+        if (!Array.isArray(reqBody[field])) {
+          return next(new ApiError(`Invalid Data Type : ${field} Must be an array`, StatusCodes.BAD_REQUEST))
+        }
+
+      }
+    } catch (error) {
+      throw new ApiError(`Invalid Data Type : ${field} Must be an array`, StatusCodes.BAD_REQUEST)
     }
     const updatedDetails = {
       ...reqBody,
+      image: image,
       updated_by: authUserDetails?._id,
     };
 
