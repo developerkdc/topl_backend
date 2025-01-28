@@ -44,11 +44,11 @@ const log_approval_item_details_schema = new mongoose.Schema(
     color: {
       color_id: {
         type: mongoose.Schema.Types.ObjectId,
-        default:null,
+        default: null,
       },
       color_name: {
         type: String,
-        default:null,
+        default: null,
       },
     },
     item_sub_category_id: {
@@ -74,10 +74,7 @@ const log_approval_item_details_schema = new mongoose.Schema(
     issue_status: {
       type: String,
       enum: {
-        values: [
-          issues_for_status.crosscutting,
-          issues_for_status.flitching
-        ],
+        values: [issues_for_status.crosscutting, issues_for_status.flitching],
         message: `Invalid status {{VALUE}} Issue Status must either be one of ${issues_for_status.crosscutting}, ${issues_for_status.flitching}`,
       },
       default: null,

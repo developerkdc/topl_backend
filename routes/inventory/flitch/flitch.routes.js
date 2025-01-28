@@ -10,6 +10,7 @@ import {
   inward_sr_no_dropdown,
   item_sr_no_dropdown,
   listing_flitch_inventory,
+  listing_flitch_history_inventory,
 } from '../../../controllers/inventory/flitch/flitch.controller.js';
 import RolesPermissions from '../../../middlewares/permission.js';
 import AuthMiddleware from '../../../middlewares/verifyToken.js';
@@ -21,6 +22,12 @@ flitch_router.post(
   AuthMiddleware,
   RolesPermissions('flitch_inventory', 'view'),
   listing_flitch_inventory
+);
+flitch_router.post(
+  '/list-history-inventory',
+  AuthMiddleware,
+  RolesPermissions('flitch_inventory', 'view'),
+  listing_flitch_history_inventory
 );
 flitch_router.post(
   '/add-inventory',

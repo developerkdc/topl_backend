@@ -262,13 +262,14 @@ export const revert_issue_for_flitching = catchAsync(
     session.startTransaction();
     try {
       const issue_for_flitching_id = req.params?.issue_for_flitching_id;
-      const issue_for_flitching = await issues_for_flitching_model.findOne({
-        _id: issue_for_flitching_id,
-      }).lean();
+      const issue_for_flitching = await issues_for_flitching_model
+        .findOne({
+          _id: issue_for_flitching_id,
+        })
+        .lean();
 
       if (!issue_for_flitching)
         return next(new ApiError('Item not found', 400));
-
 
       const add_revert_to_log_inventory = async function () {
         const update_log_item_status =
@@ -307,7 +308,7 @@ export const revert_issue_for_flitching = catchAsync(
         const is_invoice_editable = await log_inventory_items_model.find({
           _id: { $ne: issue_for_flitching?.log_inventory_item_id }, // except that item
           invoice_id: issue_for_flitching?.invoice_id, // same invoice id
-          issue_status: { $ne: null } // is issued
+          issue_status: { $ne: null }, // is issued
         });
 
         //if is_invoice_editable found that means invoice for that item is issued somewhere
@@ -322,7 +323,7 @@ export const revert_issue_for_flitching = catchAsync(
             { session }
           );
         }
-      }
+      };
 
       const add_revert_to_crosscut_done = async function () {
         const update_crosscut_done_status =
@@ -360,12 +361,16 @@ export const revert_issue_for_flitching = catchAsync(
 
         const is_crosscut_done_editable = await crosscutting_done_model.find({
           _id: { $ne: issue_for_flitching?.crosscut_done_id },
-          issue_for_crosscutting_id: issue_for_flitching?.issue_for_crosscutting_id,
-          issue_status: { $ne: null }
+          issue_for_crosscutting_id:
+            issue_for_flitching?.issue_for_crosscutting_id,
+          issue_status: { $ne: null },
         });
 
         //if is_crosscut_done_editable found that means crosscut for same issue for crosscutting id is issued somewhere
-        if (is_crosscut_done_editable && is_crosscut_done_editable?.length <= 0) {
+        if (
+          is_crosscut_done_editable &&
+          is_crosscut_done_editable?.length <= 0
+        ) {
           await crosscutting_done_model.updateMany(
             {
               issue_for_crosscutting_id:
@@ -379,16 +384,15 @@ export const revert_issue_for_flitching = catchAsync(
             { session }
           );
         }
-
-      }
+      };
 
       if (
         issue_for_flitching?.crosscut_done_id &&
         mongoose.isValidObjectId(issue_for_flitching?.crosscut_done_id)
       ) {
-        await add_revert_to_crosscut_done()
+        await add_revert_to_crosscut_done();
       } else {
-        await add_revert_to_log_inventory()
+        await add_revert_to_log_inventory();
       }
 
       await session.commitTransaction();

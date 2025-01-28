@@ -35,11 +35,11 @@ export const log_item_details_schema = new mongoose.Schema(
     color: {
       color_id: {
         type: mongoose.Schema.Types.ObjectId,
-        default:null,
+        default: null,
       },
       color_name: {
         type: String,
-        default:null,
+        default: null,
       },
     },
     item_sub_category_id: {
@@ -67,11 +67,11 @@ export const log_item_details_schema = new mongoose.Schema(
       type: String,
       enum: {
         values: [
-          issues_for_status.crosscutting,
-          issues_for_status.flitching,
-          issues_for_status.peeling,
+          issues_for_status?.crosscutting,
+          issues_for_status?.flitching,
+          issues_for_status?.peeling,
         ],
-        message: `Invalid status {{VALUE}} Issue Status must either be one of ${issues_for_status.crosscutting}, ${issues_for_status.flitching}, ${issues_for_status.peeling}`,
+        message: `Invalid status {{VALUE}} Issue Status must either be one of ${issues_for_status?.crosscutting}, ${issues_for_status?.flitching}, ${issues_for_status?.peeling}`,
       },
       default: null,
     },

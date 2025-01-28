@@ -27,11 +27,11 @@ const crosscutting_done_schema = new mongoose.Schema(
     color: {
       color_id: {
         type: mongoose.Schema.Types.ObjectId,
-        default:null,
+        default: null,
       },
       color_name: {
         type: String,
-        default:null,
+        default: null,
       },
     },
     log_no: {

@@ -172,7 +172,8 @@ export const add_log_inventory = catchAsync(async (req, res, next) => {
   }
 });
 
-export const add_single_log_item_inventory = catchAsync(async (req, res, next) => {
+export const add_single_log_item_inventory = catchAsync(
+  async (req, res, next) => {
     const item_details = req.body?.item_details;
 
     const invoice_id = item_details?.invoice_id;
@@ -653,7 +654,7 @@ export const add_issue_for_crosscutting = catchAsync(async (req, res, next) => {
 
   const issue_for_crosscutting = log_issue_for_crosscutting_data.map((ele) => {
     const { _id, ...data } = ele;
-    data.issued_from = issues_for_status.log
+    data.issued_from = issues_for_status.log;
     data.log_inventory_item_id = _id;
     data.created_by = created_by;
     return data;

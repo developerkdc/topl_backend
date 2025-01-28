@@ -209,7 +209,7 @@ export const revert_issue_for_crosscutting = catchAsync(
       const is_invoice_editable = await log_inventory_items_model.find({
         _id: { $ne: issue_for_crosscutting?.log_inventory_item_id }, // except that item
         invoice_id: issue_for_crosscutting?.invoice_id, // same invoice id
-        issue_status: { $ne: null } // is issued
+        issue_status: { $ne: null }, // is issued
       });
 
       //if is_invoice_editable found that means invoice for that item is issued somewhere
