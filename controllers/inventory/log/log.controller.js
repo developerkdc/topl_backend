@@ -638,7 +638,7 @@ export const add_issue_for_crosscutting = catchAsync(async (req, res, next) => {
   );
 
   if (
-    !update_log_items_status?.acknowledged &&
+    !update_log_items_status?.acknowledged ||
     update_log_items_status.modifiedCount <= 0
   )
     return next(new ApiError('Failed to update', 400));
@@ -653,6 +653,7 @@ export const add_issue_for_crosscutting = catchAsync(async (req, res, next) => {
 
   const issue_for_crosscutting = log_issue_for_crosscutting_data.map((ele) => {
     const { _id, ...data } = ele;
+    data.issued_from = issues_for_status.log
     data.log_inventory_item_id = _id;
     data.created_by = created_by;
     return data;
@@ -737,6 +738,7 @@ export const add_issue_for_flitching = catchAsync(async (req, res, next) => {
       amount: data?.amount,
       amount_factor: data?.amount_factor,
       expense_amount: data?.expense_amount,
+      issued_from: issues_for_status.log,
       remark: data?.remark,
       invoice_id: data?.invoice_id,
       created_by: created_by,

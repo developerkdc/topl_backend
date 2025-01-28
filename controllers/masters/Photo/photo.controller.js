@@ -30,13 +30,13 @@ export const addPhoto = catchAsync(async (req, res, next) => {
 
     const photoImagesFiles = req.files?.images;
     let images = [];
-    if (photoImagesFiles.length > 0) {
+    if (photoImagesFiles && photoImagesFiles?.length > 0) {
       images = photoImagesFiles?.map((e) => e);
     }
 
     const bannerImagesFile = req.files?.banner_image;
     let bannerImage;
-    if (bannerImagesFile?.length > 0 && bannerImagesFile?.[0]) {
+    if (bannerImagesFile && bannerImagesFile?.length > 0 && bannerImagesFile?.[0]) {
       bannerImage = bannerImagesFile?.[0];
     }
 

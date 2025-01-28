@@ -107,7 +107,7 @@ export const listing_issue_for_flitching = catchAsync(
   }
 );
 
-export const revert_issue_for_flitching = catchAsync(
+export const old_revert_issue_for_flitching = catchAsync(
   async function (req, res, next) {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -237,6 +237,158 @@ export const revert_issue_for_flitching = catchAsync(
             { session }
           );
         }
+      }
+
+      await session.commitTransaction();
+      session.endSession();
+
+      return res
+        .status(200)
+        .json(new ApiResponse(StatusCodes.OK, 'Reverted successfully'));
+    } catch (error) {
+      console.log(error);
+      await session.abortTransaction();
+      session.endSession();
+      return next(error);
+    } finally {
+      session.endSession();
+    }
+  }
+);
+
+export const revert_issue_for_flitching = catchAsync(
+  async function (req, res, next) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+      const issue_for_flitching_id = req.params?.issue_for_flitching_id;
+      const issue_for_flitching = await issues_for_flitching_model.findOne({
+        _id: issue_for_flitching_id,
+      }).lean();
+
+      if (!issue_for_flitching)
+        return next(new ApiError('Item not found', 400));
+
+
+      const add_revert_to_log_inventory = async function () {
+        const update_log_item_status =
+          await log_inventory_items_model.updateOne(
+            { _id: issue_for_flitching?.log_inventory_item_id },
+            {
+              $set: {
+                issue_status: null,
+              },
+            },
+            { session }
+          );
+
+        if (
+          !update_log_item_status.acknowledged ||
+          update_log_item_status.modifiedCount <= 0
+        )
+          return next(new ApiError('unable to update log status', 400));
+
+        const deleted_issues_for_flitching =
+          await issues_for_flitching_model.deleteOne(
+            {
+              _id: issue_for_flitching?._id,
+            },
+            { session }
+          );
+
+        if (
+          !deleted_issues_for_flitching?.acknowledged ||
+          deleted_issues_for_flitching?.deletedCount <= 0
+        )
+          return next(
+            new ApiError('Unable to revert issue for flitching', 400)
+          );
+
+        const is_invoice_editable = await log_inventory_items_model.find({
+          _id: { $ne: issue_for_flitching?.log_inventory_item_id }, // except that item
+          invoice_id: issue_for_flitching?.invoice_id, // same invoice id
+          issue_status: { $ne: null } // is issued
+        });
+
+        //if is_invoice_editable found that means invoice for that item is issued somewhere
+        if (is_invoice_editable && is_invoice_editable?.length <= 0) {
+          await log_inventory_invoice_model.updateOne(
+            { _id: issue_for_flitching?.invoice_id },
+            {
+              $set: {
+                isEditable: true,
+              },
+            },
+            { session }
+          );
+        }
+      }
+
+      const add_revert_to_crosscut_done = async function () {
+        const update_crosscut_done_status =
+          await crosscutting_done_model.updateOne(
+            { _id: issue_for_flitching?.crosscut_done_id },
+            {
+              $set: {
+                issue_status: null,
+              },
+            },
+            { session }
+          );
+
+        if (
+          !update_crosscut_done_status.acknowledged ||
+          update_crosscut_done_status.modifiedCount <= 0
+        )
+          return next(new ApiError('unable to update crosscut status', 400));
+
+        const deleted_issues_for_flitching =
+          await issues_for_flitching_model.deleteOne(
+            {
+              _id: issue_for_flitching?._id,
+            },
+            { session }
+          );
+
+        if (
+          !deleted_issues_for_flitching?.acknowledged ||
+          deleted_issues_for_flitching?.deletedCount <= 0
+        )
+          return next(
+            new ApiError('Unable to revert issue for flitching', 400)
+          );
+
+        const is_crosscut_done_editable = await crosscutting_done_model.find({
+          _id: { $ne: issue_for_flitching?.crosscut_done_id },
+          issue_for_crosscutting_id: issue_for_flitching?.issue_for_crosscutting_id,
+          issue_status: { $ne: null }
+        });
+
+        //if is_crosscut_done_editable found that means crosscut for same issue for crosscutting id is issued somewhere
+        if (is_crosscut_done_editable && is_crosscut_done_editable?.length <= 0) {
+          await crosscutting_done_model.updateMany(
+            {
+              issue_for_crosscutting_id:
+                issue_for_flitching?.issue_for_crosscutting_id,
+            },
+            {
+              $set: {
+                isEditable: true,
+              },
+            },
+            { session }
+          );
+        }
+
+      }
+
+      if (
+        issue_for_flitching?.crosscut_done_id &&
+        mongoose.isValidObjectId(issue_for_flitching?.crosscut_done_id)
+      ) {
+        await add_revert_to_crosscut_done()
+      } else {
+        await add_revert_to_log_inventory()
       }
 
       await session.commitTransaction();

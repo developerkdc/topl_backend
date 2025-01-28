@@ -70,6 +70,14 @@ const issues_for_flitching_details_schema = new mongoose.Schema(
       },
       default: issues_for_status.flitching,
     },
+    issued_from: {
+      type: String,
+      enum: {
+        values: [issues_for_status?.log, issues_for_status?.crosscut_done],
+        message: `Invalid issued from type {{VALUE}} it should be one of the ${issues_for_status?.log}, ${issues_for_status?.crosscut_done} `,
+      },
+      required: [true, 'Issued from is required'],
+    },
     // invoice_length: {
     //   type: Number,
     //   required: [true, "Invoice length is required"],

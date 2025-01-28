@@ -24,7 +24,7 @@ export const addIssueForPeelingFromLogInventory = catchAsync(
                 !Array.isArray(log_inventory_item_ids) ||
                 log_inventory_item_ids.length === 0
             ) {
-                return next(new ApiError('log_inventory_item_ids must be a array field'));
+                throw new ApiError('log_inventory_item_ids must be a array field');
             }
 
             const logInventoryItemData = await log_inventory_items_view_model
@@ -35,18 +35,17 @@ export const addIssueForPeelingFromLogInventory = catchAsync(
                 .lean();
 
             if (logInventoryItemData?.length <= 0) {
-                return next(
-                    new ApiError(
-                        'Log Inventory Item Data Not Found',
-                        StatusCodes.NOT_FOUND
-                    )
-                );
+                throw new ApiError(
+                    'Log Inventory Item Data Not Found',
+                    StatusCodes.NOT_FOUND
+                )
             }
 
             const issue_for_peeling_data = logInventoryItemData?.map(
                 (logInventoryItem) => {
                     return {
                         log_inventory_item_id: logInventoryItem?._id,
+                        issue_for_crosscutting_id: null,
                         crosscut_done_id: null,
                         inward_sr_no: logInventoryItem?.log_invoice_details?.inward_sr_no,
                         inward_date: logInventoryItem?.log_invoice_details?.inward_date,
@@ -87,7 +86,7 @@ export const addIssueForPeelingFromLogInventory = catchAsync(
             );
 
             if (add_issue_for_peeling?.length <= 0) {
-                return next(new ApiError('Failed to data for issue for peeling', 400));
+                throw new ApiError('Failed to data for issue for peeling', 400);
             }
             const log_item_ids = add_issue_for_peeling?.map(
                 (ele) => ele?.log_inventory_item_id
@@ -109,16 +108,14 @@ export const addIssueForPeelingFromLogInventory = catchAsync(
                 );
 
             if (update_log_inventory_item_status?.matchedCount <= 0) {
-                return next(new ApiError('Not found log inventory item'));
+                throw new ApiError('Not found log inventory item');
             }
 
             if (
                 !update_log_inventory_item_status.acknowledged ||
                 update_log_inventory_item_status?.modifiedCount <= 0
             ) {
-                return next(
-                    new ApiError('Unable to change status of log inventory item')
-                );
+                throw new ApiError('Unable to change status of log inventory item')
             }
 
             //updating log inventory invoice: if any one of log item send for peeling then invoice should not editable
@@ -134,16 +131,14 @@ export const addIssueForPeelingFromLogInventory = catchAsync(
                 );
 
             if (update_log_inventory_invoice_editable?.modifiedCount <= 0) {
-                return next(new ApiError('Not found log inventory invoice'));
+                throw new ApiError('Not found log inventory invoice')
             }
 
             if (
                 !update_log_inventory_invoice_editable.acknowledged ||
                 update_log_inventory_invoice_editable?.modifiedCount <= 0
             ) {
-                return next(
-                    new ApiError('Unable to change status of log inventory invoice')
-                );
+                throw new ApiError('Unable to change status of log inventory invoice')
             }
 
             await session.commitTransaction();
@@ -175,7 +170,7 @@ export const addIssueForPeelingFromCrosscutDone = catchAsync(async (req, res, ne
             !Array.isArray(crosscut_done_ids) ||
             crosscut_done_ids.length === 0
         ) {
-            return next(new ApiError('crosscut_done_ids must be a array field'));
+            throw new ApiError('crosscut_done_ids must be a array field');
         }
 
         const aggMatch = {
@@ -246,12 +241,13 @@ export const addIssueForPeelingFromCrosscutDone = catchAsync(async (req, res, ne
         ])
 
         if (crosscut_done_data?.length <= 0) {
-            return next(new ApiError('No Crosscut done data found', 400));
+            throw new ApiError('No Crosscut done data found', 400);
         }
 
         const issue_for_peeling_data = crosscut_done_data?.map((crosscutDone) => {
             return {
                 log_inventory_item_id: crosscutDone?.log_inventory_item_id,
+                issue_for_crosscutting_id: crosscutDone?.issue_for_crosscutting_id,
                 crosscut_done_id: crosscutDone?._id,
                 inward_sr_no: crosscutDone?.log_inventory_invoice_details?.inward_sr_no,
                 inward_date: crosscutDone?.log_inventory_invoice_details?.inward_date,
@@ -287,11 +283,11 @@ export const addIssueForPeelingFromCrosscutDone = catchAsync(async (req, res, ne
         );
 
         if (add_issue_for_peeling?.length <= 0) {
-            return next(new ApiError('Failed to data for issue for peeling', 400));
+            throw new ApiError('Failed to data for issue for peeling', 400);
         }
 
         const crosscut_done_issue_ids = add_issue_for_peeling.map((ele) => ele?.crosscut_done_id);
-        const issue_for_crosscutting_ids = [...new Set(crosscut_done_data.map((ele) => ele?.issue_for_crosscutting_id))];
+        const issue_for_crosscutting_ids = [...new Set(add_issue_for_peeling.map((ele) => ele?.issue_for_crosscutting_id))];
 
         //updating crosscut done status to peeling
         const update_crosscut_done_status =
@@ -306,16 +302,14 @@ export const addIssueForPeelingFromCrosscutDone = catchAsync(async (req, res, ne
             );
 
         if (update_crosscut_done_status?.matchedCount <= 0) {
-            return next(new ApiError('Not found crosscut done'));
+            throw new ApiError('Not found crosscut done');
         }
 
         if (
             !update_crosscut_done_status.acknowledged ||
             update_crosscut_done_status?.modifiedCount <= 0
         ) {
-            return next(
-                new ApiError('Unable to change status of crosscut done')
-            );
+            throw new ApiError('Unable to change status of crosscut done')
         }
 
         //updating crosscut done: if any one of item send for peeling then whole with same issue_for_crosscutting_id should not editable
@@ -331,16 +325,14 @@ export const addIssueForPeelingFromCrosscutDone = catchAsync(async (req, res, ne
             );
 
         if (update_crosscut_done_editable?.modifiedCount <= 0) {
-            return next(new ApiError('Not found issue for crosscutting,crosscut done'));
+            throw new ApiError('Not found issue for crosscutting,crosscut done');
         }
 
         if (
             !update_crosscut_done_editable.acknowledged ||
             update_crosscut_done_editable?.modifiedCount <= 0
         ) {
-            return next(
-                new ApiError('Unable to change status of editable,crosscut done')
-            );
+            throw new ApiError('Unable to change status of editable,crosscut done')
         }
 
         await session.commitTransaction();
@@ -359,4 +351,5 @@ export const addIssueForPeelingFromCrosscutDone = catchAsync(async (req, res, ne
     } finally {
         await session.endSession();
     }
-})
+});
+

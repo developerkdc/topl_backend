@@ -7,6 +7,10 @@ const issue_for_peeling_schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Log Inventory Items Id is required'],
     },
+    issue_for_crosscutting_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
     crosscut_done_id: {
       type: mongoose.Schema.Types.ObjectId,
       default: null,
