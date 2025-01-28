@@ -89,7 +89,7 @@ export const addIssueForSlicingFromFlitchInventory = catchAsync(
       );
 
       if (add_issue_for_slicing?.length <= 0) {
-        throw new ApiError('Failed to data for issue for peeling', 400);
+        throw new ApiError('Failed to data for issue for slicing', 400);
       }
       const flitch_item_ids = add_issue_for_slicing?.map(
         (ele) => ele?.flitch_inventory_item_id
@@ -212,67 +212,133 @@ export const listing_issued_for_slicing_inventory = catchAsync(
       ...search_query,
     };
 
-    const aggregate_stage = [
-      {
-        $match: match_query,
+    // Aggregation stage
+    const aggCreatedByLookup = {
+      $lookup: {
+        from: 'users',
+        localField: 'created_by',
+        foreignField: '_id',
+        pipeline: [
+          {
+            $project: {
+              user_name: 1,
+              user_type: 1,
+              dept_name: 1,
+              first_name: 1,
+              last_name: 1,
+              email_id: 1,
+              mobile_no: 1,
+            },
+          },
+        ],
+        as: 'created_by',
       },
-      {
-        $sort: {
-          [sortBy]: sort === 'desc' ? -1 : 1,
-          _id: sort === 'desc' ? -1 : 1,
-        },
+    };
+    const aggUpdatedByLookup = {
+      $lookup: {
+        from: 'users',
+        localField: 'updated_by',
+        foreignField: '_id',
+        pipeline: [
+          {
+            $project: {
+              user_name: 1,
+              user_type: 1,
+              dept_name: 1,
+              first_name: 1,
+              last_name: 1,
+              email_id: 1,
+              mobile_no: 1,
+            },
+          },
+        ],
+        as: 'updated_by',
       },
-      {
-        $skip: (parseInt(page) - 1) * parseInt(limit),
+    };
+    const aggCreatedByUnwind = {
+      $unwind: {
+        path: '$created_by',
+        preserveNullAndEmptyArrays: true,
       },
-      {
-        $limit: parseInt(limit),
+    };
+    const aggUpdatedByUnwind = {
+      $unwind: {
+        path: '$updated_by',
+        preserveNullAndEmptyArrays: true,
       },
-    ];
+    };
+    const aggMatch = {
+      $match: {
+        ...match_query,
+      },
+    };
+    const aggSort = {
+      $sort: {
+        [sortBy]: sort === 'desc' ? -1 : 1,
+      },
+    };
+    const aggSkip = {
+      $skip: (parseInt(page) - 1) * parseInt(limit),
+    };
+    const aggLimit = {
+      $limit: parseInt(limit),
+    };
 
-    const issued_for_slicing_data =
-      await issued_for_slicing_view_model.aggregate(aggregate_stage);
+    const listAggregate = [
+      aggCreatedByLookup,
+      aggCreatedByUnwind,
+      aggUpdatedByLookup,
+      aggUpdatedByUnwind,
+      aggMatch,
+      aggSort,
+      aggSkip,
+      aggLimit,
+    ]; // aggregation pipiline
 
-    const totalCount = await issued_for_slicing_view_model.countDocuments({
-      ...match_query,
+    const issue_for_slicing = await issued_for_slicing_model.aggregate(listAggregate);
+
+    const aggCount = {
+      $count: 'totalCount',
+    }; // count aggregation stage
+
+    const totalAggregate = [
+      aggCreatedByLookup,
+      aggCreatedByUnwind,
+      aggUpdatedByLookup,
+      aggUpdatedByUnwind,
+      aggMatch,
+      aggCount,
+    ]; // total aggregation pipiline
+
+    const totalDocument = await issued_for_slicing_model.aggregate(totalAggregate);
+
+    const totalPages = Math.ceil((totalDocument?.[0]?.totalCount || 0) / limit);
+
+    const response = new ApiResponse(200, 'Issue For Sciling Data Fetched Successfully', {
+      data: issue_for_slicing,
+      totalPages: totalPages,
     });
-
-    const totalPage = Math.ceil(totalCount / limit);
-
-    return res.status(200).json(
-      new ApiResponse(StatusCodes.OK, 'Data fetched successfully...', {
-        issued_for_slicing_data,
-        totalPage,
-      })
-    );
+    return res.status(200).json(response);
   }
 );
 
 export const revert_issued_for_slicing = catchAsync(async (req, res, next) => {
   const { issued_for_slicing_id } = req.body;
-  console.log('params => ', issued_for_slicing_id)
+
   const session = await mongoose.startSession();
-  await session.startTransaction();
+  session.startTransaction();
   try {
-    if (!issued_for_slicing_id) {
-      throw new ApiError(
-        'Issued for slicing id are missing',
-        StatusCodes.BAD_REQUEST
-      );
-    }
+    if (!issued_for_slicing_id || !mongoose.isValidObjectId(issued_for_slicing_id)) {
+      throw new ApiError("Invaild Id", StatusCodes.NOT_FOUND)
+    };
     const issuedForSlicingData = await issued_for_slicing_model
-      ?.findById(issued_for_slicing_id)
-      .session(session);
+      ?.findById(issued_for_slicing_id).lean()
 
     if (!issuedForSlicingData) {
       throw new ApiError('No Data found...', StatusCodes.BAD_REQUEST);
     }
 
-
-    if (
-      issuedForSlicingData?.issued_from?.toLowerCase() === 'flitching' &&
-      issuedForSlicingData?.flitching_done_id === null
-    ) {
+    const add_revert_to_flitching_done = async function () {
       const updated_document = await flitch_inventory_items_model.updateOne(
         { _id: issuedForSlicingData?.flitch_inventory_item_id },
         {
@@ -283,9 +349,16 @@ export const revert_issued_for_slicing = catchAsync(async (req, res, next) => {
         { session }
       );
 
+      if (updated_document?.matchedCount <= 0) {
+        throw new ApiError(
+          'Flitch inventory item not found',
+          StatusCodes.BAD_REQUEST
+        );
+      };
+
       if (
         !updated_document?.acknowledged ||
-        updated_document?.modifiedCount === 0
+        updated_document?.modifiedCount <= 0
       ) {
         throw new ApiError(
           'Failed to update flitch inventory item status',
@@ -297,9 +370,7 @@ export const revert_issued_for_slicing = catchAsync(async (req, res, next) => {
         _id: { $ne: issuedForSlicingData?.flitch_inventory_item_id },
         invoice_id: issuedForSlicingData?.invoice_id,
         issue_status: { $ne: null }
-      }).session(session);
-
-
+      }).lean();
 
       if (is_invoice_editable && is_invoice_editable?.length <= 0) {
         await flitch_inventory_invoice_model?.updateOne({ _id: issuedForSlicingData?.invoice_id }, {
@@ -309,12 +380,10 @@ export const revert_issued_for_slicing = catchAsync(async (req, res, next) => {
         }, { session });
       }
     }
-    if (
-      issuedForSlicingData?.issued_from?.toLowerCase() === 'flitching_done' &&
-      issuedForSlicingData?.flitching_done_id !== null
-    ) {
+
+    const add_revert_to_flitch_inventory = async function () {
       const updated_document = await flitching_done_model.updateOne(
-        { _id: issuedForSlicingData?.flitching_done_id },
+        { _id: issuedForSlicingData?.flitching_done_id, issue_for_flitching_id: issuedForSlicingData?.issue_for_flitching_id },
         {
           $set: {
             issue_status: null,
@@ -343,6 +412,19 @@ export const revert_issued_for_slicing = catchAsync(async (req, res, next) => {
       }
     }
 
+    if (
+      issuedForSlicingData?.issued_from === issues_for_status?.flitching &&
+      issuedForSlicingData?.flitching_done_id === null
+    ) {
+      await add_revert_to_flitching_done()
+    }
+    if (
+      issuedForSlicingData?.issued_from === issues_for_status?.flitching_done &&
+      issuedForSlicingData?.flitching_done_id !== null
+    ) {
+      await add_revert_to_flitch_inventory()
+    }
+
     const delete_response = await issued_for_slicing_model.deleteOne({ _id: issuedForSlicingData?._id }, { session })
 
     if (!delete_response?.acknowledged || delete_response?.deletedCount === 0) {
@@ -367,22 +449,82 @@ export const revert_issued_for_slicing = catchAsync(async (req, res, next) => {
   }
 });
 
-
 export const fetch_single_issued_for_slicing_item = catchAsync(async (req, res, next) => {
   const { id } = req.params;
 
-
-  if (!id) {
-    return next(new ApiError("Issued for slicing id is missing", StatusCodes.NOT_FOUND))
+  if (!id || !mongoose.isValidObjectId(id)) {
+    return next(new ApiError("Invaild Id", StatusCodes.NOT_FOUND))
   };
 
-  const result = await issued_for_slicing_view_model?.findById(id);
+  // Aggregation stage
+  const aggMatch = {
+    $match: { _id: mongoose.Types.ObjectId.createFromHexString(id) }
+  }
+  // const aggCreatedByLookup = {
+  //   $lookup: {
+  //     from: 'users',
+  //     localField: 'created_by',
+  //     foreignField: '_id',
+  //     pipeline: [
+  //       {
+  //         $project: {
+  //           user_name: 1,
+  //           user_type: 1,
+  //           dept_name: 1,
+  //           first_name: 1,
+  //           last_name: 1,
+  //           email_id: 1,
+  //           mobile_no: 1,
+  //         },
+  //       },
+  //     ],
+  //     as: 'created_by',
+  //   },
+  // };
+  // const aggUpdatedByLookup = {
+  //   $lookup: {
+  //     from: 'users',
+  //     localField: 'updated_by',
+  //     foreignField: '_id',
+  //     pipeline: [
+  //       {
+  //         $project: {
+  //           user_name: 1,
+  //           user_type: 1,
+  //           dept_name: 1,
+  //           first_name: 1,
+  //           last_name: 1,
+  //           email_id: 1,
+  //           mobile_no: 1,
+  //         },
+  //       },
+  //     ],
+  //     as: 'updated_by',
+  //   },
+  // };
+  // const aggCreatedByUnwind = {
+  //   $unwind: {
+  //     path: '$created_by',
+  //     preserveNullAndEmptyArrays: true,
+  //   },
+  // };
+  // const aggUpdatedByUnwind = {
+  //   $unwind: {
+  //     path: '$updated_by',
+  //     preserveNullAndEmptyArrays: true,
+  //   },
+  // };
 
-  if (!result) {
-    return next(new ApiError("No Data Found", StatusCodes.NOT_FOUND))
-  };
+  const listAggregate = [
+    aggMatch,
+    // aggCreatedByLookup,
+    // aggCreatedByUnwind,
+    // aggUpdatedByLookup,
+    // aggUpdatedByUnwind,
+  ]; // aggregation pipiline
 
-  const response = new ApiResponse(StatusCodes.OK, "Issued for Slicing Item Fetched Sucessfully", result);
+  const issue_for_slicing = await issued_for_slicing_model.aggregate(listAggregate);
+
+  const response = new ApiResponse(StatusCodes.OK, "Issued for Slicing Item Fetched Sucessfully", issue_for_slicing?.[0]);
   return res.status(StatusCodes.OK).json(response)
-
 })

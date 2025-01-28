@@ -328,7 +328,7 @@ export const revert_issue_for_flitching = catchAsync(
       const add_revert_to_crosscut_done = async function () {
         const update_crosscut_done_status =
           await crosscutting_done_model.updateOne(
-            { _id: issue_for_flitching?.crosscut_done_id },
+            { _id: issue_for_flitching?.crosscut_done_id, issue_for_crosscutting_id: issue_for_flitching?.issue_for_crosscutting_id },
             {
               $set: {
                 issue_status: null,
@@ -388,10 +388,13 @@ export const revert_issue_for_flitching = catchAsync(
 
       if (
         issue_for_flitching?.crosscut_done_id &&
-        mongoose.isValidObjectId(issue_for_flitching?.crosscut_done_id)
+        mongoose.isValidObjectId(issue_for_flitching?.crosscut_done_id) && issue_for_flitching?.issued_from === issues_for_status?.crosscut_done
       ) {
         await add_revert_to_crosscut_done();
-      } else {
+      } 
+      if (
+        issue_for_flitching?.crosscut_done_id === null && issue_for_flitching?.issued_from === issues_for_status?.log
+      ) {
         await add_revert_to_log_inventory();
       }
 
