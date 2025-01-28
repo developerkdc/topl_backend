@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { issues_for_status } from '../../../Utils/constants/constants';
+import { issues_for_status } from '../../../Utils/constants/constants.js';
 
 const issue_for_slicing_schema = new mongoose.Schema(
   {
@@ -14,8 +14,12 @@ const issue_for_slicing_schema = new mongoose.Schema(
     },
     inward_sr_no: {
       type: Number,
-      unique: true,
+      // unique: true,
       required: [true, 'Inward Sr.No is required. '],
+    },
+    invoice_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, 'Invoice Id is required'],
     },
     inward_date: {
       type: Date,
@@ -29,7 +33,7 @@ const issue_for_slicing_schema = new mongoose.Schema(
     },
     invoice_no: {
       type: String,
-      unique: true,
+      // unique: true,
       trim: true,
       uppercase: true,
       required: [true, 'Invoice No is required.'],
@@ -62,11 +66,13 @@ const issue_for_slicing_schema = new mongoose.Schema(
     color: {
       color_id: {
         type: mongoose.Schema.Types.ObjectId,
-        required: [true, 'color id is required'],
+        default: null,
+        // required: [true, 'color id is required'],
       },
       color_name: {
         type: String,
-        required: [true, 'color name is required'],
+        default: null,
+        // required: [true, 'color name is required'],
       },
     },
     flitch_formula: {
@@ -130,6 +136,7 @@ const issue_for_slicing_schema = new mongoose.Schema(
     },
     issued_from: {
       type: String,
+      uppercase: true,
       required: [true, 'Issued from is required'],
       enum: {
         values: [
@@ -179,102 +186,109 @@ export const issued_for_slicing_model = mongoose.model(
   'issued_for_slicings'
 );
 
-// const issued_for_slicing_view_schema = new mongoose.Schema({}, { strict: false, autoCreate: false, autoIndex: false });
+const issued_for_slicing_view_schema = new mongoose.Schema(
+  {},
+  { strict: false, autoCreate: false, autoIndex: false }
+);
 
-// export const issued_for_slicing_view_model = mongoose.model('issued_for_slicing_view', issued_for_slicing_view_schema, 'issued_for_slicing_view');
+export const issued_for_slicing_view_model = mongoose.model(
+  'issued_for_slicing_view',
+  issued_for_slicing_view_schema,
+  'issued_for_slicing_view'
+);
 
-// (async function () {
-//     await issued_for_slicing_view_model.createCollection({
-//         viewOn: "issued_for_slicings",
-//         pipeline: [
-//             {
-//                 $sort: {
-//                     updatedAt: -1,
-//                     _id: -1
-//                 }
-//             },
-//             {
-//                 $lookup: {
-//                     from: "flitch_inventory_item_details",
-//                     localField: "flitch_inventory_item_id",
-//                     foreignField: "_id",
-//                     as: "flitch_item_details"
-//                 }
-//             },
-//             {
-//                 $lookup: {
-//                     from: "flitchings",
-//                     localField: "flitching_done_id",
-//                     foreignField: "_id",
-//                     as: "flitching_done_item_details"
-//                 }
-//             },
-//             {
-//                 $lookup: {
-//                     from: "users",
-//                     localField: "created_by",
-//                     foreignField: "_id",
-//                     pipeline: [
-//                         {
-//                             $project: {
-//                                 user_name: 1,
-//                                 user_type: 1,
-//                                 dept_name: 1,
-//                                 first_name: 1,
-//                                 last_name: 1,
-//                                 email_id: 1,
-//                                 mobile_no: 1,
-//                             }
-//                         }
-//                     ],
-//                     as: "created_user_details",
-//                 }
-//             },
-//             {
-//                 $lookup: {
-//                     from: "users",
-//                     localField: "updated_by",
-//                     foreignField: "_id",
-//                     pipeline: [
-//                         {
-//                             $project: {
-//                                 user_name: 1,
-//                                 user_type: 1,
-//                                 dept_name: 1,
-//                                 first_name: 1,
-//                                 last_name: 1,
-//                                 email_id: 1,
-//                                 mobile_no: 1,
-//                             }
-//                         }
-//                     ],
-//                     as: "updated_user_details",
-//                 }
-//             },
-//             {
-//                 $unwind: {
-//                     path: "$flitch_item_details",
-//                     preserveNullAndEmptyArrays: true
-//                 }
-//             },
-//             {
-//                 $unwind: {
-//                     path: "$flitching_done_item_details",
-//                     preserveNullAndEmptyArrays: true
-//                 }
-//             },
-//             {
-//                 $unwind: {
-//                     path: "$created_user_details",
-//                     preserveNullAndEmptyArrays: true
-//                 }
-//             },
-//             {
-//                 $unwind: {
-//                     path: "$updated_user_details",
-//                     preserveNullAndEmptyArrays: true
-//                 }
-//             },
-//         ]
-//     })
-// })()
+(async function () {
+  await issued_for_slicing_view_model.createCollection({
+    viewOn: 'issued_for_slicings',
+    pipeline: [
+      {
+        $sort: {
+          updatedAt: -1,
+          _id: -1,
+        },
+      },
+      {
+        $lookup: {
+          from: 'flitch_inventory_item_details',
+          localField: 'flitch_inventory_item_id',
+          foreignField: '_id',
+          as: 'flitch_item_details',
+        },
+      },
+      {
+        $lookup: {
+          from: 'flitchings',
+          localField: 'flitching_done_id',
+          foreignField: '_id',
+          as: 'flitching_done_item_details',
+        },
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'created_by',
+          foreignField: '_id',
+          pipeline: [
+            {
+              $project: {
+                user_name: 1,
+                user_type: 1,
+                dept_name: 1,
+                first_name: 1,
+                last_name: 1,
+                email_id: 1,
+                mobile_no: 1,
+              },
+            },
+          ],
+          as: 'created_user_details',
+        },
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'updated_by',
+          foreignField: '_id',
+          pipeline: [
+            {
+              $project: {
+                user_name: 1,
+                user_type: 1,
+                dept_name: 1,
+                first_name: 1,
+                last_name: 1,
+                email_id: 1,
+                mobile_no: 1,
+              },
+            },
+          ],
+          as: 'updated_user_details',
+        },
+      },
+      {
+        $unwind: {
+          path: '$flitch_item_details',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $unwind: {
+          path: '$flitching_done_item_details',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $unwind: {
+          path: '$created_user_details',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $unwind: {
+          path: '$updated_user_details',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+    ],
+  });
+})();

@@ -1,24 +1,23 @@
 import mongoose from 'mongoose';
+import { createLogLogsExcel } from '../../../config/downloadExcel/Logs/Inventory/log/log.js';
+import { issues_for_crosscutting_model } from '../../../database/schema/factory/crossCutting/issuedForCutting.schema.js';
+import { issues_for_flitching_model } from '../../../database/schema/factory/flitching/issuedForFlitching.schema.js';
 import {
   log_inventory_invoice_model,
   log_inventory_items_model,
   log_inventory_items_view_model,
 } from '../../../database/schema/inventory/log/log.schema.js';
-import catchAsync from '../../../utils/errors/catchAsync.js';
-import ApiError from '../../../utils/errors/apiError.js';
-import ApiResponse from '../../../utils/ApiResponse.js';
-import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
-import { dynamic_filter } from '../../../utils/dymanicFilter.js';
-import { StatusCodes } from '../../../utils/constants.js';
-import { createMdfLogsExcel } from '../../../config/downloadExcel/Logs/Inventory/mdf/mdf.js';
-import { createLogLogsExcel } from '../../../config/downloadExcel/Logs/Inventory/log/log.js';
-import { issues_for_crosscutting_model } from '../../../database/schema/factory/crossCutting/issuedForCutting.schema.js';
-import { issues_for_status } from '../../../database/Utils/constants/constants.js';
-import { issues_for_flitching_model } from '../../../database/schema/factory/flitching/issuedForFlitching.schema.js';
 import {
   log_approval_inventory_invoice_model,
   log_approval_inventory_items_model,
 } from '../../../database/schema/inventory/log/logApproval.schema.js';
+import { issues_for_status } from '../../../database/Utils/constants/constants.js';
+import ApiResponse from '../../../utils/ApiResponse.js';
+import { StatusCodes } from '../../../utils/constants.js';
+import { dynamic_filter } from '../../../utils/dymanicFilter.js';
+import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
+import ApiError from '../../../utils/errors/apiError.js';
+import catchAsync from '../../../utils/errors/catchAsync.js';
 
 export const listing_log_inventory = catchAsync(async (req, res, next) => {
   const {
@@ -63,7 +62,7 @@ export const listing_log_inventory = catchAsync(async (req, res, next) => {
   const match_query = {
     ...filterData,
     ...search_query,
-    issue_status: issues_for_status.log,
+    issue_status: null,
   };
 
   const aggregate_stage = [
@@ -640,7 +639,7 @@ export const add_issue_for_crosscutting = catchAsync(async (req, res, next) => {
   );
 
   if (
-    !update_log_items_status?.acknowledged &&
+    !update_log_items_status?.acknowledged ||
     update_log_items_status.modifiedCount <= 0
   )
     return next(new ApiError('Failed to update', 400));
@@ -655,6 +654,7 @@ export const add_issue_for_crosscutting = catchAsync(async (req, res, next) => {
 
   const issue_for_crosscutting = log_issue_for_crosscutting_data.map((ele) => {
     const { _id, ...data } = ele;
+    data.issued_from = issues_for_status.log;
     data.log_inventory_item_id = _id;
     data.created_by = created_by;
     return data;
@@ -739,6 +739,7 @@ export const add_issue_for_flitching = catchAsync(async (req, res, next) => {
       amount: data?.amount,
       amount_factor: data?.amount_factor,
       expense_amount: data?.expense_amount,
+      issued_from: issues_for_status.log,
       remark: data?.remark,
       invoice_id: data?.invoice_id,
       created_by: created_by,
@@ -815,7 +816,7 @@ export const listing_log_history_inventory = catchAsync(
     const match_query = {
       ...filterData,
       ...search_query,
-      issue_status: { $ne: issues_for_status?.log },
+      issue_status: { $ne: null },
     };
 
     const aggregate_stage = [

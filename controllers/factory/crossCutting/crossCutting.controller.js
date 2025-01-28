@@ -153,7 +153,7 @@ export const revert_issue_for_crosscutting = catchAsync(
         { _id: issue_for_crosscutting?.log_inventory_item_id },
         {
           $set: {
-            issue_status: issues_for_status.log,
+            issue_status: null,
           },
         },
         { session }
@@ -181,20 +181,39 @@ export const revert_issue_for_crosscutting = catchAsync(
           new ApiError('Unable to revert issue for crosscutting', 400)
         );
 
-      const issue_for_crosscutting_log_invoice_found =
-        await issues_for_crosscutting_model.find({
-          _id: { $ne: issue_for_crosscutting_id },
-          invoice_id: issue_for_crosscutting?.invoice_id,
-        });
-      const issue_for_crosscutting_flitching_log_invoice_found =
-        await issues_for_flitching_model.find({
-          invoice_id: issue_for_crosscutting?.invoice_id,
-        });
+      // const issue_for_crosscutting_log_invoice_found =
+      //   await issues_for_crosscutting_model.find({
+      //     _id: { $ne: issue_for_crosscutting_id },
+      //     invoice_id: issue_for_crosscutting?.invoice_id,
+      //   });
+      // const issue_for_crosscutting_flitching_log_invoice_found =
+      //   await issues_for_flitching_model.find({
+      //     invoice_id: issue_for_crosscutting?.invoice_id,
+      //   });
 
-      if (
-        issue_for_crosscutting_log_invoice_found?.length <= 0 &&
-        issue_for_crosscutting_flitching_log_invoice_found?.length <= 0
-      ) {
+      // if (
+      //   issue_for_crosscutting_log_invoice_found?.length <= 0 &&
+      //   issue_for_crosscutting_flitching_log_invoice_found?.length <= 0
+      // ) {
+      //   await log_inventory_invoice_model.updateOne(
+      //     { _id: issue_for_crosscutting?.invoice_id },
+      //     {
+      //       $set: {
+      //         isEditable: true,
+      //       },
+      //     },
+      //     { session }
+      //   );
+      // } // previous logic
+
+      const is_invoice_editable = await log_inventory_items_model.find({
+        _id: { $ne: issue_for_crosscutting?.log_inventory_item_id }, // except that item
+        invoice_id: issue_for_crosscutting?.invoice_id, // same invoice id
+        issue_status: { $ne: null }, // is issued
+      });
+
+      //if is_invoice_editable found that means invoice for that item is issued somewhere
+      if (is_invoice_editable && is_invoice_editable?.length <= 0) {
         await log_inventory_invoice_model.updateOne(
           { _id: issue_for_crosscutting?.invoice_id },
           {
@@ -339,7 +358,7 @@ export const listing_cross_cutting_inventory = catchAsync(
     const match_query = {
       ...filterData,
       ...search_query,
-      issue_status: issues_for_status?.crosscut_done,
+      issue_status: null,
     };
 
     const aggregate_stage = [
@@ -1081,7 +1100,7 @@ export const crossCuttingDoneExcel = catchAsync(async (req, res) => {
   const match_query = {
     ...filterData,
     ...search_query,
-    issue_status: issues_for_status?.crosscut_done,
+    issue_status: null,
   };
 
   const allData = await crosscutting_done_model.find(match_query);
@@ -1151,6 +1170,7 @@ export const add_crosscut_issue_for_flitching = catchAsync(
       amount: crosscut_done_details?.cost_amount,
       amount_factor: crosscut_done_details?.amount_factor,
       expense_amount: crosscut_done_details?.expense_amount,
+      issued_from: issues_for_status.crosscut_done,
       remark: crosscut_done_details?.remarks,
       invoice_id: log_details?.invoice_id,
       created_by: created_by,

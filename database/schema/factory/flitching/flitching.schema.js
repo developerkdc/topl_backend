@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { approval_status } from '../../../Utils/approvalStatus.schema.js';
+import { issues_for_status } from '../../../Utils/constants/constants.js';
 
 const flitchingSchema = new mongoose.Schema(
   {
@@ -140,6 +141,19 @@ const flitchingSchema = new mongoose.Schema(
     expense_amount: {
       type: Number,
       required: [true, 'expense amount is required'],
+    },
+    issue_status: {
+      type: String,
+      enum: {
+        values: [
+          issues_for_status?.slicing,
+          issues_for_status?.slicing_peeling,
+          issues_for_status?.order,
+          issues_for_status?.chalan,
+        ],
+        message: `Invalid status {{VALUE}} Issue Status must either be one of ${issues_for_status?.slicing}, ${issues_for_status?.slicing_peeling}, ${issues_for_status?.order}}, ${issues_for_status?.chalan}`,
+      },
+      default: null,
     },
     approval_status: approval_status,
     remarks: {

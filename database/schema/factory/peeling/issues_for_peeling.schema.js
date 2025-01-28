@@ -7,13 +7,16 @@ const issue_for_peeling_schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Log Inventory Items Id is required'],
     },
+    issue_for_crosscutting_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
     crosscut_done_id: {
       type: mongoose.Schema.Types.ObjectId,
       default: null,
     },
     inward_sr_no: {
       type: Number,
-      unique: true,
       required: [true, 'Inward Sr.No is required. '],
     },
     inward_date: {
@@ -28,7 +31,6 @@ const issue_for_peeling_schema = new mongoose.Schema(
     },
     invoice_no: {
       type: String,
-      unique: true,
       trim: true,
       uppercase: true,
       required: [true, 'Invoice No is required.'],
@@ -50,11 +52,11 @@ const issue_for_peeling_schema = new mongoose.Schema(
     color: {
       color_id: {
         type: mongoose.Schema.Types.ObjectId,
-        required: [true, 'color id is required'],
+        default: null,
       },
       color_name: {
         type: String,
-        required: [true, 'color name is required'],
+        default: null,
       },
     },
     item_sub_category_id: {

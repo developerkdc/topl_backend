@@ -39,11 +39,11 @@ const issues_for_crosscutting_details_schema = new mongoose.Schema(
     color: {
       color_id: {
         type: mongoose.Schema.Types.ObjectId,
-        required: [true, 'color id is required'],
+        default: null,
       },
       color_name: {
         type: String,
-        required: [true, 'color name is required'],
+        default: null,
       },
     },
     item_sub_category_id: {
@@ -75,6 +75,14 @@ const issues_for_crosscutting_details_schema = new mongoose.Schema(
         message: `Invalid status {{VALUE}} Issue Status must either be one of ${issues_for_status.crosscutting}`,
       },
       default: issues_for_status.crosscutting,
+    },
+    issued_from: {
+      type: String,
+      enum: {
+        values: [issues_for_status?.log],
+        message: `Invalid issued from type {{VALUE}} it should be one of the ${issues_for_status?.log}`,
+      },
+      required: [true, 'Issued from is required'],
     },
     invoice_length: {
       type: Number,

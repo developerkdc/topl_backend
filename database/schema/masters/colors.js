@@ -11,7 +11,7 @@ const colorSchema = new mongoose.Schema(
       type: String,
       uppercase: true,
       trim: true,
-      required: [true, 'Color Name is required'],
+      default: null,
     },
     status: {
       type: Boolean,
