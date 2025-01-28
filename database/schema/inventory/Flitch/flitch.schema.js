@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import invoice_details from '../../../Utils/invoiceDetails.schema.js';
 import expensesSchema from '../../masters/expenses.schema.js';
 import { approval_status } from '../../../Utils/approvalStatus.schema.js';
+import { issues_for_status } from '../../../Utils/constants/constants.js';
 
 export const item_details_schema = new mongoose.Schema(
   {
@@ -106,6 +107,28 @@ export const item_details_schema = new mongoose.Schema(
     expense_amount: {
       type: Number,
       default: 0,
+    },
+    color: {
+      color_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        default: null
+        // required: [true, 'color id is required'],
+      },
+      color_name: {
+        type: String,
+        default: null
+        // required: [true, 'color name is required'],
+      },
+    },
+    issue_status: {
+      type: String,
+      enum: {
+        values: [
+          issues_for_status?.slicing, issues_for_status?.slicing_peeling, issues_for_status?.order, issues_for_status?.chalan
+        ],
+        message: `Invalid status {{VALUE}} Issue Status must either be one of ${issues_for_status?.slicing}, ${issues_for_status?.slicing_peeling}, ${issues_for_status?.order}}, ${issues_for_status?.chalan}`,
+      },
+      default: null
     },
     remark: {
       type: String,
@@ -274,6 +297,10 @@ export const flitch_invoice_schema = new mongoose.Schema(
           default: null,
         },
       },
+    },
+    isEditable: {
+      type: Boolean,
+      default: true,
     },
     approval_status: approval_status,
     invoice_Details: invoice_details,
