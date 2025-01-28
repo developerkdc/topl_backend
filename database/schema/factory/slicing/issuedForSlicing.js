@@ -12,6 +12,10 @@ const issue_for_slicing_schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       default: null,
     },
+    issue_for_flitching_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
     inward_sr_no: {
       type: Number,
       // unique: true,

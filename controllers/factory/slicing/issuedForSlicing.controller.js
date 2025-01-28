@@ -250,12 +250,13 @@ export const listing_issued_for_slicing_inventory = catchAsync(
 
 export const revert_issued_for_slicing = catchAsync(async (req, res, next) => {
   const { issued_for_slicing_id } = req.body;
+  console.log('params => ', issued_for_slicing_id)
   const session = await mongoose.startSession();
   await session.startTransaction();
   try {
     if (!issued_for_slicing_id) {
       throw new ApiError(
-        'Issued for slicing ids are missing',
+        'Issued for slicing id are missing',
         StatusCodes.BAD_REQUEST
       );
     }
@@ -267,9 +268,6 @@ export const revert_issued_for_slicing = catchAsync(async (req, res, next) => {
       throw new ApiError('No Data found...', StatusCodes.BAD_REQUEST);
     }
 
-    const check_invoice_id = await issued_for_slicing_model
-      ?.find({ invoice_id: issuedForSlicingData?.invoice_id })
-      .session(session);
 
     if (
       issuedForSlicingData?.issued_from?.toLowerCase() === 'flitching' &&
@@ -285,25 +283,6 @@ export const revert_issued_for_slicing = catchAsync(async (req, res, next) => {
         { session }
       );
 
-      if (check_invoice_id) {
-        const update_is_editable_status_from_flitch_inventory_invoice_details =
-          await flitch_inventory_invoice_model?.updateOne(
-            { _id: issuedForSlicingData?.invoice_id },
-            { $set: { isEditable: true } },
-            { session }
-          );
-        if (
-          !update_is_editable_status_from_flitch_inventory_invoice_details?.acknowledged ||
-          update_is_editable_status_from_flitch_inventory_invoice_details?.modifiedCount ===
-            0
-        ) {
-          throw new ApiError(
-            'Failed to update flitch inventory invoice status',
-            StatusCodes?.BAD_REQUEST
-          );
-        }
-      }
-
       if (
         !updated_document?.acknowledged ||
         updated_document?.modifiedCount === 0
@@ -312,6 +291,22 @@ export const revert_issued_for_slicing = catchAsync(async (req, res, next) => {
           'Failed to update flitch inventory item status',
           StatusCodes.BAD_REQUEST
         );
+      };
+
+      const is_invoice_editable = await flitch_inventory_items_model?.find({
+        _id: { $ne: issuedForSlicingData?.flitch_inventory_item_id },
+        invoice_id: issuedForSlicingData?.invoice_id,
+        issue_status: { $ne: null }
+      }).session(session);
+
+
+
+      if (is_invoice_editable && is_invoice_editable?.length <= 0) {
+        await flitch_inventory_invoice_model?.updateOne({ _id: issuedForSlicingData?.invoice_id }, {
+          $set: {
+            isEditable: true
+          }
+        }, { session });
       }
     }
     if (
@@ -327,26 +322,6 @@ export const revert_issued_for_slicing = catchAsync(async (req, res, next) => {
         },
         { session }
       );
-
-      if (check_invoice_id) {
-        const update_is_editable_status_from_flitch_inventory_invoice_details =
-          await flitch_inventory_invoice_model?.updateOne(
-            { _id: issuedForSlicingData?.invoice_id },
-            { $set: { isEditable: true } },
-            { session }
-          );
-        if (
-          !update_is_editable_status_from_flitch_inventory_invoice_details?.acknowledged ||
-          update_is_editable_status_from_flitch_inventory_invoice_details?.modifiedCount ===
-            0
-        ) {
-          throw new ApiError(
-            'Failed to update flitch inventory invoice status',
-            StatusCodes?.BAD_REQUEST
-          );
-        }
-      }
-
       if (
         !updated_document?.acknowledged ||
         updated_document?.modifiedCount === 0
@@ -355,14 +330,22 @@ export const revert_issued_for_slicing = catchAsync(async (req, res, next) => {
           'Failed to update flitch inventory item status',
           StatusCodes.BAD_REQUEST
         );
+      };
+
+      const is_flitching_done_editable = await flitching_done_model?.find({ _id: { $ne: issuedForSlicingData?.flitching_done_id }, issue_for_flitching_id: issuedForSlicingData?.issue_for_flitching_id, issue_status: { $ne: null } }).session(session);
+
+      if (is_flitching_done_editable && is_flitching_done_editable?.length <= 0) {
+        await flitching_done_model.updateMany({ issue_for_flitching_id: issuedForSlicingData?.issue_for_flitching_id }, {
+          $set: {
+            isEditable: true
+          }
+        }, { session })
       }
     }
 
-    const delete_response = await issued_for_slicing_model
-      ?.findByIdAndDelete(issued_for_slicing_id)
-      .session(session);
+    const delete_response = await issued_for_slicing_model.deleteOne({ _id: issuedForSlicingData?._id }, { session })
 
-    if (!delete_response) {
+    if (!delete_response?.acknowledged || delete_response?.deletedCount === 0) {
       throw new ApiError(
         'Failed to Revert Items',
         StatusCodes.INTERNAL_SERVER_ERROR
@@ -383,3 +366,23 @@ export const revert_issued_for_slicing = catchAsync(async (req, res, next) => {
     await session.endSession();
   }
 });
+
+
+export const fetch_single_issued_for_slicing_item = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+
+
+  if (!id) {
+    return next(new ApiError("Issued for slicing id is missing", StatusCodes.NOT_FOUND))
+  };
+
+  const result = await issued_for_slicing_view_model?.findById(id);
+
+  if (!result) {
+    return next(new ApiError("No Data Found", StatusCodes.NOT_FOUND))
+  };
+
+  const response = new ApiResponse(StatusCodes.OK, "Issued for Slicing Item Fetched Sucessfully", result);
+  return res.status(StatusCodes.OK).json(response)
+
+})
