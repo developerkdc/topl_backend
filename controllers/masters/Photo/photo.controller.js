@@ -97,9 +97,9 @@ export const updatePhoto = catchAsync(async (req, res, next) => {
     }
 
     const photoImagesFiles = req.files?.images;
-    let images = [];
+    let newPhotoImages = [];
     if (photoImagesFiles && photoImagesFiles?.length > 0) {
-      images = photoImagesFiles?.map((e) => e);
+      newPhotoImages = photoImagesFiles?.map((e) => e);
     }
 
     const bannerImagesFile = req.files?.banner_image;

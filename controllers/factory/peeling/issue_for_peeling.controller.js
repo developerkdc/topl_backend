@@ -57,40 +57,34 @@ export const addIssueForPeelingFromLogInventory = catchAsync(
 
       const maxSrNo = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1;
 
+
+      const log_invoice_ids = new Set();
+
+
       const issue_for_peeling_data = logInventoryItemData?.map(
-        (logInventoryItem, index) => {
+        (item, index) => {
+          log_invoice_ids.add(item.invoice_id)
           return {
             sr_no: maxSrNo + index,
-            log_inventory_item_id: logInventoryItem?._id,
-            issue_for_crosscutting_id: null,
+            log_inventory_item_id: item?._id,
             crosscut_done_id: null,
-            inward_sr_no: logInventoryItem?.log_invoice_details?.inward_sr_no,
-            inward_date: logInventoryItem?.log_invoice_details?.inward_date,
-            invoice_date:
-              logInventoryItem?.log_invoice_details?.invoice_Details
-                ?.invoice_date,
-            invoice_no:
-              logInventoryItem?.log_invoice_details?.invoice_Details
-                ?.invoice_no,
-            item_sr_no: logInventoryItem?.item_sr_no,
-            item_id: logInventoryItem?.item_id,
-            item_name: logInventoryItem?.item_name,
-            color: logInventoryItem?.color,
-            item_sub_category_id: logInventoryItem?.item_sub_category_id,
-            item_sub_category_name: logInventoryItem?.item_sub_category_name,
-            log_no: logInventoryItem?.log_no,
-            code: logInventoryItem?.log_no,
-            log_no_code: logInventoryItem?.log_no,
-            log_formula: logInventoryItem?.log_formula,
-            length: logInventoryItem?.physical_length,
-            diameter: logInventoryItem?.physical_diameter,
-            cmt: logInventoryItem?.physical_cmt,
-            amount: logInventoryItem?.amount,
+            item_id: item?.item_id,
+            item_name: item?.item_name,
+            color: item?.color,
+            item_sub_category_id: item?.item_sub_category_id,
+            item_sub_category_name: item?.item_sub_category_name,
+            log_no: item?.log_no,
+            code: item?.log_no,
+            log_no_code: item?.log_no,
+            log_formula: item?.log_formula,
+            length: item?.physical_length,
+            diameter: item?.physical_diameter,
+            cmt: item?.physical_cmt,
+            amount: item?.amount,
             amount_factor: 1,
-            expense_amount: logInventoryItem?.expense_amount,
+            expense_amount: item?.expense_amount,
             issued_from: issues_for_status?.log,
-            invoice_id: logInventoryItem?.invoice_id,
-            remark: logInventoryItem?.remark,
+            remark: item?.remark,
             created_by: userDetails?._id,
             updated_by: userDetails?._id,
           };
@@ -108,9 +102,6 @@ export const addIssueForPeelingFromLogInventory = catchAsync(
       const log_item_ids = add_issue_for_peeling?.map(
         (ele) => ele?.log_inventory_item_id
       );
-      const log_invoice_ids = [
-        ...new Set(add_issue_for_peeling.map((issue) => issue.invoice_id)),
-      ];
 
       //updating log inventory item status to peeling
       const update_log_inventory_item_status =
@@ -138,7 +129,7 @@ export const addIssueForPeelingFromLogInventory = catchAsync(
       //updating log inventory invoice: if any one of log item send for peeling then invoice should not editable
       const update_log_inventory_invoice_editable =
         await log_inventory_invoice_model.updateMany(
-          { _id: { $in: log_invoice_ids } },
+          { _id: { $in: [...log_invoice_ids] } },
           {
             $set: {
               isEditable: false,
@@ -198,30 +189,6 @@ export const addIssueForPeelingFromCrosscutDone = catchAsync(
           issue_status: null,
         },
       };
-      const aggLookupInvoice = {
-        $lookup: {
-          from: 'log_inventory_invoice_details',
-          localField: 'issuedCrossCuttingDetails.invoice_id',
-          foreignField: '_id',
-          pipeline: [
-            {
-              $project: {
-                inward_sr_no: 1,
-                inward_date: 1,
-                'invoice_Details.invoice_date': 1,
-                'invoice_Details.invoice_no': 1,
-              },
-            },
-          ],
-          as: 'log_inventory_invoice_details',
-        },
-      };
-      const aggUnwindInvoice = {
-        $unwind: {
-          path: '$log_inventory_invoice_details',
-          preserveNullAndEmptyArrays: true,
-        },
-      };
       const aggProject = {
         $project: {
           issue_for_crosscutting_id: 1,
@@ -254,15 +221,12 @@ export const addIssueForPeelingFromCrosscutDone = catchAsync(
       };
       const crosscut_done_data = await crossCuttingsDone_view_modal.aggregate([
         aggMatch,
-        aggLookupInvoice,
-        aggUnwindInvoice,
         aggProject,
       ]);
 
       if (crosscut_done_data?.length <= 0) {
         throw new ApiError('No Crosscut done data found', 400);
       }
-
       const maxNumber = await issue_for_peeling_model?.aggregate([
         {
           $group: {
@@ -274,49 +238,36 @@ export const addIssueForPeelingFromCrosscutDone = catchAsync(
 
       const maxSrNo = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1;
 
-      const issue_for_peeling_data = crosscut_done_data?.map(
-        (crosscutDone, index) => {
-          return {
-            sr_no: maxSrNo + index,
-            log_inventory_item_id: crosscutDone?.log_inventory_item_id,
-            issue_for_crosscutting_id: crosscutDone?.issue_for_crosscutting_id,
-            crosscut_done_id: crosscutDone?._id,
-            inward_sr_no:
-              crosscutDone?.log_inventory_invoice_details?.inward_sr_no,
-            inward_date:
-              crosscutDone?.log_inventory_invoice_details?.inward_date,
-            invoice_date:
-              crosscutDone?.log_inventory_invoice_details?.invoice_Details
-                ?.invoice_date,
-            invoice_no:
-              crosscutDone?.log_inventory_invoice_details?.invoice_Details
-                ?.invoice_no,
-            item_sr_no: crosscutDone?.issuedCrossCuttingDetails?.item_sr_no,
-            item_id: crosscutDone?.issuedCrossCuttingDetails?.item_id,
-            item_name: crosscutDone?.issuedCrossCuttingDetails?.item_name,
-            color: crosscutDone?.issuedCrossCuttingDetails?.color,
-            item_sub_category_id:
-              crosscutDone?.issuedCrossCuttingDetails?.item_sub_category_id,
-            item_sub_category_name:
-              crosscutDone?.issuedCrossCuttingDetails?.item_sub_category_name,
-            log_no: crosscutDone?.log_no,
-            code: crosscutDone?.code,
-            log_no_code: crosscutDone?.log_no_code,
-            log_formula: crosscutDone?.issuedCrossCuttingDetails?.log_formula,
-            length: crosscutDone?.length,
-            diameter: crosscutDone?.girth,
-            cmt: crosscutDone?.crosscut_cmt,
-            amount: crosscutDone?.cost_amount,
-            amount_factor: 1,
-            expense_amount: crosscutDone?.expense_amount,
-            issued_from: issues_for_status?.crosscut_done,
-            invoice_id: crosscutDone?.log_inventory_invoice_details?._id,
-            remark: crosscutDone?.remarks,
-            created_by: userDetails?._id,
-            updated_by: userDetails?._id,
-          };
-        }
-      );
+      const issue_for_crosscutting_ids = new Set()
+      const issue_for_peeling_data = crosscut_done_data?.map((item, index) => {
+        issue_for_crosscutting_ids.add(item?.issue_for_crosscutting_id)
+        return {
+          sr_no: maxSrNo + index,
+          log_inventory_item_id: null,
+          crosscut_done_id: item?._id,
+          item_id: item?.issuedCrossCuttingDetails?.item_id,
+          item_name: item?.issuedCrossCuttingDetails?.item_name,
+          color: item?.issuedCrossCuttingDetails?.color,
+          item_sub_category_id:
+            item?.issuedCrossCuttingDetails?.item_sub_category_id,
+          item_sub_category_name:
+            item?.issuedCrossCuttingDetails?.item_sub_category_name,
+          log_no: item?.log_no,
+          code: item?.code,
+          log_no_code: item?.log_no_code,
+          log_formula: item?.issuedCrossCuttingDetails?.log_formula,
+          length: item?.length,
+          diameter: item?.girth,
+          cmt: item?.crosscut_cmt,
+          amount: item?.cost_amount,
+          amount_factor: 1,
+          expense_amount: item?.expense_amount,
+          issued_from: issues_for_status?.crosscut_done,
+          remark: item?.remarks,
+          created_by: userDetails?._id,
+          updated_by: userDetails?._id,
+        };
+      });
 
       const add_issue_for_peeling = await issue_for_peeling_model.insertMany(
         issue_for_peeling_data,
@@ -330,11 +281,6 @@ export const addIssueForPeelingFromCrosscutDone = catchAsync(
       const crosscut_done_issue_ids = add_issue_for_peeling.map(
         (ele) => ele?.crosscut_done_id
       );
-      const issue_for_crosscutting_ids = [
-        ...new Set(
-          add_issue_for_peeling.map((ele) => ele?.issue_for_crosscutting_id)
-        ),
-      ];
 
       //updating crosscut done status to peeling
       const update_crosscut_done_status =
@@ -362,7 +308,7 @@ export const addIssueForPeelingFromCrosscutDone = catchAsync(
       //updating crosscut done: if any one of item send for peeling then whole with same issue_for_crosscutting_id should not editable
       const update_crosscut_done_editable =
         await crosscutting_done_model.updateMany(
-          { issue_for_crosscutting_id: { $in: issue_for_crosscutting_ids } },
+          { issue_for_crosscutting_id: { $in: [...issue_for_crosscutting_ids] } },
           {
             $set: {
               isEditable: false,
@@ -420,124 +366,88 @@ export const revert_issue_for_peeling = catchAsync(async (req, res, next) => {
       throw new ApiError('No Data found...', StatusCodes.BAD_REQUEST);
     }
 
-    const add_revert_to_crosscut_done = async function () {
-      const updated_document = await log_inventory_items_model.updateOne(
+    const add_revert_to_log_inventory = async function () {
+      const updated_document_log_inventory = await log_inventory_items_model.findOneAndUpdate(
         { _id: issuedForPeelingData?.log_inventory_item_id },
         {
           $set: {
             issue_status: null,
           },
         },
-        { session }
+        { new: true, session: session }
       );
 
-      if (updated_document?.matchedCount <= 0) {
+      if (!updated_document_log_inventory) {
         throw new ApiError(
-          'Log inventory item not found',
+          'Log inventory item not found or failed to update status',
           StatusCodes.BAD_REQUEST
         );
       }
 
-      if (
-        !updated_document?.acknowledged ||
-        updated_document?.modifiedCount <= 0
-      ) {
-        throw new ApiError(
-          'Failed to update log inventory item status',
-          StatusCodes.BAD_REQUEST
-        );
-      }
+      const log_inventory_invoice_id = updated_document_log_inventory?.invoice_id
 
-      const is_invoice_editable = await log_inventory_items_model
-        ?.find({
-          _id: { $ne: issuedForPeelingData?.log_inventory_item_id },
-          invoice_id: issuedForPeelingData?.invoice_id,
-          issue_status: { $ne: null },
-        })
-        .session(session);
+      const is_invoice_editable = await log_inventory_items_model?.find({
+        _id: { $ne: issuedForPeelingData?.log_inventory_item_id },
+        invoice_id: log_inventory_invoice_id,
+        issue_status: { $ne: null }
+      }).session(session);
 
       if (is_invoice_editable && is_invoice_editable?.length <= 0) {
-        await log_inventory_invoice_model?.updateOne(
-          { _id: issuedForPeelingData?.invoice_id },
-          {
-            $set: {
-              isEditable: true,
-            },
-          },
-          { session }
-        );
+        await log_inventory_invoice_model?.updateOne({ _id: log_inventory_invoice_id }, {
+          $set: {
+            isEditable: true
+          }
+        }, { session });
       }
     };
 
-    const add_revert_to_log_inventory = async function () {
-      const updated_document = await crosscutting_done_model.updateOne(
-        {
-          _id: issuedForPeelingData?.crosscut_done_id,
-          issue_for_crosscutting_id:
-            issuedForPeelingData?.issue_for_crosscutting_id,
-        },
+    const add_revert_to_crosscut_done = async function () {
+      const updated_document_crosscut_done = await crosscutting_done_model.findOneAndUpdate(
+        { _id: issuedForPeelingData?.crosscut_done_id },
         {
           $set: {
             issue_status: null,
           },
         },
-        { session }
+        { new: true, session: session }
       );
 
-      if (updated_document?.matchedCount <= 0) {
+      if (!updated_document_crosscut_done) {
         throw new ApiError(
-          'Crosscut done item not found',
+          'Crosscut done item not found or failed to update item status',
           StatusCodes.BAD_REQUEST
         );
       }
 
-      if (
-        !updated_document?.acknowledged ||
-        updated_document?.modifiedCount === 0
-      ) {
-        throw new ApiError(
-          'Failed to update  item status',
-          StatusCodes.BAD_REQUEST
-        );
-      }
+      const issue_for_crosscutting_id = updated_document_crosscut_done?.issue_for_crosscutting_id
 
-      const is_crosscut_done_editable = await crosscutting_done_model
-        ?.find({
-          _id: { $ne: issuedForPeelingData?.crosscut_done_id },
-          issue_for_crosscutting_id:
-            issuedForPeelingData?.issue_for_crosscutting_id,
-          issue_status: { $ne: null },
-        })
-        .lean();
+      const is_crosscut_done_editable = await crosscutting_done_model?.find({
+        _id: { $ne: issuedForPeelingData?.crosscut_done_id },
+        issue_for_crosscutting_id: issue_for_crosscutting_id,
+        issue_status: { $ne: null }
+      }).lean();
 
       if (is_crosscut_done_editable && is_crosscut_done_editable?.length <= 0) {
-        await crosscutting_done_model.updateMany(
-          {
-            issue_for_crosscutting_id:
-              issuedForPeelingData?.issue_for_crosscutting_id,
-          },
-          {
-            $set: {
-              isEditable: true,
-            },
-          },
-          { session }
-        );
+        await crosscutting_done_model.updateMany({ issue_for_crosscutting_id: issue_for_crosscutting_id }, {
+          $set: {
+            isEditable: true
+          }
+        }, { session })
       }
     };
 
-    if (
+    if ( // log-inventory
       issuedForPeelingData?.issued_from === issues_for_status?.log &&
       issuedForPeelingData?.crosscut_done_id === null
     ) {
-      await add_revert_to_crosscut_done();
+      await add_revert_to_log_inventory()
     }
 
-    if (
+    if ( // crosscut done
       issuedForPeelingData?.issued_from === issues_for_status?.crosscut_done &&
       issuedForPeelingData?.crosscut_done_id !== null
     ) {
-      await add_revert_to_log_inventory();
+      await add_revert_to_crosscut_done();
     }
 
     const delete_response = await issue_for_peeling_model.deleteOne(
