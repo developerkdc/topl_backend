@@ -3,6 +3,10 @@ import { issues_for_status } from '../../../Utils/constants/constants.js';
 
 const issue_for_peeling_schema = new mongoose.Schema(
   {
+    sr_no: {
+      type: Number,
+      required: [true, 'Sr.No is required'],
+    },
     log_inventory_item_id: {
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Log Inventory Items Id is required'],
@@ -246,5 +250,3 @@ export const issue_for_peeling_model = mongoose.model(
 //         ]
 //     })
 // })()
-
-
