@@ -6,9 +6,20 @@ const issue_for_slicing_schema = new mongoose.Schema(
     flitch_inventory_item_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'flitch_inventory_item_details',
-      required: [true, 'Flitch Inventory Item ID is required'],
+      // required: [true, 'Flitch Inventory Item ID is required'],
+      default: null
+    },
+    log_inventory_item_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'log_inventory_item_details',
+      // required: [true, 'Flitch Inventory Item ID is required'],
+      default: null
     },
     flitching_done_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
+    issue_for_flitching_id: {
       type: mongoose.Schema.Types.ObjectId,
       default: null,
     },
@@ -136,14 +147,13 @@ const issue_for_slicing_schema = new mongoose.Schema(
     },
     issued_from: {
       type: String,
-      uppercase: true,
       required: [true, 'Issued from is required'],
       enum: {
         values: [
           issues_for_status?.flitching,
           issues_for_status?.flitching_done,
         ],
-        message: `Invalid issued from type {{VALUE}} it should be one of the ${issues_for_status.flitching}, ${issues_for_status.flitching_done} `,
+        message: `Invalid issued from type {{VALUE}} it should be one of the ${issues_for_status.flitching}, ${issues_for_status.flitching_done}`,
       },
     },
     is_slicing_completed: {

@@ -154,19 +154,18 @@ const issue_for_peeling_schema = new mongoose.Schema(
 issue_for_peeling_schema.index({ log_inventory_item_id: 1 });
 issue_for_peeling_schema.index({ crosscut_done_id: 1 });
 
-const issue_for_peeling_model = mongoose.model(
+export const issue_for_peeling_model = mongoose.model(
   'issue_for_peelings',
   issue_for_peeling_schema,
   'issue_for_peelings'
 );
-
 // const issue_for_peeling_view_schema = new mongoose.Schema({},{
 //     strict: false,
 //     autoCreate:false,
 //     autoIndex:false,
 // })
 
-// export const issue_for_peeling_view_model = mongoose.model("issue_for_peelings_view", issue_for_peeling_view_schema,"issue_for_peelings_view")
+// export const issue_for_peeling_view_model = mongoose.model("issue_for_peelings_views", issue_for_peeling_view_schema,"issue_for_peelings_views");
 
 // (async function () {
 //     await issue_for_peeling_view_model.createCollection({
@@ -180,7 +179,7 @@ const issue_for_peeling_model = mongoose.model(
 //             },
 //             {
 //                 $lookup: {
-//                     from: "log_inventory_item_details",
+//                     from: "log_inventory_items_details",
 //                     localField: "log_inventory_item_id",
 //                     foreignField: "_id",
 //                     as: "log_item_details"
@@ -236,16 +235,16 @@ const issue_for_peeling_model = mongoose.model(
 //                     as: "updated_user_details",
 //                 }
 //             },
-//             ...["flitch_item_details","flitching_done_item_details","created_user_details","updated_user_details"].map((ele)=>{
+//             ...(["log_item_details","crosscut_done_details","created_user_details","updated_user_details"].map((ele)=>{
 //                 return {
 //                     $unwind: {
 //                         path: `$${ele}`,
 //                         preserveNullAndEmptyArrays: true
 //                     }
 //                 }
-//             })
+//             }))
 //         ]
 //     })
 // })()
 
-export default issue_for_peeling_model;
+

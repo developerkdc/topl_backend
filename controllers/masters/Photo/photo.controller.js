@@ -96,10 +96,10 @@ export const updatePhoto = catchAsync(async (req, res, next) => {
       return next(new ApiError('Invalid Params Id', 400));
     }
 
-    const photoImages = req.files;
-    let newPhotoImages = [];
-    if (photoImages.length > 0) {
-      newPhotoImages = photoImages?.map((e) => e);
+    const photoImagesFiles = req.files?.images;
+    let images = [];
+    if (photoImagesFiles && photoImagesFiles?.length > 0) {
+      images = photoImagesFiles?.map((e) => e);
     }
 
     const bannerImagesFile = req.files?.banner_image;

@@ -155,6 +155,10 @@ const flitchingSchema = new mongoose.Schema(
       },
       default: null,
     },
+    isEditable: {
+      type: Boolean,
+      default: true,
+    },
     approval_status: approval_status,
     remarks: {
       type: String,
