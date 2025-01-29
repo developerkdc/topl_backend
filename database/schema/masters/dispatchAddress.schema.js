@@ -63,8 +63,8 @@ dispatchAddressSchema.index({ pincode: 1 });
 dispatchAddressSchema.index({ gst_number: 1 });
 
 const dispatchAddressModel = mongoose.model(
-  'dispathAddresses',
+  'dispatchAddress',
   dispatchAddressSchema,
-  'dispathAddresses'
+  'dispatchAddress'
 );
 export default dispatchAddressModel;

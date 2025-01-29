@@ -5,39 +5,11 @@ const issue_for_peeling_schema = new mongoose.Schema(
   {
     log_inventory_item_id: {
       type: mongoose.Schema.Types.ObjectId,
-      required: [true, 'Log Inventory Items Id is required'],
-    },
-    issue_for_crosscutting_id: {
-      type: mongoose.Schema.Types.ObjectId,
       default: null,
     },
     crosscut_done_id: {
       type: mongoose.Schema.Types.ObjectId,
       default: null,
-    },
-    inward_sr_no: {
-      type: Number,
-      required: [true, 'Inward Sr.No is required. '],
-    },
-    inward_date: {
-      type: Date,
-      default: Date.now,
-      required: [true, 'Inward Date is required.'],
-    },
-    invoice_date: {
-      type: Date,
-      default: Date.now,
-      required: [true, 'Invoice Date is required.'],
-    },
-    invoice_no: {
-      type: String,
-      trim: true,
-      uppercase: true,
-      required: [true, 'Invoice No is required.'],
-    },
-    item_sr_no: {
-      type: Number,
-      required: [true, 'Items Sr.No is required'],
     },
     item_id: {
       type: mongoose.Schema.Types.ObjectId,
@@ -87,10 +59,6 @@ const issue_for_peeling_schema = new mongoose.Schema(
       uppercase: true,
       default: null,
     },
-    log_formula: {
-      type: String,
-      required: [true, 'Log formula is required'],
-    },
     length: {
       type: Number,
       required: [true, 'Length is required'],
@@ -122,10 +90,6 @@ const issue_for_peeling_schema = new mongoose.Schema(
         message: `Invalid issued from type {{VALUE}} it should be one of the ${issues_for_status?.log}, ${issues_for_status?.crosscut_done} `,
       },
       required: [true, 'Issued from is required'],
-    },
-    invoice_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: [true, 'Invoice Id is required'],
     },
     remark: {
       type: String,
