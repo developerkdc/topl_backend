@@ -36,6 +36,16 @@ const crosscutting_approval_schema = new mongoose.Schema(
       trim: true,
       uppercase: true,
     },
+    color: {
+      color_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        default: null,
+      },
+      color_name: {
+        type: String,
+        default: null,
+      },
+    },
     log_no: {
       type: String,
       required: [true, 'log number is required'],

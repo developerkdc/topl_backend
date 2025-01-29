@@ -26,7 +26,7 @@ export const addDispatchAddress = catchAsync(async (req, res, next) => {
     }
   }
 
-  const maxNumber = dispatchAddressModel.aggregate([
+  const maxNumber = await dispatchAddressModel.aggregate([
     {
       $group: {
         _id: null,
