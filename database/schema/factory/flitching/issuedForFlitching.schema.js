@@ -180,6 +180,10 @@ const issues_for_flitching_details_schema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    invoice_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, 'Invoice Id is required'],
+    },
     remark: {
       type: String,
       default: null,
