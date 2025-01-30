@@ -14,6 +14,18 @@ export const issues_for_status = {
 
 export const inward_type = {
   inventory: 'inventory',
-  job_work: 'job work',
+  job_work: 'job_work',
   challan: 'challan',
+};
+
+export const peeling_done = {
+  re_flitching: 're_flitching',
+  wastage: 'wastage',
+  veneer: 'veneer',
+  face: 'face',
+  core: 'core',
+};
+export const slicing_done = {
+  rest_roller: 'rest_roller',
+  wastage: 'wastage',
 };
