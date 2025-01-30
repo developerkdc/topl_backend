@@ -1,6 +1,9 @@
 import mongoose from 'mongoose';
 import invoice_details from '../../../Utils/invoiceDetails.schema.js';
-import { inward_type, issues_for_status } from '../../../Utils/constants/constants.js';
+import {
+  inward_type,
+  issues_for_status,
+} from '../../../Utils/constants/constants.js';
 import expensesSchema from '../../masters/expenses.schema.js';
 import { approval_status } from '../../../Utils/approvalStatus.schema.js';
 
@@ -177,7 +180,7 @@ export const log_invoice_schema = new mongoose.Schema(
         ],
         message: `Invalid status {{VALUE}} Issue Status must either be one of ${inward_type.inventory}, ${inward_type.job_work}, ${inward_type.challan}`,
       },
-      required: [true, 'Inwrad Date is required']
+      required: [true, 'Inwrad Date is required'],
     },
     currency: {
       type: String,

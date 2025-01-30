@@ -13,7 +13,7 @@ export const issues_for_status = {
 };
 
 export const inward_type = {
-  inventory:"inventory",
-  job_work:"job work",
-  challan:"challan",
-}
+  inventory: 'inventory',
+  job_work: 'job work',
+  challan: 'challan',
+};

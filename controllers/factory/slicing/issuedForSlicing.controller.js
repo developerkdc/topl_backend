@@ -700,7 +700,7 @@ export const revert_issued_for_slicing = catchAsync(async (req, res, next) => {
     await session.commitTransaction();
     return res.status(StatusCodes.OK).json(response);
   } catch (error) {
-    console.log("err => ", error)
+    console.log('err => ', error);
     await session.abortTransaction();
     throw error;
   } finally {
