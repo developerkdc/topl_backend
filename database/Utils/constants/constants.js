@@ -11,3 +11,9 @@ export const issues_for_status = {
   order: 'order',
   chalan: 'chalan',
 };
+
+export const inward_type = {
+  inventory:"inventory",
+  job_work:"job work",
+  challan:"challan",
+}

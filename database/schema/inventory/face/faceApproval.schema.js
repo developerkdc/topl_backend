@@ -3,6 +3,7 @@ import approvalSchema from '../../../Utils/approval.schema.js';
 import { approval_status } from '../../../Utils/approvalStatus.schema.js';
 import { approval_invoice_details } from '../../../Utils/invoiceDetails.schema.js';
 import { approvalExpensesSchema } from '../../masters/expenses.schema.js';
+import { inward_type } from '../../../Utils/constants/constants.js';
 
 const face_approval_item_details_schema = new mongoose.Schema(
   {
@@ -33,6 +34,16 @@ const face_approval_item_details_schema = new mongoose.Schema(
       required: [true, 'Item Name is required'],
       trim: true,
       uppercase: true,
+    },
+    color: {
+      color_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        default: null,
+      },
+      color_name: {
+        type: String,
+        default: null,
+      },
     },
     length: {
       type: Number,
@@ -128,6 +139,18 @@ const face_approval_invoice_schema = new mongoose.Schema(
       type: Date,
       default: Date.now,
       required: [true, 'Inward Date is required.'],
+    },
+    inward_type: {
+      type: String,
+      enum: {
+        values: [
+          inward_type.inventory,
+          inward_type.job_work,
+          inward_type.challan,
+        ],
+        message: `Invalid status {{VALUE}} Issue Status must either be one of ${inward_type.inventory}, ${inward_type.job_work}, ${inward_type.challan}`,
+      },
+      required: [true, 'Inwrad Date is required']
     },
     currency: {
       type: String,

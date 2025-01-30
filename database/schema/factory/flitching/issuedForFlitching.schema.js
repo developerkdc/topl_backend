@@ -42,6 +42,16 @@ const issues_for_flitching_details_schema = new mongoose.Schema(
       trim: true,
       uppercase: true,
     },
+    color: {
+      color_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        default: null,
+      },
+      color_name: {
+        type: String,
+        default: null,
+      },
+    },
     item_sub_category_id: {
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Items Sub-Category Id is required'],
