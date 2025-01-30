@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { slicing_done } from '../../../Utils/constants/constants';
+import { slicing_done } from '../../../Utils/constants/constants.js';
 
 const slicing_done_other_details_schema = new mongoose.Schema(
   {

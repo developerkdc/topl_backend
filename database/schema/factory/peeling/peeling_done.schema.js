@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { peeling_done } from '../../../Utils/constants/constants';
+import { peeling_done } from '../../../Utils/constants/constants.js';
 
 const peeling_done_other_details_schema = new mongoose.Schema(
   {
