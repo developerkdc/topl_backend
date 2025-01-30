@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import invoice_details from '../../../Utils/invoiceDetails.schema.js';
 import expensesSchema from '../../masters/expenses.schema.js';
 import { approval_status } from '../../../Utils/approvalStatus.schema.js';
+import { inward_type } from '../../../Utils/constants/constants.js';
 
 export const fleece_item_details_schema = new mongoose.Schema(
   {
@@ -24,6 +25,16 @@ export const fleece_item_details_schema = new mongoose.Schema(
       required: [true, 'Item Name is required'],
       trim: true,
       uppercase: true,
+    },
+    color: {
+      color_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        default: null,
+      },
+      color_name: {
+        type: String,
+        default: null,
+      },
     },
     item_sub_category_id: {
       type: mongoose.Schema.Types.ObjectId,
@@ -122,6 +133,18 @@ export const fleece_invoice_schema = new mongoose.Schema(
       type: Date,
       default: Date.now,
       required: [true, ''],
+    },
+    inward_type: {
+      type: String,
+      enum: {
+        values: [
+          inward_type.inventory,
+          inward_type.job_work,
+          inward_type.challan,
+        ],
+        message: `Invalid status {{VALUE}} Issue Status must either be one of ${inward_type.inventory}, ${inward_type.job_work}, ${inward_type.challan}`,
+      },
+      required: [true, 'Inwrad Date is required'],
     },
     currency: {
       type: String,

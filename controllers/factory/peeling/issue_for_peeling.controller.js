@@ -57,13 +57,11 @@ export const addIssueForPeelingFromLogInventory = catchAsync(
 
       const maxSrNo = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1;
 
-
       const log_invoice_ids = new Set();
-
 
       const issue_for_peeling_data = logInventoryItemData?.map(
         (item, index) => {
-          log_invoice_ids.add(item.invoice_id)
+          log_invoice_ids.add(item.invoice_id);
           return {
             sr_no: maxSrNo + index,
             log_inventory_item_id: item?._id,
@@ -238,9 +236,9 @@ export const addIssueForPeelingFromCrosscutDone = catchAsync(
 
       const maxSrNo = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1;
 
-      const issue_for_crosscutting_ids = new Set()
+      const issue_for_crosscutting_ids = new Set();
       const issue_for_peeling_data = crosscut_done_data?.map((item, index) => {
-        issue_for_crosscutting_ids.add(item?.issue_for_crosscutting_id)
+        issue_for_crosscutting_ids.add(item?.issue_for_crosscutting_id);
         return {
           sr_no: maxSrNo + index,
           log_inventory_item_id: null,
@@ -308,7 +306,9 @@ export const addIssueForPeelingFromCrosscutDone = catchAsync(
       //updating crosscut done: if any one of item send for peeling then whole with same issue_for_crosscutting_id should not editable
       const update_crosscut_done_editable =
         await crosscutting_done_model.updateMany(
-          { issue_for_crosscutting_id: { $in: [...issue_for_crosscutting_ids] } },
+          {
+            issue_for_crosscutting_id: { $in: [...issue_for_crosscutting_ids] },
+          },
           {
             $set: {
               isEditable: false,
@@ -367,15 +367,16 @@ export const revert_issue_for_peeling = catchAsync(async (req, res, next) => {
     }
 
     const add_revert_to_log_inventory = async function () {
-      const updated_document_log_inventory = await log_inventory_items_model.findOneAndUpdate(
-        { _id: issuedForPeelingData?.log_inventory_item_id },
-        {
-          $set: {
-            issue_status: null,
+      const updated_document_log_inventory =
+        await log_inventory_items_model.findOneAndUpdate(
+          { _id: issuedForPeelingData?.log_inventory_item_id },
+          {
+            $set: {
+              issue_status: null,
+            },
           },
-        },
-        { new: true, session: session }
-      );
+          { new: true, session: session }
+        );
 
       if (!updated_document_log_inventory) {
         throw new ApiError(
@@ -384,33 +385,41 @@ export const revert_issue_for_peeling = catchAsync(async (req, res, next) => {
         );
       }
 
-      const log_inventory_invoice_id = updated_document_log_inventory?.invoice_id
+      const log_inventory_invoice_id =
+        updated_document_log_inventory?.invoice_id;
 
-      const is_invoice_editable = await log_inventory_items_model?.find({
-        _id: { $ne: issuedForPeelingData?.log_inventory_item_id },
-        invoice_id: log_inventory_invoice_id,
-        issue_status: { $ne: null }
-      }).session(session);
+      const is_invoice_editable = await log_inventory_items_model
+        ?.find({
+          _id: { $ne: issuedForPeelingData?.log_inventory_item_id },
+          invoice_id: log_inventory_invoice_id,
+          issue_status: { $ne: null },
+        })
+        .session(session);
 
       if (is_invoice_editable && is_invoice_editable?.length <= 0) {
-        await log_inventory_invoice_model?.updateOne({ _id: log_inventory_invoice_id }, {
-          $set: {
-            isEditable: true
-          }
-        }, { session });
+        await log_inventory_invoice_model?.updateOne(
+          { _id: log_inventory_invoice_id },
+          {
+            $set: {
+              isEditable: true,
+            },
+          },
+          { session }
+        );
       }
     };
 
     const add_revert_to_crosscut_done = async function () {
-      const updated_document_crosscut_done = await crosscutting_done_model.findOneAndUpdate(
-        { _id: issuedForPeelingData?.crosscut_done_id },
-        {
-          $set: {
-            issue_status: null,
+      const updated_document_crosscut_done =
+        await crosscutting_done_model.findOneAndUpdate(
+          { _id: issuedForPeelingData?.crosscut_done_id },
+          {
+            $set: {
+              issue_status: null,
+            },
           },
-        },
-        { new: true, session: session }
-      );
+          { new: true, session: session }
+        );
 
       if (!updated_document_crosscut_done) {
         throw new ApiError(
@@ -419,31 +428,40 @@ export const revert_issue_for_peeling = catchAsync(async (req, res, next) => {
         );
       }
 
-      const issue_for_crosscutting_id = updated_document_crosscut_done?.issue_for_crosscutting_id
+      const issue_for_crosscutting_id =
+        updated_document_crosscut_done?.issue_for_crosscutting_id;
 
-      const is_crosscut_done_editable = await crosscutting_done_model?.find({
-        _id: { $ne: issuedForPeelingData?.crosscut_done_id },
-        issue_for_crosscutting_id: issue_for_crosscutting_id,
-        issue_status: { $ne: null }
-      }).lean();
+      const is_crosscut_done_editable = await crosscutting_done_model
+        ?.find({
+          _id: { $ne: issuedForPeelingData?.crosscut_done_id },
+          issue_for_crosscutting_id: issue_for_crosscutting_id,
+          issue_status: { $ne: null },
+        })
+        .lean();
 
       if (is_crosscut_done_editable && is_crosscut_done_editable?.length <= 0) {
-        await crosscutting_done_model.updateMany({ issue_for_crosscutting_id: issue_for_crosscutting_id }, {
-          $set: {
-            isEditable: true
-          }
-        }, { session })
+        await crosscutting_done_model.updateMany(
+          { issue_for_crosscutting_id: issue_for_crosscutting_id },
+          {
+            $set: {
+              isEditable: true,
+            },
+          },
+          { session }
+        );
       }
     };
 
-    if ( // log-inventory
+    if (
+      // log-inventory
       issuedForPeelingData?.issued_from === issues_for_status?.log &&
       issuedForPeelingData?.crosscut_done_id === null
     ) {
-      await add_revert_to_log_inventory()
+      await add_revert_to_log_inventory();
     }
 
-    if ( // crosscut done
+    if (
+      // crosscut done
       issuedForPeelingData?.issued_from === issues_for_status?.crosscut_done &&
       issuedForPeelingData?.crosscut_done_id !== null
     ) {
