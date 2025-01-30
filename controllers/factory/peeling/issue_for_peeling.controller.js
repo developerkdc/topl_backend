@@ -46,13 +46,26 @@ export const addIssueForPeelingFromLogInventory = catchAsync(
         );
       }
 
+      const maxNumber = await issue_for_peeling_model?.aggregate([
+        {
+          $group: {
+            _id: null,
+            max: { $max: '$sr_no' },
+          },
+        },
+      ]);
+
+      const maxSrNo = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1;
+
 
       const log_invoice_ids = new Set();
 
+
       const issue_for_peeling_data = logInventoryItemData?.map(
-        (item) => {
+        (item, index) => {
           log_invoice_ids.add(item.invoice_id)
           return {
+            sr_no: maxSrNo + index,
             log_inventory_item_id: item?._id,
             crosscut_done_id: null,
             item_id: item?.item_id,
@@ -214,11 +227,22 @@ export const addIssueForPeelingFromCrosscutDone = catchAsync(
       if (crosscut_done_data?.length <= 0) {
         throw new ApiError('No Crosscut done data found', 400);
       }
+      const maxNumber = await issue_for_peeling_model?.aggregate([
+        {
+          $group: {
+            _id: null,
+            max: { $max: '$sr_no' },
+          },
+        },
+      ]);
+
+      const maxSrNo = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1;
 
       const issue_for_crosscutting_ids = new Set()
-      const issue_for_peeling_data = crosscut_done_data?.map((item) => {
+      const issue_for_peeling_data = crosscut_done_data?.map((item, index) => {
         issue_for_crosscutting_ids.add(item?.issue_for_crosscutting_id)
         return {
+          sr_no: maxSrNo + index,
           log_inventory_item_id: null,
           crosscut_done_id: item?._id,
           item_id: item?.issuedCrossCuttingDetails?.item_id,
@@ -328,10 +352,15 @@ export const revert_issue_for_peeling = catchAsync(async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
-    if (!issue_for_peeling_id || !mongoose.isValidObjectId(issue_for_peeling_id)) {
-      throw new ApiError("Invaild Id", StatusCodes.NOT_FOUND)
-    };
-    const issuedForPeelingData = await issue_for_peeling_model.findById(issue_for_peeling_id).lean();
+    if (
+      !issue_for_peeling_id ||
+      !mongoose.isValidObjectId(issue_for_peeling_id)
+    ) {
+      throw new ApiError('Invaild Id', StatusCodes.NOT_FOUND);
+    }
+    const issuedForPeelingData = await issue_for_peeling_model
+      .findById(issue_for_peeling_id)
+      .lean();
 
     if (!issuedForPeelingData) {
       throw new ApiError('No Data found...', StatusCodes.BAD_REQUEST);
@@ -353,7 +382,7 @@ export const revert_issue_for_peeling = catchAsync(async (req, res, next) => {
           'Log inventory item not found or failed to update status',
           StatusCodes.BAD_REQUEST
         );
-      };
+      }
 
       const log_inventory_invoice_id = updated_document_log_inventory?.invoice_id
 
@@ -370,7 +399,7 @@ export const revert_issue_for_peeling = catchAsync(async (req, res, next) => {
           }
         }, { session });
       }
-    }
+    };
 
     const add_revert_to_crosscut_done = async function () {
       const updated_document_crosscut_done = await crosscutting_done_model.findOneAndUpdate(
@@ -388,7 +417,7 @@ export const revert_issue_for_peeling = catchAsync(async (req, res, next) => {
           'Crosscut done item not found or failed to update item status',
           StatusCodes.BAD_REQUEST
         );
-      };
+      }
 
       const issue_for_crosscutting_id = updated_document_crosscut_done?.issue_for_crosscutting_id
 
@@ -405,7 +434,7 @@ export const revert_issue_for_peeling = catchAsync(async (req, res, next) => {
           }
         }, { session })
       }
-    }
+    };
 
     if ( // log-inventory
       issuedForPeelingData?.issued_from === issues_for_status?.log &&
@@ -421,7 +450,10 @@ export const revert_issue_for_peeling = catchAsync(async (req, res, next) => {
       await add_revert_to_crosscut_done();
     }
 
-    const delete_response = await issue_for_peeling_model.deleteOne({ _id: issuedForPeelingData?._id }, { session })
+    const delete_response = await issue_for_peeling_model.deleteOne(
+      { _id: issuedForPeelingData?._id },
+      { session }
+    );
 
     if (!delete_response?.acknowledged || delete_response?.deletedCount === 0) {
       throw new ApiError(
@@ -445,238 +477,248 @@ export const revert_issue_for_peeling = catchAsync(async (req, res, next) => {
   }
 });
 
-export const listing_issued_for_peeling = catchAsync(
-  async (req, res, next) => {
-    const {
-      page = 1,
-      limit = 10,
-      sortBy = 'updatedAt',
-      sort = 'desc',
-      search = '',
-    } = req.query;
-    const {
-      string,
+export const listing_issued_for_peeling = catchAsync(async (req, res, next) => {
+  const {
+    page = 1,
+    limit = 10,
+    sortBy = 'updatedAt',
+    sort = 'desc',
+    search = '',
+  } = req.query;
+  const {
+    string,
+    boolean,
+    numbers,
+    arrayField = [],
+  } = req?.body?.searchFields || {};
+  const filter = req.body?.filter;
+
+  let search_query = {};
+  if (search != '' && req?.body?.searchFields) {
+    const search_data = DynamicSearch(
+      search,
       boolean,
       numbers,
-      arrayField = [],
-    } = req?.body?.searchFields || {};
-    const filter = req.body?.filter;
-
-    let search_query = {};
-    if (search != '' && req?.body?.searchFields) {
-      const search_data = DynamicSearch(
-        search,
-        boolean,
-        numbers,
-        string,
-        arrayField
-      );
-      if (search_data?.length == 0) {
-        return res.status(404).json({
-          statusCode: 404,
-          status: false,
-          data: {
-            data: [],
-          },
-          message: 'Results Not Found',
-        });
-      }
-      search_query = search_data;
+      string,
+      arrayField
+    );
+    if (search_data?.length == 0) {
+      return res.status(404).json({
+        statusCode: 404,
+        status: false,
+        data: {
+          data: [],
+        },
+        message: 'Results Not Found',
+      });
     }
-
-    const filterData = dynamic_filter(filter);
-
-    const match_query = {
-      ...filterData,
-      ...search_query,
-    };
-
-    // Aggregation stage
-    const aggCreatedByLookup = {
-      $lookup: {
-        from: 'users',
-        localField: 'created_by',
-        foreignField: '_id',
-        pipeline: [
-          {
-            $project: {
-              user_name: 1,
-              user_type: 1,
-              dept_name: 1,
-              first_name: 1,
-              last_name: 1,
-              email_id: 1,
-              mobile_no: 1,
-            },
-          },
-        ],
-        as: 'created_by',
-      },
-    };
-    const aggUpdatedByLookup = {
-      $lookup: {
-        from: 'users',
-        localField: 'updated_by',
-        foreignField: '_id',
-        pipeline: [
-          {
-            $project: {
-              user_name: 1,
-              user_type: 1,
-              dept_name: 1,
-              first_name: 1,
-              last_name: 1,
-              email_id: 1,
-              mobile_no: 1,
-            },
-          },
-        ],
-        as: 'updated_by',
-      },
-    };
-    const aggCreatedByUnwind = {
-      $unwind: {
-        path: '$created_by',
-        preserveNullAndEmptyArrays: true,
-      },
-    };
-    const aggUpdatedByUnwind = {
-      $unwind: {
-        path: '$updated_by',
-        preserveNullAndEmptyArrays: true,
-      },
-    };
-    const aggMatch = {
-      $match: {
-        ...match_query,
-      },
-    };
-    const aggSort = {
-      $sort: {
-        [sortBy]: sort === 'desc' ? -1 : 1,
-      },
-    };
-    const aggSkip = {
-      $skip: (parseInt(page) - 1) * parseInt(limit),
-    };
-    const aggLimit = {
-      $limit: parseInt(limit),
-    };
-
-    const listAggregate = [
-      aggCreatedByLookup,
-      aggCreatedByUnwind,
-      aggUpdatedByLookup,
-      aggUpdatedByUnwind,
-      aggMatch,
-      aggSort,
-      aggSkip,
-      aggLimit,
-    ]; // aggregation pipiline
-
-    const issue_for_peeling = await issue_for_peeling_model.aggregate(listAggregate);
-
-    const aggCount = {
-      $count: 'totalCount',
-    }; // count aggregation stage
-
-    const totalAggregate = [
-      aggCreatedByLookup,
-      aggCreatedByUnwind,
-      aggUpdatedByLookup,
-      aggUpdatedByUnwind,
-      aggMatch,
-      aggCount,
-    ]; // total aggregation pipiline
-
-    const totalDocument = await issue_for_peeling_model.aggregate(totalAggregate);
-
-    const totalPages = Math.ceil((totalDocument?.[0]?.totalCount || 0) / limit);
-
-    const response = new ApiResponse(200, 'Issue For Peeling Data Fetched Successfully', {
-      data: issue_for_peeling,
-      totalPages: totalPages,
-    });
-    return res.status(200).json(response);
+    search_query = search_data;
   }
-);
 
-export const fetch_single_issued_for_peeling_item = catchAsync(async (req, res, next) => {
-  const { id } = req.params;
+  const filterData = dynamic_filter(filter);
 
-  if (!id || !mongoose.isValidObjectId(id)) {
-    return next(new ApiError("Invaild Id", StatusCodes.NOT_FOUND))
+  const match_query = {
+    ...filterData,
+    ...search_query,
   };
 
   // Aggregation stage
+  const aggCreatedByLookup = {
+    $lookup: {
+      from: 'users',
+      localField: 'created_by',
+      foreignField: '_id',
+      pipeline: [
+        {
+          $project: {
+            user_name: 1,
+            user_type: 1,
+            dept_name: 1,
+            first_name: 1,
+            last_name: 1,
+            email_id: 1,
+            mobile_no: 1,
+          },
+        },
+      ],
+      as: 'created_by',
+    },
+  };
+  const aggUpdatedByLookup = {
+    $lookup: {
+      from: 'users',
+      localField: 'updated_by',
+      foreignField: '_id',
+      pipeline: [
+        {
+          $project: {
+            user_name: 1,
+            user_type: 1,
+            dept_name: 1,
+            first_name: 1,
+            last_name: 1,
+            email_id: 1,
+            mobile_no: 1,
+          },
+        },
+      ],
+      as: 'updated_by',
+    },
+  };
+  const aggCreatedByUnwind = {
+    $unwind: {
+      path: '$created_by',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
+  const aggUpdatedByUnwind = {
+    $unwind: {
+      path: '$updated_by',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
   const aggMatch = {
-    $match: { _id: mongoose.Types.ObjectId.createFromHexString(id) }
-  }
-  // const aggCreatedByLookup = {
-  //   $lookup: {
-  //     from: 'users',
-  //     localField: 'created_by',
-  //     foreignField: '_id',
-  //     pipeline: [
-  //       {
-  //         $project: {
-  //           user_name: 1,
-  //           user_type: 1,
-  //           dept_name: 1,
-  //           first_name: 1,
-  //           last_name: 1,
-  //           email_id: 1,
-  //           mobile_no: 1,
-  //         },
-  //       },
-  //     ],
-  //     as: 'created_by',
-  //   },
-  // };
-  // const aggUpdatedByLookup = {
-  //   $lookup: {
-  //     from: 'users',
-  //     localField: 'updated_by',
-  //     foreignField: '_id',
-  //     pipeline: [
-  //       {
-  //         $project: {
-  //           user_name: 1,
-  //           user_type: 1,
-  //           dept_name: 1,
-  //           first_name: 1,
-  //           last_name: 1,
-  //           email_id: 1,
-  //           mobile_no: 1,
-  //         },
-  //       },
-  //     ],
-  //     as: 'updated_by',
-  //   },
-  // };
-  // const aggCreatedByUnwind = {
-  //   $unwind: {
-  //     path: '$created_by',
-  //     preserveNullAndEmptyArrays: true,
-  //   },
-  // };
-  // const aggUpdatedByUnwind = {
-  //   $unwind: {
-  //     path: '$updated_by',
-  //     preserveNullAndEmptyArrays: true,
-  //   },
-  // };
+    $match: {
+      ...match_query,
+    },
+  };
+  const aggSort = {
+    $sort: {
+      [sortBy]: sort === 'desc' ? -1 : 1,
+    },
+  };
+  const aggSkip = {
+    $skip: (parseInt(page) - 1) * parseInt(limit),
+  };
+  const aggLimit = {
+    $limit: parseInt(limit),
+  };
 
   const listAggregate = [
+    aggCreatedByLookup,
+    aggCreatedByUnwind,
+    aggUpdatedByLookup,
+    aggUpdatedByUnwind,
     aggMatch,
-    // aggCreatedByLookup,
-    // aggCreatedByUnwind,
-    // aggUpdatedByLookup,
-    // aggUpdatedByUnwind,
+    aggSort,
+    aggSkip,
+    aggLimit,
   ]; // aggregation pipiline
 
-  const issue_for_peeling = await issue_for_peeling_model.aggregate(listAggregate);
+  const issue_for_peeling =
+    await issue_for_peeling_model.aggregate(listAggregate);
 
-  const response = new ApiResponse(StatusCodes.OK, "Issued for peeling Item Fetched Sucessfully", issue_for_peeling?.[0]);
-  return res.status(StatusCodes.OK).json(response)
-})
+  const aggCount = {
+    $count: 'totalCount',
+  }; // count aggregation stage
+
+  const totalAggregate = [
+    aggCreatedByLookup,
+    aggCreatedByUnwind,
+    aggUpdatedByLookup,
+    aggUpdatedByUnwind,
+    aggMatch,
+    aggCount,
+  ]; // total aggregation pipiline
+
+  const totalDocument = await issue_for_peeling_model.aggregate(totalAggregate);
+
+  const totalPages = Math.ceil((totalDocument?.[0]?.totalCount || 0) / limit);
+
+  const response = new ApiResponse(
+    200,
+    'Issue For Peeling Data Fetched Successfully',
+    {
+      data: issue_for_peeling,
+      totalPages: totalPages,
+    }
+  );
+  return res.status(200).json(response);
+});
+
+export const fetch_single_issued_for_peeling_item = catchAsync(
+  async (req, res, next) => {
+    const { id } = req.params;
+
+    if (!id || !mongoose.isValidObjectId(id)) {
+      return next(new ApiError('Invaild Id', StatusCodes.NOT_FOUND));
+    }
+
+    // Aggregation stage
+    const aggMatch = {
+      $match: { _id: mongoose.Types.ObjectId.createFromHexString(id) },
+    };
+    // const aggCreatedByLookup = {
+    //   $lookup: {
+    //     from: 'users',
+    //     localField: 'created_by',
+    //     foreignField: '_id',
+    //     pipeline: [
+    //       {
+    //         $project: {
+    //           user_name: 1,
+    //           user_type: 1,
+    //           dept_name: 1,
+    //           first_name: 1,
+    //           last_name: 1,
+    //           email_id: 1,
+    //           mobile_no: 1,
+    //         },
+    //       },
+    //     ],
+    //     as: 'created_by',
+    //   },
+    // };
+    // const aggUpdatedByLookup = {
+    //   $lookup: {
+    //     from: 'users',
+    //     localField: 'updated_by',
+    //     foreignField: '_id',
+    //     pipeline: [
+    //       {
+    //         $project: {
+    //           user_name: 1,
+    //           user_type: 1,
+    //           dept_name: 1,
+    //           first_name: 1,
+    //           last_name: 1,
+    //           email_id: 1,
+    //           mobile_no: 1,
+    //         },
+    //       },
+    //     ],
+    //     as: 'updated_by',
+    //   },
+    // };
+    // const aggCreatedByUnwind = {
+    //   $unwind: {
+    //     path: '$created_by',
+    //     preserveNullAndEmptyArrays: true,
+    //   },
+    // };
+    // const aggUpdatedByUnwind = {
+    //   $unwind: {
+    //     path: '$updated_by',
+    //     preserveNullAndEmptyArrays: true,
+    //   },
+    // };
+
+    const listAggregate = [
+      aggMatch,
+      // aggCreatedByLookup,
+      // aggCreatedByUnwind,
+      // aggUpdatedByLookup,
+      // aggUpdatedByUnwind,
+    ]; // aggregation pipiline
+
+    const issue_for_peeling =
+      await issue_for_peeling_model.aggregate(listAggregate);
+
+    const response = new ApiResponse(
+      StatusCodes.OK,
+      'Issued for peeling Item Fetched Sucessfully',
+      issue_for_peeling?.[0]
+    );
+    return res.status(StatusCodes.OK).json(response);
+  }
+);
