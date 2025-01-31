@@ -12,7 +12,7 @@ import { issues_for_status } from '../../../database/Utils/constants/constants.j
 import {
   issued_for_slicing_model,
   issued_for_slicing_view_model,
-} from '../../../database/schema/factory/slicing/issuedForSlicing.js';
+} from '../../../database/schema/factory/slicing//issue_for_slicing/issuedForSlicing.js';
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import {
@@ -403,6 +403,7 @@ export const add_issue_for_slicing_from_flitching_done = catchAsync(
 
 export const listing_issued_for_slicing_inventory = catchAsync(
   async (req, res, next) => {
+
     const {
       page = 1,
       limit = 10,

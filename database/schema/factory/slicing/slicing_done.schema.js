@@ -38,76 +38,76 @@ const slicing_done_other_details_schema = new mongoose.Schema(
       },
     },
 
-    wastage_details: {
-      type: {
-        height: {
-          type: Number,
-          default: 0,
-          required: [true, 'Wastage Height is required.'],
-        },
-        width: {
-          type: Number,
-          default: 0,
-          required: [true, 'Wastage Width is required.'],
-        },
-        length: {
-          type: Number,
-          default: 0,
-          required: [true, 'Wastage Length is required.'],
-        },
-        cmt: {
-          type: Number,
-          default: 0,
-          required: [true, 'Wastage CMT is required.'],
-        },
-        total_wastage_amount: {
-          type: Number,
-          default: 0,
-          required: [true, 'Total Wastage Amount is required.'],
-        },
-        wastage_consumed_amount: {
-          type: Number,
-          default: 0,
-          required: [true, 'Wastage Consumed Amount is required.'],
-        },
-      },
-      required: [
-        function () {
-          return this.type === slicing_done.wastage;
-        },
-        'Wastage Details is required.',
-      ],
-    },
-    available_details: {
-      type: {
-        height: {
-          type: Number,
-          default: 0,
-          required: [true, 'Available Height is required.'],
-        },
-        width: {
-          type: Number,
-          default: 0,
-          required: [true, 'Available Width is required.'],
-        },
-        length: {
-          type: Number,
-          default: 0,
-          required: [true, 'Available Length is required.'],
-        },
-        cmt: {
-          type: Number,
-          default: 0,
-          required: [true, 'Available CMT is required.'],
-        },
-      },
-      required: [
-        function () {
-          return this.type === slicing_done.rest_roller;
-        },
-        'Available Details is required.',
-      ],
-    },
+    // wastage_details: {
+    //   type: {
+    //     height: {
+    //       type: Number,
+    //       default: 0,
+    //       required: [true, 'Wastage Height is required.'],
+    //     },
+    //     width: {
+    //       type: Number,
+    //       default: 0,
+    //       required: [true, 'Wastage Width is required.'],
+    //     },
+    //     length: {
+    //       type: Number,
+    //       default: 0,
+    //       required: [true, 'Wastage Length is required.'],
+    //     },
+    //     cmt: {
+    //       type: Number,
+    //       default: 0,
+    //       required: [true, 'Wastage CMT is required.'],
+    //     },
+    //     total_wastage_amount: {
+    //       type: Number,
+    //       default: 0,
+    //       required: [true, 'Total Wastage Amount is required.'],
+    //     },
+    //     wastage_consumed_amount: {
+    //       type: Number,
+    //       default: 0,
+    //       required: [true, 'Wastage Consumed Amount is required.'],
+    //     },
+    //   },
+    //   required: [
+    //     function () {
+    //       return this.type === slicing_done.wastage;
+    //     },
+    //     'Wastage Details is required.',
+    //   ],
+    // },
+    // available_details: {
+    //   type: {
+    //     height: {
+    //       type: Number,
+    //       default: 0,
+    //       required: [true, 'Available Height is required.'],
+    //     },
+    //     width: {
+    //       type: Number,
+    //       default: 0,
+    //       required: [true, 'Available Width is required.'],
+    //     },
+    //     length: {
+    //       type: Number,
+    //       default: 0,
+    //       required: [true, 'Available Length is required.'],
+    //     },
+    //     cmt: {
+    //       type: Number,
+    //       default: 0,
+    //       required: [true, 'Available CMT is required.'],
+    //     },
+    //   },
+    //   required: [
+    //     function () {
+    //       return this.type === slicing_done.rest_roller;
+    //     },
+    //     'Available Details is required.',
+    //   ],
+    // },
     wastage_consumed_total_amount: {
       type: Number,
       default: 0,

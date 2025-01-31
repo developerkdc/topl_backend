@@ -13,6 +13,7 @@ import {
   revert_crosscutting_done,
   // machine_name_dropdown,
   revert_issue_for_crosscutting,
+  listing_crosscutting_done_history,
 } from '../../../controllers/factory/crossCutting/crossCutting.controller.js';
 import AuthMiddleware from '../../../middlewares/verifyToken.js';
 import RolesPermissions from '../../../middlewares/permission.js';
@@ -31,6 +32,12 @@ router.post(
   AuthMiddleware,
   RolesPermissions('crosscut_factory', 'view'),
   listing_issue_for_crosscutting
+);
+router.post(
+  '/list-crosscut-done-history',
+  AuthMiddleware,
+  RolesPermissions('crosscut_factory', 'view'),
+  listing_crosscutting_done_history
 );
 router.post(
   '/add-crossCut-done',

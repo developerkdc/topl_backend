@@ -236,6 +236,19 @@ export const flitching_view_modal = mongoose.model(
           localField: 'created_by',
           foreignField: '_id',
           as: 'created_user',
+          pipeline: [
+            {
+              $project: {
+                user_name: 1,
+                user_type: 1,
+                dept_name: 1,
+                first_name: 1,
+                last_name: 1,
+                email_id: 1,
+                mobile_no: 1,
+              },
+            },
+          ],
         },
       },
       {

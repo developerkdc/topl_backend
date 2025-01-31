@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { issues_for_status } from '../../../Utils/constants/constants.js';
+import { issues_for_status } from '../../../../Utils/constants/constants.js';
 
 const issue_for_slicing_schema = new mongoose.Schema(
   {
