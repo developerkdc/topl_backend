@@ -1,5 +1,8 @@
 import mongoose from 'mongoose';
-import { issues_for_status } from '../../../../Utils/constants/constants.js';
+import {
+  issues_for_status,
+  slicing_done,
+} from '../../../../Utils/constants/constants.js';
 
 const issue_for_slicing_schema = new mongoose.Schema(
   {
@@ -153,6 +156,14 @@ const issue_for_slicing_schema = new mongoose.Schema(
           issues_for_status?.flitching_done,
         ],
         message: `Invalid issued from type {{VALUE}} it should be one of the ${issues_for_status.flitching}, ${issues_for_status.flitching_done}`,
+      },
+    },
+    type: {
+      type: String,
+      default: null,
+      enum: {
+        values: [slicing_done.rest_roller, slicing_done.wastage],
+        message: `Invalid type {{VALUE}} it must be one of the ${slicing_done.rest_roller} or ${slicing_done.wastage} `,
       },
     },
     is_slicing_completed: {

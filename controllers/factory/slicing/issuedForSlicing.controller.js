@@ -403,7 +403,6 @@ export const add_issue_for_slicing_from_flitching_done = catchAsync(
 
 export const listing_issued_for_slicing_inventory = catchAsync(
   async (req, res, next) => {
-
     const {
       page = 1,
       limit = 10,

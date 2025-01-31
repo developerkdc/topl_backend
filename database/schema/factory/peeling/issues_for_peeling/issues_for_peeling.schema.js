@@ -1,5 +1,8 @@
 import mongoose from 'mongoose';
-import { issues_for_status } from '../../../Utils/constants/constants.js';
+import {
+  issue_for_peeling,
+  issues_for_status,
+} from '../../../../Utils/constants/constants.js';
 
 const issue_for_peeling_schema = new mongoose.Schema(
   {
@@ -95,6 +98,14 @@ const issue_for_peeling_schema = new mongoose.Schema(
       },
       required: [true, 'Issued from is required'],
     },
+    type: {
+      type: String,
+      enum: {
+        values: [issue_for_peeling.re_flitching, issue_for_peeling.wastage],
+        message: `Invalid type {{VALUE}} it must be one of the ${issue_for_peeling.re_flitching} or ${issue_for_peeling.wastage} `,
+      },
+      default: null,
+    },
     remark: {
       type: String,
       default: null,
@@ -122,11 +133,12 @@ const issue_for_peeling_schema = new mongoose.Schema(
 issue_for_peeling_schema.index({ log_inventory_item_id: 1 });
 issue_for_peeling_schema.index({ crosscut_done_id: 1 });
 
-export const issue_for_peeling_model = mongoose.model(
+export const issues_for_peeling_model = mongoose.model(
   'issue_for_peelings',
   issue_for_peeling_schema,
   'issue_for_peelings'
 );
+
 // const issue_for_peeling_view_schema = new mongoose.Schema({},{
 //     strict: false,
 //     autoCreate:false,
