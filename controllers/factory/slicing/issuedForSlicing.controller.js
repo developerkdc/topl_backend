@@ -12,7 +12,7 @@ import { issues_for_status } from '../../../database/Utils/constants/constants.j
 import {
   issued_for_slicing_model,
   issued_for_slicing_view_model,
-} from '../../../database/schema/factory/slicing/issuedForSlicing.js';
+} from '../../../database/schema/factory/slicing//issue_for_slicing/issuedForSlicing.js';
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import {

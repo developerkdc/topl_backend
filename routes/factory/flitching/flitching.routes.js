@@ -9,6 +9,7 @@ import {
   fetch_all_flitchings_by_issue_for_flitching_id,
   revert_flitching_done_items,
   flitchingDoneExcel,
+  listing_flitching_done_history,
 } from '../../../controllers/factory/flitching/flitchingController.js';
 import CheckRoleAndTokenAccess from '../../../middlewares/permission.js';
 import AuthMiddleware from '../../../middlewares/verifyToken.js';
@@ -21,6 +22,12 @@ router.post(
   AuthMiddleware,
   RolesPermissions('flitching_factory', 'view'),
   listing_issue_for_flitching
+);
+router.post(
+  '/list-flitching-done-history',
+  AuthMiddleware,
+  RolesPermissions('flitching_factory', 'view'),
+  listing_flitching_done_history
 );
 
 router.post(

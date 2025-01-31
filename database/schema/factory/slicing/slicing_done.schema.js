@@ -29,85 +29,77 @@ const slicing_done_other_details_schema = new mongoose.Schema(
       trim: true,
       uppercase: true,
     },
-    type: {
-      type: String,
-      required: [true, 'Type is required'],
-      enum: {
-        values: [slicing_done.rest_roller, slicing_done.wastage],
-        message: `Invalid type {{VALUE}} it must be one of the ${slicing_done.rest_roller} or ${slicing_done.wastage} `,
-      },
-    },
 
-    wastage_details: {
-      type: {
-        height: {
-          type: Number,
-          default: 0,
-          required: [true, 'Wastage Height is required.'],
-        },
-        width: {
-          type: Number,
-          default: 0,
-          required: [true, 'Wastage Width is required.'],
-        },
-        length: {
-          type: Number,
-          default: 0,
-          required: [true, 'Wastage Length is required.'],
-        },
-        cmt: {
-          type: Number,
-          default: 0,
-          required: [true, 'Wastage CMT is required.'],
-        },
-        total_wastage_amount: {
-          type: Number,
-          default: 0,
-          required: [true, 'Total Wastage Amount is required.'],
-        },
-        wastage_consumed_amount: {
-          type: Number,
-          default: 0,
-          required: [true, 'Wastage Consumed Amount is required.'],
-        },
-      },
-      required: [
-        function () {
-          return this.type === slicing_done.wastage;
-        },
-        'Wastage Details is required.',
-      ],
-    },
-    available_details: {
-      type: {
-        height: {
-          type: Number,
-          default: 0,
-          required: [true, 'Available Height is required.'],
-        },
-        width: {
-          type: Number,
-          default: 0,
-          required: [true, 'Available Width is required.'],
-        },
-        length: {
-          type: Number,
-          default: 0,
-          required: [true, 'Available Length is required.'],
-        },
-        cmt: {
-          type: Number,
-          default: 0,
-          required: [true, 'Available CMT is required.'],
-        },
-      },
-      required: [
-        function () {
-          return this.type === slicing_done.rest_roller;
-        },
-        'Available Details is required.',
-      ],
-    },
+    // wastage_details: {
+    //   type: {
+    //     height: {
+    //       type: Number,
+    //       default: 0,
+    //       required: [true, 'Wastage Height is required.'],
+    //     },
+    //     width: {
+    //       type: Number,
+    //       default: 0,
+    //       required: [true, 'Wastage Width is required.'],
+    //     },
+    //     length: {
+    //       type: Number,
+    //       default: 0,
+    //       required: [true, 'Wastage Length is required.'],
+    //     },
+    //     cmt: {
+    //       type: Number,
+    //       default: 0,
+    //       required: [true, 'Wastage CMT is required.'],
+    //     },
+    //     total_wastage_amount: {
+    //       type: Number,
+    //       default: 0,
+    //       required: [true, 'Total Wastage Amount is required.'],
+    //     },
+    //     wastage_consumed_amount: {
+    //       type: Number,
+    //       default: 0,
+    //       required: [true, 'Wastage Consumed Amount is required.'],
+    //     },
+    //   },
+    //   required: [
+    //     function () {
+    //       return this.type === slicing_done.wastage;
+    //     },
+    //     'Wastage Details is required.',
+    //   ],
+    // },
+    // available_details: {
+    //   type: {
+    //     height: {
+    //       type: Number,
+    //       default: 0,
+    //       required: [true, 'Available Height is required.'],
+    //     },
+    //     width: {
+    //       type: Number,
+    //       default: 0,
+    //       required: [true, 'Available Width is required.'],
+    //     },
+    //     length: {
+    //       type: Number,
+    //       default: 0,
+    //       required: [true, 'Available Length is required.'],
+    //     },
+    //     cmt: {
+    //       type: Number,
+    //       default: 0,
+    //       required: [true, 'Available CMT is required.'],
+    //     },
+    //   },
+    //   required: [
+    //     function () {
+    //       return this.type === slicing_done.rest_roller;
+    //     },
+    //     'Available Details is required.',
+    //   ],
+    // },
     wastage_consumed_total_amount: {
       type: Number,
       default: 0,
@@ -192,6 +184,20 @@ const slicing_done_items_schema = new mongoose.Schema({
     type: Number,
     required: [true, 'No of leaves is required'],
   },
+  cmt: {
+    type: Number,
+    required: [true, 'CMT is required'],
+  },
+
+  color_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    default: null,
+  },
+  color_name: {
+    type: String,
+    default: null,
+  },
+
   character_id: {
     type: mongoose.Schema.Types.ObjectId,
     required: [true, 'Charcter ID is required'],
@@ -340,3 +346,54 @@ export const slicing_done_item_view_model = mongoose.model(
     ],
   });
 })();
+
+const slicingDoneItems = [
+  {
+    slicing_done_other_details_id: '6721e0b93581302f31ef55e0',
+    item_name: 'AMERICAN WHITE OAK',
+    item_name_id: '66e7ca5a33d6b19a8a355c9b',
+    log_no_code: '11',
+    flitch_no: '1',
+    flitch_side: 'TQF',
+    length: 10,
+    width: 1,
+    height: 1,
+    thickness: 1,
+    no_of_leaves: 10,
+    character_id: '6788b8c81389e179f959132e',
+    character_name: 'OLIVE',
+    pattern_id: '6788e8da88cb1777cc6cf4d7',
+    pattern_name: 'PATTERN NO.1',
+    series_id: '66e7d21c3a51fb04ddfc4eb0',
+    series_name: 'AB',
+    grade_id: '66e7ede088066630aacdf501',
+    grade_name: 'A',
+    item_total_amount: 250,
+    item_wastage_consumed_amount: 0,
+    remark: 'Test Data',
+  },
+  {
+    slicing_done_other_details_id: '6721e0b93581302f31ef55e0',
+    item_name: 'AMERICAN WHITE OAK',
+    item_name_id: '66e7ca5a33d6b19a8a355c9b',
+    log_no_code: '11',
+    flitch_no: '1',
+    flitch_side: 'TQF',
+    length: 10,
+    width: 1,
+    height: 1,
+    thickness: 10,
+    no_of_leaves: 10,
+    character_id: '6788b8c81389e179f959132e',
+    character_name: 'OLIVE',
+    pattern_id: '6788e8da88cb1777cc6cf4d7',
+    pattern_name: 'PATTERN NO.1',
+    series_id: '66e7d21c3a51fb04ddfc4eb0',
+    series_name: 'AB',
+    grade_id: '66e7ede088066630aacdf501',
+    grade_name: 'A',
+    item_total_amount: 250,
+    item_wastage_consumed_amount: 0,
+    remark: 'Test Data',
+  },
+];

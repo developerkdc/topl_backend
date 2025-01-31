@@ -29,75 +29,6 @@ const peeling_done_other_details_schema = new mongoose.Schema(
       trim: true,
       uppercase: true,
     },
-    type: {
-      type: String,
-      required: [true, 'Type is required'],
-      enum: {
-        values: [peeling_done.re_flitching, peeling_done.wastage],
-        message: `Invalid type {{VALUE}} it must be one of the ${peeling_done.re_flitching} or ${peeling_done.wastage} `,
-      },
-    },
-
-    wastage_details: {
-      type: {
-        length: {
-          type: Number,
-          default: 0,
-          required: [true, 'Wastage Length is required.'],
-        },
-        diameter: {
-          type: Number,
-          default: 0,
-          required: [true, 'Wastage Width is required.'],
-        },
-        cmt: {
-          type: Number,
-          default: 0,
-          required: [true, 'Wastage CMT is required.'],
-        },
-        total_wastage_amount: {
-          type: Number,
-          default: 0,
-          required: [true, 'Total Wastage Amount is required.'],
-        },
-        wastage_consumed_amount: {
-          type: Number,
-          default: 0,
-          required: [true, 'Wastage Consumed Amount is required.'],
-        },
-      },
-      required: [
-        function () {
-          return this.type === peeling_done.wastage;
-        },
-        'Wastage Details is required.',
-      ],
-    },
-    available_details: {
-      type: {
-        length: {
-          type: Number,
-          default: 0,
-          required: [true, 'Available Length is required.'],
-        },
-        diameter: {
-          type: Number,
-          default: 0,
-          required: [true, 'Available Width is required.'],
-        },
-        cmt: {
-          type: Number,
-          default: 0,
-          required: [true, 'Available CMT is required.'],
-        },
-      },
-      required: [
-        function () {
-          return this.type === peeling_done.re_flitching;
-        },
-        'Available Details is required.',
-      ],
-    },
     wastage_consumed_total_amount: {
       type: Number,
       default: 0,
@@ -125,12 +56,21 @@ const peeling_done_other_details_schema = new mongoose.Schema(
 );
 
 peeling_done_other_details_schema.index({ type: 1 });
+peeling_done_other_details_schema.index(
+  { issue_for_peeling_id: 1 },
+  { unique: true }
+);
 
 export const peeling_done_other_details_model = mongoose.model(
   'peeling_done_other_details',
   peeling_done_other_details_schema,
   'peeling_done_other_details'
 );
+
+const output_type_validate = function () {
+  const output_type = this.output_type;
+  return output_type !== peeling_done.veneer;
+};
 
 const peeling_done_items_schema = new mongoose.Schema({
   sr_no: {
@@ -172,23 +112,35 @@ const peeling_done_items_schema = new mongoose.Schema({
   },
   length: {
     type: Number,
-    required: [true, 'Length is required'],
+    required: [output_type_validate, 'Length is required'],
   },
   width: {
     type: Number,
-    required: [true, 'Width is required'],
+    required: [output_type_validate, 'Width is required'],
   },
   height: {
     type: Number,
-    required: [true, 'Height is required'],
+    required: [output_type_validate, 'Height is required'],
   },
   thickness: {
     type: Number,
-    required: [true, 'Thickness is required'],
+    required: [output_type_validate, 'Thickness is required'],
   },
   no_of_leaves: {
     type: Number,
-    required: [true, 'No of leaves is required'],
+    required: [output_type_validate, 'No of leaves is required'],
+  },
+  cmt: {
+    type: Number,
+    required: [true, 'CMT is required'],
+  },
+  color_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    default: null,
+  },
+  color_name: {
+    type: String,
+    default: null,
   },
   character_id: {
     type: mongoose.Schema.Types.ObjectId,
@@ -239,6 +191,9 @@ const peeling_done_items_schema = new mongoose.Schema({
     default: null,
   },
 });
+
+peeling_done_items_schema.index({ sr_no: 1 }, { unique: true });
+peeling_done_items_schema.index({ peeling_done_other_details_id: 1 });
 
 export const peeling_done_items_model = mongoose.model(
   'peeling_done_items',

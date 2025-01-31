@@ -18,9 +18,12 @@ export const inward_type = {
   challan: 'challan',
 };
 
-export const peeling_done = {
+export const issue_for_peeling = {
   re_flitching: 're_flitching',
   wastage: 'wastage',
+};
+
+export const peeling_done = {
   veneer: 'veneer',
   face: 'face',
   core: 'core',
