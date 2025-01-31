@@ -152,6 +152,14 @@ const customerSchema = new mongoose.Schema(
       ref: 'transporters',
       required: [true, 'Preferable Transport for Part Load is required'],
     },
+    is_tcs_applicable: {
+      type: Boolean,
+      default: false,
+    },
+    is_tds_applicable: {
+      type: Boolean,
+      default: false,
+    },
     remark: {
       type: String,
       uppercase: true,

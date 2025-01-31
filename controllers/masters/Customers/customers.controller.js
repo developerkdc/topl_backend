@@ -115,6 +115,8 @@ export const editCustomer = catchAsync(async (req, res, next) => {
     gst_tin_number: customer?.gst_tin_number,
     preferable_transport_for_part_load:
       customer?.preferable_transport_for_part_load,
+    is_tcs_applicable: customer?.is_tcs_applicable,
+    is_tds_applicable: customer?.is_tds_applicable,
     remark: customer?.remark,
     status: customer?.status,
     contact_person: customer?.contact_person,
