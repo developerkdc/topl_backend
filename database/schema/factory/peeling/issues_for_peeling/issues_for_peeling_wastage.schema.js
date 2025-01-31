@@ -25,10 +25,7 @@ const issues_for_peeling_wastage_schema = new mongoose.Schema(
       default: 0,
       required: [true, 'Available CMT is required.'],
     },
-    amount: {
-      type: Number,
-      required: [true, 'Amount is required'],
-    },
+
     total_wastage_amount: {
       type: Number,
       default: 0,
