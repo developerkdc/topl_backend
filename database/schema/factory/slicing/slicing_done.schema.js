@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { slicing_done } from '../../../Utils/constants/constants.js';
 
 const slicing_done_other_details_schema = new mongoose.Schema(
   {
@@ -32,202 +33,87 @@ const slicing_done_other_details_schema = new mongoose.Schema(
       type: String,
       required: [true, 'Type is required'],
       enum: {
-        values: ['wastage', 'rest_roller'],
-        message:
-          'Invalid type {{VALUES}} it must be one of the wastage or rest_roller ',
+        values: [slicing_done.rest_roller, slicing_done.wastage],
+        message: `Invalid type {{VALUE}} it must be one of the ${slicing_done.rest_roller} or ${slicing_done.wastage} `,
       },
     },
 
-    wastage_slicing_details: {
-      actual_height: {
-        type: Number,
-        default: 0,
-        required: [
-          function () {
-            return this.type === 'wastage';
-          },
-          'Actual Height is required.',
-        ],
+    wastage_details: {
+      type: {
+        height: {
+          type: Number,
+          default: 0,
+          required: [true, 'Wastage Height is required.'],
+        },
+        width: {
+          type: Number,
+          default: 0,
+          required: [true, 'Wastage Width is required.'],
+        },
+        length: {
+          type: Number,
+          default: 0,
+          required: [true, 'Wastage Length is required.'],
+        },
+        cmt: {
+          type: Number,
+          default: 0,
+          required: [true, 'Wastage CMT is required.'],
+        },
+        total_wastage_amount: {
+          type: Number,
+          default: 0,
+          required: [true, 'Total Wastage Amount is required.'],
+        },
+        wastage_consumed_amount: {
+          type: Number,
+          default: 0,
+          required: [true, 'Wastage Consumed Amount is required.'],
+        },
       },
-      wastage_height: {
-        type: Number,
-        default: 0,
-        required: [
-          function () {
-            return this.type === 'wastage';
-          },
-          'Wastage Height is required.',
-        ],
-      },
-      actual_width: {
-        type: Number,
-        default: 0,
-        required: [
-          function () {
-            return this.type === 'wastage';
-          },
-          'Actual width is required.',
-        ],
-      },
-      wastage_width: {
-        type: Number,
-        default: 0,
-        required: [
-          function () {
-            return this.type === 'wastage';
-          },
-          'Wastage Width is required.',
-        ],
-      },
-      actual_length: {
-        type: Number,
-        default: 0,
-        required: [
-          function () {
-            return this.type === 'wastage';
-          },
-          'Actual Length is required.',
-        ],
-      },
-      wastage_length: {
-        type: Number,
-        default: 0,
-        required: [
-          function () {
-            return this.type === 'wastage';
-          },
-          'Wastage Length is required.',
-        ],
-      },
-      actual_cmt: {
-        type: Number,
-        default: 0,
-        required: [
-          function () {
-            return this.type === 'wastage';
-          },
-          'Actual CMT is required.',
-        ],
-      },
-      wastage_cmt: {
-        type: Number,
-        default: 0,
-        required: [
-          function () {
-            return this.type === 'wastage';
-          },
-          'Wastage CMT is required.',
-        ],
-      },
-      total_wastage_amount: {
-        type: Number,
-        default: 0,
-        required: [
-          function () {
-            return this.type === 'wastage';
-          },
-          'Total Wastage Amount is required.',
-        ],
-      },
-      wastage_consumed_amount: {
-        type: Number,
-        default: 0,
-        required: [
-          function () {
-            return this.type === 'wastage';
-          },
-          'Wastage Consumed Amount is required.',
-        ],
-      },
+      required: [
+        function () {
+          return this.type === slicing_done.wastage;
+        },
+        'Wastage Details is required.',
+      ],
     },
-    available_slicing_details: {
-      actual_height: {
-        type: Number,
-        default: 0,
-        required: [
-          function () {
-            return this.type === 'rest_roller';
-          },
-          'Actual Height is required.',
-        ],
+    available_details: {
+      type: {
+        height: {
+          type: Number,
+          default: 0,
+          required: [true, 'Available Height is required.'],
+        },
+        width: {
+          type: Number,
+          default: 0,
+          required: [true, 'Available Width is required.'],
+        },
+        length: {
+          type: Number,
+          default: 0,
+          required: [true, 'Available Length is required.'],
+        },
+        cmt: {
+          type: Number,
+          default: 0,
+          required: [true, 'Available CMT is required.'],
+        },
       },
-      available_height: {
-        type: Number,
-        default: 0,
-        required: [
-          function () {
-            return this.type === 'rest_roller';
-          },
-          'Available Height is required.',
-        ],
-      },
-      actual_width: {
-        type: Number,
-        default: 0,
-        required: [
-          function () {
-            return this.type === 'rest_roller';
-          },
-          'Actual width is required.',
-        ],
-      },
-      available_width: {
-        type: Number,
-        default: 0,
-        required: [
-          function () {
-            return this.type === 'rest_roller';
-          },
-          'Available Width is required.',
-        ],
-      },
-      actual_length: {
-        type: Number,
-        default: 0,
-        required: [
-          function () {
-            return this.type === 'rest_roller';
-          },
-          'Actual Length is required.',
-        ],
-      },
-      available_length: {
-        type: Number,
-        default: 0,
-        required: [
-          function () {
-            return this.type === 'rest_roller';
-          },
-          'Available Length is required.',
-        ],
-      },
-      actual_cmt: {
-        type: Number,
-        default: 0,
-        required: [
-          function () {
-            return this.type === 'rest_roller';
-          },
-          'Actual CMT is required.',
-        ],
-      },
-      available_cmt: {
-        type: Number,
-        default: 0,
-        required: [
-          function () {
-            return this.type === 'rest_roller';
-          },
-          'Available CMT is required.',
-        ],
-      },
+      required: [
+        function () {
+          return this.type === slicing_done.rest_roller;
+        },
+        'Available Details is required.',
+      ],
     },
     wastage_consumed_total_amount: {
       type: Number,
       default: 0,
       required: [
         function () {
-          return this.type === 'wastage';
+          return this.type === slicing_done.wastage;
         },
         'Wastage Consumed Total Amount is required.',
       ],
@@ -260,11 +146,6 @@ const slicing_done_items_schema = new mongoose.Schema({
   sr_no: {
     type: Number,
     required: [true, 'Sr No. is required'],
-  },
-  slicing_done_other_details_id: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'slicing_done_other_details',
-    required: [true, 'Slicing Done other details id is required'],
   },
   slicing_done_other_details_id: {
     type: mongoose.Schema.Types.ObjectId,
@@ -366,3 +247,96 @@ export const slicing_done_items_model = mongoose.model(
   slicing_done_items_schema,
   'slicing_done_items'
 );
+
+const slicing_done_view_schema = new mongoose.Schema(
+  {},
+  { autoCreate: false, autoIndex: false, strict: false }
+);
+
+export const slicing_done_item_view_model = mongoose.model(
+  'slicing_done_item_view',
+  slicing_done_view_schema,
+  'slicing_done_item_view'
+);
+
+(async function () {
+  await slicing_done_item_view_model.createCollection({
+    viewOn: 'slicing_done_items',
+    pipeline: [
+      {
+        $sort: {
+          updatedAt: -1,
+          _id: -1,
+        },
+      },
+      {
+        $lookup: {
+          from: 'slicing_done_other_details',
+          localField: 'slicing_done_other_details_id',
+          foriegnField: '_id',
+          as: 'slicingDoneOtherDetails',
+        },
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'created_by',
+          foriegnField: '_id',
+          as: 'createdUserDetails',
+          pipeline: [
+            {
+              $project: {
+                user_name: 1,
+                user_type: 1,
+                dept_name: 1,
+                first_name: 1,
+                last_name: 1,
+                email_id: 1,
+                mobile_no: 1,
+              },
+            },
+          ],
+        },
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'updated_by',
+          foriegnField: '_id',
+          as: 'updatedUserDetails',
+          pipeline: [
+            {
+              $project: {
+                user_name: 1,
+                user_type: 1,
+                dept_name: 1,
+                first_name: 1,
+                last_name: 1,
+                email_id: 1,
+                mobile_no: 1,
+              },
+            },
+          ],
+        },
+      },
+      {
+        $unwind: {
+          path: '$slicingDoneOtherDetails',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $unwind: {
+          path: '$createdUserDetails',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $unwind: {
+          path: '$updatedUserDetails',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+    ],
+  });
+})();
