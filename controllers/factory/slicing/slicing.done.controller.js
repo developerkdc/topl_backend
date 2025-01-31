@@ -7,7 +7,7 @@ import { issues_for_status } from '../../../database/Utils/constants/constants.j
 
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
-import slicing_done_other_details_model from '../../../database/schema/factory/slicing/slicing_done.other.details.schema.js';
+import { slicing_done_other_details_model } from '../../../database/schema/factory/slicing/slicing_done.schema.js';
 
 export const add_slicing_done_items = catchAsync(async (req, res, next) => {
   const { other_details } = req.body;
