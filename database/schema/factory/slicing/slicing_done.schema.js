@@ -247,3 +247,96 @@ export const slicing_done_items_model = mongoose.model(
   slicing_done_items_schema,
   'slicing_done_items'
 );
+
+const slicing_done_view_schema = new mongoose.Schema(
+  {},
+  { autoCreate: false, autoIndex: false, strict: false }
+);
+
+export const slicing_done_item_view_model = mongoose.model(
+  'slicing_done_item_view',
+  slicing_done_view_schema,
+  'slicing_done_item_view'
+);
+
+(async function () {
+  await slicing_done_item_view_model.createCollection({
+    viewOn: 'slicing_done_items',
+    pipeline: [
+      {
+        $sort: {
+          updatedAt: -1,
+          _id: -1,
+        },
+      },
+      {
+        $lookup: {
+          from: 'slicing_done_other_details',
+          localField: 'slicing_done_other_details_id',
+          foriegnField: '_id',
+          as: 'slicingDoneOtherDetails',
+        },
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'created_by',
+          foriegnField: '_id',
+          as: 'createdUserDetails',
+          pipeline: [
+            {
+              $project: {
+                user_name: 1,
+                user_type: 1,
+                dept_name: 1,
+                first_name: 1,
+                last_name: 1,
+                email_id: 1,
+                mobile_no: 1,
+              },
+            },
+          ],
+        },
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'updated_by',
+          foriegnField: '_id',
+          as: 'updatedUserDetails',
+          pipeline: [
+            {
+              $project: {
+                user_name: 1,
+                user_type: 1,
+                dept_name: 1,
+                first_name: 1,
+                last_name: 1,
+                email_id: 1,
+                mobile_no: 1,
+              },
+            },
+          ],
+        },
+      },
+      {
+        $unwind: {
+          path: '$slicingDoneOtherDetails',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $unwind: {
+          path: '$createdUserDetails',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $unwind: {
+          path: '$updatedUserDetails',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+    ],
+  });
+})();
