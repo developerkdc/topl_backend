@@ -1,5 +1,8 @@
 import mongoose from 'mongoose';
-import { issue_for_peeling, issues_for_status } from '../../../../Utils/constants/constants.js';
+import {
+  issue_for_peeling,
+  issues_for_status,
+} from '../../../../Utils/constants/constants.js';
 
 const issue_for_peeling_schema = new mongoose.Schema(
   {
@@ -101,7 +104,7 @@ const issue_for_peeling_schema = new mongoose.Schema(
         values: [issue_for_peeling.re_flitching, issue_for_peeling.wastage],
         message: `Invalid type {{VALUE}} it must be one of the ${issue_for_peeling.re_flitching} or ${issue_for_peeling.wastage} `,
       },
-      default:null
+      default: null,
     },
     remark: {
       type: String,
@@ -223,4 +226,3 @@ export const issues_for_peeling_model = mongoose.model(
 //         ]
 //     })
 // })()
-

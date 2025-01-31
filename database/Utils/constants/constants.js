@@ -21,7 +21,7 @@ export const inward_type = {
 export const issue_for_peeling = {
   re_flitching: 're_flitching',
   wastage: 'wastage',
-}
+};
 
 export const peeling_done = {
   veneer: 'veneer',

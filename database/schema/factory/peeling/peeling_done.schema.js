@@ -56,7 +56,10 @@ const peeling_done_other_details_schema = new mongoose.Schema(
 );
 
 peeling_done_other_details_schema.index({ type: 1 });
-peeling_done_other_details_schema.index({ issue_for_peeling_id: 1 }, { unique: true });
+peeling_done_other_details_schema.index(
+  { issue_for_peeling_id: 1 },
+  { unique: true }
+);
 
 export const peeling_done_other_details_model = mongoose.model(
   'peeling_done_other_details',
@@ -66,8 +69,8 @@ export const peeling_done_other_details_model = mongoose.model(
 
 const output_type_validate = function () {
   const output_type = this.output_type;
-  return output_type !== peeling_done.veneer
-}
+  return output_type !== peeling_done.veneer;
+};
 
 const peeling_done_items_schema = new mongoose.Schema({
   sr_no: {

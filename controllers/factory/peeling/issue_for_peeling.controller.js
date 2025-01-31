@@ -639,7 +639,8 @@ export const listing_issued_for_peeling = catchAsync(async (req, res, next) => {
     aggCount,
   ]; // total aggregation pipiline
 
-  const totalDocument = await issues_for_peeling_model.aggregate(totalAggregate);
+  const totalDocument =
+    await issues_for_peeling_model.aggregate(totalAggregate);
 
   const totalPages = Math.ceil((totalDocument?.[0]?.totalCount || 0) / limit);
 
