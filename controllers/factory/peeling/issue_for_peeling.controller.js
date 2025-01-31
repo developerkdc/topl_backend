@@ -8,7 +8,6 @@ import { StatusCodes } from '../../../utils/constants.js';
 import catchAsync from '../../../utils/errors/catchAsync.js';
 import { issues_for_status } from '../../../database/Utils/constants/constants.js';
 import mongoose from 'mongoose';
-import { issue_for_peeling_model } from '../../../database/schema/factory/peeling/issues_for_peeling.schema.js';
 import ApiResponse from '../../../utils/ApiResponse.js';
 import {
   crosscutting_done_model,
@@ -16,6 +15,7 @@ import {
 } from '../../../database/schema/factory/crossCutting/crosscutting.schema.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
+import { issues_for_peeling_model } from '../../../database/schema/factory/peeling/issues_for_peeling/issues_for_peeling.schema.js';
 
 export const addIssueForPeelingFromLogInventory = catchAsync(
   async function (req, res, next) {
@@ -46,7 +46,7 @@ export const addIssueForPeelingFromLogInventory = catchAsync(
         );
       }
 
-      const maxNumber = await issue_for_peeling_model?.aggregate([
+      const maxNumber = await issues_for_peeling_model?.aggregate([
         {
           $group: {
             _id: null,
@@ -89,7 +89,7 @@ export const addIssueForPeelingFromLogInventory = catchAsync(
         }
       );
 
-      const add_issue_for_peeling = await issue_for_peeling_model.insertMany(
+      const add_issue_for_peeling = await issues_for_peeling_model.insertMany(
         issue_for_peeling_data,
         { session }
       );
@@ -225,7 +225,7 @@ export const addIssueForPeelingFromCrosscutDone = catchAsync(
       if (crosscut_done_data?.length <= 0) {
         throw new ApiError('No Crosscut done data found', 400);
       }
-      const maxNumber = await issue_for_peeling_model?.aggregate([
+      const maxNumber = await issues_for_peeling_model?.aggregate([
         {
           $group: {
             _id: null,
@@ -267,7 +267,7 @@ export const addIssueForPeelingFromCrosscutDone = catchAsync(
         };
       });
 
-      const add_issue_for_peeling = await issue_for_peeling_model.insertMany(
+      const add_issue_for_peeling = await issues_for_peeling_model.insertMany(
         issue_for_peeling_data,
         { session }
       );
@@ -358,7 +358,7 @@ export const revert_issue_for_peeling = catchAsync(async (req, res, next) => {
     ) {
       throw new ApiError('Invaild Id', StatusCodes.NOT_FOUND);
     }
-    const issuedForPeelingData = await issue_for_peeling_model
+    const issuedForPeelingData = await issues_for_peeling_model
       .findById(issue_for_peeling_id)
       .lean();
 
@@ -468,7 +468,7 @@ export const revert_issue_for_peeling = catchAsync(async (req, res, next) => {
       await add_revert_to_crosscut_done();
     }
 
-    const delete_response = await issue_for_peeling_model.deleteOne(
+    const delete_response = await issues_for_peeling_model.deleteOne(
       { _id: issuedForPeelingData?._id },
       { session }
     );
@@ -624,7 +624,7 @@ export const listing_issued_for_peeling = catchAsync(async (req, res, next) => {
   ]; // aggregation pipiline
 
   const issue_for_peeling =
-    await issue_for_peeling_model.aggregate(listAggregate);
+    await issues_for_peeling_model.aggregate(listAggregate);
 
   const aggCount = {
     $count: 'totalCount',
@@ -639,7 +639,7 @@ export const listing_issued_for_peeling = catchAsync(async (req, res, next) => {
     aggCount,
   ]; // total aggregation pipiline
 
-  const totalDocument = await issue_for_peeling_model.aggregate(totalAggregate);
+  const totalDocument = await issues_for_peeling_model.aggregate(totalAggregate);
 
   const totalPages = Math.ceil((totalDocument?.[0]?.totalCount || 0) / limit);
 
@@ -730,7 +730,7 @@ export const fetch_single_issued_for_peeling_item = catchAsync(
     ]; // aggregation pipiline
 
     const issue_for_peeling =
-      await issue_for_peeling_model.aggregate(listAggregate);
+      await issues_for_peeling_model.aggregate(listAggregate);
 
     const response = new ApiResponse(
       StatusCodes.OK,
