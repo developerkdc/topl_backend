@@ -28,7 +28,7 @@ export const peeling_done = {
   face: 'face',
   core: 'core',
 };
-export const slicing_done = {
+export const issue_for_slicing = {
   rest_roller: 'rest_roller',
   wastage: 'wastage',
 };

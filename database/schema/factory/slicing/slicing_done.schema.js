@@ -1,5 +1,4 @@
 import mongoose from 'mongoose';
-import { slicing_done } from '../../../Utils/constants/constants.js';
 
 const slicing_done_other_details_schema = new mongoose.Schema(
   {
@@ -103,12 +102,6 @@ const slicing_done_other_details_schema = new mongoose.Schema(
     wastage_consumed_total_amount: {
       type: Number,
       default: 0,
-      required: [
-        function () {
-          return this.type === slicing_done.wastage;
-        },
-        'Wastage Consumed Total Amount is required.',
-      ],
     },
     remark: {
       type: String,

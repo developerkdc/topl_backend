@@ -1,14 +1,14 @@
-import { issues_for_peeling_model } from '../../../database/schema/factory/peeling/issues_for_peeling/issues_for_peeling.schema';
-import issues_for_peeling_available_model from '../../../database/schema/factory/peeling/issues_for_peeling/issues_for_peeling_available.schema';
-import issues_for_peeling_wastage_model from '../../../database/schema/factory/peeling/issues_for_peeling/issues_for_peeling_wastage.schema';
+import { issues_for_peeling_model } from '../../../database/schema/factory/peeling/issues_for_peeling/issues_for_peeling.schema.js';
+import issues_for_peeling_available_model from '../../../database/schema/factory/peeling/issues_for_peeling/issues_for_peeling_available.schema.js';
+import issues_for_peeling_wastage_model from '../../../database/schema/factory/peeling/issues_for_peeling/issues_for_peeling_wastage.schema.js';
 import {
   peeling_done_items_model,
   peeling_done_other_details_model,
-} from '../../../database/schema/factory/peeling/peeling_done.schema';
-import { issue_for_peeling } from '../../../database/Utils/constants/constants';
-import ApiResponse from '../../../utils/ApiResponse';
-import ApiError from '../../../utils/errors/apiError';
-import catchAsync from '../../../utils/errors/catchAsync';
+} from '../../../database/schema/factory/peeling/peeling_done.schema.js';
+import { issue_for_peeling } from '../../../database/Utils/constants/constants.js';
+import ApiResponse from '../../../utils/ApiResponse.js';
+import ApiError from '../../../utils/errors/apiError.js';
+import catchAsync from '../../../utils/errors/catchAsync.js';
 
 export const add_peeling_done = catchAsync(async (req, res, next) => {
   const session = await mongoose.startSession();
@@ -22,13 +22,7 @@ export const add_peeling_done = catchAsync(async (req, res, next) => {
       wastage_details,
       available_details,
     } = req.body;
-    for (let i of [
-      'other_details',
-      'items_details',
-      'type',
-      'wastage_details',
-      'available_details',
-    ]) {
+    for (let i of ['other_details', 'items_details', 'type']) {
       if (!req.body?.[i]) {
         throw new ApiError(`Please provide ${i} details`, 400);
       }
@@ -39,6 +33,17 @@ export const add_peeling_done = catchAsync(async (req, res, next) => {
     if (items_details?.length < 0) {
       throw new ApiError('Atleast one items is required', 400);
     }
+    if (type === issue_for_peeling.wastage) {
+      if (!wastage_details) {
+        throw new ApiError('Please provide wastage details', 400);
+      }
+    }
+    if (type === issue_for_peeling.re_flitching) {
+      if (!available_details) {
+        throw new ApiError('Please provide available details', 400);
+      }
+    }
+
 
     // Other goods details
     const add_other_details_data =
@@ -108,7 +113,7 @@ export const add_peeling_done = catchAsync(async (req, res, next) => {
 
     if (
       issue_for_peeling_type?.type?.toLowerCase() ===
-      issue_for_peeling.wastage?.toLowerCase()
+      issue_for_peeling.wastage?.toLowerCase() && wastage_details
     ) {
       const maxNumber = await issues_for_peeling_wastage_model.aggregate([
         {
@@ -139,7 +144,7 @@ export const add_peeling_done = catchAsync(async (req, res, next) => {
 
     if (
       issue_for_peeling_type?.type?.toLowerCase() ===
-      issue_for_peeling.re_flitching?.toLowerCase()
+      issue_for_peeling.re_flitching?.toLowerCase() && available_details
     ) {
       const maxNumber = await issues_for_peeling_available_model.aggregate([
         {
