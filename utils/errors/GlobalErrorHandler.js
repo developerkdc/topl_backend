@@ -57,7 +57,18 @@ export const globalErrorHandler = (err, req, res, next) => {
 
 const extractDuplicateKeyFromErrorMessage = (errorMessage) => {
   const matches = errorMessage.match(/index: (\w+)_/);
-  return matches ? matches[1] : 'unknown key';
+  const value = errorMessage.match(/dup key: ({.*?})/);
+  let dupKey = {};
+  if (value) {
+    try {
+      // Convert the captured string to valid JSON:
+      const validJsonString = value[1].replace(/(\w+):/g, '"$1":');
+      dupKey = JSON.parse(validJsonString);
+    } catch (e) {
+      console.error('Failed to parse duplicate key JSON:', e);
+    }
+  }
+  return matches ? `${dupKey[matches[1]]} - ${matches[1]}` : 'unknown key';
 };
 
 const extractValidationDetails = (errorMessage) => {

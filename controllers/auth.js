@@ -2,6 +2,7 @@ import getConfigs from '../config/config.js';
 import userModel from '../database/schema/user.schema.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import { create, generateOTP, verify } from '../utils/authServices/index.js';
+import { StatusCodes } from '../utils/constants.js';
 import { SendOtpEmail } from '../utils/emailServices/otp.js';
 import catchAsync from '../utils/errors/catchAsync.js';
 import {
@@ -18,6 +19,7 @@ import {
   PasswordReset,
   UserNotFound,
 } from '../utils/response/response.js';
+import os from 'os';
 
 const Configs = getConfigs();
 
@@ -247,3 +249,36 @@ export const ResetPassword = catchAsync(async (req, res) => {
     .status(200)
     .json({ result: [], status: true, message: PasswordReset });
 });
+
+export const checkServerHealth = async (req, res, next) => {
+  const load_time_avg = os.loadavg();
+  const server_uptime = os.uptime();
+  const uptimeMinutes = Math.floor(server_uptime / 60);
+  const uptimeHours = Math.floor(uptimeMinutes / 60);
+  const uptimeFormatted =
+    uptimeHours > 0
+      ? `${uptimeHours} hours ${uptimeMinutes % 60} minutes`
+      : `${uptimeMinutes} minutes`;
+  const total_memory = os.totalmem() / (1024 * 1024 * 1024);
+  const free_memory = os.freemem() / (1024 * 1024 * 1024);
+  const used_memory = total_memory - free_memory;
+  const cpus = os.cpus();
+
+  const cpuUsage = cpus.map((cpu, index) => {
+    const total = Object.values(cpu.times).reduce((acc, item) => acc + item, 0);
+    const usage = ((total - cpu.times.idle) / total) * 100;
+    return { core: index + 1, usage: usage?.toFixed(2) + '%' };
+  });
+
+  return res.status(StatusCodes.OK).json(
+    new ApiResponse(StatusCodes.OK, 'Server Health Fetched successfully', {
+      // uptime: uptimeFormatted,
+      cpuUsage,
+      loadAverage: load_time_avg,
+      total_memory: `${total_memory?.toFixed(2)} GB`,
+      used_memory: `${used_memory?.toFixed(2)} GB`,
+      free_memory: `${free_memory?.toFixed(2)} GB`,
+      total_cpus: cpus?.length,
+    })
+  );
+};

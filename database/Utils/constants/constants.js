@@ -8,6 +8,7 @@ export const issues_for_status = {
   peeling: 'peeling',
   slicing: 'slicing',
   slicing_peeling: 'slicing_peeling',
+  dressing: 'dressing',
   order: 'order',
   chalan: 'chalan',
 };
