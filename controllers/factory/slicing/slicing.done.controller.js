@@ -52,7 +52,6 @@ export const add_slicing_done = catchAsync(async (req, res, next) => {
       }
     }
 
-
     // Other goods details
     const add_other_details_data =
       await slicing_done_other_details_model.create(
@@ -248,9 +247,326 @@ export const revert_slicing_done = catchAsync(async (req, res, next) => {
   }
 });
 
-export const fetch_all_slicing_done_items = catchAsync(async (req, res, next) => {
-  const { page = 1, sortBy = "updatedAt", sort = "desc", limit = 10, search = "" } = req.query;
-  const { string, boolean, numbers, arrayField = [] } = req.body?.searchFields || {};
+export const fetch_all_slicing_done_items = catchAsync(
+  async (req, res, next) => {
+    const {
+      page = 1,
+      sortBy = 'updatedAt',
+      sort = 'desc',
+      limit = 10,
+      search = '',
+    } = req.query;
+    const {
+      string,
+      boolean,
+      numbers,
+      arrayField = [],
+    } = req.body?.searchFields || {};
+
+    const filter = req.body?.filter;
+
+    let search_query = {};
+    if (search != '' && req?.body?.searchFields) {
+      const search_data = DynamicSearch(
+        search,
+        boolean,
+        numbers,
+        string,
+        arrayField
+      );
+      if (search_data?.length == 0) {
+        return res.status(404).json({
+          statusCode: 404,
+          status: false,
+          data: {
+            data: [],
+          },
+          message: 'Results Not Found',
+        });
+      }
+      search_query = search_data;
+    }
+
+    const filterData = dynamic_filter(filter);
+
+    const match_query = {
+      ...search_query,
+      ...filterData,
+    };
+
+    const aggLookupSlicingDoneOtherDetails = {
+      $lookup: {
+        from: 'slicing_done_other_details',
+        localField: 'slicing_done_other_details_id',
+        foreignField: '_id',
+        as: 'slicing_done_other_details',
+      },
+    };
+    const aggCreatedUserDetails = {
+      $lookup: {
+        from: 'users',
+        localField: 'slicing_done_other_details.created_by',
+        foreignField: '_id',
+        pipeline: [
+          {
+            $project: {
+              first_name: 1,
+              last_name: 1,
+              user_name: 1,
+              user_type: 1,
+              email_id: 1,
+            },
+          },
+        ],
+        as: 'created_user_details',
+      },
+    };
+
+    const aggUpdatedUserDetails = {
+      $lookup: {
+        from: 'users',
+        localField: 'slicing_done_other_details.updated_by',
+        foreignField: '_id',
+        pipeline: [
+          {
+            $project: {
+              first_name: 1,
+              last_name: 1,
+              user_name: 1,
+              user_type: 1,
+              email_id: 1,
+            },
+          },
+        ],
+        as: 'updated_user_details',
+      },
+    };
+    const aggMatch = {
+      $match: {
+        ...match_query,
+      },
+    };
+    const aggUnwindOtherDetails = {
+      $unwind: {
+        path: '$slicing_done_other_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    };
+
+    const aggUnwindCreatedUser = {
+      $unwind: {
+        path: '$created_user_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    };
+    const aggUnwindUpdatedUser = {
+      $unwind: {
+        path: '$updated_user_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    };
+    const aggSort = {
+      $sort: {
+        [sortBy]: sort === 'desc' ? -1 : 1,
+      },
+    };
+
+    const aggSkip = {
+      $skip: (parseInt(page) - 1) * parseInt(limit),
+    };
+
+    const aggLimit = {
+      $limit: parseInt(limit),
+    };
+
+    const list_aggregate = [
+      aggLookupSlicingDoneOtherDetails,
+      aggUnwindOtherDetails,
+      aggCreatedUserDetails,
+      aggUpdatedUserDetails,
+      aggUnwindCreatedUser,
+      aggUnwindUpdatedUser,
+      aggMatch,
+      aggSort,
+      aggSkip,
+      aggLimit,
+    ];
+
+    console.log('agg => ', list_aggregate);
+    const result = await slicing_done_items_model?.aggregate(list_aggregate);
+
+    const aggCount = {
+      $count: 'totalCount',
+    };
+
+    const count_total_docs = [
+      aggLookupSlicingDoneOtherDetails,
+      aggUnwindOtherDetails,
+      aggCreatedUserDetails,
+      aggUpdatedUserDetails,
+      aggUnwindCreatedUser,
+      aggUnwindUpdatedUser,
+      aggMatch,
+      aggCount,
+    ];
+
+    const total_docs =
+      await slicing_done_items_model.aggregate(count_total_docs);
+
+    const totalPages = Math.ceil((total_docs[0]?.totalCount || 0) / limit);
+
+    const response = new ApiResponse(200, 'Data Fetched Successfully', {
+      data: result,
+      totalPages: totalPages,
+    });
+    return res.status(200).json(response);
+  }
+);
+
+export const fetch_all_details_by_slicing_done_id = catchAsync(
+  async (req, res, next) => {
+    const { id } = req.query;
+
+    if (!id) {
+      throw new ApiError('ID is missing', StatusCodes.NOT_FOUND);
+    }
+
+    const pipeline = [
+      {
+        $match: {
+          slicing_done_other_details_id:
+            mongoose.Types.ObjectId.createFromHexString(id),
+        },
+      },
+      {
+        $lookup: {
+          from: 'slicing_done_other_details',
+          foreignField: '_id',
+          localField: 'slicing_done_other_details_id',
+          as: 'other_details',
+        },
+      },
+      {
+        $unwind: {
+          path: '$other_details',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+
+      {
+        $lookup: {
+          from: 'issued_for_slicings',
+          foreignField: '_id',
+          localField: 'other_details.issue_for_slicing_id',
+          as: 'issued_for_slicing_details',
+        },
+      },
+      {
+        $unwind: {
+          path: '$issued_for_slicing_details',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $lookup: {
+          from: 'issue_for_slicing_wastage',
+          foreignField: 'issue_for_slicing_id',
+          localField: 'issued_for_slicing_details._id',
+          as: 'issue_for_slicing_wastage_details',
+        },
+      },
+      {
+        $lookup: {
+          from: 'issue_for_slicing_available',
+          foreignField: 'issue_for_slicing_id',
+          localField: 'issued_for_slicing_details._id',
+          as: 'issue_for_slicing_available_details',
+        },
+      },
+      {
+        $unwind: {
+          path: '$issue_for_slicing_wastage_details',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $unwind: {
+          path: '$issue_for_slicing_available_details',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $group: {
+          _id: 'slicing_done_other_details_id',
+          other_slicing_details: { $first: '$other_details' },
+          issue_for_slicing_details: { $first: '$issued_for_slicing_details' },
+          issue_for_slicing_wastage_details: {
+            $first: '$issue_for_slicing_wastage_details',
+          },
+          issue_for_slicing_available_details: {
+            $first: '$issue_for_slicing_available_details',
+          },
+          items: {
+            $push: {
+              _id: '$_id',
+              sr_no: '$sr_no',
+              slicing_done_other_details_id: '$slicing_done_other_details_id',
+              item_name: '$item_name',
+              item_name_id: '$item_name_id',
+              log_no_code: '$log_no_code',
+              flitch_no: '$flitch_no',
+              flitch_side: '$flitch_side',
+              length: '$length',
+              width: '$width',
+              height: '$height',
+              thickness: '$thickness',
+              no_of_leaves: '$no_of_leaves',
+              cmt: '$cmt',
+              color_id: '$color_id',
+              color_name: '$color_name',
+              character_id: '$character_id',
+              character_name: '$character_name',
+              pattern_id: '$pattern_id',
+              pattern_name: '$pattern_name',
+              series_id: '$series_id',
+              series_name: '$series_name',
+              grade_id: '$grade_id',
+              grade_name: '$grade_name',
+              issued_for_dressing: '$issued_for_dressing',
+              item_total_amount: '$item_total_amount',
+              item_wastage_consumed_amount: '$item_wastage_consumed_amount',
+              remark: '$remark',
+            },
+          },
+        },
+      },
+    ];
+    const result = await slicing_done_items_model.aggregate(pipeline);
+
+    const response = new ApiResponse(
+      StatusCodes.OK,
+      'Details Fetched successfully',
+      result
+    );
+
+    return res.status(StatusCodes.OK).json(response);
+  }
+);
+
+export const fetch_slicing_done_history = catchAsync(async (req, res, next) => {
+  const {
+    page = 1,
+    sortBy = 'updatedAt',
+    sort = 'desc',
+    limit = 10,
+    search = '',
+  } = req.query;
+  const {
+    string,
+    boolean,
+    numbers,
+    arrayField = [],
+  } = req.body?.searchFields || {};
 
   const filter = req.body?.filter;
 
@@ -280,123 +596,100 @@ export const fetch_all_slicing_done_items = catchAsync(async (req, res, next) =>
 
   const match_query = {
     ...search_query,
-    ...filterData
+    ...filterData,
+    issue_status: { $ne: null },
   };
-
-  const aggLookupSlicingDoneOtherDetails = {
-    $lookup: {
-      from: "slicing_done_other_details",
-      localField: "slicing_done_other_details_id",
-      foreignField: "_id",
-      as: "slicing_done_other_details"
-    }
-  }
-  const aggCreatedUserDetails = {
-    $lookup: {
-      from: "users",
-      localField: "slicing_done_other_details.created_by",
-      foreignField: "_id",
-      pipeline: [
-        {
-          $project: {
-            first_name: 1,
-            last_name: 1,
-            user_name: 1,
-            user_type: 1,
-            email_id: 1
-          }
-        }
-      ],
-      as: "created_user_details",
-    }
-  };
-
-  const aggUpdatedUserDetails = {
-    $lookup: {
-      from: "users",
-      localField: "slicing_done_other_details.updated_by",
-      foreignField: "_id",
-      pipeline: [
-        {
-          $project: {
-            first_name: 1,
-            last_name: 1,
-            user_name: 1,
-            user_type: 1,
-            email_id: 1
-          }
-        }
-      ],
-      as: "updated_user_details",
-    }
-  }
   const aggMatch = {
     $match: {
-      ...match_query
-    }
+      ...match_query,
+    },
   };
-  const aggUnwindOtherDetails = {
-    $unwind: {
-      path: "$slicing_done_other_details",
-      preserveNullAndEmptyArrays: true
-    }
-  }
-
+  const aggCreatedUserDetails = {
+    $lookup: {
+      from: 'users',
+      localField: 'created_by',
+      foreignField: '_id',
+      pipeline: [
+        {
+          $project: {
+            first_name: 1,
+            last_name: 1,
+            user_name: 1,
+            user_type: 1,
+            email_id: 1,
+          },
+        },
+      ],
+      as: 'created_user_details',
+    },
+  };
+  const aggUpdatedUserDetails = {
+    $lookup: {
+      from: 'users',
+      localField: 'updated_by',
+      foreignField: '_id',
+      pipeline: [
+        {
+          $project: {
+            first_name: 1,
+            last_name: 1,
+            user_name: 1,
+            user_type: 1,
+            email_id: 1,
+          },
+        },
+      ],
+      as: 'updated_user_details',
+    },
+  };
   const aggUnwindCreatedUser = {
     $unwind: {
-      path: "$created_user_details",
-      preserveNullAndEmptyArrays: true
-    }
-  }
-  const aggUnwindUpdatedUser = {
+      path: '$created_user_details',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
+  const aggUnwindUpdatdUser = {
     $unwind: {
-      path: "$updated_user_details",
-      preserveNullAndEmptyArrays: true
-    }
-  }
-  const aggSort = {
-    $sort: {
-      [sortBy]: sort === "desc" ? -1 : 1
-    }
+      path: '$updated_user_details',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
+
+  const aggLimit = {
+    $limit: parseInt(limit),
   };
 
   const aggSkip = {
-    $skip: (parseInt(page) - 1) * (parseInt(limit))
-  }
+    $skip: (parseInt(page) - 1) * parseInt(limit),
+  };
 
-  const aggLimit = {
-    $limit: parseInt(limit)
-  }
-
+  const aggSort = {
+    $sort: { [sortBy]: sort === 'desc' ? -1 : 1 },
+  };
   const list_aggregate = [
-    aggLookupSlicingDoneOtherDetails,
-    aggUnwindOtherDetails,
     aggCreatedUserDetails,
     aggUpdatedUserDetails,
     aggUnwindCreatedUser,
-    aggUnwindUpdatedUser,
+    aggUnwindUpdatdUser,
     aggMatch,
     aggSort,
     aggSkip,
-    aggLimit
+    aggLimit,
   ];
 
-  console.log("agg => ", list_aggregate)
-  const result = await slicing_done_items_model?.aggregate(list_aggregate);
+  const result = await slicing_done_items_model.aggregate(list_aggregate);
 
   const aggCount = {
-    $count: 'totalCount'
+    $count: 'totalCount',
   };
 
   const count_total_docs = [
-    aggLookupSlicingDoneOtherDetails,
-    aggUnwindOtherDetails,
     aggCreatedUserDetails,
     aggUpdatedUserDetails,
     aggUnwindCreatedUser,
-    aggUnwindUpdatedUser,
+    aggUnwindUpdatdUser,
     aggMatch,
-    aggCount
+    aggCount,
   ];
 
   const total_docs = await slicing_done_items_model.aggregate(count_total_docs);
@@ -404,131 +697,13 @@ export const fetch_all_slicing_done_items = catchAsync(async (req, res, next) =>
   const totalPages = Math.ceil((total_docs[0]?.totalCount || 0) / limit);
 
   const response = new ApiResponse(
-    200,
-    'Data Fetched Successfully',
+    StatusCodes.OK,
+    'Data fetched successfully...',
     {
       data: result,
       totalPages: totalPages,
     }
   );
-  return res.status(200).json(response);
 
+  return res.status(StatusCodes.OK).json(response);
 });
-
-export const fetch_all_details_by_slicing_done_id = catchAsync(async (req, res, next) => {
-  const { id } = req.query;
-
-  if (!id) {
-    throw new ApiError("ID is missing", StatusCodes.NOT_FOUND)
-  };
-
-  const pipeline = [
-    {
-      $match: { slicing_done_other_details_id: mongoose.Types.ObjectId.createFromHexString(id) }
-    },
-    {
-      $lookup: {
-        from: "slicing_done_other_details",
-        foreignField: "_id",
-        localField: "slicing_done_other_details_id",
-        as: "other_details"
-      }
-    },
-    {
-      $unwind: {
-        path: "$other_details",
-        preserveNullAndEmptyArrays: true
-      }
-    },
-
-    {
-      $lookup: {
-        from: "issued_for_slicings",
-        foreignField: "_id",
-        localField: "other_details.issue_for_slicing_id",
-        as: "issued_for_slicing_details"
-      }
-    },
-    {
-      $unwind: {
-        path: "$issued_for_slicing_details",
-        preserveNullAndEmptyArrays: true
-      }
-    },
-    {
-      $lookup: {
-        from: "issue_for_slicing_wastage",
-        foreignField: "issue_for_slicing_id",
-        localField: "issued_for_slicing_details._id",
-        as: "issue_for_slicing_wastage_details",
-      }
-    },
-    {
-      $lookup: {
-        from: "issue_for_slicing_available",
-        foreignField: "issue_for_slicing_id",
-        localField: "issued_for_slicing_details._id",
-        as: "issue_for_slicing_available_details",
-      }
-    },
-    {
-      $unwind: {
-        path: "$issue_for_slicing_wastage_details",
-        preserveNullAndEmptyArrays: true
-      }
-    },
-    {
-      $unwind: {
-        path: "$issue_for_slicing_available_details",
-        preserveNullAndEmptyArrays: true
-      }
-    },
-    {
-      $group: {
-        _id: "slicing_done_other_details_id",
-        other_slicing_details: { $first: "$other_details" },
-        issue_for_slicing_details: { $first: "$issued_for_slicing_details" },
-        issue_for_slicing_wastage_details: { $first: "$issue_for_slicing_wastage_details" },
-        issue_for_slicing_available_details: { $first: "$issue_for_slicing_available_details" },
-        items: {
-          $push: {
-            _id: "$_id",
-            sr_no: "$sr_no",
-            slicing_done_other_details_id: "$slicing_done_other_details_id",
-            item_name: "$item_name",
-            item_name_id: "$item_name_id",
-            log_no_code: "$log_no_code",
-            flitch_no: "$flitch_no",
-            flitch_side: "$flitch_side",
-            length: "$length",
-            width: "$width",
-            height: "$height",
-            thickness: "$thickness",
-            no_of_leaves: "$no_of_leaves",
-            cmt: "$cmt",
-            color_id: "$color_id",
-            color_name: "$color_name",
-            character_id: "$character_id",
-            character_name: "$character_name",
-            pattern_id: "$pattern_id",
-            pattern_name: "$pattern_name",
-            series_id: "$series_id",
-            series_name: "$series_name",
-            grade_id: "$grade_id",
-            grade_name: "$grade_name",
-            issued_for_dressing: "$issued_for_dressing",
-            item_total_amount: "$item_total_amount",
-            item_wastage_consumed_amount: "$item_wastage_consumed_amount",
-            remark: "$remark"
-          }
-        }
-      }
-    }
-  ]
-  const result = await slicing_done_items_model.aggregate(pipeline);
-
-
-  const response = new ApiResponse(StatusCodes.OK, "Details Fetched successfully", result);
-
-  return res.status(StatusCodes.OK).json(response)
-})

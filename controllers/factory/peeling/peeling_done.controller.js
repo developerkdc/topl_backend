@@ -44,7 +44,6 @@ export const add_peeling_done = catchAsync(async (req, res, next) => {
       }
     }
 
-
     // Other goods details
     const add_other_details_data =
       await peeling_done_other_details_model.create(
@@ -113,7 +112,8 @@ export const add_peeling_done = catchAsync(async (req, res, next) => {
 
     if (
       issue_for_peeling_type?.type?.toLowerCase() ===
-      issue_for_peeling.wastage?.toLowerCase() && wastage_details
+        issue_for_peeling.wastage?.toLowerCase() &&
+      wastage_details
     ) {
       const maxNumber = await issues_for_peeling_wastage_model.aggregate([
         {
@@ -144,7 +144,8 @@ export const add_peeling_done = catchAsync(async (req, res, next) => {
 
     if (
       issue_for_peeling_type?.type?.toLowerCase() ===
-      issue_for_peeling.re_flitching?.toLowerCase() && available_details
+        issue_for_peeling.re_flitching?.toLowerCase() &&
+      available_details
     ) {
       const maxNumber = await issues_for_peeling_available_model.aggregate([
         {

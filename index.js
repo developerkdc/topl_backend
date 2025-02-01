@@ -18,6 +18,7 @@ import rolesRouter from './routes/roles.routes.js';
 import allSeriesProductMasterRouter from './routes/seriesProductMaster/allSeriesProductMaster.routes.js';
 import usersRouter from './routes/users.routes.js';
 import { globalErrorHandler } from './utils/errors/GlobalErrorHandler.js';
+import { checkServerHealth } from './controllers/auth.js';
 const Configs = getConfigs();
 mongo_service();
 const app = express();
@@ -56,7 +57,7 @@ app.use(`/api/${Configs.server.version}/user`, usersRouter);
 app.use(`/api/${Configs.server.version}/role`, rolesRouter);
 app.use(`/api/${Configs.server.version}/profile`, profileRouter);
 app.use(`/api/${Configs.server.version}/approval-config`, approvalConfigRouter);
-
+app.use('/server-health', checkServerHealth);
 //master
 app.use(`/api/${Configs.server.version}`, allMasterRouter);
 //Series Product Master

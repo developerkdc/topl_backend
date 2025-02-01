@@ -6,8 +6,9 @@ import {
   fetch_single_issued_for_slicing_item,
   revert_issued_for_slicing,
   add_issue_for_slicing_from_flitching_done,
+  fetch_issue_for_slicing_wastage_details,
+  fetch_issue_for_slicing_available_details,
 } from '../../../controllers/factory/slicing/issuedForSlicing.controller.js';
-
 
 const issueForSlicingRouter = express.Router();
 
@@ -36,6 +37,14 @@ issueForSlicingRouter.post(
   AuthMiddleware,
   revert_issued_for_slicing
 );
-
-
+issueForSlicingRouter.post(
+  '/list-issue-for-slicing-wastage',
+  AuthMiddleware,
+  fetch_issue_for_slicing_wastage_details
+);
+issueForSlicingRouter.post(
+  '/list-issue-for-slicing-available',
+  AuthMiddleware,
+  fetch_issue_for_slicing_available_details
+);
 export default issueForSlicingRouter;

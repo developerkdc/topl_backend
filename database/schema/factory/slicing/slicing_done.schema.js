@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { issues_for_status } from '../../../Utils/constants/constants.js';
 
 const slicing_done_other_details_schema = new mongoose.Schema(
   {
@@ -234,6 +235,13 @@ const slicing_done_items_schema = new mongoose.Schema({
   item_wastage_consumed_amount: {
     type: Number,
     default: 0,
+  },
+  issue_status: {
+    type: String,
+    enum: {
+      values: [issues_for_status?.dressing],
+      message: `Invalid Issue Status {{VALUE}} issue status must be one of the ${issues_for_status?.dressing} `,
+    },
   },
   remark: {
     type: String,
