@@ -236,3 +236,61 @@ export const revert_slicing_done = catchAsync(async (req, res, next) => {
     await session.endSession();
   }
 });
+
+export const fetch_all_slicing_done_items = catchAsync(async (req, res, next) => {
+  const { page = 1, sort = "updatedAt", sortBy = "desc", limit = 10, search = "" } = req.query;
+  const { string, boolean, numbers, arrayField = [] } = req.body?.searchFields || {};
+
+  const filter = req.body?.filter;
+
+  let search_query = {};
+  if (search != '' && req?.body?.searchFields) {
+    const search_data = DynamicSearch(
+      search,
+      boolean,
+      numbers,
+      string,
+      arrayField
+    );
+    if (search_data?.length == 0) {
+      return res.status(404).json({
+        statusCode: 404,
+        status: false,
+        data: {
+          data: [],
+        },
+        message: 'Results Not Found',
+      });
+    }
+    search_query = search_data;
+  }
+
+  const filterData = dynamic_filter(filter);
+
+  const match_query = {
+    ...search_query,
+    ...filterData
+  };
+
+
+  const aggOtherDetails =
+  {
+    $lookup: {
+      from: "slicing_done_other_details",
+      foreignField: "_id",
+      localField: "slicing_done_other_details_id",
+      as: "slicing_done_other_details"
+    }
+  }
+
+  const unwindOtherDetails = {
+    $unwind: {
+      path: "$slicing_done_other_details",
+      preserveNullAndEmptyArrays: true
+    }
+  }
+
+
+
+
+})
