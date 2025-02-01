@@ -431,7 +431,6 @@ export const edit_log_invoice_inventory = catchAsync(async (req, res, next) => {
 });
 
 export const logLogsCsv = catchAsync(async (req, res) => {
-  console.log('called');
   const { search = '' } = req.query;
   const {
     string,

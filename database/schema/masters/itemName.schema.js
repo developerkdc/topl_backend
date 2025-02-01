@@ -11,6 +11,12 @@ const ItemNameSchema = new mongoose.Schema(
       unique: [true, 'Item Name already exists.'],
       uppercase: true,
     },
+    item_name_code: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      default: null,
+    },
     color: {
       color_id: {
         type: mongoose.Schema.Types.ObjectId,

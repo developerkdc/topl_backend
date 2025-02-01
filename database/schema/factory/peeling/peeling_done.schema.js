@@ -29,6 +29,10 @@ const peeling_done_other_details_schema = new mongoose.Schema(
       trim: true,
       uppercase: true,
     },
+    total_amount: {
+      type: Number,
+      required: [true, 'Total Amount is required'],
+    },
     wastage_consumed_total_amount: {
       type: Number,
       default: 0,
@@ -67,10 +71,6 @@ const output_type_validate = function () {
 };
 
 const peeling_done_items_schema = new mongoose.Schema({
-  sr_no: {
-    type: Number,
-    required: [true, 'Sr No. is required'],
-  },
   peeling_done_other_details_id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'peeling_done_other_details',
@@ -106,23 +106,27 @@ const peeling_done_items_schema = new mongoose.Schema({
   },
   length: {
     type: Number,
+    default: 0,
     required: [output_type_validate, 'Length is required'],
   },
   width: {
     type: Number,
+    default: 0,
     required: [output_type_validate, 'Width is required'],
   },
   height: {
     type: Number,
+    default: 0,
     required: [output_type_validate, 'Height is required'],
   },
   thickness: {
     type: Number,
-    required: [output_type_validate, 'Thickness is required'],
+    default: 0,
+    required: [true, 'Thickness is required'],
   },
   no_of_leaves: {
     type: Number,
-    required: [output_type_validate, 'No of leaves is required'],
+    default: 0,
   },
   cmt: {
     type: Number,
@@ -172,22 +176,37 @@ const peeling_done_items_schema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
-  item_total_amount: {
+  item_amount: {
     type: Number,
-    required: [true, 'Total Amount is required'],
+    required: [true, 'Item Amount is required'],
   },
   item_wastage_consumed_amount: {
     type: Number,
     default: 0,
   },
+  item_total_amount: {
+    type: Number,
+    default: function () {
+      return this.item_amount + this.item_wastage_consumed_amount;
+    },
+    required: [true, 'Item Total Amount is required'],
+  },
   remark: {
     type: String,
     default: null,
   },
+  created_by: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: [true, 'Created By Id is required'],
+  },
+  updated_by: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: [true, 'Updated By Id is required'],
+  },
 });
 
-peeling_done_items_schema.index({ sr_no: 1 }, { unique: true });
 peeling_done_items_schema.index({ peeling_done_other_details_id: 1 });
+peeling_done_items_schema.index({ log_no_code: 1 }, { unique: true });
 
 export const peeling_done_items_model = mongoose.model(
   'peeling_done_items',

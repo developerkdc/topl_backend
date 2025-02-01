@@ -6,10 +6,6 @@ import {
 
 const issue_for_slicing_schema = new mongoose.Schema(
   {
-    sr_no: {
-      type: Number,
-      required: [true, 'Sr.No is required'],
-    },
     flitch_inventory_item_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'flitch_inventory_item_details',
@@ -26,31 +22,6 @@ const issue_for_slicing_schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       default: null,
     },
-    //   type: Number,
-    //   // unique: true,
-    //   required: [true, 'Inward Sr.No is required. '],
-    // },
-    // invoice_id: {
-    //   type: mongoose.Schema.Types.ObjectId,
-    //   required: [true, 'Invoice Id is required'],
-    // },
-    // inward_date: {
-    //   type: Date,
-    //   default: Date.now,
-    //   required: [true, 'Inward Date is required.'],
-    // },
-    // invoice_date: {
-    //   type: Date,
-    //   default: Date.now,
-    //   required: [true, 'Invoice Date is required.'],
-    // },
-    // invoice_no: {
-    //   type: String,
-    //   // unique: true,
-    //   trim: true,
-    //   uppercase: true,
-    //   required: [true, 'Invoice No is required.'],
-    // },
     item_sr_no: {
       type: Number,
       required: [true, 'Item Sr.No is required'],
@@ -80,12 +51,10 @@ const issue_for_slicing_schema = new mongoose.Schema(
       color_id: {
         type: mongoose.Schema.Types.ObjectId,
         default: null,
-        // required: [true, 'color id is required'],
       },
       color_name: {
         type: String,
         default: null,
-        // required: [true, 'color name is required'],
       },
     },
     flitch_formula: {
@@ -199,7 +168,6 @@ const issue_for_slicing_schema = new mongoose.Schema(
 
 issue_for_slicing_schema.index({ item_sr_no: 1 });
 issue_for_slicing_schema.index({ flitching_done_id: 1 });
-issue_for_slicing_schema.index({ sr_no: 1 }, { unique: true });
 
 export const issued_for_slicing_model = mongoose.model(
   'issued_for_slicings',

@@ -6,10 +6,6 @@ import {
 
 const issue_for_peeling_schema = new mongoose.Schema(
   {
-    sr_no: {
-      type: Number,
-      required: [true, 'Sr.No is required'],
-    },
     log_inventory_item_id: {
       type: mongoose.Schema.Types.ObjectId,
       default: null,
