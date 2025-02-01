@@ -1,14 +1,14 @@
-import { issues_for_peeling_model } from '../../../database/schema/factory/peeling/issues_for_peeling/issues_for_peeling.schema';
-import issues_for_peeling_available_model from '../../../database/schema/factory/peeling/issues_for_peeling/issues_for_peeling_available.schema';
-import issues_for_peeling_wastage_model from '../../../database/schema/factory/peeling/issues_for_peeling/issues_for_peeling_wastage.schema';
+import { issues_for_peeling_model } from '../../../database/schema/factory/peeling/issues_for_peeling/issues_for_peeling.schema.js';
+import issues_for_peeling_available_model from '../../../database/schema/factory/peeling/issues_for_peeling/issues_for_peeling_available.schema.js';
+import issues_for_peeling_wastage_model from '../../../database/schema/factory/peeling/issues_for_peeling/issues_for_peeling_wastage.schema.js';
 import {
   peeling_done_items_model,
   peeling_done_other_details_model,
-} from '../../../database/schema/factory/peeling/peeling_done.schema';
-import { issue_for_peeling } from '../../../database/Utils/constants/constants';
-import ApiResponse from '../../../utils/ApiResponse';
-import ApiError from '../../../utils/errors/apiError';
-import catchAsync from '../../../utils/errors/catchAsync';
+} from '../../../database/schema/factory/peeling/peeling_done.schema.js';
+import { issue_for_peeling } from '../../../database/Utils/constants/constants.js';
+import ApiResponse from '../../../utils/ApiResponse.js';
+import ApiError from '../../../utils/errors/apiError.js';
+import catchAsync from '../../../utils/errors/catchAsync.js';
 
 export const add_peeling_done = catchAsync(async (req, res, next) => {
   const session = await mongoose.startSession();
