@@ -5,7 +5,7 @@ import catchAsync from '../../../utils/errors/catchAsync.js';
 import mongoose from 'mongoose';
 import {
   issues_for_status,
-  slicing_done,
+  issue_for_slicing,
 } from '../../../database/Utils/constants/constants.js';
 
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
@@ -41,6 +41,17 @@ export const add_slicing_done = catchAsync(async (req, res, next) => {
     if (items_details?.length < 0) {
       throw new ApiError('Atleast one items is required', 400);
     }
+    if (type === issu.wastage) {
+      if (!wastage_details) {
+        throw new ApiError('Please provide wastage details', 400);
+      }
+    }
+    if (type === issue_for_peeling.re_flitching) {
+      if (!available_details) {
+        throw new ApiError('Please provide available details', 400);
+      }
+    }
+
 
     // Other goods details
     const add_other_details_data =
@@ -110,7 +121,7 @@ export const add_slicing_done = catchAsync(async (req, res, next) => {
 
     if (
       issue_for_slicing_type?.type?.toLowerCase() ===
-      slicing_done.wastage?.toLowerCase()
+      issue_for_slicing.wastage?.toLowerCase()
     ) {
       const maxNumber = await issue_for_slicing_wastage_model.aggregate([
         {
@@ -141,7 +152,7 @@ export const add_slicing_done = catchAsync(async (req, res, next) => {
 
     if (
       issue_for_slicing_type?.type?.toLowerCase() ===
-      slicing_done.rest_roller?.toLowerCase()
+      issue_for_slicing.rest_roller?.toLowerCase()
     ) {
       const maxNumber = await issue_for_slicing_available_model.aggregate([
         {

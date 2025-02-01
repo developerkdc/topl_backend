@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import {
   issues_for_status,
-  slicing_done,
+  issue_for_slicing,
 } from '../../../../Utils/constants/constants.js';
 
 const issue_for_slicing_schema = new mongoose.Schema(
@@ -162,8 +162,8 @@ const issue_for_slicing_schema = new mongoose.Schema(
       type: String,
       default: null,
       enum: {
-        values: [slicing_done.rest_roller, slicing_done.wastage],
-        message: `Invalid type {{VALUE}} it must be one of the ${slicing_done.rest_roller} or ${slicing_done.wastage} `,
+        values: [issue_for_slicing.rest_roller, issue_for_slicing.wastage],
+        message: `Invalid type {{VALUE}} it must be one of the ${issue_for_slicing.rest_roller} or ${issue_for_slicing.wastage} `,
       },
     },
     is_slicing_completed: {

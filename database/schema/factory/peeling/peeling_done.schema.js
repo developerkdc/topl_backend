@@ -32,12 +32,6 @@ const peeling_done_other_details_schema = new mongoose.Schema(
     wastage_consumed_total_amount: {
       type: Number,
       default: 0,
-      required: [
-        function () {
-          return this.type === peeling_done.wastage;
-        },
-        'Wastage Consumed Total Amount is required.',
-      ],
     },
     remark: {
       type: String,
