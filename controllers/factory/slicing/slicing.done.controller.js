@@ -74,19 +74,7 @@ export const add_slicing_done = catchAsync(async (req, res, next) => {
     const add_other_details_id = other_details_data?._id;
 
     // item details
-    const maxNumber = await slicing_done_items_model.aggregate([
-      {
-        $group: {
-          _id: null,
-          max: { $max: '$sr_no' },
-        },
-      },
-    ]);
-
-    const maxSrNo = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1;
-
     const items_details_data = items_details?.map((item, index) => {
-      item.sr_no = maxSrNo + index;
       item.slicing_done_other_details_id = add_other_details_id;
       item.created_by = userDetails?._id;
       item.updated_by = userDetails?._id;
@@ -122,20 +110,8 @@ export const add_slicing_done = catchAsync(async (req, res, next) => {
       issue_for_slicing_type?.type?.toLowerCase() ===
       issue_for_slicing.wastage?.toLowerCase()
     ) {
-      const maxNumber = await issue_for_slicing_wastage_model.aggregate([
-        {
-          $group: {
-            _id: null,
-            max: { $max: '$sr_no' },
-          },
-        },
-      ]);
-
-      const maxSrNo = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1;
-
       const wastage_details_data = {
         ...wastage_details,
-        sr_no: maxSrNo,
         issue_for_slicing_id: issue_for_slicing_id,
         created_by: userDetails?._id,
         updated_by: userDetails?._id,
@@ -153,20 +129,8 @@ export const add_slicing_done = catchAsync(async (req, res, next) => {
       issue_for_slicing_type?.type?.toLowerCase() ===
       issue_for_slicing.rest_roller?.toLowerCase()
     ) {
-      const maxNumber = await issue_for_slicing_available_model.aggregate([
-        {
-          $group: {
-            _id: null,
-            max: { $max: '$sr_no' },
-          },
-        },
-      ]);
-
-      const maxSrNo = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1;
-
       const available_details_data = {
         ...available_details,
-        sr_no: maxSrNo,
         issue_for_slicing_id: issue_for_slicing_id,
         created_by: userDetails?._id,
         updated_by: userDetails?._id,

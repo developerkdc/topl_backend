@@ -2,10 +2,6 @@ import mongoose from 'mongoose';
 
 const issues_for_peeling_wastage_schema = new mongoose.Schema(
   {
-    sr_no: {
-      type: Number,
-      required: [true, 'Sr.No is required'],
-    },
     issue_for_peeling_id: {
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'issue for pelling id is required'],
@@ -25,7 +21,6 @@ const issues_for_peeling_wastage_schema = new mongoose.Schema(
       default: 0,
       required: [true, 'Available CMT is required.'],
     },
-
     total_wastage_amount: {
       type: Number,
       default: 0,
@@ -60,7 +55,6 @@ const issues_for_peeling_wastage_schema = new mongoose.Schema(
   }
 );
 
-issues_for_peeling_wastage_schema.index({ sr_no: 1 }, { unique: true });
 issues_for_peeling_wastage_schema.index({ issue_for_peeling_id: 1 });
 
 const issues_for_peeling_wastage_model = mongoose.model(

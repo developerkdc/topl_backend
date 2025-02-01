@@ -46,24 +46,12 @@ export const addIssueForPeelingFromLogInventory = catchAsync(
         );
       }
 
-      const maxNumber = await issues_for_peeling_model?.aggregate([
-        {
-          $group: {
-            _id: null,
-            max: { $max: '$sr_no' },
-          },
-        },
-      ]);
-
-      const maxSrNo = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1;
-
       const log_invoice_ids = new Set();
 
       const issue_for_peeling_data = logInventoryItemData?.map(
         (item, index) => {
           log_invoice_ids.add(item.invoice_id);
           return {
-            sr_no: maxSrNo + index,
             log_inventory_item_id: item?._id,
             crosscut_done_id: null,
             item_id: item?.item_id,
@@ -225,22 +213,11 @@ export const addIssueForPeelingFromCrosscutDone = catchAsync(
       if (crosscut_done_data?.length <= 0) {
         throw new ApiError('No Crosscut done data found', 400);
       }
-      const maxNumber = await issues_for_peeling_model?.aggregate([
-        {
-          $group: {
-            _id: null,
-            max: { $max: '$sr_no' },
-          },
-        },
-      ]);
-
-      const maxSrNo = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1;
 
       const issue_for_crosscutting_ids = new Set();
       const issue_for_peeling_data = crosscut_done_data?.map((item, index) => {
         issue_for_crosscutting_ids.add(item?.issue_for_crosscutting_id);
         return {
-          sr_no: maxSrNo + index,
           log_inventory_item_id: null,
           crosscut_done_id: item?._id,
           item_id: item?.issuedCrossCuttingDetails?.item_id,
