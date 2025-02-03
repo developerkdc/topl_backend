@@ -6,7 +6,7 @@ import {
   fetch_single_issued_for_peeling_item,
   listing_issued_for_peeling,
   revert_issue_for_peeling,
-} from '../../../controllers/factory/peeling/issue_for_peeling.controller.js';
+} from '../../../../controllers/factory/peeling/issues_for_peeling/issue_for_peeling.controller.js';
 const issueForPeelingRouter = express.Router();
 
 issueForPeelingRouter.post(
