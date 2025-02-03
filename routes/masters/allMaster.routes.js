@@ -14,6 +14,7 @@ import seriesRouter from './series.routes.js';
 import supplierMasterRouter from './supplier.routes.js';
 import unitMasterRouter from './unit.routes.js';
 import characterRouter from './Character/character.routes.js';
+import polishRouter from './Polish/polish.routes.js';
 import patternRouter from './Pattern/pattern.routes.js';
 import processRouter from './Process/process.routes.js';
 import colorRouter from './Color/color.routes.js';
@@ -50,5 +51,6 @@ allMasterRouter.use(`/transporter-master`, transporterRouter);
 allMasterRouter.use(`/dispatchAddress-master`, dispatchAddressRouter);
 allMasterRouter.use(`/photo-master`, photoRouter);
 allMasterRouter.use(`/customer-master`, [customerRouter, customerClientRouter]);
+allMasterRouter.use(`/polish-master`, polishRouter);
 
 export default allMasterRouter;
