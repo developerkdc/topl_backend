@@ -1,17 +1,22 @@
 import mongoose from 'mongoose';
 
-const characterSchema = new mongoose.Schema(
+const polishSchema = new mongoose.Schema(
   {
     sr_no: {
       type: Number,
       required: [true, 'Sr.No is required'],
-      // unique: [true, "Sr.No must be unique"]
     },
     name: {
       type: String,
       uppercase: true,
       trim: true,
-      required: [true, 'Character Name is required'],
+      required: [true, 'Polish Name is required'],
+    },
+    code: {
+      type: String,
+      uppercase: true,
+      trim: true,
+      required: [true, 'Polish Code is required'],
     },
     status: {
       type: Boolean,
@@ -31,9 +36,9 @@ const characterSchema = new mongoose.Schema(
   }
 );
 
-characterSchema.index({ name: 1 }, { unique: true });
-characterSchema.index({ sr_no: 1 }, { unique: true });
-characterSchema.index({ created_by: 1 });
-characterSchema.index({ updated_by: 1 });
-const characterModel = mongoose.model('characters', characterSchema);
-export default characterModel;
+polishSchema.index({ name: 1 }, { unique: true });
+polishSchema.index({ sr_no: 1 }, { unique: true });
+polishSchema.index({ created_by: 1 });
+polishSchema.index({ updated_by: 1 });
+const polishModel = mongoose.model('polish', polishSchema);
+export default polishModel;

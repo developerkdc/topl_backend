@@ -29,6 +29,10 @@ const slicing_done_other_details_schema = new mongoose.Schema(
       trim: true,
       uppercase: true,
     },
+    isEditable: {
+      type: Boolean,
+      default: true,
+    },
     total_amount: {
       type: Number,
       required: [true, 'Total Amount is required'],
