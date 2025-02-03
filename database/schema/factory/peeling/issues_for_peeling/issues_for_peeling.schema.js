@@ -4,7 +4,7 @@ import {
   issues_for_status,
 } from '../../../../Utils/constants/constants.js';
 
-const issue_for_peeling_schema = new mongoose.Schema(
+const issues_for_peeling_schema = new mongoose.Schema(
   {
     log_inventory_item_id: {
       type: mongoose.Schema.Types.ObjectId,
@@ -126,13 +126,13 @@ const issue_for_peeling_schema = new mongoose.Schema(
   }
 );
 
-issue_for_peeling_schema.index({ log_inventory_item_id: 1 });
-issue_for_peeling_schema.index({ crosscut_done_id: 1 });
+issues_for_peeling_schema.index({ log_inventory_item_id: 1 });
+issues_for_peeling_schema.index({ crosscut_done_id: 1 });
 
 export const issues_for_peeling_model = mongoose.model(
-  'issue_for_peelings',
-  issue_for_peeling_schema,
-  'issue_for_peelings'
+  'issues_for_peelings',
+  issues_for_peeling_schema,
+  'issues_for_peelings'
 );
 
 // const issue_for_peeling_view_schema = new mongoose.Schema({},{
@@ -145,7 +145,7 @@ export const issues_for_peeling_model = mongoose.model(
 
 // (async function () {
 //     await issue_for_peeling_view_model.createCollection({
-//         viewOn: "issue_for_peelings",
+//         viewOn: "issues_for_peelings",
 //         pipeline: [
 //             {
 //                 $sort: {

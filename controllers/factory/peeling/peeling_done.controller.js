@@ -10,6 +10,9 @@ import { issue_for_peeling } from '../../../database/Utils/constants/constants.j
 import ApiResponse from '../../../utils/ApiResponse.js';
 import ApiError from '../../../utils/errors/apiError.js';
 import catchAsync from '../../../utils/errors/catchAsync.js';
+import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
+import { dynamic_filter } from '../../../utils/dymanicFilter.js';
+import { StatusCodes } from '../../../utils/constants.js';
 
 export const add_peeling_done = catchAsync(async (req, res, next) => {
   const session = await mongoose.startSession();
@@ -277,7 +280,7 @@ export const edit_peeling_done = catchAsync(async (req, res, next) => {
     }
 
     //delete re-flitching
-    const delete_available = await issues_for_peeling_wastage_model.deleteOne(
+    const delete_available = await issues_for_peeling_available_model.deleteOne(
       { issue_for_peeling_id: issue_for_peeling_id },
       {
         session,
@@ -347,3 +350,410 @@ export const edit_peeling_done = catchAsync(async (req, res, next) => {
     await session.endSession();
   }
 });
+
+export const fetch_all_peeling_done_items = catchAsync(
+  async (req, res, next) => {
+    const {
+      page = 1,
+      sortBy = 'updatedAt',
+      sort = 'desc',
+      limit = 10,
+      search = '',
+    } = req.query;
+    const {
+      string,
+      boolean,
+      numbers,
+      arrayField = [],
+    } = req.body?.searchFields || {};
+
+    const filter = req.body?.filter;
+
+    let search_query = {};
+    if (search != '' && req?.body?.searchFields) {
+      const search_data = DynamicSearch(
+        search,
+        boolean,
+        numbers,
+        string,
+        arrayField
+      );
+      if (search_data?.length == 0) {
+        return res.status(404).json({
+          statusCode: 404,
+          status: false,
+          data: {
+            data: [],
+          },
+          message: 'Results Not Found',
+        });
+      }
+      search_query = search_data;
+    }
+
+    const filterData = dynamic_filter(filter);
+
+    const match_query = {
+      ...search_query,
+      ...filterData,
+    };
+
+    const aggLookupPeelingDoneOtherDetails = {
+      $lookup: {
+        from: 'peeling_done_other_details',
+        localField: 'peeling_done_other_details_id',
+        foreignField: '_id',
+        as: 'peeling_done_other_details',
+      },
+    };
+    const aggCreatedUserDetails = {
+      $lookup: {
+        from: 'users',
+        localField: 'created_by',
+        foreignField: '_id',
+        pipeline: [
+          {
+            $project: {
+              first_name: 1,
+              last_name: 1,
+              user_name: 1,
+              user_type: 1,
+              email_id: 1,
+            },
+          },
+        ],
+        as: 'created_user_details',
+      },
+    };
+
+    const aggUpdatedUserDetails = {
+      $lookup: {
+        from: 'users',
+        localField: 'updated_by',
+        foreignField: '_id',
+        pipeline: [
+          {
+            $project: {
+              first_name: 1,
+              last_name: 1,
+              user_name: 1,
+              user_type: 1,
+              email_id: 1,
+            },
+          },
+        ],
+        as: 'updated_user_details',
+      },
+    };
+    const aggMatch = {
+      $match: {
+        ...match_query,
+      },
+    };
+    const aggUnwindOtherDetails = {
+      $unwind: {
+        path: '$peeling_done_other_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    };
+
+    const aggUnwindCreatedUser = {
+      $unwind: {
+        path: '$created_user_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    };
+    const aggUnwindUpdatedUser = {
+      $unwind: {
+        path: '$updated_user_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    };
+    const aggSort = {
+      $sort: {
+        [sortBy]: sort === 'desc' ? -1 : 1,
+      },
+    };
+
+    const aggSkip = {
+      $skip: (parseInt(page) - 1) * parseInt(limit),
+    };
+
+    const aggLimit = {
+      $limit: parseInt(limit),
+    };
+
+    const list_aggregate = [
+      aggLookupPeelingDoneOtherDetails,
+      aggUnwindOtherDetails,
+      aggCreatedUserDetails,
+      aggUpdatedUserDetails,
+      aggUnwindCreatedUser,
+      aggUnwindUpdatedUser,
+      aggMatch,
+      aggSort,
+      aggSkip,
+      aggLimit,
+    ];
+
+    const result = await peeling_done_items_model.aggregate(list_aggregate);
+
+    const aggCount = {
+      $count: 'totalCount',
+    };
+
+    const count_total_docs = [
+      aggLookupPeelingDoneOtherDetails,
+      aggUnwindOtherDetails,
+      aggCreatedUserDetails,
+      aggUpdatedUserDetails,
+      aggUnwindCreatedUser,
+      aggUnwindUpdatedUser,
+      aggMatch,
+      aggCount,
+    ];
+
+    const total_docs =
+      await peeling_done_items_model.aggregate(count_total_docs);
+
+    const totalPages = Math.ceil((total_docs[0]?.totalCount || 0) / limit);
+
+    const response = new ApiResponse(200, 'Data Fetched Successfully', {
+      data: result,
+      totalPages: totalPages,
+    });
+    return res.status(200).json(response);
+  }
+);
+
+export const fetch_all_details_by_peeling_done_id = catchAsync(
+  async (req, res, next) => {
+    const { id } = req.params;
+
+    if (!id && !mongoose.isValidObjectId(id)) {
+      throw new ApiError('Invalid ID', StatusCodes.NOT_FOUND);
+    }
+
+    const pipeline = [
+      {
+        $match: {
+          _id: mongoose.Types.ObjectId.createFromHexString(id),
+        },
+      },
+      {
+        $lookup: {
+          from: 'issues_for_peelings',
+          foreignField: '_id',
+          localField: 'issue_for_peeling_id',
+          as: 'issue_for_peeling_details',
+        },
+      },
+      {
+        $unwind: {
+          path: '$issue_for_peeling_details',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $lookup: {
+          from: 'issues_for_peeling_wastage',
+          foreignField: 'issue_for_peeling_id',
+          localField: 'issue_for_peeling_id',
+          as: 'issue_for_peeling_wastage_details',
+        },
+      },
+      {
+        $lookup: {
+          from: 'issues_for_peeling_available',
+          foreignField: 'issue_for_peeling_id',
+          localField: 'issue_for_peeling_id',
+          as: 'issue_for_peeling_available_details',
+        },
+      },
+      {
+        $unwind: {
+          path: '$issue_for_peeling_wastage_details',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $unwind: {
+          path: '$issue_for_peeling_available_details',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $lookup: {
+          from: 'peeling_done_items',
+          foreignField: 'peeling_done_other_details_id',
+          localField: '_id',
+          as: 'peeling_done_items_details',
+        },
+      },
+    ];
+    const result = await peeling_done_other_details_model.aggregate(pipeline);
+
+    const response = new ApiResponse(
+      StatusCodes.OK,
+      'Details Fetched successfully',
+      result
+    );
+
+    return res.status(StatusCodes.OK).json(response);
+  }
+);
+
+// export const fetch_slicing_done_history = catchAsync(async (req, res, next) => {
+//   const {
+//     page = 1,
+//     sortBy = 'updatedAt',
+//     sort = 'desc',
+//     limit = 10,
+//     search = '',
+//   } = req.query;
+//   const {
+//     string,
+//     boolean,
+//     numbers,
+//     arrayField = [],
+//   } = req.body?.searchFields || {};
+
+//   const filter = req.body?.filter;
+
+//   let search_query = {};
+//   if (search != '' && req?.body?.searchFields) {
+//     const search_data = DynamicSearch(
+//       search,
+//       boolean,
+//       numbers,
+//       string,
+//       arrayField
+//     );
+//     if (search_data?.length == 0) {
+//       return res.status(404).json({
+//         statusCode: 404,
+//         status: false,
+//         data: {
+//           data: [],
+//         },
+//         message: 'Results Not Found',
+//       });
+//     }
+//     search_query = search_data;
+//   }
+
+//   const filterData = dynamic_filter(filter);
+
+//   const match_query = {
+//     ...search_query,
+//     ...filterData,
+//     issue_status: { $ne: null },
+//   };
+//   const aggMatch = {
+//     $match: {
+//       ...match_query,
+//     },
+//   };
+//   const aggCreatedUserDetails = {
+//     $lookup: {
+//       from: 'users',
+//       localField: 'created_by',
+//       foreignField: '_id',
+//       pipeline: [
+//         {
+//           $project: {
+//             first_name: 1,
+//             last_name: 1,
+//             user_name: 1,
+//             user_type: 1,
+//             email_id: 1,
+//           },
+//         },
+//       ],
+//       as: 'created_user_details',
+//     },
+//   };
+//   const aggUpdatedUserDetails = {
+//     $lookup: {
+//       from: 'users',
+//       localField: 'updated_by',
+//       foreignField: '_id',
+//       pipeline: [
+//         {
+//           $project: {
+//             first_name: 1,
+//             last_name: 1,
+//             user_name: 1,
+//             user_type: 1,
+//             email_id: 1,
+//           },
+//         },
+//       ],
+//       as: 'updated_user_details',
+//     },
+//   };
+//   const aggUnwindCreatedUser = {
+//     $unwind: {
+//       path: '$created_user_details',
+//       preserveNullAndEmptyArrays: true,
+//     },
+//   };
+//   const aggUnwindUpdatdUser = {
+//     $unwind: {
+//       path: '$updated_user_details',
+//       preserveNullAndEmptyArrays: true,
+//     },
+//   };
+
+//   const aggLimit = {
+//     $limit: parseInt(limit),
+//   };
+
+//   const aggSkip = {
+//     $skip: (parseInt(page) - 1) * parseInt(limit),
+//   };
+
+//   const aggSort = {
+//     $sort: { [sortBy]: sort === 'desc' ? -1 : 1 },
+//   };
+//   const list_aggregate = [
+//     aggCreatedUserDetails,
+//     aggUpdatedUserDetails,
+//     aggUnwindCreatedUser,
+//     aggUnwindUpdatdUser,
+//     aggMatch,
+//     aggSort,
+//     aggSkip,
+//     aggLimit,
+//   ];
+
+//   const result = await slicing_done_items_model.aggregate(list_aggregate);
+
+//   const aggCount = {
+//     $count: 'totalCount',
+//   };
+
+//   const count_total_docs = [
+//     aggCreatedUserDetails,
+//     aggUpdatedUserDetails,
+//     aggUnwindCreatedUser,
+//     aggUnwindUpdatdUser,
+//     aggMatch,
+//     aggCount,
+//   ];
+
+//   const total_docs = await slicing_done_items_model.aggregate(count_total_docs);
+
+//   const totalPages = Math.ceil((total_docs[0]?.totalCount || 0) / limit);
+
+//   const response = new ApiResponse(
+//     StatusCodes.OK,
+//     'Data fetched successfully...',
+//     {
+//       data: result,
+//       totalPages: totalPages,
+//     }
+//   );
+
+//   return res.status(StatusCodes.OK).json(response);
+// });
