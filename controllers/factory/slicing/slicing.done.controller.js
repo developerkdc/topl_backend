@@ -269,7 +269,7 @@ export const fetch_all_slicing_done_items = catchAsync(
     const aggCreatedUserDetails = {
       $lookup: {
         from: 'users',
-        localField: 'slicing_done_other_details.created_by',
+        localField: 'created_by',
         foreignField: '_id',
         pipeline: [
           {
@@ -289,7 +289,7 @@ export const fetch_all_slicing_done_items = catchAsync(
     const aggUpdatedUserDetails = {
       $lookup: {
         from: 'users',
-        localField: 'slicing_done_other_details.updated_by',
+        localField: 'updated_by',
         foreignField: '_id',
         pipeline: [
           {
@@ -389,39 +389,23 @@ export const fetch_all_slicing_done_items = catchAsync(
 
 export const fetch_all_details_by_slicing_done_id = catchAsync(
   async (req, res, next) => {
-    const { id } = req.query;
+    const { id } = req.params;
 
-    if (!id) {
-      throw new ApiError('ID is missing', StatusCodes.NOT_FOUND);
+    if (!id && !mongoose.isValidObjectId(id)) {
+      throw new ApiError('Invalid ID', StatusCodes.NOT_FOUND);
     }
 
     const pipeline = [
       {
         $match: {
-          slicing_done_other_details_id:
-            mongoose.Types.ObjectId.createFromHexString(id),
+          _id: mongoose.Types.ObjectId.createFromHexString(id),
         },
       },
-      {
-        $lookup: {
-          from: 'slicing_done_other_details',
-          foreignField: '_id',
-          localField: 'slicing_done_other_details_id',
-          as: 'other_details',
-        },
-      },
-      {
-        $unwind: {
-          path: '$other_details',
-          preserveNullAndEmptyArrays: true,
-        },
-      },
-
       {
         $lookup: {
           from: 'issued_for_slicings',
           foreignField: '_id',
-          localField: 'other_details.issue_for_slicing_id',
+          localField: 'issue_for_slicing_id',
           as: 'issued_for_slicing_details',
         },
       },
@@ -435,7 +419,7 @@ export const fetch_all_details_by_slicing_done_id = catchAsync(
         $lookup: {
           from: 'issue_for_slicing_wastage',
           foreignField: 'issue_for_slicing_id',
-          localField: 'issued_for_slicing_details._id',
+          localField: 'issue_for_slicing_id',
           as: 'issue_for_slicing_wastage_details',
         },
       },
@@ -443,7 +427,7 @@ export const fetch_all_details_by_slicing_done_id = catchAsync(
         $lookup: {
           from: 'issue_for_slicing_available',
           foreignField: 'issue_for_slicing_id',
-          localField: 'issued_for_slicing_details._id',
+          localField: 'issue_for_slicing_id',
           as: 'issue_for_slicing_available_details',
         },
       },
@@ -460,52 +444,15 @@ export const fetch_all_details_by_slicing_done_id = catchAsync(
         },
       },
       {
-        $group: {
-          _id: 'slicing_done_other_details_id',
-          other_slicing_details: { $first: '$other_details' },
-          issue_for_slicing_details: { $first: '$issued_for_slicing_details' },
-          issue_for_slicing_wastage_details: {
-            $first: '$issue_for_slicing_wastage_details',
-          },
-          issue_for_slicing_available_details: {
-            $first: '$issue_for_slicing_available_details',
-          },
-          items: {
-            $push: {
-              _id: '$_id',
-              sr_no: '$sr_no',
-              slicing_done_other_details_id: '$slicing_done_other_details_id',
-              item_name: '$item_name',
-              item_name_id: '$item_name_id',
-              log_no_code: '$log_no_code',
-              flitch_no: '$flitch_no',
-              flitch_side: '$flitch_side',
-              length: '$length',
-              width: '$width',
-              height: '$height',
-              thickness: '$thickness',
-              no_of_leaves: '$no_of_leaves',
-              cmt: '$cmt',
-              color_id: '$color_id',
-              color_name: '$color_name',
-              character_id: '$character_id',
-              character_name: '$character_name',
-              pattern_id: '$pattern_id',
-              pattern_name: '$pattern_name',
-              series_id: '$series_id',
-              series_name: '$series_name',
-              grade_id: '$grade_id',
-              grade_name: '$grade_name',
-              issued_for_dressing: '$issued_for_dressing',
-              item_total_amount: '$item_total_amount',
-              item_wastage_consumed_amount: '$item_wastage_consumed_amount',
-              remark: '$remark',
-            },
-          },
+        $lookup: {
+          from: 'slicing_done_items',
+          foreignField: 'slicing_done_other_details_id',
+          localField: '_id',
+          as: 'slicing_done_items_details',
         },
       },
     ];
-    const result = await slicing_done_items_model.aggregate(pipeline);
+    const result = await slicing_done_other_details_model.aggregate(pipeline);
 
     const response = new ApiResponse(
       StatusCodes.OK,

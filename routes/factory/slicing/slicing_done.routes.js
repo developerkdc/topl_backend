@@ -16,7 +16,7 @@ slicingDoneRouter.post(
   fetch_all_slicing_done_items
 );
 slicingDoneRouter.get(
-  '/list-all-slicing-done-by-other-details-id',
+  '/fetch-single-slicing-done-details/:id',
   AuthMiddleware,
   fetch_all_details_by_slicing_done_id
 );

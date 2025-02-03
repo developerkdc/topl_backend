@@ -1,5 +1,5 @@
 import express from 'express';
-import AuthMiddleware from '../../../middlewares/verifyToken.js';
+import AuthMiddleware from '../../../../middlewares/verifyToken.js';
 import {
   addIssueForPeelingFromCrosscutDone,
   addIssueForPeelingFromLogInventory,
