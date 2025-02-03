@@ -1,10 +1,6 @@
 import mongoose from 'mongoose';
 
 const issue_for_slicing_available_schema = new mongoose.Schema({
-  sr_no: {
-    type: Number,
-    required: [true, 'Sr.No is required'],
-  },
   issue_for_slicing_id: {
     type: mongoose.Schema.Types.ObjectId,
     required: [true, 'Issue for Slicing ID is required.'],

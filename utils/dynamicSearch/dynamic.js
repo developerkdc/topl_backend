@@ -32,6 +32,7 @@ export const DynamicSearch = (
     const searchQuery =
       dynamicSearchQueries?.length > 0 ? { $or: dynamicSearchQueries } : [];
 
+    console.log('search qurery => ', searchQuery);
     return searchQuery;
   } else {
     return [];

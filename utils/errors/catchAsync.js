@@ -6,20 +6,6 @@ const catchAsync = (fn) => {
     try {
       await fn(req, res, next);
     } catch (error) {
-      //   if (req.files) {
-      //     console.log(req.files);
-      //     const { banner_image, images } = req.files;
-
-      //     if (banner_image && banner_image.length > 0) {
-      //       fs.unlinkSync(banner_image[0].path);
-      //     }
-
-      //     if (images && images.length > 0) {
-      //       images.forEach((image) => {
-      //         fs.unlinkSync(image.path);
-      //       });
-      //     }
-      //   }
       if (req.files) {
         const fileFields = Object.keys(req.files);
         fileFields.forEach((field) => {
@@ -31,7 +17,6 @@ const catchAsync = (fn) => {
           }
         });
       }
-
       return next(error);
     }
   };
