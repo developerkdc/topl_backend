@@ -5,7 +5,7 @@ import {
   fetchBarcodeList,
   fetchSingleBarcode,
   updateBarcodeDetails,
-  dropdownBarcode,
+  dropdownBarcode, updateBarcodeStatus
 } from '../../controllers/seriesProductMaster/barcode.master.controller.js';
 import { MulterFunction } from '../../config/multer/multer.js';
 const router = Router();
@@ -28,6 +28,7 @@ router.post(
 );
 router.post('/list-barcode', AuthMiddleware, fetchBarcodeList);
 router.get('/list-single-barcode/:id', AuthMiddleware, fetchSingleBarcode);
+router.patch('/update-barcode-status', AuthMiddleware, updateBarcodeStatus);
 
 //Without Permission
 router.get('/dropdown-barcode', AuthMiddleware, dropdownBarcode);
