@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { issues_for_status } from '../../../Utils/constants/constants.js';
+import { issues_for_status, slicing_done_from } from '../../../Utils/constants/constants.js';
 
 const slicing_done_other_details_schema = new mongoose.Schema(
   {
@@ -173,6 +173,7 @@ const slicing_done_items_schema = new mongoose.Schema({
   },
   issue_status: {
     type: String,
+    default: null,
     enum: {
       values: [issues_for_status?.dressing],
       message: `Invalid Issue Status {{VALUE}} issue status must be one of the ${issues_for_status?.dressing} `,
@@ -184,6 +185,10 @@ const slicing_done_items_schema = new mongoose.Schema({
       return this.item_amount + this.item_wastage_consumed_amount;
     },
     required: [true, 'Item Total Amount is required'],
+  },
+  slicing_done_from: {
+    type: String,
+    default: null
   },
   remark: {
     type: String,

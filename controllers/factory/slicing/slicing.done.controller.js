@@ -6,6 +6,7 @@ import mongoose from 'mongoose';
 import {
   issues_for_status,
   issue_for_slicing,
+  slicing_done_from,
 } from '../../../database/Utils/constants/constants.js';
 
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
@@ -708,7 +709,7 @@ export const edit_slicing_done = catchAsync(async (req, res, next) => {
     //add wastage
     if (
       issue_for_slicing_type?.type?.toLowerCase() ===
-        issue_for_slicing.wastage?.toLowerCase() &&
+      issue_for_slicing.wastage?.toLowerCase() &&
       wastage_details
     ) {
       const wastage_details_data = {
@@ -730,7 +731,7 @@ export const edit_slicing_done = catchAsync(async (req, res, next) => {
     // add available
     if (
       issue_for_slicing_type?.type?.toLowerCase() ===
-        issue_for_slicing.rest_roller?.toLowerCase() &&
+      issue_for_slicing.rest_roller?.toLowerCase() &&
       available_details
     ) {
       const re_slicing_details_data = {
@@ -901,5 +902,96 @@ export const revert_slicing_done = catchAsync(async (req, res, next) => {
     throw error;
   } finally {
     await session.endSession();
+  }
+});
+
+export const add_reslicing_done = catchAsync(async (req, res, next) => {
+  const { other_details, items_details, type, wastage_details } = req.body;
+  const { userDetails } = req.userDetails
+  const session = await mongoose.startSession()
+  try {
+    session.startTransaction()
+
+    for (let field of ["other_details", "items_details", "type"]) {
+      if (!req.body?.[field]) {
+        throw new ApiError(`${field} is missing...`, StatusCodes.BAD_REQUEST)
+      }
+    };
+    if (type?.toLowerCase() === issue_for_slicing?.wastage?.toLowerCase()) {
+      if (!wastage_details) {
+        throw new ApiError("Wastage details are required..", StatusCodes.BAD_REQUEST)
+      }
+    };
+
+    const add_other_details_data = await slicing_done_other_details_model.create([
+      {
+        ...other_details,
+        created_by: userDetails?._id,
+        updated_by: userDetails?._id
+      }
+    ], { session });
+
+    const other_details_data = add_other_details_data?.[0];
+
+    if (!other_details_data) {
+      throw new ApiError("Failed to add other details", StatusCodes.BAD_REQUEST)
+    };
+    const add_other_details_id = other_details_data?._id;
+
+    //item_details
+
+    const items_details_data = items_details?.map((item) => {
+      item.slicing_done_other_details_id = add_other_details_id;
+      item.slicing_done_from = slicing_done_from?.re_slicing;
+      item.created_by = userDetails?._id,
+        item.updated_by = userDetails?._id
+      return item
+    });
+
+    const add_items_details_data = await slicing_done_items_model.insertMany(items_details_data, { session });
+
+    if (add_items_details_data?.length === 0) {
+      throw new ApiError("Failed to add Slicing Item Details", StatusCodes.OK)
+    };
+
+    const issue_for_slicing_id = other_details_data?.issue_for_slicing_id
+
+    const update_issue_for_slicing_type = await issued_for_slicing_model?.findOneAndUpdate({ _id: issue_for_slicing_id }, {
+      $set: {
+        type: type,
+        updated_by: userDetails?._id
+      }
+    }, { new: true, runValidators: true, session });
+
+    if (!update_issue_for_slicing_type) {
+      throw new ApiError("Failed to update issue for slicing type", StatusCodes.BAD_REQUEST)
+    };
+
+
+    //add wastage details
+    if (type?.toLowerCase() === issue_for_slicing?.wastage?.toLowerCase()) {
+      const add_wastage_details = await issue_for_slicing_wastage_model.create([{
+        ...wastage_details,
+        issue_for_slicing_id: issue_for_slicing_id,
+        created_by: userDetails?._id,
+        updated_by: userDetails?._id
+      }], { session });
+
+      if (add_wastage_details?.length === 0) {
+        throw new ApiError("Failed to add wastage details", StatusCodes.BAD_REQUEST)
+      };
+    };
+
+    await session.commitTransaction();
+
+    const response = new ApiResponse(StatusCodes.OK, "Re-Slicing Done Sucessfully", { other_details: other_details, items_details: items_details, wastage_details: wastage_details });
+
+    return res.status(StatusCodes.OK).json(response);
+
+  } catch (error) {
+    await session.abortTransaction();
+    throw error
+  } finally {
+    await session.endSession()
   }
 });
