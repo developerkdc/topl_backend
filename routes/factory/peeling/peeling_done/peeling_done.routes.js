@@ -1,11 +1,12 @@
 import express from 'express';
-import AuthMiddleware from '../../../middlewares/verifyToken.js';
 import {
   add_peeling_done,
   edit_peeling_done,
   fetch_all_details_by_peeling_done_id,
   fetch_all_peeling_done_items,
-} from '../../../controllers/factory/peeling/peeling_done.controller.js';
+  revert_all_pending_done,
+} from '../../../../controllers/factory/peeling/peeling_done/peeling_done.controller.js';
+import AuthMiddleware from '../../../../middlewares/verifyToken.js';
 const peelingDoneRouter = express.Router();
 
 peelingDoneRouter.post('/add-peeling-done', AuthMiddleware, add_peeling_done);
@@ -23,6 +24,11 @@ peelingDoneRouter.get(
   '/fetch-single-peeling-done-details/:id',
   AuthMiddleware,
   fetch_all_details_by_peeling_done_id
+);
+peelingDoneRouter.post(
+  '/revert-peeling-done-details/:id',
+  AuthMiddleware,
+  revert_all_pending_done
 );
 
 export default peelingDoneRouter;
