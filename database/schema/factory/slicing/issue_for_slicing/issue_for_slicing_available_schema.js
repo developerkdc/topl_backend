@@ -37,6 +37,10 @@ const issue_for_slicing_available_schema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  is_reslicing_done: {
+    type: Boolean,
+    default: false
+  },
   created_by: {
     type: mongoose.Schema.Types.ObjectId,
     required: [true, 'Created By is required'],

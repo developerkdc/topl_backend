@@ -121,18 +121,6 @@ export const item_details_schema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-    color: {
-      color_id: {
-        type: mongoose.Schema.Types.ObjectId,
-        default: null,
-        // required: [true, 'color id is required'],
-      },
-      color_name: {
-        type: String,
-        default: null,
-        // required: [true, 'color name is required'],
-      },
-    },
     issue_status: {
       type: String,
       enum: {

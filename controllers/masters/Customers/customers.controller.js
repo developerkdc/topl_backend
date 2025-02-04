@@ -262,9 +262,19 @@ export const fetchCustomerList = catchAsync(async (req, res, next) => {
   };
   const aggTransport = {
     $lookup: {
-      from: 'transports',
+      from: 'transporters',
       localField: 'preferable_transport_for_part_load',
       foreignField: '_id',
+      pipeline: [
+        {
+          $project: {
+            name: 1,
+            branch: 1,
+            transport_id: 1,
+            type: 1,
+          }
+        }
+      ],
       as: 'preferable_transport_for_part_load',
     },
   };
@@ -385,6 +395,30 @@ export const fetchSingleCustomer = catchAsync(async (req, res, next) => {
           },
         ],
         as: 'updated_by',
+      },
+    },
+    {
+      $lookup: {
+        from: 'transporters',
+        localField: 'preferable_transport_for_part_load',
+        foreignField: '_id',
+        pipeline: [
+          {
+            $project: {
+              name: 1,
+              branch: 1,
+              transport_id: 1,
+              type: 1,
+            }
+          }
+        ],
+        as: 'preferable_transport_for_part_load',
+      },
+    },
+    {
+      $unwind: {
+        path: '$preferable_transport_for_part_load',
+        preserveNullAndEmptyArrays: true,
       },
     },
     {

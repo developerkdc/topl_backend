@@ -58,11 +58,6 @@ const slicing_done_other_details_schema = new mongoose.Schema(
 );
 
 slicing_done_other_details_schema.index({ type: 1 });
-slicing_done_other_details_schema.index(
-  { issue_for_slicing_id: 1 },
-  { unique: true }
-);
-
 export const slicing_done_other_details_model = mongoose.model(
   'slicing_done_other_details',
   slicing_done_other_details_schema,
@@ -202,7 +197,7 @@ const slicing_done_items_schema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     required: [true, 'Updated By Id is required'],
   },
-});
+}, { timestamps: true });
 
 slicing_done_items_schema.index({ slicing_done_other_details_id: 1 });
 slicing_done_items_schema.index({ log_no_code: 1 }, { unique: true });
