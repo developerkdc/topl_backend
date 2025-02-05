@@ -160,6 +160,10 @@ const customerSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    is_turnover_based_tcs_applicable: {
+      type: Boolean,
+      default: true,
+    },
     remark: {
       type: String,
       uppercase: true,
