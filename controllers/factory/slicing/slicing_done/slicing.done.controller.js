@@ -725,7 +725,7 @@ export const edit_slicing_done = catchAsync(async (req, res, next) => {
     //add wastage
     if (
       issue_for_slicing_type?.type?.toLowerCase() ===
-        issue_for_slicing.wastage?.toLowerCase() &&
+      issue_for_slicing.wastage?.toLowerCase() &&
       wastage_details
     ) {
       const wastage_details_data = {
@@ -747,7 +747,7 @@ export const edit_slicing_done = catchAsync(async (req, res, next) => {
     // add available
     if (
       issue_for_slicing_type?.type?.toLowerCase() ===
-        issue_for_slicing.rest_roller?.toLowerCase() &&
+      issue_for_slicing.rest_roller?.toLowerCase() &&
       available_details
     ) {
       const re_slicing_details_data = {
@@ -1239,3 +1239,33 @@ export const revert_re_slicing_done = catchAsync(async (req, res, next) => {
     await session.endSession();
   }
 });
+
+
+export const update_slicing_done_items_details = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  const { no_of_leaves, thickness } = req.body;
+
+  if (!mongoose.isValidObjectId(id)) {
+    throw new ApiError("Invalid ID", StatusCodes.BAD_REQUEST)
+  };
+
+  const { _id } = req.userDetails;
+  const update_result = await slicing_done_items_model.updateOne({ _id: id }, {
+    $set: {
+      no_of_leaves: no_of_leaves, thickness: thickness, updated_by: _id
+    }
+  });
+  if (update_result.matchedCount <= 0) {
+    throw new ApiError("Item Not Found", StatusCodes.NOT_FOUND)
+  }
+
+  if (!update_result.acknowledged || update_result.modifiedCount <= 0) {
+    throw new ApiError("Failed to update item", StatusCodes.BAD_REQUEST)
+  };
+
+  const response = new ApiResponse(StatusCodes.OK, "Item Updated Successfully");
+
+  return res.status(StatusCodes.OK).json(response)
+
+})
+

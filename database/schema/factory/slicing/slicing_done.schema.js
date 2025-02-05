@@ -40,6 +40,10 @@ const slicing_done_other_details_schema = new mongoose.Schema(
       type: Number,
       required: [true, 'Total Amount is required'],
     },
+    total_cmt: {
+      type: Number,
+      required: [true, 'Total CMT is required'],
+    },
     wastage_consumed_total_amount: {
       type: Number,
       default: 0,
@@ -93,18 +97,18 @@ const slicing_done_items_schema = new mongoose.Schema(
       type: String,
       required: [true, 'Flitch Side is required'],
     },
-    length: {
-      type: Number,
-      required: [true, 'Length is required'],
-    },
-    width: {
-      type: Number,
-      required: [true, 'Width is required'],
-    },
-    height: {
-      type: Number,
-      required: [true, 'Height is required'],
-    },
+    // length: {
+    //   type: Number,
+    //   required: [true, 'Length is required'],
+    // },
+    // width: {
+    //   type: Number,
+    //   required: [true, 'Width is required'],
+    // },
+    // height: {
+    //   type: Number,
+    //   required: [true, 'Height is required'],
+    // },
     thickness: {
       type: Number,
       required: [true, 'Thickness is required'],
@@ -113,10 +117,10 @@ const slicing_done_items_schema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-    cmt: {
-      type: Number,
-      required: [true, 'CMT is required'],
-    },
+    // cmt: {
+    //   type: Number,
+    //   required: [true, 'CMT is required'],
+    // },
     color_id: {
       type: mongoose.Schema.Types.ObjectId,
       default: null,
@@ -161,14 +165,14 @@ const slicing_done_items_schema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    item_amount: {
-      type: Number,
-      required: [true, 'Item Amount is required'],
-    },
-    item_wastage_consumed_amount: {
-      type: Number,
-      default: 0,
-    },
+    // item_amount: {
+    //   type: Number,
+    //   required: [true, 'Item Amount is required'],
+    // },
+    // item_wastage_consumed_amount: {
+    //   type: Number,
+    //   default: 0,
+    // },
     issue_status: {
       type: String,
       default: null,
@@ -177,13 +181,13 @@ const slicing_done_items_schema = new mongoose.Schema(
         message: `Invalid Issue Status {{VALUE}} issue status must be one of the ${issues_for_status?.dressing} `,
       },
     },
-    item_total_amount: {
-      type: Number,
-      default: function () {
-        return this.item_amount + this.item_wastage_consumed_amount;
-      },
-      required: [true, 'Item Total Amount is required'],
-    },
+    // item_total_amount: {
+    //   type: Number,
+    //   default: function () {
+    //     return this.item_amount + this.item_wastage_consumed_amount;
+    //   },
+    //   required: [true, 'Item Total Amount is required'],
+    // },
     slicing_done_from: {
       type: String,
       default: null,
