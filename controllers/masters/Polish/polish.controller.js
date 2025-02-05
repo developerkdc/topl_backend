@@ -7,7 +7,7 @@ import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
 
 export const addPolish = catchAsync(async (req, res, next) => {
-  const { name, code} = req.body;
+  const { name, code } = req.body;
   const authUserDetail = req.userDetails;
 
   if (!name) {
@@ -74,10 +74,7 @@ export const updatePolish = catchAsync(async (req, res, next) => {
   if (updatePolishData.matchedCount <= 0) {
     return next(new ApiError('Document not found', 404));
   }
-  if (
-    !updatePolishData.acknowledged ||
-    updatePolishData.modifiedCount <= 0
-  ) {
+  if (!updatePolishData.acknowledged || updatePolishData.modifiedCount <= 0) {
     return next(new ApiError('Failed to update document', 500));
   }
 
@@ -340,7 +337,7 @@ export const dropdownPolish = catchAsync(async (req, res, next) => {
     {
       $project: {
         name: 1,
-        code:1
+        code: 1,
       },
     },
   ]);

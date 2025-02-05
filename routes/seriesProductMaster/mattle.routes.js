@@ -6,6 +6,7 @@ import {
   fetchMattleList,
   fetchSingleMattle,
   updateMattleDetails,
+  updateStatus,
 } from '../../controllers/seriesProductMaster/mattle.master.controller.js';
 import { MulterFunction } from '../../config/multer/multer.js';
 const router = Router();
@@ -28,6 +29,7 @@ router.post(
 );
 router.post('/list-mattle', AuthMiddleware, fetchMattleList);
 router.get('/list-single-mattle/:id', AuthMiddleware, fetchSingleMattle);
+router.patch('/update-mattle-status', AuthMiddleware, updateStatus);
 
 //without permission
 router.get('/dropdown-mattle', AuthMiddleware, dropdownMattle);

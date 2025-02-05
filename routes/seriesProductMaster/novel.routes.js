@@ -6,6 +6,7 @@ import {
   fetchNovelList,
   fetchSingleNovel,
   updateNovelDetails,
+  updateStatus,
 } from '../../controllers/seriesProductMaster/novel.master.controller.js';
 import { MulterFunction } from '../../config/multer/multer.js';
 const router = Router();
@@ -28,6 +29,7 @@ router.post(
 );
 router.post('/list-novel', AuthMiddleware, fetchNovelList);
 router.get('/list-single-novel/:id', AuthMiddleware, fetchSingleNovel);
+router.patch('/update-novel-status', AuthMiddleware, updateStatus);
 
 //without permission
 router.get('/dropdown-novel', AuthMiddleware, dropdownNovel);

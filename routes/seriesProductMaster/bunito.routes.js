@@ -5,7 +5,8 @@ import {
   dropdownBunito,
   fetchBunitoList,
   fetchSingleBunito,
-  updateBunitoDetails, updateStatus
+  updateBunitoDetails,
+  updateStatus,
 } from '../../controllers/seriesProductMaster/bunito.master.controller.js';
 import { MulterFunction } from '../../config/multer/multer.js';
 const router = Router();

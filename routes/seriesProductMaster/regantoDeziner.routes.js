@@ -6,6 +6,7 @@ import {
   fetchRegantoDezinerList,
   fetchSingleRegantoDeziner,
   updateRegantoDezinerDetails,
+  updateStatus,
 } from '../../controllers/seriesProductMaster/regantoDeziner.master.controller.js';
 import { MulterFunction } from '../../config/multer/multer.js';
 
@@ -33,6 +34,7 @@ router.get(
   AuthMiddleware,
   fetchSingleRegantoDeziner
 );
+router.patch('/update-regantoDeziner-status', AuthMiddleware, updateStatus);
 router.get('/dropdown-regantoDeziner', dropdownRegantoDeziner);
 
 export default router;

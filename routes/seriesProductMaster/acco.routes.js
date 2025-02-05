@@ -5,7 +5,8 @@ import {
   dropdownAcco,
   fetchAccoList,
   fetchSingleAcco,
-  updateAccoDetails, updateStatus
+  updateAccoDetails,
+  updateStatus,
 } from '../../controllers/seriesProductMaster/acco.master.controller.js';
 import { MulterFunction } from '../../config/multer/multer.js';
 const router = Router();

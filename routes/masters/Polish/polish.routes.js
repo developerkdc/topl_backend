@@ -13,11 +13,7 @@ const polishRouter = express.Router();
 polishRouter.post('/add-polish', AuthMiddleware, addPolish);
 polishRouter.patch('/update-polish/:id', AuthMiddleware, updatePolish);
 
-polishRouter.get(
-  '/single-polish/:id',
-  AuthMiddleware,
-  fetchSinglePolish
-);
+polishRouter.get('/single-polish/:id', AuthMiddleware, fetchSinglePolish);
 polishRouter.post('/list-polish', AuthMiddleware, fetchPolishList);
 
 polishRouter.get('/dropdown-polish', AuthMiddleware, dropdownPolish);

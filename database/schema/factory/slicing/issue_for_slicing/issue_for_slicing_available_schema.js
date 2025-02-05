@@ -35,11 +35,11 @@ const issue_for_slicing_available_schema = new mongoose.Schema({
   },
   issued_for_dressing: {
     type: Boolean,
-    default: false
+    default: false,
   },
   is_reslicing_done: {
     type: Boolean,
-    default: false
+    default: false,
   },
   created_by: {
     type: mongoose.Schema.Types.ObjectId,

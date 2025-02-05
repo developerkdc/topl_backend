@@ -5,7 +5,8 @@ import {
   dropdownChromaComposite,
   fetchChromaCompositeList,
   fetchSingleChromaComposite,
-  updateChromaCompositeDetails, updateStatus
+  updateChromaCompositeDetails,
+  updateStatus,
 } from '../../controllers/seriesProductMaster/chromaComposite.master.controller.js';
 import { MulterFunction } from '../../config/multer/multer.js';
 const router = Router();

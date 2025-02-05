@@ -5,7 +5,8 @@ import {
   dropdownChromaRibbed,
   fetchChromaRibbedList,
   fetchSingleChromaRibbed,
-  updateChromaRibbedDetails, updateStatus
+  updateChromaRibbedDetails,
+  updateStatus,
 } from '../../controllers/seriesProductMaster/chromaRibbed.master.controller.js';
 import { MulterFunction } from '../../config/multer/multer.js';
 const router = Router();

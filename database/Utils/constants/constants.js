@@ -35,6 +35,6 @@ export const issue_for_slicing = {
 };
 
 export const slicing_done_from = {
-  issue_for_slicing: "issue_for_slicing",
-  re_slicing: "re_slicing"
-}
+  issue_for_slicing: 'issue_for_slicing',
+  re_slicing: 're_slicing',
+};

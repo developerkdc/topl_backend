@@ -272,8 +272,8 @@ export const fetchCustomerList = catchAsync(async (req, res, next) => {
             branch: 1,
             transport_id: 1,
             type: 1,
-          }
-        }
+          },
+        },
       ],
       as: 'preferable_transport_for_part_load',
     },
@@ -409,8 +409,8 @@ export const fetchSingleCustomer = catchAsync(async (req, res, next) => {
               branch: 1,
               transport_id: 1,
               type: 1,
-            }
-          }
+            },
+          },
         ],
         as: 'preferable_transport_for_part_load',
       },
