@@ -13,7 +13,8 @@ export const addBunito = catchAsync(async (req, res, next) => {
   const image = req.file;
   const required_array_fields = [
     'size',
-    'sub_category',
+    "veneer_sub_category",
+    "base_sub_category",
     'instructions',
     'base',
     'process_flow',
@@ -80,7 +81,8 @@ export const updateBunitoDetails = catchAsync(async (req, res, next) => {
 
   const required_array_fields = [
     'size',
-    'sub_category',
+    "veneer_sub_category",
+    "base_sub_category",
     'instructions',
     'base',
     'process_flow',
@@ -89,7 +91,6 @@ export const updateBunitoDetails = catchAsync(async (req, res, next) => {
   try {
     for (field of required_array_fields) {
       reqBody[field] = JSON.parse(reqBody[field]);
-      console.dir(reqBody[field]);
       if (!Array.isArray(reqBody[field])) {
         return next(
           new ApiError(
