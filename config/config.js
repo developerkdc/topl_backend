@@ -11,6 +11,7 @@ const getConfigs = () => {
         'http://localhost:3001',
         'http://localhost:3000',
         'https://topl.kdcstaging.in',
+        'https://kdctopl.kdcstaging.in',
       ],
       credentials: true,
     },
