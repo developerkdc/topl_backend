@@ -8,7 +8,7 @@ const issues_for_peeling_wastage_schema = new mongoose.Schema(
     },
     issue_for_peeling_available_id: {
       type: mongoose.Schema.Types.ObjectId,
-      default: null
+      default: null,
     },
     length: {
       type: Number,
@@ -61,7 +61,10 @@ const issues_for_peeling_wastage_schema = new mongoose.Schema(
 
 issues_for_peeling_wastage_schema.index({ issue_for_peeling_id: 1 });
 issues_for_peeling_wastage_schema.index({ issue_for_peeling_available_id: 1 });
-issues_for_peeling_wastage_schema.index({ issue_for_peeling_id: 1, issue_for_peeling_available_id: 1 }, { unique: true });
+issues_for_peeling_wastage_schema.index(
+  { issue_for_peeling_id: 1, issue_for_peeling_available_id: 1 },
+  { unique: true }
+);
 
 const issues_for_peeling_wastage_model = mongoose.model(
   'issues_for_peeling_wastage',

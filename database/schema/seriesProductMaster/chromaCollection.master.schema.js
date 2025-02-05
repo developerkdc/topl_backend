@@ -62,16 +62,16 @@ const chromaCollectionSchema = new mongoose.Schema(
             type: String,
             trim: true,
             uppercase: true,
-            default: null
+            default: null,
           },
           sub_category_id: {
             type: mongoose.Schema.Types.ObjectId,
-            default: null
+            default: null,
           },
         },
       ],
       default: [],
-      set: (val) => (Array.isArray(val) ? val : [])
+      set: (val) => (Array.isArray(val) ? val : []),
     },
     base_sub_category: {
       type: [
@@ -80,16 +80,16 @@ const chromaCollectionSchema = new mongoose.Schema(
             type: String,
             trim: true,
             uppercase: true,
-            default: null
+            default: null,
           },
           sub_category_id: {
             type: mongoose.Schema.Types.ObjectId,
-            default: null
+            default: null,
           },
         },
       ],
       default: [],
-      set: (val) => (Array.isArray(val) ? val : [])
+      set: (val) => (Array.isArray(val) ? val : []),
     },
     base_min_thickness: {
       type: Number,

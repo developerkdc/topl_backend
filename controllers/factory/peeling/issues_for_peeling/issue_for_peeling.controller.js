@@ -435,14 +435,14 @@ export const revert_issue_for_peeling = catchAsync(async (req, res, next) => {
       issuedForPeelingData?.crosscut_done_id === null
     ) {
       await add_revert_to_log_inventory();
-    }
-
-    if (
+    } else if (
       // crosscut done
       issuedForPeelingData?.issued_from === issues_for_status?.crosscut_done &&
       issuedForPeelingData?.crosscut_done_id !== null
     ) {
       await add_revert_to_crosscut_done();
+    } else {
+      throw new ApiError('No Data found to revert', StatusCodes.BAD_REQUEST);
     }
 
     const delete_response = await issues_for_peeling_model.deleteOne(

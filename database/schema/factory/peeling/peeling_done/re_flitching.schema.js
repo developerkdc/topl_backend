@@ -1,4 +1,5 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
+import { issues_for_status } from '../../../../Utils/constants/constants.js';
 
 const re_flitching_other_details_schema = new mongoose.Schema(
   {
@@ -56,8 +57,15 @@ const re_flitching_other_details_schema = new mongoose.Schema(
   { timestamps: true }
 );
 
-re_flitching_other_details_schema.index({ issue_for_peeling_available_id: 1 }, { unique: true });
-export const re_flitching_other_details_model = mongoose.model("re_flitching_other_details", re_flitching_other_details_schema, "re_flitching_other_details");
+re_flitching_other_details_schema.index(
+  { issue_for_peeling_available_id: 1 },
+  { unique: true }
+);
+export const re_flitching_other_details_model = mongoose.model(
+  're_flitching_other_details',
+  re_flitching_other_details_schema,
+  're_flitching_other_details'
+);
 
 const re_flitching_items_schema = new mongoose.Schema(
   {
@@ -119,7 +127,7 @@ const re_flitching_items_schema = new mongoose.Schema(
     },
     flitch_formula: {
       type: String,
-      default: "BF",
+      default: 'BF',
     },
     length: {
       type: Number,
@@ -163,6 +171,14 @@ const re_flitching_items_schema = new mongoose.Schema(
       trim: true,
       uppercase: true,
     },
+    issue_status: {
+      type: String,
+      enum: {
+        values: [issues_for_status?.slicing],
+        message: `Invalid status {{VALUE}} Issue Status must either be one of ${issues_for_status?.slicing}`,
+      },
+      default: null,
+    },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Created By Id is required'],
@@ -177,6 +193,8 @@ const re_flitching_items_schema = new mongoose.Schema(
   }
 );
 
-
-
-export const re_flitching_items_model = mongoose.model("re_flitching_items", re_flitching_items_schema, "re_flitching_items");
+export const re_flitching_items_model = mongoose.model(
+  're_flitching_items',
+  re_flitching_items_schema,
+  're_flitching_items'
+);

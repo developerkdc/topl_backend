@@ -65,13 +65,13 @@ const extractDuplicateKeyFromErrorMessage = (errorMessage) => {
       const validJsonString = value[1].replace(/(\w+):/g, '"$1":');
       dupKey = JSON.parse(validJsonString);
     } catch (e) {
-      dupKey = {}
+      dupKey = {};
       console.error('Failed to parse duplicate key JSON:', e);
     }
   }
-  if(dupKey[matches[1]]){
+  if (dupKey[matches[1]]) {
     return matches ? `${dupKey[matches[1]]} - ${matches[1]}` : 'unknown key';
-  }else{
+  } else {
     return matches ? `${matches[1]}` : 'unknown key';
   }
 };

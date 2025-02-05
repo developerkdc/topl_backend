@@ -62,17 +62,17 @@ const barcodeSchema = new mongoose.Schema(
             // required: [true, 'Sub Category Name is required'],
             trim: true,
             uppercase: true,
-            default: null
+            default: null,
           },
           sub_category_id: {
             type: mongoose.Schema.Types.ObjectId,
             // required: [true, 'Sub Category ID is required'],
-            default: null
+            default: null,
           },
         },
       ],
       default: null,
-      set: (val) => (Array.isArray(val) ? val : [])
+      set: (val) => (Array.isArray(val) ? val : []),
     },
 
     base_sub_category: {
@@ -82,16 +82,16 @@ const barcodeSchema = new mongoose.Schema(
             type: String,
             trim: true,
             uppercase: true,
-            default: null
+            default: null,
           },
           sub_category_id: {
             type: mongoose.Schema.Types.ObjectId,
-            default: null
+            default: null,
           },
         },
       ],
       default: null,
-      set: (val) => (Array.isArray(val) ? val : [])
+      set: (val) => (Array.isArray(val) ? val : []),
     },
     base_min_thickness: {
       type: Number,

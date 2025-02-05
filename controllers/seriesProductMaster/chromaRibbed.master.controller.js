@@ -13,7 +13,8 @@ export const addChromaRibbed = catchAsync(async (req, res, next) => {
   const image = req?.file;
   const required_array_fields = [
     'size',
-    'sub_category',
+    'veneer_sub_category',
+    'base_sub_category',
     'instructions',
     'base',
     'process_flow',
@@ -22,7 +23,7 @@ export const addChromaRibbed = catchAsync(async (req, res, next) => {
   try {
     for (field of required_array_fields) {
       reqBody[field] = JSON.parse(reqBody[field]);
-      console.dir(reqBody[field]);
+      console.log('field= > ', reqBody[field]);
       if (!Array.isArray(reqBody[field])) {
         return next(
           new ApiError(
@@ -82,7 +83,8 @@ export const updateChromaRibbedDetails = catchAsync(async (req, res, next) => {
   const image = req?.file ? req.file : reqBody?.image;
   const required_array_fields = [
     'size',
-    'sub_category',
+    'veneer_sub_category',
+    'base_sub_category',
     'instructions',
     'base',
     'process_flow',

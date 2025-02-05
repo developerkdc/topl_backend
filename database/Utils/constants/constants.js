@@ -6,6 +6,7 @@ export const issues_for_status = {
   log: 'log',
   flitch: 'flitch',
   peeling: 'peeling',
+  reflitching: 'reflitching',
   slicing: 'slicing',
   slicing_peeling: 'slicing_peeling',
   dressing: 'dressing',
