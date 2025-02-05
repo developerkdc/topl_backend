@@ -352,7 +352,7 @@ export const revert_issue_for_peeling = catchAsync(async (req, res, next) => {
               issue_status: null,
             },
           },
-          { new: true, session: session }
+          { new: true, runValidators: true, session: session }
         );
 
       if (!updated_document_log_inventory) {
@@ -395,7 +395,7 @@ export const revert_issue_for_peeling = catchAsync(async (req, res, next) => {
               issue_status: null,
             },
           },
-          { new: true, session: session }
+          { new: true, runValidators: true, session: session }
         );
 
       if (!updated_document_crosscut_done) {
