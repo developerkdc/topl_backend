@@ -5,7 +5,7 @@ import {
   dropdownChromaComposite,
   fetchChromaCompositeList,
   fetchSingleChromaComposite,
-  updateChromaCompositeDetails,
+  updateChromaCompositeDetails, updateStatus
 } from '../../controllers/seriesProductMaster/chromaComposite.master.controller.js';
 import { MulterFunction } from '../../config/multer/multer.js';
 const router = Router();
@@ -27,6 +27,7 @@ router.post(
   updateChromaCompositeDetails
 );
 router.post('/list-chromaComposite', AuthMiddleware, fetchChromaCompositeList);
+router.patch('/update-chromaComposite-status', AuthMiddleware, updateStatus);
 router.get(
   '/list-chromaComposite/:id',
   AuthMiddleware,
