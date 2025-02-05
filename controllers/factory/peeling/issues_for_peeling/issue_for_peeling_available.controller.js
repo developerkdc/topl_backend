@@ -1,16 +1,19 @@
-import mongoose from "mongoose";
-import issues_for_peeling_available_model from "../../../../database/schema/factory/peeling/issues_for_peeling/issues_for_peeling_available.schema.js";
-import ApiResponse from "../../../../utils/ApiResponse.js";
-import { StatusCodes } from "../../../../utils/constants.js";
-import { dynamic_filter } from "../../../../utils/dymanicFilter.js";
-import { DynamicSearch } from "../../../../utils/dynamicSearch/dynamic.js";
-import catchAsync from "../../../../utils/errors/catchAsync.js";
-import { re_flitching_items_model, re_flitching_other_details_model } from "../../../../database/schema/factory/peeling/peeling_done/re_flitching.schema.js";
-import issues_for_peeling_wastage_model from "../../../../database/schema/factory/peeling/issues_for_peeling/issues_for_peeling_wastage.schema.js";
-import { peeling_done_other_details_model } from "../../../../database/schema/factory/peeling/peeling_done/peeling_done.schema.js";
-import ApiError from "../../../../utils/errors/apiError.js";
-import { issues_for_status } from "../../../../database/Utils/constants/constants.js";
-import { issued_for_slicing_model } from "../../../../database/schema/factory/slicing/issue_for_slicing/issuedForSlicing.js";
+import mongoose from 'mongoose';
+import issues_for_peeling_available_model from '../../../../database/schema/factory/peeling/issues_for_peeling/issues_for_peeling_available.schema.js';
+import ApiResponse from '../../../../utils/ApiResponse.js';
+import { StatusCodes } from '../../../../utils/constants.js';
+import { dynamic_filter } from '../../../../utils/dymanicFilter.js';
+import { DynamicSearch } from '../../../../utils/dynamicSearch/dynamic.js';
+import catchAsync from '../../../../utils/errors/catchAsync.js';
+import {
+  re_flitching_items_model,
+  re_flitching_other_details_model,
+} from '../../../../database/schema/factory/peeling/peeling_done/re_flitching.schema.js';
+import issues_for_peeling_wastage_model from '../../../../database/schema/factory/peeling/issues_for_peeling/issues_for_peeling_wastage.schema.js';
+import { peeling_done_other_details_model } from '../../../../database/schema/factory/peeling/peeling_done/peeling_done.schema.js';
+import ApiError from '../../../../utils/errors/apiError.js';
+import { issues_for_status } from '../../../../database/Utils/constants/constants.js';
+import { issued_for_slicing_model } from '../../../../database/schema/factory/slicing/issue_for_slicing/issuedForSlicing.js';
 
 export const fetch_issue_for_peeling_available_details = catchAsync(
   async (req, res, next) => {
@@ -188,12 +191,8 @@ export const add_reflitching_details = catchAsync(async (req, res, next) => {
   session.startTransaction();
   try {
     const userDetails = req.userDetails;
-    const {
-      other_details,
-      items_details,
-      wastage_details,
-      is_wastage
-    } = req.body;
+    const { other_details, items_details, wastage_details, is_wastage } =
+      req.body;
     for (let i of ['other_details', 'items_details']) {
       if (!req.body?.[i]) {
         throw new ApiError(`Please provide ${i} details`, 400);
@@ -206,13 +205,17 @@ export const add_reflitching_details = catchAsync(async (req, res, next) => {
       throw new ApiError('Atleast one items is required', 400);
     }
 
-    const reflitching_available_data = await issues_for_peeling_available_model.findOne({ _id: other_details?.issue_for_peeling_available_id });
+    const reflitching_available_data =
+      await issues_for_peeling_available_model.findOne({
+        _id: other_details?.issue_for_peeling_available_id,
+      });
 
     if (!reflitching_available_data) {
       throw new ApiError('No available data found for issue for peeling', 404);
     }
     const issue_for_peeling_available_id = reflitching_available_data?._id;
-    const issue_for_peeling_id = reflitching_available_data?.issue_for_peeling_id;
+    const issue_for_peeling_id =
+      reflitching_available_data?.issue_for_peeling_id;
 
     // Other goods details
     const add_other_details_data =
@@ -269,17 +272,25 @@ export const add_reflitching_details = catchAsync(async (req, res, next) => {
     }
 
     //isEditable false for peeling done;
-    const update_editable_peeling_done = await peeling_done_other_details_model.updateOne({ issue_for_peeling_id: issue_for_peeling_id }, {
-      $set: {
-        isEditable: false
-      }
-    }, { session });
+    const update_editable_peeling_done =
+      await peeling_done_other_details_model.updateOne(
+        { issue_for_peeling_id: issue_for_peeling_id },
+        {
+          $set: {
+            isEditable: false,
+          },
+        },
+        { session }
+      );
 
     if (update_editable_peeling_done.matchedCount <= 0) {
       throw new ApiError('peeling done details not found', 400);
     }
 
-    if (!update_editable_peeling_done.acknowledged || update_editable_peeling_done.matchedCount <= 0) {
+    if (
+      !update_editable_peeling_done.acknowledged ||
+      update_editable_peeling_done.matchedCount <= 0
+    ) {
       throw new ApiError('Failed to update peeling done details', 400);
     }
 
@@ -307,12 +318,8 @@ export const edit_reflitching_details = catchAsync(async (req, res, next) => {
     if (!reflitching_id && !mongoose.isValidObjectId(reflitching_id)) {
       throw new ApiError('Invalid reflitching id', 400);
     }
-    const {
-      other_details,
-      items_details,
-      wastage_details,
-      is_wastage
-    } = req.body;
+    const { other_details, items_details, wastage_details, is_wastage } =
+      req.body;
     for (let i of ['other_details', 'items_details']) {
       if (!req.body?.[i]) {
         throw new ApiError(`Please provide ${i} details`, 400);
@@ -325,7 +332,8 @@ export const edit_reflitching_details = catchAsync(async (req, res, next) => {
       throw new ApiError('Atleast one items is required', 400);
     }
 
-    const fetch_other_details_data = await re_flitching_other_details_model.findOne({ _id: reflitching_id });
+    const fetch_other_details_data =
+      await re_flitching_other_details_model.findOne({ _id: reflitching_id });
     if (!fetch_other_details_data) {
       throw new ApiError('Not data found', 400);
     }
@@ -334,23 +342,32 @@ export const edit_reflitching_details = catchAsync(async (req, res, next) => {
       throw new ApiError('Cannot edit reflitching data', 400);
     }
 
-    const reflitching_available_data = await issues_for_peeling_available_model.findOne({ _id: fetch_other_details_data?.issue_for_peeling_available_id });
+    const reflitching_available_data =
+      await issues_for_peeling_available_model.findOne({
+        _id: fetch_other_details_data?.issue_for_peeling_available_id,
+      });
 
     if (!reflitching_available_data) {
       throw new ApiError('No available data found for reflitching', 404);
     }
     const issue_for_peeling_available_id = reflitching_available_data?._id;
-    const issue_for_peeling_id = reflitching_available_data?.issue_for_peeling_id;
+    const issue_for_peeling_id =
+      reflitching_available_data?.issue_for_peeling_id;
 
     // Other goods details
     const { createdAt, updatetAt, ...update_other_details } = other_details;
-    const add_other_details_data = await re_flitching_other_details_model.findOneAndUpdate({ _id: reflitching_id }, {
-      $set: {
-        ...update_other_details,
-        created_by: userDetails?._id,
-        updated_by: userDetails?._id,
-      },
-    }, { new: true, session });
+    const add_other_details_data =
+      await re_flitching_other_details_model.findOneAndUpdate(
+        { _id: reflitching_id },
+        {
+          $set: {
+            ...update_other_details,
+            created_by: userDetails?._id,
+            updated_by: userDetails?._id,
+          },
+        },
+        { new: true, session }
+      );
     const other_details_data = add_other_details_data;
 
     if (!other_details_data) {
@@ -392,12 +409,16 @@ export const edit_reflitching_details = catchAsync(async (req, res, next) => {
 
     // Wastage
     if (!is_wastage) {
-      const delete_wastage_details = await issues_for_peeling_wastage_model.deleteOne(
-        { issue_for_peeling_id: issue_for_peeling_id, issue_for_peeling_available_id: issue_for_peeling_available_id },
-        {
-          session,
-        }
-      );
+      const delete_wastage_details =
+        await issues_for_peeling_wastage_model.deleteOne(
+          {
+            issue_for_peeling_id: issue_for_peeling_id,
+            issue_for_peeling_available_id: issue_for_peeling_available_id,
+          },
+          {
+            session,
+          }
+        );
 
       if (
         !delete_wastage_details.acknowledged ||
@@ -418,15 +439,20 @@ export const edit_reflitching_details = catchAsync(async (req, res, next) => {
         created_by: userDetails?._id,
         updated_by: userDetails?._id,
       };
-      const add_wastage_details_data = await issues_for_peeling_wastage_model.findOneAndUpdate({
-        _id: wastage_details?._id,
-        issue_for_peeling_id: issue_for_peeling_id,
-        issue_for_peeling_available_id: issue_for_peeling_available_id
-      }, {
-        $set: {
-          ...wastage_details_data
-        }
-      }, { new: true, session });
+      const add_wastage_details_data =
+        await issues_for_peeling_wastage_model.findOneAndUpdate(
+          {
+            _id: wastage_details?._id,
+            issue_for_peeling_id: issue_for_peeling_id,
+            issue_for_peeling_available_id: issue_for_peeling_available_id,
+          },
+          {
+            $set: {
+              ...wastage_details_data,
+            },
+          },
+          { new: true, session }
+        );
 
       if (!add_wastage_details_data) {
         throw new ApiError('Failed to update wastage details', 400);
@@ -434,17 +460,25 @@ export const edit_reflitching_details = catchAsync(async (req, res, next) => {
     }
 
     //isEditable false for peeling done;
-    const update_editable_peeling_done = await peeling_done_other_details_model.updateOne({ issue_for_peeling_id: issue_for_peeling_id }, {
-      $set: {
-        isEditable: false
-      }
-    }, { session });
+    const update_editable_peeling_done =
+      await peeling_done_other_details_model.updateOne(
+        { issue_for_peeling_id: issue_for_peeling_id },
+        {
+          $set: {
+            isEditable: false,
+          },
+        },
+        { session }
+      );
 
     if (update_editable_peeling_done.matchedCount <= 0) {
       throw new ApiError('peeling done details not found', 400);
     }
 
-    if (!update_editable_peeling_done.acknowledged || update_editable_peeling_done.matchedCount <= 0) {
+    if (
+      !update_editable_peeling_done.acknowledged ||
+      update_editable_peeling_done.matchedCount <= 0
+    ) {
       throw new ApiError('Failed to update peeling done details', 400);
     }
 
@@ -711,36 +745,37 @@ export const revert_all_reflitching = catchAsync(async (req, res, next) => {
       throw new ApiError('Invalid ID', StatusCodes.NOT_FOUND);
     }
 
-    const fetch_re_flitching_other_details = await re_flitching_other_details_model.aggregate([
-      {
-        $match: {
-          _id: mongoose.Types.ObjectId.createFromHexString(id),
+    const fetch_re_flitching_other_details =
+      await re_flitching_other_details_model.aggregate([
+        {
+          $match: {
+            _id: mongoose.Types.ObjectId.createFromHexString(id),
+          },
         },
-      },
-      {
-        $lookup: {
-          from: 'issues_for_peeling_available',
-          foreignField: '_id',
-          localField: 'issue_for_peeling_available_id',
-          pipeline: [
-            {
-              $project: {
-                _id: 1,
-                issue_for_peeling_id: 1
-              }
-            }
-          ],
-          as: 'issue_for_peeling_available_details',
+        {
+          $lookup: {
+            from: 'issues_for_peeling_available',
+            foreignField: '_id',
+            localField: 'issue_for_peeling_available_id',
+            pipeline: [
+              {
+                $project: {
+                  _id: 1,
+                  issue_for_peeling_id: 1,
+                },
+              },
+            ],
+            as: 'issue_for_peeling_available_details',
+          },
         },
-      },
-      {
-        $unwind: {
-          path: '$issue_for_peeling_available_details',
-          preserveNullAndEmptyArrays: true,
+        {
+          $unwind: {
+            path: '$issue_for_peeling_available_details',
+            preserveNullAndEmptyArrays: true,
+          },
         },
-      },
-    ]);
-    const re_flitching_other_details = fetch_re_flitching_other_details?.[0]
+      ]);
+    const re_flitching_other_details = fetch_re_flitching_other_details?.[0];
 
     if (!re_flitching_other_details) {
       throw new ApiError('Not data found', 400);
@@ -752,22 +787,39 @@ export const revert_all_reflitching = catchAsync(async (req, res, next) => {
 
     //delete other details
     const re_flitching_other_details_id = re_flitching_other_details?._id;
-    const delete_re_flitching_other_details = await re_flitching_other_details_model.findOneAndDelete({ _id: re_flitching_other_details_id }, { session });
+    const delete_re_flitching_other_details =
+      await re_flitching_other_details_model.findOneAndDelete(
+        { _id: re_flitching_other_details_id },
+        { session }
+      );
 
     if (!delete_re_flitching_other_details) {
       throw new ApiError('Failed to delete re-flitching', 400);
     }
 
     // delete items
-    const deleted_re_flitching_other_details_id = delete_re_flitching_other_details?._id;
-    const delete_re_flitching_items_details = await re_flitching_items_model.deleteMany({ re_flitching_other_details_id: deleted_re_flitching_other_details_id }, { session });
+    const deleted_re_flitching_other_details_id =
+      delete_re_flitching_other_details?._id;
+    const delete_re_flitching_items_details =
+      await re_flitching_items_model.deleteMany(
+        {
+          re_flitching_other_details_id: deleted_re_flitching_other_details_id,
+        },
+        { session }
+      );
 
-    if (!delete_re_flitching_items_details.acknowledged || delete_re_flitching_items_details.deletedCount <= 0) {
+    if (
+      !delete_re_flitching_items_details.acknowledged ||
+      delete_re_flitching_items_details.deletedCount <= 0
+    ) {
       throw new ApiError('Failed to delete re-flitching items', 400);
     }
 
-    const issue_for_peeling_available_id = re_flitching_other_details?.issue_for_peeling_available_details?._id;
-    const issue_for_peeling_id = re_flitching_other_details?.issue_for_peeling_available_details?.issue_for_peeling_id;
+    const issue_for_peeling_available_id =
+      re_flitching_other_details?.issue_for_peeling_available_details?._id;
+    const issue_for_peeling_id =
+      re_flitching_other_details?.issue_for_peeling_available_details
+        ?.issue_for_peeling_id;
     //delete wastage
     const delete_wastage = await issues_for_peeling_wastage_model.deleteOne(
       {
@@ -782,24 +834,34 @@ export const revert_all_reflitching = catchAsync(async (req, res, next) => {
     }
 
     // update peeling done
-    const update_editable_peeling_done = await peeling_done_other_details_model.updateOne({ issue_for_peeling_id: issue_for_peeling_id }, {
-      $set: {
-        isEditable: true
-      }
-    }, { session });
+    const update_editable_peeling_done =
+      await peeling_done_other_details_model.updateOne(
+        { issue_for_peeling_id: issue_for_peeling_id },
+        {
+          $set: {
+            isEditable: true,
+          },
+        },
+        { session }
+      );
 
     if (update_editable_peeling_done.matchedCount <= 0) {
       throw new ApiError('peeling done details not found', 400);
     }
 
-    if (!update_editable_peeling_done.acknowledged || update_editable_peeling_done.matchedCount <= 0) {
+    if (
+      !update_editable_peeling_done.acknowledged ||
+      update_editable_peeling_done.matchedCount <= 0
+    ) {
       throw new ApiError('Failed to update peeling done details', 400);
     }
 
     await session.commitTransaction();
-    const response = new ApiResponse(StatusCodes.OK, 'Re-flitching Revert Successfully');
-    return res.status(StatusCodes.OK).json(response)
-
+    const response = new ApiResponse(
+      StatusCodes.OK,
+      'Re-flitching Revert Successfully'
+    );
+    return res.status(StatusCodes.OK).json(response);
   } catch (error) {
     await session.abortTransaction();
     throw error;
@@ -808,116 +870,150 @@ export const revert_all_reflitching = catchAsync(async (req, res, next) => {
   }
 });
 
-export const reflitching_issue_for_slicing = catchAsync(async (req, res, next) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-  try {
-    let { reflitching_items_ids } = req.body;
-    const userDetails = req.userDetails;
-    if (!reflitching_items_ids) {
-      throw new ApiError('reflitching_items_ids is missing', 400);
-    }
-    if (!Array.isArray(reflitching_items_ids)) {
-      throw new ApiError('invalid data type, reflitching_items_ids must be a array', 400);
-    }
-
-    reflitching_items_ids = reflitching_items_ids.map((e) => mongoose.Types.ObjectId.createFromHexString(e));
-
-    const fetch_reflitching_items_details = await re_flitching_items_model.aggregate([
-      {
-        $match: {
-          _id: { $in: reflitching_items_ids }
-        }
+export const reflitching_issue_for_slicing = catchAsync(
+  async (req, res, next) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+      let { reflitching_items_ids } = req.body;
+      const userDetails = req.userDetails;
+      if (!reflitching_items_ids) {
+        throw new ApiError('reflitching_items_ids is missing', 400);
       }
-    ]);
-    if (!fetch_reflitching_items_details && fetch_reflitching_items_details?.length <= 0) {
-      throw new ApiError('reflitching items not found', 400);
-    }
-
-    const re_flitching_other_details_ids = new Set();
-    const issue_for_slicing = fetch_reflitching_items_details.map((item) => {
-      re_flitching_other_details_ids.add(item.re_flitching_other_details_id);
-      return {
-        reflitching_item_id: item?._id,
-        item_sr_no: item?.item_sr_no,
-        item_id: item?.item_id,
-        item_name: item?.item_name,
-        item_sub_category_id: item?.item_sub_category_id,
-        item_sub_category_name: item?.item_sub_category_name,
-        color: item?.color,
-        flitch_formula: item?.flitch_formula,
-        log_no: item?.log_no,
-        log_no_code: item?.log_no_code,
-        flitch_code: item?.flitch_code,
-        length: item?.length,
-        width1: item?.width1,
-        width2: item?.width2,
-        width3: item?.width3,
-        height: item?.height,
-        cmt: item?.cmt,
-        amount: item?.amount,
-        expense_amount: item?.expense_amount,
-        amount_factor: 1,
-        issued_from: issues_for_status?.reflitching,
-        is_peeling_done: true,
-        remark: item?.remark,
-        created_by: userDetails?._id,
-        updated_by: userDetails?._id
+      if (!Array.isArray(reflitching_items_ids)) {
+        throw new ApiError(
+          'invalid data type, reflitching_items_ids must be a array',
+          400
+        );
       }
-    })
 
-    // add issue for slicing
-    const add_issue_for_slicing_data = await issued_for_slicing_model.insertMany(issue_for_slicing, { session });
-    if (!add_issue_for_slicing_data || add_issue_for_slicing_data?.length <= 0) {
-      throw new ApiError('issue for slicing not added', 400);
-    }
+      reflitching_items_ids = reflitching_items_ids.map((e) =>
+        mongoose.Types.ObjectId.createFromHexString(e)
+      );
 
-    // update issue status for reflitching items
-    const reflitching_item_ids = add_issue_for_slicing_data?.map((e) => e.reflitching_item_id);
-    const update_reflitching_items = await re_flitching_items_model.updateMany({ _id: { $in: reflitching_item_ids } }, {
-      $set: {
-        issue_status: issues_for_status?.slicing
+      const fetch_reflitching_items_details =
+        await re_flitching_items_model.aggregate([
+          {
+            $match: {
+              _id: { $in: reflitching_items_ids },
+            },
+          },
+        ]);
+      if (
+        !fetch_reflitching_items_details &&
+        fetch_reflitching_items_details?.length <= 0
+      ) {
+        throw new ApiError('reflitching items not found', 400);
       }
-    }, { session })
-    if (update_reflitching_items?.matchedCount <= 0) {
-      throw new ApiError('Not found reflitching items');
-    }
 
-    if (
-      !update_reflitching_items.acknowledged ||
-      update_reflitching_items?.modifiedCount <= 0
-    ) {
-      throw new ApiError('Unable to change status of reflitching items');
-    }
+      const re_flitching_other_details_ids = new Set();
+      const issue_for_slicing = fetch_reflitching_items_details.map((item) => {
+        re_flitching_other_details_ids.add(item.re_flitching_other_details_id);
+        return {
+          reflitching_item_id: item?._id,
+          item_sr_no: item?.item_sr_no,
+          item_id: item?.item_id,
+          item_name: item?.item_name,
+          item_sub_category_id: item?.item_sub_category_id,
+          item_sub_category_name: item?.item_sub_category_name,
+          color: item?.color,
+          flitch_formula: item?.flitch_formula,
+          log_no: item?.log_no,
+          log_no_code: item?.log_no_code,
+          flitch_code: item?.flitch_code,
+          length: item?.length,
+          width1: item?.width1,
+          width2: item?.width2,
+          width3: item?.width3,
+          height: item?.height,
+          cmt: item?.cmt,
+          amount: item?.amount,
+          expense_amount: item?.expense_amount,
+          amount_factor: 1,
+          issued_from: issues_for_status?.reflitching,
+          is_peeling_done: true,
+          remark: item?.remark,
+          created_by: userDetails?._id,
+          updated_by: userDetails?._id,
+        };
+      });
 
-    //update reflitching other details isEditable
-    const update_reflitching_other_details = await re_flitching_other_details_model.updateMany({}, {
-      $set: {
-        isEditable: false
+      // add issue for slicing
+      const add_issue_for_slicing_data =
+        await issued_for_slicing_model.insertMany(issue_for_slicing, {
+          session,
+        });
+      if (
+        !add_issue_for_slicing_data ||
+        add_issue_for_slicing_data?.length <= 0
+      ) {
+        throw new ApiError('issue for slicing not added', 400);
       }
-    }, { session })
-    if (update_reflitching_other_details?.matchedCount <= 0) {
-      throw new ApiError('Not found reflitching other details');
+
+      // update issue status for reflitching items
+      const reflitching_item_ids = add_issue_for_slicing_data?.map(
+        (e) => e.reflitching_item_id
+      );
+      const update_reflitching_items =
+        await re_flitching_items_model.updateMany(
+          { _id: { $in: reflitching_item_ids } },
+          {
+            $set: {
+              issue_status: issues_for_status?.slicing,
+            },
+          },
+          { session }
+        );
+      if (update_reflitching_items?.matchedCount <= 0) {
+        throw new ApiError('Not found reflitching items');
+      }
+
+      if (
+        !update_reflitching_items.acknowledged ||
+        update_reflitching_items?.modifiedCount <= 0
+      ) {
+        throw new ApiError('Unable to change status of reflitching items');
+      }
+
+      //update reflitching other details isEditable
+      const update_reflitching_other_details =
+        await re_flitching_other_details_model.updateMany(
+          {},
+          {
+            $set: {
+              isEditable: false,
+            },
+          },
+          { session }
+        );
+      if (update_reflitching_other_details?.matchedCount <= 0) {
+        throw new ApiError('Not found reflitching other details');
+      }
+
+      if (
+        !update_reflitching_other_details.acknowledged ||
+        update_reflitching_other_details?.modifiedCount <= 0
+      ) {
+        throw new ApiError(
+          'Unable to change editable status of reflitching other details'
+        );
+      }
+
+      await session.commitTransaction();
+      const response = new ApiResponse(
+        StatusCodes.CREATED,
+        'Issued for slicing Successfully',
+        add_issue_for_slicing_data
+      );
+      return res.status(StatusCodes.CREATED).json(response);
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      await session.endSession();
     }
-
-    if (
-      !update_reflitching_other_details.acknowledged ||
-      update_reflitching_other_details?.modifiedCount <= 0
-    ) {
-      throw new ApiError('Unable to change editable status of reflitching other details');
-    }
-
-    await session.commitTransaction();
-    const response = new ApiResponse(StatusCodes.CREATED, 'Issued for slicing Successfully', add_issue_for_slicing_data);
-    return res.status(StatusCodes.CREATED).json(response)
-
-  } catch (error) {
-    await session.abortTransaction();
-    throw error;
-  } finally {
-    await session.endSession();
   }
-})
+);
 
 export const fetch_reflitching_items_history = catchAsync(
   async (req, res, next) => {
@@ -964,7 +1060,7 @@ export const fetch_reflitching_items_history = catchAsync(
     const match_query = {
       ...search_query,
       ...filterData,
-      issue_status: { $ne: null }
+      issue_status: { $ne: null },
     };
 
     const aggLookupReflitchingOtherDetails = {

@@ -14,8 +14,8 @@ export const addCanvas = catchAsync(async (req, res, next) => {
   const image = req.file;
   const required_array_fields = [
     'size',
-    "veneer_sub_category",
-    "base_sub_category",
+    'veneer_sub_category',
+    'base_sub_category',
     'instructions',
     'base',
     'process_flow',
@@ -82,8 +82,8 @@ export const updateCanvasDetails = catchAsync(async (req, res, next) => {
 
   const required_array_fields = [
     'size',
-    "veneer_sub_category",
-    "base_sub_category",
+    'veneer_sub_category',
+    'base_sub_category',
     'instructions',
     'base',
     'process_flow',

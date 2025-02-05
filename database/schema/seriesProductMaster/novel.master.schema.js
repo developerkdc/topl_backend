@@ -71,7 +71,7 @@ const novelSchema = new mongoose.Schema(
         },
       ],
       default: [],
-      set: (val) => (Array.isArray(val) ? val : [])
+      set: (val) => (Array.isArray(val) ? val : []),
     },
     base_sub_category: {
       type: [
@@ -89,7 +89,7 @@ const novelSchema = new mongoose.Schema(
         },
       ],
       default: [],
-      set: (val) => (Array.isArray(val) ? val : [])
+      set: (val) => (Array.isArray(val) ? val : []),
     },
 
     base_min_thickness: {

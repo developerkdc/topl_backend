@@ -15,8 +15,8 @@ export const addChromaComposite = catchAsync(async (req, res, next) => {
   console.log('reqBody => ', reqBody.sub_category);
   const required_array_fields = [
     'size',
-    "veneer_sub_category",
-    "base_sub_category",
+    'veneer_sub_category',
+    'base_sub_category',
     'instructions',
     'base',
     'process_flow',
@@ -85,8 +85,8 @@ export const updateChromaCompositeDetails = catchAsync(
     const image = req?.file ? req?.file : reqBody?.image;
     const required_array_fields = [
       'size',
-      "veneer_sub_category",
-      "base_sub_category",
+      'veneer_sub_category',
+      'base_sub_category',
       'base',
       'process_flow',
     ];

@@ -1,5 +1,14 @@
 import express from 'express';
-import { add_reflitching_details, edit_reflitching_details, fetch_all_details_by_reflitching_id, fetch_all_reflitching_items, fetch_issue_for_peeling_available_details, fetch_reflitching_items_history, reflitching_issue_for_slicing, revert_all_reflitching } from '../../../../controllers/factory/peeling/issues_for_peeling/issue_for_peeling_available.controller.js';
+import {
+  add_reflitching_details,
+  edit_reflitching_details,
+  fetch_all_details_by_reflitching_id,
+  fetch_all_reflitching_items,
+  fetch_issue_for_peeling_available_details,
+  fetch_reflitching_items_history,
+  reflitching_issue_for_slicing,
+  revert_all_reflitching,
+} from '../../../../controllers/factory/peeling/issues_for_peeling/issue_for_peeling_available.controller.js';
 import AuthMiddleware from '../../../../middlewares/verifyToken.js';
 const issue_for_peeling_available = express.Router();
 

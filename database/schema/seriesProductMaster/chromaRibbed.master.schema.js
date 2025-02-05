@@ -72,7 +72,7 @@ const chromaRibbedSchema = new mongoose.Schema(
         },
       ],
       default: [],
-      set: (val) => (Array.isArray(val) ? val : [])
+      set: (val) => (Array.isArray(val) ? val : []),
     },
     base_sub_category: {
       type: [
@@ -90,7 +90,7 @@ const chromaRibbedSchema = new mongoose.Schema(
         },
       ],
       default: [],
-      set: (val) => (Array.isArray(val) ? val : [])
+      set: (val) => (Array.isArray(val) ? val : []),
     },
     base_min_thickness: {
       type: Number,
