@@ -6,7 +6,7 @@ import {
   fetch_slicing_done_history,
   revert_slicing_done,
   add_reslicing_done,
-  revert_re_slicing_done,
+  revert_re_slicing_done, update_slicing_done_items_details, edit_slicing_done
 } from '../../../../controllers/factory/slicing/slicing_done/slicing.done.controller.js';
 import AuthMiddleware from '../../../../middlewares/verifyToken.js';
 
@@ -44,4 +44,6 @@ slicingDoneRouter.post(
   AuthMiddleware,
   add_reslicing_done
 );
+slicingDoneRouter.patch('/update-slicing-done-item-details/:id', AuthMiddleware, update_slicing_done_items_details)
+slicingDoneRouter.patch('/update-slicing-done/:slicing_done_id', AuthMiddleware, edit_slicing_done)
 export default slicingDoneRouter;
