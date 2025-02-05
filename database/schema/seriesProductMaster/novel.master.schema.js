@@ -55,21 +55,41 @@ const novelSchema = new mongoose.Schema(
         },
       ],
     },
-    sub_category: {
+    veneer_sub_category: {
       type: [
         {
           sub_category_name: {
             type: String,
-            required: [true, 'Sub Category Name is required'],
+            default: null,
             trim: true,
             uppercase: true,
           },
           sub_category_id: {
             type: mongoose.Schema.Types.ObjectId,
-            required: [true, 'Sub Category ID is required'],
+            default: null,
           },
         },
       ],
+      default: [],
+      set: (val) => (Array.isArray(val) ? val : [])
+    },
+    base_sub_category: {
+      type: [
+        {
+          sub_category_name: {
+            type: String,
+            default: null,
+            trim: true,
+            uppercase: true,
+          },
+          sub_category_id: {
+            type: mongoose.Schema.Types.ObjectId,
+            default: null,
+          },
+        },
+      ],
+      default: [],
+      set: (val) => (Array.isArray(val) ? val : [])
     },
 
     base_min_thickness: {
