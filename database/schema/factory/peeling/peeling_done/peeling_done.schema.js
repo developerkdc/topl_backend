@@ -33,6 +33,10 @@ const peeling_done_other_details_schema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    total_cmt: {
+      type: Number,
+      required: [true, 'Total Cmt is required'],
+    },
     total_amount: {
       type: Number,
       required: [true, 'Total Amount is required'],
@@ -89,6 +93,12 @@ const peeling_done_items_schema = new mongoose.Schema(
       },
       required: [true, 'Output Type is required'],
     },
+    side: {
+      type: String,
+      default: 'A',
+      uppercase: true,
+      trim: true,
+    },
     item_name: {
       type: String,
       required: [true, 'Item Name is required'],
@@ -132,10 +142,12 @@ const peeling_done_items_schema = new mongoose.Schema(
     no_of_leaves: {
       type: Number,
       default: 0,
+      required: [true, 'No of leaves is required'],
     },
     cmt: {
       type: Number,
-      required: [true, 'CMT is required'],
+      default: 0,
+      required: [output_type_validate, 'CMT is required'],
     },
     color_id: {
       type: mongoose.Schema.Types.ObjectId,
@@ -177,13 +189,10 @@ const peeling_done_items_schema = new mongoose.Schema(
       type: String,
       required: [true, 'Grade Name is required'],
     },
-    issued_for_dressing: {
-      type: Boolean,
-      default: false,
-    },
     item_amount: {
       type: Number,
-      required: [true, 'Item Amount is required'],
+      default: 0,
+      required: [output_type_validate, 'Item Amount is required'],
     },
     item_wastage_consumed_amount: {
       type: Number,

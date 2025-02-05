@@ -48,6 +48,13 @@ export const add_peeling_done = catchAsync(async (req, res, next) => {
       }
     }
 
+    const fetch_issue_for_peeling_data = await issues_for_peeling_model.findOne(
+      { _id: other_details?.issue_for_peeling_id }
+    );
+    if (!fetch_issue_for_peeling_data) {
+      throw new ApiError('Issue for peeling data not found', 400);
+    }
+
     // Other goods details
     const add_other_details_data =
       await peeling_done_other_details_model.create(
@@ -95,7 +102,7 @@ export const add_peeling_done = catchAsync(async (req, res, next) => {
             updated_by: userDetails?._id,
           },
         },
-        { new: true, session }
+        { new: true, runValidators: true, session }
       );
 
     if (!issue_for_peeling_type) {
@@ -218,7 +225,7 @@ export const edit_peeling_done = catchAsync(async (req, res, next) => {
             updated_by: userDetails?._id,
           },
         },
-        { new: true, session }
+        { new: true, runValidators: true, session }
       );
 
     const other_details_data = add_other_details_data;
@@ -273,7 +280,7 @@ export const edit_peeling_done = catchAsync(async (req, res, next) => {
             updated_by: userDetails?._id,
           },
         },
-        { new: true, session }
+        { new: true, runValidators: true, session }
       );
 
     if (!issue_for_peeling_type) {
@@ -737,7 +744,7 @@ export const revert_all_pending_done = catchAsync(async (req, res, next) => {
 
     if (
       !update_issue_for_peeling.acknowledged ||
-      update_issue_for_peeling.deletedCount <= 0
+      update_issue_for_peeling.modifiedCount <= 0
     ) {
       throw new ApiError('Failed to update type issue for peeling', 400);
     }
@@ -756,157 +763,40 @@ export const revert_all_pending_done = catchAsync(async (req, res, next) => {
   }
 });
 
-// export const fetch_slicing_done_history = catchAsync(async (req, res, next) => {
-//   const {
-//     page = 1,
-//     sortBy = 'updatedAt',
-//     sort = 'desc',
-//     limit = 10,
-//     search = '',
-//   } = req.query;
-//   const {
-//     string,
-//     boolean,
-//     numbers,
-//     arrayField = [],
-//   } = req.body?.searchFields || {};
+export const update_peeling_done_items_details = catchAsync(
+  async (req, res) => {
+    const { id } = req.params;
+    const { no_of_leaves, thickness } = req.body;
 
-//   const filter = req.body?.filter;
+    if (!mongoose.isValidObjectId(id)) {
+      throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
+    }
 
-//   let search_query = {};
-//   if (search != '' && req?.body?.searchFields) {
-//     const search_data = DynamicSearch(
-//       search,
-//       boolean,
-//       numbers,
-//       string,
-//       arrayField
-//     );
-//     if (search_data?.length == 0) {
-//       return res.status(404).json({
-//         statusCode: 404,
-//         status: false,
-//         data: {
-//           data: [],
-//         },
-//         message: 'Results Not Found',
-//       });
-//     }
-//     search_query = search_data;
-//   }
+    const userDetails = req.userDetails;
+    const update_result = await peeling_done_items_model.updateOne(
+      { _id: id },
+      {
+        $set: {
+          thickness: thickness,
+          no_of_leaves: no_of_leaves,
+          updated_by: userDetails?._id,
+        },
+      }
+    );
+    if (update_result.matchedCount <= 0) {
+      throw new ApiError('Item Not Found', StatusCodes.NOT_FOUND);
+    }
 
-//   const filterData = dynamic_filter(filter);
+    if (!update_result.acknowledged || update_result.modifiedCount <= 0) {
+      throw new ApiError('Failed to update item', StatusCodes.BAD_REQUEST);
+    }
 
-//   const match_query = {
-//     ...search_query,
-//     ...filterData,
-//     issue_status: { $ne: null },
-//   };
-//   const aggMatch = {
-//     $match: {
-//       ...match_query,
-//     },
-//   };
-//   const aggCreatedUserDetails = {
-//     $lookup: {
-//       from: 'users',
-//       localField: 'created_by',
-//       foreignField: '_id',
-//       pipeline: [
-//         {
-//           $project: {
-//             first_name: 1,
-//             last_name: 1,
-//             user_name: 1,
-//             user_type: 1,
-//             email_id: 1,
-//           },
-//         },
-//       ],
-//       as: 'created_user_details',
-//     },
-//   };
-//   const aggUpdatedUserDetails = {
-//     $lookup: {
-//       from: 'users',
-//       localField: 'updated_by',
-//       foreignField: '_id',
-//       pipeline: [
-//         {
-//           $project: {
-//             first_name: 1,
-//             last_name: 1,
-//             user_name: 1,
-//             user_type: 1,
-//             email_id: 1,
-//           },
-//         },
-//       ],
-//       as: 'updated_user_details',
-//     },
-//   };
-//   const aggUnwindCreatedUser = {
-//     $unwind: {
-//       path: '$created_user_details',
-//       preserveNullAndEmptyArrays: true,
-//     },
-//   };
-//   const aggUnwindUpdatdUser = {
-//     $unwind: {
-//       path: '$updated_user_details',
-//       preserveNullAndEmptyArrays: true,
-//     },
-//   };
+    const response = new ApiResponse(
+      StatusCodes.OK,
+      'Item Updated Successfully',
+      update_result
+    );
 
-//   const aggLimit = {
-//     $limit: parseInt(limit),
-//   };
-
-//   const aggSkip = {
-//     $skip: (parseInt(page) - 1) * parseInt(limit),
-//   };
-
-//   const aggSort = {
-//     $sort: { [sortBy]: sort === 'desc' ? -1 : 1 },
-//   };
-//   const list_aggregate = [
-//     aggCreatedUserDetails,
-//     aggUpdatedUserDetails,
-//     aggUnwindCreatedUser,
-//     aggUnwindUpdatdUser,
-//     aggMatch,
-//     aggSort,
-//     aggSkip,
-//     aggLimit,
-//   ];
-
-//   const result = await slicing_done_items_model.aggregate(list_aggregate);
-
-//   const aggCount = {
-//     $count: 'totalCount',
-//   };
-
-//   const count_total_docs = [
-//     aggCreatedUserDetails,
-//     aggUpdatedUserDetails,
-//     aggUnwindCreatedUser,
-//     aggUnwindUpdatdUser,
-//     aggMatch,
-//     aggCount,
-//   ];
-
-//   const total_docs = await slicing_done_items_model.aggregate(count_total_docs);
-
-//   const totalPages = Math.ceil((total_docs[0]?.totalCount || 0) / limit);
-
-//   const response = new ApiResponse(
-//     StatusCodes.OK,
-//     'Data fetched successfully...',
-//     {
-//       data: result,
-//       totalPages: totalPages,
-//     }
-//   );
-
-//   return res.status(StatusCodes.OK).json(response);
-// });
+    return res.status(StatusCodes.OK).json(response);
+  }
+);
