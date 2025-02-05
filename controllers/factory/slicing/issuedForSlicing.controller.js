@@ -22,6 +22,7 @@ import {
 
 import issue_for_slicing_available_model from '../../../database/schema/factory/slicing/issue_for_slicing/issue_for_slicing_available_schema.js';
 import issue_for_slicing_wastage_model from '../../../database/schema/factory/slicing/issue_for_slicing/issue_for_slicing_wastage_schema.js';
+import { re_flitching_items_model, re_flitching_other_details_model } from '../../../database/schema/factory/peeling/peeling_done/re_flitching.schema.js';
 
 export const addIssueForSlicingFromFlitchInventory = catchAsync(
   async function (req, res, next) {
@@ -586,7 +587,7 @@ export const revert_issued_for_slicing = catchAsync(async (req, res, next) => {
       throw new ApiError('No Data found...', StatusCodes.BAD_REQUEST);
     }
 
-    const add_revert_to_flitching_done = async function () {
+    const add_revert_to_flitch_inventory = async function () {
       const updated_document =
         await flitch_inventory_items_model.findOneAndUpdate(
           { _id: issuedForSlicingData?.flitch_inventory_item_id },
@@ -626,7 +627,7 @@ export const revert_issued_for_slicing = catchAsync(async (req, res, next) => {
       }
     };
 
-    const add_revert_to_flitch_inventory = async function () {
+    const add_revert_to_flitching_done = async function () {
       const updated_document = await flitching_done_model.findOneAndUpdate(
         {
           _id: issuedForSlicingData?.flitching_done_id,
@@ -670,17 +671,59 @@ export const revert_issued_for_slicing = catchAsync(async (req, res, next) => {
       }
     };
 
+    const add_revert_to_reflitching_item = async function () {
+      const updated_document = await re_flitching_items_model.findOneAndUpdate({ _id: issuedForSlicingData?.reflitching_item_id }, {
+        $set: {
+          issue_status: null,
+        }
+      }, { new: true, session });
+
+      if (!updated_document) {
+        throw new ApiError(
+          'Failed to update reflitching item status',
+          StatusCodes.BAD_REQUEST
+        );
+      }
+
+      const re_flitching_other_details_id = updated_document?.re_flitching_other_details_id
+      const re_flitching_item_id = updated_document?._id
+
+      const is_re_flitching_other_details_editable = await re_flitching_items_model.find({
+        _id: { $ne: re_flitching_item_id },
+        issue_status: { $ne: null }
+      })
+
+      if (is_re_flitching_other_details_editable && is_re_flitching_other_details_editable?.length <= 0) {
+        await re_flitching_other_details_model.updateOne(
+          { _id: re_flitching_other_details_id },
+          {
+            $set: {
+              isEditable: true,
+            },
+          },
+          { session }
+        );
+      }
+
+    }
+
     if (
       issuedForSlicingData?.issued_from === issues_for_status?.flitching &&
       issuedForSlicingData?.flitching_done_id === null
     ) {
-      await add_revert_to_flitching_done();
-    }
-    if (
+      await add_revert_to_flitch_inventory();
+    } else if (
       issuedForSlicingData?.issued_from === issues_for_status?.flitching_done &&
       issuedForSlicingData?.flitching_done_id !== null
     ) {
-      await add_revert_to_flitch_inventory();
+      await add_revert_to_flitching_done();
+    } else if (
+      issuedForSlicingData?.issued_from === issues_for_status?.reflitching &&
+      issuedForSlicingData?.reflitching_item_id !== null
+    ) {
+      await add_revert_to_reflitching_item();
+    } else {
+      throw new ApiError("No Data found to revert", StatusCodes.BAD_REQUEST)
     }
 
     const delete_response = await issued_for_slicing_model.deleteOne(

@@ -9,6 +9,8 @@ import { re_flitching_items_model, re_flitching_other_details_model } from "../.
 import issues_for_peeling_wastage_model from "../../../../database/schema/factory/peeling/issues_for_peeling/issues_for_peeling_wastage.schema.js";
 import { peeling_done_other_details_model } from "../../../../database/schema/factory/peeling/peeling_done/peeling_done.schema.js";
 import ApiError from "../../../../utils/errors/apiError.js";
+import { issues_for_status } from "../../../../database/Utils/constants/constants.js";
+import { issued_for_slicing_model } from "../../../../database/schema/factory/slicing/issue_for_slicing/issuedForSlicing.js";
 
 export const fetch_issue_for_peeling_available_details = catchAsync(
   async (req, res, next) => {
@@ -804,4 +806,291 @@ export const revert_all_reflitching = catchAsync(async (req, res, next) => {
   } finally {
     await session.endSession();
   }
+});
+
+export const reflitching_issue_for_slicing = catchAsync(async (req, res, next) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    let { reflitching_items_ids } = req.body;
+    const userDetails = req.userDetails;
+    if (!reflitching_items_ids) {
+      throw new ApiError('reflitching_items_ids is missing', 400);
+    }
+    if (!Array.isArray(reflitching_items_ids)) {
+      throw new ApiError('invalid data type, reflitching_items_ids must be a array', 400);
+    }
+
+    reflitching_items_ids = reflitching_items_ids.map((e) => mongoose.Types.ObjectId.createFromHexString(e));
+
+    const fetch_reflitching_items_details = await re_flitching_items_model.aggregate([
+      {
+        $match: {
+          _id: { $in: reflitching_items_ids }
+        }
+      }
+    ]);
+    if (!fetch_reflitching_items_details && fetch_reflitching_items_details?.length <= 0) {
+      throw new ApiError('reflitching items not found', 400);
+    }
+
+    const re_flitching_other_details_ids = new Set();
+    const issue_for_slicing = fetch_reflitching_items_details.map((item) => {
+      re_flitching_other_details_ids.add(item.re_flitching_other_details_id);
+      return {
+        reflitching_item_id: item?._id,
+        item_sr_no: item?.item_sr_no,
+        item_id: item?.item_id,
+        item_name: item?.item_name,
+        item_sub_category_id: item?.item_sub_category_id,
+        item_sub_category_name: item?.item_sub_category_name,
+        color: item?.color,
+        flitch_formula: item?.flitch_formula,
+        log_no: item?.log_no,
+        log_no_code: item?.log_no_code,
+        flitch_code: item?.flitch_code,
+        length: item?.length,
+        width1: item?.width1,
+        width2: item?.width2,
+        width3: item?.width3,
+        height: item?.height,
+        cmt: item?.cmt,
+        amount: item?.amount,
+        expense_amount: item?.expense_amount,
+        amount_factor: 1,
+        issued_from: issues_for_status?.reflitching,
+        is_peeling_done: true,
+        remark: item?.remark,
+        created_by: userDetails?._id,
+        updated_by: userDetails?._id
+      }
+    })
+
+    // add issue for slicing
+    const add_issue_for_slicing_data = await issued_for_slicing_model.insertMany(issue_for_slicing, { session });
+    if (!add_issue_for_slicing_data || add_issue_for_slicing_data?.length <= 0) {
+      throw new ApiError('issue for slicing not added', 400);
+    }
+
+    // update issue status for reflitching items
+    const reflitching_item_ids = add_issue_for_slicing_data?.map((e) => e.reflitching_item_id);
+    const update_reflitching_items = await re_flitching_items_model.updateMany({ _id: { $in: reflitching_item_ids } }, {
+      $set: {
+        issue_status: issues_for_status?.slicing
+      }
+    }, { session })
+    if (update_reflitching_items?.matchedCount <= 0) {
+      throw new ApiError('Not found reflitching items');
+    }
+
+    if (
+      !update_reflitching_items.acknowledged ||
+      update_reflitching_items?.modifiedCount <= 0
+    ) {
+      throw new ApiError('Unable to change status of reflitching items');
+    }
+
+    //update reflitching other details isEditable
+    const update_reflitching_other_details = await re_flitching_other_details_model.updateMany({}, {
+      $set: {
+        isEditable: false
+      }
+    }, { session })
+    if (update_reflitching_other_details?.matchedCount <= 0) {
+      throw new ApiError('Not found reflitching other details');
+    }
+
+    if (
+      !update_reflitching_other_details.acknowledged ||
+      update_reflitching_other_details?.modifiedCount <= 0
+    ) {
+      throw new ApiError('Unable to change editable status of reflitching other details');
+    }
+
+    await session.commitTransaction();
+    const response = new ApiResponse(StatusCodes.CREATED, 'Issued for slicing Successfully', add_issue_for_slicing_data);
+    return res.status(StatusCodes.CREATED).json(response)
+
+  } catch (error) {
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    await session.endSession();
+  }
 })
+
+export const fetch_reflitching_items_history = catchAsync(
+  async (req, res, next) => {
+    const {
+      page = 1,
+      sortBy = 'updatedAt',
+      sort = 'desc',
+      limit = 10,
+      search = '',
+    } = req.query;
+    const {
+      string,
+      boolean,
+      numbers,
+      arrayField = [],
+    } = req.body?.searchFields || {};
+
+    const filter = req.body?.filter;
+
+    let search_query = {};
+    if (search != '' && req?.body?.searchFields) {
+      const search_data = DynamicSearch(
+        search,
+        boolean,
+        numbers,
+        string,
+        arrayField
+      );
+      if (search_data?.length == 0) {
+        return res.status(404).json({
+          statusCode: 404,
+          status: false,
+          data: {
+            data: [],
+          },
+          message: 'Results Not Found',
+        });
+      }
+      search_query = search_data;
+    }
+
+    const filterData = dynamic_filter(filter);
+
+    const match_query = {
+      ...search_query,
+      ...filterData,
+      issue_status: { $ne: null }
+    };
+
+    const aggLookupReflitchingOtherDetails = {
+      $lookup: {
+        from: 're_flitching_other_details',
+        localField: 're_flitching_other_details_id',
+        foreignField: '_id',
+        as: 're_flitching_other_details',
+      },
+    };
+    const aggCreatedUserDetails = {
+      $lookup: {
+        from: 'users',
+        localField: 'created_by',
+        foreignField: '_id',
+        pipeline: [
+          {
+            $project: {
+              first_name: 1,
+              last_name: 1,
+              user_name: 1,
+              user_type: 1,
+              email_id: 1,
+            },
+          },
+        ],
+        as: 'created_user_details',
+      },
+    };
+
+    const aggUpdatedUserDetails = {
+      $lookup: {
+        from: 'users',
+        localField: 'updated_by',
+        foreignField: '_id',
+        pipeline: [
+          {
+            $project: {
+              first_name: 1,
+              last_name: 1,
+              user_name: 1,
+              user_type: 1,
+              email_id: 1,
+            },
+          },
+        ],
+        as: 'updated_user_details',
+      },
+    };
+    const aggMatch = {
+      $match: {
+        ...match_query,
+      },
+    };
+    const aggUnwindOtherDetails = {
+      $unwind: {
+        path: '$re_flitching_other_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    };
+
+    const aggUnwindCreatedUser = {
+      $unwind: {
+        path: '$created_user_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    };
+    const aggUnwindUpdatedUser = {
+      $unwind: {
+        path: '$updated_user_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    };
+    const aggSort = {
+      $sort: {
+        [sortBy]: sort === 'desc' ? -1 : 1,
+      },
+    };
+
+    const aggSkip = {
+      $skip: (parseInt(page) - 1) * parseInt(limit),
+    };
+
+    const aggLimit = {
+      $limit: parseInt(limit),
+    };
+
+    const list_aggregate = [
+      aggLookupReflitchingOtherDetails,
+      aggUnwindOtherDetails,
+      aggCreatedUserDetails,
+      aggUpdatedUserDetails,
+      aggUnwindCreatedUser,
+      aggUnwindUpdatedUser,
+      aggMatch,
+      aggSort,
+      aggSkip,
+      aggLimit,
+    ];
+
+    const result = await re_flitching_items_model.aggregate(list_aggregate);
+
+    const aggCount = {
+      $count: 'totalCount',
+    };
+
+    const count_total_docs = [
+      aggLookupReflitchingOtherDetails,
+      aggUnwindOtherDetails,
+      aggCreatedUserDetails,
+      aggUpdatedUserDetails,
+      aggUnwindCreatedUser,
+      aggUnwindUpdatedUser,
+      aggMatch,
+      aggCount,
+    ];
+
+    const total_docs =
+      await re_flitching_items_model.aggregate(count_total_docs);
+
+    const totalPages = Math.ceil((total_docs[0]?.totalCount || 0) / limit);
+
+    const response = new ApiResponse(200, 'Data Fetched Successfully', {
+      data: result,
+      totalPages: totalPages,
+    });
+    return res.status(200).json(response);
+  }
+);

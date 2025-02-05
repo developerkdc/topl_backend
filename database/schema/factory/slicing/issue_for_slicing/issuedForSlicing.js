@@ -22,6 +22,10 @@ const issue_for_slicing_schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       default: null,
     },
+    reflitching_item_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
     item_sr_no: {
       type: Number,
       required: [true, 'Item Sr.No is required'],
@@ -123,8 +127,9 @@ const issue_for_slicing_schema = new mongoose.Schema(
         values: [
           issues_for_status?.flitching,
           issues_for_status?.flitching_done,
+          issues_for_status?.reflitching,
         ],
-        message: `Invalid issued from type {{VALUE}} it should be one of the ${issues_for_status.flitching}, ${issues_for_status.flitching_done}`,
+        message: `Invalid issued from type {{VALUE}} it should be one of the ${issues_for_status.flitching}, ${issues_for_status.flitching_done} or ${issues_for_status.reflitching}`,
       },
     },
     type: {

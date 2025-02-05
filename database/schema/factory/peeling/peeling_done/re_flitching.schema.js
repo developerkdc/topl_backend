@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { issues_for_status } from "../../../../Utils/constants/constants.js";
 
 const re_flitching_other_details_schema = new mongoose.Schema(
     {
@@ -57,7 +58,7 @@ const re_flitching_other_details_schema = new mongoose.Schema(
 );
 
 re_flitching_other_details_schema.index({ issue_for_peeling_available_id: 1 }, { unique: true });
-export const re_flitching_other_details_model = mongoose.model("re_flitching_other_details",re_flitching_other_details_schema,"re_flitching_other_details");
+export const re_flitching_other_details_model = mongoose.model("re_flitching_other_details", re_flitching_other_details_schema, "re_flitching_other_details");
 
 const re_flitching_items_schema = new mongoose.Schema(
     {
@@ -162,6 +163,16 @@ const re_flitching_items_schema = new mongoose.Schema(
             default: null,
             trim: true,
             uppercase: true,
+        },
+        issue_status: {
+            type: String,
+            enum: {
+                values: [
+                    issues_for_status?.slicing
+                ],
+                message: `Invalid status {{VALUE}} Issue Status must either be one of ${issues_for_status?.slicing}`,
+            },
+            default: null,
         },
         created_by: {
             type: mongoose.Schema.Types.ObjectId,
