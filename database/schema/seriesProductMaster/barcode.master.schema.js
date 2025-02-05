@@ -1,4 +1,4 @@
-import mongoose, { Schema } from 'mongoose';
+import mongoose, { Schema, set } from 'mongoose';
 
 const barcodeSchema = new mongoose.Schema(
   {
@@ -71,7 +71,8 @@ const barcodeSchema = new mongoose.Schema(
           },
         },
       ],
-      default: null
+      default: null,
+      set: (val) => (Array.isArray(val) ? val : [])
     },
 
     base_sub_category: {
@@ -89,7 +90,8 @@ const barcodeSchema = new mongoose.Schema(
           },
         },
       ],
-      default: null
+      default: null,
+      set: (val) => (Array.isArray(val) ? val : [])
     },
     base_min_thickness: {
       type: Number,
