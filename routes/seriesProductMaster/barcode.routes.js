@@ -5,7 +5,8 @@ import {
   fetchBarcodeList,
   fetchSingleBarcode,
   updateBarcodeDetails,
-  dropdownBarcode, updateBarcodeStatus
+  dropdownBarcode,
+  updateBarcodeStatus,
 } from '../../controllers/seriesProductMaster/barcode.master.controller.js';
 import { MulterFunction } from '../../config/multer/multer.js';
 const router = Router();

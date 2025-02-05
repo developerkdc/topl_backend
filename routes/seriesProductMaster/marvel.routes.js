@@ -6,6 +6,7 @@ import {
   fetchMarvelList,
   fetchSingleMarvel,
   updateMarvelDetails,
+  updateStatus,
 } from '../../controllers/seriesProductMaster/marvel.master.controller.js';
 const router = Router();
 import { MulterFunction } from '../../config/multer/multer.js';
@@ -27,6 +28,7 @@ router.post(
 );
 router.post('/list-marvel', AuthMiddleware, fetchMarvelList);
 router.get('/list-single-marvel/:id', AuthMiddleware, fetchSingleMarvel);
+router.patch('/update-marvel-status', AuthMiddleware, updateStatus);
 
 //Without Permission
 router.get('/dropdown-marvel', AuthMiddleware, dropdownMarvel);

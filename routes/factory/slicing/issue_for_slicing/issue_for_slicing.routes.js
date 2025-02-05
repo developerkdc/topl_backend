@@ -6,9 +6,7 @@ import {
   fetch_single_issued_for_slicing_item,
   revert_issued_for_slicing,
   add_issue_for_slicing_from_flitching_done,
-
 } from '../../../../controllers/factory/slicing/issue_for_slicing/issuedForSlicing.controller.js';
-
 
 const issueForSlicingRouter = express.Router();
 
@@ -37,6 +35,5 @@ issueForSlicingRouter.post(
   AuthMiddleware,
   revert_issued_for_slicing
 );
-
 
 export default issueForSlicingRouter;

@@ -4,7 +4,9 @@ import {
   fetch_all_slicing_done_items,
   fetch_all_details_by_slicing_done_id,
   fetch_slicing_done_history,
-  revert_slicing_done, add_reslicing_done, revert_re_slicing_done
+  revert_slicing_done,
+  add_reslicing_done,
+  revert_re_slicing_done,
 } from '../../../../controllers/factory/slicing/slicing_done/slicing.done.controller.js';
 import AuthMiddleware from '../../../../middlewares/verifyToken.js';
 
@@ -37,5 +39,9 @@ slicingDoneRouter.post(
   AuthMiddleware,
   revert_re_slicing_done
 );
-slicingDoneRouter.post('/create-re-slicing', AuthMiddleware, add_reslicing_done)
+slicingDoneRouter.post(
+  '/create-re-slicing',
+  AuthMiddleware,
+  add_reslicing_done
+);
 export default slicingDoneRouter;

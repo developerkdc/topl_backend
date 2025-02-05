@@ -6,6 +6,7 @@ import {
   fetchFurrowRegantoList,
   fetchSingleFurrowReganto,
   updateFurrowRegantoDetails,
+  updateStatus,
 } from '../../controllers/seriesProductMaster/furrow.reganto.master.controller.js';
 import { MulterFunction } from '../../config/multer/multer.js';
 
@@ -33,7 +34,7 @@ router.get(
   AuthMiddleware,
   fetchSingleFurrowReganto
 );
-
+router.patch('/update-furrow-reganto-status', AuthMiddleware, updateStatus);
 //without permission
 router.get('/dropdown-furrow-reganto', AuthMiddleware, dropdownFurrowReganto);
 

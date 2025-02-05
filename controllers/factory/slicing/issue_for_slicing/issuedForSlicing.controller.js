@@ -20,7 +20,6 @@ import {
   flitching_view_modal,
 } from '../../../../database/schema/factory/flitching/flitching.schema.js';
 
-
 export const addIssueForSlicingFromFlitchInventory = catchAsync(
   async function (req, res, next) {
     const session = await mongoose.startSession();
@@ -795,7 +794,3 @@ export const fetch_single_issued_for_slicing_item = catchAsync(
     return res.status(StatusCodes.OK).json(response);
   }
 );
-
-
-
-

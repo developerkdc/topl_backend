@@ -6,6 +6,7 @@ import {
   fetchRegantoPremierList,
   fetchSingleRegantoPremier,
   updateRegantoPremierDetails,
+  updateStatus,
 } from '../../controllers/seriesProductMaster/reganto.premier.controller.js';
 import { MulterFunction } from '../../config/multer/multer.js';
 
@@ -33,6 +34,7 @@ router.get(
   AuthMiddleware,
   fetchSingleRegantoPremier
 );
+router.patch('/update-reganto-premier-status', AuthMiddleware, updateStatus);
 
 //without permission
 router.get('/dropdown-reganto-premier', AuthMiddleware, dropdownRegantoPremier);

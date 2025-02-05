@@ -25,10 +25,13 @@ factoryRouter.use(`/factory/peeling-wastage`, issue_for_peeling_wastage_router);
 factoryRouter.use(`/factory/peeling-available`, issue_for_peeling_available);
 factoryRouter.use(`/factory/peeling-done`, peelingDoneRouter);
 
-//slicing factory routes 
+//slicing factory routes
 factoryRouter.use(`/factory/slicing`, issueForSlicingRouter);
 factoryRouter.use(`/factory/slicing-done`, slicingDoneRouter);
-factoryRouter.use("/factory/slicing-available", issue_for_slicing_available_router)
-factoryRouter.use("/factory/slicing-wastage", issue_for_peeling_wastage_router)
+factoryRouter.use(
+  '/factory/slicing-available',
+  issue_for_slicing_available_router
+);
+factoryRouter.use('/factory/slicing-wastage', issue_for_peeling_wastage_router);
 
 export default factoryRouter;

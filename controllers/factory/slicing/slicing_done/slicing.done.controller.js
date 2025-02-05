@@ -609,13 +609,21 @@ export const edit_slicing_done = catchAsync(async (req, res, next) => {
       }
     }
 
-    const verify_other_details = await slicing_done_other_details_model.findOne({ _id: slicing_done_id });
+    const verify_other_details = await slicing_done_other_details_model.findOne(
+      { _id: slicing_done_id }
+    );
 
     if (!verify_other_details) {
-      throw new ApiError("Slicing Done Data not found.", StatusCodes.BAD_REQUEST)
+      throw new ApiError(
+        'Slicing Done Data not found.',
+        StatusCodes.BAD_REQUEST
+      );
     }
     if (!verify_other_details?.isEditable) {
-      throw new ApiError("Slicing Done item is not editable", StatusCodes.BAD_REQUEST)
+      throw new ApiError(
+        'Slicing Done item is not editable',
+        StatusCodes.BAD_REQUEST
+      );
     }
     // Other goods details
     const add_other_details_data =
@@ -717,7 +725,7 @@ export const edit_slicing_done = catchAsync(async (req, res, next) => {
     //add wastage
     if (
       issue_for_slicing_type?.type?.toLowerCase() ===
-      issue_for_slicing.wastage?.toLowerCase() &&
+        issue_for_slicing.wastage?.toLowerCase() &&
       wastage_details
     ) {
       const wastage_details_data = {
@@ -739,7 +747,7 @@ export const edit_slicing_done = catchAsync(async (req, res, next) => {
     // add available
     if (
       issue_for_slicing_type?.type?.toLowerCase() ===
-      issue_for_slicing.rest_roller?.toLowerCase() &&
+        issue_for_slicing.rest_roller?.toLowerCase() &&
       available_details
     ) {
       const re_slicing_details_data = {
@@ -915,65 +923,90 @@ export const revert_slicing_done = catchAsync(async (req, res, next) => {
 
 export const add_reslicing_done = catchAsync(async (req, res, next) => {
   const { other_details, items_details, type, wastage_details } = req.body;
-  const userDetails = req.userDetails
+  const userDetails = req.userDetails;
   const session = await mongoose.startSession();
   try {
-    session.startTransaction()
-    for (let field of ["other_details", "items_details", "type"]) {
+    session.startTransaction();
+    for (let field of ['other_details', 'items_details', 'type']) {
       if (!req.body?.[field]) {
-        throw new ApiError(`${field} is missing...`, StatusCodes.BAD_REQUEST)
+        throw new ApiError(`${field} is missing...`, StatusCodes.BAD_REQUEST);
       }
-    };
+    }
     if (type?.toLowerCase() === issue_for_slicing?.wastage?.toLowerCase()) {
       if (!wastage_details) {
-        throw new ApiError("Wastage details are required..", StatusCodes.BAD_REQUEST)
+        throw new ApiError(
+          'Wastage details are required..',
+          StatusCodes.BAD_REQUEST
+        );
       }
-    };
+    }
 
-    const add_other_details_data = await slicing_done_other_details_model.create([
-      {
-        ...other_details,
-        created_by: userDetails?._id,
-        updated_by: userDetails?._id
-      }
-    ], { session });
+    const add_other_details_data =
+      await slicing_done_other_details_model.create(
+        [
+          {
+            ...other_details,
+            created_by: userDetails?._id,
+            updated_by: userDetails?._id,
+          },
+        ],
+        { session }
+      );
 
     const other_details_data = add_other_details_data?.[0];
 
     if (!other_details_data) {
-      throw new ApiError("Failed to add other details", StatusCodes.BAD_REQUEST)
-    };
+      throw new ApiError(
+        'Failed to add other details',
+        StatusCodes.BAD_REQUEST
+      );
+    }
     const add_other_details_id = other_details_data?._id;
-    const issue_for_slicing_id = other_details_data?.issue_for_slicing_id
+    const issue_for_slicing_id = other_details_data?.issue_for_slicing_id;
 
     //update slicing done other details to false as items will not be edited since reslicing is done for that item
-    const update_is_editable_status = await slicing_done_other_details_model?.updateMany({ issue_for_slicing_id: issue_for_slicing_id, _id: { $ne: add_other_details_id } }, {
-      $set: {
-        isEditable: false,
-        updated_by: userDetails?._id
-      }
-    }, { session });
+    const update_is_editable_status =
+      await slicing_done_other_details_model?.updateMany(
+        {
+          issue_for_slicing_id: issue_for_slicing_id,
+          _id: { $ne: add_other_details_id },
+        },
+        {
+          $set: {
+            isEditable: false,
+            updated_by: userDetails?._id,
+          },
+        },
+        { session }
+      );
 
-    if (!update_is_editable_status?.acknowledged || update_is_editable_status?.modifiedCount === 0) {
-      throw new ApiError("Failed to update Editable status in other details", StatusCodes.BAD_REQUEST)
-    };
+    if (
+      !update_is_editable_status?.acknowledged ||
+      update_is_editable_status?.modifiedCount === 0
+    ) {
+      throw new ApiError(
+        'Failed to update Editable status in other details',
+        StatusCodes.BAD_REQUEST
+      );
+    }
 
     //item_details
     const items_details_data = items_details?.map((item) => {
       item.slicing_done_other_details_id = add_other_details_id;
       item.slicing_done_from = slicing_done_from?.re_slicing;
-      item.created_by = userDetails?._id,
-        item.updated_by = userDetails?._id
-      return item
+      (item.created_by = userDetails?._id),
+        (item.updated_by = userDetails?._id);
+      return item;
     });
 
-    const add_items_details_data = await slicing_done_items_model.insertMany(items_details_data, { session });
+    const add_items_details_data = await slicing_done_items_model.insertMany(
+      items_details_data,
+      { session }
+    );
 
     if (add_items_details_data?.length === 0) {
-      throw new ApiError("Failed to add Slicing Item Details", StatusCodes.OK)
-    };
-
-
+      throw new ApiError('Failed to add Slicing Item Details', StatusCodes.OK);
+    }
 
     // const update_other_details_editable_status_for_done_items = await issued_for_slicing_model?.findOneAndUpdate({ _id: issue_for_slicing_id }, {
     //   $set: {
@@ -986,44 +1019,68 @@ export const add_reslicing_done = catchAsync(async (req, res, next) => {
     //   throw new ApiError("Failed to update issue for slicing type", StatusCodes.BAD_REQUEST)
     // };
 
-
     //add wastage details
     if (type?.toLowerCase() === issue_for_slicing?.wastage?.toLowerCase()) {
-      const add_wastage_details = await issue_for_slicing_wastage_model.create([{
-        ...wastage_details,
-        issue_for_slicing_id: issue_for_slicing_id,
-        created_by: userDetails?._id,
-        updated_by: userDetails?._id
-      }], { session });
+      const add_wastage_details = await issue_for_slicing_wastage_model.create(
+        [
+          {
+            ...wastage_details,
+            issue_for_slicing_id: issue_for_slicing_id,
+            created_by: userDetails?._id,
+            updated_by: userDetails?._id,
+          },
+        ],
+        { session }
+      );
 
       if (add_wastage_details?.length === 0) {
-        throw new ApiError("Failed to add wastage details", StatusCodes.BAD_REQUEST)
-      };
-    };
-
-    const update_issue_for_slicing_available_slicing_status = await issue_for_slicing_available_model?.updateOne({ issue_for_slicing_id: issue_for_slicing_id }, {
-      $set: {
-        is_reslicing_done: true
+        throw new ApiError(
+          'Failed to add wastage details',
+          StatusCodes.BAD_REQUEST
+        );
       }
-    }, { session });
-
-    if (!update_issue_for_slicing_available_slicing_status?.acknowledged || update_issue_for_slicing_available_slicing_status?.modifiedCount === 0) {
-      throw new ApiError("Failed to update issue for slicing available slicing done status", StatusCodes.BAD_REQUEST)
     }
 
+    const update_issue_for_slicing_available_slicing_status =
+      await issue_for_slicing_available_model?.updateOne(
+        { issue_for_slicing_id: issue_for_slicing_id },
+        {
+          $set: {
+            is_reslicing_done: true,
+          },
+        },
+        { session }
+      );
+
+    if (
+      !update_issue_for_slicing_available_slicing_status?.acknowledged ||
+      update_issue_for_slicing_available_slicing_status?.modifiedCount === 0
+    ) {
+      throw new ApiError(
+        'Failed to update issue for slicing available slicing done status',
+        StatusCodes.BAD_REQUEST
+      );
+    }
 
     await session.commitTransaction();
 
-    const response = new ApiResponse(StatusCodes.OK, "Re-Slicing Done Sucessfully", { other_details: other_details, items_details: items_details, wastage_details: wastage_details });
+    const response = new ApiResponse(
+      StatusCodes.OK,
+      'Re-Slicing Done Sucessfully',
+      {
+        other_details: other_details,
+        items_details: items_details,
+        wastage_details: wastage_details,
+      }
+    );
 
     return res.status(StatusCodes.OK).json(response);
-
   } catch (error) {
-    console.log("err => ", error)
+    console.log('err => ', error);
     await session.abortTransaction();
-    throw error
+    throw error;
   } finally {
-    await session.endSession()
+    await session.endSession();
   }
 });
 
@@ -1086,7 +1143,6 @@ export const revert_re_slicing_done = catchAsync(async (req, res, next) => {
       );
     }
 
-
     const delete_issue_for_slicing_wastage_result =
       await issue_for_slicing_wastage_model?.deleteOne(
         { issue_for_slicing_id: other_details?.issue_for_slicing_id },
@@ -1126,7 +1182,10 @@ export const revert_re_slicing_done = catchAsync(async (req, res, next) => {
 
     const update_other_details_editable_status_for_done_items =
       await slicing_done_other_details_model.updateOne(
-        { issue_for_slicing_id: other_details?.issue_for_slicing_id, _id: { $ne: other_details_id } },
+        {
+          issue_for_slicing_id: other_details?.issue_for_slicing_id,
+          _id: { $ne: other_details_id },
+        },
         {
           $set: {
             isEditable: true,
@@ -1145,15 +1204,22 @@ export const revert_re_slicing_done = catchAsync(async (req, res, next) => {
       );
     }
 
+    const update_is_reslicing_done_status =
+      await issue_for_slicing_available_model?.updateOne(
+        { issue_for_slicing_id: other_details?.issue_for_slicing_id },
+        {
+          $set: {
+            is_reslicing_done: false,
+          },
+        },
+        { session }
+      );
 
-    const update_is_reslicing_done_status = await issue_for_slicing_available_model?.updateOne({ issue_for_slicing_id: other_details?.issue_for_slicing_id }, {
-      $set: {
-        is_reslicing_done: false
-      }
-    }, { session });
-
-    if (!update_is_reslicing_done_status.acknowledged || update_is_reslicing_done_status?.modifiedCount === 0) {
-      throw new ApiError("Failed to update reslicing done status")
+    if (
+      !update_is_reslicing_done_status.acknowledged ||
+      update_is_reslicing_done_status?.modifiedCount === 0
+    ) {
+      throw new ApiError('Failed to update reslicing done status');
     }
     await session.commitTransaction();
     const response = new ApiResponse(

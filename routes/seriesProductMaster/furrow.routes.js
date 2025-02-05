@@ -6,6 +6,7 @@ import {
   fetchFurrowList,
   fetchSingleFurrow,
   updateFurrowDetails,
+  updateStatus,
 } from '../../controllers/seriesProductMaster/furrow.master.controller.js';
 import { MulterFunction } from '../../config/multer/multer.js';
 const router = Router();
@@ -28,6 +29,7 @@ router.post(
 );
 router.post('/list-furrow', AuthMiddleware, fetchFurrowList);
 router.get('/list-single-furrow/:id', AuthMiddleware, fetchSingleFurrow);
+router.patch('/update-furrow-status', AuthMiddleware, updateStatus);
 
 //without permission
 router.get('/dropdown-furrow', AuthMiddleware, dropdownFurrow);

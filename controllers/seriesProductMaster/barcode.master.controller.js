@@ -405,26 +405,27 @@ export const dropdownBarcode = catchAsync(async (req, res, next) => {
   return res.status(StatusCodes.OK).json(response);
 });
 
-
 export const updateBarcodeStatus = catchAsync(async (req, res, next) => {
   const { id, status } = req.body;
 
   if (!id) {
-    throw new ApiError("ID is missing", StatusCodes.BAD_REQUEST)
-  };
+    throw new ApiError('ID is missing', StatusCodes.BAD_REQUEST);
+  }
 
   const update_result = await barcodeModel.findByIdAndUpdate(id, {
     $set: {
-      status: status
-    }
+      status: status,
+    },
   });
 
   if (!update_result) {
-    throw new ApiError("Failed to update status", StatusCodes.BAD_REQUEST)
+    throw new ApiError('Failed to update status', StatusCodes.BAD_REQUEST);
   }
 
-  const response = new ApiResponse(StatusCodes.OK, "Status Updated Sucessfully");
+  const response = new ApiResponse(
+    StatusCodes.OK,
+    'Status Updated Sucessfully'
+  );
 
-  return res.status(StatusCodes.OK).json(response)
-
-})
+  return res.status(StatusCodes.OK).json(response);
+});

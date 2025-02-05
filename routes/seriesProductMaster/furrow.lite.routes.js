@@ -6,6 +6,7 @@ import {
   fetchFurrowLiteList,
   fetchSingleFurrowLite,
   updateFurrowLiteDetails,
+  updateStatus,
 } from '../../controllers/seriesProductMaster/furrow.lite.master.controller.js';
 import { MulterFunction } from '../../config/multer/multer.js';
 const router = Router();
@@ -32,6 +33,7 @@ router.get(
   AuthMiddleware,
   fetchSingleFurrowLite
 );
+router.patch('/update-furrow-lite-status', AuthMiddleware, updateStatus);
 
 //without permission
 router.get('/dropdown-furrow-lite', AuthMiddleware, dropdownFurrowLite);

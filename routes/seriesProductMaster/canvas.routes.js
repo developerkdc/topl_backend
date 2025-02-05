@@ -6,6 +6,7 @@ import {
   fetchCanvasList,
   fetchSingleCanvas,
   updateCanvasDetails,
+  updateStatus,
 } from '../../controllers/seriesProductMaster/canvas.master.controller.js';
 import { MulterFunction } from '../../config/multer/multer.js';
 const router = Router();
@@ -28,6 +29,7 @@ router.post(
 );
 router.post('/list-canvas', AuthMiddleware, fetchCanvasList);
 router.get('/list-canvas/:id', AuthMiddleware, fetchSingleCanvas);
+router.patch('/update-canvas-status', AuthMiddleware, updateStatus);
 router.get('/dropdown-canvas', dropdownCanvas);
 
 export default router;
