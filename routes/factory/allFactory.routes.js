@@ -4,7 +4,7 @@ import flitchingFactoryRoutes from './flitching/flitching.routes.js';
 import rejected_crosscutting_router from './crossCutting/rejectedCrosscutting.routes.js';
 
 import slicingDoneRouter from './slicing/slicing_done/slicing_done.routes.js';
-import peelingDoneRouter from './peeling/peeling_done.routes.js';
+import peelingDoneRouter from './peeling/peeling_done/peeling_done.routes.js';
 import issueForPeelingRouter from './peeling/issue_for_peeling/issue_for_peeling.routes.js';
 import issue_for_peeling_wastage_router from './peeling/issue_for_peeling/issue_for_peeling_wastage.routes.js';
 import issue_for_peeling_available from './peeling/issue_for_peeling/issue_for_peeling_available.routes.js';

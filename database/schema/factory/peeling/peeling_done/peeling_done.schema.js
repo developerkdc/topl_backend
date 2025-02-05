@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { peeling_done } from '../../../Utils/constants/constants.js';
+import { peeling_done } from '../../../../Utils/constants/constants.js';
 
 const peeling_done_other_details_schema = new mongoose.Schema(
   {
@@ -207,6 +207,8 @@ const peeling_done_items_schema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     required: [true, 'Updated By Id is required'],
   },
+},{
+  timestamps:true
 });
 
 peeling_done_items_schema.index({ peeling_done_other_details_id: 1 });

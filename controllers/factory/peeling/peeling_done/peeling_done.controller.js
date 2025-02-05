@@ -1,18 +1,18 @@
 import mongoose from 'mongoose';
-import { issues_for_peeling_model } from '../../../database/schema/factory/peeling/issues_for_peeling/issues_for_peeling.schema.js';
-import issues_for_peeling_available_model from '../../../database/schema/factory/peeling/issues_for_peeling/issues_for_peeling_available.schema.js';
-import issues_for_peeling_wastage_model from '../../../database/schema/factory/peeling/issues_for_peeling/issues_for_peeling_wastage.schema.js';
+import { issues_for_peeling_model } from '../../../../database/schema/factory/peeling/issues_for_peeling/issues_for_peeling.schema.js';
+import issues_for_peeling_available_model from '../../../../database/schema/factory/peeling/issues_for_peeling/issues_for_peeling_available.schema.js';
+import issues_for_peeling_wastage_model from '../../../../database/schema/factory/peeling/issues_for_peeling/issues_for_peeling_wastage.schema.js';
 import {
   peeling_done_items_model,
   peeling_done_other_details_model,
-} from '../../../database/schema/factory/peeling/peeling_done.schema.js';
-import { issue_for_peeling } from '../../../database/Utils/constants/constants.js';
-import ApiResponse from '../../../utils/ApiResponse.js';
-import ApiError from '../../../utils/errors/apiError.js';
-import catchAsync from '../../../utils/errors/catchAsync.js';
-import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
-import { dynamic_filter } from '../../../utils/dymanicFilter.js';
-import { StatusCodes } from '../../../utils/constants.js';
+} from '../../../../database/schema/factory/peeling/peeling_done/peeling_done.schema.js';
+import { issue_for_peeling } from '../../../../database/Utils/constants/constants.js';
+import ApiResponse from '../../../../utils/ApiResponse.js';
+import ApiError from '../../../../utils/errors/apiError.js';
+import catchAsync from '../../../../utils/errors/catchAsync.js';
+import { DynamicSearch } from '../../../../utils/dynamicSearch/dynamic.js';
+import { dynamic_filter } from '../../../../utils/dymanicFilter.js';
+import { StatusCodes } from '../../../../utils/constants.js';
 
 export const add_peeling_done = catchAsync(async (req, res, next) => {
   const session = await mongoose.startSession();
@@ -104,7 +104,7 @@ export const add_peeling_done = catchAsync(async (req, res, next) => {
 
     if (
       issue_for_peeling_type?.type?.toLowerCase() ===
-        issue_for_peeling.wastage?.toLowerCase() &&
+      issue_for_peeling.wastage?.toLowerCase() &&
       wastage_details
     ) {
       const wastage_details_data = {
@@ -124,7 +124,7 @@ export const add_peeling_done = catchAsync(async (req, res, next) => {
 
     if (
       issue_for_peeling_type?.type?.toLowerCase() ===
-        issue_for_peeling.re_flitching?.toLowerCase() &&
+      issue_for_peeling.re_flitching?.toLowerCase() &&
       available_details
     ) {
       const re_flitching_details_data = {
@@ -197,13 +197,23 @@ export const edit_peeling_done = catchAsync(async (req, res, next) => {
       }
     }
 
+    const fetch_other_details_data = await peeling_done_other_details_model.findOne({ _id: peeling_done_id });
+    if (!fetch_other_details_data) {
+      throw new ApiError('Not data found', 400);
+    }
+
+    if (!fetch_other_details_data.isEditable) {
+      throw new ApiError('Cannot edit peeling done', 400);
+    }
+
     // Other goods details
+    const { createdAt, updatetAt, ...update_other_details } = other_details;
     const add_other_details_data =
       await peeling_done_other_details_model.findOneAndUpdate(
         { _id: peeling_done_id },
         {
           $set: {
-            ...other_details,
+            ...update_other_details,
             updated_by: userDetails?._id,
           },
         },
@@ -223,6 +233,8 @@ export const edit_peeling_done = catchAsync(async (req, res, next) => {
       item.peeling_done_other_details_id = add_other_details_id;
       item.created_by = item.created_by ? item.created_by : userDetails?._id;
       item.updated_by = userDetails?._id;
+      item.createdAt = item.createdAt ? item.createdAt : new Date();
+      item.updatedAt = new Date();
       return item;
     });
 
@@ -294,7 +306,7 @@ export const edit_peeling_done = catchAsync(async (req, res, next) => {
     //add wastage
     if (
       issue_for_peeling_type?.type?.toLowerCase() ===
-        issue_for_peeling.wastage?.toLowerCase() &&
+      issue_for_peeling.wastage?.toLowerCase() &&
       wastage_details
     ) {
       const wastage_details_data = {
@@ -316,7 +328,7 @@ export const edit_peeling_done = catchAsync(async (req, res, next) => {
     // add available
     if (
       issue_for_peeling_type?.type?.toLowerCase() ===
-        issue_for_peeling.re_flitching?.toLowerCase() &&
+      issue_for_peeling.re_flitching?.toLowerCase() &&
       available_details
     ) {
       const re_flitching_details_data = {
@@ -602,6 +614,120 @@ export const fetch_all_details_by_peeling_done_id = catchAsync(
     return res.status(StatusCodes.OK).json(response);
   }
 );
+
+export const revert_all_pending_done = catchAsync(async (req, res, next) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const { id } = req.params;
+
+    if (!id && !mongoose.isValidObjectId(id)) {
+      throw new ApiError('Invalid ID', StatusCodes.NOT_FOUND);
+    }
+
+    const fetch_peeling_done_other_details = await peeling_done_other_details_model.aggregate([
+      {
+        $match: { _id: mongoose.Types.ObjectId.createFromHexString(id) }
+      },
+      {
+        $lookup: {
+          from: 'issues_for_peelings',
+          foreignField: '_id',
+          localField: 'issue_for_peeling_id',
+          pipeline: [
+            {
+              $project: {
+                _id: 1,
+                type: 1
+              }
+            }
+          ],
+          as: 'issue_for_peeling_details',
+        },
+      },
+      {
+        $unwind: {
+          path: '$issue_for_peeling_details',
+          preserveNullAndEmptyArrays: true,
+        },
+      }
+    ]);
+    const peeling_done_other_details = fetch_peeling_done_other_details?.[0]
+
+    if (!peeling_done_other_details) {
+      throw new ApiError('Not data found', 400);
+    }
+
+    if (!peeling_done_other_details?.isEditable) {
+      throw new ApiError('Cannot revert peeling done', 400);
+    }
+
+    const peeling_done_other_details_id = peeling_done_other_details?._id;
+
+    const delete_peeling_done_other_details = await peeling_done_other_details_model.findOneAndDelete({ _id: peeling_done_other_details_id }, { session });
+
+    if (!delete_peeling_done_other_details) {
+      throw new ApiError('Failed to delete peeling done', 400);
+    }
+
+    const deleted_peeling_done_other_details_id = delete_peeling_done_other_details?._id;
+
+    const delete_peeling_done_items_details = await peeling_done_items_model.deleteMany({ peeling_done_other_details_id: deleted_peeling_done_other_details_id }, { session });
+
+    if (!delete_peeling_done_items_details.acknowledged || delete_peeling_done_items_details.deletedCount <= 0) {
+      throw new ApiError('Failed to delete peeling done items', 400);
+    }
+
+    const issue_for_peeling_id = peeling_done_other_details?.issue_for_peeling_details?._id;
+    const type = peeling_done_other_details?.issue_for_peeling_details?.type;
+
+    if (type === issue_for_peeling?.re_flitching) {
+      //delete re-flitching
+      const delete_available = await issues_for_peeling_available_model.deleteOne(
+        { issue_for_peeling_id: issue_for_peeling_id },
+        {
+          session,
+        }
+      );
+
+      if (!delete_available.acknowledged) {
+        throw new ApiError('Failed to delete available details', 400);
+      }
+    }
+
+    if (type === issue_for_peeling?.wastage) {
+      //delete wastage
+      const delete_wastage = await issues_for_peeling_wastage_model.deleteOne(
+        { issue_for_peeling_id: issue_for_peeling_id },
+        {
+          session,
+        }
+      );
+
+      if (!delete_wastage.acknowledged) {
+        throw new ApiError('Failed to delete wastage details', 400);
+      }
+    }
+
+    const update_issue_for_peeling = await issues_for_peeling_model.updateOne({ _id: issue_for_peeling_id }, {
+      $set: { type: null },
+    },{session});
+
+    if (!update_issue_for_peeling.acknowledged || update_issue_for_peeling.deletedCount <= 0) {
+      throw new ApiError('Failed to update type issue for peeling', 400);
+    }
+
+    await session.commitTransaction();
+    const response = new ApiResponse(StatusCodes.OK, 'Peeling Done Revert Successfully');
+    return res.status(StatusCodes.OK).json(response)
+
+  } catch (error) {
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    await session.endSession();
+  }
+});
 
 // export const fetch_slicing_done_history = catchAsync(async (req, res, next) => {
 //   const {

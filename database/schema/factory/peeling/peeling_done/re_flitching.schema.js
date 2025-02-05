@@ -1,10 +1,69 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
-const re_flitching_schema = new mongoose.Schema(
+const re_flitching_other_details_schema = new mongoose.Schema(
   {
-    issue_for_peeling_id: {
+    issue_for_peeling_available_id: {
       type: mongoose.Schema.Types.ObjectId,
-      required: [true, 'issue for peeling id is required'],
+      required: [true, 'issue for pelling available id is required'],
+    },
+    flitching_date: {
+      type: Date,
+      required: [true, 'flitching Date is required'],
+    },
+    no_of_workers: {
+      type: Number,
+      required: [true, 'No.of Workers is required '],
+    },
+    no_of_working_hours: {
+      type: Number,
+      required: [true, 'No. of Working hours is required'],
+    },
+    no_of_total_hours: {
+      type: Number,
+      required: [true, 'No. of Total hours is required'],
+    },
+    shift: {
+      type: String,
+      required: [true, 'Shift is required'],
+      trim: true,
+      uppercase: true,
+    },
+    isEditable: {
+      type: Boolean,
+      default: true,
+    },
+    total_amount: {
+      type: Number,
+      required: [true, 'Total Amount is required'],
+    },
+    wastage_consumed_total_amount: {
+      type: Number,
+      default: 0,
+    },
+    remark: {
+      type: String,
+      default: null,
+    },
+    created_by: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, 'Created By Id is required'],
+    },
+    updated_by: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, 'Updated By Id is required'],
+    },
+  },
+  { timestamps: true }
+);
+
+re_flitching_other_details_schema.index({ issue_for_peeling_available_id: 1 }, { unique: true });
+export const re_flitching_other_details_model = mongoose.model("re_flitching_other_details", re_flitching_other_details_schema, "re_flitching_other_details");
+
+const re_flitching_items_schema = new mongoose.Schema(
+  {
+    re_flitching_other_details_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, 're flitching other details id is required'],
     },
     item_id: {
       type: mongoose.Schema.Types.ObjectId,
@@ -54,13 +113,13 @@ const re_flitching_schema = new mongoose.Schema(
     },
     flitch_code: {
       type: String,
-      required: [true, 'Log Number is required'],
+      required: [true, 'Flitch code is required'],
       trim: true,
       uppercase: true,
     },
     flitch_formula: {
       type: String,
-      default: 'BF',
+      default: "BF",
     },
     length: {
       type: Number,
@@ -82,7 +141,7 @@ const re_flitching_schema = new mongoose.Schema(
       type: Number,
       required: [true, 'height is required'],
     },
-    flitch_cmt: {
+    cmt: {
       type: Number,
       required: [true, 'Flitch Cmt is required'],
     },
@@ -118,11 +177,6 @@ const re_flitching_schema = new mongoose.Schema(
   }
 );
 
-re_flitching_schema.index({ issue_for_peeling_id: 1 }, { unique: true });
 
-const re_flitching_model = mongoose.model(
-  're_flitchings',
-  re_flitching_schema,
-  're_flitchings'
-);
-export default re_flitching_model;
+
+export const re_flitching_items_model = mongoose.model("re_flitching_items", re_flitching_items_schema, "re_flitching_items");
