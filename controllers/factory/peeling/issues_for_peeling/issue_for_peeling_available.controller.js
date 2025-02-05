@@ -366,7 +366,7 @@ export const edit_reflitching_details = catchAsync(async (req, res, next) => {
             updated_by: userDetails?._id,
           },
         },
-        { new: true, session }
+        { new: true, runValidators: true, session }
       );
     const other_details_data = add_other_details_data;
 
@@ -451,7 +451,7 @@ export const edit_reflitching_details = catchAsync(async (req, res, next) => {
               ...wastage_details_data,
             },
           },
-          { new: true, session }
+          { new: true, runValidators: true, session }
         );
 
       if (!add_wastage_details_data) {
