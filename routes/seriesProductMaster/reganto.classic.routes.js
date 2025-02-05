@@ -6,6 +6,7 @@ import {
   fetchRegantoClassicList,
   fetchSingleRegantoClassic,
   updateRegantoClassicDetails,
+  updateStatus,
 } from '../../controllers/seriesProductMaster/reganto.classic.controller.js';
 import { MulterFunction } from '../../config/multer/multer.js';
 const router = Router();
@@ -33,6 +34,7 @@ router.get(
   fetchSingleRegantoClassic
 );
 
+router.patch('/update-reganto-classic-status', AuthMiddleware, updateStatus);
 //without permission
 router.get('/dropdown-reganto-classic', AuthMiddleware, dropdownRegantoClassic);
 

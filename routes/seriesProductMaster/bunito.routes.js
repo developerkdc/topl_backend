@@ -6,6 +6,7 @@ import {
   fetchBunitoList,
   fetchSingleBunito,
   updateBunitoDetails,
+  updateStatus,
 } from '../../controllers/seriesProductMaster/bunito.master.controller.js';
 import { MulterFunction } from '../../config/multer/multer.js';
 const router = Router();
@@ -27,6 +28,7 @@ router.post(
   updateBunitoDetails
 );
 router.post('/list-bunito', AuthMiddleware, fetchBunitoList);
+router.patch('/update-bunito-status', AuthMiddleware, updateStatus);
 router.get('/list-single-bunito/:id', AuthMiddleware, fetchSingleBunito);
 
 //without permission

@@ -34,3 +34,8 @@ export const issue_for_slicing = {
   rest_roller: 'rest_roller',
   wastage: 'wastage',
 };
+
+export const slicing_done_from = {
+  issue_for_slicing: 'issue_for_slicing',
+  re_slicing: 're_slicing',
+};

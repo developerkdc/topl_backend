@@ -404,3 +404,28 @@ export const dropdownBunito = catchAsync(async (req, res, next) => {
 
   return res.status(StatusCodes.OK).json(response);
 });
+
+export const updateStatus = catchAsync(async (req, res, next) => {
+  const { id, status } = req.body;
+
+  if (!id) {
+    throw new ApiError('ID is missing', StatusCodes.BAD_REQUEST);
+  }
+
+  const update_result = await bunitoModel.findByIdAndUpdate(id, {
+    $set: {
+      status: status,
+    },
+  });
+
+  if (!update_result) {
+    throw new ApiError('Failed to update status', StatusCodes.BAD_REQUEST);
+  }
+
+  const response = new ApiResponse(
+    StatusCodes.OK,
+    'Status Updated Sucessfully'
+  );
+
+  return res.status(StatusCodes.OK).json(response);
+});

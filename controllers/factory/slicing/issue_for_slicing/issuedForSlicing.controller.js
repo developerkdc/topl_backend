@@ -1,28 +1,24 @@
-import { StatusCodes } from '../../../utils/constants.js';
-import ApiResponse from '../../../utils/ApiResponse.js';
-import ApiError from '../../../utils/errors/apiError.js';
-import catchAsync from '../../../utils/errors/catchAsync.js';
+import { StatusCodes } from '../../../../utils/constants.js';
+import ApiResponse from '../../../../utils/ApiResponse.js';
+import ApiError from '../../../../utils/errors/apiError.js';
+import catchAsync from '../../../../utils/errors/catchAsync.js';
 import mongoose from 'mongoose';
 import {
   flitch_inventory_invoice_model,
   flitch_inventory_items_model,
   flitch_inventory_items_view_model,
-} from '../../../database/schema/inventory/Flitch/flitch.schema.js';
-import { issues_for_status } from '../../../database/Utils/constants/constants.js';
+} from '../../../../database/schema/inventory/Flitch/flitch.schema.js';
+import { issues_for_status } from '../../../../database/Utils/constants/constants.js';
 import {
   issued_for_slicing_model,
   issued_for_slicing_view_model,
-} from '../../../database/schema/factory/slicing//issue_for_slicing/issuedForSlicing.js';
-import { dynamic_filter } from '../../../utils/dymanicFilter.js';
-import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
+} from '../../../../database/schema/factory/slicing/issue_for_slicing/issuedForSlicing.js';
+import { dynamic_filter } from '../../../../utils/dymanicFilter.js';
+import { DynamicSearch } from '../../../../utils/dynamicSearch/dynamic.js';
 import {
   flitching_done_model,
   flitching_view_modal,
-} from '../../../database/schema/factory/flitching/flitching.schema.js';
-
-import issue_for_slicing_available_model from '../../../database/schema/factory/slicing/issue_for_slicing/issue_for_slicing_available_schema.js';
-import issue_for_slicing_wastage_model from '../../../database/schema/factory/slicing/issue_for_slicing/issue_for_slicing_wastage_schema.js';
-import { re_flitching_items_model, re_flitching_other_details_model } from '../../../database/schema/factory/peeling/peeling_done/re_flitching.schema.js';
+} from '../../../../database/schema/factory/flitching/flitching.schema.js';
 
 export const addIssueForSlicingFromFlitchInventory = catchAsync(
   async function (req, res, next) {
@@ -587,7 +583,7 @@ export const revert_issued_for_slicing = catchAsync(async (req, res, next) => {
       throw new ApiError('No Data found...', StatusCodes.BAD_REQUEST);
     }
 
-    const add_revert_to_flitch_inventory = async function () {
+    const add_revert_to_flitching_done = async function () {
       const updated_document =
         await flitch_inventory_items_model.findOneAndUpdate(
           { _id: issuedForSlicingData?.flitch_inventory_item_id },
@@ -627,7 +623,7 @@ export const revert_issued_for_slicing = catchAsync(async (req, res, next) => {
       }
     };
 
-    const add_revert_to_flitching_done = async function () {
+    const add_revert_to_flitch_inventory = async function () {
       const updated_document = await flitching_done_model.findOneAndUpdate(
         {
           _id: issuedForSlicingData?.flitching_done_id,
@@ -671,59 +667,17 @@ export const revert_issued_for_slicing = catchAsync(async (req, res, next) => {
       }
     };
 
-    const add_revert_to_reflitching_item = async function () {
-      const updated_document = await re_flitching_items_model.findOneAndUpdate({ _id: issuedForSlicingData?.reflitching_item_id }, {
-        $set: {
-          issue_status: null,
-        }
-      }, { new: true, session });
-
-      if (!updated_document) {
-        throw new ApiError(
-          'Failed to update reflitching item status',
-          StatusCodes.BAD_REQUEST
-        );
-      }
-
-      const re_flitching_other_details_id = updated_document?.re_flitching_other_details_id
-      const re_flitching_item_id = updated_document?._id
-
-      const is_re_flitching_other_details_editable = await re_flitching_items_model.find({
-        _id: { $ne: re_flitching_item_id },
-        issue_status: { $ne: null }
-      })
-
-      if (is_re_flitching_other_details_editable && is_re_flitching_other_details_editable?.length <= 0) {
-        await re_flitching_other_details_model.updateOne(
-          { _id: re_flitching_other_details_id },
-          {
-            $set: {
-              isEditable: true,
-            },
-          },
-          { session }
-        );
-      }
-
-    }
-
     if (
       issuedForSlicingData?.issued_from === issues_for_status?.flitching &&
       issuedForSlicingData?.flitching_done_id === null
     ) {
-      await add_revert_to_flitch_inventory();
-    } else if (
+      await add_revert_to_flitching_done();
+    }
+    if (
       issuedForSlicingData?.issued_from === issues_for_status?.flitching_done &&
       issuedForSlicingData?.flitching_done_id !== null
     ) {
-      await add_revert_to_flitching_done();
-    } else if (
-      issuedForSlicingData?.issued_from === issues_for_status?.reflitching &&
-      issuedForSlicingData?.reflitching_item_id !== null
-    ) {
-      await add_revert_to_reflitching_item();
-    } else {
-      throw new ApiError("No Data found to revert", StatusCodes.BAD_REQUEST)
+      await add_revert_to_flitch_inventory();
     }
 
     const delete_response = await issued_for_slicing_model.deleteOne(
@@ -836,364 +790,6 @@ export const fetch_single_issued_for_slicing_item = catchAsync(
       StatusCodes.OK,
       'Issued for Slicing Item Fetched Sucessfully',
       issue_for_slicing?.[0]
-    );
-    return res.status(StatusCodes.OK).json(response);
-  }
-);
-
-export const fetch_issue_for_slicing_wastage_details = catchAsync(
-  async (req, res, next) => {
-    const {
-      page = 1,
-      limit = 10,
-      sortBy = 'updatedAt',
-      sort = 'desc',
-      search = '',
-    } = req.query;
-    console.log('search => ', search);
-
-    const {
-      string,
-      boolean,
-      numbers,
-      arrayField = [],
-    } = req.body.searchFields || {};
-
-    const { filter } = req.body;
-
-    let search_query = {};
-
-    if (search != '' && req?.body?.searchFields) {
-      const search_data = DynamicSearch(
-        search,
-        boolean,
-        numbers,
-        string,
-        arrayField
-      );
-
-      if (search_data?.length === 0) {
-        throw new ApiError('NO Data found...', StatusCodes.NOT_FOUND);
-      }
-      search_query = search_data;
-    }
-
-    console.log(search_query);
-    const filterData = dynamic_filter(filter);
-
-    const match_query = {
-      ...search_query,
-      ...filterData,
-    };
-
-    const aggLookupIssueForSlicing = {
-      $lookup: {
-        from: 'issued_for_slicings',
-        localField: 'issue_for_slicing_id',
-        foreignField: '_id',
-        as: 'issue_for_slicing_details',
-      },
-    };
-
-    const aggCreatedUserDetails = {
-      $lookup: {
-        from: 'users',
-        localField: 'created_by',
-        foreignField: '_id',
-        pipeline: [
-          {
-            $project: {
-              first_name: 1,
-              last_name: 1,
-              user_name: 1,
-              user_type: 1,
-              email_id: 1,
-            },
-          },
-        ],
-        as: 'created_user_details',
-      },
-    };
-    const aggUpdatedUserDetails = {
-      $lookup: {
-        from: 'users',
-        localField: 'updated_by',
-        foreignField: '_id',
-        pipeline: [
-          {
-            $project: {
-              first_name: 1,
-              last_name: 1,
-              user_name: 1,
-              user_type: 1,
-              email_id: 1,
-            },
-          },
-        ],
-        as: 'updated_user_details',
-      },
-    };
-
-    const aggMatch = {
-      $match: {
-        ...match_query,
-      },
-    };
-
-    const aggUnwindIssueForSlicing = {
-      $unwind: {
-        path: '$issue_for_slicing_details',
-        preserveNullAndEmptyArrays: true,
-      },
-    };
-
-    const aggUnwindCreatedUser = {
-      $unwind: {
-        path: '$created_user_details',
-        preserveNullAndEmptyArrays: true,
-      },
-    };
-    const aggUnwindUpdatdUser = {
-      $unwind: {
-        path: '$updated_user_details',
-        preserveNullAndEmptyArrays: true,
-      },
-    };
-
-    const aggSort = {
-      $sort: {
-        [sortBy]: sort === 'desc' ? -1 : 1,
-      },
-    };
-
-    const aggSkip = {
-      $skip: (parseInt(page) - 1) * parseInt(limit),
-    };
-
-    const aggLimit = {
-      $limit: parseInt(limit),
-    };
-
-    const list_aggregate = [
-      aggLookupIssueForSlicing,
-      aggUnwindIssueForSlicing,
-      aggCreatedUserDetails,
-      aggUpdatedUserDetails,
-      aggUnwindCreatedUser,
-      aggUnwindUpdatdUser,
-      aggMatch,
-      aggSort,
-      aggSkip,
-      aggLimit,
-    ];
-
-    const result =
-      await issue_for_slicing_wastage_model.aggregate(list_aggregate);
-
-    const aggCount = {
-      $count: 'totalCount',
-    };
-
-    const count_total_docs = [
-      aggLookupIssueForSlicing,
-      aggUnwindIssueForSlicing,
-      aggCreatedUserDetails,
-      aggUnwindCreatedUser,
-      aggUpdatedUserDetails,
-      aggUnwindUpdatdUser,
-      aggMatch,
-      aggCount,
-    ];
-    const total_docs =
-      await issue_for_slicing_wastage_model.aggregate(count_total_docs);
-
-    const totalPages = Math.ceil((total_docs?.[0]?.totalCount || 0) / limit);
-
-    const response = new ApiResponse(
-      StatusCodes.OK,
-      'Data fetched successfully',
-      {
-        data: result,
-        totalPages: totalPages,
-      }
-    );
-    return res.status(StatusCodes.OK).json(response);
-  }
-);
-
-export const fetch_issue_for_slicing_available_details = catchAsync(
-  async (req, res, next) => {
-    const {
-      page = 1,
-      limit = 10,
-      sortBy = 'updatdAt',
-      sort = 'desc',
-      search = '',
-    } = req.query;
-
-    const {
-      string,
-      boolean,
-      numbers,
-      arrayField = [],
-    } = req.body.searchFields || {};
-
-    const { filter } = req.body;
-
-    let search_query = {};
-
-    if (search != '' && req?.body?.searchFields) {
-      const search_data = DynamicSearch(
-        search,
-        string,
-        boolean,
-        numbers,
-        arrayField
-      );
-
-      if (search_data?.length === 0) {
-        throw new ApiError('NO Data found...', StatusCodes.NOT_FOUND);
-      }
-      search_query = search_data;
-    }
-
-    const filterData = dynamic_filter(filter);
-
-    const match_query = {
-      ...search_query,
-      ...filterData,
-    };
-
-    const aggLookupIssueForSlicing = {
-      $lookup: {
-        from: 'issued_for_slicings',
-        localField: 'issue_for_slicing_id',
-        foreignField: '_id',
-        as: 'issue_for_slicing_details',
-      },
-    };
-
-    const aggCreatedUserDetails = {
-      $lookup: {
-        from: 'users',
-        localField: 'created_by',
-        foreignField: '_id',
-        pipeline: [
-          {
-            $project: {
-              first_name: 1,
-              last_name: 1,
-              user_name: 1,
-              user_type: 1,
-              email_id: 1,
-            },
-          },
-        ],
-        as: 'created_user_details',
-      },
-    };
-    const aggUpdatedUserDetails = {
-      $lookup: {
-        from: 'users',
-        localField: 'updated_by',
-        foreignField: '_id',
-        pipeline: [
-          {
-            $project: {
-              first_name: 1,
-              last_name: 1,
-              user_name: 1,
-              user_type: 1,
-              email_id: 1,
-            },
-          },
-        ],
-        as: 'updated_user_details',
-      },
-    };
-
-    const aggMatch = {
-      $match: {
-        ...match_query,
-      },
-    };
-
-    const aggUnwindIssueForSlicing = {
-      $unwind: {
-        path: '$issue_for_slicing_details',
-        preserveNullAndEmptyArrays: true,
-      },
-    };
-
-    const aggUnwindCreatedUser = {
-      $unwind: {
-        path: '$created_user_details',
-        preserveNullAndEmptyArrays: true,
-      },
-    };
-    const aggUnwindUpdatdUser = {
-      $unwind: {
-        path: '$updated_user_details',
-        preserveNullAndEmptyArrays: true,
-      },
-    };
-
-    const aggSort = {
-      $sort: {
-        [sortBy]: sort === 'desc' ? -1 : 1,
-      },
-    };
-
-    const aggSkip = {
-      $skip: (parseInt(page) - 1) * parseInt(limit),
-    };
-
-    const aggLimit = {
-      $limit: parseInt(limit),
-    };
-
-    const list_aggregate = [
-      aggLookupIssueForSlicing,
-      aggUnwindIssueForSlicing,
-      aggCreatedUserDetails,
-      aggUnwindCreatedUser,
-      aggUpdatedUserDetails,
-      aggUnwindUpdatdUser,
-      aggMatch,
-      aggSort,
-      aggSkip,
-      aggLimit,
-    ];
-
-    const result =
-      await issue_for_slicing_available_model.aggregate(list_aggregate);
-
-    const aggCount = {
-      $count: 'totalCount',
-    };
-
-    const count_total_docs = [
-      aggLookupIssueForSlicing,
-      aggUnwindIssueForSlicing,
-      aggCreatedUserDetails,
-      aggUnwindCreatedUser,
-      aggUpdatedUserDetails,
-      aggUnwindUpdatdUser,
-      aggMatch,
-      aggCount,
-    ];
-    const total_docs =
-      await issue_for_slicing_available_model.aggregate(count_total_docs);
-
-    const totalPages = Math.ceil((total_docs?.[0]?.totalCount || 0) / limit);
-
-    const response = new ApiResponse(
-      StatusCodes.OK,
-      'Data fetched successfully',
-      {
-        data: result,
-        totalPages: totalPages,
-      }
     );
     return res.status(StatusCodes.OK).json(response);
   }

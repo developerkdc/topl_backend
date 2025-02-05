@@ -1,16 +1,21 @@
-import issues_for_peeling_wastage_model from '../../../../database/schema/factory/peeling/issues_for_peeling/issues_for_peeling_wastage.schema.js';
-import ApiResponse from '../../../../utils/ApiResponse.js';
 import { StatusCodes } from '../../../../utils/constants.js';
+import ApiResponse from '../../../../utils/ApiResponse.js';
+import ApiError from '../../../../utils/errors/apiError.js';
+import catchAsync from '../../../../utils/errors/catchAsync.js';
+import mongoose from 'mongoose';
+
+import { issues_for_status } from '../../../../database/Utils/constants/constants.js';
+
 import { dynamic_filter } from '../../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../../utils/dynamicSearch/dynamic.js';
-import catchAsync from '../../../../utils/errors/catchAsync.js';
+import issue_for_slicing_available_model from '../../../../database/schema/factory/slicing/issue_for_slicing/issue_for_slicing_available_schema.js';
 
-export const fetch_issue_for_peeling_wastage_details = catchAsync(
+export const fetch_issue_for_slicing_available_details = catchAsync(
   async (req, res, next) => {
     const {
       page = 1,
       limit = 10,
-      sortBy = 'updatedAt',
+      sortBy = 'updatdAt',
       sort = 'desc',
       search = '',
     } = req.query;
@@ -29,9 +34,9 @@ export const fetch_issue_for_peeling_wastage_details = catchAsync(
     if (search != '' && req?.body?.searchFields) {
       const search_data = DynamicSearch(
         search,
+        string,
         boolean,
         numbers,
-        string,
         arrayField
       );
 
@@ -48,12 +53,12 @@ export const fetch_issue_for_peeling_wastage_details = catchAsync(
       ...filterData,
     };
 
-    const aggLookupIssueForPeeling = {
+    const aggLookupIssueForSlicing = {
       $lookup: {
-        from: 'issues_for_peelings',
-        localField: 'issue_for_peeling_id',
+        from: 'issued_for_slicings',
+        localField: 'issue_for_slicing_id',
         foreignField: '_id',
-        as: 'issue_for_peeling_details',
+        as: 'issue_for_slicing_details',
       },
     };
 
@@ -102,9 +107,9 @@ export const fetch_issue_for_peeling_wastage_details = catchAsync(
       },
     };
 
-    const aggUnwindIssueForPeeling = {
+    const aggUnwindIssueForSlicing = {
       $unwind: {
-        path: '$issue_for_peeling_details',
+        path: '$issue_for_slicing_details',
         preserveNullAndEmptyArrays: true,
       },
     };
@@ -137,11 +142,11 @@ export const fetch_issue_for_peeling_wastage_details = catchAsync(
     };
 
     const list_aggregate = [
-      aggLookupIssueForPeeling,
-      aggUnwindIssueForPeeling,
+      aggLookupIssueForSlicing,
+      aggUnwindIssueForSlicing,
       aggCreatedUserDetails,
-      aggUpdatedUserDetails,
       aggUnwindCreatedUser,
+      aggUpdatedUserDetails,
       aggUnwindUpdatdUser,
       aggMatch,
       aggSort,
@@ -150,15 +155,15 @@ export const fetch_issue_for_peeling_wastage_details = catchAsync(
     ];
 
     const result =
-      await issues_for_peeling_wastage_model.aggregate(list_aggregate);
+      await issue_for_slicing_available_model.aggregate(list_aggregate);
 
     const aggCount = {
       $count: 'totalCount',
     };
 
     const count_total_docs = [
-      aggLookupIssueForPeeling,
-      aggUnwindIssueForPeeling,
+      aggLookupIssueForSlicing,
+      aggUnwindIssueForSlicing,
       aggCreatedUserDetails,
       aggUnwindCreatedUser,
       aggUpdatedUserDetails,
@@ -167,7 +172,7 @@ export const fetch_issue_for_peeling_wastage_details = catchAsync(
       aggCount,
     ];
     const total_docs =
-      await issues_for_peeling_wastage_model.aggregate(count_total_docs);
+      await issue_for_slicing_available_model.aggregate(count_total_docs);
 
     const totalPages = Math.ceil((total_docs?.[0]?.totalCount || 0) / limit);
 

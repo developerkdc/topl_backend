@@ -1,11 +1,29 @@
-import issues_for_peeling_wastage_model from '../../../../database/schema/factory/peeling/issues_for_peeling/issues_for_peeling_wastage.schema.js';
-import ApiResponse from '../../../../utils/ApiResponse.js';
 import { StatusCodes } from '../../../../utils/constants.js';
+import ApiResponse from '../../../../utils/ApiResponse.js';
+import ApiError from '../../../../utils/errors/apiError.js';
+import catchAsync from '../../../../utils/errors/catchAsync.js';
+import mongoose from 'mongoose';
+import {
+  flitch_inventory_invoice_model,
+  flitch_inventory_items_model,
+  flitch_inventory_items_view_model,
+} from '../../../../database/schema/inventory/Flitch/flitch.schema.js';
+import { issues_for_status } from '../../../../database/Utils/constants/constants.js';
+import {
+  issued_for_slicing_model,
+  issued_for_slicing_view_model,
+} from '../../../../database/schema/factory/slicing/issue_for_slicing/issuedForSlicing.js';
 import { dynamic_filter } from '../../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../../utils/dynamicSearch/dynamic.js';
-import catchAsync from '../../../../utils/errors/catchAsync.js';
+import {
+  flitching_done_model,
+  flitching_view_modal,
+} from '../../../../database/schema/factory/flitching/flitching.schema.js';
 
-export const fetch_issue_for_peeling_wastage_details = catchAsync(
+import issue_for_slicing_available_model from '../../../../database/schema/factory/slicing/issue_for_slicing/issue_for_slicing_available_schema.js';
+import issue_for_slicing_wastage_model from '../../../../database/schema/factory/slicing/issue_for_slicing/issue_for_slicing_wastage_schema.js';
+
+export const fetch_issue_for_slicing_wastage_details = catchAsync(
   async (req, res, next) => {
     const {
       page = 1,
@@ -14,6 +32,7 @@ export const fetch_issue_for_peeling_wastage_details = catchAsync(
       sort = 'desc',
       search = '',
     } = req.query;
+    console.log('search => ', search);
 
     const {
       string,
@@ -41,6 +60,7 @@ export const fetch_issue_for_peeling_wastage_details = catchAsync(
       search_query = search_data;
     }
 
+    console.log(search_query);
     const filterData = dynamic_filter(filter);
 
     const match_query = {
@@ -48,12 +68,12 @@ export const fetch_issue_for_peeling_wastage_details = catchAsync(
       ...filterData,
     };
 
-    const aggLookupIssueForPeeling = {
+    const aggLookupIssueForSlicing = {
       $lookup: {
-        from: 'issues_for_peelings',
-        localField: 'issue_for_peeling_id',
+        from: 'issued_for_slicings',
+        localField: 'issue_for_slicing_id',
         foreignField: '_id',
-        as: 'issue_for_peeling_details',
+        as: 'issue_for_slicing_details',
       },
     };
 
@@ -102,9 +122,9 @@ export const fetch_issue_for_peeling_wastage_details = catchAsync(
       },
     };
 
-    const aggUnwindIssueForPeeling = {
+    const aggUnwindIssueForSlicing = {
       $unwind: {
-        path: '$issue_for_peeling_details',
+        path: '$issue_for_slicing_details',
         preserveNullAndEmptyArrays: true,
       },
     };
@@ -137,8 +157,8 @@ export const fetch_issue_for_peeling_wastage_details = catchAsync(
     };
 
     const list_aggregate = [
-      aggLookupIssueForPeeling,
-      aggUnwindIssueForPeeling,
+      aggLookupIssueForSlicing,
+      aggUnwindIssueForSlicing,
       aggCreatedUserDetails,
       aggUpdatedUserDetails,
       aggUnwindCreatedUser,
@@ -150,15 +170,15 @@ export const fetch_issue_for_peeling_wastage_details = catchAsync(
     ];
 
     const result =
-      await issues_for_peeling_wastage_model.aggregate(list_aggregate);
+      await issue_for_slicing_wastage_model.aggregate(list_aggregate);
 
     const aggCount = {
       $count: 'totalCount',
     };
 
     const count_total_docs = [
-      aggLookupIssueForPeeling,
-      aggUnwindIssueForPeeling,
+      aggLookupIssueForSlicing,
+      aggUnwindIssueForSlicing,
       aggCreatedUserDetails,
       aggUnwindCreatedUser,
       aggUpdatedUserDetails,
@@ -167,7 +187,7 @@ export const fetch_issue_for_peeling_wastage_details = catchAsync(
       aggCount,
     ];
     const total_docs =
-      await issues_for_peeling_wastage_model.aggregate(count_total_docs);
+      await issue_for_slicing_wastage_model.aggregate(count_total_docs);
 
     const totalPages = Math.ceil((total_docs?.[0]?.totalCount || 0) / limit);
 

@@ -13,7 +13,8 @@ export const addFurrow = catchAsync(async (req, res, next) => {
   const image = req.file;
   const required_array_fields = [
     'size',
-    'sub_category',
+    'veneer_sub_category',
+    'base_sub_category',
     'instructions',
     'base',
     'process_flow',
@@ -79,7 +80,8 @@ export const updateFurrowDetails = catchAsync(async (req, res, next) => {
 
   const required_array_fields = [
     'size',
-    'sub_category',
+    'veneer_sub_category',
+    'base_sub_category',
     'instructions',
     'base',
     'process_flow',
@@ -397,6 +399,31 @@ export const dropdownFurrow = catchAsync(async (req, res, next) => {
     StatusCodes.OK,
     'Furrow Dropdown Fetched Successfully',
     result
+  );
+
+  return res.status(StatusCodes.OK).json(response);
+});
+
+export const updateStatus = catchAsync(async (req, res, next) => {
+  const { id, status } = req.body;
+
+  if (!id) {
+    throw new ApiError('ID is missing', StatusCodes.BAD_REQUEST);
+  }
+
+  const update_result = await furrowModel.findByIdAndUpdate(id, {
+    $set: {
+      status: status,
+    },
+  });
+
+  if (!update_result) {
+    throw new ApiError('Failed to update status', StatusCodes.BAD_REQUEST);
+  }
+
+  const response = new ApiResponse(
+    StatusCodes.OK,
+    'Status Updated Sucessfully'
   );
 
   return res.status(StatusCodes.OK).json(response);

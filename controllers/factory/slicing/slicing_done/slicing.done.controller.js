@@ -1,22 +1,23 @@
-import { StatusCodes } from '../../../utils/constants.js';
-import ApiResponse from '../../../utils/ApiResponse.js';
-import ApiError from '../../../utils/errors/apiError.js';
-import catchAsync from '../../../utils/errors/catchAsync.js';
+import { StatusCodes } from '../../../../utils/constants.js';
+import ApiResponse from '../../../../utils/ApiResponse.js';
+import ApiError from '../../../../utils/errors/apiError.js';
+import catchAsync from '../../../../utils/errors/catchAsync.js';
 import mongoose from 'mongoose';
 import {
   issues_for_status,
   issue_for_slicing,
-} from '../../../database/Utils/constants/constants.js';
+  slicing_done_from,
+} from '../../../../database/Utils/constants/constants.js';
 
-import { dynamic_filter } from '../../../utils/dymanicFilter.js';
-import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
+import { dynamic_filter } from '../../../../utils/dymanicFilter.js';
+import { DynamicSearch } from '../../../../utils/dynamicSearch/dynamic.js';
 import {
   slicing_done_items_model,
   slicing_done_other_details_model,
-} from '../../../database/schema/factory/slicing/slicing_done.schema.js';
-import { issued_for_slicing_model } from '../../../database/schema/factory/slicing/issue_for_slicing/issuedForSlicing.js';
-import issue_for_slicing_available_model from '../../../database/schema/factory/slicing/issue_for_slicing/issue_for_slicing_available_schema.js';
-import issue_for_slicing_wastage_model from '../../../database/schema/factory/slicing/issue_for_slicing/issue_for_slicing_wastage_schema.js';
+} from '../../../../database/schema/factory/slicing/slicing_done.schema.js';
+import { issued_for_slicing_model } from '../../../../database/schema/factory/slicing/issue_for_slicing/issuedForSlicing.js';
+import issue_for_slicing_available_model from '../../../../database/schema/factory/slicing/issue_for_slicing/issue_for_slicing_available_schema.js';
+import issue_for_slicing_wastage_model from '../../../../database/schema/factory/slicing/issue_for_slicing/issue_for_slicing_wastage_schema.js';
 
 export const add_slicing_done = catchAsync(async (req, res, next) => {
   const session = await mongoose.startSession();
@@ -608,6 +609,22 @@ export const edit_slicing_done = catchAsync(async (req, res, next) => {
       }
     }
 
+    const verify_other_details = await slicing_done_other_details_model.findOne(
+      { _id: slicing_done_id }
+    );
+
+    if (!verify_other_details) {
+      throw new ApiError(
+        'Slicing Done Data not found.',
+        StatusCodes.BAD_REQUEST
+      );
+    }
+    if (!verify_other_details?.isEditable) {
+      throw new ApiError(
+        'Slicing Done item is not editable',
+        StatusCodes.BAD_REQUEST
+      );
+    }
     // Other goods details
     const add_other_details_data =
       await slicing_done_other_details_model.findOneAndUpdate(
@@ -756,7 +773,7 @@ export const edit_slicing_done = catchAsync(async (req, res, next) => {
       items_details: add_items_details_data,
     });
 
-    return res.status(201).json(response);
+    return res.status(200).json(response);
   } catch (error) {
     await session.abortTransaction();
     throw error;
@@ -865,7 +882,7 @@ export const revert_slicing_done = catchAsync(async (req, res, next) => {
       }
     }
 
-    const update_issue_for_slicing_type =
+    const update_other_details_editable_status_for_done_items =
       await issued_for_slicing_model.updateOne(
         { _id: other_details?.issue_for_slicing_id },
         {
@@ -877,13 +894,332 @@ export const revert_slicing_done = catchAsync(async (req, res, next) => {
       );
 
     if (
-      !update_issue_for_slicing_type.acknowledged ||
-      update_issue_for_slicing_type.modifiedCount === 0
+      !update_other_details_editable_status_for_done_items.acknowledged ||
+      update_other_details_editable_status_for_done_items.modifiedCount === 0
     ) {
       throw new ApiError(
         'Unable Update Issue for slicing Type Status',
         StatusCodes.BAD_REQUEST
       );
+    }
+    await session.commitTransaction();
+    const response = new ApiResponse(
+      StatusCodes.OK,
+      'Slicing Done Items Reverted Successfully',
+      {
+        other_details,
+        items_details,
+      }
+    );
+
+    return res.status(StatusCodes.OK).json(response);
+  } catch (error) {
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    await session.endSession();
+  }
+});
+
+export const add_reslicing_done = catchAsync(async (req, res, next) => {
+  const { other_details, items_details, type, wastage_details } = req.body;
+  const userDetails = req.userDetails;
+  const session = await mongoose.startSession();
+  try {
+    session.startTransaction();
+    for (let field of ['other_details', 'items_details', 'type']) {
+      if (!req.body?.[field]) {
+        throw new ApiError(`${field} is missing...`, StatusCodes.BAD_REQUEST);
+      }
+    }
+    if (type?.toLowerCase() === issue_for_slicing?.wastage?.toLowerCase()) {
+      if (!wastage_details) {
+        throw new ApiError(
+          'Wastage details are required..',
+          StatusCodes.BAD_REQUEST
+        );
+      }
+    }
+
+    const add_other_details_data =
+      await slicing_done_other_details_model.create(
+        [
+          {
+            ...other_details,
+            created_by: userDetails?._id,
+            updated_by: userDetails?._id,
+          },
+        ],
+        { session }
+      );
+
+    const other_details_data = add_other_details_data?.[0];
+
+    if (!other_details_data) {
+      throw new ApiError(
+        'Failed to add other details',
+        StatusCodes.BAD_REQUEST
+      );
+    }
+    const add_other_details_id = other_details_data?._id;
+    const issue_for_slicing_id = other_details_data?.issue_for_slicing_id;
+
+    //update slicing done other details to false as items will not be edited since reslicing is done for that item
+    const update_is_editable_status =
+      await slicing_done_other_details_model?.updateMany(
+        {
+          issue_for_slicing_id: issue_for_slicing_id,
+          _id: { $ne: add_other_details_id },
+        },
+        {
+          $set: {
+            isEditable: false,
+            updated_by: userDetails?._id,
+          },
+        },
+        { session }
+      );
+
+    if (
+      !update_is_editable_status?.acknowledged ||
+      update_is_editable_status?.modifiedCount === 0
+    ) {
+      throw new ApiError(
+        'Failed to update Editable status in other details',
+        StatusCodes.BAD_REQUEST
+      );
+    }
+
+    //item_details
+    const items_details_data = items_details?.map((item) => {
+      item.slicing_done_other_details_id = add_other_details_id;
+      item.slicing_done_from = slicing_done_from?.re_slicing;
+      (item.created_by = userDetails?._id),
+        (item.updated_by = userDetails?._id);
+      return item;
+    });
+
+    const add_items_details_data = await slicing_done_items_model.insertMany(
+      items_details_data,
+      { session }
+    );
+
+    if (add_items_details_data?.length === 0) {
+      throw new ApiError('Failed to add Slicing Item Details', StatusCodes.OK);
+    }
+
+    // const update_other_details_editable_status_for_done_items = await issued_for_slicing_model?.findOneAndUpdate({ _id: issue_for_slicing_id }, {
+    //   $set: {
+    //     type: type,
+    //     updated_by: userDetails?._id
+    //   }
+    // }, { new: true, runValidators: true, session });
+
+    // if (!update_other_details_editable_status_for_done_items) {
+    //   throw new ApiError("Failed to update issue for slicing type", StatusCodes.BAD_REQUEST)
+    // };
+
+    //add wastage details
+    if (type?.toLowerCase() === issue_for_slicing?.wastage?.toLowerCase()) {
+      const add_wastage_details = await issue_for_slicing_wastage_model.create(
+        [
+          {
+            ...wastage_details,
+            issue_for_slicing_id: issue_for_slicing_id,
+            created_by: userDetails?._id,
+            updated_by: userDetails?._id,
+          },
+        ],
+        { session }
+      );
+
+      if (add_wastage_details?.length === 0) {
+        throw new ApiError(
+          'Failed to add wastage details',
+          StatusCodes.BAD_REQUEST
+        );
+      }
+    }
+
+    const update_issue_for_slicing_available_slicing_status =
+      await issue_for_slicing_available_model?.updateOne(
+        { issue_for_slicing_id: issue_for_slicing_id },
+        {
+          $set: {
+            is_reslicing_done: true,
+          },
+        },
+        { session }
+      );
+
+    if (
+      !update_issue_for_slicing_available_slicing_status?.acknowledged ||
+      update_issue_for_slicing_available_slicing_status?.modifiedCount === 0
+    ) {
+      throw new ApiError(
+        'Failed to update issue for slicing available slicing done status',
+        StatusCodes.BAD_REQUEST
+      );
+    }
+
+    await session.commitTransaction();
+
+    const response = new ApiResponse(
+      StatusCodes.OK,
+      'Re-Slicing Done Sucessfully',
+      {
+        other_details: other_details,
+        items_details: items_details,
+        wastage_details: wastage_details,
+      }
+    );
+
+    return res.status(StatusCodes.OK).json(response);
+  } catch (error) {
+    console.log('err => ', error);
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    await session.endSession();
+  }
+});
+
+export const revert_re_slicing_done = catchAsync(async (req, res, next) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const { other_details_id } = req.params;
+    if (!other_details_id) {
+      throw new ApiError('Please provide other details id', 400);
+    }
+
+    const other_details =
+      await slicing_done_other_details_model.findById(other_details_id);
+    if (!other_details) {
+      throw new ApiError('Other details not found', 404);
+    }
+
+    const issue_for_slicing_details = await issued_for_slicing_model.findById(
+      other_details?.issue_for_slicing_id
+    );
+
+    if (!issue_for_slicing_details) {
+      throw new ApiError('Issue for slicing Details not found...');
+    }
+    const items_details = await slicing_done_items_model.find({
+      slicing_done_other_details_id: other_details?._id,
+    });
+    if (items_details?.length <= 0) {
+      throw new ApiError('Items details not found', 404);
+    }
+
+    const delete_other_details_result =
+      await slicing_done_other_details_model.findByIdAndDelete(
+        other_details_id,
+        {
+          session,
+        }
+      );
+
+    if (!delete_other_details_result) {
+      throw new ApiError(
+        'Unable to delete slicing done other details',
+        StatusCodes.BAD_REQUEST
+      );
+    }
+    const delete_slicing_done_items_result =
+      await slicing_done_items_model.deleteMany(
+        { slicing_done_other_details_id: other_details?._id },
+        { session }
+      );
+
+    if (
+      !delete_slicing_done_items_result?.acknowledged ||
+      delete_slicing_done_items_result?.deletedCount === 0
+    ) {
+      throw new ApiError(
+        'Unable to delete slicing items',
+        StatusCodes.BAD_REQUEST
+      );
+    }
+
+    const delete_issue_for_slicing_wastage_result =
+      await issue_for_slicing_wastage_model?.deleteOne(
+        { issue_for_slicing_id: other_details?.issue_for_slicing_id },
+        { session }
+      );
+
+    if (
+      !delete_issue_for_slicing_wastage_result?.acknowledged ||
+      delete_issue_for_slicing_wastage_result?.deletedCount === 0
+    ) {
+      throw new ApiError(
+        'Unable to delete issue for slicing wastage details',
+        StatusCodes.BAD_REQUEST
+      );
+    }
+
+    // if (
+    //   issue_for_slicing_details?.type?.toLowerCase() ===
+    //   issue_for_slicing?.rest_roller?.toLowerCase()
+    // ) {
+    //   const delete_issue_for_slicing_available_result =
+    //     await issue_for_slicing_available_model.deleteOne(
+    //       { issue_for_slicing_id: other_details?.issue_for_slicing_id },
+    //       { session }
+    //     );
+
+    //   if (
+    //     !delete_issue_for_slicing_available_result?.acknowledged ||
+    //     delete_issue_for_slicing_available_result?.deletedCount === 0
+    //   ) {
+    //     throw new ApiError(
+    //       'Unable to delete issue for slicing available details',
+    //       StatusCodes.BAD_REQUEST
+    //     );
+    //   }
+    // }
+
+    const update_other_details_editable_status_for_done_items =
+      await slicing_done_other_details_model.updateOne(
+        {
+          issue_for_slicing_id: other_details?.issue_for_slicing_id,
+          _id: { $ne: other_details_id },
+        },
+        {
+          $set: {
+            isEditable: true,
+          },
+        },
+        { session }
+      );
+
+    if (
+      !update_other_details_editable_status_for_done_items.acknowledged ||
+      update_other_details_editable_status_for_done_items.modifiedCount === 0
+    ) {
+      throw new ApiError(
+        'Failed to Update slicing done editable Status',
+        StatusCodes.BAD_REQUEST
+      );
+    }
+
+    const update_is_reslicing_done_status =
+      await issue_for_slicing_available_model?.updateOne(
+        { issue_for_slicing_id: other_details?.issue_for_slicing_id },
+        {
+          $set: {
+            is_reslicing_done: false,
+          },
+        },
+        { session }
+      );
+
+    if (
+      !update_is_reslicing_done_status.acknowledged ||
+      update_is_reslicing_done_status?.modifiedCount === 0
+    ) {
+      throw new ApiError('Failed to update reslicing done status');
     }
     await session.commitTransaction();
     const response = new ApiResponse(

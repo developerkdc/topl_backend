@@ -6,6 +6,7 @@ import {
   fetchChromaCollectionList,
   fetchSingleChromaCollection,
   updateChromaCollectionDetails,
+  updateStatus,
 } from '../../controllers/seriesProductMaster/chromaCollection.master.controller.js';
 import { MulterFunction } from '../../config/multer/multer.js';
 const router = Router();
@@ -36,6 +37,7 @@ router.get(
   AuthMiddleware,
   fetchSingleChromaCollection
 );
+router.patch('/update-chromaCollection-status', AuthMiddleware, updateStatus);
 router.get('/dropdown-chromaCollection', dropdownChromaCollection);
 
 export default router;

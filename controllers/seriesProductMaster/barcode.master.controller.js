@@ -13,7 +13,8 @@ export const addBarcode = catchAsync(async (req, res, next) => {
   const image = req?.file;
   const required_array_fields = [
     'size',
-    'sub_category',
+    'veneer_sub_category',
+    'base_sub_category',
     'instructions',
     'base',
     'process_flow',
@@ -81,7 +82,8 @@ export const updateBarcodeDetails = catchAsync(async (req, res, next) => {
 
   const required_array_fields = [
     'size',
-    'sub_category',
+    'veneer_sub_category',
+    'base_sub_category',
     'instructions',
     'base',
     'process_flow',
@@ -400,6 +402,31 @@ export const dropdownBarcode = catchAsync(async (req, res, next) => {
     StatusCodes.OK,
     'Barcode Dropdown Fetched Successfully',
     barcodeList
+  );
+
+  return res.status(StatusCodes.OK).json(response);
+});
+
+export const updateBarcodeStatus = catchAsync(async (req, res, next) => {
+  const { id, status } = req.body;
+
+  if (!id) {
+    throw new ApiError('ID is missing', StatusCodes.BAD_REQUEST);
+  }
+
+  const update_result = await barcodeModel.findByIdAndUpdate(id, {
+    $set: {
+      status: status,
+    },
+  });
+
+  if (!update_result) {
+    throw new ApiError('Failed to update status', StatusCodes.BAD_REQUEST);
+  }
+
+  const response = new ApiResponse(
+    StatusCodes.OK,
+    'Status Updated Sucessfully'
   );
 
   return res.status(StatusCodes.OK).json(response);

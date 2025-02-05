@@ -6,6 +6,7 @@ import {
   fetchChromaRibbedList,
   fetchSingleChromaRibbed,
   updateChromaRibbedDetails,
+  updateStatus,
 } from '../../controllers/seriesProductMaster/chromaRibbed.master.controller.js';
 import { MulterFunction } from '../../config/multer/multer.js';
 const router = Router();
@@ -28,6 +29,7 @@ router.post(
 );
 router.post('/list-chromaRibbed', AuthMiddleware, fetchChromaRibbedList);
 router.get('/list-chromaRibbed/:id', AuthMiddleware, fetchSingleChromaRibbed);
+router.patch('/update-chromaRibbed-status', AuthMiddleware, updateStatus);
 
 // Without permissions
 router.get('/dropdown-chromaRibbed', dropdownChromaRibbed);

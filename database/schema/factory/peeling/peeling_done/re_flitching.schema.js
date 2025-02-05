@@ -2,59 +2,59 @@ import mongoose from "mongoose";
 import { issues_for_status } from "../../../../Utils/constants/constants.js";
 
 const re_flitching_other_details_schema = new mongoose.Schema(
-    {
-        issue_for_peeling_available_id: {
-            type: mongoose.Schema.Types.ObjectId,
-            required: [true, 'issue for pelling available id is required'],
-        },
-        flitching_date: {
-            type: Date,
-            required: [true, 'flitching Date is required'],
-        },
-        no_of_workers: {
-            type: Number,
-            required: [true, 'No.of Workers is required '],
-        },
-        no_of_working_hours: {
-            type: Number,
-            required: [true, 'No. of Working hours is required'],
-        },
-        no_of_total_hours: {
-            type: Number,
-            required: [true, 'No. of Total hours is required'],
-        },
-        shift: {
-            type: String,
-            required: [true, 'Shift is required'],
-            trim: true,
-            uppercase: true,
-        },
-        isEditable: {
-            type: Boolean,
-            default: true,
-        },
-        total_amount: {
-            type: Number,
-            required: [true, 'Total Amount is required'],
-        },
-        wastage_consumed_total_amount: {
-            type: Number,
-            default: 0,
-        },
-        remark: {
-            type: String,
-            default: null,
-        },
-        created_by: {
-            type: mongoose.Schema.Types.ObjectId,
-            required: [true, 'Created By Id is required'],
-        },
-        updated_by: {
-            type: mongoose.Schema.Types.ObjectId,
-            required: [true, 'Updated By Id is required'],
-        },
+  {
+    issue_for_peeling_available_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, 'issue for pelling available id is required'],
     },
-    { timestamps: true }
+    flitching_date: {
+      type: Date,
+      required: [true, 'flitching Date is required'],
+    },
+    no_of_workers: {
+      type: Number,
+      required: [true, 'No.of Workers is required '],
+    },
+    no_of_working_hours: {
+      type: Number,
+      required: [true, 'No. of Working hours is required'],
+    },
+    no_of_total_hours: {
+      type: Number,
+      required: [true, 'No. of Total hours is required'],
+    },
+    shift: {
+      type: String,
+      required: [true, 'Shift is required'],
+      trim: true,
+      uppercase: true,
+    },
+    isEditable: {
+      type: Boolean,
+      default: true,
+    },
+    total_amount: {
+      type: Number,
+      required: [true, 'Total Amount is required'],
+    },
+    wastage_consumed_total_amount: {
+      type: Number,
+      default: 0,
+    },
+    remark: {
+      type: String,
+      default: null,
+    },
+    created_by: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, 'Created By Id is required'],
+    },
+    updated_by: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, 'Updated By Id is required'],
+    },
+  },
+  { timestamps: true }
 );
 
 re_flitching_other_details_schema.index({ issue_for_peeling_available_id: 1 }, { unique: true });
