@@ -60,7 +60,6 @@ const slicing_done_other_details_schema = new mongoose.Schema(
   { timestamps: true }
 );
 
-slicing_done_other_details_schema.index({ type: 1 });
 export const slicing_done_other_details_model = mongoose.model(
   'slicing_done_other_details',
   slicing_done_other_details_schema,
