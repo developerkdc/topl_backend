@@ -18,7 +18,7 @@ const barcodeSchema = new mongoose.Schema(
     },
     default_item_name_id: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'item_name',
+      // ref: 'item_name',
       default: null,
     },
     code: {

@@ -12,7 +12,7 @@ export const addChromaComposite = catchAsync(async (req, res, next) => {
   const authUserDetails = req.userDetails;
 
   const image = req?.file;
-  console.log('reqBody => ', reqBody.sub_category);
+  console.log('reqBody => ', reqBody);
   const required_array_fields = [
     'size',
     'veneer_sub_category',
@@ -74,6 +74,8 @@ export const updateChromaCompositeDetails = catchAsync(
   async (req, res, next) => {
     const { id } = req.params;
     const reqBody = req.body;
+
+    console.log("body => ", reqBody)
     const authUserDetails = req.userDetails;
 
     if (!id) {
@@ -87,6 +89,7 @@ export const updateChromaCompositeDetails = catchAsync(
       'size',
       'veneer_sub_category',
       'base_sub_category',
+      'instructions',
       'base',
       'process_flow',
     ];

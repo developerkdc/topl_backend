@@ -81,6 +81,7 @@ export const updateMattleDetails = catchAsync(async (req, res, next) => {
   const required_array_fields = [
     'size',
     'veneer_sub_category',
+    'instructions',
     'base_sub_category',
     'base',
     'process_flow',
