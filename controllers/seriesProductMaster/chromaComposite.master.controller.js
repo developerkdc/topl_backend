@@ -75,7 +75,7 @@ export const updateChromaCompositeDetails = catchAsync(
     const { id } = req.params;
     const reqBody = req.body;
 
-    console.log("body => ", reqBody)
+    console.log('body => ', reqBody);
     const authUserDetails = req.userDetails;
 
     if (!id) {

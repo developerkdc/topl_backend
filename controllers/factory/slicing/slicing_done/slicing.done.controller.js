@@ -61,7 +61,10 @@ export const add_slicing_done = catchAsync(async (req, res, next) => {
       throw new ApiError('Issue for slicing data not found', 400);
     }
     if (fetch_issue_for_slicing_data?.is_slicing_completed) {
-      throw new ApiError('Already created slicing done for this issue for slicing', 400);
+      throw new ApiError(
+        'Already created slicing done for this issue for slicing',
+        400
+      );
     }
 
     // Other goods details
@@ -108,7 +111,7 @@ export const add_slicing_done = catchAsync(async (req, res, next) => {
         {
           $set: {
             type: type,
-            is_slicing_completed:true,
+            is_slicing_completed: true,
             updated_by: userDetails?._id,
           },
         },
@@ -737,7 +740,7 @@ export const edit_slicing_done = catchAsync(async (req, res, next) => {
     //add wastage
     if (
       issue_for_slicing_type?.type?.toLowerCase() ===
-      issue_for_slicing.wastage?.toLowerCase() &&
+        issue_for_slicing.wastage?.toLowerCase() &&
       wastage_details
     ) {
       const wastage_details_data = {
@@ -759,7 +762,7 @@ export const edit_slicing_done = catchAsync(async (req, res, next) => {
     // add available
     if (
       issue_for_slicing_type?.type?.toLowerCase() ===
-      issue_for_slicing.rest_roller?.toLowerCase() &&
+        issue_for_slicing.rest_roller?.toLowerCase() &&
       available_details
     ) {
       const re_slicing_details_data = {
@@ -800,7 +803,7 @@ export const revert_slicing_done = catchAsync(async (req, res, next) => {
   try {
     const { other_details_id } = req.params;
     const userDetails = req.userDetails;
-    
+
     if (!other_details_id) {
       throw new ApiError('Please provide other details id', 400);
     }
@@ -902,8 +905,8 @@ export const revert_slicing_done = catchAsync(async (req, res, next) => {
         {
           $set: {
             type: null,
-            is_slicing_completed:false,
-            updated_by:userDetails?._id
+            is_slicing_completed: false,
+            updated_by: userDetails?._id,
           },
         },
         { session }
@@ -1256,32 +1259,39 @@ export const revert_re_slicing_done = catchAsync(async (req, res, next) => {
   }
 });
 
+export const update_slicing_done_items_details = catchAsync(
+  async (req, res) => {
+    const { id } = req.params;
+    const { no_of_leaves, thickness } = req.body;
 
-export const update_slicing_done_items_details = catchAsync(async (req, res) => {
-  const { id } = req.params;
-  const { no_of_leaves, thickness } = req.body;
-
-  if (!mongoose.isValidObjectId(id)) {
-    throw new ApiError("Invalid ID", StatusCodes.BAD_REQUEST)
-  };
-
-  const { _id } = req.userDetails;
-  const update_result = await slicing_done_items_model.updateOne({ _id: id }, {
-    $set: {
-      no_of_leaves: no_of_leaves, thickness: thickness, updated_by: _id
+    if (!mongoose.isValidObjectId(id)) {
+      throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
     }
-  });
-  if (update_result.matchedCount <= 0) {
-    throw new ApiError("Item Not Found", StatusCodes.NOT_FOUND)
+
+    const { _id } = req.userDetails;
+    const update_result = await slicing_done_items_model.updateOne(
+      { _id: id },
+      {
+        $set: {
+          no_of_leaves: no_of_leaves,
+          thickness: thickness,
+          updated_by: _id,
+        },
+      }
+    );
+    if (update_result.matchedCount <= 0) {
+      throw new ApiError('Item Not Found', StatusCodes.NOT_FOUND);
+    }
+
+    if (!update_result.acknowledged || update_result.modifiedCount <= 0) {
+      throw new ApiError('Failed to update item', StatusCodes.BAD_REQUEST);
+    }
+
+    const response = new ApiResponse(
+      StatusCodes.OK,
+      'Item Updated Successfully'
+    );
+
+    return res.status(StatusCodes.OK).json(response);
   }
-
-  if (!update_result.acknowledged || update_result.modifiedCount <= 0) {
-    throw new ApiError("Failed to update item", StatusCodes.BAD_REQUEST)
-  };
-
-  const response = new ApiResponse(StatusCodes.OK, "Item Updated Successfully");
-
-  return res.status(StatusCodes.OK).json(response)
-
-})
-
+);
