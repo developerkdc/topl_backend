@@ -34,7 +34,7 @@ issueForPeelingRouter.get(
 );
 
 issueForPeelingRouter.post(
-  '/revert-issue-for-peeling',
+  '/revert-issue-for-peeling/:issue_for_peeling_id',
   AuthMiddleware,
   revert_issue_for_peeling
 );

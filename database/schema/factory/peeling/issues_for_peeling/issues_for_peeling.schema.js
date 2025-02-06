@@ -102,6 +102,10 @@ const issues_for_peeling_schema = new mongoose.Schema(
       },
       default: null,
     },
+    is_peeling_done: {
+      type: Boolean,
+      default: false
+    },
     remark: {
       type: String,
       default: null,

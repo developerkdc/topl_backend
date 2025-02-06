@@ -324,7 +324,7 @@ export const addIssueForPeelingFromCrosscutDone = catchAsync(
 );
 
 export const revert_issue_for_peeling = catchAsync(async (req, res, next) => {
-  const { issue_for_peeling_id } = req.body;
+  const { issue_for_peeling_id } = req.params;
 
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -341,6 +341,9 @@ export const revert_issue_for_peeling = catchAsync(async (req, res, next) => {
 
     if (!issuedForPeelingData) {
       throw new ApiError('No Data found...', StatusCodes.BAD_REQUEST);
+    }
+    if(issuedForPeelingData?.is_peeling_done){
+      throw new ApiError('Already created peeling done, so cannot revert issue for peeling', StatusCodes.BAD_REQUEST);
     }
 
     const add_revert_to_log_inventory = async function () {
