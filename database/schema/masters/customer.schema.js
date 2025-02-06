@@ -119,11 +119,13 @@ const customerSchema = new mongoose.Schema(
     gst_number: {
       type: String,
       trim: true,
+      uppercase: true,
       required: [true, 'gst number is required'],
     },
     pan_number: {
       type: String,
       trim: true,
+      uppercase: true,
       required: [true, 'pan number is required'],
     },
     legal_name: {
@@ -135,16 +137,19 @@ const customerSchema = new mongoose.Schema(
     ecc_number: {
       type: String,
       trim: true,
+      uppercase: true,
       default: null,
     },
     cst_tin_number: {
       type: String,
       trim: true,
+      uppercase: true,
       default: null,
     },
     gst_tin_number: {
       type: String,
       trim: true,
+      uppercase: true,
       default: null,
     },
     preferable_transport_for_part_load: {

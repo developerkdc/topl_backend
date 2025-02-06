@@ -582,6 +582,9 @@ export const revert_issued_for_slicing = catchAsync(async (req, res, next) => {
     if (!issuedForSlicingData) {
       throw new ApiError('No Data found...', StatusCodes.BAD_REQUEST);
     }
+    if(issuedForSlicingData?.is_slicing_completed){
+      throw new ApiError('Already created slicing done, so cannot revert issue for slicing', StatusCodes.BAD_REQUEST);
+    }
 
     const add_revert_to_flitching_done = async function () {
       const updated_document =

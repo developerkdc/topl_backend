@@ -53,6 +53,17 @@ export const add_slicing_done = catchAsync(async (req, res, next) => {
       }
     }
 
+    // issue for slicing
+    const fetch_issue_for_slicing_data = await issued_for_slicing_model.findOne(
+      { _id: other_details?.issue_for_slicing_id }
+    );
+    if (!fetch_issue_for_slicing_data) {
+      throw new ApiError('Issue for slicing data not found', 400);
+    }
+    if (fetch_issue_for_slicing_data?.is_slicing_completed) {
+      throw new ApiError('Already created slicing done for this issue for slicing', 400);
+    }
+
     // Other goods details
     const add_other_details_data =
       await slicing_done_other_details_model.create(
@@ -97,6 +108,7 @@ export const add_slicing_done = catchAsync(async (req, res, next) => {
         {
           $set: {
             type: type,
+            is_slicing_completed:true,
             updated_by: userDetails?._id,
           },
         },
@@ -787,6 +799,8 @@ export const revert_slicing_done = catchAsync(async (req, res, next) => {
   session.startTransaction();
   try {
     const { other_details_id } = req.params;
+    const userDetails = req.userDetails;
+    
     if (!other_details_id) {
       throw new ApiError('Please provide other details id', 400);
     }
@@ -888,6 +902,8 @@ export const revert_slicing_done = catchAsync(async (req, res, next) => {
         {
           $set: {
             type: null,
+            is_slicing_completed:false,
+            updated_by:userDetails?._id
           },
         },
         { session }
