@@ -73,9 +73,8 @@ export const peeling_done_other_details_model = mongoose.model(
   'peeling_done_other_details'
 );
 
-const output_type_validate = function () {
-  const output_type = this.output_type;
-  return output_type !== peeling_done.veneer;
+const veneer_output_type_not_required_field = function () {
+  return this.output_type !== peeling_done.veneer;
 };
 
 const peeling_done_items_schema = new mongoose.Schema(
@@ -122,17 +121,17 @@ const peeling_done_items_schema = new mongoose.Schema(
     length: {
       type: Number,
       default: 0,
-      required: [output_type_validate, 'Length is required'],
+      required: [veneer_output_type_not_required_field, 'Length is required'],
     },
     width: {
       type: Number,
       default: 0,
-      required: [output_type_validate, 'Width is required'],
+      required: [veneer_output_type_not_required_field, 'Width is required'],
     },
     height: {
       type: Number,
       default: 0,
-      required: [output_type_validate, 'Height is required'],
+      required: [veneer_output_type_not_required_field, 'Height is required'],
     },
     thickness: {
       type: Number,
@@ -147,7 +146,7 @@ const peeling_done_items_schema = new mongoose.Schema(
     cmt: {
       type: Number,
       default: 0,
-      required: [output_type_validate, 'CMT is required'],
+      required: [veneer_output_type_not_required_field, 'CMT is required'],
     },
     color_id: {
       type: mongoose.Schema.Types.ObjectId,
@@ -192,7 +191,7 @@ const peeling_done_items_schema = new mongoose.Schema(
     item_amount: {
       type: Number,
       default: 0,
-      required: [output_type_validate, 'Item Amount is required'],
+      required: [veneer_output_type_not_required_field, 'Item Amount is required'],
     },
     item_wastage_consumed_amount: {
       type: Number,

@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import invoice_details from '../../../Utils/invoiceDetails.schema.js';
 import expensesSchema from '../../masters/expenses.schema.js';
 import { approval_status } from '../../../Utils/approvalStatus.schema.js';
-import { inward_type } from '../../../Utils/constants/constants.js';
+import { inward_type, issues_for_status } from '../../../Utils/constants/constants.js';
 
 export const veneer_item_details_schema = new mongoose.Schema(
   {
@@ -88,6 +88,16 @@ export const veneer_item_details_schema = new mongoose.Schema(
     total_sq_meter: {
       type: Number,
       required: [true, 'total square meter is required'],
+    },
+    issue_status: {
+      type: String,
+      enum: {
+        values: [
+          issues_for_status?.smoking_dying,
+        ],
+        message: `Invalid status {{VALUE}} Issue Status must either be one of ${issues_for_status?.smoking_dying}`,
+      },
+      default: null,
     },
     cut_id: {
       type: mongoose.Schema.Types.ObjectId,
@@ -322,6 +332,10 @@ export const veneer_invoice_schema = new mongoose.Schema(
           default: null,
         },
       },
+    },
+    isEditable: {
+      type: Boolean,
+      default: true,
     },
     approval_status: approval_status,
     invoice_Details: invoice_details,

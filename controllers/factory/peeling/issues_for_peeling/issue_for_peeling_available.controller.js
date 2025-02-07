@@ -978,7 +978,7 @@ export const reflitching_issue_for_slicing = catchAsync(
       //update reflitching other details isEditable
       const update_reflitching_other_details =
         await re_flitching_other_details_model.updateMany(
-          {},
+          { _id: { $in: [...re_flitching_other_details_ids] } },
           {
             $set: {
               isEditable: false,

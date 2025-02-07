@@ -695,6 +695,7 @@ export const revert_all_pending_done = catchAsync(async (req, res, next) => {
       throw new ApiError('Failed to delete peeling done', 400);
     }
 
+    //delete items
     const deleted_peeling_done_other_details_id =
       delete_peeling_done_other_details?._id;
 

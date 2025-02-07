@@ -3,7 +3,7 @@ import approvalSchema from '../../../Utils/approval.schema.js';
 import { approval_invoice_details } from '../../../Utils/invoiceDetails.schema.js';
 import { approvalExpensesSchema } from '../../masters/expenses.schema.js';
 import { approval_status } from '../../../Utils/approvalStatus.schema.js';
-import { inward_type } from '../../../Utils/constants/constants.js';
+import { inward_type, issues_for_status } from '../../../Utils/constants/constants.js';
 
 const veneer_approval_item_details_schema = new mongoose.Schema(
   {
@@ -94,6 +94,16 @@ const veneer_approval_item_details_schema = new mongoose.Schema(
     total_sq_meter: {
       type: Number,
       required: [true, 'total square meter is required'],
+    },
+    issue_status: {
+      type: String,
+      enum: {
+        values: [
+          issues_for_status?.smoking_dying,
+        ],
+        message: `Invalid status {{VALUE}} Issue Status must either be one of ${issues_for_status?.smoking_dying}`,
+      },
+      default: null,
     },
     cut_id: {
       type: mongoose.Schema.Types.ObjectId,
@@ -331,6 +341,10 @@ const veneer_approval_invoice_schema = new mongoose.Schema(
           default: null,
         },
       },
+    },
+    isEditable: {
+      type: Boolean,
+      default: true,
     },
     approval_status: approval_status,
     invoice_Details: approval_invoice_details,

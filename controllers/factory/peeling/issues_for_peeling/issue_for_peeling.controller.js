@@ -24,22 +24,21 @@ export const addIssueForPeelingFromLogInventory = catchAsync(
     try {
       const userDetails = req.userDetails;
       const { log_inventory_item_ids } = req.body;
-
-      if (
-        !Array.isArray(log_inventory_item_ids) ||
-        log_inventory_item_ids.length === 0
-      ) {
-        throw new ApiError('log_inventory_item_ids must be a array field');
+      if (!log_inventory_item_ids || (Array.isArray(log_inventory_item_ids) && log_inventory_item_ids?.length <= 0)) {
+        throw new ApiError("log_inventory_item_ids is required", StatusCodes.BAD_REQUEST);
+      }
+      if (!Array.isArray(log_inventory_item_ids)) {
+        throw new ApiError("log_inventory_item_ids must be array", StatusCodes.BAD_REQUEST);
       }
 
-      const logInventoryItemData = await log_inventory_items_view_model
+      const logInventoryItemData = await log_inventory_items_model
         .find({
           _id: { $in: log_inventory_item_ids },
           issue_status: null,
         })
         .lean();
 
-      if (logInventoryItemData?.length <= 0) {
+      if (!logInventoryItemData || logInventoryItemData?.length <= 0) {
         throw new ApiError(
           'Log Inventory Item Data Not Found',
           StatusCodes.NOT_FOUND
@@ -161,8 +160,11 @@ export const addIssueForPeelingFromCrosscutDone = catchAsync(
       const userDetails = req.userDetails;
       const { crosscut_done_ids } = req.body;
 
-      if (!Array.isArray(crosscut_done_ids) || crosscut_done_ids.length === 0) {
-        throw new ApiError('crosscut_done_ids must be a array field');
+      if (!crosscut_done_ids || (Array.isArray(crosscut_done_ids) && crosscut_done_ids?.length <= 0)) {
+        throw new ApiError("crosscut_done_ids is required", StatusCodes.BAD_REQUEST);
+      }
+      if (!Array.isArray(crosscut_done_ids)) {
+        throw new ApiError("crosscut_done_ids must be array", StatusCodes.BAD_REQUEST);
       }
 
       const aggMatch = {
@@ -451,11 +453,11 @@ export const revert_issue_for_peeling = catchAsync(async (req, res, next) => {
       throw new ApiError('No Data found to revert', StatusCodes.BAD_REQUEST);
     }
 
+    // delete reverted items
     const delete_response = await issues_for_peeling_model.deleteOne(
       { _id: issuedForPeelingData?._id },
       { session }
     );
-
     if (!delete_response?.acknowledged || delete_response?.deletedCount === 0) {
       throw new ApiError(
         'Failed to Revert Items',
