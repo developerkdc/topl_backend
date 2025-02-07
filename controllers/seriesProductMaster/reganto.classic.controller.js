@@ -13,8 +13,8 @@ export const addRegantoClassic = catchAsync(async (req, res, next) => {
   const image = req.file;
   const required_array_fields = [
     'size',
-    "veneer_sub_category",
-    "base_sub_category",
+    'veneer_sub_category',
+    'base_sub_category',
     'instructions',
     'base',
     'process_flow',
@@ -80,8 +80,8 @@ export const updateRegantoClassicDetails = catchAsync(
     }
     const required_array_fields = [
       'size',
-      "veneer_sub_category",
-      "base_sub_category",
+      'veneer_sub_category',
+      'base_sub_category',
       'instructions',
       'base',
       'process_flow',

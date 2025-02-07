@@ -19,6 +19,7 @@ import {
   flitching_done_model,
   flitching_view_modal,
 } from '../../../../database/schema/factory/flitching/flitching.schema.js';
+import { re_flitching_items_model, re_flitching_other_details_model } from '../../../../database/schema/factory/peeling/peeling_done/re_flitching.schema.js';
 
 export const addIssueForSlicingFromFlitchInventory = catchAsync(
   async function (req, res, next) {
@@ -27,16 +28,15 @@ export const addIssueForSlicingFromFlitchInventory = catchAsync(
     try {
       const userDetails = req.userDetails;
       const { flitch_inventory_item_ids, is_peeling_done } = req.body;
-      const flitch_items_invoice_set = new Set();
 
-      if (
-        !Array.isArray(flitch_inventory_item_ids) ||
-        flitch_inventory_item_ids?.length === 0
-      ) {
-        throw new ApiError('Flitch inventory item must be a array field');
+      if (!flitch_inventory_item_ids || (Array.isArray(flitch_inventory_item_ids) && flitch_inventory_item_ids?.length <= 0)) {
+        throw new ApiError("flitch_inventory_item_ids is required", StatusCodes.BAD_REQUEST);
+      }
+      if (!Array.isArray(flitch_inventory_item_ids)) {
+        throw new ApiError("flitch_inventory_item_ids must be array", StatusCodes.BAD_REQUEST);
       }
 
-      const flitchInventoryItemData = await flitch_inventory_items_view_model
+      const flitchInventoryItemData = await flitch_inventory_items_model
         .find({
           _id: { $in: flitch_inventory_item_ids },
           issue_status: null,
@@ -50,22 +50,12 @@ export const addIssueForSlicingFromFlitchInventory = catchAsync(
         );
       }
 
-      const maxNumber = await issued_for_slicing_model?.aggregate([
-        {
-          $group: {
-            _id: null,
-            max: { $max: '$sr_no' },
-          },
-        },
-      ]);
 
-      const maxSrNo = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1;
-
+      const flitch_items_invoice_set = new Set();
       const issue_for_slicing_data = flitchInventoryItemData?.map(
         (item, index) => {
           flitch_items_invoice_set?.add(item?.invoice_id);
           return {
-            sr_no: maxSrNo + index,
             flitch_inventory_item_id: item?._id,
             item_sr_no: item?.item_sr_no,
             item_id: item?.item_id,
@@ -195,24 +185,13 @@ export const add_issue_for_slicing_from_flitching_done = catchAsync(
     try {
       const userDetails = req.userDetails;
       const { flitching_done_ids, is_peeling_done } = req.body;
-      const issue_for_flitching_ids_set = new Set();
 
-      if (
-        !Array.isArray(flitching_done_ids) ||
-        flitching_done_ids?.length === 0
-      ) {
-        throw new ApiError('flitching_done_ids must be a array field');
+      if (!flitching_done_ids || (Array.isArray(flitching_done_ids) && flitching_done_ids?.length <= 0)) {
+        throw new ApiError("flitching_done_ids is required", StatusCodes.BAD_REQUEST);
       }
-      const maxNumber = await issued_for_slicing_model?.aggregate([
-        {
-          $group: {
-            _id: null,
-            max: { $max: '$sr_no' },
-          },
-        },
-      ]);
-
-      const maxSrNo = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1;
+      if (!Array.isArray(flitching_done_ids)) {
+        throw new ApiError("flitching_done_ids must be array", StatusCodes.BAD_REQUEST);
+      }
 
       const aggMatch = {
         $match: {
@@ -270,6 +249,7 @@ export const add_issue_for_slicing_from_flitching_done = catchAsync(
         throw new ApiError('No Flitching done data found', 400);
       }
 
+      const issue_for_flitching_ids_set = new Set();
       const issue_for_slicing_data = flitching_done_data?.map((item, index) => {
         issue_for_flitching_ids_set?.add(item?.issue_for_flitching_id);
         return {
@@ -582,11 +562,14 @@ export const revert_issued_for_slicing = catchAsync(async (req, res, next) => {
     if (!issuedForSlicingData) {
       throw new ApiError('No Data found...', StatusCodes.BAD_REQUEST);
     }
-    if(issuedForSlicingData?.is_slicing_completed){
-      throw new ApiError('Already created slicing done, so cannot revert issue for slicing', StatusCodes.BAD_REQUEST);
+    if (issuedForSlicingData?.is_slicing_completed) {
+      throw new ApiError(
+        'Already created slicing done, so cannot revert issue for slicing',
+        StatusCodes.BAD_REQUEST
+      );
     }
 
-    const add_revert_to_flitching_done = async function () {
+    const add_revert_to_flitching_inventory = async function () {
       const updated_document =
         await flitch_inventory_items_model.findOneAndUpdate(
           { _id: issuedForSlicingData?.flitch_inventory_item_id },
@@ -626,7 +609,7 @@ export const revert_issued_for_slicing = catchAsync(async (req, res, next) => {
       }
     };
 
-    const add_revert_to_flitch_inventory = async function () {
+    const add_revert_to_flitch_done = async function () {
       const updated_document = await flitching_done_model.findOneAndUpdate(
         {
           _id: issuedForSlicingData?.flitching_done_id,
@@ -670,24 +653,69 @@ export const revert_issued_for_slicing = catchAsync(async (req, res, next) => {
       }
     };
 
+    const add_revert_to_reflitching = async function () {
+      const reflitching_item_id = issuedForSlicingData?.reflitching_item_id;
+      const updated_document = await re_flitching_items_model.findOneAndUpdate({ _id: reflitching_item_id }, {
+        $set: {
+          issue_status: null
+        }
+      }, { new: true, session });
+
+      if (!updated_document) {
+        throw new ApiError(
+          'Reflitching item not found',
+          StatusCodes.BAD_REQUEST
+        );
+      }
+      const reflitching_done_id = updated_document?.re_flitching_other_details_id
+      const is_reflitching_done_editable = await re_flitching_items_model
+        ?.find({
+          _id: { $ne: reflitching_item_id },
+          re_flitching_other_details_id: reflitching_done_id,
+          issue_status: { $ne: null },
+        })
+        .lean();
+
+      if (is_reflitching_done_editable && is_reflitching_done_editable?.length <= 0) {
+        await re_flitching_other_details_model?.updateOne(
+          { _id: reflitching_done_id },
+          {
+            $set: {
+              isEditable: true,
+            },
+          },
+          { session }
+        );
+      }
+    }
+
     if (
+      // flitch inventory
       issuedForSlicingData?.issued_from === issues_for_status?.flitching &&
       issuedForSlicingData?.flitching_done_id === null
     ) {
-      await add_revert_to_flitching_done();
-    }
-    if (
+      await add_revert_to_flitching_inventory();
+    } else if (
+      // flitching done
       issuedForSlicingData?.issued_from === issues_for_status?.flitching_done &&
       issuedForSlicingData?.flitching_done_id !== null
     ) {
-      await add_revert_to_flitch_inventory();
+      await add_revert_to_flitch_done();
+    } else if(
+      // reflitching
+      issuedForSlicingData?.reflitching_item_id !== null &&
+      issuedForSlicingData?.issued_from === issues_for_status?.reflitching
+    ){
+      await add_revert_to_reflitching()
+    }else {
+      throw new ApiError('No Data found to revert', StatusCodes.BAD_REQUEST);
     }
 
+    // delete reverted items
     const delete_response = await issued_for_slicing_model.deleteOne(
       { _id: issuedForSlicingData?._id },
       { session }
     );
-
     if (!delete_response?.acknowledged || delete_response?.deletedCount === 0) {
       throw new ApiError(
         'Failed to Revert Items',
