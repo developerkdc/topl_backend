@@ -64,7 +64,6 @@ export const veneer_item_details_schema = new mongoose.Schema(
     },
     pallet_number: {
       type: String,
-      unique: [true, 'pallet number must be unique'],
       required: [true, 'pallet_number is required'], //auto increment
       trim: true,
       uppercase: true,
@@ -182,6 +181,10 @@ veneer_item_details_schema.index(
   { item_sr_no: 1, invoice_id: 1 },
   { unique: true }
 );
+veneer_item_details_schema.index({ item_name: -1 });
+veneer_item_details_schema.index({ bundle_number: -1 });
+veneer_item_details_schema.index({ pallet_number: -1 });
+veneer_item_details_schema.index({ item_name: -1, pallet_number: -1, bundle_number: -1 }, { unique: true });
 
 export const veneer_invoice_schema = new mongoose.Schema(
   {

@@ -185,6 +185,9 @@ const veneer_approval_item_details_schema = new mongoose.Schema(
 
 veneer_approval_item_details_schema.index({ item_sr_no: 1 });
 veneer_approval_item_details_schema.index({ item_sr_no: 1, invoice_id: 1 });
+veneer_approval_item_details_schema.index({ item_name: -1 });
+veneer_approval_item_details_schema.index({ bundle_number: -1 });
+veneer_approval_item_details_schema.index({ pallet_number: -1 });
 
 const veneer_approval_invoice_schema = new mongoose.Schema(
   {

@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import { issues_for_status } from "../../../Utils/constants/constants.js";
 
-const validate_dressing_required_field = function(){
+const validate_dressing_required_field = function () {
     return this.dressing_done_id || this.issued_from === issues_for_status.dressing
 }
 
@@ -162,6 +162,8 @@ const issues_for_smoking_dying_schema = new mongoose.Schema({
 issues_for_smoking_dying_schema.index({ item_name: -1 });
 issues_for_smoking_dying_schema.index({ bundle_number: -1 });
 issues_for_smoking_dying_schema.index({ pallet_number: -1 });
-issues_for_smoking_dying_schema.index({ pallet_number: -1, bundle_number: -1 }, { unique: true });
+issues_for_smoking_dying_schema.index({ item_name: -1, pallet_number: -1, bundle_number: -1 }, { unique: true });
 
-export const issues_for_smoking_dying_model = mongoose.model("issues_for_smoking_dyings", issues_for_smoking_dying_schema, "issues_for_smoking_dyings")
+export const issues_for_smoking_dying_model = mongoose.model("issues_for_smoking_dyings", issues_for_smoking_dying_schema, "issues_for_smoking_dyings");
+
+// const issues_for_smoking_dying_view_schema = new 
