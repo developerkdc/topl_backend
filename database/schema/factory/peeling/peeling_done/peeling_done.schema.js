@@ -106,6 +106,16 @@ const peeling_done_items_schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Item Name ID is required'],
     },
+    item_sub_category_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, 'Items Sub-Category Id is required'],
+    },
+    item_sub_category_name: {
+      type: String,
+      required: [true, 'Item Sub-Category Name is required'],
+      trim: true,
+      uppercase: true,
+    },
     log_no_code: {
       type: String,
       required: [true, 'Log No Code is required'],

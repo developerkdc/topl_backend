@@ -4,7 +4,7 @@ import ApiError from "../../../utils/errors/apiError.js";
 import { StatusCodes } from "../../../utils/constants.js";
 import { veneer_inventory_invoice_model, veneer_inventory_items_model } from "../../../database/schema/inventory/venner/venner.schema.js";
 import ApiResponse from "../../../utils/ApiResponse.js";
-import { issues_for_smoking_dying_model } from "../../../database/schema/factory/smoking_dying/issues_for_smoking_dying.schema.js";
+import { issues_for_smoking_dying_model, issues_for_smoking_dying_view_model } from "../../../database/schema/factory/smoking_dying/issues_for_smoking_dying.schema.js";
 import { issues_for_status } from "../../../database/Utils/constants/constants.js";
 import { DynamicSearch } from "../../../utils/dynamicSearch/dynamic.js";
 import { dynamic_filter } from "../../../utils/dymanicFilter.js";
@@ -38,6 +38,8 @@ export const add_issue_for_smoking_dying_from_veneer_inventory = catchAsync(asyn
                 veneer_inventory_id: item?._id,
                 item_name: item?.item_name,
                 item_name_id: item?.item_id,
+                item_sub_category_id: item?.item_sub_category_id,
+                item_sub_category_name: item?.item_sub_category_name,
                 log_no_code: item?.log_code,
                 length: item?.length,
                 width: item?.width,
@@ -176,60 +178,6 @@ export const listing_issued_for_smoking_dying = catchAsync(async (req, res, next
     };
 
     // Aggregation stage
-    const aggCreatedByLookup = {
-        $lookup: {
-            from: 'users',
-            localField: 'created_by',
-            foreignField: '_id',
-            pipeline: [
-                {
-                    $project: {
-                        user_name: 1,
-                        user_type: 1,
-                        dept_name: 1,
-                        first_name: 1,
-                        last_name: 1,
-                        email_id: 1,
-                        mobile_no: 1,
-                    },
-                },
-            ],
-            as: 'created_by',
-        },
-    };
-    const aggUpdatedByLookup = {
-        $lookup: {
-            from: 'users',
-            localField: 'updated_by',
-            foreignField: '_id',
-            pipeline: [
-                {
-                    $project: {
-                        user_name: 1,
-                        user_type: 1,
-                        dept_name: 1,
-                        first_name: 1,
-                        last_name: 1,
-                        email_id: 1,
-                        mobile_no: 1,
-                    },
-                },
-            ],
-            as: 'updated_by',
-        },
-    };
-    const aggCreatedByUnwind = {
-        $unwind: {
-            path: '$created_by',
-            preserveNullAndEmptyArrays: true,
-        },
-    };
-    const aggUpdatedByUnwind = {
-        $unwind: {
-            path: '$updated_by',
-            preserveNullAndEmptyArrays: true,
-        },
-    };
     const aggMatch = {
         $match: {
             ...match_query,
@@ -248,10 +196,6 @@ export const listing_issued_for_smoking_dying = catchAsync(async (req, res, next
     };
 
     const listAggregate = [
-        aggCreatedByLookup,
-        aggCreatedByUnwind,
-        aggUpdatedByLookup,
-        aggUpdatedByUnwind,
         aggMatch,
         aggSort,
         aggSkip,
@@ -259,23 +203,19 @@ export const listing_issued_for_smoking_dying = catchAsync(async (req, res, next
     ]; // aggregation pipiline
 
     const issue_for_smoking_dying =
-        await issues_for_smoking_dying_model.aggregate(listAggregate);
+        await issues_for_smoking_dying_view_model.aggregate(listAggregate);
 
     const aggCount = {
         $count: 'totalCount',
     }; // count aggregation stage
 
     const totalAggregate = [
-        aggCreatedByLookup,
-        aggCreatedByUnwind,
-        aggUpdatedByLookup,
-        aggUpdatedByUnwind,
         aggMatch,
         aggCount,
     ]; // total aggregation pipiline
 
     const totalDocument =
-        await issues_for_smoking_dying_model.aggregate(totalAggregate);
+        await issues_for_smoking_dying_view_model.aggregate(totalAggregate);
 
     const totalPages = Math.ceil((totalDocument?.[0]?.totalCount || 0) / limit);
 
@@ -293,152 +233,194 @@ export const listing_issued_for_smoking_dying = catchAsync(async (req, res, next
 export const fetch_single_issued_for_smoking_dying_item = catchAsync(async (req, res, next) => {
     const { id } = req.params;
 
-    if (!id || !mongoose.isValidObjectId(id)) {
-        return next(new ApiError('Invaild Id', StatusCodes.NOT_FOUND));
-    }
-
     // Aggregation stage
     const aggMatch = {
-        $match: { _id: mongoose.Types.ObjectId.createFromHexString(id) },
+        $match: { _id: id },
     };
-    // const aggCreatedByLookup = {
-    //   $lookup: {
-    //     from: 'users',
-    //     localField: 'created_by',
-    //     foreignField: '_id',
-    //     pipeline: [
-    //       {
-    //         $project: {
-    //           user_name: 1,
-    //           user_type: 1,
-    //           dept_name: 1,
-    //           first_name: 1,
-    //           last_name: 1,
-    //           email_id: 1,
-    //           mobile_no: 1,
-    //         },
-    //       },
-    //     ],
-    //     as: 'created_by',
-    //   },
-    // };
-    // const aggUpdatedByLookup = {
-    //   $lookup: {
-    //     from: 'users',
-    //     localField: 'updated_by',
-    //     foreignField: '_id',
-    //     pipeline: [
-    //       {
-    //         $project: {
-    //           user_name: 1,
-    //           user_type: 1,
-    //           dept_name: 1,
-    //           first_name: 1,
-    //           last_name: 1,
-    //           email_id: 1,
-    //           mobile_no: 1,
-    //         },
-    //       },
-    //     ],
-    //     as: 'updated_by',
-    //   },
-    // };
-    // const aggCreatedByUnwind = {
-    //   $unwind: {
-    //     path: '$created_by',
-    //     preserveNullAndEmptyArrays: true,
-    //   },
-    // };
-    // const aggUpdatedByUnwind = {
-    //   $unwind: {
-    //     path: '$updated_by',
-    //     preserveNullAndEmptyArrays: true,
-    //   },
-    // };
 
     const listAggregate = [
         aggMatch,
-        // aggCreatedByLookup,
-        // aggCreatedByUnwind,
-        // aggUpdatedByLookup,
-        // aggUpdatedByUnwind,
     ]; // aggregation pipiline
 
     const issue_for_smoking_dying =
-        await issues_for_smoking_dying_model.aggregate(listAggregate);
+        await issues_for_smoking_dying_view_model.aggregate(listAggregate);
 
     const response = new ApiResponse(
         StatusCodes.OK,
-        'Issued for Smoking Dying Item Fetched Sucessfully',
+        'Issued for Smoking Dying Fetched Sucessfully',
         issue_for_smoking_dying?.[0]
     );
     return res.status(StatusCodes.OK).json(response);
 });
 
+// export const revert_issued_for_smoking_dying_item = catchAsync(async (req, res, next) => {
+//     const session = await mongoose.startSession();
+//     session.startTransaction();
+//     try {
+//         const { id } = req.params;
+//         if (!mongoose.isValidObjectId(id)) {
+//             throw new ApiError("Invalid Id", StatusCodes.BAD_REQUEST)
+//         }
+
+//         const fetch_issue_for_smoking_dying_data = await issues_for_smoking_dying_model.findOne({ _id: id }).lean();
+//         if (!fetch_issue_for_smoking_dying_data) {
+//             throw new ApiError("Issue for Smoking Dying Item Not Found", StatusCodes.NOT_FOUND)
+//         }
+
+//         const revert_to_veneer_inventory = async function () {
+//             const veneer_inventory_item_id = fetch_issue_for_smoking_dying_data?.veneer_inventory_id;
+//             const update_document = await veneer_inventory_items_model.findOneAndUpdate(
+//                 { _id: veneer_inventory_item_id },
+//                 {
+//                     $set: {
+//                         issue_status: null
+//                     }
+//                 }, 
+//                 { new: true, session }
+//             );
+
+//             if (!update_document) {
+//                 throw new ApiError("Veneer Inventory Item Not Found", StatusCodes.NOT_FOUND)
+//             }
+
+//             const veneer_invoice_id = update_document?.invoice_id;
+//             const is_invoice_editable = await veneer_inventory_items_model.find({
+//                 _id: { $ne: veneer_inventory_item_id },
+//                 invoice_id: veneer_invoice_id,
+//                 issue_status: { $ne: null }
+//             }).lean();
+
+//             if (is_invoice_editable && is_invoice_editable?.length <= 0) {
+//                 await veneer_inventory_invoice_model.updateOne(
+//                     { _id: veneer_invoice_id },
+//                     {
+//                         $set: {
+//                             isEditable: true,
+//                         },
+//                     },
+//                     { session }
+//                 );
+//             }
+
+//         }
+//         const revert_to_dressing_done = async function () { }
+
+//         if (fetch_issue_for_smoking_dying_data?.veneer_inventory_id !== null && issues_for_status?.veneer) {
+//             await revert_to_veneer_inventory();
+//         } else if (fetch_issue_for_smoking_dying_data?.dressing_done_id !== null && issues_for_status?.dressing) {
+//             await revert_to_dressing_done();
+//         } else {
+//             throw new ApiError("No data found to revert item", StatusCodes.BAD_REQUEST)
+//         }
+
+
+//         // delete reverted items
+//         const delete_response = await issues_for_smoking_dying_model.deleteOne(
+//             { _id: fetch_issue_for_smoking_dying_data?._id },
+//             { session }
+//         );
+//         if (!delete_response?.acknowledged || delete_response?.deletedCount === 0) {
+//             throw new ApiError(
+//                 'Failed to Revert Items',
+//                 StatusCodes.INTERNAL_SERVER_ERROR
+//             );
+//         }
+
+//         const response = new ApiResponse(
+//             StatusCodes.OK,
+//             'Items Reverted Successfully',
+//             delete_response
+//         );
+//         await session.commitTransaction();
+//         return res.status(StatusCodes.OK).json(response);
+//     } catch (error) {
+//         await session.abortTransaction();
+//         throw error;
+//     } finally {
+//         await session.endSession();
+//     }
+// });
+
 export const revert_issued_for_smoking_dying_item = catchAsync(async (req, res, next) => {
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
-        const { id } = req.params;
-        if (!mongoose.isValidObjectId(id)) {
-            throw new ApiError("Invalid Id", StatusCodes.BAD_REQUEST)
+        const { pallet_number } = req.params;
+        if (!pallet_number) {
+            throw new ApiError('Pallet Number is required', StatusCodes.BAD_REQUEST)
         }
 
-        const fetch_issue_for_smoking_dying_data = await issues_for_smoking_dying_model.findOne({ _id: id }).lean();
-        if (!fetch_issue_for_smoking_dying_data) {
-            throw new ApiError("Issue for Smoking Dying Item Not Found", StatusCodes.NOT_FOUND)
+        const issue_for_smoking_dying = await issues_for_smoking_dying_view_model.aggregate([
+            {
+                $match: {
+                    _id: pallet_number
+                }
+            }
+        ]);
+        if (issue_for_smoking_dying && !issue_for_smoking_dying?.[0]) {
+            throw new ApiError("No Data Found");
         }
+
+        const bundle_list = issue_for_smoking_dying?.[0]?.bundles;
+
+        const veneer_inventory_ids = bundle_list?.filter((item) => item?.veneer_inventory_id !== null && item.issued_from === issues_for_status?.veneer)?.map((item) => mongoose.Types.ObjectId.createFromHexString(item?.veneer_inventory_id?.toString()));
+
+        const dressing_done_ids = bundle_list?.filter((item) => item?.dressing_done_id !== null && item.issued_from === issues_for_status?.dressing)?.map((item) => mongoose.Types.ObjectId.createFromHexString(item?.dressing_done_id?.toString()));
 
         const revert_to_veneer_inventory = async function () {
-            const veneer_inventory_item_id = fetch_issue_for_smoking_dying_data?.veneer_inventory_id;
-            const update_document = await veneer_inventory_items_model.findOneAndUpdate(
-                { _id: veneer_inventory_item_id },
-                {
-                    $set: {
-                        issue_status: null
-                    }
-                },
-                { new: true, session }
+            // Update documents
+            const update_veneer_item = await veneer_inventory_items_model.updateMany(
+                { _id: { $in: veneer_inventory_ids } },
+                { $set: { issue_status: null } },
+                { session }
             );
 
-            if (!update_document) {
-                throw new ApiError("Veneer Inventory Item Not Found", StatusCodes.NOT_FOUND)
+            if (update_veneer_item.matchedCount <= 0) {
+                throw new ApiError("Not data found to Update Veneer Item", StatusCodes.INTERNAL_SERVER_ERROR)
+            }
+            if (!update_veneer_item.acknowledged || update_veneer_item.modifiedCount <= 0) {
+                throw new ApiError("Failed to Update Veneer Item", StatusCodes.INTERNAL_SERVER_ERROR)
             }
 
-            const veneer_invoice_id = update_document?.invoice_id;
-            const is_invoice_editable = await veneer_inventory_items_model.find({
-                _id: { $ne: veneer_inventory_item_id },
-                invoice_id: veneer_invoice_id,
-                issue_status: { $ne: null }
-            }).lean();
+            // Fetch updated documents
+            for (let veneer_inventory_id of veneer_inventory_ids) {
+                const update_document = await veneer_inventory_items_model.findOne(
+                    { _id: veneer_inventory_id }
+                ).lean();
+                const veneer_invoice_id = update_document?.invoice_id;
 
-            if (is_invoice_editable && is_invoice_editable?.length <= 0) {
-                await veneer_inventory_invoice_model.updateOne(
-                    { _id: veneer_invoice_id },
-                    {
-                        $set: {
-                            isEditable: true,
+                const is_invoice_editable = await veneer_inventory_items_model.find({
+                    _id: { $ne: veneer_inventory_id },
+                    invoice_id: veneer_invoice_id,
+                    issue_status: { $ne: null }
+                }).lean();
+
+                if (is_invoice_editable && is_invoice_editable?.length <= 0) {
+                    await veneer_inventory_invoice_model.updateOne(
+                        { _id: veneer_invoice_id },
+                        {
+                            $set: {
+                                isEditable: true,
+                            },
                         },
-                    },
-                    { session }
-                );
+                        { session }
+                    );
+                }
             }
-
         }
         const revert_to_dressing_done = async function () { }
 
-        if (fetch_issue_for_smoking_dying_data?.veneer_inventory_id !== null && issues_for_status?.veneer) {
+        if (veneer_inventory_ids?.length > 0) {
             await revert_to_veneer_inventory();
-        } else if (fetch_issue_for_smoking_dying_data?.dressing_done_id !== null && issues_for_status?.dressing) {
+        } else if (dressing_done_ids?.length > 0) {
             await revert_to_dressing_done();
         } else {
             throw new ApiError("No data found to revert item", StatusCodes.BAD_REQUEST)
         }
 
-
         // delete reverted items
         const delete_response = await issues_for_smoking_dying_model.deleteOne(
-            { _id: fetch_issue_for_smoking_dying_data?._id },
+            { pallet_number: pallet_number },
             { session }
         );
         if (!delete_response?.acknowledged || delete_response?.deletedCount === 0) {

@@ -22,7 +22,7 @@ smokingDyingRouter.get(
 );
 
 smokingDyingRouter.post(
-    '/revert-issue-for-smoking-dying/:id',
+    '/revert-issue-for-smoking-dying/:pallet_number',
     AuthMiddleware,
     revert_issued_for_smoking_dying_item
   );

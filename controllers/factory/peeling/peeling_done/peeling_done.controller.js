@@ -52,10 +52,6 @@ export const add_peeling_done = catchAsync(async (req, res, next) => {
     const fetch_issue_for_peeling_data = await issues_for_peeling_model.findOne(
       { _id: other_details?.issue_for_peeling_id }
     );
-    console.log(
-      fetch_issue_for_peeling_data,
-      other_details?.issue_for_peeling_id
-    );
     if (!fetch_issue_for_peeling_data) {
       throw new ApiError('Issue for peeling data not found', 400);
     }

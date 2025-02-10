@@ -28,6 +28,16 @@ const issues_for_smoking_dying_schema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         required: [true, 'Item Name ID is required'],
     },
+    item_sub_category_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: [true, 'Items Sub-Category Id is required'],
+    },
+    item_sub_category_name: {
+        type: String,
+        required: [true, 'Item Sub-Category Name is required'],
+        trim: true,
+        uppercase: true,
+    },
     log_no_code: {
         type: String,
         required: [true, 'Log No Code is required'],
@@ -166,4 +176,89 @@ issues_for_smoking_dying_schema.index({ item_name: -1, pallet_number: -1, bundle
 
 export const issues_for_smoking_dying_model = mongoose.model("issues_for_smoking_dyings", issues_for_smoking_dying_schema, "issues_for_smoking_dyings");
 
-// const issues_for_smoking_dying_view_schema = new 
+const issues_for_smoking_dying_view_schema = new mongoose.Schema({}, {
+    strict: false,
+    autoCreate: false,
+    autoIndex: false
+});
+
+export const issues_for_smoking_dying_view_model = mongoose.model("issues_for_smoking_dying_views", issues_for_smoking_dying_view_schema, "issues_for_smoking_dying_views");
+
+(async function () {
+    await issues_for_smoking_dying_view_model.createCollection({
+        viewOn: "issues_for_smoking_dyings",
+        pipeline: [
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'created_by',
+                    foreignField: '_id',
+                    pipeline: [
+                        {
+                            $project: {
+                                user_name: 1,
+                                user_type: 1,
+                                dept_name: 1,
+                                first_name: 1,
+                                last_name: 1,
+                                email_id: 1,
+                                mobile_no: 1,
+                            },
+                        },
+                    ],
+                    as: 'created_by',
+                },
+            },
+            {
+                $unwind: {
+                    path: '$created_by',
+                    preserveNullAndEmptyArrays: true,
+                },
+            },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'updated_by',
+                    foreignField: '_id',
+                    pipeline: [
+                        {
+                            $project: {
+                                user_name: 1,
+                                user_type: 1,
+                                dept_name: 1,
+                                first_name: 1,
+                                last_name: 1,
+                                email_id: 1,
+                                mobile_no: 1,
+                            },
+                        },
+                    ],
+                    as: 'updated_by',
+                },
+            },
+            {
+                $unwind: {
+                    path: '$updated_by',
+                    preserveNullAndEmptyArrays: true,
+                },
+            },
+            {
+                $group: {
+                    _id: "$pallet_number",
+                    item_name: {
+                        $first: "$item_name"
+                    },
+                    item_sub_category_name: {
+                        $first: "$item_sub_category_name"
+                    },
+                    bundles: {
+                        $push: "$$ROOT"
+                    },
+                    total_bundles: {
+                        $sum: 1
+                    }
+                }
+            }
+        ]
+    })
+})()
