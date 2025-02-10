@@ -164,7 +164,7 @@ export const listItemSubCategories = catchAsync(async (req, res) => {
     },
     {
       $lookup: {
-        from: 'item_subcategories',
+        from: 'item_categories',
         localField: 'category',
         foreignField: '_id',
         as: 'categoryDetails',
@@ -251,7 +251,7 @@ export const DropdownSubcategoryNameMaster = catchAsync(async (req, res) => {
       $project: {
         name: 1,
         'categoryDetails.category': 1,
-        'catgeoryDetails._id': 1
+        'categoryDetails._id': 1
       },
     },
   ]).collation({ locale: 'en', caseLevel: true });
