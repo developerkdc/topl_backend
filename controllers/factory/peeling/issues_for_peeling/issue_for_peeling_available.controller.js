@@ -20,7 +20,7 @@ export const fetch_issue_for_peeling_available_details = catchAsync(
     const {
       page = 1,
       limit = 10,
-      sortBy = 'updatdAt',
+      sortBy = 'updatedAt',
       sort = 'desc',
       search = '',
     } = req.query;

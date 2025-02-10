@@ -4,7 +4,7 @@ export const issues_for_status = {
   flitching: 'flitching',
   flitching_done: 'flitching_done',
   log: 'log',
-  veneer:"veneer",
+  veneer: 'veneer',
   flitch: 'flitch',
   peeling: 'peeling',
   reflitching: 'reflitching',
