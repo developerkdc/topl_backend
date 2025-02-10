@@ -24,11 +24,21 @@ export const addIssueForPeelingFromLogInventory = catchAsync(
     try {
       const userDetails = req.userDetails;
       const { log_inventory_item_ids } = req.body;
-      if (!log_inventory_item_ids || (Array.isArray(log_inventory_item_ids) && log_inventory_item_ids?.length <= 0)) {
-        throw new ApiError("log_inventory_item_ids is required", StatusCodes.BAD_REQUEST);
+      if (
+        !log_inventory_item_ids ||
+        (Array.isArray(log_inventory_item_ids) &&
+          log_inventory_item_ids?.length <= 0)
+      ) {
+        throw new ApiError(
+          'log_inventory_item_ids is required',
+          StatusCodes.BAD_REQUEST
+        );
       }
       if (!Array.isArray(log_inventory_item_ids)) {
-        throw new ApiError("log_inventory_item_ids must be array", StatusCodes.BAD_REQUEST);
+        throw new ApiError(
+          'log_inventory_item_ids must be array',
+          StatusCodes.BAD_REQUEST
+        );
       }
 
       const logInventoryItemData = await log_inventory_items_model
@@ -160,11 +170,20 @@ export const addIssueForPeelingFromCrosscutDone = catchAsync(
       const userDetails = req.userDetails;
       const { crosscut_done_ids } = req.body;
 
-      if (!crosscut_done_ids || (Array.isArray(crosscut_done_ids) && crosscut_done_ids?.length <= 0)) {
-        throw new ApiError("crosscut_done_ids is required", StatusCodes.BAD_REQUEST);
+      if (
+        !crosscut_done_ids ||
+        (Array.isArray(crosscut_done_ids) && crosscut_done_ids?.length <= 0)
+      ) {
+        throw new ApiError(
+          'crosscut_done_ids is required',
+          StatusCodes.BAD_REQUEST
+        );
       }
       if (!Array.isArray(crosscut_done_ids)) {
-        throw new ApiError("crosscut_done_ids must be array", StatusCodes.BAD_REQUEST);
+        throw new ApiError(
+          'crosscut_done_ids must be array',
+          StatusCodes.BAD_REQUEST
+        );
       }
 
       const aggMatch = {

@@ -6,7 +6,7 @@ import itemCategoryModel from '../../database/schema/masters/item.category.schem
 import itemSubCategoryModel from '../../database/schema/masters/item.subcategory.schema.js';
 import { DynamicSearch } from '../../utils/dynamicSearch/dynamic.js';
 export const addItems = catchAsync(async (req, res) => {
-  const { name, remark } = req.body;
+  const { name, remark, category } = req.body;
 
   if (!name) {
     return res.json(
@@ -16,6 +16,7 @@ export const addItems = catchAsync(async (req, res) => {
       )
     );
   }
+
   const checkIfAlreadyExists = await itemSubCategoryModel.find({ name: name });
   if (checkIfAlreadyExists.length > 0) {
     return res.json(
@@ -44,6 +45,7 @@ export const addItems = catchAsync(async (req, res) => {
   const newItemCatgory = new itemSubCategoryModel({
     sr_no: newMax,
     name,
+    category,
     remark,
     created_by,
   });
@@ -159,6 +161,14 @@ export const listItemSubCategories = catchAsync(async (req, res) => {
         as: 'userDetails',
       },
     },
+    {
+      $lookup: {
+        from: 'item_categories',
+        localField: 'category',
+        foreignField: '_id',
+        as: 'categoryDetails',
+      },
+    },
     { $unwind: { path: '$userDetails', preserveNullAndEmptyArrays: true } },
     { $match: { ...searchQuery } },
     {
@@ -166,6 +176,7 @@ export const listItemSubCategories = catchAsync(async (req, res) => {
         sr_no: 1,
         name: 1,
         remark: 1,
+        categoryDetails: 1,
         createdAt: 1,
         created_by: 1,
         'userDetails.first_name': 1,
@@ -200,25 +211,50 @@ export const listItemSubCategories = catchAsync(async (req, res) => {
 export const DropdownSubcategoryNameMaster = catchAsync(async (req, res) => {
   const { type } = req.query;
 
-  const searchQuery = type
-    ? {
-        $or: [{ name: { $regex: type, $options: 'i' } }],
-      }
-    : {};
+  // const searchQuery = type
+  //   ? {
+  //     $or: [{ name: { $regex: type, $options: 'i' } }, { 'categoryDetails.category': { $regex: type, $options: "i" } }],
+  //   }
+  //   : {};
+  let searchQuery = {};
 
-  const list = await itemSubCategoryModel.aggregate([
-    {
-      $match: searchQuery,
-    },
-    {
-      $sort: { name: 1 },
-    },
-    {
-      $project: {
-        name: 1,
+  if (type) {
+    searchQuery['categoryDetails.category'] = type;
+  }
+
+  console.log(searchQuery);
+
+  const list = await itemSubCategoryModel
+    .aggregate([
+      {
+        $lookup: {
+          from: 'item_categories',
+          localField: 'category',
+          foreignField: '_id',
+          as: 'categoryDetails',
+        },
       },
-    },
-  ]);
+      // {
+      //   $unwind: {
+      //     path: "$categoryDetails",
+      //     preserveNullAndEmptyArrays: true
+      //   }
+      // },
+      {
+        $match: searchQuery,
+      },
+      {
+        $sort: { name: 1 },
+      },
+      {
+        $project: {
+          name: 1,
+          'categoryDetails.category': 1,
+          'categoryDetails._id': 1,
+        },
+      },
+    ])
+    .collation({ locale: 'en', caseLevel: true });
 
   res
     .status(200)

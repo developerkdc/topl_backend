@@ -23,8 +23,8 @@ router.post(
 );
 router.post(
   '/list',
-  AuthMiddleware,
-  RolesPermissions('item_sub_category_master', 'view'),
+  // AuthMiddleware,
+  // RolesPermissions('item_sub_category_master', 'view'),
   listItemSubCategories
 );
 

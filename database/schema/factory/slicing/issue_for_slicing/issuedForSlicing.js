@@ -43,11 +43,12 @@ const issue_for_slicing_schema = new mongoose.Schema(
     },
     item_sub_category_id: {
       type: mongoose.Schema.Types.ObjectId,
-      required: [true, 'Items Sub-Category Id is required'],
+      default: null,
     },
     item_sub_category_name: {
       type: String,
-      required: [true, 'Item Sub-Category Name is required'],
+      // required: [true, 'Item Sub-Category Name is required'],
+      default: null,
       trim: true,
       uppercase: true,
     },
