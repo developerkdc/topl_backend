@@ -44,7 +44,7 @@ router.post(
 // without permission
 router.get(
   '/dropdown-item-name-master',
-  AuthMiddleware,
+  // AuthMiddleware,
   DropdownItemNameMaster
 );
 

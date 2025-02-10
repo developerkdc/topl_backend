@@ -180,9 +180,23 @@ export const ListItemNameMaster = catchAsync(async (req, res) => {
 });
 
 export const DropdownItemNameMaster = catchAsync(async (req, res) => {
-  const { type } = req.query;
+  const { type, subcategory } = req.query;
+  const searchQuery = {};
 
-  const searchQuery = type ? { 'categoryDetails.category': type } : {};
+  if (type) {
+    searchQuery['categoryDetails.category'] = type
+  };
+
+  if (subcategory) {
+    searchQuery['subCategoryDetails.name'] = subcategory
+  };
+
+  if (type && subcategory) {
+    searchQuery["$and"] = [
+      { 'categoryDetails.category': type },
+      { 'subCategoryDetails.name': subcategory }
+    ]
+  }
 
   const list = await ItemNameModel.aggregate([
     {
@@ -202,10 +216,10 @@ export const DropdownItemNameMaster = catchAsync(async (req, res) => {
       },
     },
     {
-      $unwind: '$categoryDetails',
+      $unwind: { path: '$categoryDetails', preserveNullAndEmptyArrays: true },
     },
     {
-      $unwind: '$subCategoryDetails',
+      $unwind: { path: '$subCategoryDetails', preserveNullAndEmptyArrays: true },
     },
     {
       $match: searchQuery,
@@ -227,12 +241,13 @@ export const DropdownItemNameMaster = catchAsync(async (req, res) => {
     },
   ]).collation({ locale: 'en', caseLevel: true });
 
+
   res
     .status(200)
     .json(
       new ApiResponse(
         StatusCodes.OK,
-        'Name dropdown fetched successfully....',
+        'Item Name dropdown fetched successfully....',
         list
       )
     );

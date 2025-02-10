@@ -31,7 +31,7 @@ router.post(
 // without permission
 router.get(
   '/dropdown-subcategory-master',
-  AuthMiddleware,
+  // AuthMiddleware,
   DropdownSubcategoryNameMaster
 );
 
