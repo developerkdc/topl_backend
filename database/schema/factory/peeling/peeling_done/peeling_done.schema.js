@@ -191,7 +191,10 @@ const peeling_done_items_schema = new mongoose.Schema(
     item_amount: {
       type: Number,
       default: 0,
-      required: [veneer_output_type_not_required_field, 'Item Amount is required'],
+      required: [
+        veneer_output_type_not_required_field,
+        'Item Amount is required',
+      ],
     },
     item_wastage_consumed_amount: {
       type: Number,

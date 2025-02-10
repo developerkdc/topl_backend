@@ -100,7 +100,12 @@ const chromaCompositeSchema = new mongoose.Schema(
       default: 0,
     },
     instructions: {
-      type: [String],
+      type: [
+        {
+          type: String,
+          uppercase: true,
+        },
+      ],
       default: null,
       trim: true,
       uppercase: true,

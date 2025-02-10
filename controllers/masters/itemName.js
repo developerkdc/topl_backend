@@ -10,8 +10,8 @@ import { StatusCodes } from '../../utils/constants.js';
 
 export const AddItemNameMaster = catchAsync(async (req, res) => {
   const authUserDetail = req.userDetails;
-  const { item_name, category, color } = req.body;
-  if (!item_name || !category) {
+  const { item_name, category, color, item_subcategory, item_name_code } = req.body;
+  if (!item_name || !category || !item_subcategory) {
     return res.json(
       new ApiResponse(StatusCodes.NOT_FOUND, 'all fields are required')
     );
@@ -36,6 +36,7 @@ export const AddItemNameMaster = catchAsync(async (req, res) => {
     item_name,
     color,
     category,
+    item_subcategory, item_name_code,
     created_by,
   };
   const newItemNameList = new ItemNameModel(itemNameData);
@@ -127,6 +128,14 @@ export const ListItemNameMaster = catchAsync(async (req, res) => {
         as: 'categoryDetails',
       },
     },
+    {
+      $lookup: {
+        from: 'item_subcategories',
+        localField: 'item_subcategory',
+        foreignField: '_id',
+        as: 'subCategoryDetails',
+      },
+    },
     { $unwind: { path: '$userDetails', preserveNullAndEmptyArrays: true } },
     // { $unwind: { path: '$categoryDetails', preserveNullAndEmptyArrays: true } },
     { $match: { ...searchQuery } },
@@ -141,6 +150,11 @@ export const ListItemNameMaster = catchAsync(async (req, res) => {
         'userDetails.user_name': 1,
         'categoryDetails._id': 1,
         'categoryDetails.category': 1,
+        'subCategoryDetails.name': 1,
+        'subCategoryDetails._id': 1,
+        item_name_code: 1,
+        color: 1,
+
       },
     },
     { $skip: skipped },
@@ -180,7 +194,18 @@ export const DropdownItemNameMaster = catchAsync(async (req, res) => {
       },
     },
     {
+      $lookup: {
+        from: 'item_subcategories',
+        localField: 'item_subcategory',
+        foreignField: '_id',
+        as: 'subCategoryDetails',
+      },
+    },
+    {
       $unwind: '$categoryDetails',
+    },
+    {
+      $unwind: '$subCategoryDetails',
     },
     {
       $match: searchQuery,
@@ -192,7 +217,9 @@ export const DropdownItemNameMaster = catchAsync(async (req, res) => {
       $project: {
         item_name: 1,
         category: 1,
+        item_subcategory: 1,
         color: 1,
+        item_name_code: 1
       },
     },
     {

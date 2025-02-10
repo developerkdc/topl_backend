@@ -61,7 +61,7 @@ export const listing_veneer_inventory = catchAsync(async (req, res, next) => {
   const match_query = {
     ...filterData,
     ...search_query,
-    issue_status: null
+    issue_status: null,
   };
 
   const aggregate_stage = [

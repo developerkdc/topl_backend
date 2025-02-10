@@ -15,7 +15,7 @@ export const fetch_issue_for_slicing_available_details = catchAsync(
     const {
       page = 1,
       limit = 10,
-      sortBy = 'updatdAt',
+      sortBy = 'updatedAt',
       sort = 'desc',
       search = '',
     } = req.query;
@@ -34,9 +34,10 @@ export const fetch_issue_for_slicing_available_details = catchAsync(
     if (search != '' && req?.body?.searchFields) {
       const search_data = DynamicSearch(
         search,
-        string,
+
         boolean,
         numbers,
+        string,
         arrayField
       );
 

@@ -19,7 +19,10 @@ import {
   flitching_done_model,
   flitching_view_modal,
 } from '../../../../database/schema/factory/flitching/flitching.schema.js';
-import { re_flitching_items_model, re_flitching_other_details_model } from '../../../../database/schema/factory/peeling/peeling_done/re_flitching.schema.js';
+import {
+  re_flitching_items_model,
+  re_flitching_other_details_model,
+} from '../../../../database/schema/factory/peeling/peeling_done/re_flitching.schema.js';
 
 export const addIssueForSlicingFromFlitchInventory = catchAsync(
   async function (req, res, next) {
@@ -29,11 +32,21 @@ export const addIssueForSlicingFromFlitchInventory = catchAsync(
       const userDetails = req.userDetails;
       const { flitch_inventory_item_ids, is_peeling_done } = req.body;
 
-      if (!flitch_inventory_item_ids || (Array.isArray(flitch_inventory_item_ids) && flitch_inventory_item_ids?.length <= 0)) {
-        throw new ApiError("flitch_inventory_item_ids is required", StatusCodes.BAD_REQUEST);
+      if (
+        !flitch_inventory_item_ids ||
+        (Array.isArray(flitch_inventory_item_ids) &&
+          flitch_inventory_item_ids?.length <= 0)
+      ) {
+        throw new ApiError(
+          'flitch_inventory_item_ids is required',
+          StatusCodes.BAD_REQUEST
+        );
       }
       if (!Array.isArray(flitch_inventory_item_ids)) {
-        throw new ApiError("flitch_inventory_item_ids must be array", StatusCodes.BAD_REQUEST);
+        throw new ApiError(
+          'flitch_inventory_item_ids must be array',
+          StatusCodes.BAD_REQUEST
+        );
       }
 
       const flitchInventoryItemData = await flitch_inventory_items_model
@@ -49,7 +62,6 @@ export const addIssueForSlicingFromFlitchInventory = catchAsync(
           StatusCodes.NOT_FOUND
         );
       }
-
 
       const flitch_items_invoice_set = new Set();
       const issue_for_slicing_data = flitchInventoryItemData?.map(
@@ -186,11 +198,20 @@ export const add_issue_for_slicing_from_flitching_done = catchAsync(
       const userDetails = req.userDetails;
       const { flitching_done_ids, is_peeling_done } = req.body;
 
-      if (!flitching_done_ids || (Array.isArray(flitching_done_ids) && flitching_done_ids?.length <= 0)) {
-        throw new ApiError("flitching_done_ids is required", StatusCodes.BAD_REQUEST);
+      if (
+        !flitching_done_ids ||
+        (Array.isArray(flitching_done_ids) && flitching_done_ids?.length <= 0)
+      ) {
+        throw new ApiError(
+          'flitching_done_ids is required',
+          StatusCodes.BAD_REQUEST
+        );
       }
       if (!Array.isArray(flitching_done_ids)) {
-        throw new ApiError("flitching_done_ids must be array", StatusCodes.BAD_REQUEST);
+        throw new ApiError(
+          'flitching_done_ids must be array',
+          StatusCodes.BAD_REQUEST
+        );
       }
 
       const aggMatch = {
@@ -655,11 +676,15 @@ export const revert_issued_for_slicing = catchAsync(async (req, res, next) => {
 
     const add_revert_to_reflitching = async function () {
       const reflitching_item_id = issuedForSlicingData?.reflitching_item_id;
-      const updated_document = await re_flitching_items_model.findOneAndUpdate({ _id: reflitching_item_id }, {
-        $set: {
-          issue_status: null
-        }
-      }, { new: true, session });
+      const updated_document = await re_flitching_items_model.findOneAndUpdate(
+        { _id: reflitching_item_id },
+        {
+          $set: {
+            issue_status: null,
+          },
+        },
+        { new: true, session }
+      );
 
       if (!updated_document) {
         throw new ApiError(
@@ -667,7 +692,8 @@ export const revert_issued_for_slicing = catchAsync(async (req, res, next) => {
           StatusCodes.BAD_REQUEST
         );
       }
-      const reflitching_done_id = updated_document?.re_flitching_other_details_id
+      const reflitching_done_id =
+        updated_document?.re_flitching_other_details_id;
       const is_reflitching_done_editable = await re_flitching_items_model
         ?.find({
           _id: { $ne: reflitching_item_id },
@@ -676,7 +702,10 @@ export const revert_issued_for_slicing = catchAsync(async (req, res, next) => {
         })
         .lean();
 
-      if (is_reflitching_done_editable && is_reflitching_done_editable?.length <= 0) {
+      if (
+        is_reflitching_done_editable &&
+        is_reflitching_done_editable?.length <= 0
+      ) {
         await re_flitching_other_details_model?.updateOne(
           { _id: reflitching_done_id },
           {
@@ -687,7 +716,7 @@ export const revert_issued_for_slicing = catchAsync(async (req, res, next) => {
           { session }
         );
       }
-    }
+    };
 
     if (
       // flitch inventory
@@ -701,13 +730,13 @@ export const revert_issued_for_slicing = catchAsync(async (req, res, next) => {
       issuedForSlicingData?.flitching_done_id !== null
     ) {
       await add_revert_to_flitch_done();
-    } else if(
+    } else if (
       // reflitching
       issuedForSlicingData?.reflitching_item_id !== null &&
       issuedForSlicingData?.issued_from === issues_for_status?.reflitching
-    ){
-      await add_revert_to_reflitching()
-    }else {
+    ) {
+      await add_revert_to_reflitching();
+    } else {
       throw new ApiError('No Data found to revert', StatusCodes.BAD_REQUEST);
     }
 

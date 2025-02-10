@@ -2,7 +2,10 @@ import mongoose from 'mongoose';
 import invoice_details from '../../../Utils/invoiceDetails.schema.js';
 import expensesSchema from '../../masters/expenses.schema.js';
 import { approval_status } from '../../../Utils/approvalStatus.schema.js';
-import { inward_type, issues_for_status } from '../../../Utils/constants/constants.js';
+import {
+  inward_type,
+  issues_for_status,
+} from '../../../Utils/constants/constants.js';
 
 export const veneer_item_details_schema = new mongoose.Schema(
   {
@@ -92,9 +95,7 @@ export const veneer_item_details_schema = new mongoose.Schema(
     issue_status: {
       type: String,
       enum: {
-        values: [
-          issues_for_status?.smoking_dying,
-        ],
+        values: [issues_for_status?.smoking_dying],
         message: `Invalid status {{VALUE}} Issue Status must either be one of ${issues_for_status?.smoking_dying}`,
       },
       default: null,

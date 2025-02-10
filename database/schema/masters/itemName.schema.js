@@ -17,6 +17,7 @@ const ItemNameSchema = new mongoose.Schema(
       uppercase: true,
       default: null,
     },
+
     color: {
       color_id: {
         type: mongoose.Schema.Types.ObjectId,
@@ -31,6 +32,11 @@ const ItemNameSchema = new mongoose.Schema(
       type: [mongoose.Schema.Types.ObjectId],
       ref: 'item_category',
       required: [true, 'category id is required'],
+    },
+    item_subcategory: {
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: 'item_subcategory',
+      required: [true, 'subcategory id is required'],
     },
     created_by: {
       type: mongoose.Types.ObjectId,

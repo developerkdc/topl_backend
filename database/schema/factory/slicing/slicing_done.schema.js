@@ -85,6 +85,16 @@ const slicing_done_items_schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Item Name ID is required'],
     },
+    item_sub_category_name: {
+      type: String,
+      default: null,
+      uppercase: true,
+      trim: true
+    },
+    item_sub_category_name_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null
+    },
     log_no_code: {
       type: String,
       required: [true, 'Log No Code is required'],
@@ -309,3 +319,170 @@ export const slicing_done_items_model = mongoose.model(
 //     ],
 //   });
 // })();
+
+const issue_for_dressing_view_schema = new mongoose.Schema(
+  {},
+  { autoCreate: false, autoIndex: false, strict: false }
+);
+
+export const issue_for_dressing_model = mongoose.model(
+  'issue_for_dressing',
+  issue_for_dressing_view_schema,
+  'issue_for_dressing'
+);
+
+//view for fetching data from slicing_done_items and peeling_done_items for issue for dressing listing
+(async function () {
+  await issue_for_dressing_model.createCollection({
+    viewOn: 'slicing_done_items',
+    pipeline: [
+      {
+        $sort: {
+          updatedAt: -1,
+          _id: -1,
+        },
+      },
+      {
+        $lookup: {
+          from: 'slicing_done_other_details',
+          foreignField: '_id',
+          localField: 'slicing_done_other_details_id',
+          as: 'slicing_done_other_details',
+        },
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'created_by',
+          foreignField: '_id',
+          as: 'created_user_details',
+          pipeline: [
+            {
+              $project: {
+                first_name: 1,
+                last_name: 1,
+                user_name: 1,
+                user_type: 1,
+                dept_name: 1,
+              },
+            },
+          ],
+        },
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'updated_by',
+          foreignField: '_id',
+          as: 'updated_user_details',
+          pipeline: [
+            {
+              $project: {
+                first_name: 1,
+                last_name: 1,
+                user_name: 1,
+                user_type: 1,
+                dept_name: 1,
+              },
+            },
+          ],
+        },
+      },
+      {
+        $unwind: {
+          path: '$slicing_done_other_details',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $unwind: {
+          path: '$created_user_details',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $unwind: {
+          path: '$updated_user_details',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $unionWith: {
+          coll: 'peeling_done_items',
+          pipeline: [
+            {
+              $sort: {
+                updatedAt: -1,
+                _id: -1,
+              },
+            },
+            {
+              $lookup: {
+                from: 'peeling_done_other_details',
+                localField: 'peeling_done_other_details_id',
+                foreignField: '_id',
+                as: 'peeling_done_other_details',
+              },
+            },
+            {
+              $lookup: {
+                from: 'users',
+                localField: 'created_by',
+                foreignField: '_id',
+                as: 'created_user_details',
+                pipeline: [
+                  {
+                    $project: {
+                      first_name: 1,
+                      last_name: 1,
+                      user_name: 1,
+                      user_type: 1,
+                      dept_name: 1,
+                    },
+                  },
+                ],
+              },
+            },
+            {
+              $lookup: {
+                from: 'users',
+                localField: 'updated_by',
+                foreignField: '_id',
+                as: 'updated_user_details',
+                pipeline: [
+                  {
+                    $project: {
+                      first_name: 1,
+                      last_name: 1,
+                      user_name: 1,
+                      user_type: 1,
+                      dept_name: 1,
+                    },
+                  },
+                ],
+              },
+            },
+            {
+              $unwind: {
+                path: '$peeling_done_other_details',
+                preserveNullAndEmptyArrays: true,
+              },
+            },
+            {
+              $unwind: {
+                path: '$created_user_details',
+                preserveNullAndEmptyArrays: true,
+              },
+            },
+            {
+              $unwind: {
+                path: '$updated_user_details',
+                preserveNullAndEmptyArrays: true,
+              },
+            },
+          ],
+        },
+      },
+    ],
+  });
+})();
