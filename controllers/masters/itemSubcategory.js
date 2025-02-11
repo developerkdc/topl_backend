@@ -17,7 +17,6 @@ export const addItems = catchAsync(async (req, res) => {
     );
   }
 
-
   const checkIfAlreadyExists = await itemSubCategoryModel.find({ name: name });
   if (checkIfAlreadyExists.length > 0) {
     return res.json(
@@ -177,7 +176,7 @@ export const listItemSubCategories = catchAsync(async (req, res) => {
         sr_no: 1,
         name: 1,
         remark: 1,
-        'categoryDetails': 1,
+        categoryDetails: 1,
         createdAt: 1,
         created_by: 1,
         'userDetails.first_name': 1,
@@ -221,8 +220,8 @@ export const DropdownSubcategoryNameMaster = catchAsync(async (req, res) => {
   let searchQuery = {};
 
   if (type) {
-    searchQuery['categoryDetails.category'] = type
-  };
+    searchQuery['categoryDetails.category'] = type;
+  }
 
 
   const list = await itemSubCategoryModel.aggregate([

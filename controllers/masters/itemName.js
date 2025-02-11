@@ -10,7 +10,8 @@ import { StatusCodes } from '../../utils/constants.js';
 
 export const AddItemNameMaster = catchAsync(async (req, res) => {
   const authUserDetail = req.userDetails;
-  const { item_name, category, color, item_subcategory, item_name_code } = req.body;
+  const { item_name, category, color, item_subcategory, item_name_code } =
+    req.body;
   if (!item_name || !category || !item_subcategory) {
     return res.json(
       new ApiResponse(StatusCodes.NOT_FOUND, 'all fields are required')
@@ -36,7 +37,8 @@ export const AddItemNameMaster = catchAsync(async (req, res) => {
     item_name,
     color,
     category,
-    item_subcategory, item_name_code,
+    item_subcategory,
+    item_name_code,
     created_by,
   };
   const newItemNameList = new ItemNameModel(itemNameData);
@@ -154,7 +156,6 @@ export const ListItemNameMaster = catchAsync(async (req, res) => {
         'subCategoryDetails._id': 1,
         item_name_code: 1,
         color: 1,
-
       },
     },
     { $skip: skipped },
@@ -185,18 +186,18 @@ export const DropdownItemNameMaster = catchAsync(async (req, res) => {
   const searchQuery = {};
 
   if (type) {
-    searchQuery['categoryDetails.category'] = type
-  };
+    searchQuery['categoryDetails.category'] = type;
+  }
 
   if (subcategory) {
-    searchQuery['subCategoryDetails.name'] = subcategory
-  };
+    searchQuery['subCategoryDetails.name'] = subcategory;
+  }
 
   if (type && subcategory) {
-    searchQuery["$and"] = [
+    searchQuery['$and'] = [
       { 'categoryDetails.category': type },
-      { 'subCategoryDetails.name': subcategory }
-    ]
+      { 'subCategoryDetails.name': subcategory },
+    ];
   }
 
   const list = await ItemNameModel.aggregate([
@@ -220,7 +221,10 @@ export const DropdownItemNameMaster = catchAsync(async (req, res) => {
       $unwind: { path: '$categoryDetails', preserveNullAndEmptyArrays: true },
     },
     {
-      $unwind: { path: '$subCategoryDetails', preserveNullAndEmptyArrays: true },
+      $unwind: {
+        path: '$subCategoryDetails',
+        preserveNullAndEmptyArrays: true,
+      },
     },
     {
       $match: searchQuery,
@@ -234,14 +238,13 @@ export const DropdownItemNameMaster = catchAsync(async (req, res) => {
         category: 1,
         item_subcategory: 1,
         color: 1,
-        item_name_code: 1
+        item_name_code: 1,
       },
     },
     {
       $sort: { item_name: 1 },
     },
   ]).collation({ locale: 'en', caseLevel: true });
-
 
   res
     .status(200)

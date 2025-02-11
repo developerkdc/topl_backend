@@ -20,8 +20,8 @@ const itemSubCategorySchema = new mongoose.Schema(
     },
     category: {
       type: [mongoose.Schema.Types.ObjectId],
-      ref: "item_subcategory",
-      default: null
+      ref: 'item_subcategory',
+      default: null,
     },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,

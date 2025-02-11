@@ -4,7 +4,7 @@ import {
   fetch_single_issued_for_smoking_dying_item,
   listing_issued_for_smoking_dying,
   revert_issued_for_smoking_dying_item,
-} from '../../../controllers/factory/smoking_dying/issues_for_smoking_dying.contoller.js';
+} from '../../../controllers/factory/smoking_dying/issues_for_smoking_dying.controller.js';
 import AuthMiddleware from '../../../middlewares/verifyToken.js';
 const smokingDyingRouter = express.Router();
 
@@ -27,7 +27,7 @@ smokingDyingRouter.get(
 );
 
 smokingDyingRouter.post(
-  '/revert-issue-for-smoking-dying/:id',
+  '/revert-issue-for-smoking-dying/:pallet_number',
   AuthMiddleware,
   revert_issued_for_smoking_dying_item
 );
