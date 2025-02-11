@@ -181,6 +181,7 @@ export const ListItemNameMaster = catchAsync(async (req, res) => {
 
 export const DropdownItemNameMaster = catchAsync(async (req, res) => {
   const { type, subcategory } = req.query;
+
   const searchQuery = {};
 
   if (type) {
