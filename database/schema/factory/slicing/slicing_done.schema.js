@@ -89,11 +89,11 @@ const slicing_done_items_schema = new mongoose.Schema(
       type: String,
       default: null,
       uppercase: true,
-      trim: true
+      trim: true,
     },
     item_sub_category_name_id: {
       type: mongoose.Schema.Types.ObjectId,
-      default: null
+      default: null,
     },
     log_no_code: {
       type: String,

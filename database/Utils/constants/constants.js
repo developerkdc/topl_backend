@@ -41,3 +41,13 @@ export const slicing_done_from = {
   issue_for_slicing: 'issue_for_slicing',
   re_slicing: 're_slicing',
 };
+
+
+export const dressing_error_types = {
+  no_of_leaves_missmatch: 'no_of_leaves_missmatch',
+  thickness_missmatch: 'thickness_missmatch',
+  process_pending: 'process_pending',
+  slicing_not_done: 'slicing_not_done',
+  peeling_not_done: 'peeling_not_done',
+  dressing_done: 'dressing_done'
+}
