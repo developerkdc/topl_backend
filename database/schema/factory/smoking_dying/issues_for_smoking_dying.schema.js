@@ -9,6 +9,10 @@ const validate_dressing_required_field = function () {
 
 const issues_for_smoking_dying_schema = new mongoose.Schema(
   {
+    unique_identifier: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, 'unique identifier is required'],
+    },
     veneer_inventory_id: {
       type: mongoose.Schema.Types.ObjectId,
       default: null,
@@ -183,10 +187,7 @@ const issues_for_smoking_dying_schema = new mongoose.Schema(
 issues_for_smoking_dying_schema.index({ item_name: -1 });
 issues_for_smoking_dying_schema.index({ bundle_number: -1 });
 issues_for_smoking_dying_schema.index({ pallet_number: -1 });
-issues_for_smoking_dying_schema.index(
-  { item_name: -1, pallet_number: -1, bundle_number: -1 },
-  { unique: true }
-);
+issues_for_smoking_dying_schema.index({ item_name: -1, pallet_number: -1, bundle_number: -1 });
 
 export const issues_for_smoking_dying_model = mongoose.model(
   'issues_for_smoking_dyings',
@@ -269,7 +270,10 @@ export const issues_for_smoking_dying_view_model = mongoose.model(
       },
       {
         $group: {
-          _id: '$pallet_number',
+          _id: {
+            unique_identifier:'$unique_identifier',
+            pallet_number:'$pallet_number'
+          },
           item_name: {
             $first: '$item_name',
           },

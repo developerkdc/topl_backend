@@ -21,13 +21,13 @@ smokingDyingRouter.post(
 );
 
 smokingDyingRouter.get(
-  '/fetch-single-issue-for-smoking-dying/:id',
+  '/fetch-single-issue-for-smoking-dying/:unique_identifier/:pallet_number',
   AuthMiddleware,
   fetch_single_issued_for_smoking_dying_item
 );
 
 smokingDyingRouter.post(
-  '/revert-issue-for-smoking-dying/:pallet_number',
+  '/revert-issue-for-smoking-dying/:unique_identifier/:pallet_number',
   AuthMiddleware,
   revert_issued_for_smoking_dying_item
 );
