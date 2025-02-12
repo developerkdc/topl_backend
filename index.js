@@ -19,6 +19,7 @@ import allSeriesProductMasterRouter from './routes/seriesProductMaster/allSeries
 import usersRouter from './routes/users.routes.js';
 import { globalErrorHandler } from './utils/errors/GlobalErrorHandler.js';
 import { checkServerHealth } from './controllers/auth.js';
+
 const Configs = getConfigs();
 mongo_service();
 const app = express();

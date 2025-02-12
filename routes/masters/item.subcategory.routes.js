@@ -3,7 +3,8 @@ import {
   addItems,
   DropdownSubcategoryNameMaster,
   editItemSubCategory,
-  listItemSubCategories, DropdownSubcategoryNameMasterByCategoryName
+  listItemSubCategories,
+  DropdownSubcategoryNameMasterByCategoryName,
 } from '../../controllers/masters/itemSubcategory.js';
 import AuthMiddleware from '../../middlewares/verifyToken.js';
 import RolesPermissions from '../../middlewares/permission.js';

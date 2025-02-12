@@ -104,7 +104,7 @@ export const listItemCategories = catchAsync(async (req, res) => {
   const skipped = (pageInt - 1) * limitInt;
 
   const sortDirection = sortOrder === 'desc' ? -1 : 1;
-  const sortObj = sortField ? { [sortField]: sortDirection } : {};
+  const sortObj = sortField ? { [sortField]: sortDirection } : { updatedAt: -1 };
   // const searchQuery = query
   //   ? {
   //       $or: [
@@ -119,24 +119,24 @@ export const listItemCategories = catchAsync(async (req, res) => {
   //   : {};
   const searchQuery = query
     ? {
-        $or: [
-          { category: { $regex: query, $options: 'i' } },
-          { calculate_unit: { $regex: query, $options: 'i' } },
-          { product_hsn_code: { $regex: query, $options: 'i' } },
-          { 'userDetails.user_name': { $regex: query, $options: 'i' } },
+      $or: [
+        { category: { $regex: query, $options: 'i' } },
+        { calculate_unit: { $regex: query, $options: 'i' } },
+        { product_hsn_code: { $regex: query, $options: 'i' } },
+        { 'userDetails.user_name': { $regex: query, $options: 'i' } },
 
-          ...(isValidDate(query)
-            ? [
-                {
-                  createdAt: {
-                    $gte: new Date(new Date(query).setHours(0, 0, 0, 0)), // Start of the day
-                    $lt: new Date(new Date(query).setHours(23, 59, 59, 999)), // End of the day
-                  },
-                },
-              ]
-            : []),
-        ],
-      }
+        ...(isValidDate(query)
+          ? [
+            {
+              createdAt: {
+                $gte: new Date(new Date(query).setHours(0, 0, 0, 0)), // Start of the day
+                $lt: new Date(new Date(query).setHours(23, 59, 59, 999)), // End of the day
+              },
+            },
+          ]
+          : []),
+      ],
+    }
     : {};
 
   // Helper function to validate the date
@@ -168,13 +168,14 @@ export const listItemCategories = catchAsync(async (req, res) => {
         'userDetails.user_name': 1,
       },
     },
+    { $sort: sortObj },
     { $skip: skipped },
     { $limit: limitInt },
   ];
 
-  if (Object.keys(sortObj).length > 0) {
-    pipeline.push({ $sort: sortObj });
-  }
+  // if (Object.keys(sortObj).length > 0) {
+  //   pipeline.push({ $sort: sortObj });
+  // }
   const allDetails = await itemCategoryModel.aggregate(pipeline);
 
   if (allDetails.length === 0) {
@@ -208,8 +209,8 @@ export const DropdownItemCategoryNameMaster = catchAsync(async (req, res) => {
 
   const searchQuery = type
     ? {
-        $or: [{ category: { $regex: type, $options: 'i' } }],
-      }
+      $or: [{ category: { $regex: type, $options: 'i' } }],
+    }
     : {};
 
   const list = await itemCategoryModel.aggregate([

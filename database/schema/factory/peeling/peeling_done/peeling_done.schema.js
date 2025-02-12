@@ -198,6 +198,10 @@ const peeling_done_items_schema = new mongoose.Schema(
       type: String,
       required: [true, 'Grade Name is required'],
     },
+    is_dressing_done: {
+      type: Boolean,
+      default: false
+    },
     item_amount: {
       type: Number,
       default: 0,

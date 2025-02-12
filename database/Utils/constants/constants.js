@@ -42,12 +42,17 @@ export const slicing_done_from = {
   re_slicing: 're_slicing',
 };
 
-
 export const dressing_error_types = {
   no_of_leaves_missmatch: 'no_of_leaves_missmatch',
   thickness_missmatch: 'thickness_missmatch',
   process_pending: 'process_pending',
   slicing_not_done: 'slicing_not_done',
   peeling_not_done: 'peeling_not_done',
-  dressing_done: 'dressing_done'
-}
+  dressing_done: 'dressing_done',
+};
+
+export const dressing_issue_status = {
+  issue_for_smoking_dying: 'issue_for_smoking_dying',
+  issue_for_grouping_clipping: 'issue_for_grouping_clipping',
+  issue_for_order: 'issue_for_order',
+};

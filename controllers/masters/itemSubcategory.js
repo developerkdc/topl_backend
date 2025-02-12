@@ -181,7 +181,6 @@ export const listItemSubCategories = catchAsync(async (req, res) => {
         created_by: 1,
         'userDetails.first_name': 1,
         'userDetails.user_name': 1,
-
       },
     },
     { $skip: skipped },
@@ -223,36 +222,37 @@ export const DropdownSubcategoryNameMaster = catchAsync(async (req, res) => {
     searchQuery['categoryDetails.category'] = type;
   }
 
-
-  const list = await itemSubCategoryModel.aggregate([
-    {
-      $lookup: {
-        from: "item_categories",
-        localField: "category",
-        foreignField: "_id",
-        as: "categoryDetails"
-      }
-    },
-    // {
-    //   $unwind: {
-    //     path: "$categoryDetails",
-    //     preserveNullAndEmptyArrays: true
-    //   }
-    // },
-    {
-      $match: searchQuery,
-    },
-    {
-      $sort: { name: 1 },
-    },
-    {
-      $project: {
-        name: 1,
-        'categoryDetails.category': 1,
-        'categoryDetails._id': 1
+  const list = await itemSubCategoryModel
+    .aggregate([
+      {
+        $lookup: {
+          from: 'item_categories',
+          localField: 'category',
+          foreignField: '_id',
+          as: 'categoryDetails',
+        },
       },
-    },
-  ]).collation({ locale: 'en', caseLevel: true });
+      // {
+      //   $unwind: {
+      //     path: "$categoryDetails",
+      //     preserveNullAndEmptyArrays: true
+      //   }
+      // },
+      {
+        $match: searchQuery,
+      },
+      {
+        $sort: { name: 1 },
+      },
+      {
+        $project: {
+          name: 1,
+          'categoryDetails.category': 1,
+          'categoryDetails._id': 1,
+        },
+      },
+    ])
+    .collation({ locale: 'en', caseLevel: true });
 
   res
     .status(200)
@@ -264,47 +264,52 @@ export const DropdownSubcategoryNameMaster = catchAsync(async (req, res) => {
       )
     );
 });
-export const DropdownSubcategoryNameMasterByCategoryName = catchAsync(async (req, res) => {
-  const { category } = req.body;
-  if (!Array.isArray(category)) {
-    throw new ApiError("Category must be array", StatusCodes.NOT_FOUND)
+export const DropdownSubcategoryNameMasterByCategoryName = catchAsync(
+  async (req, res) => {
+    const { category } = req.body;
+    if (!Array.isArray(category)) {
+      throw new ApiError('Category must be array', StatusCodes.NOT_FOUND);
+    }
+    let searchQuery =
+      category?.length > 0
+        ? { 'categoryDetails.category': { $in: category } }
+        : {};
+
+    const list = await itemSubCategoryModel
+      .aggregate([
+        {
+          $lookup: {
+            from: 'item_categories',
+            localField: 'category',
+            foreignField: '_id',
+            as: 'categoryDetails',
+          },
+        },
+
+        {
+          $match: searchQuery,
+        },
+        {
+          $sort: { name: 1 },
+        },
+        {
+          $project: {
+            name: 1,
+            'categoryDetails.category': 1,
+            'categoryDetails._id': 1,
+          },
+        },
+      ])
+      .collation({ locale: 'en', caseLevel: true });
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          StatusCodes.OK,
+          'Subcategory dropdown fetched successfully....',
+          list
+        )
+      );
   }
-  let searchQuery = category?.length > 0 ? { 'categoryDetails.category': { $in: category } } : {}
-
-  const list = await itemSubCategoryModel.aggregate([
-    {
-      $lookup: {
-        from: "item_categories",
-        localField: "category",
-        foreignField: "_id",
-        as: "categoryDetails"
-      }
-    },
-
-    {
-      $match: searchQuery,
-    },
-    {
-      $sort: { name: 1 },
-    },
-    {
-      $project: {
-        name: 1,
-        'categoryDetails.category': 1,
-        'categoryDetails._id': 1
-      },
-    },
-  ]).collation({ locale: 'en', caseLevel: true });
-
-  res
-    .status(200)
-    .json(
-      new ApiResponse(
-        StatusCodes.OK,
-        'Subcategory dropdown fetched successfully....',
-        list
-      )
-    );
-});
-
-
+);
