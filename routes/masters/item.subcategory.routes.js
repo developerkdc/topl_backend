@@ -4,6 +4,7 @@ import {
   DropdownSubcategoryNameMaster,
   editItemSubCategory,
   listItemSubCategories,
+  DropdownSubcategoryNameMasterByCategoryName,
 } from '../../controllers/masters/itemSubcategory.js';
 import AuthMiddleware from '../../middlewares/verifyToken.js';
 import RolesPermissions from '../../middlewares/permission.js';
@@ -23,8 +24,8 @@ router.post(
 );
 router.post(
   '/list',
-  // AuthMiddleware,
-  // RolesPermissions('item_sub_category_master', 'view'),
+  AuthMiddleware,
+  RolesPermissions('item_sub_category_master', 'view'),
   listItemSubCategories
 );
 
@@ -33,6 +34,11 @@ router.get(
   '/dropdown-subcategory-master',
   AuthMiddleware,
   DropdownSubcategoryNameMaster
+);
+router.get(
+  '/dropdown-subcategory-master-by-category-name',
+  AuthMiddleware,
+  DropdownSubcategoryNameMasterByCategoryName
 );
 
 export default router;

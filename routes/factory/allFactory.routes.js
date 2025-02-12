@@ -10,9 +10,10 @@ import issue_for_peeling_wastage_router from './peeling/issue_for_peeling/issue_
 import issue_for_peeling_available from './peeling/issue_for_peeling/issue_for_peeling_available.routes.js';
 import issue_for_slicing_available_router from './slicing/issue_for_slicing/issue_for_slicing_available.routes.js';
 import issueForSlicingRouter from './slicing/issue_for_slicing/issue_for_slicing.routes.js';
-import dressingRouter from './dressing/issue_for_dressing/issue_for_dressing.routes.js';
+import issueForDressingRouter from './dressing/issue_for_dressing/issue_for_dressing.routes.js';
 import issueForSmokingDyingRouter from './smoking_dying/issues_for_smoking_dying.routes.js';
 import smokingDyingDoneRouter from './smoking_dying/smoking_dying_done.routes.js';
+import dressingDoneRouter from './dressing/dressing_done/dressing.done.routes.js';
 const factoryRouter = express.Router();
 
 factoryRouter.use(`/factory/cross-cutting`, crossCuttingFactoryRoutes);
@@ -42,6 +43,7 @@ factoryRouter.use('/factory/smoking-dying', issueForSmokingDyingRouter);
 factoryRouter.use('/factory/smoking-dying-done', smokingDyingDoneRouter);
 
 //dressing routes
-factoryRouter.use('/factory/dressing', dressingRouter);
+factoryRouter.use('/factory/dressing', issueForDressingRouter);
+factoryRouter.use('/factory/dressing-done', dressingDoneRouter);
 
 export default factoryRouter;

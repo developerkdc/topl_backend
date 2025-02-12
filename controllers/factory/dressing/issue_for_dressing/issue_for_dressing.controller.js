@@ -51,6 +51,7 @@ export const list_issue_for_dressing = catchAsync(async (req, res) => {
   const aggMatch = {
     $match: {
       ...matchQuery,
+      is_dressing_done: false
     },
   };
 

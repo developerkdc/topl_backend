@@ -1,4 +1,3 @@
-import { raw } from 'express';
 import mongoose from 'mongoose';
 
 const raw_machine_data_schema = new mongoose.Schema(
