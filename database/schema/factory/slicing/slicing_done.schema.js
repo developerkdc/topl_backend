@@ -145,6 +145,8 @@ const slicing_done_items_schema = new mongoose.Schema(
     },
     character_name: {
       type: String,
+      trim: true,
+      uppercase: true,
       required: [true, 'Charcter Name is required'],
     },
     pattern_id: {
@@ -153,6 +155,8 @@ const slicing_done_items_schema = new mongoose.Schema(
     },
     pattern_name: {
       type: String,
+      trim: true,
+      uppercase: true,
       required: [true, 'Pattern Name is required'],
     },
     series_id: {
@@ -161,6 +165,8 @@ const slicing_done_items_schema = new mongoose.Schema(
     },
     series_name: {
       type: String,
+      trim: true,
+      uppercase: true,
       required: [true, 'Series Name is required'],
     },
     grade_id: {
@@ -169,11 +175,17 @@ const slicing_done_items_schema = new mongoose.Schema(
     },
     grade_name: {
       type: String,
+      trim: true,
+      uppercase: true,
       required: [true, 'Grade Name is required'],
     },
     issued_for_dressing: {
       type: Boolean,
       default: false,
+    },
+    is_dressing_done: {
+      type: Boolean,
+      default: false
     },
     // item_amount: {
     //   type: Number,
@@ -352,6 +364,21 @@ export const issue_for_dressing_model = mongoose.model(
       },
       {
         $lookup: {
+          from: 'issued_for_slicings',
+          localField: 'slicing_done_other_details.issue_for_slicing_id',
+          foreignField: '_id',
+          as: 'slicing_done_item_issued_from',
+          pipeline: [
+            {
+              $project: {
+                issued_from: 1,
+              },
+            },
+          ],
+        },
+      },
+      {
+        $lookup: {
           from: 'users',
           localField: 'created_by',
           foreignField: '_id',
@@ -396,6 +423,12 @@ export const issue_for_dressing_model = mongoose.model(
       },
       {
         $unwind: {
+          path: '$slicing_done_item_issued_from',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $unwind: {
           path: '$created_user_details',
           preserveNullAndEmptyArrays: true,
         },
@@ -422,6 +455,21 @@ export const issue_for_dressing_model = mongoose.model(
                 localField: 'peeling_done_other_details_id',
                 foreignField: '_id',
                 as: 'peeling_done_other_details',
+              },
+            },
+            {
+              $lookup: {
+                from: 'issues_for_peelings',
+                foreignField: '_id',
+                localField: 'peeling_done_other_details.issue_for_peeling_id',
+                as: 'peeling_done_item_issued_from',
+                pipeline: [
+                  {
+                    $project: {
+                      issued_from: 1,
+                    },
+                  },
+                ],
               },
             },
             {
@@ -465,6 +513,12 @@ export const issue_for_dressing_model = mongoose.model(
             {
               $unwind: {
                 path: '$peeling_done_other_details',
+                preserveNullAndEmptyArrays: true,
+              },
+            },
+            {
+              $unwind: {
+                path: '$peeling_done_item_issued_from',
                 preserveNullAndEmptyArrays: true,
               },
             },
