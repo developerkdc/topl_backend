@@ -1,82 +1,82 @@
 import mongoose from 'mongoose';
 
-const process_done_details_schema = new mongoose.Schema(
-  {
-    process_done_date: {
-      type: Date,
-      required: [true, 'Peeling Date is required'],
-    },
-    issue_for_smoking_dying_unique_identify: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: [true, 'Issues for smoking unique identifier is required'],
-    },
-    issue_for_smoking_dying_pallet_number: {
-      type: String,
-      required: [true, 'Issues for smoking pallet number is required'],
-    },
-    no_of_workers: {
-      type: Number,
-      required: [true, 'No.of Workers is required '],
-    },
-    no_of_working_hours: {
-      type: Number,
-      required: [true, 'No. of Working hours is required'],
-    },
-    no_of_total_hours: {
-      type: Number,
-      required: [true, 'No. of Total hours is required'],
-    },
-    shift: {
-      type: String,
-      required: [true, 'Shift is required'],
-      trim: true,
-      uppercase: true,
-    },
-    pallet_number: {
-      type: String,
-      required: [true, 'pallet number is required'],
-    },
-    process_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: [true, 'process id is required'],
-    },
-    process_name: {
-      type: String,
-      required: [true, 'process name is required'],
-    },
-    color_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      default: null,
-    },
-    color_name: {
-      type: String,
-      default: null,
-    },
-    isEditable: {
-      type: Boolean,
-      default: true,
-    },
-    remark: {
-      type: String,
-      default: null,
-      trim: true,
-      uppercase: true,
-    },
-    created_by: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: [true, 'Created By Id is required'],
-    },
-    updated_by: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: [true, 'Updated By Id is required'],
-    },
+const process_done_details_schema = new mongoose.Schema({
+  process_done_date: {
+    type: Date,
+    required: [true, 'Peeling Date is required'],
   },
-  {
-    timestamps: true,
-  }
+  issue_for_smoking_dying_unique_identifier: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: [true, 'Issues for smoking unique identifier is required'],
+  },
+  issue_for_smoking_dying_pallet_number: {
+    type: String,
+    required: [true, 'Issues for smoking pallet number is required'],
+  },
+  no_of_workers: {
+    type: Number,
+    required: [true, 'No.of Workers is required '],
+  },
+  no_of_working_hours: {
+    type: Number,
+    required: [true, 'No. of Working hours is required'],
+  },
+  no_of_total_hours: {
+    type: Number,
+    required: [true, 'No. of Total hours is required'],
+  },
+  shift: {
+    type: String,
+    required: [true, 'Shift is required'],
+    trim: true,
+    uppercase: true,
+  },
+  pallet_number: {
+    type: String,
+    required: [true, 'pallet number is required'],
+  },
+  process_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: [true, 'process id is required'],
+  },
+  process_name: {
+    type: String,
+    required: [true, 'process name is required'],
+  },
+  color_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    default: null,
+  },
+  color_name: {
+    type: String,
+    default: null,
+  },
+  isEditable: {
+    type: Boolean,
+    default: true,
+  },
+  remark: {
+    type: String,
+    default: null,
+    trim: true,
+    uppercase: true,
+  },
+  created_by: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: [true, 'Created By Id is required'],
+  },
+  updated_by: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: [true, 'Updated By Id is required'],
+  },
+}, {
+  timestamps: true,
+}
 );
 
-export const process_done_details_model = mongoose.model("process_done_details",process_done_details_schema,"process_done_details");
+process_done_details_schema.index({ pallet_number: 1 }, { unique: true })
+
+export const process_done_details_model = mongoose.model("process_done_details", process_done_details_schema, "process_done_details");
 
 const process_done_items_details_schema = new mongoose.Schema({
   process_done_id: {
@@ -167,19 +167,19 @@ const process_done_items_details_schema = new mongoose.Schema({
   },
   character_id: {
     type: mongoose.Schema.Types.ObjectId,
-    required: [validate_dressing_required_field, 'Charcter ID is required'],
+    default: null,
   },
   character_name: {
     type: String,
-    required: [validate_dressing_required_field, 'Charcter Name is required'],
+    default: null,
   },
   pattern_id: {
     type: mongoose.Schema.Types.ObjectId,
-    required: [validate_dressing_required_field, 'Pattern ID is required'],
+    default: null,
   },
   pattern_name: {
     type: String,
-    required: [validate_dressing_required_field, 'Pattern Name is required'],
+    default: null,
   },
   series_id: {
     type: mongoose.Schema.Types.ObjectId,
@@ -233,4 +233,4 @@ const process_done_items_details_schema = new mongoose.Schema({
     timestamps: true,
   }
 );
-export const process_done_items_details_model = mongoose.model("process_done_items_details",process_done_items_details_schema,"process_done_items_details");
+export const process_done_items_details_model = mongoose.model("process_done_items_details", process_done_items_details_schema, "process_done_items_details");

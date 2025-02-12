@@ -280,6 +280,9 @@ export const issues_for_smoking_dying_view_model = mongoose.model(
           item_sub_category_name: {
             $first: '$item_sub_category_name',
           },
+          is_smoking_dying_done: {
+            $first: '$is_smoking_dying_done',
+          },
           bundles: {
             $push: '$$ROOT',
           },
