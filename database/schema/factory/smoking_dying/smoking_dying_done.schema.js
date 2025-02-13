@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { issues_for_status } from '../../../Utils/constants/constants.js';
 
 const process_done_details_schema = new mongoose.Schema({
   process_done_date: {
@@ -196,6 +197,14 @@ const process_done_items_details_schema = new mongoose.Schema({
   grade_name: {
     type: String,
     required: [true, 'Grade Name is required'],
+  },
+  issue_status: {
+    type: String,
+    enum: {
+      values: [issues_for_status.grouping],
+      message: `Invalid type {{VALUE}} it must be one of the ${issues_for_status.grouping}`,
+    },
+    default: null
   },
   amount: {
     type: Number,

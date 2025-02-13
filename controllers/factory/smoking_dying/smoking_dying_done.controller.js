@@ -101,6 +101,9 @@ export const add_process_done_details = catchAsync(async (req, res, next) => {
             { runValidators: true, session }
         );
 
+        if (update_issue_for_smoking_dying.matchedCount <= 0) {
+            throw new ApiError('No data found to update issue for smoking dying data', StatusCodes.BAD_GATEWAY);
+        }
         if (!update_issue_for_smoking_dying.acknowledged || update_issue_for_smoking_dying.modifiedCount <= 0) {
             throw new ApiError('Failed to update issue for smoking dying data', StatusCodes.BAD_GATEWAY);
         }
@@ -383,3 +386,81 @@ export const fetch_all_process_done_details = catchAsync(async (req, res, next) 
     return res.status(200).json(response);
 }
 );
+
+export const revert_process_done_details = catchAsync(async (req, res, next) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+        const userDetails = req.userDetails;
+        let { id } = req.params;
+        if (!id || !mongoose.isValidObjectId(id)) {
+            throw new ApiError(`Please valid process_done_details_id`, StatusCodes.BAD_REQUEST);
+        }
+
+        const fetch_process_done_details = await process_done_details_model.findOne({
+            _id: id,
+        }).lean();
+        if (!fetch_process_done_details) {
+            throw new ApiError('No process done data found', StatusCodes.BAD_GATEWAY);
+        };
+        if (!fetch_process_done_details.isEditable) {
+            throw new ApiError('Cannot revert process done', StatusCodes.BAD_GATEWAY);
+        };
+
+        const process_done_details_id = fetch_process_done_details?._id;
+        const issue_for_smoking_dying_unique_identifier = fetch_process_done_details?.issue_for_smoking_dying_unique_identifier;
+        const issue_for_smoking_dying_pallet_number = fetch_process_done_details?.issue_for_smoking_dying_pallet_number;
+
+        //delete process done
+        const delete_process_done = await process_done_details_model.deleteOne({ _id: process_done_details_id }, { session });
+        if (!delete_process_done.acknowledged || delete_process_done.deletedCount <= 0) {
+            throw new ApiError('Failed to delete process done details', StatusCodes.BAD_GATEWAY);
+        }
+
+        //delete process done items
+        const delete_process_done_items = await process_done_items_details_model.deleteMany({ process_done_id: process_done_details_id }, { session });
+        if (!delete_process_done_items.acknowledged || delete_process_done_items.deletedCount <= 0) {
+            throw new ApiError('Failed to delete process done items details', StatusCodes.BAD_GATEWAY);
+        }
+        console.log({
+            unique_identifier: issue_for_smoking_dying_unique_identifier,
+            pallet_number: issue_for_smoking_dying_pallet_number,
+        })
+        const update_issue_for_smoking_dying = await issues_for_smoking_dying_model.updateMany(
+            {
+                unique_identifier: issue_for_smoking_dying_unique_identifier,
+                pallet_number: issue_for_smoking_dying_pallet_number,
+            },
+            {
+                $set: {
+                    is_smoking_dying_done: false,
+                    updated_by: userDetails?._id,
+                }
+            },
+            { runValidators: true, session }
+        );
+
+        if (update_issue_for_smoking_dying.matchedCount <= 0) {
+            throw new ApiError('No data found to update issue for smoking dying data', StatusCodes.BAD_GATEWAY);
+        }
+        if (!update_issue_for_smoking_dying.acknowledged || update_issue_for_smoking_dying.modifiedCount <= 0) {
+            throw new ApiError('Failed to update issue for smoking dying data', StatusCodes.BAD_GATEWAY);
+        }
+
+        const response = new ApiResponse(
+            StatusCodes.OK,
+            'Process done revert successfully',
+            {
+                process_done_details: delete_process_done,
+                process_done_items_details: delete_process_done_items
+            }
+        );
+        await session.commitTransaction();
+        return res.status(StatusCodes.OK).json(response);
+    } catch (error) {
+        await session.abortTransaction();
+        throw error;
+    } finally {
+        await session.endSession();
+    }
+});
