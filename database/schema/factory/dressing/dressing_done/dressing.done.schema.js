@@ -19,6 +19,7 @@ const dressing_done_other_details_schema = new mongoose.Schema(
       type: String,
       required: [true, 'Shift is required.'],
       trim: true,
+      uppercase: true
     },
     no_of_workers: {
       type: Number,

@@ -480,7 +480,7 @@ export const revert_issued_for_smoking_dying_item = catchAsync(
           }
         }
       };
-      const revert_to_dressing_done = async function () {};
+      const revert_to_dressing_done = async function () { };
 
       if (veneer_inventory_ids?.length > 0) {
         await revert_to_veneer_inventory();

@@ -114,7 +114,7 @@ export const listItemSubCategories = catchAsync(async (req, res) => {
   const skipped = (pageInt - 1) * limitInt;
 
   const sortDirection = sortOrder === 'desc' ? -1 : 1;
-  const sortObj = sortField ? { [sortField]: sortDirection } : {};
+  const sortObj = sortField ? { [sortField]: sortDirection } : { updatedAt: - 1 };
   // const searchQuery = query
   //   ? {
   //       $or: [{ name: { $regex: query, $options: "i" } }],
@@ -183,13 +183,14 @@ export const listItemSubCategories = catchAsync(async (req, res) => {
         'userDetails.user_name': 1,
       },
     },
+    { $sort: sortObj },
     { $skip: skipped },
     { $limit: limitInt },
   ];
 
-  if (Object.keys(sortObj).length > 0) {
-    pipeline.push({ $sort: sortObj });
-  }
+  // if (Object.keys(sortObj).length > 0) {
+  //   pipeline.push({ $sort: sortObj });
+  // }
   const allDetails = await itemSubCategoryModel.aggregate(pipeline);
 
   if (allDetails.length === 0) {
