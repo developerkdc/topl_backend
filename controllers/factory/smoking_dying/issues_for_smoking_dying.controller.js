@@ -276,9 +276,10 @@ export const fetch_single_issued_for_smoking_dying_item = catchAsync(
     const aggMatch = {
       $match: {
         _id: {
-          unique_identifier: mongoose.Types.ObjectId.createFromHexString(unique_identifier),
-          pallet_number: pallet_number
-        }
+          unique_identifier:
+            mongoose.Types.ObjectId.createFromHexString(unique_identifier),
+          pallet_number: pallet_number,
+        },
       },
     };
 
@@ -401,8 +402,11 @@ export const revert_issued_for_smoking_dying_item = catchAsync(
           {
             $match: {
               _id: {
-                unique_identifier: mongoose.Types.ObjectId.createFromHexString(unique_identifier),
-                pallet_number: pallet_number
+                unique_identifier:
+                  mongoose.Types.ObjectId.createFromHexString(
+                    unique_identifier
+                  ),
+                pallet_number: pallet_number,
               },
             },
           },
@@ -413,7 +417,7 @@ export const revert_issued_for_smoking_dying_item = catchAsync(
 
       if (issue_for_smoking_dying?.[0]?.is_smoking_dying_done) {
         throw new ApiError('Cannot revert issue for smoking dying');
-      };
+      }
 
       const bundle_list = issue_for_smoking_dying?.[0]?.bundles;
 
@@ -494,7 +498,7 @@ export const revert_issued_for_smoking_dying_item = catchAsync(
           }
         }
       };
-      const revert_to_dressing_done = async function () { };
+      const revert_to_dressing_done = async function () {};
 
       if (veneer_inventory_ids?.length > 0) {
         await revert_to_veneer_inventory();
@@ -511,7 +515,7 @@ export const revert_issued_for_smoking_dying_item = catchAsync(
       const delete_response = await issues_for_smoking_dying_model.deleteMany(
         {
           unique_identifier: unique_identifier,
-          pallet_number: pallet_number
+          pallet_number: pallet_number,
         },
         { session }
       );
