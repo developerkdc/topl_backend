@@ -101,7 +101,7 @@ export const listSeriesDetails = catchAsync(async (req, res) => {
   const skipped = (pageInt - 1) * limitInt;
 
   const sortDirection = sortOrder === 'desc' ? -1 : 1;
-  const sortObj = sortField ? { [sortField]: sortDirection } : {};
+  const sortObj = sortField ? { [sortField]: sortDirection } : { updatedAt: -1 };
   let searchQuery = {};
   if (query != '' && req?.body?.searchFields) {
     const searchdata = DynamicSearch(
@@ -145,13 +145,14 @@ export const listSeriesDetails = catchAsync(async (req, res) => {
         'userDetails.user_name': 1,
       },
     },
+    { $sort: sortObj },
     { $skip: skipped },
     { $limit: limitInt },
   ];
 
-  if (Object.keys(sortObj).length > 0) {
-    pipeline.push({ $sort: sortObj });
-  }
+  // if (Object.keys(sortObj).length > 0) {
+  //   pipeline.push({ $sort: sortObj });
+  // }
   const allDetails = await seriesModel.aggregate(pipeline);
   if (allDetails.length === 0) {
     return res.json(new ApiResponse(StatusCodes.OK, 'NO Data found...'));
@@ -172,8 +173,8 @@ export const DropdownSeriesNameMaster = catchAsync(async (req, res) => {
 
   const searchQuery = type
     ? {
-        $or: [{ series_name: { $regex: type, $options: 'i' } }],
-      }
+      $or: [{ series_name: { $regex: type, $options: 'i' } }],
+    }
     : {};
 
   const list = await seriesModel.aggregate([

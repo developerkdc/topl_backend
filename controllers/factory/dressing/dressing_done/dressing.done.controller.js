@@ -104,7 +104,7 @@ export const create_dressing = catchAsync(async (req, res, next) => {
                 throw new ApiError('Failed to add items', StatusCodes.BAD_REQUEST);
             }
             const update_dressing_done_status = await peeling_done_items_model.updateMany({
-                peeling_done_other_details_id: add_other_details?.peeling_done_id
+                peeling_done_other_details_id: add_other_details?.peeling_done_other_details_id
             }, {
                 $set: {
                     is_dressing_done: true
@@ -264,6 +264,37 @@ export const fetch_all_dressing_done_items = catchAsync(async (req, res) => {
         },
     };
 
+
+    const aggGroupBy = {
+        $group: {
+            _id: "$pallet_number",
+            item_name: {
+                $first: "$item_name"
+            },
+            item_sub_cat: {
+                $first: "$item_sub_category_name"
+            },
+            log_no_code: {
+                $first: "$log_no_code"
+            },
+            bundles: {
+                $push: "$$ROOT"
+            },
+            total_bundles: {
+                $sum: 1
+            },
+            available_bundles: {
+                $sum: {
+                    $cond: {
+                        if: { $eq: ["$issue_status", null] },
+                        then: 1,
+                        else: 0
+                    }
+                }
+            }
+        }
+
+    }
     const aggLookupOtherDetails = {
         $lookup: {
             from: "dressing_done_other_details",
@@ -345,7 +376,7 @@ export const fetch_all_dressing_done_items = catchAsync(async (req, res) => {
         $limit: parseInt(limit),
     };
 
-    const all_aggregates = [aggLookupOtherDetails, aggUnwindOtherDetails, aggCreatedUserDetails, aggUpdatedUserDetails, aggUnwindCreatedUserDetails, aggUnwindUpdatedUserDetails, aggMatch, aggSort, aggSkip, aggLimit];
+    const all_aggregates = [aggLookupOtherDetails, aggUnwindOtherDetails, aggCreatedUserDetails, aggUpdatedUserDetails, aggUnwindCreatedUserDetails, aggGroupBy, aggUnwindUpdatedUserDetails, aggMatch, aggSort, aggSkip, aggLimit];
 
 
     const list_dressing_done_items =
@@ -435,10 +466,12 @@ export const fetch_all_dressing_done_items_by_other_details_id = catchAsync(asyn
 
 export const edit_dressing_done_items = catchAsync(async (req, res) => {
     const { slicing_done_other_details_id } = req.params;
-    const { other_details, item_details } = req.params;
+    const { other_details, item_details } = req.body;
+    const { _id } = req.userDetails;
     const session = await mongoose.startSession()
+    session.startTransaction()
     try {
-        await session.startTransaction()
+
         if (!isValidObjectId(slicing_done_other_details_id)) {
             throw new ApiError("Invalid ID", StatusCodes.NOT_FOUND)
         };
@@ -467,12 +500,192 @@ export const edit_dressing_done_items = catchAsync(async (req, res) => {
             throw new ApiError("Dressing done item is not editable", StatusCodes.BAD_REQUEST)
         };
 
+        const update_other_details_result = await dressing_done_other_details_model.findOneAndUpdate({
+            _id: slicing_done_other_details_id
+        }, {
+            $set: {
+                ...other_details,
+                updated_by: _id
+            }
+        }, { new: true }).session(session);
 
+        if (!update_other_details_result) {
+            throw new ApiError("Failed to update dressing other details ", StatusCodes.BAD_REQUEST)
+        }
+        const total_no_of_leaves_by_log_no_code = item_details?.reduce(
+            (acc, item) => {
+                acc[item?.log_no_code] =
+                    (acc[item?.log_no_code] || 0) + item.no_of_leaves;
+                return acc;
+            },
+            {}
+        );
+
+        const add_peeling_done_item = async () => {
+
+            const delete_existing_items_result = await dressing_done_items_model?.deleteMany({
+                dressing_done_other_details_id: other_details_data?._id
+            }, { session });
+
+            if (!delete_existing_items_result.acknowledged || delete_existing_items_result.deletedCount === 0) {
+                throw new ApiError("Failed to delete dressing done items", StatusCodes.BAD_REQUEST)
+            };
+
+            const peeling_done_details = await peeling_done_items_model.find({
+                peeling_done_other_details_id:
+                    other_details?.peeling_done_other_details_id,
+            });
+            if (peeling_done_details.length === 0) {
+                throw new ApiError(
+                    'Peeling Done item details no found..!',
+                    StatusCodes.NOT_FOUND
+                );
+            }
+            const peelingDoneMap = peeling_done_details?.reduce((acc, item) => {
+                acc[item.log_no_code] = item;
+                return acc;
+            }, {});
+            for (let item of item_details) {
+                const peeling_done_data = peelingDoneMap[item?.log_no_code];
+                if (
+                    total_no_of_leaves_by_log_no_code[item?.log_no_code] !==
+                    peeling_done_data?.no_of_leaves
+                ) {
+                    throw new ApiError(
+                        `No.of Leaves Missmatch for ${item?.log_no_code}, Actual No. of Leaves Issued : ${item?.no_of_leaves}, Dressing Done No.of Leaves : ${item?.no_of_leaves} `,
+                        StatusCodes.BAD_REQUEST
+                    );
+                }
+
+                if (item.thickness !== peeling_done_data?.thickness) {
+                    throw new ApiError(
+                        `Thickness missmatch for Log No.Code ${item?.log_no_code}`
+                    );
+                }
+            }
+
+            const updated_item_details = item_details?.map((item) => {
+                item.dressing_done_other_details_id = other_details_data?._id;
+                item.created_by = _id;
+                item.updated_by = _id;
+                return item;
+            });
+
+            const add_items_result = await dressing_done_items_model.insertMany(
+                updated_item_details,
+                { session }
+            );
+
+
+
+            if (add_items_result?.length === 0) {
+                throw new ApiError('Failed to add items', StatusCodes.BAD_REQUEST);
+            }
+            // const update_dressing_done_status = await peeling_done_items_model.updateMany({
+            //     peeling_done_other_details_id: other_details_data?.peeling_done_other_details_id
+            // }, {
+            //     $set: {
+            //         is_dressing_done: true
+            //     }
+            // }, { session });
+
+            // if (!update_dressing_done_status.acknowledged || update_dressing_done_status.modifiedCount === 0) {
+            //     throw new ApiError("Failed to updated dressing done status ", StatusCodes.BAD_REQUEST)
+            // }
+        };
+
+        const add_slicing_done_item = async () => {
+            console.log("inside")
+            const delete_existing_item_result = await dressing_done_items_model.deleteMany({
+                dressing_done_other_details_id: other_details_data?._id
+            }, { session });
+
+            if (!delete_existing_item_result.acknowledged || delete_existing_item_result.deletedCount === 0) {
+                throw new ApiError("Failed to delete existing dressing done items ", StatusCodes.BAD_REQUEST)
+            }
+            const slicing_done_details = await slicing_done_items_model
+                .find({
+                    slicing_done_other_details_id:
+                        other_details?.slicing_done_other_details_id,
+                })
+                .session(session);
+
+            if (slicing_done_details.length === 0) {
+                throw new ApiError(
+                    'Slicing Done item details no found.',
+                    StatusCodes.NOT_FOUND
+                );
+            }
+            const slicingDoneMap = slicing_done_details?.reduce((acc, item) => {
+                acc[item.log_no_code] = item;
+                return acc;
+            }, {});
+
+            for (let item of item_details) {
+                const slicing_done_data = slicingDoneMap[item?.log_no_code];
+                if (
+                    total_no_of_leaves_by_log_no_code[item?.log_no_code] !==
+                    slicing_done_data?.no_of_leaves
+                ) {
+                    throw new ApiError(
+                        `No.of Leaves Missmatch for ${item?.log_no_code}, Actual No. of Leaves Issued : ${slicing_done_data?.no_of_leaves}, Dressing Done No.of Leaves : ${total_no_of_leaves_by_log_no_code[item?.log_no_code]} `,
+                        StatusCodes.BAD_REQUEST
+                    );
+                }
+
+                if (item.thickness !== slicing_done_data?.thickness) {
+                    throw new ApiError(
+                        `Thickness missmatch for Log No.Code ${item?.log_no_code}, Provided : ${item?.thickness},Actual : ${slicing_done_data?.thickness} Thickness`
+                    );
+                }
+            }
+
+            const updated_item_details = item_details?.map((item) => {
+                item.dressing_done_other_details_id = other_details_data?._id;
+                item.created_by = _id;
+                item.updated_by = _id;
+                return item;
+            });
+
+            const add_items_result = await dressing_done_items_model.insertMany(
+                updated_item_details,
+                { session }
+            );
+
+
+            if (add_items_result?.length === 0) {
+                throw new ApiError('Failed to add items', StatusCodes.BAD_REQUEST);
+            };
+
+            // const update_dressing_done_status = await slicing_done_items_model.updateMany({
+            //     slicing_done_other_details_id: other_details?.slicing_done_other_details_id
+            // }, {
+            //     $set: {
+            //         is_dressing_done: true
+            //     }
+            // }, { session });
+
+            // if (!update_dressing_done_status.acknowledged || update_dressing_done_status.modifiedCount === 0) {
+            //     throw new ApiError("Failed to updated dressing done status ", StatusCodes.BAD_REQUEST)
+            // };
+            console.log("executed")
+        }
+        if (other_details_data?.peeling_done_other_details_id) {
+            await add_peeling_done_item()
+        }
+        if (other_details_data?.slicing_done_other_details_id) {
+            await add_slicing_done_item()
+        }
+        console.log("outside")
+        await session.commitTransaction()
+        const response = new ApiResponse(StatusCodes.OK, "Dressing items updated successfully");
+
+        return res.status(StatusCodes.OK).json(response)
     } catch (error) {
         await session.abortTransaction()
         throw error
     } finally {
-        session.endSession()
+        await session.endSession()
     }
 
 

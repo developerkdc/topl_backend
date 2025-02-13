@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import mongoose, { mongo } from 'mongoose';
 import catchAsync from '../../../utils/errors/catchAsync.js';
 import ApiError from '../../../utils/errors/apiError.js';
 import { StatusCodes } from '../../../utils/constants.js';
@@ -57,10 +57,12 @@ export const add_issue_for_smoking_dying_from_veneer_inventory = catchAsync(
       }
 
       const veneer_invoice_ids = new Set();
+      const unique_identifier = new mongoose.Types.ObjectId();
       const issues_for_smoking_dying_data = fetch_veneer_inventory_data?.map(
         (item) => {
           veneer_invoice_ids.add(item?.invoice_id);
           return {
+            unique_identifier: unique_identifier,
             veneer_inventory_id: item?._id,
             item_name: item?.item_name,
             item_name_id: item?.item_id,
@@ -268,11 +270,16 @@ export const listing_issued_for_smoking_dying = catchAsync(
 
 export const fetch_single_issued_for_smoking_dying_item = catchAsync(
   async (req, res, next) => {
-    const { id } = req.params;
+    const { unique_identifier, pallet_number } = req.params;
 
     // Aggregation stage
     const aggMatch = {
-      $match: { _id: id },
+      $match: {
+        _id: {
+          unique_identifier: mongoose.Types.ObjectId.createFromHexString(unique_identifier),
+          pallet_number: pallet_number
+        }
+      },
     };
 
     const listAggregate = [aggMatch]; // aggregation pipiline
@@ -381,10 +388,10 @@ export const revert_issued_for_smoking_dying_item = catchAsync(
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
-      const { pallet_number } = req.params;
-      if (!pallet_number) {
+      const { unique_identifier, pallet_number } = req.params;
+      if (!pallet_number || !unique_identifier) {
         throw new ApiError(
-          'Pallet Number is required',
+          'pallet_number or unique_identifier is required',
           StatusCodes.BAD_REQUEST
         );
       }
@@ -393,13 +400,20 @@ export const revert_issued_for_smoking_dying_item = catchAsync(
         await issues_for_smoking_dying_view_model.aggregate([
           {
             $match: {
-              _id: pallet_number,
+              _id: {
+                unique_identifier: mongoose.Types.ObjectId.createFromHexString(unique_identifier),
+                pallet_number: pallet_number
+              },
             },
           },
         ]);
-      if (issue_for_smoking_dying && !issue_for_smoking_dying?.[0]) {
-        throw new ApiError('No Data Found');
+      if (!issue_for_smoking_dying || !issue_for_smoking_dying?.[0]) {
+        throw new ApiError('No Data Found', StatusCodes.BAD_GATEWAY);
       }
+
+      if (issue_for_smoking_dying?.[0]?.is_smoking_dying_done) {
+        throw new ApiError('Cannot revert issue for smoking dying');
+      };
 
       const bundle_list = issue_for_smoking_dying?.[0]?.bundles;
 
@@ -480,7 +494,7 @@ export const revert_issued_for_smoking_dying_item = catchAsync(
           }
         }
       };
-      const revert_to_dressing_done = async function () {};
+      const revert_to_dressing_done = async function () { };
 
       if (veneer_inventory_ids?.length > 0) {
         await revert_to_veneer_inventory();
@@ -494,8 +508,11 @@ export const revert_issued_for_smoking_dying_item = catchAsync(
       }
 
       // delete reverted items
-      const delete_response = await issues_for_smoking_dying_model.deleteOne(
-        { pallet_number: pallet_number },
+      const delete_response = await issues_for_smoking_dying_model.deleteMany(
+        {
+          unique_identifier: unique_identifier,
+          pallet_number: pallet_number
+        },
         { session }
       );
       if (

@@ -101,7 +101,7 @@ export const MachineDetails = catchAsync(async (req, res) => {
   const skipped = (pageInt - 1) * limitInt;
 
   const sortDirection = sortOrder === 'desc' ? -1 : 1;
-  const sortObj = sortField ? { [sortField]: sortDirection } : {};
+  const sortObj = sortField ? { [sortField]: sortDirection } : { updatedAt: -1 };
   let searchQuery = {};
   if (query != '' && req?.body?.searchFields) {
     const searchdata = DynamicSearch(
@@ -158,13 +158,14 @@ export const MachineDetails = catchAsync(async (req, res) => {
         'departmentDetails.dept_name': 1,
       },
     },
+    { $sort: sortObj },
     { $skip: skipped },
     { $limit: limitInt },
   ];
 
-  if (Object.keys(sortObj).length > 0) {
-    pipeline.push({ $sort: sortObj });
-  }
+  // if (Object.keys(sortObj).length > 0) {
+  //   pipeline.push({ $sort: sortObj });
+  // }
   const allDetails = await machineModel.aggregate(pipeline);
   if (allDetails.length === 0) {
     return res.json(new ApiResponse(StatusCodes.OK, 'NO Data found...'));
@@ -185,8 +186,8 @@ export const DropdownMachineNameMaster = catchAsync(async (req, res) => {
 
   const searchQuery = type
     ? {
-        $or: [{ 'deptDetails.dept_name': { $regex: type, $options: 'i' } }],
-      }
+      $or: [{ 'deptDetails.dept_name': { $regex: type, $options: 'i' } }],
+    }
     : {};
 
   const list = await machineModel.aggregate([

@@ -139,7 +139,7 @@ export const listItemCategories = catchAsync(async (req, res) => {
     }
     : {};
 
-  // Helper function to validate the date
+
   function isValidDate(dateString) {
     const date = new Date(dateString);
     return !isNaN(date.getTime());
