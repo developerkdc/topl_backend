@@ -542,7 +542,7 @@ export const fetch_all_reflitching_items = catchAsync(
     const match_query = {
       ...search_query,
       ...filterData,
-      issue_status: null
+      issue_status: null,
     };
 
     const aggLookupReflitchingOtherDetails = {

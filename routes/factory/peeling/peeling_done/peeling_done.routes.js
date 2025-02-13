@@ -11,11 +11,7 @@ import {
 import AuthMiddleware from '../../../../middlewares/verifyToken.js';
 const peelingDoneRouter = express.Router();
 
-peelingDoneRouter.post(
-  '/add-peeling-done',
-  AuthMiddleware,
-  add_peeling_done
-);
+peelingDoneRouter.post('/add-peeling-done', AuthMiddleware, add_peeling_done);
 peelingDoneRouter.patch(
   '/edit-peeling-done/:peeling_done_id',
   AuthMiddleware,

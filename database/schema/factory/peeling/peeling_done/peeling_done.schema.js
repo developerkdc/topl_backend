@@ -1,5 +1,8 @@
 import mongoose from 'mongoose';
-import { issues_for_status, peeling_done } from '../../../../Utils/constants/constants.js';
+import {
+  issues_for_status,
+  peeling_done,
+} from '../../../../Utils/constants/constants.js';
 
 const peeling_done_other_details_schema = new mongoose.Schema(
   {
@@ -204,11 +207,11 @@ const peeling_done_items_schema = new mongoose.Schema(
         values: [issues_for_status.dressing, issues_for_status.pressing],
         message: `Invalid type {{VALUE}} it must be one of the ${peeling_done.veneer}, ${peeling_done.face} or ${peeling_done.core}`,
       },
-      default: null
+      default: null,
     },
     is_dressing_done: {
       type: Boolean,
-      default: false
+      default: false,
     },
     item_amount: {
       type: Number,
