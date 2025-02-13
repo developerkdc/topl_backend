@@ -150,7 +150,7 @@ const core_approval_invoice_schema = new mongoose.Schema(
         ],
         message: `Invalid status {{VALUE}} Issue Status must either be one of ${inward_type.inventory}, ${inward_type.job_work}, ${inward_type.challan}`,
       },
-      required: [true, 'Inwrad Date is required'],
+      required: [true, 'Inward Type is required'],
     },
     currency: {
       type: String,
