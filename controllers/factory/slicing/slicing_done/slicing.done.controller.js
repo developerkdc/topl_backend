@@ -276,7 +276,7 @@ export const fetch_all_slicing_done_items = catchAsync(
     const aggMatch = {
       $match: {
         ...match_query,
-        issue_status: null
+        issue_status: null,
       },
     };
     const aggUnwindOtherDetails = {

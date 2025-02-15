@@ -187,8 +187,7 @@ const dressing_done_items_schema = new mongoose.Schema(
     },
     is_dressing_done: {
       type: Boolean,
-      default: false
-
+      default: false,
     },
     remark: {
       type: String,
