@@ -19,9 +19,12 @@ import allSeriesProductMasterRouter from './routes/seriesProductMaster/allSeries
 import usersRouter from './routes/users.routes.js';
 import { globalErrorHandler } from './utils/errors/GlobalErrorHandler.js';
 import { checkServerHealth } from './controllers/auth.js';
+import { addBulkJobs } from './config/redis/redis.config.js';
 
+addBulkJobs();
 const Configs = getConfigs();
 mongo_service();
+
 const app = express();
 const server = http.createServer(app);
 export const io = new Server(server, {

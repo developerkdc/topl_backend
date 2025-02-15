@@ -1140,4 +1140,199 @@ export const fetch_dressing_done_history = catchAsync(
 
 export const revert_dressing_done_items = catchAsync(async (req, res) => {
   const { other_details_id } = req.params;
+  const { _id } = req.userDetails;
+  const session = await mongoose.startSession();
+  try {
+    await session.startTransaction();
+
+    if (!other_details_id) {
+      throw new ApiError('ID is missing', StatusCodes.NOT_FOUND);
+    }
+
+    if (!isValidObjectId(other_details_id)) {
+      throw new ApiError('Invalid ID ', StatusCodes.BAD_REQUEST);
+    }
+
+    const other_details_data = await dressing_done_other_details_model.findOne({
+      _id: other_details_id,
+    });
+
+    if (!other_details_data) {
+      throw new ApiError('Dressing Done details not found');
+    }
+    if (!other_details_data?.isEditable) {
+      throw new ApiError(
+        'You can not revert this item as it is already issued for next process'
+      );
+    }
+
+    const dressing_done_items = await dressing_done_items_model.find({
+      dressing_done_other_details_id: other_details_data?._id,
+    });
+
+    if (dressing_done_items?.length === 0) {
+      throw new ApiError(
+        'Dressing Done Items not found',
+        StatusCodes.NOT_FOUND
+      );
+    }
+
+    const delete_dressing_done_other_details_result =
+      await dressing_done_other_details_model.findByIdAndDelete(
+        other_details_id,
+        { session }
+      );
+
+    if (!delete_dressing_done_other_details_result) {
+      throw new ApiError(
+        'Failed to delete dressing done other details data',
+        StatusCodes.BAD_REQUEST
+      );
+    }
+
+    const delete_dressing_done_items_result =
+      await dressing_done_items_model.deleteMany(
+        { dressing_done_other_details_id: other_details_id },
+        { session }
+      );
+
+    if (
+      !delete_dressing_done_items_result.acknowledged ||
+      delete_dressing_done_items_result?.deletedCount === 0
+    ) {
+      throw new ApiError(
+        'Failed to delete dressing done items',
+        StatusCodes.BAD_REQUEST
+      );
+    }
+
+    const revert_slicing_items = async () => {
+      const update_slicing_other_details_editable_status =
+        await slicing_done_other_details_model.updateOne(
+          { _id: other_details_data?.slicing_done_other_details_id },
+          {
+            $set: {
+              isEditable: true,
+              updated_by: _id,
+            },
+          },
+          { session }
+        );
+
+      if (update_slicing_other_details_editable_status.matchedCount === 0) {
+        throw new ApiError('Slicing Done other details not found');
+      }
+
+      if (
+        !update_slicing_other_details_editable_status.acknowledged ||
+        update_slicing_other_details_editable_status?.modifiedCount === 0
+      ) {
+        throw new ApiError(
+          'Failed to update slicing done editable status',
+          StatusCodes.BAD_REQUEST
+        );
+      }
+
+      const update_slicing_done_items_status =
+        await slicing_done_items_model?.updateMany(
+          {
+            slicing_done_other_details_id:
+              other_details_data?.slicing_done_other_details_id,
+          },
+          {
+            $set: {
+              is_dressing_done: false,
+              issue_status: null,
+              updated_by: _id,
+            },
+          },
+          { session }
+        );
+
+      if (update_slicing_done_items_status?.matchedCount === 0) {
+        throw new ApiError('Slicing Done items not found');
+      }
+
+      if (
+        !update_slicing_done_items_status?.acknowledged ||
+        update_slicing_done_items_status?.modifiedCount === 0
+      ) {
+        throw new ApiError('Failed to update slicing done items status');
+      }
+    };
+    const revert_peeling_items = async () => {
+      const update_peeling_other_details_editable_status =
+        await peeling_done_other_details_model.updateOne(
+          { _id: other_details_data?.peeling_done_other_details_id },
+          {
+            $set: {
+              isEditable: true,
+              updated_by: _id,
+            },
+          },
+          { session }
+        );
+
+      if (update_peeling_other_details_editable_status.matchedCount === 0) {
+        throw new ApiError('Peeling Done other details not found');
+      }
+
+      if (
+        !update_peeling_other_details_editable_status.acknowledged ||
+        update_peeling_other_details_editable_status?.modifiedCount === 0
+      ) {
+        throw new ApiError(
+          'Failed to update peeling done editable status',
+          StatusCodes.BAD_REQUEST
+        );
+      }
+
+      const update_peeling_done_items_status =
+        await peeling_done_items_model?.updateMany(
+          {
+            peeling_done_other_details_id:
+              other_details_data?.peeling_done_other_details_id,
+          },
+          {
+            $set: {
+              is_dressing_done: false,
+              issue_status: null,
+              updated_by: _id,
+            },
+          },
+          { session }
+        );
+
+      if (update_peeling_done_items_status?.matchedCount === 0) {
+        throw new ApiError('Peeling Done items not found');
+      }
+
+      if (
+        !update_peeling_done_items_status?.acknowledged ||
+        update_peeling_done_items_status?.modifiedCount === 0
+      ) {
+        throw new ApiError('Failed to update peeling done items status');
+      }
+    };
+    if (other_details_data?.peeling_done_other_details_id) {
+      await revert_peeling_items();
+    }
+
+    if (other_details_data?.slicing_done_other_details_id) {
+      await revert_slicing_items();
+    }
+
+    const response = new ApiResponse(
+      StatusCodes.OK,
+      'Dressing Done items reverted successfully'
+    );
+    await session?.commitTransaction();
+
+    return res.status(StatusCodes.OK).json(response);
+  } catch (error) {
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    await session.endSession();
+  }
 });
