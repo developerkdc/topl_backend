@@ -12,6 +12,8 @@ export const issues_for_status = {
   slicing_peeling: 'slicing_peeling',
   smoking_dying: 'smoking_dying',
   dressing: 'dressing',
+  pressing: 'pressing',
+  grouping: 'grouping',
   order: 'order',
   chalan: 'chalan',
 };

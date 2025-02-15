@@ -101,7 +101,9 @@ export const listSeriesDetails = catchAsync(async (req, res) => {
   const skipped = (pageInt - 1) * limitInt;
 
   const sortDirection = sortOrder === 'desc' ? -1 : 1;
-  const sortObj = sortField ? { [sortField]: sortDirection } : { updatedAt: -1 };
+  const sortObj = sortField
+    ? { [sortField]: sortDirection }
+    : { updatedAt: -1 };
   let searchQuery = {};
   if (query != '' && req?.body?.searchFields) {
     const searchdata = DynamicSearch(
@@ -173,8 +175,8 @@ export const DropdownSeriesNameMaster = catchAsync(async (req, res) => {
 
   const searchQuery = type
     ? {
-      $or: [{ series_name: { $regex: type, $options: 'i' } }],
-    }
+        $or: [{ series_name: { $regex: type, $options: 'i' } }],
+      }
     : {};
 
   const list = await seriesModel.aggregate([

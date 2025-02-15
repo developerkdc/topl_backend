@@ -114,7 +114,9 @@ export const listItemSubCategories = catchAsync(async (req, res) => {
   const skipped = (pageInt - 1) * limitInt;
 
   const sortDirection = sortOrder === 'desc' ? -1 : 1;
-  const sortObj = sortField ? { [sortField]: sortDirection } : { updatedAt: - 1 };
+  const sortObj = sortField
+    ? { [sortField]: sortDirection }
+    : { updatedAt: -1 };
   // const searchQuery = query
   //   ? {
   //       $or: [{ name: { $regex: query, $options: "i" } }],

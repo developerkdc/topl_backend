@@ -187,7 +187,11 @@ const issues_for_smoking_dying_schema = new mongoose.Schema(
 issues_for_smoking_dying_schema.index({ item_name: -1 });
 issues_for_smoking_dying_schema.index({ bundle_number: -1 });
 issues_for_smoking_dying_schema.index({ pallet_number: -1 });
-issues_for_smoking_dying_schema.index({ item_name: -1, pallet_number: -1, bundle_number: -1 });
+issues_for_smoking_dying_schema.index({
+  item_name: -1,
+  pallet_number: -1,
+  bundle_number: -1,
+});
 
 export const issues_for_smoking_dying_model = mongoose.model(
   'issues_for_smoking_dyings',
@@ -272,7 +276,7 @@ export const issues_for_smoking_dying_view_model = mongoose.model(
         $group: {
           _id: {
             unique_identifier: '$unique_identifier',
-            pallet_number: '$pallet_number'
+            pallet_number: '$pallet_number',
           },
           item_name: {
             $first: '$item_name',

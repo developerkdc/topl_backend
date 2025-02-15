@@ -90,7 +90,9 @@ export const ListItemNameMaster = catchAsync(async (req, res) => {
   const skipped = (pageInt - 1) * limitInt;
 
   const sortDirection = sortOrder === 'desc' ? -1 : 1;
-  const sortObj = sortField ? { [sortField]: sortDirection } : { updatedAt: -1 };
+  const sortObj = sortField
+    ? { [sortField]: sortDirection }
+    : { updatedAt: -1 };
   let searchQuery = {};
   if (query != '' && req?.body?.searchFields) {
     const searchdata = DynamicSearch(

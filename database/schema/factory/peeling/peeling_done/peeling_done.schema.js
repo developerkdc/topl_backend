@@ -1,5 +1,8 @@
 import mongoose from 'mongoose';
-import { peeling_done } from '../../../../Utils/constants/constants.js';
+import {
+  issues_for_status,
+  peeling_done,
+} from '../../../../Utils/constants/constants.js';
 
 const peeling_done_other_details_schema = new mongoose.Schema(
   {
@@ -198,9 +201,17 @@ const peeling_done_items_schema = new mongoose.Schema(
       type: String,
       required: [true, 'Grade Name is required'],
     },
+    issue_status: {
+      type: String,
+      enum: {
+        values: [issues_for_status.dressing, issues_for_status.pressing],
+        message: `Invalid type {{VALUE}} it must be one of the ${peeling_done.veneer}, ${peeling_done.face} or ${peeling_done.core}`,
+      },
+      default: null,
+    },
     is_dressing_done: {
       type: Boolean,
-      default: false
+      default: false,
     },
     item_amount: {
       type: Number,
