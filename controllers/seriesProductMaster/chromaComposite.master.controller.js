@@ -63,7 +63,7 @@ export const addChromaComposite = catchAsync(async (req, res, next) => {
 
   const response = new ApiResponse(
     StatusCodes.CREATED,
-    'ChromaComposite Added Successfully',
+    'Item Added Successfully',
     newChromaComposite
   );
 
@@ -141,7 +141,7 @@ export const updateChromaCompositeDetails = catchAsync(
 
     const response = new ApiResponse(
       StatusCodes.OK,
-      'ChromaComposite Updated Successfully',
+      'Item Updated Successfully',
       updateResponse
     );
     return res.status(StatusCodes.OK).json(response);

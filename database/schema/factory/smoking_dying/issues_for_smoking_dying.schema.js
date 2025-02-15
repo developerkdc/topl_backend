@@ -271,8 +271,8 @@ export const issues_for_smoking_dying_view_model = mongoose.model(
       {
         $group: {
           _id: {
-            unique_identifier:'$unique_identifier',
-            pallet_number:'$pallet_number'
+            unique_identifier: '$unique_identifier',
+            pallet_number: '$pallet_number'
           },
           item_name: {
             $first: '$item_name',
