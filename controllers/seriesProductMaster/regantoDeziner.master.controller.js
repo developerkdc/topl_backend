@@ -61,7 +61,7 @@ export const addRegantoDeziner = catchAsync(async (req, res, next) => {
 
   const response = new ApiResponse(
     StatusCodes.CREATED,
-    'RegantoDeziner Added Successfully',
+    'Item Added Successfully',
     newRegantoDeziner
   );
 
@@ -135,7 +135,7 @@ export const updateRegantoDezinerDetails = catchAsync(
 
     const response = new ApiResponse(
       StatusCodes.OK,
-      'RegantoDeziner Updated Successfully',
+      'Item Updated Successfully',
       updateResponse
     );
     return res.status(StatusCodes.OK).json(response);

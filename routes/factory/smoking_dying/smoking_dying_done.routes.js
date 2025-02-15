@@ -4,7 +4,7 @@ import {
   add_process_done_details,
   edit_process_done_details,
   fetch_all_process_done_details,
-  fetch_single_process_done_details,
+  fetch_single_process_done_details, fetch_smoking_dying_done_history,
   revert_process_done_details,
 } from '../../../controllers/factory/smoking_dying/smoking_dying_done.controller.js';
 
@@ -32,6 +32,11 @@ smokingDyingDoneRouter.get(
   '/fetch-single-process-done/:process_done_details_id',
   AuthMiddleware,
   fetch_single_process_done_details
+);
+smokingDyingDoneRouter.post(
+  '/list-smoking-dying-history',
+  AuthMiddleware,
+  fetch_smoking_dying_done_history
 );
 
 smokingDyingDoneRouter.post(

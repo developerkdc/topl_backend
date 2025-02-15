@@ -13,6 +13,7 @@ import {
 } from '../../../database/schema/factory/smoking_dying/smoking_dying_done.schema.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
+import smoking_dying_done_history_model from "../../../database/schema/factory/smoking_dying/smoking_dying_done.history.schema.js";
 
 export const add_process_done_details = catchAsync(async (req, res, next) => {
   const session = await mongoose.startSession();
@@ -474,6 +475,222 @@ export const fetch_all_process_done_details = catchAsync(
     return res.status(200).json(response);
   }
 );
+
+export const fetch_smoking_dying_done_history = catchAsync(async (req, res, next) => {
+  const {
+    page = 1,
+    sortBy = 'updatedAt',
+    sort = 'desc',
+    limit = 10,
+    search = '',
+  } = req.query;
+  const {
+    string,
+    boolean,
+    numbers,
+    arrayField = [],
+  } = req.body?.searchFields || {};
+
+  const filter = req.body?.filter;
+
+  let search_query = {};
+  if (search != '' && req?.body?.searchFields) {
+    const search_data = DynamicSearch(
+      search,
+      boolean,
+      numbers,
+      string,
+      arrayField
+    );
+    if (search_data?.length == 0) {
+      return res.status(404).json({
+        statusCode: 404,
+        status: false,
+        data: {
+          data: [],
+        },
+        message: 'Results Not Found',
+      });
+    }
+    search_query = search_data;
+  }
+
+  const filterData = dynamic_filter(filter);
+
+  const match_query = {
+    ...search_query,
+    ...filterData,
+    issue_status: { $ne: null },
+  };
+  const aggMatch = {
+    $match: {
+      ...match_query,
+    },
+  };
+  // const aggGroupBy = {
+  //     $group: {
+  //         _id: { pallet_number: "$bundle_details.pallet_number" },
+
+  //         item_name: { $first: "$bundle_details.item_name" },
+  //         item_sub_cat: { $first: "$bundle_details.item_sub_category_name" },
+  //         issue_status: { $first: "$bundle_details.issue_status" },
+  //         // bundles: {
+  //         //     $push: "$$ROOT"
+  //         // },
+  //         // total_bundles: {
+  //         //     $sum: 1
+  //         // },
+  //         // available_bundles: {
+  //         //     $sum: {
+  //         //         $cond: {
+  //         //             if: { $eq: ["$issue_status", null] },
+  //         //             then: 1,
+  //         //             else: 0
+  //         //         }
+  //         //     }
+  //         // }
+  //     }
+
+  // }
+  const aggAddGlobalFields = {
+    $addFields: {
+      item_name: { $arrayElemAt: ["$bundle_details.item_name", 0] },
+      item_sub_cat: { $arrayElemAt: ["$bundle_details.item_sub_category_name", 0] },
+      issue_status: { $arrayElemAt: ["$bundle_details.issue_status", 0] },
+      log_no_code: { $arrayElemAt: ["$bundle_details.log_no_code", 0] },
+    },
+  };
+  const aggLookupDressingDoneOtherDetails = {
+    $lookup: {
+      from: "process_done_details",
+      localField: "dressing_done_other_details_id",
+      foreignField: "_id",
+      as: "process_done_details"
+    }
+  }
+  const aggUnwindDressingDoneOtherDetails = {
+    $unwind: {
+      path: "$process_done_details",
+      preserveNullAndEmptyArrays: true
+    }
+  }
+  const aggLookupBundles = {
+    $lookup: {
+      from: "process_done_items_details",
+      localField: "bundles",
+      foreignField: "_id",
+      as: "bundle_details"
+    }
+  }
+  const aggCreatedUserDetails = {
+    $lookup: {
+      from: 'users',
+      localField: 'created_by',
+      foreignField: '_id',
+      pipeline: [
+        {
+          $project: {
+            first_name: 1,
+            last_name: 1,
+            user_name: 1,
+            user_type: 1,
+            email_id: 1,
+          },
+        },
+      ],
+      as: 'created_user_details',
+    },
+  };
+  const aggUpdatedUserDetails = {
+    $lookup: {
+      from: 'users',
+      localField: 'updated_by',
+      foreignField: '_id',
+      pipeline: [
+        {
+          $project: {
+            first_name: 1,
+            last_name: 1,
+            user_name: 1,
+            user_type: 1,
+          },
+        },
+      ],
+      as: 'updated_user_details',
+    },
+  };
+  const aggUnwindCreatedUser = {
+    $unwind: {
+      path: '$created_user_details',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
+  const aggUnwindUpdatdUser = {
+    $unwind: {
+      path: '$updated_user_details',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
+
+  const aggLimit = {
+    $limit: parseInt(limit),
+  };
+
+  const aggSkip = {
+    $skip: (parseInt(page) - 1) * parseInt(limit),
+  };
+
+  const aggSort = {
+    $sort: { [sortBy]: sort === 'desc' ? -1 : 1 },
+  };
+  const list_aggregate = [
+    aggLookupDressingDoneOtherDetails,
+    aggLookupBundles,
+    aggAddGlobalFields,
+    aggUnwindDressingDoneOtherDetails,
+    aggCreatedUserDetails,
+    aggUpdatedUserDetails,
+    aggUnwindCreatedUser,
+    aggUnwindUpdatdUser,
+    aggMatch,
+    // aggAddGlobalFields,
+    aggSort,
+    aggSkip,
+    aggLimit,
+
+  ];
+
+  const result = await smoking_dying_done_history_model.aggregate(list_aggregate);
+
+
+  const aggCount = {
+    $count: 'totalCount',
+  };
+
+  const count_total_docs = [
+    aggCreatedUserDetails,
+    aggUpdatedUserDetails,
+    aggUnwindCreatedUser,
+    aggUnwindUpdatdUser,
+    aggMatch,
+    aggCount,
+  ];
+
+  const total_docs = await smoking_dying_done_history_model.aggregate(count_total_docs);
+
+  const totalPages = Math.ceil((total_docs[0]?.totalCount || 0) / limit);
+
+  const response = new ApiResponse(
+    StatusCodes.OK,
+    'Data fetched successfully...',
+    {
+      data: result,
+      totalPages: totalPages,
+    }
+  );
+
+  return res.status(StatusCodes.OK).json(response);
+});
 
 export const revert_process_done_details = catchAsync(
   async (req, res, next) => {

@@ -63,7 +63,7 @@ export const addChromaRibbed = catchAsync(async (req, res, next) => {
 
   const response = new ApiResponse(
     StatusCodes.CREATED,
-    'Chroma Ribbed Successfully',
+    'Item Added Successfully',
     newChromaRibbed
   );
 
@@ -136,7 +136,7 @@ export const updateChromaRibbedDetails = catchAsync(async (req, res, next) => {
 
   const response = new ApiResponse(
     StatusCodes.OK,
-    'Chroma Ribbed Updated Successfully',
+    'Item Updated Successfully',
     updateResponse
   );
   return res.status(StatusCodes.OK).json(response);

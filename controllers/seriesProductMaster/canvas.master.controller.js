@@ -63,7 +63,7 @@ export const addCanvas = catchAsync(async (req, res, next) => {
 
   const response = new ApiResponse(
     StatusCodes.CREATED,
-    'Canvas Added Successfully',
+    'Item Added Successfully',
     newCanvas
   );
 
@@ -135,7 +135,7 @@ export const updateCanvasDetails = catchAsync(async (req, res, next) => {
 
   const response = new ApiResponse(
     StatusCodes.OK,
-    'Canvas Updated Successfully',
+    'Item Updated Successfully',
     updateResponse
   );
   return res.status(StatusCodes.OK).json(response);

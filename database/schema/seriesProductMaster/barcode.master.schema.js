@@ -53,6 +53,8 @@ const barcodeSchema = new mongoose.Schema(
           },
         },
       ],
+      default: null,
+      set: (val) => (Array.isArray(val) ? val : []),
     },
     veneer_sub_category: {
       type: [

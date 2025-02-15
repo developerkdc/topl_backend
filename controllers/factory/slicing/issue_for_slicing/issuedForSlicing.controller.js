@@ -77,7 +77,7 @@ export const addIssueForSlicingFromFlitchInventory = catchAsync(
             item_sub_category_name: item?.item_sub_category_name,
             log_no: item?.log_no,
             flitch_code: item?.flitch_code,
-            log_no_code: is_peeling_done ? `${item?.log_no}PD` : item?.log_no,
+            log_no_code: is_peeling_done ? `${item?.log_no + item?.flitch_code}PD` : item?.log_no + item?.flitch_code,
             flitch_formula: item?.flitch_formula,
             length: item?.length,
             width1: item?.width1,

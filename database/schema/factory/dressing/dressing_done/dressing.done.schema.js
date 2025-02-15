@@ -147,6 +147,14 @@ const dressing_done_items_schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Pattern ID is required'],
     },
+    series_name: {
+      type: String,
+      required: [true, 'Series Name is required.'],
+    },
+    series_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, 'Series ID is required'],
+    },
     grade_name: {
       type: String,
       uppercase: true,
@@ -168,6 +176,19 @@ const dressing_done_items_schema = new mongoose.Schema(
         message: `Invalid Issue Status -> {{VALUE}} it must be one of the ${dressing_issue_status.issue_for_grouping_clipping}, ${dressing_issue_status.issue_for_order}, ${dressing_issue_status.issue_for_smoking_dying} `,
       },
       default: null,
+    },
+    amount_factor: {
+      type: Number,
+      default: 1,
+    },
+    expense_amount: {
+      type: Number,
+      default: 0,
+    },
+    is_dressing_done: {
+      type: Boolean,
+      default: false
+
     },
     remark: {
       type: String,

@@ -62,7 +62,7 @@ export const addBunito = catchAsync(async (req, res, next) => {
 
   const response = new ApiResponse(
     StatusCodes.CREATED,
-    'Bunito Added Successfully',
+    'Item Added Successfully',
     newBunito
   );
 
@@ -134,7 +134,7 @@ export const updateBunitoDetails = catchAsync(async (req, res, next) => {
 
   const response = new ApiResponse(
     StatusCodes.OK,
-    'Bunito Updated Successfully',
+    'Item Updated Successfully',
     updateResponse
   );
   return res.status(StatusCodes.OK).json(response);
