@@ -4,7 +4,8 @@ import {
   add_process_done_details,
   edit_process_done_details,
   fetch_all_process_done_details,
-  fetch_single_process_done_details, fetch_smoking_dying_done_history,
+  fetch_single_process_done_details,
+  fetch_smoking_dying_done_history,
   revert_process_done_details,
 } from '../../../controllers/factory/smoking_dying/smoking_dying_done.controller.js';
 

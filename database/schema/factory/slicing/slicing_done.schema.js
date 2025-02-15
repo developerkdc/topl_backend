@@ -107,7 +107,7 @@ const slicing_done_items_schema = new mongoose.Schema(
       type: String,
       required: [true, 'Flitch Side is required'],
       uppercase: true,
-      trim: true
+      trim: true,
     },
     // length: {
     //   type: Number,

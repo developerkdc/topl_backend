@@ -14,7 +14,10 @@ import {
 import { issues_for_status } from '../../../database/Utils/constants/constants.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
-import { dressing_done_items_model, dressing_done_other_details_model } from '../../../database/schema/factory/dressing/dressing_done/dressing.done.schema.js';
+import {
+  dressing_done_items_model,
+  dressing_done_other_details_model,
+} from '../../../database/schema/factory/dressing/dressing_done/dressing.done.schema.js';
 import dressing_done_history_model from '../../../database/schema/factory/dressing/dressing_done/dressing.done.history.schema.js';
 
 export const add_issue_for_smoking_dying_from_veneer_inventory = catchAsync(
@@ -178,8 +181,8 @@ export const add_issue_for_smoking_dying_from_veneer_inventory = catchAsync(
   }
 );
 
-export const add_issue_for_smoking_dying_from_dressing_done_factory = catchAsync(
-  async (req, res, next) => {
+export const add_issue_for_smoking_dying_from_dressing_done_factory =
+  catchAsync(async (req, res, next) => {
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
@@ -187,12 +190,14 @@ export const add_issue_for_smoking_dying_from_dressing_done_factory = catchAsync
       const userDetails = req.userDetails;
 
       if (!dressing_done_other_details_id) {
-        throw new ApiError("Dressing Done other details is missing", StatusCodes.NOT_FOUND)
+        throw new ApiError(
+          'Dressing Done other details is missing',
+          StatusCodes.NOT_FOUND
+        );
       }
       if (
         !dressing_done_ids ||
-        (Array.isArray(dressing_done_ids) &&
-          dressing_done_ids?.length <= 0)
+        (Array.isArray(dressing_done_ids) && dressing_done_ids?.length <= 0)
       ) {
         throw new ApiError(
           'dressing_done_ids is required',
@@ -213,10 +218,7 @@ export const add_issue_for_smoking_dying_from_dressing_done_factory = catchAsync
         })
         .lean();
 
-      if (
-        !fetch_dressing_done_data ||
-        fetch_dressing_done_data?.length <= 0
-      ) {
+      if (!fetch_dressing_done_data || fetch_dressing_done_data?.length <= 0) {
         throw new ApiError(
           'dressing done items not found',
           StatusCodes.NOT_FOUND
@@ -283,8 +285,9 @@ export const add_issue_for_smoking_dying_from_dressing_done_factory = catchAsync
       }
 
       // update issue status in dressing done items to smoking_dying
-      const dressing_done_items_ids =
-        insert_issues_for_smoking_dying_data.map((e) => e?.dressing_done_id);
+      const dressing_done_items_ids = insert_issues_for_smoking_dying_data.map(
+        (e) => e?.dressing_done_id
+      );
       const update_dressing_item_issue_status =
         await dressing_done_items_model.updateMany(
           { _id: { $in: dressing_done_items_ids } },
@@ -319,7 +322,9 @@ export const add_issue_for_smoking_dying_from_dressing_done_factory = catchAsync
           { session }
         );
 
-      if (update_dressing_done_other_details_editable_status?.matchedCount <= 0) {
+      if (
+        update_dressing_done_other_details_editable_status?.matchedCount <= 0
+      ) {
         throw new ApiError('Dressing Done Other Details Document not found.');
       }
 
@@ -338,12 +343,15 @@ export const add_issue_for_smoking_dying_from_dressing_done_factory = catchAsync
         created_by: userDetails?._id,
         updated_by: userDetails?._id,
       };
-      console.log(history_data)
-      const add_dressing_done_items_to_dressing_history = await dressing_done_history_model.create([history_data], { session });
-
+      console.log(history_data);
+      const add_dressing_done_items_to_dressing_history =
+        await dressing_done_history_model.create([history_data], { session });
 
       if (add_dressing_done_items_to_dressing_history?.length === 0) {
-        throw new ApiError("Failed to add items to dressing done history", StatusCodes.BAD_REQUEST)
+        throw new ApiError(
+          'Failed to add items to dressing done history',
+          StatusCodes.BAD_REQUEST
+        );
       }
 
       await session.commitTransaction();
@@ -359,8 +367,7 @@ export const add_issue_for_smoking_dying_from_dressing_done_factory = catchAsync
     } finally {
       await session.endSession();
     }
-  }
-);
+  });
 
 export const listing_issued_for_smoking_dying = catchAsync(
   async (req, res, next) => {
@@ -607,7 +614,6 @@ export const revert_issued_for_smoking_dying_item = catchAsync(
 
       const bundle_list = issue_for_smoking_dying?.[0]?.bundles;
 
-
       const veneer_inventory_ids = bundle_list
         ?.filter(
           (item) =>
@@ -631,7 +637,6 @@ export const revert_issued_for_smoking_dying_item = catchAsync(
             item?.dressing_done_id?.toString()
           )
         );
-
 
       const revert_to_veneer_inventory = async function () {
         // Update documents
@@ -715,7 +720,8 @@ export const revert_issued_for_smoking_dying_item = catchAsync(
           const update_document = await dressing_done_items_model
             .findOne({ _id: dressing_done_id })
             .lean();
-          const dressing_done_other_details_id = update_document?.dressing_done_other_details_id;
+          const dressing_done_other_details_id =
+            update_document?.dressing_done_other_details_id;
 
           const is_dressing_done_item_editable = await dressing_done_items_model
             .find({
@@ -725,7 +731,10 @@ export const revert_issued_for_smoking_dying_item = catchAsync(
             })
             .lean();
 
-          if (is_dressing_done_item_editable && is_dressing_done_item_editable?.length <= 0) {
+          if (
+            is_dressing_done_item_editable &&
+            is_dressing_done_item_editable?.length <= 0
+          ) {
             await dressing_done_other_details_model.updateOne(
               { _id: dressing_done_other_details_id },
               {
@@ -736,13 +745,27 @@ export const revert_issued_for_smoking_dying_item = catchAsync(
               { session }
             );
 
-            const delete_dressing_done_history_doc = await dressing_done_history_model.deleteOne({
-              dressing_done_other_details_id: dressing_done_other_details_id,
-              bundles: { $all: dressing_done_ids, $size: dressing_done_ids?.length }
-            }, { session });
+            const delete_dressing_done_history_doc =
+              await dressing_done_history_model.deleteOne(
+                {
+                  dressing_done_other_details_id:
+                    dressing_done_other_details_id,
+                  bundles: {
+                    $all: dressing_done_ids,
+                    $size: dressing_done_ids?.length,
+                  },
+                },
+                { session }
+              );
 
-            if (!delete_dressing_done_history_doc.acknowledged || delete_dressing_done_history_doc.deletedCount === 0) {
-              throw new ApiError("Failed to delete dressing history documnet", StatusCodes.BAD_REQUEST)
+            if (
+              !delete_dressing_done_history_doc.acknowledged ||
+              delete_dressing_done_history_doc.deletedCount === 0
+            ) {
+              throw new ApiError(
+                'Failed to delete dressing history documnet',
+                StatusCodes.BAD_REQUEST
+              );
             }
           }
         }
@@ -792,5 +815,3 @@ export const revert_issued_for_smoking_dying_item = catchAsync(
     }
   }
 );
-
-
