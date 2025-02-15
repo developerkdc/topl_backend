@@ -53,8 +53,3 @@ export const dressing_error_types = {
   dressing_done: 'dressing_done',
 };
 
-export const dressing_issue_status = {
-  issue_for_smoking_dying: 'issue_for_smoking_dying',
-  issue_for_grouping_clipping: 'issue_for_grouping_clipping',
-  issue_for_order: 'issue_for_order',
-};

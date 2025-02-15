@@ -343,7 +343,6 @@ export const add_issue_for_smoking_dying_from_dressing_done_factory =
         created_by: userDetails?._id,
         updated_by: userDetails?._id,
       };
-      console.log(history_data);
       const add_dressing_done_items_to_dressing_history =
         await dressing_done_history_model.create([history_data], { session });
 
@@ -751,8 +750,7 @@ export const revert_issued_for_smoking_dying_item = catchAsync(
                   dressing_done_other_details_id:
                     dressing_done_other_details_id,
                   bundles: {
-                    $all: dressing_done_ids,
-                    $size: dressing_done_ids?.length,
+                    $in: dressing_done_ids
                   },
                 },
                 { session }

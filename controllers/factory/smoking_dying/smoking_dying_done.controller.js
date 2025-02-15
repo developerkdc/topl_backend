@@ -13,7 +13,7 @@ import {
 } from '../../../database/schema/factory/smoking_dying/smoking_dying_done.schema.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
-import smoking_dying_done_history_model from '../../../database/schema/factory/smoking_dying/smoking_dying_done.history.schema.js';
+import process_done_history_model from '../../../database/schema/factory/smoking_dying/smoking_dying_done.history.schema.js';
 
 export const add_process_done_details = catchAsync(async (req, res, next) => {
   const session = await mongoose.startSession();
@@ -528,31 +528,6 @@ export const fetch_smoking_dying_done_history = catchAsync(
         ...match_query,
       },
     };
-    // const aggGroupBy = {
-    //     $group: {
-    //         _id: { pallet_number: "$bundle_details.pallet_number" },
-
-    //         item_name: { $first: "$bundle_details.item_name" },
-    //         item_sub_cat: { $first: "$bundle_details.item_sub_category_name" },
-    //         issue_status: { $first: "$bundle_details.issue_status" },
-    //         // bundles: {
-    //         //     $push: "$$ROOT"
-    //         // },
-    //         // total_bundles: {
-    //         //     $sum: 1
-    //         // },
-    //         // available_bundles: {
-    //         //     $sum: {
-    //         //         $cond: {
-    //         //             if: { $eq: ["$issue_status", null] },
-    //         //             then: 1,
-    //         //             else: 0
-    //         //         }
-    //         //     }
-    //         // }
-    //     }
-
-    // }
     const aggAddGlobalFields = {
       $addFields: {
         item_name: { $arrayElemAt: ['$bundle_details.item_name', 0] },
@@ -563,10 +538,10 @@ export const fetch_smoking_dying_done_history = catchAsync(
         log_no_code: { $arrayElemAt: ['$bundle_details.log_no_code', 0] },
       },
     };
-    const aggLookupDressingDoneOtherDetails = {
+    const aggLookupProcessDoneDetails = {
       $lookup: {
         from: 'process_done_details',
-        localField: 'dressing_done_other_details_id',
+        localField: 'process_done_id',
         foreignField: '_id',
         as: 'process_done_details',
       },
@@ -647,7 +622,7 @@ export const fetch_smoking_dying_done_history = catchAsync(
       $sort: { [sortBy]: sort === 'desc' ? -1 : 1 },
     };
     const list_aggregate = [
-      aggLookupDressingDoneOtherDetails,
+      aggLookupProcessDoneDetails,
       aggLookupBundles,
       aggAddGlobalFields,
       aggUnwindDressingDoneOtherDetails,
@@ -663,7 +638,7 @@ export const fetch_smoking_dying_done_history = catchAsync(
     ];
 
     const result =
-      await smoking_dying_done_history_model.aggregate(list_aggregate);
+      await process_done_history_model.aggregate(list_aggregate);
 
     const aggCount = {
       $count: 'totalCount',
@@ -679,7 +654,7 @@ export const fetch_smoking_dying_done_history = catchAsync(
     ];
 
     const total_docs =
-      await smoking_dying_done_history_model.aggregate(count_total_docs);
+      await process_done_history_model.aggregate(count_total_docs);
 
     const totalPages = Math.ceil((total_docs[0]?.totalCount || 0) / limit);
 

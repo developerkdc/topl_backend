@@ -14,6 +14,7 @@ import issueForDressingRouter from './dressing/issue_for_dressing/issue_for_dres
 import issueForSmokingDyingRouter from './smoking_dying/issues_for_smoking_dying.routes.js';
 import smokingDyingDoneRouter from './smoking_dying/smoking_dying_done.routes.js';
 import dressingDoneRouter from './dressing/dressing_done/dressing.done.routes.js';
+import issueForGroupingRouter from './grouping/issues_for_grouping.routes.js';
 const factoryRouter = express.Router();
 
 factoryRouter.use(`/factory/cross-cutting`, crossCuttingFactoryRoutes);
@@ -45,5 +46,9 @@ factoryRouter.use('/factory/smoking-dying-done', smokingDyingDoneRouter);
 //dressing routes
 factoryRouter.use('/factory/dressing', issueForDressingRouter);
 factoryRouter.use('/factory/dressing-done', dressingDoneRouter);
+
+//grouping
+factoryRouter.use('/factory/grouping', issueForGroupingRouter);
+
 
 export default factoryRouter;
