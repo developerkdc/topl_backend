@@ -101,11 +101,23 @@ const peeling_done_items_schema = new mongoose.Schema(
       },
       required: [true, 'Output Type is required'],
     },
+    log_no: {
+      type: String,
+      required: [true, 'Log No is required'],
+    },
+    code: {
+      type: String,
+      required: [true, 'Code is required'],
+    },
     side: {
       type: String,
       default: 'A',
       uppercase: true,
       trim: true,
+    },
+    log_no_code: {
+      type: String,
+      required: [true, 'Log No Code is required'],
     },
     item_name: {
       type: String,
@@ -124,18 +136,6 @@ const peeling_done_items_schema = new mongoose.Schema(
       required: [true, 'Item Sub-Category Name is required'],
       trim: true,
       uppercase: true,
-    },
-    log_no_code: {
-      type: String,
-      required: [true, 'Log No Code is required'],
-    },
-    log_no: {
-      type: String,
-      required: [true, 'Log No is required'],
-    },
-    code: {
-      type: String,
-      required: [true, 'Code is required'],
     },
     length: {
       type: Number,

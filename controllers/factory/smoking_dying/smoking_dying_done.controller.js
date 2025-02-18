@@ -739,10 +739,7 @@ export const revert_process_done_details = catchAsync(
           StatusCodes.BAD_GATEWAY
         );
       }
-      console.log({
-        unique_identifier: issue_for_smoking_dying_unique_identifier,
-        pallet_number: issue_for_smoking_dying_pallet_number,
-      });
+      
       const update_issue_for_smoking_dying =
         await issues_for_smoking_dying_model.updateMany(
           {

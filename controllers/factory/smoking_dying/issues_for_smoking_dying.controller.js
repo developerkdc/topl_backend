@@ -663,38 +663,31 @@ export const revert_issued_for_smoking_dying_item = catchAsync(
         }
 
         // Fetch updated documents
-        for (let veneer_inventory_id of veneer_inventory_ids) {
-          const update_document = await veneer_inventory_items_model
-            .findOne({ _id: veneer_inventory_id })
-            .lean();
-          const veneer_invoice_id = update_document?.invoice_id;
+        const is_invoice_editable = await veneer_inventory_items_model
+          .find({
+            _id: { $nin: veneer_inventory_ids },
+            invoice_id: veneer_invoice_id,
+            issue_status: { $ne: null },
+          })
+          .lean();
 
-          const is_invoice_editable = await veneer_inventory_items_model
-            .find({
-              _id: { $ne: veneer_inventory_id },
-              invoice_id: veneer_invoice_id,
-              issue_status: { $ne: null },
-            })
-            .lean();
-
-          if (is_invoice_editable && is_invoice_editable?.length <= 0) {
-            await veneer_inventory_invoice_model.updateOne(
-              { _id: veneer_invoice_id },
-              {
-                $set: {
-                  isEditable: true,
-                },
+        if (is_invoice_editable && is_invoice_editable?.length <= 0) {
+          await veneer_inventory_invoice_model.updateOne(
+            { _id: veneer_invoice_id },
+            {
+              $set: {
+                isEditable: true,
               },
-              { session }
-            );
-          }
+            },
+            { session }
+          );
         }
       };
       const revert_to_dressing_done = async function () {
         const update_dressing_done_item =
           await dressing_done_items_model.updateMany(
             { _id: { $in: dressing_done_ids } },
-            { $set: { issue_status: null } },
+            { $set: { issue_status: null, updated_by: userDetails?._id } },
             { session }
           );
 
@@ -714,58 +707,54 @@ export const revert_issued_for_smoking_dying_item = catchAsync(
           );
         }
 
-        // Fetch updated documents
-        for (let dressing_done_id of dressing_done_ids) {
-          const update_document = await dressing_done_items_model
-            .findOne({ _id: dressing_done_id })
-            .lean();
-          const dressing_done_other_details_id =
-            update_document?.dressing_done_other_details_id;
-
-          const is_dressing_done_item_editable = await dressing_done_items_model
-            .find({
-              _id: { $ne: dressing_done_id },
-              dressing_done_other_details_id: dressing_done_other_details_id,
-              issue_status: { $ne: null },
-            })
-            .lean();
-
-          if (
-            is_dressing_done_item_editable &&
-            is_dressing_done_item_editable?.length <= 0
-          ) {
-            await dressing_done_other_details_model.updateOne(
-              { _id: dressing_done_other_details_id },
-              {
-                $set: {
-                  isEditable: true,
-                },
+        const delete_dressing_done_history_doc =
+          await dressing_done_history_model.deleteOne(
+            {
+              dressing_done_other_details_id:
+                dressing_done_other_details_id,
+              bundles: {
+                $all: dressing_done_ids
               },
-              { session }
-            );
+            },
+            { session }
+          );
 
-            const delete_dressing_done_history_doc =
-              await dressing_done_history_model.deleteOne(
-                {
-                  dressing_done_other_details_id:
-                    dressing_done_other_details_id,
-                  bundles: {
-                    $in: dressing_done_ids
-                  },
-                },
-                { session }
-              );
+        if (
+          !delete_dressing_done_history_doc.acknowledged ||
+          delete_dressing_done_history_doc.deletedCount === 0
+        ) {
+          throw new ApiError(
+            'Failed to delete dressing history documnet',
+            StatusCodes.BAD_REQUEST
+          );
+        }
 
-            if (
-              !delete_dressing_done_history_doc.acknowledged ||
-              delete_dressing_done_history_doc.deletedCount === 0
-            ) {
-              throw new ApiError(
-                'Failed to delete dressing history documnet',
-                StatusCodes.BAD_REQUEST
-              );
-            }
-          }
+        // Fetch updated documents
+        const dressing_done_other_details_id =
+          update_document?.dressing_done_other_details_id;
+
+        const is_dressing_done_item_editable = await dressing_done_items_model
+          .find({
+            _id: { $nin: dressing_done_ids },
+            dressing_done_other_details_id: dressing_done_other_details_id,
+            issue_status: { $ne: null },
+          })
+          .lean();
+
+        if (
+          is_dressing_done_item_editable &&
+          is_dressing_done_item_editable?.length <= 0
+        ) {
+          await dressing_done_other_details_model.updateOne(
+            { _id: dressing_done_other_details_id },
+            {
+              $set: {
+                isEditable: true,
+              },
+            },
+            { session }
+          );
+
         }
       };
 

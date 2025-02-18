@@ -22,11 +22,11 @@ export const add_peeling_done = catchAsync(async (req, res, next) => {
     const {
       other_details,
       items_details,
-      type,
+      type = null,
       wastage_details,
       available_details,
     } = req.body;
-    for (let i of ['other_details', 'items_details', 'type']) {
+    for (let i of ['other_details', 'items_details']) {
       if (!req.body?.[i]) {
         throw new ApiError(`Please provide ${i} details`, 400);
       }
@@ -119,7 +119,7 @@ export const add_peeling_done = catchAsync(async (req, res, next) => {
 
     if (
       issue_for_peeling_type?.type?.toLowerCase() ===
-        issue_for_peeling.wastage?.toLowerCase() &&
+      issue_for_peeling.wastage?.toLowerCase() &&
       wastage_details
     ) {
       const wastage_details_data = {
@@ -139,7 +139,7 @@ export const add_peeling_done = catchAsync(async (req, res, next) => {
 
     if (
       issue_for_peeling_type?.type?.toLowerCase() ===
-        issue_for_peeling.re_flitching?.toLowerCase() &&
+      issue_for_peeling.re_flitching?.toLowerCase() &&
       available_details
     ) {
       const re_flitching_details_data = {
@@ -186,11 +186,11 @@ export const edit_peeling_done = catchAsync(async (req, res, next) => {
     const {
       other_details,
       items_details,
-      type,
+      type = null,
       wastage_details,
       available_details,
     } = req.body;
-    for (let i of ['other_details', 'items_details', 'type']) {
+    for (let i of ['other_details', 'items_details']) {
       if (!req.body?.[i]) {
         throw new ApiError(`Please provide ${i} details`, 400);
       }
@@ -322,7 +322,7 @@ export const edit_peeling_done = catchAsync(async (req, res, next) => {
     //add wastage
     if (
       issue_for_peeling_type?.type?.toLowerCase() ===
-        issue_for_peeling.wastage?.toLowerCase() &&
+      issue_for_peeling.wastage?.toLowerCase() &&
       wastage_details
     ) {
       const wastage_details_data = {
@@ -344,7 +344,7 @@ export const edit_peeling_done = catchAsync(async (req, res, next) => {
     // add available
     if (
       issue_for_peeling_type?.type?.toLowerCase() ===
-        issue_for_peeling.re_flitching?.toLowerCase() &&
+      issue_for_peeling.re_flitching?.toLowerCase() &&
       available_details
     ) {
       const re_flitching_details_data = {

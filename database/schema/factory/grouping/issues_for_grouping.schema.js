@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { issues_for_status } from "../../../Utils/constants/constants.js";
 
 const issues_for_grouping_schema = new mongoose.Schema({
     process_done_id: {
@@ -12,6 +13,14 @@ const issues_for_grouping_schema = new mongoose.Schema({
     bundles: {
         type: [mongoose.Schema.Types.ObjectId],
         required: [true, 'Bundles Array is required'],
+    },
+    issued_from: {
+        type: String,
+        enum: {
+            values: [issues_for_status?.smoking_dying, issues_for_status?.dressing],
+            message: `Invalid issued from type {{VALUE}} it should be one of the ${issues_for_status?.smoking_dying}, ${issues_for_status?.dressing} `,
+        },
+        required: [true, 'Issued from is required'],
     },
     is_grouping_done: {
         type: Boolean,
@@ -102,7 +111,7 @@ export const issues_for_grouping_view_model = mongoose.model("issues_for_groupin
                     from: 'process_done_details',
                     localField: 'process_done_id',
                     foreignField: '_id',
-                    as: 'done_details',
+                    as: 'process_done_details',
                 },
             },
             {
@@ -110,7 +119,7 @@ export const issues_for_grouping_view_model = mongoose.model("issues_for_groupin
                     from: 'dressing_done_other_details',
                     localField: 'dressing_done_id',
                     foreignField: '_id',
-                    as: 'done_details',
+                    as: 'dressing_done_details',
                 },
             },
             {
@@ -124,7 +133,7 @@ export const issues_for_grouping_view_model = mongoose.model("issues_for_groupin
                     from: 'process_done_items_details',
                     localField: 'bundles',
                     foreignField: '_id',
-                    as: 'bundle_details',
+                    as: 'process_bundle_details',
                 },
             },
             {
@@ -132,13 +141,7 @@ export const issues_for_grouping_view_model = mongoose.model("issues_for_groupin
                     from: 'dressing_done_items',
                     localField: 'bundles',
                     foreignField: '_id',
-                    as: 'bundle_details',
-                },
-            },
-            {
-                $unwind: {
-                    path: '$bundle_details',
-                    preserveNullAndEmptyArrays: true,
+                    as: 'dressing_bundle_details',
                 },
             },
         ]
