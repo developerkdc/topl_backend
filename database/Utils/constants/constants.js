@@ -15,6 +15,9 @@ export const issues_for_status = {
   pressing: 'pressing',
   grouping: 'grouping',
   order: 'order',
+  tapping: 'tapping',
+  tapping_sample: 'tapping_sample',
+  tapping_stock: 'tapping_stock',
   chalan: 'chalan',
 };
 
