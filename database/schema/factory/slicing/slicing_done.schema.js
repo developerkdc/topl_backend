@@ -48,6 +48,12 @@ const slicing_done_other_details_schema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    final_amount: {
+      type: Number,
+      default: function () {
+        return this.total_amount + this.wastage_consumed_total_amount;
+      },
+    },
     remark: {
       type: String,
       default: null,

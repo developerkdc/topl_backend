@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-const smoking_dying_done_history_schema = new mongoose.Schema(
+const process_done_history_schema = new mongoose.Schema(
   {
     process_done_id: {
       type: mongoose.Schema.Types.ObjectId,
@@ -9,10 +9,6 @@ const smoking_dying_done_history_schema = new mongoose.Schema(
     bundles: {
       type: [mongoose.Schema.Types.ObjectId],
       required: [true, 'Bundles Array is required'],
-    },
-    status: {
-      type: Boolean,
-      default: true,
     },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,
@@ -26,10 +22,10 @@ const smoking_dying_done_history_schema = new mongoose.Schema(
   { timestamps: true }
 );
 
-const smoking_dying_done_history_model = mongoose.model(
-  'smoking_dying_done_history',
-  smoking_dying_done_history_schema,
-  'smoking_dying_done_history'
+const process_done_history_model = mongoose.model(
+  'process_done_history',
+  process_done_history_schema,
+  'process_done_history'
 );
 
-export default smoking_dying_done_history_model;
+export default process_done_history_model;
