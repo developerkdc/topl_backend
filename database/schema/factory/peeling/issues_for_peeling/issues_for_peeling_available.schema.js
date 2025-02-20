@@ -14,7 +14,7 @@ const issues_for_peeling_available_schema = new mongoose.Schema(
     diameter: {
       type: Number,
       default: 0,
-      required: [true, 'Available Width is required.'],
+      required: [true, 'Available Diameter is required.'],
     },
     cmt: {
       type: Number,

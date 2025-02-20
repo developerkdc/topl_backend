@@ -54,9 +54,9 @@ export const issues_for_grouping_view_model = mongoose.model("issues_for_groupin
         pipeline: [
             {
                 $lookup: {
-                    from: 'users',
-                    localField: 'created_by',
-                    foreignField: '_id',
+                    from: "users",
+                    localField: "created_by",
+                    foreignField: "_id",
                     pipeline: [
                         {
                             $project: {
@@ -66,24 +66,24 @@ export const issues_for_grouping_view_model = mongoose.model("issues_for_groupin
                                 first_name: 1,
                                 last_name: 1,
                                 email_id: 1,
-                                mobile_no: 1,
-                            },
-                        },
+                                mobile_no: 1
+                            }
+                        }
                     ],
-                    as: 'created_by',
-                },
+                    as: "created_by"
+                }
             },
             {
                 $unwind: {
-                    path: '$created_by',
-                    preserveNullAndEmptyArrays: true,
-                },
+                    path: "$created_by",
+                    preserveNullAndEmptyArrays: true
+                }
             },
             {
                 $lookup: {
-                    from: 'users',
-                    localField: 'updated_by',
-                    foreignField: '_id',
+                    from: "users",
+                    localField: "updated_by",
+                    foreignField: "_id",
                     pipeline: [
                         {
                             $project: {
@@ -93,57 +93,85 @@ export const issues_for_grouping_view_model = mongoose.model("issues_for_groupin
                                 first_name: 1,
                                 last_name: 1,
                                 email_id: 1,
-                                mobile_no: 1,
-                            },
-                        },
+                                mobile_no: 1
+                            }
+                        }
                     ],
-                    as: 'updated_by',
-                },
+                    as: "updated_by"
+                }
             },
             {
                 $unwind: {
-                    path: '$updated_by',
-                    preserveNullAndEmptyArrays: true,
-                },
+                    path: "$updated_by",
+                    preserveNullAndEmptyArrays: true
+                }
             },
             {
                 $lookup: {
-                    from: 'process_done_details',
-                    localField: 'process_done_id',
-                    foreignField: '_id',
-                    as: 'process_done_details',
-                },
-            },
-            {
-                $lookup: {
-                    from: 'dressing_done_other_details',
-                    localField: 'dressing_done_id',
-                    foreignField: '_id',
-                    as: 'dressing_done_details',
-                },
+                    from: "process_done_details",
+                    localField: "process_done_id",
+                    foreignField: "_id",
+                    as: "process_done_details"
+                }
             },
             {
                 $unwind: {
-                    path: '$done_details',
-                    preserveNullAndEmptyArrays: true,
-                },
+                    path: "$process_done_details",
+                    preserveNullAndEmptyArrays: true
+                }
             },
             {
                 $lookup: {
-                    from: 'process_done_items_details',
-                    localField: 'bundles',
-                    foreignField: '_id',
-                    as: 'process_bundle_details',
-                },
+                    from: "dressing_done_other_details",
+                    localField: "dressing_done_id",
+                    foreignField: "_id",
+                    as: "dressing_done_details"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$dressing_done_details",
+                    preserveNullAndEmptyArrays: true
+                }
             },
             {
                 $lookup: {
-                    from: 'dressing_done_items',
-                    localField: 'bundles',
-                    foreignField: '_id',
-                    as: 'dressing_bundle_details',
-                },
+                    from: "process_done_items_details",
+                    localField: "bundles",
+                    foreignField: "_id",
+                    as: "process_bundle_details"
+                }
             },
+            {
+                $lookup: {
+                    from: "dressing_done_items",
+                    localField: "bundles",
+                    foreignField: "_id",
+                    as: "dressing_bundle_details"
+                }
+            },
+            {
+                $set: {
+                    total_bundles: { $size: "$bundles" },
+                    other_details: {
+                        $cond: {
+                            if: "$dressing_done_details",
+                            then: "$dressing_done_details",
+                            else: "$process_done_details"
+                        }
+                    },
+                    bundles_details: {
+                        $cond: {
+                            if: { $gt: [{ $size: "$process_bundle_details" }, 0] },
+                            then: "$process_bundle_details",
+                            else: "$dressing_bundle_details"
+                        }
+                    }
+                }
+            },
+            {
+                $unset: ["process_bundle_details", "dressing_bundle_details", "dressing_done_details", "process_done_details"]
+            }
         ]
     })
-})()
+})();
