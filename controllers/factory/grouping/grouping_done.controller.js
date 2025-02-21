@@ -4,6 +4,9 @@ import ApiError from "../../../utils/errors/apiError.js";
 import { issues_for_grouping_model } from "../../../database/schema/factory/grouping/issues_for_grouping.schema.js";
 import { grouping_done_details_model, grouping_done_items_details_model } from "../../../database/schema/factory/grouping/grouping_done.schema.js";
 import ApiResponse from "../../../utils/ApiResponse.js";
+import { DynamicSearch } from "../../../utils/dynamicSearch/dynamic.js";
+import { dynamic_filter } from "../../../utils/dymanicFilter.js";
+import { StatusCodes } from "../../../utils/constants.js";
 
 export const add_grouping_done = catchAsync(async (req, res, next) => {
     const session = await mongoose.startSession();
@@ -254,10 +257,16 @@ export const fetch_all_grouping_done_items = catchAsync(async (req, res, next) =
 
     const filterData = dynamic_filter(filter);
 
+    const match_common_query = {
+        $match: {
+            is_damaged: false,
+            issue_status: null,
+        }
+    };
+
     const match_query = {
         ...search_query,
-        ...filterData,
-        issue_status: null,
+        ...filterData
     };
 
     const aggLookupOtherDetails = {
@@ -346,6 +355,7 @@ export const fetch_all_grouping_done_items = catchAsync(async (req, res, next) =
     };
 
     const list_aggregate = [
+        match_common_query,
         aggLookupOtherDetails,
         aggUnwindOtherDetails,
         aggCreatedUserDetails,
@@ -365,6 +375,7 @@ export const fetch_all_grouping_done_items = catchAsync(async (req, res, next) =
     };
 
     const count_total_docs = [
+        match_common_query,
         aggLookupOtherDetails,
         aggUnwindOtherDetails,
         aggCreatedUserDetails,
@@ -388,6 +399,39 @@ export const fetch_all_grouping_done_items = catchAsync(async (req, res, next) =
 });
 
 export const fetch_all_details_by_grouping_done_id = catchAsync(async (req, res, next) => {
+    const { id } = req.params;
+
+    if (!id && !mongoose.isValidObjectId(id)) {
+        throw new ApiError('Invalid ID', StatusCodes.NOT_FOUND);
+    }
+
+    const pipeline = [
+        {
+            $match: {
+                _id: mongoose.Types.ObjectId.createFromHexString(id),
+            },
+        },
+        {
+            $lookup: {
+                from: 'grouping_done_items_details',
+                localField: '_id',
+                foreignField: 'grouping_done_other_details_id',
+                as: 'grouping_done_items_details',
+            },
+        }
+    ];
+    const result = await grouping_done_details_model.aggregate(pipeline);
+
+    const response = new ApiResponse(
+        StatusCodes.OK,
+        'Details Fetched successfully',
+        result?.[0]
+    );
+
+    return res.status(StatusCodes.OK).json(response);
+});
+
+export const fetch_all_details_by_grouping_done_item_id = catchAsync(async (req, res, next) => {
     const { id } = req.params;
 
     if (!id && !mongoose.isValidObjectId(id)) {
@@ -426,7 +470,7 @@ export const fetch_all_details_by_grouping_done_id = catchAsync(async (req, res,
     return res.status(StatusCodes.OK).json(response);
 });
 
-export const revert_all_pending_done = catchAsync(async (req, res, next) => {
+export const revert_all_grouping_done = catchAsync(async (req, res, next) => {
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
@@ -552,8 +596,10 @@ export const fetch_all_damaged_grouping_done_items = catchAsync(async (req, res,
     const filterData = dynamic_filter(filter);
 
     const match_common_query = {
-        is_damaged: true,
-        issue_status: null,
+        $match: {
+            is_damaged: true,
+            issue_status: null,
+        }
     };
     const match_query = {
         ...search_query,
@@ -684,7 +730,7 @@ export const fetch_all_damaged_grouping_done_items = catchAsync(async (req, res,
     return res.status(200).json(response);
 });
 
-export const marked_as_grouping_done_damaged = catchAsync(async (req, res, next) => {
+export const add_grouping_done_damaged = catchAsync(async (req, res, next) => {
     const { id } = req.params;
     const userDetails = req.userDetails;
     if (!id && !mongoose.isValidObjectId(id)) {
@@ -717,7 +763,7 @@ export const marked_as_grouping_done_damaged = catchAsync(async (req, res, next)
 
     const response = new ApiResponse(
         StatusCodes.OK,
-        'Marked as damaged successfully',
+        'Add to damaged successfully',
         update_grouping_done_damaged
     );
 
