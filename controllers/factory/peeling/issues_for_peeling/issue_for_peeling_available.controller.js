@@ -692,6 +692,22 @@ export const fetch_all_details_by_reflitching_id = catchAsync(
           from: 'issues_for_peeling_available',
           foreignField: '_id',
           localField: 'issue_for_peeling_available_id',
+          pipeline: [
+            {
+              $lookup: {
+                from: 'issues_for_peelings',
+                localField: 'issue_for_peeling_id',
+                foreignField: '_id',
+                as: 'issue_for_peeling_details',
+              },
+            },
+            {
+              $unwind: {
+                path: '$issue_for_peeling_details',
+                preserveNullAndEmptyArrays: true,
+              },
+            }
+          ],
           as: 'issue_for_peeling_available_details',
         },
       },
