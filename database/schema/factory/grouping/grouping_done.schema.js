@@ -63,7 +63,7 @@ export const grouping_done_details_model = mongoose.model(
 
 const grouping_done_items_details_schema = new mongoose.Schema(
     {
-        grouping_done_id: {
+        grouping_done_other_details_id: {
             type: mongoose.Schema.Types.ObjectId,
             required: [true, 'Process done id is required'],
         },
@@ -243,6 +243,10 @@ const grouping_done_items_details_schema = new mongoose.Schema(
         timestamps: true,
     }
 );
+
+grouping_done_items_details_schema.index({ group_no: -1 }, { unique: true })
+grouping_done_items_details_schema.index({ group_no: -1, pallet_number: -1 }, { unique: true })
+
 export const grouping_done_items_details_model = mongoose.model(
     'grouping_done_items_details',
     grouping_done_items_details_schema,

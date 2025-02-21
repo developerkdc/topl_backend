@@ -41,6 +41,12 @@ const re_flitching_other_details_schema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    final_amount: {
+      type: Number,
+      default: function () {
+        return this.total_amount + this.wastage_consumed_total_amount;
+      },
+    },
     remark: {
       type: String,
       default: null,
@@ -113,15 +119,15 @@ const re_flitching_items_schema = new mongoose.Schema(
       trim: true,
       uppercase: true,
     },
-    log_no_code: {
-      type: String,
-      default: null,
-      trim: true,
-      uppercase: true,
-    },
     flitch_code: {
       type: String,
       required: [true, 'Flitch code is required'],
+      trim: true,
+      uppercase: true,
+    },
+    log_no_code: {
+      type: String,
+      default: null,
       trim: true,
       uppercase: true,
     },
