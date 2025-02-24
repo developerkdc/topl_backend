@@ -59,6 +59,7 @@ export const listing_flitch_inventory = catchAsync(async (req, res, next) => {
   const match_query = {
     ...filterData,
     ...search_query,
+    issue_status: null
   };
 
   const aggregate_stage = [
