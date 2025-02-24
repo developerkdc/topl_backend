@@ -469,7 +469,6 @@ export const edit_reflitching_details = catchAsync(async (req, res, next) => {
       const add_wastage_details_data =
         await issues_for_peeling_wastage_model.findOneAndUpdate(
           {
-            _id: wastage_id,
             issue_for_peeling_id: issue_for_peeling_id,
             issue_for_peeling_available_id: issue_for_peeling_available_id,
           },
