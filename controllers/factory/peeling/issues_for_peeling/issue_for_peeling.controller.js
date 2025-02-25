@@ -539,12 +539,20 @@ export const listing_issued_for_peeling = catchAsync(async (req, res, next) => {
 
   const filterData = dynamic_filter(filter);
 
+
   const match_query = {
     ...filterData,
     ...search_query,
   };
 
   // Aggregation stage
+
+  const aggCommonMatch = {
+    $match: {
+      is_peeling_done: false
+    }
+  }
+
   const aggCreatedByLookup = {
     $lookup: {
       from: 'users',
@@ -617,6 +625,7 @@ export const listing_issued_for_peeling = catchAsync(async (req, res, next) => {
   };
 
   const listAggregate = [
+    aggCommonMatch,
     aggCreatedByLookup,
     aggCreatedByUnwind,
     aggUpdatedByLookup,
@@ -635,6 +644,7 @@ export const listing_issued_for_peeling = catchAsync(async (req, res, next) => {
   }; // count aggregation stage
 
   const totalAggregate = [
+    aggCommonMatch,
     aggCreatedByLookup,
     aggCreatedByUnwind,
     aggUpdatedByLookup,

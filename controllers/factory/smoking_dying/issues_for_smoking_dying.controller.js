@@ -432,7 +432,12 @@ export const listing_issued_for_smoking_dying = catchAsync(
       $limit: parseInt(limit),
     };
 
-    const listAggregate = [aggMatch, aggSort, aggSkip, aggLimit]; // aggregation pipiline
+    const listAggregate = [
+      aggMatch,
+      aggSort,
+      aggSkip,
+      aggLimit
+    ]; // aggregation pipiline
 
     const issue_for_smoking_dying =
       await issues_for_smoking_dying_view_model.aggregate(listAggregate);
@@ -441,7 +446,10 @@ export const listing_issued_for_smoking_dying = catchAsync(
       $count: 'totalCount',
     }; // count aggregation stage
 
-    const totalAggregate = [aggMatch, aggCount]; // total aggregation pipiline
+    const totalAggregate = [
+      aggMatch,
+      aggCount
+    ]; // total aggregation pipiline
 
     const totalDocument =
       await issues_for_smoking_dying_view_model.aggregate(totalAggregate);

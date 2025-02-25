@@ -450,6 +450,12 @@ export const listing_issued_for_slicing_inventory = catchAsync(
     };
 
     // Aggregation stage
+    const aggCommonMatch = {
+      $match: {
+        is_slicing_completed: false
+      }
+    }
+
     const aggCreatedByLookup = {
       $lookup: {
         from: 'users',
@@ -522,6 +528,7 @@ export const listing_issued_for_slicing_inventory = catchAsync(
     };
 
     const listAggregate = [
+      aggCommonMatch,
       aggCreatedByLookup,
       aggCreatedByUnwind,
       aggUpdatedByLookup,
@@ -540,6 +547,7 @@ export const listing_issued_for_slicing_inventory = catchAsync(
     }; // count aggregation stage
 
     const totalAggregate = [
+      aggCommonMatch,
       aggCreatedByLookup,
       aggCreatedByUnwind,
       aggUpdatedByLookup,
