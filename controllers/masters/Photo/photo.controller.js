@@ -44,7 +44,19 @@ export const addPhoto = catchAsync(async (req, res, next) => {
       bannerImage = bannerImagesFile?.[0];
     }
 
+    let other_details = {}
+    if (req.body?.other_details) {
+      try {
+        const other_details_data = JSON.parse(req.body?.other_details)
+        other_details = other_details_data
+      } catch (error) {
+        console.log("Failed to parse other details", error)
+        throw error
+      }
+    }
+
     const photoData = {
+      ...other_details,
       sr_no: maxSrNo,
       photo_number: photo_number,
       images: images,
@@ -68,20 +80,6 @@ export const addPhoto = catchAsync(async (req, res, next) => {
 
     return res.status(201).json(response);
   } catch (error) {
-    // if (req.files?.images) {
-    //   req.files?.images?.forEach((file) => {
-    //     if (fs.existsSync(file.path)) {
-    //       fs.unlinkSync(file.path);
-    //     }
-    //   });
-    // }
-    // if(req.files?.banner_image){
-    //   req.files?.banner_image?.forEach((file) => {
-    //     if (fs.existsSync(file.path)) {
-    //       fs.unlinkSync(file.path);
-    //     }
-    //   });
-    // }
     throw error;
   }
 });
@@ -125,14 +123,25 @@ export const updatePhoto = catchAsync(async (req, res, next) => {
       throw error;
     }
 
-    const fetchPhotoData = await photoModel.findOne({ _id: id });
-
+    let other_details = {}
+    if (req.body?.other_details) {
+      try {
+        const other_details_data = JSON.parse(req.body?.other_details)
+        other_details = other_details_data
+      } catch (error) {
+        console.log("Failed to parse other details", error)
+        throw error
+      }
+    }
+    
     const photoData = {
+      ...other_details,
       photo_number: photo_number,
       status: status,
       updated_by: authUserDetail?._id,
     };
-
+    
+    const fetchPhotoData = await photoModel.findOne({ _id: id });
     if (bannerImage) {
       photoData.banner_image = bannerImage;
       if (fs.existsSync(fetchPhotoData?.banner_image?.path)) {
@@ -187,20 +196,6 @@ export const updatePhoto = catchAsync(async (req, res, next) => {
 
     return res.status(201).json(response);
   } catch (error) {
-    // if (req.files?.images) {
-    //   req.files?.images?.forEach((file) => {
-    //     if (fs.existsSync(file.path)) {
-    //       fs.unlinkSync(file.path);
-    //     }
-    //   });
-    // }
-    // if(req.files?.banner_image){
-    //   req.files?.banner_image?.forEach((file) => {
-    //     if (fs.existsSync(file.path)) {
-    //       fs.unlinkSync(file.path);
-    //     }
-    //   });
-    // }
     throw error;
   }
 });
