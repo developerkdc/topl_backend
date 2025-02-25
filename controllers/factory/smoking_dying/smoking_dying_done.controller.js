@@ -531,7 +531,7 @@ export const fetch_smoking_dying_done_history = catchAsync(
     const aggAddGlobalFields = {
       $addFields: {
         item_name: { $arrayElemAt: ['$bundle_details.item_name', 0] },
-        item_sub_cat: {
+        item_sub_category_name: {
           $arrayElemAt: ['$bundle_details.item_sub_category_name', 0],
         },
         issue_status: { $arrayElemAt: ['$bundle_details.issue_status', 0] },

@@ -6,6 +6,7 @@ import { dynamic_filter } from '../../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../../utils/dynamicSearch/dynamic.js';
 import { issues_for_status } from '../../../../database/Utils/constants/constants.js';
 import { issue_for_dressing_model } from '../../../../database/schema/factory/slicing/slicing_done.schema.js';
+import mongoose from 'mongoose';
 
 export const list_issue_for_dressing = catchAsync(async (req, res) => {
   const {
@@ -108,6 +109,34 @@ export const fetch_single_issue_of_dressing_item = catchAsync(
       throw new ApiError('No Data Found', StatusCodes.NOT_FOUND);
     }
 
+    const response = new ApiResponse(
+      StatusCodes.OK,
+      'Data fetched successfully',
+      result
+    );
+
+    return res.status(StatusCodes.OK).json(response);
+  }
+);
+
+export const fetch_all_issue_for_dressing_items_by_item_other_details_id = catchAsync(
+  async (req, res) => {
+    const { id } = req.params;
+
+    if (!id) {
+      throw new ApiError('ID is missing', StatusCodes.NOT_FOUND);
+    }
+
+    const result = await issue_for_dressing_model.aggregate([
+      {
+        $match: {
+          $or: [
+            { peeling_done_other_details_id: mongoose.Types.ObjectId.createFromHexString(id) },
+            { slicing_done_other_details_id: mongoose.Types.ObjectId.createFromHexString(id) }
+          ]
+        }
+      }
+    ]);
     const response = new ApiResponse(
       StatusCodes.OK,
       'Data fetched successfully',
