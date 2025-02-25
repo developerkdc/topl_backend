@@ -133,11 +133,11 @@ const photoSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
-    collection: {
+    collection_name: {
       type: String,
       uppercase: true,
       trim: true,
-      required: [true, 'Collection is required']
+      required: [true, 'Collection Name is required']
     },
     grain_direction: {
       type: String,
