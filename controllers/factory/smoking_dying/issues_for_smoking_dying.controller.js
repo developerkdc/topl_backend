@@ -432,7 +432,12 @@ export const listing_issued_for_smoking_dying = catchAsync(
       $limit: parseInt(limit),
     };
 
-    const listAggregate = [aggMatch, aggSort, aggSkip, aggLimit]; // aggregation pipiline
+    const listAggregate = [
+      aggMatch,
+      aggSort,
+      aggSkip,
+      aggLimit
+    ]; // aggregation pipiline
 
     const issue_for_smoking_dying =
       await issues_for_smoking_dying_view_model.aggregate(listAggregate);
@@ -441,7 +446,10 @@ export const listing_issued_for_smoking_dying = catchAsync(
       $count: 'totalCount',
     }; // count aggregation stage
 
-    const totalAggregate = [aggMatch, aggCount]; // total aggregation pipiline
+    const totalAggregate = [
+      aggMatch,
+      aggCount
+    ]; // total aggregation pipiline
 
     const totalDocument =
       await issues_for_smoking_dying_view_model.aggregate(totalAggregate);
@@ -662,18 +670,25 @@ export const revert_issued_for_smoking_dying_item = catchAsync(
           );
         }
 
+        const veneer_inventory_details = await veneer_inventory_items_model
+          .find({
+            _id: { $nin: veneer_inventory_ids },
+          })
+          .lean();
+        const veneer_invoice_id = veneer_inventory_details.map((ele) => ele.invoice_id);
+
         // Fetch updated documents
         const is_invoice_editable = await veneer_inventory_items_model
           .find({
             _id: { $nin: veneer_inventory_ids },
-            invoice_id: veneer_invoice_id,
+            invoice_id: { $in: veneer_invoice_id },
             issue_status: { $ne: null },
           })
           .lean();
 
         if (is_invoice_editable && is_invoice_editable?.length <= 0) {
           await veneer_inventory_invoice_model.updateOne(
-            { _id: veneer_invoice_id },
+            { _id: { $in: veneer_invoice_id } },
             {
               $set: {
                 isEditable: true,
@@ -683,6 +698,7 @@ export const revert_issued_for_smoking_dying_item = catchAsync(
           );
         }
       };
+
       const revert_to_dressing_done = async function () {
         const update_dressing_done_item =
           await dressing_done_items_model.updateMany(

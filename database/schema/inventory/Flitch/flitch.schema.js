@@ -67,6 +67,13 @@ export const item_details_schema = new mongoose.Schema(
       trim: true,
       uppercase: true,
     },
+    log_no_code:{
+      type:String,
+      trim: true,
+      uppercase: true,
+      default:null,
+      // required:[true,'Log No Code is required'],
+    },
     flitch_formula: {
       type: String,
       required: [true, 'Flitch formula is required'],

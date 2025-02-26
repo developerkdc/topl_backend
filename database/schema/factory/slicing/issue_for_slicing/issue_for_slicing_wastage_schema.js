@@ -53,7 +53,7 @@ const issue_for_slicing_wastage_schema = new mongoose.Schema(
 );
 
 issue_for_slicing_wastage_schema?.index(
-  { issue_for_scliing_id: 1 },
+  { issue_for_slicing_id: 1 },
   { unique: true }
 );
 const issue_for_slicing_wastage_model = mongoose.model(

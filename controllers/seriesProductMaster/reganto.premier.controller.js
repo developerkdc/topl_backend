@@ -105,6 +105,22 @@ export const updateRegantoPremierDetails = catchAsync(
         StatusCodes.BAD_REQUEST
       );
     }
+    const non_required_fields = [
+      'default_item_name',
+      'default_item_name_id',
+      'base_sub_category',
+      'base_min_thickness',
+      'veneer_min_thickness',
+      'instructions',
+      'process_flow',
+      'remark',
+    ];
+
+    for (let field of non_required_fields) {
+      if (!(field in reqBody)) {
+        reqBody[field] = null;
+      }
+    }
     const updatedDetails = {
       ...reqBody,
       image: image,

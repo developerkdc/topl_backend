@@ -9,6 +9,7 @@ import {
 } from '../../../database/schema/factory/smoking_dying/issues_for_smoking_dying.schema.js';
 import {
   process_done_details_model,
+  process_done_details_view_model,
   process_done_items_details_model,
 } from '../../../database/schema/factory/smoking_dying/smoking_dying_done.schema.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
@@ -416,6 +417,7 @@ export const fetch_all_process_done_details = catchAsync(
         preserveNullAndEmptyArrays: true,
       },
     };
+
     const agg_match = {
       $match: {
         ...match_query,
@@ -434,35 +436,24 @@ export const fetch_all_process_done_details = catchAsync(
     };
 
     const aggregation_pipeline = [
-      agg_lookup_items,
-      agg_lookup_created_by,
-      agg_unwind_created_by,
-      agg_lookup_updated_by,
-      agg_unwind_updated_by,
       agg_match,
       agg_sort,
       agg_skip,
       agg_limit,
     ];
 
-    const result =
-      await process_done_details_model.aggregate(aggregation_pipeline);
+    const result = await process_done_details_view_model.aggregate(aggregation_pipeline);
 
     const agg_count = {
       $count: 'totalCount',
     };
 
     const total_count_aggregation_pipeline = [
-      agg_lookup_items,
-      agg_lookup_created_by,
-      agg_unwind_created_by,
-      agg_lookup_updated_by,
-      agg_unwind_updated_by,
       agg_match,
       agg_count,
     ];
 
-    const total_docs = await process_done_details_model.aggregate(
+    const total_docs = await process_done_details_view_model.aggregate(
       total_count_aggregation_pipeline
     );
 
@@ -530,12 +521,13 @@ export const fetch_smoking_dying_done_history = catchAsync(
     };
     const aggAddGlobalFields = {
       $addFields: {
-        item_name: { $arrayElemAt: ['$bundle_details.item_name', 0] },
-        item_sub_cat: {
-          $arrayElemAt: ['$bundle_details.item_sub_category_name', 0],
+        item_name: { $first: "$bundle_details.item_name" },
+        item_sub_category_name: { $first: "$bundle_details.item_sub_category_name" },
+        total_bundles: {
+          $size: "$bundle_details"
         },
-        issue_status: { $arrayElemAt: ['$bundle_details.issue_status', 0] },
-        log_no_code: { $arrayElemAt: ['$bundle_details.log_no_code', 0] },
+        issue_status: { $first: '$bundle_details.issue_status' },
+        log_no_code: { $first: '$bundle_details.log_no_code' },
       },
     };
     const aggLookupProcessDoneDetails = {
@@ -739,7 +731,7 @@ export const revert_process_done_details = catchAsync(
           StatusCodes.BAD_GATEWAY
         );
       }
-      
+
       const update_issue_for_smoking_dying =
         await issues_for_smoking_dying_model.updateMany(
           {

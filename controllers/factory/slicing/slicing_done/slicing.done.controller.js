@@ -27,11 +27,11 @@ export const add_slicing_done = catchAsync(async (req, res, next) => {
     const {
       other_details,
       items_details,
-      type,
+      type = null,
       wastage_details,
       available_details,
     } = req.body;
-    for (let i of ['other_details', 'items_details', 'type']) {
+    for (let i of ['other_details', 'items_details']) {
       if (!req.body?.[i]) {
         throw new ApiError(`Please provide ${i} details`, 400);
       }
@@ -325,7 +325,6 @@ export const fetch_all_slicing_done_items = catchAsync(
       aggLimit,
     ];
 
-    console.log('agg => ', list_aggregate);
     const result = await slicing_done_items_model?.aggregate(list_aggregate);
 
     const aggCount = {
@@ -599,11 +598,11 @@ export const edit_slicing_done = catchAsync(async (req, res, next) => {
     const {
       other_details,
       items_details,
-      type,
+      type = null,
       wastage_details,
       available_details,
     } = req.body;
-    for (let i of ['other_details', 'items_details', 'type']) {
+    for (let i of ['other_details', 'items_details']) {
       if (!req.body?.[i]) {
         throw new ApiError(`Please provide ${i} details`, 400);
       }
