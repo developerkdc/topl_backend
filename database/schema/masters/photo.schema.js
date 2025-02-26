@@ -27,59 +27,49 @@ const photoSchema = new mongoose.Schema(
     current_stage: {
       type: String,
       trim: true,
-      required: [true, 'Current Stage is required']
+      default:null
     },
     group_no: {
       type: String,
       trim: true,
-      required: [true, 'Group No is required']
+      default:null
     },
     item_name: {
       type: String,
       trim: true,
-      required: [true, 'Item Name is required']
+      default:null
     },
     length: {
       type: Number,
-      required: [true, 'Length is required'],
+      default:null,
     },
     width: {
       type: Number,
-      required: [true, 'Width is required'],
+      default:null
     },
     thickness: {
       type: Number,
-      required: [true, 'Thickness is required'],
+      default:null
     },
     no_sheet: {
       type: Number,
-      required: [true, 'No of Sheets is required'],
+      default:null
+    },
+    timber_colour_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
+    timber_colour_name: {
+      type: String,
+      default: null,
     },
     process_id: {
       type: mongoose.Schema.Types.ObjectId,
-      required: [true, 'process id is required'],
+      default:null,
     },
     process_name: {
       type: String,
-      required: [true, 'process name is required'],
-    },
-    cut_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: [true, 'cut id is required'],
-    },
-    cut_name: {
-      type: String,
-      trim: true,
-      uppercase: true,
-      required: [true, 'cut name is required'],
-    },
-    color_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      default: null,
-    },
-    color_name: {
-      type: String,
-      default: null,
+      default:null,
     },
     character_id: {
       type: mongoose.Schema.Types.ObjectId,
@@ -113,11 +103,23 @@ const photoSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Grade Name is required'],
     },
-    placement: {
+    cut_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, 'cut id is required'],
+    },
+    cut_name: {
       type: String,
-      uppercase: true,
       trim: true,
-      required: [true, 'Placement is required']
+      uppercase: true,
+      required: [true, 'cut name is required'],
+    },
+    process_color_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
+    process_color_name: {
+      type: String,
+      default: null,
     },
     sales_item_name: {
       type: String,
@@ -125,13 +127,15 @@ const photoSchema = new mongoose.Schema(
       uppercase: true,
       required: [true, 'Sales Item Name is required']
     },
-    timber_colour_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      default: null,
-    },
-    timber_colour_name: {
+
+
+
+
+    placement: {
       type: String,
-      default: null,
+      uppercase: true,
+      trim: true,
+      required: [true, 'Placement is required']
     },
     collection_name: {
       type: String,
@@ -195,12 +199,10 @@ const photoSchema = new mongoose.Schema(
     min_rate: {
       type: Number,
       default: 0,
-      required: [true, 'Min Rate is required']
     },
     max_rate: {
       type: Number,
       default: 0,
-      required: [true, 'Max Rate is required']
     },
   },
   { timestamps: true }

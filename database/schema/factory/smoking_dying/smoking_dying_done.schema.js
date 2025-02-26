@@ -281,6 +281,8 @@ export const process_done_details_view_model = mongoose.model("process_done_deta
         },
         {
           $addFields: {
+            item_name: { $first: "$process_done_items_details.item_name" },
+            item_sub_category_name: { $first: "$process_done_items_details.item_sub_category_name" },
             total_bundles: {
               $size: "$process_done_items_details"
             },
