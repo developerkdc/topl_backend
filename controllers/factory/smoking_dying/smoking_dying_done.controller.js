@@ -9,6 +9,7 @@ import {
 } from '../../../database/schema/factory/smoking_dying/issues_for_smoking_dying.schema.js';
 import {
   process_done_details_model,
+  process_done_details_view_model,
   process_done_items_details_model,
 } from '../../../database/schema/factory/smoking_dying/smoking_dying_done.schema.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
@@ -416,6 +417,7 @@ export const fetch_all_process_done_details = catchAsync(
         preserveNullAndEmptyArrays: true,
       },
     };
+
     const agg_match = {
       $match: {
         ...match_query,
@@ -434,35 +436,24 @@ export const fetch_all_process_done_details = catchAsync(
     };
 
     const aggregation_pipeline = [
-      agg_lookup_items,
-      agg_lookup_created_by,
-      agg_unwind_created_by,
-      agg_lookup_updated_by,
-      agg_unwind_updated_by,
       agg_match,
       agg_sort,
       agg_skip,
       agg_limit,
     ];
 
-    const result =
-      await process_done_details_model.aggregate(aggregation_pipeline);
+    const result = await process_done_details_view_model.aggregate(aggregation_pipeline);
 
     const agg_count = {
       $count: 'totalCount',
     };
 
     const total_count_aggregation_pipeline = [
-      agg_lookup_items,
-      agg_lookup_created_by,
-      agg_unwind_created_by,
-      agg_lookup_updated_by,
-      agg_unwind_updated_by,
       agg_match,
       agg_count,
     ];
 
-    const total_docs = await process_done_details_model.aggregate(
+    const total_docs = await process_done_details_view_model.aggregate(
       total_count_aggregation_pipeline
     );
 
@@ -739,7 +730,7 @@ export const revert_process_done_details = catchAsync(
           StatusCodes.BAD_GATEWAY
         );
       }
-      
+
       const update_issue_for_smoking_dying =
         await issues_for_smoking_dying_model.updateMany(
           {
