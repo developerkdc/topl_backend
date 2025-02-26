@@ -521,12 +521,13 @@ export const fetch_smoking_dying_done_history = catchAsync(
     };
     const aggAddGlobalFields = {
       $addFields: {
-        item_name: { $arrayElemAt: ['$bundle_details.item_name', 0] },
-        item_sub_category_name: {
-          $arrayElemAt: ['$bundle_details.item_sub_category_name', 0],
+        item_name: { $first: "$bundle_details.item_name" },
+        item_sub_category_name: { $first: "$bundle_details.item_sub_category_name" },
+        total_bundles: {
+          $size: "$bundle_details"
         },
-        issue_status: { $arrayElemAt: ['$bundle_details.issue_status', 0] },
-        log_no_code: { $arrayElemAt: ['$bundle_details.log_no_code', 0] },
+        issue_status: { $first: '$bundle_details.issue_status' },
+        log_no_code: { $first: '$bundle_details.log_no_code' },
       },
     };
     const aggLookupProcessDoneDetails = {
