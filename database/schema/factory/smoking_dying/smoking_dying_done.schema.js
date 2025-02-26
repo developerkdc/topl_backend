@@ -254,3 +254,100 @@ export const process_done_items_details_model = mongoose.model(
   process_done_items_details_schema,
   'process_done_items_details'
 );
+
+const process_done_details_view_schema = new mongoose.Schema(
+  {},
+  {
+    strict: false,
+    autoCreate: false,
+    autoIndex: false,
+  }
+);
+
+export const process_done_details_view_model = mongoose.model("process_done_details_views", process_done_details_view_schema, "process_done_details_views");
+
+(
+  async function () {
+    await process_done_details_view_model.createCollection({
+      viewOn: "process_done_details",
+      pipeline: [
+        {
+          $lookup: {
+            from: 'process_done_items_details',
+            localField: '_id',
+            foreignField: 'process_done_id',
+            as: 'process_done_items_details',
+          },
+        },
+        {
+          $addFields: {
+            total_bundles: {
+              $size: "$process_done_items_details"
+            },
+            available_bundles: {
+              $size: {
+                $filter: {
+                  input: "$process_done_items_details",
+                  as: "item",
+                  cond: {
+                    $eq: ["$$item.issue_status", null]
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'created_by',
+            foreignField: '_id',
+            pipeline: [
+              {
+                $project: {
+                  first_name: 1,
+                  last_name: 1,
+                  user_name: 1,
+                  user_type: 1,
+                  email_id: 1,
+                },
+              },
+            ],
+            as: 'created_user_details',
+          },
+        },
+        {
+          $unwind: {
+            path: '$created_user_details',
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'updated_by',
+            foreignField: '_id',
+            pipeline: [
+              {
+                $project: {
+                  first_name: 1,
+                  last_name: 1,
+                  user_name: 1,
+                  user_type: 1,
+                  email_id: 1,
+                },
+              },
+            ],
+            as: 'updated_user_details',
+          },
+        },
+        {
+          $unwind: {
+            path: '$updated_user_details',
+            preserveNullAndEmptyArrays: true,
+          },
+        }
+      ]
+    })
+  }
+)()
