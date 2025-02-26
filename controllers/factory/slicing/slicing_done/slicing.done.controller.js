@@ -325,7 +325,6 @@ export const fetch_all_slicing_done_items = catchAsync(
       aggLimit,
     ];
 
-    console.log('agg => ', list_aggregate);
     const result = await slicing_done_items_model?.aggregate(list_aggregate);
 
     const aggCount = {

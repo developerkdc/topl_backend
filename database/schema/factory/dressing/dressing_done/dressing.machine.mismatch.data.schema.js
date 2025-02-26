@@ -18,7 +18,8 @@ const dressing_miss_match_data_schema = new mongoose.Schema(
     },
     item_id: {
       type: mongoose.Schema.Types.ObjectId,
-      required: [true, 'Item ID is required.'],
+      // required: [true, 'Item ID is required.'],
+      default: null,
     },
     length: {
       type: Number,
@@ -45,8 +46,9 @@ const dressing_miss_match_data_schema = new mongoose.Schema(
       required: [true, 'Bundle Number is required'],
     },
     pallet_number: {
-      type: Number,
+      type: String,
       required: [true, 'Pallet Number is required.'],
+      trim: true,
     },
     process_status: {
       type: String,
@@ -85,12 +87,12 @@ const dressing_miss_match_data_schema = new mongoose.Schema(
 );
 
 dressing_miss_match_data_schema.index(
-  { pallet_number: 1, bundle_number: 1 },
+  { pallet_number: 1, bundle_number: 1, log_no_code: 1 },
   { unique: true }
 );
 dressing_miss_match_data_schema.index({ pallet_number: 1 });
 dressing_miss_match_data_schema.index({ bundle_number: 1 });
-dressing_miss_match_data_schema.index({ log_no_code: 1 }, { unique: true });
+dressing_miss_match_data_schema.index({ log_no_code: 1 });
 
 const dressing_miss_match_data_model = mongoose.model(
   'dressing_miss_match_data',

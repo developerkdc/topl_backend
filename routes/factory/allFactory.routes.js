@@ -14,6 +14,7 @@ import issueForDressingRouter from './dressing/issue_for_dressing/issue_for_dres
 import issueForSmokingDyingRouter from './smoking_dying/issues_for_smoking_dying.routes.js';
 import smokingDyingDoneRouter from './smoking_dying/smoking_dying_done.routes.js';
 import dressingDoneRouter from './dressing/dressing_done/dressing.done.routes.js';
+import issue_for_slicing_wastage_router from './slicing/issue_for_slicing/issue_for_slicing_wastage.routes.js';
 import issueForGroupingRouter from './grouping/issues_for_grouping.routes.js';
 import issue_for_slicing_wastage_router from './slicing/issue_for_slicing/issue_for_slicing_wastage.routes.js';
 import groupingDoneRouter from './grouping/grouping_done.routes.js';

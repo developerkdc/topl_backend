@@ -45,6 +45,9 @@ const getConfigs = () => {
     cookie: {
       cookie_expire: process.env.COOKIE_EXPIRE,
     },
+    redis: {
+      port: process.env.REDIS_PORT || 6379,
+    },
   };
 };
 
