@@ -30,7 +30,8 @@ const multerFunction = (destination) => {
   const fileFilter = function (req, file, cb) {
     if (
       file.mimetype ===
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+      '.accdb'
     ) {
       cb(null, true);
     } else {

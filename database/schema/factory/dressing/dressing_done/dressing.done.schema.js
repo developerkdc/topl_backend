@@ -17,7 +17,8 @@ const dressing_done_other_details_schema = new mongoose.Schema(
     },
     shift: {
       type: String,
-      required: [true, 'Shift is required.'],
+      // required: [true, 'Shift is required.'],
+      default: null,
       trim: true,
       uppercase: true,
     },
@@ -40,6 +41,8 @@ const dressing_done_other_details_schema = new mongoose.Schema(
     remark: {
       type: String,
       default: null,
+      trim: true,
+      uppercase: true,
     },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,
@@ -192,6 +195,8 @@ const dressing_done_items_schema = new mongoose.Schema(
     remark: {
       type: String,
       default: null,
+      trim: true,
+      uppercase: true,
     },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,
@@ -208,7 +213,7 @@ const dressing_done_items_schema = new mongoose.Schema(
 dressing_done_items_schema.index({ log_no_code: 1 });
 dressing_done_items_schema.index({ pallet_number: 1 });
 dressing_done_items_schema.index(
-  { pallet_number: 1, bundle_number: 1 },
+  { log_no_code: 1, pallet_number: 1, bundle_number: 1 },
   { unique: true }
 );
 dressing_done_items_schema.index({ item_name: 1 });
