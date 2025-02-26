@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { dressing_issue_status } from '../../../../Utils/constants/constants.js';
+import { issues_for_status } from '../../../../Utils/constants/constants.js';
 
 const dressing_done_other_details_schema = new mongoose.Schema(
   {
@@ -172,11 +172,11 @@ const dressing_done_items_schema = new mongoose.Schema(
       type: String,
       enum: {
         values: [
-          dressing_issue_status?.issue_for_grouping_clipping,
-          dressing_issue_status.issue_for_order,
-          dressing_issue_status.issue_for_smoking_dying,
+          issues_for_status.grouping,
+          issues_for_status.order,
+          issues_for_status.smoking_dying,
         ],
-        message: `Invalid Issue Status -> {{VALUE}} it must be one of the ${dressing_issue_status.issue_for_grouping_clipping}, ${dressing_issue_status.issue_for_order}, ${dressing_issue_status.issue_for_smoking_dying} `,
+        message: `Invalid Issue Status -> {{VALUE}} it must be one of the ${issues_for_status.grouping}, ${issues_for_status.order}, ${issues_for_status.smoking_dying} `,
       },
       default: null,
     },

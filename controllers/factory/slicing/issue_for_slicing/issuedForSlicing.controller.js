@@ -276,7 +276,6 @@ export const add_issue_for_slicing_from_flitching_done = catchAsync(
       const issue_for_slicing_data = flitching_done_data?.map((item, index) => {
         issue_for_flitching_ids_set?.add(item?.issue_for_flitching_id);
         return {
-          sr_no: maxSrNo + index,
           flitch_inventory_item_id: null,
           log_inventory_item_id: item?.log_inventory_item_id,
           issue_for_flitching_id: item?.issue_for_flitching_id,
@@ -451,6 +450,12 @@ export const listing_issued_for_slicing_inventory = catchAsync(
     };
 
     // Aggregation stage
+    const aggCommonMatch = {
+      $match: {
+        is_slicing_completed: false
+      }
+    }
+
     const aggCreatedByLookup = {
       $lookup: {
         from: 'users',
@@ -523,6 +528,7 @@ export const listing_issued_for_slicing_inventory = catchAsync(
     };
 
     const listAggregate = [
+      aggCommonMatch,
       aggCreatedByLookup,
       aggCreatedByUnwind,
       aggUpdatedByLookup,
@@ -541,6 +547,7 @@ export const listing_issued_for_slicing_inventory = catchAsync(
     }; // count aggregation stage
 
     const totalAggregate = [
+      aggCommonMatch,
       aggCreatedByLookup,
       aggCreatedByUnwind,
       aggUpdatedByLookup,

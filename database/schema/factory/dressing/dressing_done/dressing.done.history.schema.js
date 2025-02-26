@@ -10,10 +10,6 @@ const dressing_done_history_schema = new mongoose.Schema(
       type: [mongoose.Schema.Types.ObjectId],
       required: [true, 'Bundles Array is required'],
     },
-    status: {
-      type: Boolean,
-      default: true,
-    },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Created By is required.'],

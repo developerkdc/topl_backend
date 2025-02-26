@@ -15,6 +15,9 @@ export const issues_for_status = {
   pressing: 'pressing',
   grouping: 'grouping',
   order: 'order',
+  tapping: 'tapping',
+  tapping_sample: 'tapping_sample',
+  tapping_stock: 'tapping_stock',
   chalan: 'chalan',
 };
 
@@ -53,8 +56,3 @@ export const dressing_error_types = {
   dressing_done: 'dressing_done',
 };
 
-export const dressing_issue_status = {
-  issue_for_smoking_dying: 'issue_for_smoking_dying',
-  issue_for_grouping_clipping: 'issue_for_grouping_clipping',
-  issue_for_order: 'issue_for_order',
-};
