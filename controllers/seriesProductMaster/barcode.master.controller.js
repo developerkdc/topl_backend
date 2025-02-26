@@ -176,7 +176,7 @@ export const fetchBarcodeList = catchAsync(async (req, res, next) => {
   const filter = req.body?.filter;
 
   let search_query = {};
-
+  console.log('search field => ', search);
   if (search != '' && req?.body?.searchFields) {
     const search_data = DynamicSearch(
       search,
@@ -185,6 +185,7 @@ export const fetchBarcodeList = catchAsync(async (req, res, next) => {
       string,
       arrayField
     );
+
     if (search_data?.length == 0) {
       return res.status(404).json({
         statusCode: 404,
@@ -197,6 +198,7 @@ export const fetchBarcodeList = catchAsync(async (req, res, next) => {
     }
     search_query = search_data;
   }
+  console.log(search_query);
 
   const filterData = dynamic_filter(filter);
 

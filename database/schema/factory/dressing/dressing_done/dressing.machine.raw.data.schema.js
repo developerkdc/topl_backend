@@ -13,6 +13,7 @@ const raw_machine_data_schema = new mongoose.Schema(
     Fecha: {
       type: Date,
       required: [true, 'Fecha is required'],
+      // set: (val) => new Date((val - 25569) * 86400 * 1000)
     },
     DressingDate: {
       type: Date,
@@ -271,22 +272,31 @@ const raw_machine_data_schema = new mongoose.Schema(
 );
 
 raw_machine_data_schema.index(
-  { DressingDate: 1, ItemSrNo: 1 },
+  { DressingDate: 1, Identificador: 1 },
+  { unique: true }
+);
+raw_machine_data_schema.index(
+  { Tronco: 1, Partida: 1, NumPaqTronco: 1 },
   { unique: true }
 );
 raw_machine_data_schema.index({ DressingDate: 1 });
-raw_machine_data_schema.pre('save', async function (next) {
-  this.DressingDate = this.Fecha.toISOString().split('T')[0];
+// raw_machine_data_schema.pre('save', async function (next) {
+//   console.log("called 🦿")
+//   this.DressingDate = this.Fecha.toISOString().split('T')[0];
 
-  const max_sr_no = await mongoose
-    .model('dressing_machine_raw_data')
-    .findOne({ DressingDate: this.DressingDate })
-    .sort({ ItemSrNo: -1 })
-    .select('ItemSrNo');
+//   try {
+//     const max_sr_no = await mongoose
+//       .model('dressing_machine_raw_data')
+//       .findOne({ DressingDate: this.DressingDate })
+//       .sort({ ItemSrNo: -1 })
+//       .select('ItemSrNo');
 
-  this.ItemSrNo = max_sr_no ? max_sr_no?.ItemSrNo + 1 : 1;
-  next();
-});
+//     this.ItemSrNo = max_sr_no ? max_sr_no?.ItemSrNo + 1 : 1;
+//     next();
+//   } catch (error) {
+//     next(error)
+//   }
+// });
 
 const dressing_raw_machine_data_model = mongoose.model(
   'dressing_machine_raw_data',

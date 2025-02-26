@@ -7,6 +7,8 @@ import {
   edit_dressing_done_items,
   fetch_single_dressing_done_item,
   fetch_dressing_done_history,
+  revert_dressing_done_items,
+  create_dressing_items_from_dressing_report,
 } from '../../../../controllers/factory/dressing/dressing_done/dressing.done.controller.js';
 const dressing_done_router = Router();
 
@@ -35,5 +37,15 @@ dressing_done_router.post(
   '/list-dressing-done-history',
   AuthMiddleware,
   fetch_dressing_done_history
+);
+dressing_done_router.post(
+  '/revert-dressing-done/:other_details_id',
+  AuthMiddleware,
+  revert_dressing_done_items
+);
+dressing_done_router.post(
+  '/create-dressing-from-report',
+  AuthMiddleware,
+  create_dressing_items_from_dressing_report
 );
 export default dressing_done_router;
