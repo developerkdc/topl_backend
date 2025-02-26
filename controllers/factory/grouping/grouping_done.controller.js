@@ -418,6 +418,14 @@ export const fetch_all_details_by_grouping_done_id = catchAsync(async (req, res,
                 foreignField: 'grouping_done_other_details_id',
                 as: 'grouping_done_items_details',
             },
+        },
+        {
+            $lookup: {
+                from: 'issues_for_grouping_views',
+                localField: 'issue_for_grouping_id',
+                foreignField: '_id',
+                as: 'issues_for_grouping',
+            },
         }
     ];
     const result = await grouping_done_details_model.aggregate(pipeline);

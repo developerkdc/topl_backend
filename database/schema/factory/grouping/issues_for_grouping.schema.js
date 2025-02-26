@@ -152,7 +152,6 @@ export const issues_for_grouping_view_model = mongoose.model("issues_for_groupin
             },
             {
                 $set: {
-                    total_bundles: { $size: "$bundles" },
                     other_details: {
                         $cond: {
                             if: "$dressing_done_details",
@@ -167,6 +166,17 @@ export const issues_for_grouping_view_model = mongoose.model("issues_for_groupin
                             else: "$dressing_bundle_details"
                         }
                     }
+                }
+            },
+            {
+                $addFields: {
+                    item_name: { $first: "$bundles_details.item_name" },
+                    item_sub_category_name: { $first: "$bundles_details.item_sub_category_name" },
+                    total_bundles: {
+                        $size: "$bundles_details"
+                    },
+                    total_sqm: { $sum: "$bundles_details.sqm" },
+                    total_amount: { $sum: "$bundles_details.amount"}
                 }
             },
             {

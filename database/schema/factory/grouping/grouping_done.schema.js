@@ -69,10 +69,14 @@ const grouping_done_items_details_schema = new mongoose.Schema(
         },
         group_no: {
             type: String,
+            uppercase: true,
+            trim: true,
             required: [true, 'Group No is required'],
         },
         photo_no: {
             type: String,
+            uppercase: true,
+            trim: true,
             required: [true, 'Photo No is required'],
         },
         photo_no_id: {
@@ -81,6 +85,8 @@ const grouping_done_items_details_schema = new mongoose.Schema(
         },
         item_name: {
             type: String,
+            uppercase: true,
+            trim: true,
             required: [true, 'Item Name is required'],
         },
         item_name_id: {
@@ -99,6 +105,8 @@ const grouping_done_items_details_schema = new mongoose.Schema(
         },
         log_no_code: {
             type: String,
+            uppercase: true,
+            trim: true,
             required: [true, 'Log No Code is required'],
         },
         length: {
@@ -143,6 +151,8 @@ const grouping_done_items_details_schema = new mongoose.Schema(
         },
         process_name: {
             type: String,
+            uppercase: true,
+            trim: true,
             required: [true, 'process name is required'],
         },
         cut_id: {
@@ -161,6 +171,8 @@ const grouping_done_items_details_schema = new mongoose.Schema(
         },
         color_name: {
             type: String,
+            uppercase: true,
+            trim: true,
             default: null,
         },
         character_id: {
@@ -169,6 +181,8 @@ const grouping_done_items_details_schema = new mongoose.Schema(
         },
         character_name: {
             type: String,
+            uppercase: true,
+            trim: true,
             default: null,
         },
         pattern_id: {
@@ -177,6 +191,8 @@ const grouping_done_items_details_schema = new mongoose.Schema(
         },
         pattern_name: {
             type: String,
+            uppercase: true,
+            trim: true,
             default: null,
         },
         series_id: {
@@ -185,6 +201,8 @@ const grouping_done_items_details_schema = new mongoose.Schema(
         },
         series_name: {
             type: String,
+            uppercase: true,
+            trim: true,
             required: [true, 'Series Name is required'],
         },
         grade_id: {
@@ -193,6 +211,8 @@ const grouping_done_items_details_schema = new mongoose.Schema(
         },
         grade_name: {
             type: String,
+            uppercase: true,
+            trim: true,
             required: [true, 'Grade Name is required'],
         },
         issue_status: {
