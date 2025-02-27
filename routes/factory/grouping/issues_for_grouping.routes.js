@@ -1,6 +1,12 @@
 import express from 'express';
 import AuthMiddleware from '../../../middlewares/verifyToken.js';
-import { fetch_all_issue_for_grouping_details, fetch_single_issue_for_grouping_details, issue_for_grouping_from_dressing_done, issue_for_grouping_from_smoking_dying_done, revert_issue_for_grouping } from '../../../controllers/factory/grouping/issues_for_grouping.controller.js';
+import {
+  fetch_all_issue_for_grouping_details,
+  fetch_single_issue_for_grouping_details,
+  issue_for_grouping_from_dressing_done,
+  issue_for_grouping_from_smoking_dying_done,
+  revert_issue_for_grouping,
+} from '../../../controllers/factory/grouping/issues_for_grouping.controller.js';
 const issueForGroupingRouter = express.Router();
 
 issueForGroupingRouter.post(

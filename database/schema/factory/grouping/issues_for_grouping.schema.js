@@ -1,52 +1,64 @@
-import mongoose from "mongoose";
-import { issues_for_status } from "../../../Utils/constants/constants.js";
+import mongoose from 'mongoose';
+import { issues_for_status } from '../../../Utils/constants/constants.js';
 
-const issues_for_grouping_schema = new mongoose.Schema({
+const issues_for_grouping_schema = new mongoose.Schema(
+  {
     process_done_id: {
-        type: mongoose.Schema.Types.ObjectId,
-        default: null
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
     },
     dressing_done_id: {
-        type: mongoose.Schema.Types.ObjectId,
-        default: null
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
     },
     bundles: {
-        type: [mongoose.Schema.Types.ObjectId],
-        required: [true, 'Bundles Array is required'],
+      type: [mongoose.Schema.Types.ObjectId],
+      required: [true, 'Bundles Array is required'],
     },
     issued_from: {
-        type: String,
-        enum: {
-            values: [issues_for_status?.smoking_dying, issues_for_status?.dressing],
-            message: `Invalid issued from type {{VALUE}} it should be one of the ${issues_for_status?.smoking_dying}, ${issues_for_status?.dressing} `,
-        },
-        required: [true, 'Issued from is required'],
+      type: String,
+      enum: {
+        values: [issues_for_status?.smoking_dying, issues_for_status?.dressing],
+        message: `Invalid issued from type {{VALUE}} it should be one of the ${issues_for_status?.smoking_dying}, ${issues_for_status?.dressing} `,
+      },
+      required: [true, 'Issued from is required'],
     },
     is_grouping_done: {
-        type: Boolean,
-        default: false
+      type: Boolean,
+      default: false,
     },
     created_by: {
-        type: mongoose.Schema.Types.ObjectId,
-        required: [true, 'Created By is required.'],
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, 'Created By is required.'],
     },
     updated_by: {
-        type: mongoose.Schema.Types.ObjectId,
-        required: [true, 'Updated By is required.'],
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, 'Updated By is required.'],
     },
-},
-    { timestamps: true }
+  },
+  { timestamps: true }
 );
 
-export const issues_for_grouping_model = mongoose.model("issues_for_groupings", issues_for_grouping_schema, "issues_for_groupings");
+export const issues_for_grouping_model = mongoose.model(
+  'issues_for_groupings',
+  issues_for_grouping_schema,
+  'issues_for_groupings'
+);
 
-const issues_for_grouping_view_schema = new mongoose.Schema({}, {
+const issues_for_grouping_view_schema = new mongoose.Schema(
+  {},
+  {
     autoCreate: false,
     autoIndex: false,
-    strict: false
-});
+    strict: false,
+  }
+);
 
-export const issues_for_grouping_view_model = mongoose.model("issues_for_grouping_views", issues_for_grouping_view_schema, "issues_for_grouping_views");
+export const issues_for_grouping_view_model = mongoose.model(
+  'issues_for_grouping_views',
+  issues_for_grouping_view_schema,
+  'issues_for_grouping_views'
+);
 
 (async function () {
     await issues_for_grouping_view_model.createCollection({
@@ -152,7 +164,6 @@ export const issues_for_grouping_view_model = mongoose.model("issues_for_groupin
             },
             {
                 $set: {
-                    total_bundles: { $size: "$bundles" },
                     other_details: {
                         $cond: {
                             if: "$dressing_done_details",
@@ -167,6 +178,17 @@ export const issues_for_grouping_view_model = mongoose.model("issues_for_groupin
                             else: "$dressing_bundle_details"
                         }
                     }
+                }
+            },
+            {
+                $addFields: {
+                    item_name: { $first: "$bundles_details.item_name" },
+                    item_sub_category_name: { $first: "$bundles_details.item_sub_category_name" },
+                    total_bundles: {
+                        $size: "$bundles_details"
+                    },
+                    total_sqm: { $sum: "$bundles_details.sqm" },
+                    total_amount: { $sum: "$bundles_details.amount"}
                 }
             },
             {

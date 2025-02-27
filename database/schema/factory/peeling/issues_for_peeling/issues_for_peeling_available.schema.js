@@ -31,9 +31,9 @@ const issues_for_peeling_available_schema = new mongoose.Schema(
       trim: true,
       uppercase: true,
     },
-    is_re_flicthing_done:{
-      type:Boolean,
-      default:false
+    is_re_flicthing_done: {
+      type: Boolean,
+      default: false,
     },
     created_by: {
       type: mongoose.Types.ObjectId,

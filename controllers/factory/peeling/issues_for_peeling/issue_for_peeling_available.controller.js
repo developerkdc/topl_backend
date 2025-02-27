@@ -10,7 +10,10 @@ import {
   re_flitching_other_details_model,
 } from '../../../../database/schema/factory/peeling/peeling_done/re_flitching.schema.js';
 import issues_for_peeling_wastage_model from '../../../../database/schema/factory/peeling/issues_for_peeling/issues_for_peeling_wastage.schema.js';
-import { peeling_done_items_model, peeling_done_other_details_model } from '../../../../database/schema/factory/peeling/peeling_done/peeling_done.schema.js';
+import {
+  peeling_done_items_model,
+  peeling_done_other_details_model,
+} from '../../../../database/schema/factory/peeling/peeling_done/peeling_done.schema.js';
 import ApiError from '../../../../utils/errors/apiError.js';
 import { issues_for_status } from '../../../../database/Utils/constants/constants.js';
 import { issued_for_slicing_model } from '../../../../database/schema/factory/slicing/issue_for_slicing/issuedForSlicing.js';
@@ -191,7 +194,8 @@ export const add_reflitching_details = catchAsync(async (req, res, next) => {
   session.startTransaction();
   try {
     const userDetails = req.userDetails;
-    const { other_details, items_details, wastage_details, is_wastage } = req.body;
+    const { other_details, items_details, wastage_details, is_wastage } =
+      req.body;
     for (let i of ['other_details', 'items_details']) {
       if (!req.body?.[i]) {
         throw new ApiError(`Please provide ${i} details`, 400);
@@ -316,7 +320,10 @@ export const add_reflitching_details = catchAsync(async (req, res, next) => {
       !update_is_re_flicthing_done.acknowledged ||
       update_is_re_flicthing_done.matchedCount <= 0
     ) {
-      throw new ApiError('Failed to update update_is_re_flicthing_done status', 400);
+      throw new ApiError(
+        'Failed to update update_is_re_flicthing_done status',
+        400
+      );
     }
 
     await session.commitTransaction();
@@ -732,7 +739,7 @@ export const fetch_all_details_by_reflitching_id = catchAsync(
                 path: '$issue_for_peeling_details',
                 preserveNullAndEmptyArrays: true,
               },
-            }
+            },
           ],
           as: 'issue_for_peeling_available_details',
         },
@@ -877,7 +884,9 @@ export const revert_all_reflitching = catchAsync(async (req, res, next) => {
     }
 
     // update peeling done
-    const is_peeling_done_editable = await peeling_done_items_model.find({ issue_status: { $ne: null } });
+    const is_peeling_done_editable = await peeling_done_items_model.find({
+      issue_status: { $ne: null },
+    });
     if (is_peeling_done_editable.length > 0) {
       const update_editable_peeling_done =
         await peeling_done_other_details_model.updateOne(
@@ -889,11 +898,11 @@ export const revert_all_reflitching = catchAsync(async (req, res, next) => {
           },
           { session }
         );
-  
+
       if (update_editable_peeling_done.matchedCount <= 0) {
         throw new ApiError('peeling done details not found', 400);
       }
-  
+
       if (
         !update_editable_peeling_done.acknowledged ||
         update_editable_peeling_done.matchedCount <= 0
@@ -922,7 +931,10 @@ export const revert_all_reflitching = catchAsync(async (req, res, next) => {
       !update_is_re_flicthing_done.acknowledged ||
       update_is_re_flicthing_done.matchedCount <= 0
     ) {
-      throw new ApiError('Failed to update update_is_re_flicthing_done status', 400);
+      throw new ApiError(
+        'Failed to update update_is_re_flicthing_done status',
+        400
+      );
     }
 
     await session.commitTransaction();

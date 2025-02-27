@@ -2,63 +2,61 @@ import mongoose from 'mongoose';
 import { issues_for_status } from '../../../Utils/constants/constants.js';
 
 const grouping_done_details_schema = new mongoose.Schema(
-    {
-        grouping_done_date: {
-            type: Date,
-            required: [true, 'grouping Date is required'],
-        },
-        issue_for_grouping_id: {
-            type: mongoose.Schema.Types.ObjectId,
-            required: [true, 'Issues for grouping id is required'],
-        },
-        no_of_workers: {
-            type: Number,
-            required: [true, 'No.of Workers is required '],
-        },
-        no_of_working_hours: {
-            type: Number,
-            required: [true, 'No. of Working hours is required'],
-        },
-        no_of_total_hours: {
-            type: Number,
-            required: [true, 'No. of Total hours is required'],
-        },
-        shift: {
-            type: String,
-            required: [true, 'Shift is required'],
-            trim: true,
-            uppercase: true,
-        },
-        isEditable: {
-            type: Boolean,
-            default: true,
-        },
-        remark: {
-            type: String,
-            default: null,
-            trim: true,
-            uppercase: true,
-        },
-        created_by: {
-            type: mongoose.Schema.Types.ObjectId,
-            required: [true, 'Created By Id is required'],
-        },
-        updated_by: {
-            type: mongoose.Schema.Types.ObjectId,
-            required: [true, 'Updated By Id is required'],
-        },
+  {
+    grouping_done_date: {
+      type: Date,
+      required: [true, 'grouping Date is required'],
     },
-    {
-        timestamps: true,
-    }
+    issue_for_grouping_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, 'Issues for grouping id is required'],
+    },
+    no_of_workers: {
+      type: Number,
+      required: [true, 'No.of Workers is required '],
+    },
+    no_of_working_hours: {
+      type: Number,
+      required: [true, 'No. of Working hours is required'],
+    },
+    no_of_total_hours: {
+      type: Number,
+      required: [true, 'No. of Total hours is required'],
+    },
+    shift: {
+      type: String,
+      required: [true, 'Shift is required'],
+      trim: true,
+      uppercase: true,
+    },
+    isEditable: {
+      type: Boolean,
+      default: true,
+    },
+    remark: {
+      type: String,
+      default: null,
+      trim: true,
+      uppercase: true,
+    },
+    created_by: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, 'Created By Id is required'],
+    },
+    updated_by: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, 'Updated By Id is required'],
+    },
+  },
+  {
+    timestamps: true,
+  }
 );
 
-grouping_done_details_schema.index({ pallet_number: 1 }, { unique: true });
-
 export const grouping_done_details_model = mongoose.model(
-    'grouping_done_details',
-    grouping_done_details_schema,
-    'grouping_done_details'
+  'grouping_done_details',
+  grouping_done_details_schema,
+  'grouping_done_details'
 );
 
 const grouping_done_items_details_schema = new mongoose.Schema(
@@ -69,10 +67,14 @@ const grouping_done_items_details_schema = new mongoose.Schema(
         },
         group_no: {
             type: String,
+            uppercase: true,
+            trim: true,
             required: [true, 'Group No is required'],
         },
         photo_no: {
             type: String,
+            uppercase: true,
+            trim: true,
             required: [true, 'Photo No is required'],
         },
         photo_no_id: {
@@ -81,6 +83,8 @@ const grouping_done_items_details_schema = new mongoose.Schema(
         },
         item_name: {
             type: String,
+            uppercase: true,
+            trim: true,
             required: [true, 'Item Name is required'],
         },
         item_name_id: {
@@ -99,6 +103,8 @@ const grouping_done_items_details_schema = new mongoose.Schema(
         },
         log_no_code: {
             type: String,
+            uppercase: true,
+            trim: true,
             required: [true, 'Log No Code is required'],
         },
         length: {
@@ -131,6 +137,20 @@ const grouping_done_items_details_schema = new mongoose.Schema(
             default: 0,
             required: [true, 'SQM is required'],
         },
+        available_details: {
+            no_of_leaves: {
+                type: Number,
+                default: function () {
+                    return this.no_of_leaves;
+                },
+            },
+            sqm: {
+                type: Number,
+                default: function () {
+                    return this.sqm;
+                },
+            },
+        },
         pallet_number: {
             type: String,
             trim: true,
@@ -143,6 +163,8 @@ const grouping_done_items_details_schema = new mongoose.Schema(
         },
         process_name: {
             type: String,
+            uppercase: true,
+            trim: true,
             required: [true, 'process name is required'],
         },
         cut_id: {
@@ -161,6 +183,8 @@ const grouping_done_items_details_schema = new mongoose.Schema(
         },
         color_name: {
             type: String,
+            uppercase: true,
+            trim: true,
             default: null,
         },
         character_id: {
@@ -169,6 +193,8 @@ const grouping_done_items_details_schema = new mongoose.Schema(
         },
         character_name: {
             type: String,
+            uppercase: true,
+            trim: true,
             default: null,
         },
         pattern_id: {
@@ -177,6 +203,8 @@ const grouping_done_items_details_schema = new mongoose.Schema(
         },
         pattern_name: {
             type: String,
+            uppercase: true,
+            trim: true,
             default: null,
         },
         series_id: {
@@ -185,6 +213,8 @@ const grouping_done_items_details_schema = new mongoose.Schema(
         },
         series_name: {
             type: String,
+            uppercase: true,
+            trim: true,
             required: [true, 'Series Name is required'],
         },
         grade_id: {
@@ -193,6 +223,8 @@ const grouping_done_items_details_schema = new mongoose.Schema(
         },
         grade_name: {
             type: String,
+            uppercase: true,
+            trim: true,
             required: [true, 'Grade Name is required'],
         },
         issue_status: {
@@ -244,11 +276,14 @@ const grouping_done_items_details_schema = new mongoose.Schema(
     }
 );
 
-grouping_done_items_details_schema.index({ group_no: -1 }, { unique: true })
-grouping_done_items_details_schema.index({ group_no: -1, pallet_number: -1 }, { unique: true })
+grouping_done_items_details_schema.index({ group_no: -1 }, { unique: true });
+grouping_done_items_details_schema.index(
+  { group_no: -1, pallet_number: -1 },
+  { unique: true }
+);
 
 export const grouping_done_items_details_model = mongoose.model(
-    'grouping_done_items_details',
-    grouping_done_items_details_schema,
-    'grouping_done_items_details'
+  'grouping_done_items_details',
+  grouping_done_items_details_schema,
+  'grouping_done_items_details'
 );

@@ -100,6 +100,8 @@ const re_flitching_items_schema = new mongoose.Schema(
       },
       color_name: {
         type: String,
+        uppercase: true,
+      trim: true,
         default: null,
       },
     },
@@ -110,7 +112,7 @@ const re_flitching_items_schema = new mongoose.Schema(
       uppercase: true,
     },
     item_sub_category_id: {
-      type: String,
+      type: mongoose.Schema.Types.ObjectId,
       required: [true, 'item_sub_category_id is required'],
     },
     log_no: {
@@ -133,6 +135,8 @@ const re_flitching_items_schema = new mongoose.Schema(
     },
     flitch_formula: {
       type: String,
+      uppercase: true,
+      trim: true,
       default: 'BF',
     },
     length: {

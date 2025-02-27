@@ -452,9 +452,9 @@ export const listing_issued_for_slicing_inventory = catchAsync(
     // Aggregation stage
     const aggCommonMatch = {
       $match: {
-        is_slicing_completed: false
-      }
-    }
+        is_slicing_completed: false,
+      },
+    };
 
     const aggCreatedByLookup = {
       $lookup: {

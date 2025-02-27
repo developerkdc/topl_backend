@@ -103,10 +103,14 @@ const peeling_done_items_schema = new mongoose.Schema(
     },
     log_no: {
       type: String,
+      uppercase: true,
+      trim: true,
       required: [true, 'Log No is required'],
     },
     code: {
       type: String,
+      uppercase: true,
+      trim: true,
       required: [true, 'Code is required'],
     },
     side: {
@@ -117,10 +121,14 @@ const peeling_done_items_schema = new mongoose.Schema(
     },
     log_no_code: {
       type: String,
+      uppercase: true,
+      trim: true,
       required: [true, 'Log No Code is required'],
     },
     item_name: {
       type: String,
+      uppercase: true,
+      trim: true,
       required: [true, 'Item Name is required'],
     },
     item_name_id: {
@@ -173,6 +181,8 @@ const peeling_done_items_schema = new mongoose.Schema(
     },
     color_name: {
       type: String,
+      uppercase: true,
+      trim: true,
       default: null,
     },
     character_id: {
@@ -181,6 +191,8 @@ const peeling_done_items_schema = new mongoose.Schema(
     },
     character_name: {
       type: String,
+      uppercase: true,
+      trim: true,
       required: [true, 'Charcter Name is required'],
     },
     pattern_id: {
@@ -189,6 +201,8 @@ const peeling_done_items_schema = new mongoose.Schema(
     },
     pattern_name: {
       type: String,
+      uppercase: true,
+      trim: true,
       required: [true, 'Pattern Name is required'],
     },
     series_id: {
@@ -197,6 +211,8 @@ const peeling_done_items_schema = new mongoose.Schema(
     },
     series_name: {
       type: String,
+      uppercase: true,
+      trim: true,
       required: [true, 'Series Name is required'],
     },
     grade_id: {
@@ -205,6 +221,8 @@ const peeling_done_items_schema = new mongoose.Schema(
     },
     grade_name: {
       type: String,
+      uppercase: true,
+      trim: true,
       required: [true, 'Grade Name is required'],
     },
     issue_status: {
@@ -240,6 +258,8 @@ const peeling_done_items_schema = new mongoose.Schema(
     },
     remark: {
       type: String,
+      uppercase: true,
+      trim: true,
       default: null,
     },
     created_by: {
