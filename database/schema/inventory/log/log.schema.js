@@ -60,7 +60,6 @@ export const log_item_details_schema = new mongoose.Schema(
       required: [true, 'Log No is required'],
       trim: true,
       uppercase: true,
-      unique: [true, 'Log Number must be unique'],
     },
     log_formula: {
       type: String,
@@ -153,6 +152,7 @@ export const log_item_details_schema = new mongoose.Schema(
 );
 
 log_item_details_schema.index({ item_sr_no: 1 });
+log_item_details_schema.index({ log_no: 1 }, { unique: true });
 log_item_details_schema.index(
   { item_sr_no: 1, invoice_id: 1 },
   { unique: true }
