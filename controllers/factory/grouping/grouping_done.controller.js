@@ -418,19 +418,27 @@ export const fetch_all_details_by_grouping_done_id = catchAsync(
     }
 
     const pipeline = [
-      {
-        $match: {
-          _id: mongoose.Types.ObjectId.createFromHexString(id),
+        {
+            $match: {
+                _id: mongoose.Types.ObjectId.createFromHexString(id),
+            },
         },
-      },
-      {
-        $lookup: {
-          from: 'grouping_done_items_details',
-          localField: '_id',
-          foreignField: 'grouping_done_other_details_id',
-          as: 'grouping_done_items_details',
+        {
+            $lookup: {
+                from: 'grouping_done_items_details',
+                localField: '_id',
+                foreignField: 'grouping_done_other_details_id',
+                as: 'grouping_done_items_details',
+            },
         },
-      },
+        {
+            $lookup: {
+                from: 'issues_for_grouping_views',
+                localField: 'issue_for_grouping_id',
+                foreignField: '_id',
+                as: 'issues_for_grouping',
+            },
+        }
     ];
     const result = await grouping_done_details_model.aggregate(pipeline);
 

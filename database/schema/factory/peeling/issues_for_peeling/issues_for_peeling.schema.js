@@ -31,6 +31,8 @@ const issues_for_peeling_schema = new mongoose.Schema(
       },
       color_name: {
         type: String,
+        uppercase: true,
+      trim: true,
         default: null,
       },
     },

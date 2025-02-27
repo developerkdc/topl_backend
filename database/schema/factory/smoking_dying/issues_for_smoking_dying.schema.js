@@ -35,6 +35,8 @@ const issues_for_smoking_dying_schema = new mongoose.Schema(
     },
     item_name: {
       type: String,
+      uppercase: true,
+      trim: true,
       required: [true, 'Item Name is required'],
     },
     item_name_id: {
@@ -53,6 +55,8 @@ const issues_for_smoking_dying_schema = new mongoose.Schema(
     },
     log_no_code: {
       type: String,
+      uppercase: true,
+      trim: true,
       required: [true, 'Log No Code is required'],
     },
     length: {
@@ -101,6 +105,8 @@ const issues_for_smoking_dying_schema = new mongoose.Schema(
     },
     color_name: {
       type: String,
+      uppercase: true,
+      trim: true,
       default: null,
     },
     character_id: {
@@ -110,6 +116,8 @@ const issues_for_smoking_dying_schema = new mongoose.Schema(
     },
     character_name: {
       type: String,
+      uppercase: true,
+      trim: true,
       default: null,
       required: [validate_dressing_required_field, 'Charcter Name is required'],
     },
@@ -120,6 +128,8 @@ const issues_for_smoking_dying_schema = new mongoose.Schema(
     },
     pattern_name: {
       type: String,
+      uppercase: true,
+      trim: true,
       default: null,
       required: [validate_dressing_required_field, 'Pattern Name is required'],
     },
@@ -129,6 +139,8 @@ const issues_for_smoking_dying_schema = new mongoose.Schema(
     },
     series_name: {
       type: String,
+      uppercase: true,
+      trim: true,
       required: [true, 'Series Name is required'],
     },
     grade_id: {
@@ -137,6 +149,8 @@ const issues_for_smoking_dying_schema = new mongoose.Schema(
     },
     grade_name: {
       type: String,
+      uppercase: true,
+      trim: true,
       required: [true, 'Grade Name is required'],
     },
     amount: {

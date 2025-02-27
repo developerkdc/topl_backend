@@ -27,11 +27,14 @@ const photoSchema = new mongoose.Schema(
     current_stage: {
       type: String,
       uppercase: true,
+      uppercase: true,
       trim: true,
+      default: null
       default: null
     },
     group_no: {
       type: String,
+      uppercase: true,
       uppercase: true,
       trim: true,
       default: null
@@ -110,17 +113,20 @@ const photoSchema = new mongoose.Schema(
     },
     grade_id: {
       type: mongoose.Schema.Types.ObjectId,
-      default: null
+      default:null
     },
     grade_name: {
       type: String,
       uppercase: true,
       trim: true,
       default: null
+      uppercase: true,
+      trim: true,
+      default: null
     },
     cut_id: {
       type: mongoose.Schema.Types.ObjectId,
-      default: null
+      default:null
     },
     cut_name: {
       type: String,
@@ -155,8 +161,8 @@ const photoSchema = new mongoose.Schema(
             process_name: {
               type: String,
               uppercase: true,
-              trim: true,
-              default: null
+      trim: true,
+      default: null
             },
           }
         }
@@ -174,8 +180,8 @@ const photoSchema = new mongoose.Schema(
             character_name: {
               type: String,
               uppercase: true,
-              trim: true,
-              default: null
+      trim: true,
+      default: null
             },
           }
         }
@@ -214,7 +220,7 @@ const photoSchema = new mongoose.Schema(
     },
     destination_pallet_no: {
       type: String,
-      default: null
+      default:null
     },
     min_rate: {
       type: Number,
