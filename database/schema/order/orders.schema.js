@@ -26,7 +26,8 @@ const OrderSchema = new mongoose.Schema(
       trim: true,
     },
     orderDate: { type: Date, required: true },
-    customer_name: {
+    
+    owner_name: {
       type: String,
       required: true,
       uppercase: true,
@@ -35,7 +36,6 @@ const OrderSchema = new mongoose.Schema(
     customer_id: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
-      trim: true,
     },
     order_type: {
       type: String,
@@ -80,7 +80,7 @@ const OrderSchema = new mongoose.Schema(
       trim: true,
     },
     common_instructions: {
-      type: [Sting],
+      type: [String],
       default: null,
     },
     order_remarks: {
@@ -98,6 +98,7 @@ const OrderSchema = new mongoose.Schema(
       ],
       uppercase: true,
       trim: true,
+      default: null,
     },
 
     raw_materials: {
