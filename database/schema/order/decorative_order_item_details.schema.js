@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { order_category } from '../../Utils/constants/constants.js';
+import { order_category, order_item_status } from '../../Utils/constants/constants.js';
 
 const decorative_order_item_details_schema = new mongoose.Schema(
   {
@@ -61,6 +61,26 @@ const decorative_order_item_details_schema = new mongoose.Schema(
       default: null
     },
     group_number_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null
+    },
+    diffrent_group_photo_number: {
+      type: String,
+      uppercase: true,
+      trim: true,
+      default: null
+    },
+    diffrent_group_photo_number_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null
+    },
+    diffrent_group_group_number: {
+      type: String,
+      uppercase: true,
+      trim: true,
+      default: null
+    },
+    diffrent_group_group_number_id: {
       type: mongoose.Schema.Types.ObjectId,
       default: null
     },
@@ -139,6 +159,14 @@ const decorative_order_item_details_schema = new mongoose.Schema(
       uppercase: true,
       trim: true,
       default: null,
+    },
+    item_status: {
+      type: String,
+      default: null,
+      enum: {
+        values: [order_item_status?.cancel],
+        message: `Invalid Order Status -> {{VALUE}} it must be one of the ${order_item_status?.cancel}`
+      }
     },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,

@@ -89,10 +89,17 @@ export const listing_plywood_inventory = catchAsync(async (req, res, next) => {
   const List_plywood_inventory_details =
     await plywood_inventory_items_view_modal.aggregate(aggregate_stage);
 
+  const totalCount = await plywood_inventory_items_view_modal.countDocuments({
+    ...match_query,
+  });
+
+  const totalPage = Math.ceil(totalCount / limit);
+
   return res.status(200).json({
     statusCode: 200,
     status: 'success',
     data: List_plywood_inventory_details,
+    totalPage: totalPage,
     message: 'Data fetched successfully',
   });
 });
