@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import LogSchemaFunction from '../LogsSchema/logs.schema.js';
+import { order_category } from '../../Utils/constants/constants.js';
 
 const RawOrderItemDetailsSchema = new mongoose.Schema(
   {
