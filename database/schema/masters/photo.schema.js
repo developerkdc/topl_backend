@@ -30,7 +30,6 @@ const photoSchema = new mongoose.Schema(
       uppercase: true,
       trim: true,
       default: null
-      default: null
     },
     group_no: {
       type: String,
@@ -117,9 +116,6 @@ const photoSchema = new mongoose.Schema(
     },
     grade_name: {
       type: String,
-      uppercase: true,
-      trim: true,
-      default: null
       uppercase: true,
       trim: true,
       default: null
