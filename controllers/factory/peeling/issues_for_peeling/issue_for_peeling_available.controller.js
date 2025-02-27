@@ -61,6 +61,11 @@ export const fetch_issue_for_peeling_available_details = catchAsync(
       ...filterData,
     };
 
+    const aggCommonMatch = {
+      $match: {
+        is_re_flicthing_done: false,
+      }
+    }
     const aggLookupIssueForPeeling = {
       $lookup: {
         from: 'issues_for_peelings',
@@ -143,6 +148,7 @@ export const fetch_issue_for_peeling_available_details = catchAsync(
     };
 
     const list_aggregate = [
+      aggCommonMatch,
       aggLookupIssueForPeeling,
       aggUnwindIssueForPeeling,
       aggCreatedUserDetails,
@@ -163,6 +169,7 @@ export const fetch_issue_for_peeling_available_details = catchAsync(
     };
 
     const count_total_docs = [
+      aggCommonMatch,
       aggLookupIssueForPeeling,
       aggUnwindIssueForPeeling,
       aggCreatedUserDetails,
@@ -575,8 +582,13 @@ export const fetch_all_reflitching_items = catchAsync(
     const match_query = {
       ...search_query,
       ...filterData,
-      issue_status: null,
     };
+
+    const aggCommonMatch = {
+      $match: {
+        issue_status: null,
+      }
+    }
 
     const aggLookupReflitchingOtherDetails = {
       $lookup: {
@@ -664,6 +676,7 @@ export const fetch_all_reflitching_items = catchAsync(
     };
 
     const list_aggregate = [
+      aggCommonMatch,
       aggLookupReflitchingOtherDetails,
       aggUnwindOtherDetails,
       aggCreatedUserDetails,
@@ -683,6 +696,7 @@ export const fetch_all_reflitching_items = catchAsync(
     };
 
     const count_total_docs = [
+      aggCommonMatch,
       aggLookupReflitchingOtherDetails,
       aggUnwindOtherDetails,
       aggCreatedUserDetails,
@@ -696,7 +710,7 @@ export const fetch_all_reflitching_items = catchAsync(
     const total_docs =
       await re_flitching_items_model.aggregate(count_total_docs);
 
-    const totalPages = Math.ceil((total_docs[0]?.totalCount || 0) / limit);
+    const totalPages = Math.ceil((total_docs?.[0]?.totalCount || 0) / limit);
 
     const response = new ApiResponse(200, 'Data Fetched Successfully', {
       data: result,

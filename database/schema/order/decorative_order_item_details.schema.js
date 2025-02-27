@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
+import { order_category, order_item_status } from '../../Utils/constants/constants.js';
 
-const DecorativeOrderItemDetailsSchema = new mongoose.Schema(
+const decorative_order_item_details_schema = new mongoose.Schema(
   {
     item_no: {
       type: Number,
@@ -13,27 +14,15 @@ const DecorativeOrderItemDetailsSchema = new mongoose.Schema(
     },
     order_category: {
       type: String,
-      enum: [
-        order_category.raw,
+      enum: {
+        values: [order_category.raw,
         order_category.plain,
-        order_category.series_product,
-      ],
+        order_category.series_product],
+        message: `Invalid Order Category -> {{VALUE}} it must be one of the ${order_category?.raw}, ${order_category?.plain}, ${order_category?.series_product}`
+      },
       required: [true, 'Order Category is required'],
       uppercase: true,
       trim: true,
-    },
-
-    photo_no: {
-      type: String,
-      default:null
-    },
-    group_no:{
-      type: String,
-      default:null
-    },
-    series:{
-      type: String,
-      default:null
     },
     item_name: {
       type: String,
@@ -47,7 +36,6 @@ const DecorativeOrderItemDetailsSchema = new mongoose.Schema(
     },
     item_sub_category_id: {
       type: mongoose.Schema.Types.ObjectId,
-      // required: [true, 'Items Sub-Category Id is required'],
       default: null,
     },
     item_sub_category_name: {
@@ -56,9 +44,83 @@ const DecorativeOrderItemDetailsSchema = new mongoose.Schema(
       uppercase: true,
       default: null,
     },
-    log_no: {
+    photo_number: {
       type: String,
-      required: [true, 'Log No is required'],
+      uppercase: true,
+      trim: true,
+      default: null
+    },
+    photo_number_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null
+    },
+    group_number: {
+      type: String,
+      uppercase: true,
+      trim: true,
+      default: null
+    },
+    group_number_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null
+    },
+    diffrent_group_photo_number: {
+      type: String,
+      uppercase: true,
+      trim: true,
+      default: null
+    },
+    diffrent_group_photo_number_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null
+    },
+    diffrent_group_group_number: {
+      type: String,
+      uppercase: true,
+      trim: true,
+      default: null
+    },
+    diffrent_group_group_number_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null
+    },
+    series_name: {
+      type: String,
+      uppercase: true,
+      trim: true,
+      default: null
+    },
+    series_name_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null
+    },
+    pressing_instructions: {
+      type: [{
+        type: String,
+        trim: true,
+        uppercase: true
+      }],
+      default: []
+    },
+    base_type: {
+      type: String,
+      uppercase: true,
+      trim: true,
+      default: null
+    },
+    base_sub_category_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
+    base_sub_category_name: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      default: null,
+    },
+    base_required_thickness: {
+      type: Number,
+      default: 0
     },
     length: {
       type: Number,
@@ -72,11 +134,7 @@ const DecorativeOrderItemDetailsSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-    no_of_sheet: {
-      type: Number,
-      default: 0,
-    },
-    cbm: {
+    no_of_sheets: {
       type: Number,
       default: 0,
     },
@@ -84,11 +142,11 @@ const DecorativeOrderItemDetailsSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-    quantity: {
+    previous_rate: {
       type: Number,
       default: 0,
     },
-    rate: {
+    rate_per_sqm: {
       type: Number,
       default: 0,
     },
@@ -96,22 +154,26 @@ const DecorativeOrderItemDetailsSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-
-    item_remarks: {
+    remark: {
       type: String,
       uppercase: true,
       trim: true,
       default: null,
     },
-
+    item_status: {
+      type: String,
+      default: null,
+      enum: {
+        values: [order_item_status?.cancel],
+        message: `Invalid Order Status -> {{VALUE}} it must be one of the ${order_item_status?.cancel}`
+      }
+    },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'users',
       required: [true, 'Created By Id is required'],
     },
     updated_by: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'users',
       required: [true, 'Updated By Id is required'],
     },
   },
@@ -120,7 +182,7 @@ const DecorativeOrderItemDetailsSchema = new mongoose.Schema(
   }
 );
 
-export const DecorativeOrderItemDetailsModel = mongoose.model(
+export const decorative_order_item_details_model = mongoose.model(
   'decorative_order_item_details',
-  DecorativeOrderItemDetailsSchema
+  decorative_order_item_details_schema, 'decorative_order_item_details'
 );
