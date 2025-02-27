@@ -432,12 +432,7 @@ export const listing_issued_for_smoking_dying = catchAsync(
       $limit: parseInt(limit),
     };
 
-    const listAggregate = [
-      aggMatch,
-      aggSort,
-      aggSkip,
-      aggLimit
-    ]; // aggregation pipiline
+    const listAggregate = [aggMatch, aggSort, aggSkip, aggLimit]; // aggregation pipiline
 
     const issue_for_smoking_dying =
       await issues_for_smoking_dying_view_model.aggregate(listAggregate);
@@ -446,10 +441,7 @@ export const listing_issued_for_smoking_dying = catchAsync(
       $count: 'totalCount',
     }; // count aggregation stage
 
-    const totalAggregate = [
-      aggMatch,
-      aggCount
-    ]; // total aggregation pipiline
+    const totalAggregate = [aggMatch, aggCount]; // total aggregation pipiline
 
     const totalDocument =
       await issues_for_smoking_dying_view_model.aggregate(totalAggregate);
@@ -718,10 +710,9 @@ export const revert_issued_for_smoking_dying_item = catchAsync(
         const delete_dressing_done_history_doc =
           await dressing_done_history_model.deleteOne(
             {
-              dressing_done_other_details_id:
-                dressing_done_other_details_id,
+              dressing_done_other_details_id: dressing_done_other_details_id,
               bundles: {
-                $all: dressing_done_ids
+                $all: dressing_done_ids,
               },
             },
             { session }
@@ -762,7 +753,6 @@ export const revert_issued_for_smoking_dying_item = catchAsync(
             },
             { session }
           );
-
         }
       };
 

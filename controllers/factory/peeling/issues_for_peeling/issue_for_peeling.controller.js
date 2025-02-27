@@ -539,7 +539,6 @@ export const listing_issued_for_peeling = catchAsync(async (req, res, next) => {
 
   const filterData = dynamic_filter(filter);
 
-
   const match_query = {
     ...filterData,
     ...search_query,
@@ -549,9 +548,9 @@ export const listing_issued_for_peeling = catchAsync(async (req, res, next) => {
 
   const aggCommonMatch = {
     $match: {
-      is_peeling_done: false
-    }
-  }
+      is_peeling_done: false,
+    },
+  };
 
   const aggCreatedByLookup = {
     $lookup: {

@@ -4,7 +4,7 @@ const photoSchema = new mongoose.Schema(
   {
     sr_no: {
       type: Number,
-      required: [true, 'Sr.No is required']
+      required: [true, 'Sr.No is required'],
     },
     photo_number: {
       type: String,
@@ -27,17 +27,17 @@ const photoSchema = new mongoose.Schema(
     current_stage: {
       type: String,
       trim: true,
-      required: [true, 'Current Stage is required']
+      required: [true, 'Current Stage is required'],
     },
     group_no: {
       type: String,
       trim: true,
-      required: [true, 'Group No is required']
+      required: [true, 'Group No is required'],
     },
     item_name: {
       type: String,
       trim: true,
-      required: [true, 'Item Name is required']
+      required: [true, 'Item Name is required'],
     },
     length: {
       type: Number,
@@ -117,13 +117,13 @@ const photoSchema = new mongoose.Schema(
       type: String,
       uppercase: true,
       trim: true,
-      required: [true, 'Placement is required']
+      required: [true, 'Placement is required'],
     },
     sales_item_name: {
       type: String,
       trim: true,
       uppercase: true,
-      required: [true, 'Sales Item Name is required']
+      required: [true, 'Sales Item Name is required'],
     },
     timber_colour_id: {
       type: mongoose.Schema.Types.ObjectId,
@@ -137,13 +137,13 @@ const photoSchema = new mongoose.Schema(
       type: String,
       uppercase: true,
       trim: true,
-      required: [true, 'Collection Name is required']
+      required: [true, 'Collection Name is required'],
     },
     grain_direction: {
       type: String,
       uppercase: true,
       trim: true,
-      required: [true, 'Grain Direction is required']
+      required: [true, 'Grain Direction is required'],
     },
     dyed_color_id: {
       type: mongoose.Schema.Types.ObjectId,
@@ -153,28 +153,28 @@ const photoSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
-    remark: { 
+    remark: {
       type: String,
-      uppercase:true,
+      uppercase: true,
       trim: true,
-      default:null 
+      default: null,
     },
     type: {
       type: String,
       uppercase: true,
       trim: true,
-      required: [true, 'Type is required']
+      required: [true, 'Type is required'],
     },
     destination: {
       type: String,
       trim: true,
       uppercase: true,
-      required: [true, 'Destination is required']
+      required: [true, 'Destination is required'],
     },
     destination_pallet_no: {
       type: String,
       trim: true,
-      required: [true, 'Destination Pallet No is required']
+      required: [true, 'Destination Pallet No is required'],
     },
     value_added_process_id: {
       type: mongoose.Schema.Types.ObjectId,
@@ -195,12 +195,12 @@ const photoSchema = new mongoose.Schema(
     min_rate: {
       type: Number,
       default: 0,
-      required: [true, 'Min Rate is required']
+      required: [true, 'Min Rate is required'],
     },
     max_rate: {
       type: Number,
       default: 0,
-      required: [true, 'Max Rate is required']
+      required: [true, 'Max Rate is required'],
     },
   },
   { timestamps: true }

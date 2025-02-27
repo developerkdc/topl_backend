@@ -54,5 +54,5 @@ export const dressing_error_types = {
   slicing_not_done: 'slicing_not_done',
   peeling_not_done: 'peeling_not_done',
   dressing_done: 'dressing_done',
+  in_complete_data: 'in_complete_data',
 };
-

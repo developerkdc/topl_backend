@@ -637,8 +637,7 @@ export const fetch_smoking_dying_done_history = catchAsync(
       aggLimit,
     ];
 
-    const result =
-      await process_done_history_model.aggregate(list_aggregate);
+    const result = await process_done_history_model.aggregate(list_aggregate);
 
     const aggCount = {
       $count: 'totalCount',
@@ -739,7 +738,7 @@ export const revert_process_done_details = catchAsync(
           StatusCodes.BAD_GATEWAY
         );
       }
-      
+
       const update_issue_for_smoking_dying =
         await issues_for_smoking_dying_model.updateMany(
           {

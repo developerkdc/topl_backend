@@ -220,8 +220,8 @@ export const issues_for_smoking_dying_view_model = mongoose.model(
     pipeline: [
       {
         $match: {
-          is_smoking_dying_done:false
-        }
+          is_smoking_dying_done: false,
+        },
       },
       {
         $lookup: {
