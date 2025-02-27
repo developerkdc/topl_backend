@@ -53,8 +53,6 @@ const grouping_done_details_schema = new mongoose.Schema(
     }
 );
 
-grouping_done_details_schema.index({ pallet_number: 1 }, { unique: true });
-
 export const grouping_done_details_model = mongoose.model(
     'grouping_done_details',
     grouping_done_details_schema,
@@ -138,6 +136,20 @@ const grouping_done_items_details_schema = new mongoose.Schema(
             type: Number,
             default: 0,
             required: [true, 'SQM is required'],
+        },
+        available_details: {
+            no_of_leaves: {
+                type: Number,
+                default: function () {
+                    return this.no_of_leaves;
+                },
+            },
+            sqm: {
+                type: Number,
+                default: function () {
+                    return this.sqm;
+                },
+            },
         },
         pallet_number: {
             type: String,
