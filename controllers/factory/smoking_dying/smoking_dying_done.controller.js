@@ -629,8 +629,7 @@ export const fetch_smoking_dying_done_history = catchAsync(
       aggLimit,
     ];
 
-    const result =
-      await process_done_history_model.aggregate(list_aggregate);
+    const result = await process_done_history_model.aggregate(list_aggregate);
 
     const aggCount = {
       $count: 'totalCount',

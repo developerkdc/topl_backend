@@ -24,7 +24,7 @@ dressing_done_router.get(
   fetch_all_dressing_done_items_by_other_details_id
 );
 dressing_done_router.post(
-  '/edit-dressing-done-items/:slicing_done_other_details_id',
+  '/edit-dressing-done-items/:id',
   AuthMiddleware,
   edit_dressing_done_items
 );

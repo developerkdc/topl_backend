@@ -44,14 +44,14 @@ export const addPhoto = catchAsync(async (req, res, next) => {
       bannerImage = bannerImagesFile?.[0];
     }
 
-    let other_details = {}
+    let other_details = {};
     if (req.body?.other_details) {
       try {
-        const other_details_data = JSON.parse(req.body?.other_details)
-        other_details = other_details_data
+        const other_details_data = JSON.parse(req.body?.other_details);
+        other_details = other_details_data;
       } catch (error) {
-        console.log("Failed to parse other details", error)
-        throw error
+        console.log('Failed to parse other details', error);
+        throw error;
       }
     }
 
@@ -123,24 +123,24 @@ export const updatePhoto = catchAsync(async (req, res, next) => {
       throw error;
     }
 
-    let other_details = {}
+    let other_details = {};
     if (req.body?.other_details) {
       try {
-        const other_details_data = JSON.parse(req.body?.other_details)
-        other_details = other_details_data
+        const other_details_data = JSON.parse(req.body?.other_details);
+        other_details = other_details_data;
       } catch (error) {
-        console.log("Failed to parse other details", error)
-        throw error
+        console.log('Failed to parse other details', error);
+        throw error;
       }
     }
-    
+
     const photoData = {
       ...other_details,
       photo_number: photo_number,
       status: status,
       updated_by: authUserDetail?._id,
     };
-    
+
     const fetchPhotoData = await photoModel.findOne({ _id: id });
     if (bannerImage) {
       photoData.banner_image = bannerImage;

@@ -19,6 +19,8 @@ import {
   get_session,
   save_session,
 } from '../../../../utils/mongo_session_store.js';
+import dressing_miss_match_data_model from '../../../../database/schema/factory/dressing/dressing_done/dressing.machine.mismatch.data.schema.js';
+import { dressing_error_types } from '../../../../database/Utils/constants/constants.js';
 
 export const list_issue_for_dressing = catchAsync(async (req, res) => {
   const {
@@ -460,3 +462,179 @@ export const fetch_all_issue_for_dressing_items_by_item_other_details_id =
 
     return res.status(StatusCodes.OK).json(response);
   });
+
+export const list_issue_for_dressing_raw_machine_data = catchAsync(
+  async (req, res) => {
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = 'updatedAt',
+      sort = 'desc',
+      search = '',
+    } = req.query;
+
+    const {
+      string,
+      boolean,
+      numbers,
+      arrayField = [],
+    } = req.body.searchFields || {};
+
+    const { filter } = req.body;
+    let search_query = {};
+
+    if (search != '' && req?.body?.searchFields) {
+      const search_data = DynamicSearch(
+        search,
+        boolean,
+        numbers,
+        string,
+        arrayField
+      );
+
+      if (search_data?.length === 0) {
+        throw new ApiError('NO Data found...', StatusCodes.NOT_FOUND);
+      }
+      search_query = search_data;
+    }
+
+    const filterData = dynamic_filter(filter);
+
+    const matchQuery = {
+      ...search_query,
+      ...filterData,
+    };
+
+    const aggMatch = {
+      $match: {
+        ...matchQuery,
+      },
+    };
+
+    const aggSort = {
+      $sort: { [sortBy]: sort === 'desc' ? -1 : 1 },
+    };
+
+    const aggSkip = {
+      $skip: (parseInt(page) - 1) * parseInt(limit),
+    };
+
+    const aggLimit = {
+      $limit: parseInt(limit),
+    };
+
+    const all_aggregates = [aggMatch, aggSort, aggSkip, aggLimit];
+
+    const list_dressing_raw_machine_data =
+      await dressing_raw_machine_data_model.aggregate(all_aggregates);
+
+    const aggCount = {
+      $count: 'totalCount',
+    };
+
+    const aggCountTotalDocs = [aggMatch, aggCount];
+
+    const total_docs =
+      await dressing_raw_machine_data_model.aggregate(aggCountTotalDocs);
+
+    const totalPages = Math.ceil(
+      (total_docs?.[0]?.totalCount || 0) / parseInt(limit)
+    );
+
+    const response = new ApiResponse(
+      StatusCodes.OK,
+      'Dressing Raw Machine Data Fetched Successfully',
+      { data: list_dressing_raw_machine_data, totalPages: totalPages }
+    );
+
+    return res.status(StatusCodes.OK).json(response);
+  }
+);
+export const list_issue_for_dressing_machine_miss_match_data = catchAsync(
+  async (req, res) => {
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = 'updatedAt',
+      sort = 'desc',
+      search = '',
+    } = req.query;
+
+    const {
+      string,
+      boolean,
+      numbers,
+      arrayField = [],
+    } = req.body.searchFields || {};
+
+    const { filter } = req.body;
+    let search_query = {};
+
+    if (search != '' && req?.body?.searchFields) {
+      const search_data = DynamicSearch(
+        search,
+        boolean,
+        numbers,
+        string,
+        arrayField
+      );
+
+      if (search_data?.length === 0) {
+        throw new ApiError('NO Data found...', StatusCodes.NOT_FOUND);
+      }
+      search_query = search_data;
+    }
+
+    const filterData = dynamic_filter(filter);
+
+    const matchQuery = {
+      ...search_query,
+      ...filterData,
+    };
+
+    const aggMatch = {
+      $match: {
+        ...matchQuery,
+        process_status: { $ne: dressing_error_types?.dressing_done },
+      },
+    };
+
+    const aggSort = {
+      $sort: { [sortBy]: sort === 'desc' ? -1 : 1 },
+    };
+
+    const aggSkip = {
+      $skip: (parseInt(page) - 1) * parseInt(limit),
+    };
+
+    const aggLimit = {
+      $limit: parseInt(limit),
+    };
+
+    const all_aggregates = [aggMatch, aggSort, aggSkip, aggLimit];
+
+    const list_dressing_machine_missmatch_data =
+      await dressing_miss_match_data_model.aggregate(all_aggregates);
+
+    const aggCount = {
+      $count: 'totalCount',
+    };
+
+    const aggCountTotalDocs = [aggMatch, aggCount];
+
+    const total_docs =
+      await dressing_miss_match_data_model.aggregate(aggCountTotalDocs);
+
+    const totalPages = Math.ceil(
+      (total_docs?.[0]?.totalCount || 0) / parseInt(limit)
+    );
+
+    const response = new ApiResponse(
+      StatusCodes.OK,
+      'Dressing Machine MissMatch Data Fetched Successfully',
+      { data: list_dressing_machine_missmatch_data, totalPages: totalPages }
+    );
+
+    return res.status(StatusCodes.OK).json(response);
+  }
+);

@@ -27,11 +27,14 @@ const photoSchema = new mongoose.Schema(
     current_stage: {
       type: String,
       uppercase: true,
+      uppercase: true,
       trim: true,
+      default: null
       default: null
     },
     group_no: {
       type: String,
+      uppercase: true,
       uppercase: true,
       trim: true,
       default: null
@@ -114,6 +117,9 @@ const photoSchema = new mongoose.Schema(
     },
     grade_name: {
       type: String,
+      uppercase: true,
+      trim: true,
+      default: null
       uppercase: true,
       trim: true,
       default: null

@@ -104,10 +104,12 @@ const slicing_done_items_schema = new mongoose.Schema(
     log_no_code: {
       type: String,
       required: [true, 'Log No Code is required'],
+      uppercase: true,
     },
     log_no: {
       type: String,
       required: [true, 'Flitch No is required'],
+      uppercase: true,
     },
     flitch_side: {
       type: String,
