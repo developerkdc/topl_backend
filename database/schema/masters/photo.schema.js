@@ -26,34 +26,37 @@ const photoSchema = new mongoose.Schema(
     },
     current_stage: {
       type: String,
+      uppercase: true,
       trim: true,
-      default:null
+      default: null
     },
     group_no: {
       type: String,
+      uppercase: true,
       trim: true,
-      default:null
+      default: null
     },
     item_name: {
       type: String,
+      uppercase: true,
       trim: true,
-      default:null
+      default: null
     },
     length: {
       type: Number,
-      default:null,
+      default: null,
     },
     width: {
       type: Number,
-      default:null
+      default: null
     },
     thickness: {
       type: Number,
-      default:null
+      default: null
     },
     no_sheet: {
       type: Number,
-      default:null
+      default: null
     },
     timber_colour_id: {
       type: mongoose.Schema.Types.ObjectId,
@@ -61,15 +64,19 @@ const photoSchema = new mongoose.Schema(
     },
     timber_colour_name: {
       type: String,
-      default: null,
+      uppercase: true,
+      trim: true,
+      default: null
     },
     process_id: {
       type: mongoose.Schema.Types.ObjectId,
-      default:null,
+      default: null,
     },
     process_name: {
       type: String,
-      default:null,
+      uppercase: true,
+      trim: true,
+      default: null
     },
     character_id: {
       type: mongoose.Schema.Types.ObjectId,
@@ -77,7 +84,9 @@ const photoSchema = new mongoose.Schema(
     },
     character_name: {
       type: String,
-      default: null,
+      uppercase: true,
+      trim: true,
+      default: null
     },
     pattern_id: {
       type: mongoose.Schema.Types.ObjectId,
@@ -85,33 +94,39 @@ const photoSchema = new mongoose.Schema(
     },
     pattern_name: {
       type: String,
-      default: null,
+      uppercase: true,
+      trim: true,
+      default: null
     },
     series_id: {
       type: mongoose.Schema.Types.ObjectId,
-      required: [true, 'Series ID is required'],
+      default: null
     },
     series_name: {
       type: String,
-      required: [true, 'Series Name is required'],
+      uppercase: true,
+      trim: true,
+      default: null
     },
     grade_id: {
       type: mongoose.Schema.Types.ObjectId,
-      required: [true, 'Grade ID is required'],
+      default: null
     },
     grade_name: {
       type: String,
-      required: [true, 'Grade Name is required'],
+      uppercase: true,
+      trim: true,
+      default: null
     },
     cut_id: {
       type: mongoose.Schema.Types.ObjectId,
-      required: [true, 'cut id is required'],
+      default: null
     },
     cut_name: {
       type: String,
-      trim: true,
       uppercase: true,
-      required: [true, 'cut name is required'],
+      trim: true,
+      default: null
     },
     process_color_id: {
       type: mongoose.Schema.Types.ObjectId,
@@ -119,7 +134,9 @@ const photoSchema = new mongoose.Schema(
     },
     process_color_name: {
       type: String,
-      default: null,
+      uppercase: true,
+      trim: true,
+      default: null
     },
     sales_item_name: {
       type: String,
@@ -127,74 +144,77 @@ const photoSchema = new mongoose.Schema(
       uppercase: true,
       required: [true, 'Sales Item Name is required']
     },
-
-
-
-
+    value_added_process: {
+      type: [
+        {
+          type: {
+            process_id: {
+              type: mongoose.Schema.Types.ObjectId,
+              default: null,
+            },
+            process_name: {
+              type: String,
+              uppercase: true,
+              trim: true,
+              default: null
+            },
+          }
+        }
+      ],
+      default: []
+    },
+    additional_character: {
+      type: [
+        {
+          type: {
+            character_id: {
+              type: mongoose.Schema.Types.ObjectId,
+              default: null,
+            },
+            character_name: {
+              type: String,
+              uppercase: true,
+              trim: true,
+              default: null
+            },
+          }
+        }
+      ],
+      default: []
+    },
     placement: {
       type: String,
       uppercase: true,
       trim: true,
-      required: [true, 'Placement is required']
+      default: null
     },
     collection_name: {
       type: String,
       uppercase: true,
       trim: true,
-      required: [true, 'Collection Name is required']
+      default: null
     },
     grain_direction: {
       type: String,
       uppercase: true,
       trim: true,
-      required: [true, 'Grain Direction is required']
-    },
-    dyed_color_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      default: null,
-    },
-    dyed_color_name: {
-      type: String,
-      default: null,
-    },
-    remark: { 
-      type: String,
-      uppercase:true,
-      trim: true,
-      default:null 
+      default: null
     },
     type: {
       type: String,
       uppercase: true,
       trim: true,
-      required: [true, 'Type is required']
+      default: null
     },
     destination: {
       type: String,
-      trim: true,
       uppercase: true,
-      required: [true, 'Destination is required']
+      trim: true,
+      default: null
     },
     destination_pallet_no: {
       type: String,
-      trim: true,
-      required: [true, 'Destination Pallet No is required']
-    },
-    value_added_process_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: [true, 'value added process id is required'],
-    },
-    value_added_process_name: {
-      type: String,
-      required: [true, 'value added process name is required'],
-    },
-    new_character_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      default: null,
-    },
-    new_character_name: {
-      type: String,
-      default: null,
+      default: null
     },
     min_rate: {
       type: Number,
@@ -203,6 +223,12 @@ const photoSchema = new mongoose.Schema(
     max_rate: {
       type: Number,
       default: 0,
+    },
+    remark: {
+      type: String,
+      uppercase: true,
+      trim: true,
+      default: null
     },
   },
   { timestamps: true }
