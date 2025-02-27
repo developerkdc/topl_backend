@@ -27,11 +27,11 @@ export const add_slicing_done = catchAsync(async (req, res, next) => {
     const {
       other_details,
       items_details,
-      type,
+      type = null,
       wastage_details,
       available_details,
     } = req.body;
-    for (let i of ['other_details', 'items_details', 'type']) {
+    for (let i of ['other_details', 'items_details']) {
       if (!req.body?.[i]) {
         throw new ApiError(`Please provide ${i} details`, 400);
       }
@@ -598,11 +598,11 @@ export const edit_slicing_done = catchAsync(async (req, res, next) => {
     const {
       other_details,
       items_details,
-      type,
+      type = null,
       wastage_details,
       available_details,
     } = req.body;
-    for (let i of ['other_details', 'items_details', 'type']) {
+    for (let i of ['other_details', 'items_details']) {
       if (!req.body?.[i]) {
         throw new ApiError(`Please provide ${i} details`, 400);
       }

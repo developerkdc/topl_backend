@@ -105,18 +105,22 @@ const issues_for_smoking_dying_schema = new mongoose.Schema(
     },
     character_id: {
       type: mongoose.Schema.Types.ObjectId,
+      default: null,
       required: [validate_dressing_required_field, 'Charcter ID is required'],
     },
     character_name: {
       type: String,
+      default: null,
       required: [validate_dressing_required_field, 'Charcter Name is required'],
     },
     pattern_id: {
       type: mongoose.Schema.Types.ObjectId,
+      default: null,
       required: [validate_dressing_required_field, 'Pattern ID is required'],
     },
     pattern_name: {
       type: String,
+      default: null,
       required: [validate_dressing_required_field, 'Pattern Name is required'],
     },
     series_id: {
@@ -220,8 +224,8 @@ export const issues_for_smoking_dying_view_model = mongoose.model(
     pipeline: [
       {
         $match: {
-          is_smoking_dying_done: false,
-        },
+          is_smoking_dying_done: false
+        }
       },
       {
         $lookup: {
