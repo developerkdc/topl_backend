@@ -69,7 +69,7 @@ export const order_type = {
 };
 export const order_category = {
   raw: "RAW",
-  plain: "PLAIN",
+  decorative: "DECORATIVE",
   series_product: "SERIES PRODUCT",
 };
 export const branding_type = {
