@@ -52,7 +52,7 @@ export const add_decorative_order = catchAsync(async (req, res) => {
         };
 
         await session?.commitTransaction()
-        const response = new ApiResponse(StatusCodes.CREATED, "Order Created Successfully.", { order_details, item_details });
+        const response = new ApiResponse(StatusCodes.CREATED, "Order Created Successfully.", { order_details: order_details_data, item_details: create_order_result });
 
         return res.status(StatusCodes.CREATED).json(response)
     } catch (error) {
@@ -116,7 +116,7 @@ export const update_decorative_order = catchAsync(async (req, res) => {
         };
 
         await session?.commitTransaction()
-        const response = new ApiResponse(StatusCodes.OK, "Order Updated Successfully.", { order_details, item_details });
+        const response = new ApiResponse(StatusCodes.OK, "Order Updated Successfully.", { order_details: order_details_result, item_details: create_order_result });
         return res.status(StatusCodes.OK).json(response)
     } catch (error) {
         await session?.abortTransaction()
@@ -406,7 +406,5 @@ export const fetch_all_decorative_order_items_by_order_id = catchAsync(async (re
 
     const response = new ApiResponse(StatusCodes.OK, "All Items of order fetched successfully", result);
     return res.status(StatusCodes.OK).json(response)
-
-
 })
 

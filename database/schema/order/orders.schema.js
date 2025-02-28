@@ -47,14 +47,14 @@ const OrderSchema = new mongoose.Schema(
     order_received_from: {
       type: String, //ONLINE, FACTORY, MOBILE
       // required: true,
-      default: '',
+      default: null,
       uppercase: true,
       trim: true,
     },
     credit_schedule: {
       type: String, //ADVANCE, AGAINST DISPATCH, 15 DAYS, 30 DAYS, 45 DAYS, 60 DAYS
       // required: true,
-      default: '',
+      default: null,
       uppercase: true,
       trim: true,
     },
@@ -74,7 +74,7 @@ const OrderSchema = new mongoose.Schema(
       type: String,
       enum: [branding_type.with_branding, branding_type.without_branding],
       required: true,
-      default: '',
+      default: null,
       uppercase: true,
       trim: true,
     },
@@ -86,7 +86,7 @@ const OrderSchema = new mongoose.Schema(
       type: String,
       uppercase: true,
       trim: true,
-      default: '',
+      default: null,
     },
     order_status: {
       type: String,
@@ -131,4 +131,4 @@ const OrderSchema = new mongoose.Schema(
   }
 );
 
-export const OrderModel = mongoose.model('orders', OrderSchema);
+export const OrderModel = mongoose.model('orders', OrderSchema, 'orders');
