@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import LogSchemaFunction from '../LogsSchema/logs.schema.js';
+import { order_category } from '../../Utils/constants/constants.js';
 
 const RawOrderItemDetailsSchema = new mongoose.Schema(
   {
@@ -55,6 +56,8 @@ const RawOrderItemDetailsSchema = new mongoose.Schema(
     log_no: {
       type: String,
       required: [true, 'Log No is required'],
+      trim: true,
+      uppercase: true,
     },
     length: {
       type: Number,
@@ -120,6 +123,9 @@ export const RawOrderItemDetailsModel = mongoose.model(
   'raw_order_item_details',
   RawOrderItemDetailsSchema
 );
+
+
+
 
 const RawOrderItemDetailsSchema1 = new mongoose.Schema(
   {

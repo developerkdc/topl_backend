@@ -59,20 +59,24 @@ export const dressing_error_types = {
 
 // order related constants
 export const order_status = {
-  pending:"PENDING",
-  partial_complete:"PARTIAL COMPLETE",
-  complete:"COMPLETE",
+  pending: "PENDING",
+  partial_complete: "PARTIAL COMPLETE",
+  complete: "COMPLETE",
 };
 export const order_type = {
-  regular:"REGULAR",
-  job_work:"JOB WORK",
+  regular: "REGULAR",
+  job_work: "JOB WORK",
 };
 export const order_category = {
-  raw:"RAW",
-  plain:"PLAIN",
-  series_product:"SERIES PRODUCT",
+  raw: "RAW",
+  decorative: "DECORATIVE",
+  series_product: "SERIES PRODUCT",
 };
 export const branding_type = {
-  with_branding:"WITH BRANDING",
-  without_branding:"WITHOUT BRANDING",
+  with_branding: "WITH BRANDING",
+  without_branding: "WITHOUT BRANDING",
+}
+
+export const order_item_status = {
+  cancel: "cancel"
 }
