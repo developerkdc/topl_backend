@@ -9,7 +9,6 @@ import { order_item_status } from '../../database/Utils/constants/constants.js';
 import { dynamic_filter } from '../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../utils/dynamicSearch/dynamic.js'
 
-
 export const add_decorative_order = catchAsync(async (req, res) => {
     const { order_details, item_details } = req.body
     const userDetails = req.userDetails;
@@ -61,7 +60,7 @@ export const add_decorative_order = catchAsync(async (req, res) => {
     } finally {
         await session.endSession()
     }
-})
+});
 
 export const update_decorative_order = catchAsync(async (req, res) => {
     const { order_details_id } = req.params;
@@ -124,8 +123,7 @@ export const update_decorative_order = catchAsync(async (req, res) => {
     } finally {
         await session?.endSession()
     }
-})
-
+});
 
 export const update_order_item_status_by_item_id = catchAsync(async (req, res) => {
     const { id } = req.params;
@@ -324,7 +322,6 @@ export const fetch_all_decorative_order_items = catchAsync(
         return res.status(StatusCodes?.OK).json(response);
     }
 );
-
 
 export const fetch_all_decorative_order_items_by_order_id = catchAsync(async (req, res) => {
     const { id } = req.params;

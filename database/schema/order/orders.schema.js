@@ -79,7 +79,11 @@ const OrderSchema = new mongoose.Schema(
       trim: true,
     },
     common_instructions: {
-      type: [String],
+      type: [{
+        type:String,
+        trim:true,
+        uppercase:true
+      }],
       default: null,
     },
     order_remarks: {

@@ -1,10 +1,13 @@
 import mongoose from "mongoose";
-import { OrderModel } from "../../../database/schema/order/orders.schema";
-import ApiResponse from "../../../utils/ApiResponse";
-import { StatusCodes } from "../../../utils/constants";
-import series_product_order_item_details_model from "../../../database/schema/order/series_product_order_item_details.schema";
-import { DynamicSearch } from "../../../utils/dynamicSearch/dynamic";
-import { dynamic_filter } from "../../../utils/dymanicFilter";
+import { OrderModel } from "../../../database/schema/order/orders.schema.js";
+import ApiResponse from "../../../utils/ApiResponse.js";
+import { StatusCodes } from "../../../utils/constants.js";
+import series_product_order_item_details_model from "../../../database/schema/order/series_product_order_item_details.schema.js";
+import { DynamicSearch } from "../../../utils/dynamicSearch/dynamic.js";
+import { dynamic_filter } from "../../../utils/dymanicFilter.js";
+import catchAsync from "../../../utils/errors/catchAsync.js";
+import { order_item_status } from "../../../database/Utils/constants/constants.js";
+import ApiError from "../../../utils/errors/apiError.js";
 
 export const add_series_order = catchAsync(async (req, res) => {
     const session = await mongoose.startSession();
@@ -47,7 +50,10 @@ export const add_series_order = catchAsync(async (req, res) => {
         };
 
         await session.commitTransaction()
-        const response = new ApiResponse(StatusCodes.CREATED, "Order Created Successfully.", { order_details, item_details });
+        const response = new ApiResponse(StatusCodes.CREATED, "Order Created Successfully.", {
+            order_details: order_details_data,
+            item_details: create_order_result
+        });
 
         return res.status(StatusCodes.CREATED).json(response)
     } catch (error) {
@@ -107,8 +113,11 @@ export const update_series_order = catchAsync(async (req, res) => {
             throw new ApiError("Failed to add order item details", StatusCodes?.BAD_REQUEST)
         };
 
-        await session?.commitTransaction()
-        const response = new ApiResponse(StatusCodes.OK, "Order Updated Successfully.", { order_details, item_details });
+        const response = new ApiResponse(StatusCodes.OK, "Order Updated Successfully.", {
+            order_details: order_details_result,
+            item_details: create_order_result
+        });
+        await session?.commitTransaction();
         return res.status(StatusCodes.OK).json(response)
     } catch (error) {
         await session?.abortTransaction()
@@ -118,7 +127,7 @@ export const update_series_order = catchAsync(async (req, res) => {
     }
 });
 
-export const update_order_item_status_by_item_id = catchAsync(async (req, res) => {
+export const update_series_order_item_status_by_item_id = catchAsync(async (req, res) => {
     const { id } = req.params;
     const { _id } = req.userDetails
 
@@ -313,3 +322,85 @@ export const fetch_all_series_order_items = catchAsync(async (req, res, next) =>
     });
     return res.status(StatusCodes?.OK).json(response);
 });
+
+export const fetch_all_series_order_items_by_order_id = catchAsync(async (req, res) => {
+    const { id } = req.params;
+
+    if (!id) {
+        throw new ApiError("ID is missing", StatusCodes.BAD_REQUEST)
+    }
+    if (!mongoose.isValidObjectId(id)) {
+        throw new ApiError("Invalid ID", StatusCodes.BAD_REQUEST)
+    };
+
+    const pipeline = [
+        {
+            $match: {
+                _id: mongoose.Types.ObjectId.createFromHexString(id)
+            }
+        },
+        {
+            $lookup: {
+                from: 'series_product_order_item_details',
+                foreignField: "order_id",
+                localField: "_id",
+                as: "order_items_details"
+            }
+        },
+        {
+            $lookup: {
+                from: "users",
+                foreignField: "_id",
+                localField: "created_by",
+                as: "created_user_details",
+                pipeline: [
+                    {
+                        $project: {
+                            first_name: 1,
+                            last_name: 1,
+                            user_name: 1,
+                            user_type: 1,
+                            email_id: 1,
+                        },
+                    }
+                ]
+            }
+        },
+        {
+            $lookup: {
+                from: "users",
+                foreignField: "_id",
+                localField: "updated_by",
+                as: "updated_user_details",
+                pipeline: [
+                    {
+                        $project: {
+                            first_name: 1,
+                            last_name: 1,
+                            user_name: 1,
+                            user_type: 1,
+                            email_id: 1,
+                        },
+                    }
+                ]
+            }
+        },
+        {
+            $unwind: {
+                path: "$created_user_details",
+                preserveNullAndEmptyArrays: true
+            }
+        },
+        {
+            $unwind: {
+                path: "$updated_user_details",
+                preserveNullAndEmptyArrays: true
+            }
+        },
+    ];
+
+    const result = await OrderModel.aggregate(pipeline);
+
+    const response = new ApiResponse(StatusCodes.OK, "All Items of order fetched successfully", result);
+    return res.status(StatusCodes.OK).json(response)
+})
