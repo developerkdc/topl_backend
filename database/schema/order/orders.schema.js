@@ -1,5 +1,4 @@
 import mongoose from 'mongoose';
-import LogSchemaFunction from '../LogsSchema/logs.schema.js';
 import {
   branding_type,
   order_category,
@@ -127,4 +126,3 @@ const OrderSchema = new mongoose.Schema(
 );
 
 export const OrderModel = mongoose.model('orders', OrderSchema);
-LogSchemaFunction('orders', OrderModel);
