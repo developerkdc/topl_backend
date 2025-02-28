@@ -18,7 +18,7 @@ export const issues_for_status = {
   tapping: 'tapping',
   tapping_sample: 'tapping_sample',
   tapping_stock: 'tapping_stock',
-  chalan: 'chalan',
+  challan: 'challan',
 };
 
 export const inward_type = {
@@ -56,3 +56,23 @@ export const dressing_error_types = {
   dressing_done: 'dressing_done',
   in_complete_data: 'in_complete_data',
 };
+
+// order related constants
+export const order_status = {
+  pending:"PENDING",
+  partial_complete:"PARTIAL COMPLETE",
+  complete:"COMPLETE",
+};
+export const order_type = {
+  regular:"REGULAR",
+  job_work:"JOB WORK",
+};
+export const order_category = {
+  raw:"RAW",
+  plain:"PLAIN",
+  series_product:"SERIES PRODUCT",
+};
+export const branding_type = {
+  with_branding:"WITH BRANDING",
+  without_branding:"WITHOUT BRANDING",
+}

@@ -660,11 +660,12 @@ export const listing_flitching_done_inventory = catchAsync(
     const match_query = {
       ...filterData,
       ...search_query,
+      issue_status: null
     };
 
     const aggregate_stage = [
       {
-        $match: match_query,
+        $match: { ...match_query },
       },
       {
         $sort: {
@@ -682,6 +683,7 @@ export const listing_flitching_done_inventory = catchAsync(
 
     const flitching_done_list =
       await flitching_view_modal.aggregate(aggregate_stage);
+
 
     const totalCount = await flitching_view_modal.countDocuments({
       ...match_query,
