@@ -3,6 +3,7 @@ import ApiError from '../../utils/errors/apiError.js';
 import { OrderModel } from '../../database/schema/order/orders.schema.js';
 import catchAsync from '../../utils/errors/catchAsync.js';
 import { RawOrderItemDetailsModel } from '../../database/schema/order/raw_order_item_details.schema.js';
+import ApiResponse from '../../utils/ApiResponse.js';
 
 export const AddRawOrder = catchAsync(async (req, res, next) => {
   const { order_details, item_details } = req.body;
@@ -63,26 +64,30 @@ export const AddRawOrder = catchAsync(async (req, res, next) => {
       updated_by: authUserDetail._id,
     }));
 
-    const newItems = await RawOrderItemDetailsModel.insertMany(formattedItemsDetails, { session });
+    const newItems = await RawOrderItemDetailsModel.insertMany(
+      formattedItemsDetails,
+      { session }
+    );
 
     if (!newItems || newItems.length === 0) {
       throw new ApiError('Failed to add order items', 400);
     }
 
     await session.commitTransaction();
-    session.endSession();
 
-    res
-      .status(201)
-      .json({ message: 'Order added successfully', order: newOrderDetails });
+    const response = new ApiResponse(
+      StatusCodes.CREATED,
+      'Order Created Successfully.',
+      { order_details: newOrderDetails, item_details: newItems }
+    );
+
+    return res.status(StatusCodes.CREATED).json(response);
   } catch (error) {
     await session.abortTransaction();
-    session.endSession();
 
-    console.error('Error adding order:', error);
-    res
-      .status(500)
-      .json({ message: 'Failed to add order', error: error.message });
+    throw error;
+  } finally {
+    await session.endSession();
   }
 });
 

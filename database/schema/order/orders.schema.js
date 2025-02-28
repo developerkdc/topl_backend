@@ -26,7 +26,7 @@ const OrderSchema = new mongoose.Schema(
       trim: true,
     },
     orderDate: { type: Date, required: true },
-    
+
     owner_name: {
       type: String,
       required: true,
@@ -109,6 +109,12 @@ const OrderSchema = new mongoose.Schema(
     series_product: {
       type: String,
       default: null,
+    },
+    is_close: {
+      type: String,
+      default: null,
+      uppercase: true,
+      trim: true,
     },
 
     created_by: {

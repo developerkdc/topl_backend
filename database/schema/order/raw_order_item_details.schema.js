@@ -13,17 +13,6 @@ const RawOrderItemDetailsSchema = new mongoose.Schema(
       ref: 'orders',
       required: [true, 'Order Id is required'],
     },
-    order_category: {
-      type: String,
-      enum: [
-        order_category.raw,
-        order_category.plain,
-        order_category.series_product,
-      ],
-      required: [true, 'Order Category is required'],
-      uppercase: true,
-      trim: true,
-    },
 
     raw_material: {
       type: String,
@@ -119,13 +108,12 @@ const RawOrderItemDetailsSchema = new mongoose.Schema(
   }
 );
 
+RawOrderItemDetailsSchema.index({ order_id: 1, item_no: 1 }, { unique: true });
+
 export const RawOrderItemDetailsModel = mongoose.model(
   'raw_order_item_details',
   RawOrderItemDetailsSchema
 );
-
-
-
 
 const RawOrderItemDetailsSchema1 = new mongoose.Schema(
   {
@@ -199,7 +187,7 @@ const RawOrderItemDetailsSchema1 = new mongoose.Schema(
       },
       default: null,
     },
-    
+
     flitch: {
       type: {
         item_name: {
