@@ -12,18 +12,7 @@ const decorative_order_item_details_schema = new mongoose.Schema(
       ref: 'orders',
       required: [true, 'Order Id is required'],
     },
-    order_category: {
-      type: String,
-      enum: {
-        values: [order_category.raw,
-        order_category.plain,
-        order_category.series_product],
-        message: `Invalid Order Category -> {{VALUE}} it must be one of the ${order_category?.raw}, ${order_category?.plain}, ${order_category?.series_product}`
-      },
-      required: [true, 'Order Category is required'],
-      uppercase: true,
-      trim: true,
-    },
+
     item_name: {
       type: String,
       required: [true, 'Item Name is required'],
@@ -95,12 +84,10 @@ const decorative_order_item_details_schema = new mongoose.Schema(
       default: null
     },
     pressing_instructions: {
-      type: [{
-        type: String,
-        trim: true,
-        uppercase: true
-      }],
-      default: []
+      type: String,
+      trim: true,
+      uppercase: true,
+      default: null
     },
     base_type: {
       type: String,

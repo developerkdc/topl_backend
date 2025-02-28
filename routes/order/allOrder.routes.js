@@ -1,5 +1,6 @@
 import express from 'express';
 import rawOrderRouter from './rawOrder.routes.js';
+import decorativeOrderRouter from './decorativeOrder.routes.js';
 
 const orderRouter = express.Router();
 
@@ -41,6 +42,7 @@ const orderRouter = express.Router();
 //   GetGroupNoBasedOnItemNameAndItemCode
 // );
 
-orderRouter.use('/raw-order',rawOrderRouter );
+orderRouter.use('/raw-order', rawOrderRouter);
+orderRouter.use('/decorative-order', decorativeOrderRouter);
 
 export default orderRouter;

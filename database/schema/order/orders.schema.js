@@ -18,7 +18,7 @@ const OrderSchema = new mongoose.Schema(
       type: String,
       enum: [
         order_category.raw,
-        order_category.plain,
+        order_category.decorative,
         order_category.series_product,
       ],
       required: true,

@@ -5,6 +5,7 @@ import ApiResponse from '../../utils/ApiResponse.js';
 import { StatusCodes } from '../../utils/constants.js';
 import { OrderModel } from '../../database/schema/order/orders.schema.js';
 import { decorative_order_item_details_model } from '../../database/schema/order/decorative_order_item_details.schema.js';
+import { order_item_status } from '../../database/Utils/constants/constants.js';
 
 
 export const add_decorative_order = catchAsync(async (req, res) => {
@@ -117,3 +118,28 @@ export const update_decorative_order = catchAsync(async (req, res) => {
         await session?.endSession()
     }
 })
+
+
+export const update_order_item_status_by_item_id = catchAsync(async (req, res) => {
+    const { id } = req.params;
+    const { _id } = req.userDetails
+
+    const update_result = await decorative_order_item_details_model?.updateOne({ _id: id }, {
+        $set: {
+            item_status: order_item_status?.cancel,
+            updated_by: _id
+        }
+    });
+
+    if (update_result?.matchedCount === 0) {
+        throw new ApiError("Order Item Not found", StatusCodes?.NOT_FOUND)
+    };
+
+    if (!update_result?.acknowledged || update_result?.modifiedCount === 0) {
+        throw new ApiError("Failed to update order item status", StatusCodes.BAD_REQUEST)
+    };
+
+    const response = new ApiResponse(StatusCodes.OK, "Order Item Cancelled Successfully", update_result);
+    return res.status(StatusCodes.OK).json(response)
+});
+
