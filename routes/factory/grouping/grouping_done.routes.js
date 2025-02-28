@@ -7,6 +7,7 @@ import {
   fetch_all_details_by_grouping_done_id,
   fetch_all_details_by_grouping_done_item_id,
   fetch_all_grouping_done_items,
+  group_no_dropdown,
   recreate_grouping_done_items,
   revert_all_grouping_done,
   revert_grouping_done_damaged,
@@ -44,6 +45,11 @@ groupingDoneRouter.post(
   '/revert-grouping-done-details/:id',
   AuthMiddleware,
   revert_all_grouping_done
+);
+groupingDoneRouter.get(
+  '/group-no-dropdown',
+  AuthMiddleware,
+  group_no_dropdown
 );
 
 //damaged

@@ -1,5 +1,5 @@
 const session_map = new Map();
-console.log(session_map);
+// console.log(session_map);
 
 export const save_session = (session_id, session) => {
   session_map?.set(session_id, session);

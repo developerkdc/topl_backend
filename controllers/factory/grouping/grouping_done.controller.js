@@ -581,6 +581,21 @@ export const revert_all_grouping_done = catchAsync(async (req, res, next) => {
   }
 });
 
+export const group_no_dropdown = catchAsync(async (req,res,next)=>{
+  const fetch_group_no = await grouping_done_items_details_model.find({},{
+    group_no:1,
+    photo_no:1,
+    photo_no_id:1
+  })
+  const response = new ApiResponse(
+    StatusCodes.OK,
+    'Details Fetched successfully',
+    fetch_group_no
+  );
+
+  return res.status(StatusCodes.OK).json(response);
+})
+
 //Damaged
 export const fetch_all_damaged_grouping_done_items = catchAsync(
   async (req, res, next) => {

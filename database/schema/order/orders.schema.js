@@ -1,5 +1,4 @@
 import mongoose from 'mongoose';
-import LogSchemaFunction from '../LogsSchema/logs.schema.js';
 import {
   branding_type,
   order_category,
@@ -18,7 +17,7 @@ const OrderSchema = new mongoose.Schema(
       type: String,
       enum: [
         order_category.raw,
-        order_category.plain,
+        order_category.decorative,
         order_category.series_product,
       ],
       required: true,
@@ -26,7 +25,8 @@ const OrderSchema = new mongoose.Schema(
       trim: true,
     },
     orderDate: { type: Date, required: true },
-    customer_name: {
+
+    owner_name: {
       type: String,
       required: true,
       uppercase: true,
@@ -35,7 +35,6 @@ const OrderSchema = new mongoose.Schema(
     customer_id: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
-      trim: true,
     },
     order_type: {
       type: String,
@@ -80,7 +79,7 @@ const OrderSchema = new mongoose.Schema(
       trim: true,
     },
     common_instructions: {
-      type: [Sting],
+      type: [String],
       default: null,
     },
     order_remarks: {
@@ -98,6 +97,7 @@ const OrderSchema = new mongoose.Schema(
       ],
       uppercase: true,
       trim: true,
+      default: null,
     },
 
     raw_materials: {
@@ -109,7 +109,12 @@ const OrderSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
-
+    is_close: {
+      type: String,
+      uppercase: true,
+      trim: true,
+      default: null,
+    },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'users',
@@ -127,4 +132,3 @@ const OrderSchema = new mongoose.Schema(
 );
 
 export const OrderModel = mongoose.model('orders', OrderSchema);
-LogSchemaFunction('orders', OrderModel);
