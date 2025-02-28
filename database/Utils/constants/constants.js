@@ -78,5 +78,5 @@ export const branding_type = {
 }
 
 export const order_item_status = {
-  cancel: "cancel"
+  cancel: "CANCEL"
 }

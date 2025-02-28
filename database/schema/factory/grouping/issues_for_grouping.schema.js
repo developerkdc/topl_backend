@@ -182,8 +182,10 @@ export const issues_for_grouping_view_model = mongoose.model(
             },
             {
                 $addFields: {
+                    item_name_id: { $first: "$bundles_details.item_name_id" },
                     item_name: { $first: "$bundles_details.item_name" },
                     item_sub_category_name: { $first: "$bundles_details.item_sub_category_name" },
+                    item_sub_category_id: { $first: "$bundles_details.item_sub_category_id" },
                     total_bundles: {
                         $size: "$bundles_details"
                     },

@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { order_item_status } from "../../Utils/constants/constants";
 
 const series_product_order_item_details_schema = new mongoose.Schema({
     sr_no: {
@@ -108,6 +109,14 @@ const series_product_order_item_details_schema = new mongoose.Schema({
         uppercase: true,
         default: null,
     },
+    item_status: {
+        type: String,
+        enum: {
+            values: [order_item_status?.cancel],
+            message: `Invalid Order Status -> {{VALUE}} it must be one of the ${order_item_status?.cancel}`
+        },
+        default: null
+    },
     pressing_instruction: {
         type: String,
         trim: true,
@@ -146,4 +155,12 @@ const series_product_order_item_details_schema = new mongoose.Schema({
     },
 }, {
     timestamps: true,
-})
+});
+
+series_product_order_item_details_schema.index({ sr_no: 1 });
+series_product_order_item_details_schema.index({ order_id: 1 });
+series_product_order_item_details_schema.index({ sr_no: 1, order_id: 1 }, { unique: true });
+
+const series_product_order_item_details_model = mongoose.model("series_product_order_item_details", series_product_order_item_details_schema, "series_product_order_item_details");
+
+export default series_product_order_item_details_model;

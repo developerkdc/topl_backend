@@ -2,61 +2,61 @@ import mongoose from 'mongoose';
 import { issues_for_status } from '../../../Utils/constants/constants.js';
 
 const grouping_done_details_schema = new mongoose.Schema(
-  {
-    grouping_done_date: {
-      type: Date,
-      required: [true, 'grouping Date is required'],
+    {
+        grouping_done_date: {
+            type: Date,
+            required: [true, 'grouping Date is required'],
+        },
+        issue_for_grouping_id: {
+            type: mongoose.Schema.Types.ObjectId,
+            required: [true, 'Issues for grouping id is required'],
+        },
+        no_of_workers: {
+            type: Number,
+            required: [true, 'No.of Workers is required '],
+        },
+        no_of_working_hours: {
+            type: Number,
+            required: [true, 'No. of Working hours is required'],
+        },
+        no_of_total_hours: {
+            type: Number,
+            required: [true, 'No. of Total hours is required'],
+        },
+        shift: {
+            type: String,
+            required: [true, 'Shift is required'],
+            trim: true,
+            uppercase: true,
+        },
+        isEditable: {
+            type: Boolean,
+            default: true,
+        },
+        remark: {
+            type: String,
+            default: null,
+            trim: true,
+            uppercase: true,
+        },
+        created_by: {
+            type: mongoose.Schema.Types.ObjectId,
+            required: [true, 'Created By Id is required'],
+        },
+        updated_by: {
+            type: mongoose.Schema.Types.ObjectId,
+            required: [true, 'Updated By Id is required'],
+        },
     },
-    issue_for_grouping_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: [true, 'Issues for grouping id is required'],
-    },
-    no_of_workers: {
-      type: Number,
-      required: [true, 'No.of Workers is required '],
-    },
-    no_of_working_hours: {
-      type: Number,
-      required: [true, 'No. of Working hours is required'],
-    },
-    no_of_total_hours: {
-      type: Number,
-      required: [true, 'No. of Total hours is required'],
-    },
-    shift: {
-      type: String,
-      required: [true, 'Shift is required'],
-      trim: true,
-      uppercase: true,
-    },
-    isEditable: {
-      type: Boolean,
-      default: true,
-    },
-    remark: {
-      type: String,
-      default: null,
-      trim: true,
-      uppercase: true,
-    },
-    created_by: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: [true, 'Created By Id is required'],
-    },
-    updated_by: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: [true, 'Updated By Id is required'],
-    },
-  },
-  {
-    timestamps: true,
-  }
+    {
+        timestamps: true,
+    }
 );
 
 export const grouping_done_details_model = mongoose.model(
-  'grouping_done_details',
-  grouping_done_details_schema,
-  'grouping_done_details'
+    'grouping_done_details',
+    grouping_done_details_schema,
+    'grouping_done_details'
 );
 
 const grouping_done_items_details_schema = new mongoose.Schema(
@@ -169,13 +169,13 @@ const grouping_done_items_details_schema = new mongoose.Schema(
         },
         cut_id: {
             type: mongoose.Schema.Types.ObjectId,
-            required: [true, 'cut id is required'],
+            default: null,
         },
         cut_name: {
             type: String,
             trim: true,
             uppercase: true,
-            required: [true, 'cut name is required'],
+            default: null,
         },
         color_id: {
             type: mongoose.Schema.Types.ObjectId,
@@ -278,12 +278,12 @@ const grouping_done_items_details_schema = new mongoose.Schema(
 
 grouping_done_items_details_schema.index({ group_no: -1 }, { unique: true });
 grouping_done_items_details_schema.index(
-  { group_no: -1, pallet_number: -1 },
-  { unique: true }
+    { group_no: -1, pallet_number: -1 },
+    { unique: true }
 );
 
 export const grouping_done_items_details_model = mongoose.model(
-  'grouping_done_items_details',
-  grouping_done_items_details_schema,
-  'grouping_done_items_details'
+    'grouping_done_items_details',
+    grouping_done_items_details_schema,
+    'grouping_done_items_details'
 );
