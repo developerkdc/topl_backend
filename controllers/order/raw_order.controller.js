@@ -7,7 +7,7 @@ import ApiResponse from '../../utils/ApiResponse.js';
 
 export const AddRawOrder = catchAsync(async (req, res, next) => {
   const { order_details, item_details } = req.body;
-  const authUserDetail = req.userDetails;
+  const userDetails = req.userDetails;
 
   for (let i of ['order_details', 'item_details']) {
     if (!req.body?.[i]) {
@@ -40,8 +40,8 @@ export const AddRawOrder = catchAsync(async (req, res, next) => {
         {
           ...order_details,
           order_no: newOrderNumber,
-          created_by: authUserDetail._id,
-          updated_by: authUserDetail._id,
+          created_by: userDetails._id,
+          updated_by: userDetails._id,
         },
       ],
       { session }
@@ -60,8 +60,8 @@ export const AddRawOrder = catchAsync(async (req, res, next) => {
     const formattedItemsDetails = item_details.map((item) => ({
       ...item,
       order_id: newOrderDetails._id,
-      created_by: authUserDetail._id,
-      updated_by: authUserDetail._id,
+      created_by: userDetails._id,
+      updated_by: userDetails._id,
     }));
 
     const newItems = await RawOrderItemDetailsModel.insertMany(
@@ -91,352 +91,90 @@ export const AddRawOrder = catchAsync(async (req, res, next) => {
   }
 });
 
-export const ListPendingRawOrders = catchAsync(async (req, res, next) => {
-  const { string, boolean, numbers, arrayField } =
-    req?.body?.searchFields || {};
-  const {
-    page = 1,
-    limit = 10,
-    sortBy = 'updated_at',
-    sort = 'desc',
-  } = req.query;
-  const skip = Math.max((page - 1) * limit, 0);
+export const UpdateRawOrder = catchAsync(async (req, res) => {
+  const { order_details_id } = req.params;
 
-  const search = req.query.search || '';
+  const { order_details, item_details } = req.body;
+  const userDetails = req.userDetails;
 
-  let searchQuery = {};
-  if (search != '' && req?.body?.searchFields) {
-    const searchdata = DynamicSearch(
-      search,
-      boolean,
-      numbers,
-      string,
-      arrayField
-    );
-    if (searchdata?.length == 0) {
-      return res.status(404).json({
-        statusCode: 404,
-        status: false,
-        data: {
-          data: [],
-        },
-        message: 'Results Not Found',
-      });
-    }
-    searchQuery = searchdata;
-  }
-
-  const { to, from, ...data } = req?.body?.filters || {};
-  const matchQuery = data || {};
-
-  if (to && from) {
-    console.log(new Date(from));
-    matchQuery['orderDate'] = { $gte: new Date(from), $lte: new Date(to) };
-  }
-  const issuedForFinishingView = mongoose.connection.db.collection(
-    'order_raw_pending_view'
-  );
-
-  const totalDocuments = await issuedForFinishingView.countDocuments({
-    ...matchQuery,
-    ...searchQuery,
-  });
-  const totalPages = Math.ceil(totalDocuments / limit);
-
-  const issuedForFinishingData = await issuedForFinishingView
-    .aggregate([
-      {
-        $match: {
-          ...matchQuery,
-          ...searchQuery,
-        },
-      },
-      {
-        $sort: {
-          [sortBy]: sort == 'desc' ? -1 : 1,
-        },
-      },
-      {
-        $skip: skip,
-      },
-      {
-        $limit: limit,
-      },
-    ])
-    .toArray();
-  return res.status(200).json({
-    result: issuedForFinishingData,
-    statusCode: 200,
-    status: 'success',
-    totalPages: totalPages,
-  });
-});
-
-export const ListCompleteRawOrders = catchAsync(async (req, res, next) => {
-  const { string, boolean, numbers, arrayField } =
-    req?.body?.searchFields || {};
-  const {
-    page = 1,
-    limit = 10,
-    sortBy = 'updated_at',
-    sort = 'desc',
-  } = req.query;
-  const skip = Math.max((page - 1) * limit, 0);
-
-  const search = req.query.search || '';
-
-  let searchQuery = {};
-  if (search != '' && req?.body?.searchFields) {
-    const searchdata = DynamicSearch(
-      search,
-      boolean,
-      numbers,
-      string,
-      arrayField
-    );
-    if (searchdata?.length == 0) {
-      return res.status(404).json({
-        statusCode: 404,
-        status: false,
-        data: {
-          data: [],
-        },
-        message: 'Results Not Found',
-      });
-    }
-    searchQuery = searchdata;
-  }
-
-  const { to, from, ...data } = req?.body?.filters || {};
-  const matchQuery = data || {};
-
-  if (to && from) {
-    console.log(new Date(from));
-    matchQuery['orderDate'] = { $gte: new Date(from), $lte: new Date(to) };
-  }
-  const issuedForFinishingView = mongoose.connection.db.collection(
-    'order_raw_complete_view'
-  );
-  const totalDocuments = await issuedForFinishingView.countDocuments({
-    ...matchQuery,
-    ...searchQuery,
-  });
-  const totalPages = Math.ceil(totalDocuments / limit);
-
-  const issuedForFinishingData = await issuedForFinishingView
-    .aggregate([
-      {
-        $match: {
-          ...matchQuery,
-          ...searchQuery,
-        },
-      },
-      {
-        $sort: {
-          [sortBy]: sort == 'desc' ? -1 : 1,
-        },
-      },
-      {
-        $skip: skip,
-      },
-      {
-        $limit: limit,
-      },
-    ])
-    .toArray();
-  return res.status(200).json({
-    result: issuedForFinishingData,
-    statusCode: 200,
-    status: 'success',
-    totalPages: totalPages,
-  });
-});
-
-export const ListPendingGroupOrders = catchAsync(async (req, res, next) => {
-  const { string, boolean, numbers, arrayField } =
-    req?.body?.searchFields || {};
-  const {
-    page = 1,
-    limit = 10,
-    sortBy = 'updated_at',
-    sort = 'desc',
-  } = req.query;
-  const skip = Math.max((page - 1) * limit, 0);
-
-  const search = req.query.search || '';
-
-  let searchQuery = {};
-  if (search != '' && req?.body?.searchFields) {
-    const searchdata = DynamicSearch(
-      search,
-      boolean,
-      numbers,
-      string,
-      arrayField
-    );
-    if (searchdata?.length == 0) {
-      return res.status(404).json({
-        statusCode: 404,
-        status: false,
-        data: {
-          data: [],
-        },
-        message: 'Results Not Found',
-      });
-    }
-    searchQuery = searchdata;
-  }
-
-  const { to, from, ...data } = req?.body?.filters || {};
-  const matchQuery = data || {};
-
-  if (to && from) {
-    console.log(new Date(from));
-    matchQuery['orderDate'] = { $gte: new Date(from), $lte: new Date(to) };
-  }
-  const issuedForFinishingView = mongoose.connection.db.collection(
-    'order_group_pending_view'
-  );
-  const totalDocuments = await issuedForFinishingView.countDocuments({
-    ...matchQuery,
-    ...searchQuery,
-  });
-  const totalPages = Math.ceil(totalDocuments / limit);
-
-  const issuedForFinishingData = await issuedForFinishingView
-    .aggregate([
-      {
-        $match: {
-          ...matchQuery,
-          ...searchQuery,
-        },
-      },
-      {
-        $sort: {
-          [sortBy]: sort == 'desc' ? -1 : 1,
-        },
-      },
-      {
-        $skip: skip,
-      },
-      {
-        $limit: limit,
-      },
-    ])
-    .toArray();
-  return res.status(200).json({
-    result: issuedForFinishingData,
-    statusCode: 200,
-    status: 'success',
-    totalPages: totalPages,
-  });
-});
-
-export const ListCompleteGroupOrders = catchAsync(async (req, res, next) => {
-  const { string, boolean, numbers, arrayField } =
-    req?.body?.searchFields || {};
-  const {
-    page = 1,
-    limit = 10,
-    sortBy = 'updated_at',
-    sort = 'desc',
-  } = req.query;
-  const skip = Math.max((page - 1) * limit, 0);
-
-  const search = req.query.search || '';
-
-  let searchQuery = {};
-  if (search != '' && req?.body?.searchFields) {
-    const searchdata = DynamicSearch(
-      search,
-      boolean,
-      numbers,
-      string,
-      arrayField
-    );
-    if (searchdata?.length == 0) {
-      return res.status(404).json({
-        statusCode: 404,
-        status: false,
-        data: {
-          data: [],
-        },
-        message: 'Results Not Found',
-      });
-    }
-    searchQuery = searchdata;
-  }
-
-  const { to, from, ...data } = req?.body?.filters || {};
-  const matchQuery = data || {};
-
-  if (to && from) {
-    console.log(new Date(from));
-    matchQuery['orderDate'] = { $gte: new Date(from), $lte: new Date(to) };
-  }
-  const issuedForFinishingView = mongoose.connection.db.collection(
-    'order_group_complete_view'
-  );
-  const totalDocuments = await issuedForFinishingView.countDocuments({
-    ...matchQuery,
-    ...searchQuery,
-  });
-  const totalPages = Math.ceil(totalDocuments / limit);
-
-  const issuedForFinishingData = await issuedForFinishingView
-    .aggregate([
-      {
-        $match: {
-          ...matchQuery,
-          ...searchQuery,
-        },
-      },
-      {
-        $sort: {
-          [sortBy]: sort == 'desc' ? -1 : 1,
-        },
-      },
-      {
-        $skip: skip,
-      },
-      {
-        $limit: limit,
-      },
-    ])
-    .toArray();
-  return res.status(200).json({
-    result: issuedForFinishingData,
-    statusCode: 200,
-    status: 'success',
-    totalPages: totalPages,
-  });
-});
-
-export const updateOrder = catchAsync(async (req, res, next) => {
-  const { id } = req.query;
-  const updates = req.body;
-
+  const session = await mongoose.startSession();
   try {
-    const isOrderDispatched = await DispatchModel.findOne({ order_id: id });
-    if (isOrderDispatched) {
-      return res
-        .status(400)
-        .json({ message: 'Cannot Update Order Already Dispatched' });
+    await session.startTransaction();
+
+    for (let field of ['order_details', 'item_details']) {
+      if (!req.body[field]) {
+        throw new ApiError(`${field} is required`, StatusCodes?.NOT_FOUND);
+      }
     }
-    // Find the order by ID and update it
-    const order = await OrderModel.findByIdAndUpdate(id, updates, {
-      new: true,
+    if (!Array.isArray(item_details)) {
+      throw new ApiError(
+        'Item details must be an array',
+        StatusCodes.BAD_REQUEST
+      );
+    }
+
+    const order_details_result = await OrderModel.findOneAndUpdate(
+      { _id: order_details_id },
+      {
+        $set: {
+          ...order_details,
+          updated_by: userDetails?._id,
+        },
+      },
+      { session, new: true }
+    );
+    if (!order_details_result) {
+      throw new ApiError(
+        'Failed to Update order details data.',
+        StatusCodes.BAD_REQUEST
+      );
+    }
+
+    const delete_order_items =
+      await RawOrderItemDetailsModel?.deleteMany(
+        { order_id: order_details_result?._id },
+        { session }
+      );
+
+    if (
+      !delete_order_items?.acknowledged ||
+      delete_order_items?.deletedCount === 0
+    ) {
+      throw new ApiError(
+        'Failed to delete item details',
+        StatusCodes.BAD_REQUEST
+      );
+    }
+
+    const updated_item_details = item_details?.map((item) => {
+      item.order_id = order_details_result?._id;
+      item.updated_by = userDetails?._id;
+      return item;
     });
 
-    if (!order) {
-      return res.status(404).json({ error: 'Order not found' });
+    const create_order_result =
+      await RawOrderItemDetailsModel?.insertMany(
+        updated_item_details,
+        { session }
+      );
+    if (create_order_result?.length === 0) {
+      throw new ApiError(
+        'Failed to update order item details',
+        StatusCodes?.BAD_REQUEST
+      );
     }
 
-    return res.status(200).json(order);
+    await session?.commitTransaction();
+    const response = new ApiResponse(
+      StatusCodes.OK,
+      'Order Updated Successfully.',
+      { order_details, item_details }
+    );
+    return res.status(StatusCodes.OK).json(response);
   } catch (error) {
-    console.error('An error occurred while patching the order:', error);
-    return res
-      .status(500)
-      .json({ error: 'An error occurred while patching the order' });
+    await session?.abortTransaction();
+    throw error;
+  } finally {
+    await session?.endSession();
   }
 });
