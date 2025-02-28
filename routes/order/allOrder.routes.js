@@ -1,6 +1,6 @@
 import express from 'express';
 import rawOrderRouter from './rawOrder.routes.js';
-import decorativeOrderRouter from './decorativeOrder.routes.js';
+import decorativeOrderRouter from './decorative_order/decorativeOrder.routes.js';
 
 const orderRouter = express.Router();
 
