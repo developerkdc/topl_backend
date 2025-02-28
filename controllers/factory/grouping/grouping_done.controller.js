@@ -418,27 +418,33 @@ export const fetch_all_details_by_grouping_done_id = catchAsync(
     }
 
     const pipeline = [
-        {
-            $match: {
-                _id: mongoose.Types.ObjectId.createFromHexString(id),
-            },
+      {
+        $match: {
+          _id: mongoose.Types.ObjectId.createFromHexString(id),
         },
-        {
-            $lookup: {
-                from: 'grouping_done_items_details',
-                localField: '_id',
-                foreignField: 'grouping_done_other_details_id',
-                as: 'grouping_done_items_details',
-            },
+      },
+      {
+        $lookup: {
+          from: 'grouping_done_items_details',
+          localField: '_id',
+          foreignField: 'grouping_done_other_details_id',
+          as: 'grouping_done_items_details',
         },
-        {
-            $lookup: {
-                from: 'issues_for_grouping_views',
-                localField: 'issue_for_grouping_id',
-                foreignField: '_id',
-                as: 'issues_for_grouping',
-            },
+      },
+      {
+        $lookup: {
+          from: 'issues_for_grouping_views',
+          localField: 'issue_for_grouping_id',
+          foreignField: '_id',
+          as: 'issues_for_grouping',
+        },
+      },
+      {
+        $unwind: {
+          path: "$issues_for_grouping",
+          preserveNullAndEmptyArrays: true
         }
+      }
     ];
     const result = await grouping_done_details_model.aggregate(pipeline);
 
@@ -580,6 +586,21 @@ export const revert_all_grouping_done = catchAsync(async (req, res, next) => {
     await session.endSession();
   }
 });
+
+export const group_no_dropdown = catchAsync(async (req, res, next) => {
+  const fetch_group_no = await grouping_done_items_details_model.find({}, {
+    group_no: 1,
+    photo_no: 1,
+    photo_no_id: 1
+  })
+  const response = new ApiResponse(
+    StatusCodes.OK,
+    'Details Fetched successfully',
+    fetch_group_no
+  );
+
+  return res.status(StatusCodes.OK).json(response);
+})
 
 //Damaged
 export const fetch_all_damaged_grouping_done_items = catchAsync(

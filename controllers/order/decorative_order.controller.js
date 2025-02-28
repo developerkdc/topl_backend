@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import mongoose, { isValidObjectId } from 'mongoose';
 import catchAsync from '../../utils/errors/catchAsync.js';
 import ApiError from '../../utils/errors/apiError.js';
 import ApiResponse from '../../utils/ApiResponse.js';
@@ -6,6 +6,8 @@ import { StatusCodes } from '../../utils/constants.js';
 import { OrderModel } from '../../database/schema/order/orders.schema.js';
 import { decorative_order_item_details_model } from '../../database/schema/order/decorative_order_item_details.schema.js';
 import { order_item_status } from '../../database/Utils/constants/constants.js';
+import { dynamic_filter } from '../../utils/dymanicFilter.js';
+import { DynamicSearch } from '../../utils/dynamicSearch/dynamic.js'
 
 
 export const add_decorative_order = catchAsync(async (req, res) => {
@@ -85,7 +87,7 @@ export const update_decorative_order = catchAsync(async (req, res) => {
                 ...order_details,
                 updated_by: userDetails?._id
             }
-        }, { session, new: true });
+        }, { session, runValidators: true, new: true });
         if (!order_details_result) {
             throw new ApiError("Failed to Update order details data.", StatusCodes.BAD_REQUEST)
         };
@@ -98,8 +100,9 @@ export const update_decorative_order = catchAsync(async (req, res) => {
         };
 
         const updated_item_details = item_details?.map((item) => {
-            item.order_id = order_details_result?._id;
+            item.created_by = item.created_by ? item?.created_by : userDetails?._id;
             item.updated_by = userDetails?._id;
+            item.createdAt = item.createdAt ? item?.createdAt : new Date();
             return item
         });
 
@@ -143,3 +146,186 @@ export const update_order_item_status_by_item_id = catchAsync(async (req, res) =
     return res.status(StatusCodes.OK).json(response)
 });
 
+export const fetch_all_decorative_order_items = catchAsync(
+    async (req, res, next) => {
+        const {
+            page = 1,
+            sortBy = 'updatedAt',
+            sort = 'desc',
+            limit = 10,
+            search = '',
+        } = req.query;
+        const {
+            string,
+            boolean,
+            numbers,
+            arrayField = [],
+        } = req.body?.searchFields || {};
+
+        const filter = req.body?.filter;
+
+        let search_query = {};
+        if (search != '' && req?.body?.searchFields) {
+            const search_data = DynamicSearch(
+                search,
+                boolean,
+                numbers,
+                string,
+                arrayField
+            );
+            if (search_data?.length == 0) {
+                return res.status(404).json({
+                    statusCode: 404,
+                    status: false,
+                    data: {
+                        data: [],
+                    },
+                    message: 'Results Not Found',
+                });
+            }
+            search_query = search_data;
+        }
+
+        const filterData = dynamic_filter(filter);
+
+        const match_query = {
+            ...search_query,
+            ...filterData,
+        };
+
+        const aggLookupOrderDetails = {
+            $lookup: {
+                from: 'orders',
+                localField: 'order_id',
+                foreignField: '_id',
+                as: 'order_details',
+            },
+        };
+        const aggCreatedUserDetails = {
+            $lookup: {
+                from: 'users',
+                localField: 'created_by',
+                foreignField: '_id',
+                pipeline: [
+                    {
+                        $project: {
+                            first_name: 1,
+                            last_name: 1,
+                            user_name: 1,
+                            user_type: 1,
+                            email_id: 1,
+                        },
+                    },
+                ],
+                as: 'created_user_details',
+            },
+        };
+
+        const aggUpdatedUserDetails = {
+            $lookup: {
+                from: 'users',
+                localField: 'updated_by',
+                foreignField: '_id',
+                pipeline: [
+                    {
+                        $project: {
+                            first_name: 1,
+                            last_name: 1,
+                            user_name: 1,
+                            user_type: 1,
+                            email_id: 1,
+                        },
+                    },
+                ],
+                as: 'updated_user_details',
+            },
+        };
+        const aggMatch = {
+            $match: {
+                ...match_query,
+            },
+        };
+        const aggUnwindOtherDetails = {
+            $unwind: {
+                path: '$order_details',
+                preserveNullAndEmptyArrays: true,
+            },
+        };
+
+        const aggUnwindCreatedUser = {
+            $unwind: {
+                path: '$created_user_details',
+                preserveNullAndEmptyArrays: true,
+            },
+        };
+        const aggUnwindUpdatedUser = {
+            $unwind: {
+                path: '$updated_user_details',
+                preserveNullAndEmptyArrays: true,
+            },
+        };
+        const aggSort = {
+            $sort: {
+                [sortBy]: sort === 'desc' ? -1 : 1,
+            },
+        };
+
+        const aggSkip = {
+            $skip: (parseInt(page) - 1) * parseInt(limit),
+        };
+
+        const aggLimit = {
+            $limit: parseInt(limit),
+        };
+
+        const list_aggregate = [
+            aggLookupOrderDetails,
+            aggUnwindOtherDetails,
+            aggCreatedUserDetails,
+            aggUpdatedUserDetails,
+            aggUnwindCreatedUser,
+            aggUnwindUpdatedUser,
+            aggMatch,
+            aggSort,
+            aggSkip,
+            aggLimit,
+        ];
+
+        const result = await decorative_order_item_details_model?.aggregate(list_aggregate);
+
+        const aggCount = {
+            $count: 'totalCount',
+        };
+
+        const count_total_docs = [
+            aggLookupOrderDetails,
+            aggUnwindOtherDetails,
+            aggCreatedUserDetails,
+            aggUpdatedUserDetails,
+            aggUnwindCreatedUser,
+            aggUnwindUpdatedUser,
+            aggMatch,
+            aggCount,
+        ];
+
+        const total_docs =
+            await decorative_order_item_details_model.aggregate(count_total_docs);
+
+        const totalPages = Math.ceil((total_docs[0]?.totalCount || 0) / limit);
+
+        const response = new ApiResponse(StatusCodes?.OK, 'Data Fetched Successfully', {
+            data: result,
+            totalPages: totalPages,
+        });
+        return res.status(StatusCodes?.OK).json(response);
+    }
+);
+
+export const fetch_all_decorative_order_items_by_order_id = catchAsync(async (req, res) => {
+    const { id } = req.params;
+
+    if (!isValidObjectId(id)) {
+        throw new ApiError("Invalid ID", StatusCodes.BAD_REQUEST)
+    };
+
+})

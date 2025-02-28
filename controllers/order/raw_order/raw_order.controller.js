@@ -1,9 +1,9 @@
 import mongoose from 'mongoose';
-import ApiError from '../../utils/errors/apiError.js';
-import { OrderModel } from '../../database/schema/order/orders.schema.js';
-import catchAsync from '../../utils/errors/catchAsync.js';
-import { RawOrderItemDetailsModel } from '../../database/schema/order/raw_order_item_details.schema.js';
-import ApiResponse from '../../utils/ApiResponse.js';
+import ApiError from '../../../utils/errors/apiError.js';
+import { OrderModel } from '../../../database/schema/order/orders.schema.js';
+import catchAsync from '../../../utils/errors/catchAsync.js';
+import { RawOrderItemDetailsModel } from '../../../database/schema/order/raw_order_item_details.schema.js';
+import ApiResponse from '../../../utils/ApiResponse.js';
 
 export const AddRawOrder = catchAsync(async (req, res, next) => {
   const { order_details, item_details } = req.body;
@@ -121,7 +121,7 @@ export const UpdateRawOrder = catchAsync(async (req, res) => {
           updated_by: userDetails?._id,
         },
       },
-      { session, new: true }
+      { session, runValidators: true, new: true }
     );
     if (!order_details_result) {
       throw new ApiError(
@@ -130,11 +130,10 @@ export const UpdateRawOrder = catchAsync(async (req, res) => {
       );
     }
 
-    const delete_order_items =
-      await RawOrderItemDetailsModel?.deleteMany(
-        { order_id: order_details_result?._id },
-        { session }
-      );
+    const delete_order_items = await RawOrderItemDetailsModel?.deleteMany(
+      { order_id: order_details_result?._id },
+      { session }
+    );
 
     if (
       !delete_order_items?.acknowledged ||
@@ -148,18 +147,19 @@ export const UpdateRawOrder = catchAsync(async (req, res) => {
 
     const updated_item_details = item_details?.map((item) => {
       item.order_id = order_details_result?._id;
+      item.created_by = item.created_by ? item?.created_by : userDetails?._id;
       item.updated_by = userDetails?._id;
+      item.createdAt = item.createdAt ? item?.createdAt : new Date();
       return item;
     });
 
-    const create_order_result =
-      await RawOrderItemDetailsModel?.insertMany(
-        updated_item_details,
-        { session }
-      );
+    const create_order_result = await RawOrderItemDetailsModel?.insertMany(
+      updated_item_details,
+      { session }
+    );
     if (create_order_result?.length === 0) {
       throw new ApiError(
-        'Failed to update order item details',
+        'Failed to add order item details',
         StatusCodes?.BAD_REQUEST
       );
     }
