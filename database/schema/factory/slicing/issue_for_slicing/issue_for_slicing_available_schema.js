@@ -50,7 +50,7 @@ const issue_for_slicing_available_schema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     required: [true, 'Updated  By is required'],
   },
-});
+}, { timestamps: true });
 
 issue_for_slicing_available_schema?.index(
   { issue_for_slicing_id: 1 },

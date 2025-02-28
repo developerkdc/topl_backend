@@ -227,6 +227,8 @@ const slicing_done_items_schema = new mongoose.Schema(
     remark: {
       type: String,
       default: null,
+      uppercase: true,
+      trim: true
     },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,
