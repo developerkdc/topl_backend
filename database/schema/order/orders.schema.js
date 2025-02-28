@@ -110,7 +110,12 @@ const OrderSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
-
+    is_close: {
+      type: String,
+      uppercase: true,
+      trim: true,
+      default: null,
+    },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'users',

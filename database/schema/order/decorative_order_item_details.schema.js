@@ -53,23 +53,23 @@ const decorative_order_item_details_schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       default: null
     },
-    diffrent_group_photo_number: {
+    different_group_photo_number: {
       type: String,
       uppercase: true,
       trim: true,
       default: null
     },
-    diffrent_group_photo_number_id: {
+    different_group_photo_number_id: {
       type: mongoose.Schema.Types.ObjectId,
       default: null
     },
-    diffrent_group_group_number: {
+    different_group_group_number: {
       type: String,
       uppercase: true,
       trim: true,
       default: null
     },
-    diffrent_group_group_number_id: {
+    different_group_group_number_id: {
       type: mongoose.Schema.Types.ObjectId,
       default: null
     },
@@ -168,6 +168,8 @@ const decorative_order_item_details_schema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+decorative_order_item_details_schema?.index({ order_id: 1, item_no: 1 }, { unique: true });
 
 export const decorative_order_item_details_model = mongoose.model(
   'decorative_order_item_details',
