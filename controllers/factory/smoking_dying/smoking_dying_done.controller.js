@@ -357,65 +357,7 @@ export const fetch_all_process_done_details = catchAsync(
     const match_query = {
       ...search_query,
       ...filterData,
-    };
-
-    const agg_lookup_items = {
-      $lookup: {
-        from: 'process_done_items_details',
-        localField: '_id',
-        foreignField: 'process_done_id',
-        as: 'process_done_items_details',
-      },
-    };
-    const agg_lookup_created_by = {
-      $lookup: {
-        from: 'users',
-        localField: 'created_by',
-        foreignField: '_id',
-        pipeline: [
-          {
-            $project: {
-              first_name: 1,
-              last_name: 1,
-              user_name: 1,
-              user_type: 1,
-              email_id: 1,
-            },
-          },
-        ],
-        as: 'created_user_details',
-      },
-    };
-    const agg_unwind_created_by = {
-      $unwind: {
-        path: '$created_user_details',
-        preserveNullAndEmptyArrays: true,
-      },
-    };
-    const agg_lookup_updated_by = {
-      $lookup: {
-        from: 'users',
-        localField: 'updated_by',
-        foreignField: '_id',
-        pipeline: [
-          {
-            $project: {
-              first_name: 1,
-              last_name: 1,
-              user_name: 1,
-              user_type: 1,
-              email_id: 1,
-            },
-          },
-        ],
-        as: 'updated_user_details',
-      },
-    };
-    const agg_unwind_updated_by = {
-      $unwind: {
-        path: '$updated_user_details',
-        preserveNullAndEmptyArrays: true,
-      },
+      available_bundles: { $gt: 0 }
     };
 
     const agg_match = {
