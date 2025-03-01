@@ -64,8 +64,8 @@ export const fetch_issue_for_peeling_available_details = catchAsync(
     const aggCommonMatch = {
       $match: {
         is_re_flicthing_done: false,
-      }
-    }
+      },
+    };
     const aggLookupIssueForPeeling = {
       $lookup: {
         from: 'issues_for_peelings',
@@ -587,8 +587,8 @@ export const fetch_all_reflitching_items = catchAsync(
     const aggCommonMatch = {
       $match: {
         issue_status: null,
-      }
-    }
+      },
+    };
 
     const aggLookupReflitchingOtherDetails = {
       $lookup: {

@@ -440,10 +440,10 @@ export const fetch_all_details_by_grouping_done_id = catchAsync(
       },
       {
         $unwind: {
-          path: "$issues_for_grouping",
-          preserveNullAndEmptyArrays: true
-        }
-      }
+          path: '$issues_for_grouping',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
     ];
     const result = await grouping_done_details_model.aggregate(pipeline);
 
@@ -587,11 +587,14 @@ export const revert_all_grouping_done = catchAsync(async (req, res, next) => {
 });
 
 export const group_no_dropdown = catchAsync(async (req, res, next) => {
-  const fetch_group_no = await grouping_done_items_details_model.find({}, {
-    group_no: 1,
-    photo_no: 1,
-    photo_no_id: 1
-  })
+  const fetch_group_no = await grouping_done_items_details_model.find(
+    {},
+    {
+      group_no: 1,
+      photo_no: 1,
+      photo_no_id: 1,
+    }
+  );
   const response = new ApiResponse(
     StatusCodes.OK,
     'Details Fetched successfully',

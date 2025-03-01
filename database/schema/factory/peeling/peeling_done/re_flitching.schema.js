@@ -101,7 +101,7 @@ const re_flitching_items_schema = new mongoose.Schema(
       color_name: {
         type: String,
         uppercase: true,
-      trim: true,
+        trim: true,
         default: null,
       },
     },
