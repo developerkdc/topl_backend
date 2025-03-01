@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import { OrderModel } from "../../../database/schema/order/orders.schema.js";
 import ApiResponse from "../../../utils/ApiResponse.js";
 import { StatusCodes } from "../../../utils/constants.js";
-import series_product_order_item_details_model from "../../../database/schema/order/series_product_order_item_details.schema.js";
+import series_product_order_item_details_model from "../../../database/schema/order/series_product_order/series_product_order_item_details.schema.js";
 import { DynamicSearch } from "../../../utils/dynamicSearch/dynamic.js";
 import { dynamic_filter } from "../../../utils/dymanicFilter.js";
 import catchAsync from "../../../utils/errors/catchAsync.js";

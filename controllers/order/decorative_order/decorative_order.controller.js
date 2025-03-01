@@ -50,9 +50,8 @@ export const add_decorative_order = catchAsync(async (req, res) => {
             throw new ApiError("Failed to add order item details", StatusCodes?.BAD_REQUEST)
         };
 
-        await session?.commitTransaction()
         const response = new ApiResponse(StatusCodes.CREATED, "Order Created Successfully.", { order_details: order_details_data, item_details: create_order_result });
-
+        await session?.commitTransaction()
         return res.status(StatusCodes.CREATED).json(response)
     } catch (error) {
         await session?.abortTransaction()
@@ -114,8 +113,8 @@ export const update_decorative_order = catchAsync(async (req, res) => {
             throw new ApiError("Failed to add order item details", StatusCodes?.BAD_REQUEST)
         };
 
-        await session?.commitTransaction()
         const response = new ApiResponse(StatusCodes.OK, "Order Updated Successfully.", { order_details: order_details_result, item_details: create_order_result });
+        await session?.commitTransaction()
         return res.status(StatusCodes.OK).json(response)
     } catch (error) {
         await session?.abortTransaction()
