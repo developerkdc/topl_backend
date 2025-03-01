@@ -280,23 +280,10 @@ raw_machine_data_schema.index(
   { unique: true }
 );
 raw_machine_data_schema.index({ DressingDate: 1 });
-// raw_machine_data_schema.pre('save', async function (next) {
-//   console.log("called 🦿")
-//   this.DressingDate = this.Fecha.toISOString().split('T')[0];
+raw_machine_data_schema.index({ Fecha: 1 });
+raw_machine_data_schema.index({ updatedAt: 1 });
 
-//   try {
-//     const max_sr_no = await mongoose
-//       .model('dressing_machine_raw_data')
-//       .findOne({ DressingDate: this.DressingDate })
-//       .sort({ ItemSrNo: -1 })
-//       .select('ItemSrNo');
-
-//     this.ItemSrNo = max_sr_no ? max_sr_no?.ItemSrNo + 1 : 1;
-//     next();
-//   } catch (error) {
-//     next(error)
-//   }
-// });
+// raw_machine_data_schema?.clearIndexes()
 
 const dressing_raw_machine_data_model = mongoose.model(
   'dressing_machine_raw_data',
