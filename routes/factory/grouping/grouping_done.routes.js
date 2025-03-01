@@ -46,11 +46,7 @@ groupingDoneRouter.post(
   AuthMiddleware,
   revert_all_grouping_done
 );
-groupingDoneRouter.get(
-  '/group-no-dropdown',
-  AuthMiddleware,
-  group_no_dropdown
-);
+groupingDoneRouter.get('/group-no-dropdown', AuthMiddleware, group_no_dropdown);
 
 //damaged
 groupingDoneRouter.post(

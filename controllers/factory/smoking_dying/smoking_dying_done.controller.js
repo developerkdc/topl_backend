@@ -357,7 +357,7 @@ export const fetch_all_process_done_details = catchAsync(
     const match_query = {
       ...search_query,
       ...filterData,
-      available_bundles: { $gt: 0 }
+      available_bundles: { $gt: 0 },
     };
 
     const agg_match = {
@@ -377,23 +377,16 @@ export const fetch_all_process_done_details = catchAsync(
       $limit: parseInt(limit),
     };
 
-    const aggregation_pipeline = [
-      agg_match,
-      agg_sort,
-      agg_skip,
-      agg_limit,
-    ];
+    const aggregation_pipeline = [agg_match, agg_sort, agg_skip, agg_limit];
 
-    const result = await process_done_details_view_model.aggregate(aggregation_pipeline);
+    const result =
+      await process_done_details_view_model.aggregate(aggregation_pipeline);
 
     const agg_count = {
       $count: 'totalCount',
     };
 
-    const total_count_aggregation_pipeline = [
-      agg_match,
-      agg_count,
-    ];
+    const total_count_aggregation_pipeline = [agg_match, agg_count];
 
     const total_docs = await process_done_details_view_model.aggregate(
       total_count_aggregation_pipeline
@@ -463,10 +456,12 @@ export const fetch_smoking_dying_done_history = catchAsync(
     };
     const aggAddGlobalFields = {
       $addFields: {
-        item_name: { $first: "$bundle_details.item_name" },
-        item_sub_category_name: { $first: "$bundle_details.item_sub_category_name" },
+        item_name: { $first: '$bundle_details.item_name' },
+        item_sub_category_name: {
+          $first: '$bundle_details.item_sub_category_name',
+        },
         total_bundles: {
-          $size: "$bundle_details"
+          $size: '$bundle_details',
         },
         issue_status: { $first: '$bundle_details.issue_status' },
         log_no_code: { $first: '$bundle_details.log_no_code' },

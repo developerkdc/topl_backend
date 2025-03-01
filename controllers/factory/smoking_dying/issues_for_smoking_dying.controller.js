@@ -667,7 +667,9 @@ export const revert_issued_for_smoking_dying_item = catchAsync(
             _id: { $nin: veneer_inventory_ids },
           })
           .lean();
-        const veneer_invoice_id = veneer_inventory_details.map((ele) => ele.invoice_id);
+        const veneer_invoice_id = veneer_inventory_details.map(
+          (ele) => ele.invoice_id
+        );
 
         // Fetch updated documents
         const is_invoice_editable = await veneer_inventory_items_model

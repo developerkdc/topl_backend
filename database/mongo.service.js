@@ -5,7 +5,7 @@ const Configs = getConfigs();
 let connect = () => {
   const options = {
     // useNewUrlParser: true
-    retryWrites: true
+    retryWrites: true,
   };
   mongoose.connect(Configs?.mongo?.url, options);
 

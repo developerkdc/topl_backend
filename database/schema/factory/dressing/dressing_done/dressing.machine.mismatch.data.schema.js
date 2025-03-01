@@ -5,7 +5,7 @@ const dressing_miss_match_data_schema = new mongoose.Schema(
   {
     dressing_date: {
       type: Date,
-      required: [true, "Dressing Date is required."]
+      required: [true, 'Dressing Date is required.'],
     },
     log_no_code: {
       type: String,
@@ -61,7 +61,7 @@ const dressing_miss_match_data_schema = new mongoose.Schema(
           dressing_error_types.process_pending,
           dressing_error_types.slicing_not_done,
           dressing_error_types.thickness_missmatch,
-          dressing_error_types.in_complete_data
+          dressing_error_types.in_complete_data,
         ],
         message: `Invalid error type -> {{VALUE}} must be one of the ${dressing_error_types.dressing_done} , ${dressing_error_types.no_of_leaves_missmatch},  ${dressing_error_types.peeling_not_done} , ${dressing_error_types.process_pending} , ${dressing_error_types.slicing_not_done} , ${dressing_error_types.thickness_missmatch}, ${dressing_error_types.in_complete_data}`,
       },

@@ -101,11 +101,11 @@ export const veneer_item_details_schema = new mongoose.Schema(
     },
     cut_id: {
       type: mongoose.Schema.Types.ObjectId,
-      default:null,
+      default: null,
     },
     cut_name: {
       type: String,
-      default:null,
+      default: null,
       trim: true,
       uppercase: true,
     },
