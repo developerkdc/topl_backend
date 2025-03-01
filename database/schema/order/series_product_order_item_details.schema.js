@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { order_item_status } from "../../Utils/constants/constants";
+import { order_item_status } from "../../Utils/constants/constants.js";
 
 const series_product_order_item_details_schema = new mongoose.Schema({
     sr_no: {

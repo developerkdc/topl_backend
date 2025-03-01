@@ -1,14 +1,13 @@
 import mongoose, { isValidObjectId } from 'mongoose';
-import catchAsync from '../../utils/errors/catchAsync.js';
-import ApiError from '../../utils/errors/apiError.js';
-import ApiResponse from '../../utils/ApiResponse.js';
-import { StatusCodes } from '../../utils/constants.js';
-import { OrderModel } from '../../database/schema/order/orders.schema.js';
-import { decorative_order_item_details_model } from '../../database/schema/order/decorative_order_item_details.schema.js';
-import { order_item_status } from '../../database/Utils/constants/constants.js';
-import { dynamic_filter } from '../../utils/dymanicFilter.js';
-import { DynamicSearch } from '../../utils/dynamicSearch/dynamic.js'
-
+import catchAsync from '../../../utils/errors/catchAsync.js';
+import ApiError from '../../../utils/errors/apiError.js';
+import ApiResponse from '../../../utils/ApiResponse.js';
+import { StatusCodes } from '../../../utils/constants.js';
+import { OrderModel } from '../../../database/schema/order/orders.schema.js';
+import { decorative_order_item_details_model } from '../../../database/schema/order/decorative_order/decorative_order_item_details.schema.js';
+import { order_item_status } from '../../../database/Utils/constants/constants.js';
+import { dynamic_filter } from '../../../utils/dymanicFilter.js';
+import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js'
 
 export const add_decorative_order = catchAsync(async (req, res) => {
     const { order_details, item_details } = req.body
@@ -52,7 +51,7 @@ export const add_decorative_order = catchAsync(async (req, res) => {
         };
 
         await session?.commitTransaction()
-        const response = new ApiResponse(StatusCodes.CREATED, "Order Created Successfully.", { order_details, item_details });
+        const response = new ApiResponse(StatusCodes.CREATED, "Order Created Successfully.", { order_details: order_details_data, item_details: create_order_result });
 
         return res.status(StatusCodes.CREATED).json(response)
     } catch (error) {
@@ -61,7 +60,7 @@ export const add_decorative_order = catchAsync(async (req, res) => {
     } finally {
         await session.endSession()
     }
-})
+});
 
 export const update_decorative_order = catchAsync(async (req, res) => {
     const { order_details_id } = req.params;
@@ -72,6 +71,9 @@ export const update_decorative_order = catchAsync(async (req, res) => {
     const session = await mongoose.startSession()
     try {
         await session.startTransaction();
+        if (!order_details_id) {
+            throw new ApiError("Order details id is missing")
+        }
 
         for (let field of ["order_details", "item_details"]) {
             if (!req.body[field]) {
@@ -100,6 +102,7 @@ export const update_decorative_order = catchAsync(async (req, res) => {
         };
 
         const updated_item_details = item_details?.map((item) => {
+            item.order_id = order_details_result?._id;
             item.created_by = item.created_by ? item?.created_by : userDetails?._id;
             item.updated_by = userDetails?._id;
             item.createdAt = item.createdAt ? item?.createdAt : new Date();
@@ -112,7 +115,7 @@ export const update_decorative_order = catchAsync(async (req, res) => {
         };
 
         await session?.commitTransaction()
-        const response = new ApiResponse(StatusCodes.OK, "Order Updated Successfully.", { order_details, item_details });
+        const response = new ApiResponse(StatusCodes.OK, "Order Updated Successfully.", { order_details: order_details_result, item_details: create_order_result });
         return res.status(StatusCodes.OK).json(response)
     } catch (error) {
         await session?.abortTransaction()
@@ -120,8 +123,7 @@ export const update_decorative_order = catchAsync(async (req, res) => {
     } finally {
         await session?.endSession()
     }
-})
-
+});
 
 export const update_order_item_status_by_item_id = catchAsync(async (req, res) => {
     const { id } = req.params;
@@ -324,8 +326,82 @@ export const fetch_all_decorative_order_items = catchAsync(
 export const fetch_all_decorative_order_items_by_order_id = catchAsync(async (req, res) => {
     const { id } = req.params;
 
+    if (!id) {
+        throw new ApiError("ID is missing", StatusCodes.BAD_REQUEST)
+    }
     if (!isValidObjectId(id)) {
         throw new ApiError("Invalid ID", StatusCodes.BAD_REQUEST)
     };
 
+    const pipeline = [
+        {
+            $match: {
+                _id: mongoose.Types.ObjectId.createFromHexString(id)
+            }
+        },
+        {
+            $lookup: {
+                from: 'decorative_order_item_details',
+                foreignField: "order_id",
+                localField: "_id",
+                as: "order_items_details"
+            }
+        },
+        {
+            $lookup: {
+                from: "users",
+                foreignField: "_id",
+                localField: "created_by",
+                as: "created_user_details",
+                pipeline: [
+                    {
+                        $project: {
+                            first_name: 1,
+                            last_name: 1,
+                            user_name: 1,
+                            user_type: 1,
+                            email_id: 1,
+                        },
+                    }
+                ]
+            }
+        },
+        {
+            $lookup: {
+                from: "users",
+                foreignField: "_id",
+                localField: "updated_by",
+                as: "updated_user_details",
+                pipeline: [
+                    {
+                        $project: {
+                            first_name: 1,
+                            last_name: 1,
+                            user_name: 1,
+                            user_type: 1,
+                            email_id: 1,
+                        },
+                    }
+                ]
+            }
+        },
+        {
+            $unwind: {
+                path: "$created_user_details",
+                preserveNullAndEmptyArrays: true
+            }
+        },
+        {
+            $unwind: {
+                path: "$updated_user_details",
+                preserveNullAndEmptyArrays: true
+            }
+        },
+    ];
+
+    const result = await OrderModel.aggregate(pipeline);
+
+    const response = new ApiResponse(StatusCodes.OK, "All Items of order fetched successfully", result);
+    return res.status(StatusCodes.OK).json(response)
 })
+

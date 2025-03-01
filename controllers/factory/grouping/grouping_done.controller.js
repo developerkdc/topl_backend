@@ -425,7 +425,6 @@ export const fetch_all_details_by_grouping_done_id = catchAsync(
       },
       {
         $lookup: {
-          from: 'grouping_done_items_details',
           localField: '_id',
           foreignField: 'grouping_done_other_details_id',
           as: 'grouping_done_items_details',
@@ -600,7 +599,7 @@ export const group_no_dropdown = catchAsync(async (req, res, next) => {
   );
 
   return res.status(StatusCodes.OK).json(response);
-})
+});
 
 //Damaged
 export const fetch_all_damaged_grouping_done_items = catchAsync(

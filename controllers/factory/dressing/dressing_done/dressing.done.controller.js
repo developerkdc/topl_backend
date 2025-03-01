@@ -331,8 +331,8 @@ export const fetch_all_dressing_done_items = catchAsync(async (req, res) => {
 
   const aggMatch = {
     $match: {
-      ...matchQuery,
       issue_status: null,
+      ...matchQuery,
     },
   };
 
@@ -452,8 +452,8 @@ export const fetch_all_dressing_done_items = catchAsync(async (req, res) => {
     aggCreatedUserDetails,
     aggUpdatedUserDetails,
     aggUnwindCreatedUserDetails,
-    aggGroupBy,
     aggUnwindUpdatedUserDetails,
+    aggGroupBy,
     aggMatch,
     aggSort,
     aggSkip,
