@@ -11,7 +11,6 @@ const OrderSchema = new mongoose.Schema(
     order_no: {
       type: Number,
       required: true,
-      unique: true,
     },
     order_category: {
       type: String,
@@ -79,11 +78,13 @@ const OrderSchema = new mongoose.Schema(
       trim: true,
     },
     common_instructions: {
-      type: [{
-        type:String,
-        trim:true,
-        uppercase:true
-      }],
+      type: [
+        {
+          type: String,
+          trim: true,
+          uppercase: true,
+        },
+      ],
       default: null,
     },
     order_remarks: {
@@ -134,5 +135,22 @@ const OrderSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+// indexing
+const indexingFields = [
+  [{ order_no: 1 }, { unique: true }],
+  [{ order_category: 1 }],
+  [{ orderDate: 1 }],
+  [{ owner_name: 1 }],
+  [{ customer_id: 1 }],
+  [{ order_type: 1 }],
+  [{ order_status: 1 }],
+  [{ raw_materials: 1 }],
+  [{ series_product: 1 }],
+  [{ created_by: 1 }],
+  [{ updatedAt: 1 }],
+];
+
+indexingFields.forEach((index) => OrderSchema.index(...index));
 
 export const OrderModel = mongoose.model('orders', OrderSchema, 'orders');
