@@ -2,7 +2,7 @@ import mongoose, { isValidObjectId } from 'mongoose';
 import ApiError from '../../../utils/errors/apiError.js';
 import { OrderModel } from '../../../database/schema/order/orders.schema.js';
 import catchAsync from '../../../utils/errors/catchAsync.js';
-import { RawOrderItemDetailsModel } from '../../../database/schema/order/raw_order_item_details.schema.js';
+import { RawOrderItemDetailsModel } from '../../../database/schema/order/raw_order/raw_order_item_details.schema.js';
 import ApiResponse from '../../../utils/ApiResponse.js';
 import { StatusCodes } from '../../../utils/constants.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
