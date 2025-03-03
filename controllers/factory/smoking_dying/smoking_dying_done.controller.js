@@ -38,27 +38,31 @@ export const add_process_done_details = catchAsync(async (req, res, next) => {
       }
     }
 
+    
+    const issue_for_smoking_dying =
+    await issues_for_smoking_dying_view_model.aggregate([
+      {
+        $match: {
+          _id: {
+            unique_identifier: unique_identifier,
+            pallet_number: pallet_number,
+          },
+        },
+      },
+    ]);
+    const issue_for_smoking_dying_details = issue_for_smoking_dying?.[0]
+    if (!issue_for_smoking_dying_details) {
+      throw new ApiError('No issue for smoking dying data found',400);
+    }
+    if (issue_for_smoking_dying_details?.is_smoking_dying_done) {
+      throw new ApiError('Already created smoking dying done for this issue for smoking dying',400);
+    }
+
     const unique_identifier = mongoose.Types.ObjectId.createFromHexString(
       process_done_details?.issue_for_smoking_dying_unique_identifier
     );
     const pallet_number =
       process_done_details?.issue_for_smoking_dying_pallet_number;
-
-    const issue_for_smoking_dying =
-      await issues_for_smoking_dying_view_model.aggregate([
-        {
-          $match: {
-            _id: {
-              unique_identifier: unique_identifier,
-              pallet_number: pallet_number,
-            },
-          },
-        },
-      ]);
-
-    if (!issue_for_smoking_dying || !issue_for_smoking_dying?.[0]) {
-      throw new ApiError('No issue for smoking dying data found');
-    }
 
     const add_process_done_details = await process_done_details_model.create(
       [
