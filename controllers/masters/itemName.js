@@ -220,15 +220,15 @@ export const DropdownItemNameMaster = catchAsync(async (req, res) => {
         as: 'subCategoryDetails',
       },
     },
-    {
-      $unwind: { path: '$categoryDetails', preserveNullAndEmptyArrays: true },
-    },
-    {
-      $unwind: {
-        path: '$subCategoryDetails',
-        preserveNullAndEmptyArrays: true,
-      },
-    },
+    // {
+    //   $unwind: { path: '$categoryDetails', preserveNullAndEmptyArrays: true },
+    // },
+    // {
+    //   $unwind: {
+    //     path: '$subCategoryDetails',
+    //     preserveNullAndEmptyArrays: true,
+    //   },
+    // },
     {
       $match: searchQuery,
     },
