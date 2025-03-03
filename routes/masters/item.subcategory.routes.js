@@ -35,7 +35,7 @@ router.get(
   AuthMiddleware,
   DropdownSubcategoryNameMaster
 );
-router.get(
+router.post(
   '/dropdown-subcategory-master-by-category-name',
   AuthMiddleware,
   DropdownSubcategoryNameMasterByCategoryName
