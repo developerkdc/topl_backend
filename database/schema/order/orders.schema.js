@@ -108,10 +108,16 @@ const OrderSchema = new mongoose.Schema(
     raw_materials: {
       type: String,
       default: null,
+      uppercase: true,
+      trim: true,
+      default: null,
     },
 
     series_product: {
       type: String,
+      default: null,
+      uppercase: true,
+      trim: true,
       default: null,
     },
     is_close: {

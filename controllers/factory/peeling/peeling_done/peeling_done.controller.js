@@ -19,7 +19,7 @@ export const add_peeling_done = catchAsync(async (req, res, next) => {
   session.startTransaction();
   try {
     const userDetails = req.userDetails;
-    const {
+    let {
       other_details,
       items_details,
       type = null,
@@ -184,7 +184,7 @@ export const edit_peeling_done = catchAsync(async (req, res, next) => {
     if (!peeling_done_id && !mongoose.isValidObjectId(peeling_done_id)) {
       throw new ApiError('Invalid peeling done id', 400);
     }
-    const {
+    let {
       other_details,
       items_details,
       type = null,
