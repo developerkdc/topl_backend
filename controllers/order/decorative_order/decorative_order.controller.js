@@ -481,7 +481,6 @@ export const fetch_all_decorative_order_items_by_order_id = catchAsync(
   }
 );
 
-
 // export const fetch_customer_previous_rate = catchAsync(async(req,res) => {
 
 // })
