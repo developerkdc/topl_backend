@@ -3,7 +3,7 @@ import { order_item_status } from '../../../Utils/constants/constants.js';
 
 const series_product_order_item_details_schema = new mongoose.Schema(
   {
-    sr_no: {
+    item_no: {
       type: Number,
       required: [true, 'Sr no is required'],
     },
@@ -28,6 +28,12 @@ const series_product_order_item_details_schema = new mongoose.Schema(
       uppercase: true,
       required: [true, 'Code is required'],
     },
+    color_code: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      default:null
+    },
     photo_id: {
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Photo Id is required'],
@@ -51,6 +57,14 @@ const series_product_order_item_details_schema = new mongoose.Schema(
     base_width: {
       type: Number,
       required: [true, 'Base Width is required'],
+    },
+    veneer_min_thickness: {
+      type: Number,
+      default:null,
+    },
+    base_min_thickness: {
+      type: Number,
+      default:null,
     },
     no_of_hours: {
       type: Number,
