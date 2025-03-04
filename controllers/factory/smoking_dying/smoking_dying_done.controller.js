@@ -38,6 +38,11 @@ export const add_process_done_details = catchAsync(async (req, res, next) => {
       }
     }
 
+    const unique_identifier = mongoose.Types.ObjectId.createFromHexString(
+      process_done_details?.issue_for_smoking_dying_unique_identifier
+    );
+    const pallet_number =
+      process_done_details?.issue_for_smoking_dying_pallet_number;
     
     const issue_for_smoking_dying =
     await issues_for_smoking_dying_view_model.aggregate([
@@ -58,11 +63,6 @@ export const add_process_done_details = catchAsync(async (req, res, next) => {
       throw new ApiError('Already created smoking dying done for this issue for smoking dying',400);
     }
 
-    const unique_identifier = mongoose.Types.ObjectId.createFromHexString(
-      process_done_details?.issue_for_smoking_dying_unique_identifier
-    );
-    const pallet_number =
-      process_done_details?.issue_for_smoking_dying_pallet_number;
 
     const add_process_done_details = await process_done_details_model.create(
       [
