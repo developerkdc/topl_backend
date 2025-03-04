@@ -587,8 +587,15 @@ export const revert_all_grouping_done = catchAsync(async (req, res, next) => {
 });
 
 export const group_no_dropdown = catchAsync(async (req, res, next) => {
+  const { photo_no_id } = req.query;
+  const matchQuery = {};
+  if (photo_no_id) {
+    matchQuery.photo_no_id = photo_no_id;
+  }
   const fetch_group_no = await grouping_done_items_details_model.find(
-    {},
+    {
+      ...matchQuery
+    },
     {
       group_no: 1,
       photo_no: 1,
