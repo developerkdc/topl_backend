@@ -40,6 +40,17 @@ const RawOrderItemDetailsSchema = new mongoose.Schema(
       uppercase: true,
       default: null,
     },
+    unit_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      // required: [true, 'Items Sub-Category Id is required'],
+      default: null,
+    },
+    unit_name: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      default: null,
+    },
     log_no: {
       type: String,
       // required: [true, 'Log No is required'],
