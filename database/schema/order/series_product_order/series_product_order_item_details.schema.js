@@ -174,10 +174,10 @@ const series_product_order_item_details_schema = new mongoose.Schema(
   }
 );
 
-series_product_order_item_details_schema.index({ sr_no: 1 });
+series_product_order_item_details_schema.index({ item_no: 1 });
 series_product_order_item_details_schema.index({ order_id: 1 });
 series_product_order_item_details_schema.index(
-  { sr_no: 1, order_id: 1 },
+  { item_no: 1, order_id: 1 },
   { unique: true }
 );
 
