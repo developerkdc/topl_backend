@@ -42,7 +42,8 @@ const RawOrderItemDetailsSchema = new mongoose.Schema(
     },
     log_no: {
       type: String,
-      required: [true, 'Log No is required'],
+      // required: [true, 'Log No is required'],
+      default: null,
       trim: true,
       uppercase: true,
     },
