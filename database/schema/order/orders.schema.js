@@ -72,7 +72,7 @@ const OrderSchema = new mongoose.Schema(
     branding_type: {
       type: String,
       enum: [branding_type.with_branding, branding_type.without_branding],
-      required: true,
+      // required: true,
       default: null,
       uppercase: true,
       trim: true,
