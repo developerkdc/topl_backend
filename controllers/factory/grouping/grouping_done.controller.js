@@ -425,6 +425,7 @@ export const fetch_all_details_by_grouping_done_id = catchAsync(
       },
       {
         $lookup: {
+          from:"grouping_done_items_details",
           localField: '_id',
           foreignField: 'grouping_done_other_details_id',
           as: 'grouping_done_items_details',
