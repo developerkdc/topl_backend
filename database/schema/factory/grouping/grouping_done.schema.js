@@ -271,7 +271,7 @@ const grouping_done_items_details_schema = new mongoose.Schema(
     updated_by: {
       type: mongoose.Types.ObjectId,
       ref: 'users',
-      required: [true, 'Created By is required'],
+      required: [true, 'Updated By is required'],
       trim: true,
     },
   },
