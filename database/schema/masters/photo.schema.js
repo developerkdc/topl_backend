@@ -236,6 +236,14 @@ const photoSchema = new mongoose.Schema(
       trim: true,
       default: null,
     },
+    created_by: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, 'created by is required'],
+    },
+    updated_by: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, 'updated by is required'],
+    },
   },
   { timestamps: true }
 );

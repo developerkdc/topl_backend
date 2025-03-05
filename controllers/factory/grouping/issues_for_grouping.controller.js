@@ -680,6 +680,7 @@ export const fetch_all_issue_for_grouping_details = catchAsync(
     const match_query = {
       ...search_query,
       ...filterData,
+      is_grouping_done:false
     };
 
     const agg_match = {
