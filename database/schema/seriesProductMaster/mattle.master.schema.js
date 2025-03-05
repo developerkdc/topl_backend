@@ -37,6 +37,14 @@ const mattleSchema = new mongoose.Schema(
     size: {
       type: [
         {
+          base_size: {
+            type: String,
+            required: [true, 'Base size is required in size'],
+            trim: true,
+            default:function(){
+              return `${this.length}'${this.width}`
+            }
+          },
           length: {
             type: Number,
             required: [true, 'Length is required in size'],
