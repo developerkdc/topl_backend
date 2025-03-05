@@ -184,6 +184,7 @@ export const issues_for_grouping_view_model = mongoose.model(
         $addFields: {
           item_name_id: { $first: '$bundles_details.item_name_id' },
           item_name: { $first: '$bundles_details.item_name' },
+          log_no_code: { $first: '$bundles_details.log_no_code' },
           item_sub_category_name: {
             $first: '$bundles_details.item_sub_category_name',
           },

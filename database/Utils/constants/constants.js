@@ -80,3 +80,9 @@ export const branding_type = {
 export const order_item_status = {
   cancel: 'CANCEL',
 };
+
+export const item_issued_from = {
+  log: "LOG",
+  flitch: "FLITCH",
+  veneer: "VENEER"
+}

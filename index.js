@@ -17,7 +17,7 @@ import profileRouter from './routes/profile.routes.js';
 import rolesRouter from './routes/roles.routes.js';
 import allSeriesProductMasterRouter from './routes/seriesProductMaster/allSeriesProductMaster.routes.js';
 import usersRouter from './routes/users.routes.js';
-import orderRouter from './routes/order/allOrder.routes.js';
+import allOrderRouter from './routes/order/allOrder.routes.js';
 import { globalErrorHandler } from './utils/errors/GlobalErrorHandler.js';
 import { checkServerHealth } from './controllers/auth.js';
 // import { start_worker_thread } from './utils/constants.js';
@@ -81,7 +81,7 @@ app.use(`/api/${Configs.server.version}`, factoryRouter);
 //Approval
 app.use(`/api/${Configs.server.version}`, approvalRouters);
 // orders
-app.use(`/api/${Configs.server.version}/order`, orderRouter);
+app.use(`/api/${Configs.server.version}/order`, allOrderRouter);
 
 app.use(globalErrorHandler);
 
