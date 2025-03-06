@@ -4,7 +4,6 @@ import { log_inventory_items_model } from '../../../../../database/schema/invent
 import catchAsync from '../../../../../utils/errors/catchAsync.js';
 import ApiResponse from '../../../../../utils/ApiResponse.js';
 import { StatusCodes } from '../../../../../utils/constants.js';
-
 import { issues_for_status, item_issued_from } from '../../../../../database/Utils/constants/constants.js';
 import { RawOrderItemDetailsModel } from '../../../../../database/schema/order/raw_order/raw_order_item_details.schema.js';
 import issue_for_order_model from '../../../../../database/schema/order/issue_for_order/issue_for_order.schema.js';
@@ -39,6 +38,7 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
         };
 
         const updated_body = {
+            order_id: order_item_data?.order_id,
             order_item_id: order_item_data?._id,
             issued_from: item_issued_from?.log,
             item_details: log_item_data,
