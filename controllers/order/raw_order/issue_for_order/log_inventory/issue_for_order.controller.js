@@ -32,10 +32,14 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
             throw new ApiError("Order Item Data not found")
         };
 
-        const log_item_data = await log_inventory_items_model.findById(log_item_id);
+        const log_item_data = await log_inventory_items_model.findById(log_item_id).lean();
         if (!log_item_data) {
             throw new ApiError("Log Item Data not found.")
         };
+
+        if (log_item_data?.issue_status !== null) {
+            throw new ApiError(`Log item is already issued for ${log_item_data?.issue_status?.toUpperCase()} `)
+        }
 
         const updated_body = {
             order_id: order_item_data?.order_id,
