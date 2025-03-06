@@ -93,7 +93,7 @@ export const order_items_dropdown = catchAsync(async (req, res, next) => {
 
 export const fetch_single_order_items = catchAsync(async (req, res, next) => {
   const { order_id, item_id } = req.params;
-  if (!mongoose.isValidObjectId(orderId) || !mongoose.isValidObjectId(item_id)) {
+  if (!mongoose.isValidObjectId(order_id) || !mongoose.isValidObjectId(item_id)) {
     throw new ApiError("Invalid Order or Item Id", StatusCodes.BAD_REQUEST);
   }
 
@@ -132,7 +132,7 @@ export const fetch_single_order_items = catchAsync(async (req, res, next) => {
   }
 
   const aggIssuedItems = {
-    $lookup:{
+    $lookup: {
       from: "issued_for_order_items",
       localField: "_id",
       foreignField: "order_item_id",
