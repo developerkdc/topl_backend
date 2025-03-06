@@ -194,6 +194,7 @@ export const create_dressing = catchAsync(async (req, res, next) => {
 
       const updated_item_details = item_details?.map((item) => {
         item.dressing_done_other_details_id = add_other_details?._id;
+        item.item_sub_category_id = item?.item_sub_category_name_id;
         item.created_by = _id;
         item.updated_by = _id;
         return item;
@@ -1450,7 +1451,7 @@ export const create_dressing_items_from_dressing_report = catchAsync(
         log_no_code_amount_map[item?.log_no_code] = Number(
           (
             log_no_code_factor_map[item?.log_no_code] *
-            item?.slicing_done_other_details?.total_amount
+            item?.slicing_done_other_details?.total_amount //change to final amount
           )?.toFixed(2)
         );
       }

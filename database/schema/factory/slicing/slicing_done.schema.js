@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import {
   issues_for_status,
+  peeling_done,
   slicing_done_from,
 } from '../../../Utils/constants/constants.js';
 
@@ -455,6 +456,11 @@ export const issue_for_dressing_model = mongoose.model(
         $unionWith: {
           coll: 'peeling_done_items',
           pipeline: [
+            {
+              $match: {
+                output_type: peeling_done?.veneer
+              }
+            },
             {
               $sort: {
                 updatedAt: -1,

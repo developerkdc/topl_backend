@@ -33,6 +33,6 @@ const issue_for_order_schema = new mongoose.Schema({
     }
 }, { timestamps: true });
 
-const issue_for_order_model = mongoose?.models.issue_for_order_model || mongoose.model('issued_for_order_items', issue_for_order_schema, 'issued_for_order_items');
+const issue_for_order_model = mongoose.model('issued_for_order_items', issue_for_order_schema, 'issued_for_order_items');
 
 export default issue_for_order_model

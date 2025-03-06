@@ -110,7 +110,7 @@ export const fetch_single_order_items = catchAsync(async (req, res, next) => {
 
   const aggMatch = {
     $match: {
-      _id: item_id,
+      _id: mongoose.Types.ObjectId.createFromHexString(item_id),
       order_id: orderId
     }
   }
@@ -139,6 +139,7 @@ export const fetch_single_order_items = catchAsync(async (req, res, next) => {
       as: "issued_for_order_items"
     }
   }
+
 
   const order_items_data = await order_items_models?.[category]?.aggregate([
     aggMatch,
