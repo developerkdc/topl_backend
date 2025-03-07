@@ -21,163 +21,163 @@ import {
 import dressing_done_history_model from '../../../database/schema/factory/dressing/dressing_done/dressing.done.history.schema.js';
 
 export const add_issue_for_smoking_dying_from_veneer_inventory = catchAsync(async (req, res, next) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
-    try {
-      const { veneer_inventory_ids } = req.body;
-      const userDetails = req.userDetails;
-      if (
-        !veneer_inventory_ids ||
-        (Array.isArray(veneer_inventory_ids) &&
-          veneer_inventory_ids?.length <= 0)
-      ) {
-        throw new ApiError(
-          'veneer_inventory_ids is required',
-          StatusCodes.BAD_REQUEST
-        );
-      }
-      if (!Array.isArray(veneer_inventory_ids)) {
-        throw new ApiError(
-          'veneer_inventory_ids must be array',
-          StatusCodes.BAD_REQUEST
-        );
-      }
-
-      const fetch_veneer_inventory_data = await veneer_inventory_items_model
-        .find({
-          _id: { $in: veneer_inventory_ids },
-          issue_status: null,
-        })
-        .lean();
-
-      if (
-        !fetch_veneer_inventory_data ||
-        fetch_veneer_inventory_data?.length <= 0
-      ) {
-        throw new ApiError(
-          'veneer inventory items not found',
-          StatusCodes.NOT_FOUND
-        );
-      }
-
-      const veneer_invoice_ids = new Set();
-      const unique_identifier = new mongoose.Types.ObjectId();
-      const issues_for_smoking_dying_data = fetch_veneer_inventory_data?.map(
-        (item) => {
-          veneer_invoice_ids.add(item?.invoice_id);
-          return {
-            unique_identifier: unique_identifier,
-            veneer_inventory_id: item?._id,
-            item_name: item?.item_name,
-            item_name_id: item?.item_id,
-            item_sub_category_id: item?.item_sub_category_id,
-            item_sub_category_name: item?.item_sub_category_name,
-            log_no_code: item?.log_code,
-            length: item?.length,
-            width: item?.width,
-            height: item?.height,
-            thickness: item?.thickness,
-            no_of_leaves: item?.number_of_leaves,
-            sqm: item?.total_sq_meter,
-            bundle_number: item?.bundle_number,
-            pallet_number: item?.pallet_number,
-            color_id: item?.color?.color_id,
-            color_name: item?.color?.color_name,
-            series_id: item?.series_id,
-            series_name: item?.series_name,
-            grade_id: item?.grades_id,
-            grade_name: item?.grades_name,
-            amount: item?.amount,
-            expense_amount: item?.expense_amount,
-            issued_from: issues_for_status?.veneer,
-            remark: item?.remark,
-            created_by: userDetails?._id,
-            updated_by: userDetails?._id,
-          };
-        }
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const { veneer_inventory_ids } = req.body;
+    const userDetails = req.userDetails;
+    if (
+      !veneer_inventory_ids ||
+      (Array.isArray(veneer_inventory_ids) &&
+        veneer_inventory_ids?.length <= 0)
+    ) {
+      throw new ApiError(
+        'veneer_inventory_ids is required',
+        StatusCodes.BAD_REQUEST
       );
-
-      //add data to issue for smoking dying
-      const insert_issues_for_smoking_dying_data =
-        await issues_for_smoking_dying_model.insertMany(
-          issues_for_smoking_dying_data,
-          { session }
-        );
-
-      if (
-        !insert_issues_for_smoking_dying_data ||
-        insert_issues_for_smoking_dying_data?.length <= 0
-      ) {
-        throw new ApiError(
-          'Failed to add data for issues for smoking dying',
-          StatusCodes.INTERNAL_SERVER_ERROR
-        );
-      }
-
-      // update issue status in veneer inventory to smoking_dying
-      const veneer_inventory_items_ids =
-        insert_issues_for_smoking_dying_data.map((e) => e.veneer_inventory_id);
-      const update_veneer_inventory_issue_status =
-        await veneer_inventory_items_model.updateMany(
-          { _id: { $in: veneer_inventory_items_ids } },
-          {
-            $set: {
-              issue_status: issues_for_status?.smoking_dying,
-            },
-          },
-          { session }
-        );
-
-      if (update_veneer_inventory_issue_status?.matchedCount <= 0) {
-        throw new ApiError('veneer inventory item not found');
-      }
-
-      if (
-        !update_veneer_inventory_issue_status.acknowledged ||
-        update_veneer_inventory_issue_status?.modifiedCount <= 0
-      ) {
-        throw new ApiError('Unable to change status of veneer inventory item');
-      }
-
-      //updating veneer inventory invoice: if any one of veneer item send for peeling then invoice should not editable
-      const update_veneer_inventory_invoice_editable =
-        await veneer_inventory_invoice_model.updateMany(
-          { _id: { $in: [...veneer_invoice_ids] } },
-          {
-            $set: {
-              isEditable: false,
-            },
-          },
-          { session }
-        );
-
-      if (update_veneer_inventory_invoice_editable?.modifiedCount <= 0) {
-        throw new ApiError('veneer inventory invoice not found');
-      }
-
-      if (
-        !update_veneer_inventory_invoice_editable.acknowledged ||
-        update_veneer_inventory_invoice_editable?.modifiedCount <= 0
-      ) {
-        throw new ApiError(
-          'Unable to change status of veneer inventory invoice'
-        );
-      }
-
-      await session.commitTransaction();
-      const response = new ApiResponse(
-        StatusCodes.CREATED,
-        'Issue for smoking-dying added successfully',
-        insert_issues_for_smoking_dying_data
-      );
-      return res.status(StatusCodes.CREATED).json(response);
-    } catch (error) {
-      await session.abortTransaction();
-      throw error;
-    } finally {
-      await session.endSession();
     }
+    if (!Array.isArray(veneer_inventory_ids)) {
+      throw new ApiError(
+        'veneer_inventory_ids must be array',
+        StatusCodes.BAD_REQUEST
+      );
+    }
+
+    const fetch_veneer_inventory_data = await veneer_inventory_items_model
+      .find({
+        _id: { $in: veneer_inventory_ids },
+        issue_status: null,
+      })
+      .lean();
+
+    if (
+      !fetch_veneer_inventory_data ||
+      fetch_veneer_inventory_data?.length <= 0
+    ) {
+      throw new ApiError(
+        'veneer inventory items not found',
+        StatusCodes.NOT_FOUND
+      );
+    }
+
+    const veneer_invoice_ids = new Set();
+    const unique_identifier = new mongoose.Types.ObjectId();
+    const issues_for_smoking_dying_data = fetch_veneer_inventory_data?.map(
+      (item) => {
+        veneer_invoice_ids.add(item?.invoice_id);
+        return {
+          unique_identifier: unique_identifier,
+          veneer_inventory_id: item?._id,
+          item_name: item?.item_name,
+          item_name_id: item?.item_id,
+          item_sub_category_id: item?.item_sub_category_id,
+          item_sub_category_name: item?.item_sub_category_name,
+          log_no_code: item?.log_code,
+          length: item?.length,
+          width: item?.width,
+          height: item?.height,
+          thickness: item?.thickness,
+          no_of_leaves: item?.number_of_leaves,
+          sqm: item?.total_sq_meter,
+          bundle_number: item?.bundle_number,
+          pallet_number: item?.pallet_number,
+          color_id: item?.color?.color_id,
+          color_name: item?.color?.color_name,
+          series_id: item?.series_id,
+          series_name: item?.series_name,
+          grade_id: item?.grades_id,
+          grade_name: item?.grades_name,
+          amount: item?.amount,
+          expense_amount: item?.expense_amount,
+          issued_from: issues_for_status?.veneer,
+          remark: item?.remark,
+          created_by: userDetails?._id,
+          updated_by: userDetails?._id,
+        };
+      }
+    );
+
+    //add data to issue for smoking dying
+    const insert_issues_for_smoking_dying_data =
+      await issues_for_smoking_dying_model.insertMany(
+        issues_for_smoking_dying_data,
+        { session }
+      );
+
+    if (
+      !insert_issues_for_smoking_dying_data ||
+      insert_issues_for_smoking_dying_data?.length <= 0
+    ) {
+      throw new ApiError(
+        'Failed to add data for issues for smoking dying',
+        StatusCodes.INTERNAL_SERVER_ERROR
+      );
+    }
+
+    // update issue status in veneer inventory to smoking_dying
+    const veneer_inventory_items_ids =
+      insert_issues_for_smoking_dying_data.map((e) => e.veneer_inventory_id);
+    const update_veneer_inventory_issue_status =
+      await veneer_inventory_items_model.updateMany(
+        { _id: { $in: veneer_inventory_items_ids } },
+        {
+          $set: {
+            issue_status: issues_for_status?.smoking_dying,
+          },
+        },
+        { session }
+      );
+
+    if (update_veneer_inventory_issue_status?.matchedCount <= 0) {
+      throw new ApiError('veneer inventory item not found');
+    }
+
+    if (
+      !update_veneer_inventory_issue_status.acknowledged ||
+      update_veneer_inventory_issue_status?.modifiedCount <= 0
+    ) {
+      throw new ApiError('Unable to change status of veneer inventory item');
+    }
+
+    //updating veneer inventory invoice: if any one of veneer item send for peeling then invoice should not editable
+    const update_veneer_inventory_invoice_editable =
+      await veneer_inventory_invoice_model.updateMany(
+        { _id: { $in: [...veneer_invoice_ids] } },
+        {
+          $set: {
+            isEditable: false,
+          },
+        },
+        { session }
+      );
+
+    if (update_veneer_inventory_invoice_editable?.modifiedCount <= 0) {
+      throw new ApiError('veneer inventory invoice not found');
+    }
+
+    if (
+      !update_veneer_inventory_invoice_editable.acknowledged ||
+      update_veneer_inventory_invoice_editable?.modifiedCount <= 0
+    ) {
+      throw new ApiError(
+        'Unable to change status of veneer inventory invoice'
+      );
+    }
+
+    await session.commitTransaction();
+    const response = new ApiResponse(
+      StatusCodes.CREATED,
+      'Issue for smoking-dying added successfully',
+      insert_issues_for_smoking_dying_data
+    );
+    return res.status(StatusCodes.CREATED).json(response);
+  } catch (error) {
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    await session.endSession();
   }
+}
 );
 
 export const add_issue_for_smoking_dying_from_dressing_done_factory = catchAsync(async (req, res, next) => {
@@ -416,7 +416,7 @@ export const listing_issued_for_smoking_dying = catchAsync(
     const aggMatch = {
       $match: {
         ...match_query,
-        is_smoking_dying_done:false
+        is_smoking_dying_done: false
       },
     };
     const aggSort = {
@@ -717,10 +717,19 @@ export const revert_issued_for_smoking_dying_item = catchAsync(
           );
         }
 
+        const dressing_done_item_details = await dressing_done_items_model
+          .find({
+            _id: { $nin: dressing_done_ids },
+          })
+          .lean();
+        const dressing_done_other_details_id = dressing_done_item_details.map(
+          (ele) => ele.dressing_done_other_details_id
+        );
+
         const delete_dressing_done_history_doc =
           await dressing_done_history_model.deleteOne(
             {
-              dressing_done_other_details_id: dressing_done_other_details_id,
+              dressing_done_other_details_id: { $in: dressing_done_other_details_id },
               bundles: {
                 $all: dressing_done_ids,
               },
@@ -739,13 +748,10 @@ export const revert_issued_for_smoking_dying_item = catchAsync(
         }
 
         // Fetch updated documents
-        const dressing_done_other_details_id =
-          update_document?.dressing_done_other_details_id;
-
         const is_dressing_done_item_editable = await dressing_done_items_model
           .find({
             _id: { $nin: dressing_done_ids },
-            dressing_done_other_details_id: dressing_done_other_details_id,
+            dressing_done_other_details_id: { $in: dressing_done_other_details_id },
             issue_status: { $ne: null },
           })
           .lean();
@@ -755,7 +761,7 @@ export const revert_issued_for_smoking_dying_item = catchAsync(
           is_dressing_done_item_editable?.length <= 0
         ) {
           await dressing_done_other_details_model.updateOne(
-            { _id: dressing_done_other_details_id },
+            { _id: { $in: dressing_done_other_details_id } },
             {
               $set: {
                 isEditable: true,
