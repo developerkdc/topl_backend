@@ -580,6 +580,7 @@ export const revert_issued_for_smoking_dying_item = catchAsync(
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
+      const userDetails = req.userDetails;
       const { unique_identifier, pallet_number } = req.params;
       if (!pallet_number || !unique_identifier) {
         throw new ApiError(

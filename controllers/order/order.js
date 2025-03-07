@@ -132,13 +132,14 @@ export const fetch_single_order_items = catchAsync(async (req, res, next) => {
   }
 
   const aggIssuedItems = {
-    $lookup:{
+    $lookup: {
       from: "issued_for_order_items",
       localField: "_id",
       foreignField: "order_item_id",
       as: "issued_for_order_items"
     }
   }
+
 
   const order_items_data = await order_items_models?.[category]?.aggregate([
     aggMatch,
