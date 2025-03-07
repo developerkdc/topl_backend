@@ -336,6 +336,11 @@ export const fetch_all_dressing_done_items = catchAsync(async (req, res) => {
       ...matchQuery,
     },
   };
+  const aggSortBeforeGroup = {
+    $sort: {
+      updatedAt: -1
+    }
+  }
 
   const aggGroupBy = {
     $group: {
@@ -364,6 +369,7 @@ export const fetch_all_dressing_done_items = catchAsync(async (req, res) => {
           },
         },
       },
+      latestUpdatedAt: { $max: '$updatedAt' }
     },
   };
   const aggLookupOtherDetails = {
@@ -436,7 +442,7 @@ export const fetch_all_dressing_done_items = catchAsync(async (req, res) => {
   };
 
   const aggSort = {
-    $sort: { [sortBy]: sort === 'desc' ? -1 : 1 },
+    $sort: { [sortBy === "updatedAt" ? "latestUpdatedAt" : sortBy]: sort === 'desc' ? -1 : 1 },
   };
 
   const aggSkip = {
@@ -448,6 +454,7 @@ export const fetch_all_dressing_done_items = catchAsync(async (req, res) => {
   };
 
   const all_aggregates = [
+    aggSortBeforeGroup,
     aggLookupOtherDetails,
     aggUnwindOtherDetails,
     aggCreatedUserDetails,
