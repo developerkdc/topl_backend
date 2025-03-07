@@ -1,6 +1,6 @@
 import mongoose, { isValidObjectId } from 'mongoose';
 import ApiError from '../../../../../utils/errors/apiError.js';
-import { flitch_inventory_items_model } from '../../../../../database/schema/inventory/Flitch/flitch.schema.js'
+import { flitch_inventory_invoice_model, flitch_inventory_items_model } from '../../../../../database/schema/inventory/Flitch/flitch.schema.js'
 import catchAsync from '../../../../../utils/errors/catchAsync.js';
 import ApiResponse from '../../../../../utils/ApiResponse.js';
 import { StatusCodes } from '../../../../../utils/constants.js';
@@ -70,6 +70,20 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
 
         if (!update_flitch_item_issue_status?.acknowledged || update_flitch_item_issue_status?.modifiedCount === 0) {
             throw new ApiError("Failed to update Flitch item status", StatusCodes.BAD_REQUEST)
+        };
+
+        const update_flitch_inventory_invoice_editable_status = await flitch_inventory_invoice_model?.updateOne({ _id: flitch_item_data?.invoice_id }, {
+            $set: {
+                isEditable: false,
+                updated_by: userDetails?._id
+            }
+        }, { session })
+        if (update_flitch_inventory_invoice_editable_status?.matchedCount === 0) {
+            throw new ApiError("Flitch item invoice not found", StatusCodes.BAD_REQUEST)
+        };
+
+        if (!update_flitch_inventory_invoice_editable_status?.acknowledged || update_flitch_inventory_invoice_editable_status?.modifiedCount === 0) {
+            throw new ApiError("Failed to update Flitch item invoice status", StatusCodes.BAD_REQUEST)
         };
 
 

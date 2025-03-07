@@ -278,6 +278,58 @@ export const fetch_all_raw_order_items = catchAsync(async (req, res, next) => {
       localField: 'order_id',
       foreignField: '_id',
       as: 'order_details',
+      pipeline: [
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'created_by',
+            foreignField: '_id',
+            pipeline: [
+              {
+                $project: {
+                  first_name: 1,
+                  last_name: 1,
+                  user_name: 1,
+                  user_type: 1,
+                  email_id: 1,
+                },
+              },
+            ],
+            as: 'order_created_user_details',
+          },
+        },
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'updated_by',
+            foreignField: '_id',
+            pipeline: [
+              {
+                $project: {
+                  first_name: 1,
+                  last_name: 1,
+                  user_name: 1,
+                  user_type: 1,
+                  email_id: 1,
+                },
+              },
+            ],
+            as: 'order_updated_user_details',
+          },
+        },
+        {
+          $unwind: {
+            path: "$order_created_user_details",
+            preserveNullAndEmptyArrays: true
+          }
+        },
+        {
+          $unwind: {
+            path: "$order_updated_user_details",
+            preserveNullAndEmptyArrays: true
+          }
+        }
+      ]
     },
   };
   const aggCreatedUserDetails = {
@@ -319,6 +371,45 @@ export const fetch_all_raw_order_items = catchAsync(async (req, res, next) => {
       as: 'updated_user_details',
     },
   };
+  const aggOrderCreatedUserDetails = {
+    $lookup: {
+      from: 'users',
+      localField: 'order_details.created_by',
+      foreignField: '_id',
+      pipeline: [
+        {
+          $project: {
+            first_name: 1,
+            last_name: 1,
+            user_name: 1,
+            user_type: 1,
+            email_id: 1,
+          },
+        },
+      ],
+      as: 'order_created_user_details',
+    },
+  };
+
+  const aggOrderUpdatedUserDetails = {
+    $lookup: {
+      from: 'users',
+      localField: 'order_details.updated_by',
+      foreignField: '_id',
+      pipeline: [
+        {
+          $project: {
+            first_name: 1,
+            last_name: 1,
+            user_name: 1,
+            user_type: 1,
+            email_id: 1,
+          },
+        },
+      ],
+      as: 'order_updated_user_details',
+    },
+  };
   const aggMatch = {
     $match: {
       ...match_query,
@@ -343,6 +434,18 @@ export const fetch_all_raw_order_items = catchAsync(async (req, res, next) => {
       preserveNullAndEmptyArrays: true,
     },
   };
+  const aggOrderUnwindCreatedUser = {
+    $unwind: {
+      path: '$order_created_user_details',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
+  const aggOrderUnwindUpdatedUser = {
+    $unwind: {
+      path: '$order_updated_user_details',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
   const aggSort = {
     $sort: {
       [sortBy]: sort === 'desc' ? -1 : 1,
@@ -364,6 +467,10 @@ export const fetch_all_raw_order_items = catchAsync(async (req, res, next) => {
     aggUpdatedUserDetails,
     aggUnwindCreatedUser,
     aggUnwindUpdatedUser,
+    // aggOrderCreatedUserDetails,
+    // aggOrderUpdatedUserDetails,
+    // aggOrderUnwindCreatedUser,
+    // aggOrderUnwindUpdatedUser,
     aggMatch,
     aggSort,
     aggSkip,
