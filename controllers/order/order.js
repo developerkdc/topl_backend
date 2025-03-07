@@ -110,8 +110,8 @@ export const fetch_single_order_items = catchAsync(async (req, res, next) => {
 
   const aggMatch = {
     $match: {
-      _id: mongoose.Types.ObjectId.createFromHexString(item_id),
-      order_id: orderId
+      _id: mongoose.Types.ObjectId.createFromHexString(item_id?.toString()),
+      order_id: mongoose.Types.ObjectId.createFromHexString(orderId?.toString())
     }
   }
 
