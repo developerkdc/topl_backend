@@ -34,11 +34,11 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
 
         const flitch_item_data = await flitch_inventory_items_model.findById(flitch_item_id).lean();
         if (!flitch_item_data) {
-            throw new ApiError("Log Item Data not found.")
+            throw new ApiError("Flitch Item Data not found.")
         };
 
         if (flitch_item_data?.issue_status !== null) {
-            throw new ApiError(`Log item is already issued for ${flitch_item_data?.issue_status?.toUpperCase()} `)
+            throw new ApiError(`Flitch item is already issued for ${flitch_item_data?.issue_status?.toUpperCase()} `)
         }
 
         const updated_body = {
@@ -57,19 +57,19 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
             throw new ApiError("Failed to Add order details", StatusCodes?.BAD_REQUEST)
         };
 
-        const update_log_item_issue_status = await flitch_inventory_items_model.updateOne({ _id: flitch_item_data?._id }, {
+        const update_flitch_item_issue_status = await flitch_inventory_items_model.updateOne({ _id: flitch_item_data?._id }, {
             $set: {
                 issue_status: issues_for_status?.order,
                 updated_by: userDetails?._id
             }
         }, { session: session });
 
-        if (update_log_item_issue_status?.matchedCount === 0) {
-            throw new ApiError("Log item not found", StatusCodes.BAD_REQUEST)
+        if (update_flitch_item_issue_status?.matchedCount === 0) {
+            throw new ApiError("Flitch item not found", StatusCodes.BAD_REQUEST)
         };
 
-        if (!update_log_item_issue_status?.acknowledged || update_log_item_issue_status?.modifiedCount === 0) {
-            throw new ApiError("Failed to update Log item status", StatusCodes.BAD_REQUEST)
+        if (!update_flitch_item_issue_status?.acknowledged || update_flitch_item_issue_status?.modifiedCount === 0) {
+            throw new ApiError("Failed to update Flitch item status", StatusCodes.BAD_REQUEST)
         };
 
 
@@ -110,19 +110,19 @@ export const revert_issued_item_by_id = catchAsync(async (req, res) => {
             throw new ApiError("Failed to delete ordered data ", StatusCodes.BAD_REQUEST)
         };
 
-        const update_log_item_issue_status = await log_inventory_items_model?.updateOne({ _id: issued_order_data?.item_details?._id }, {
+        const update_flitch_item_issue_status = await flitch_inventory_items_model?.updateOne({ _id: issued_order_data?.item_details?._id }, {
             $set: {
                 issue_status: null,
                 updated_by: userDetails?._id
             }
         }, { session });
 
-        if (update_log_item_issue_status?.matchedCount === 0) {
-            throw new ApiError("Log item not found", StatusCodes.BAD_REQUEST)
+        if (update_flitch_item_issue_status?.matchedCount === 0) {
+            throw new ApiError("Flitch item not found", StatusCodes.BAD_REQUEST)
         };
 
-        if (!update_log_item_issue_status?.acknowledged || update_log_item_issue_status?.modifiedCount === 0) {
-            throw new ApiError("Failed to update Log item status", StatusCodes.BAD_REQUEST)
+        if (!update_flitch_item_issue_status?.acknowledged || update_flitch_item_issue_status?.modifiedCount === 0) {
+            throw new ApiError("Failed to update Flitch item status", StatusCodes.BAD_REQUEST)
         };
 
         const response = new ApiResponse(StatusCodes.OK, "Order Reverted Successfully");
