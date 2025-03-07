@@ -8,6 +8,8 @@ import ApiResponse from "../../utils/ApiResponse.js";
 import { StatusCodes } from "../../utils/constants.js";
 import ApiError from "../../utils/errors/apiError.js";
 import catchAsync from "../../utils/errors/catchAsync.js";
+import RevertOrderItem from "./revert_issued_order_item/revert_issued_order_item.controller..js";
+import issue_for_order_model from "../../database/schema/order/issue_for_order/issue_for_order.schema.js";
 
 const order_items_models = {
   [order_category.raw]: RawOrderItemDetailsModel,
@@ -156,3 +158,35 @@ export const fetch_single_order_items = catchAsync(async (req, res, next) => {
 
   return res.status(StatusCodes.OK).json(response);
 });
+
+export const revert_order_by_order_id = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  const userDetails = req.userDetails;
+
+  if (!id) {
+    throw new ApiError("ID not found", StatusCodes.NOT_FOUND)
+  };
+  const session = await mongoose.startSession();
+  try {
+    await session.startTransaction();
+
+    const revert_order_handler = new RevertOrderItem(id, userDetails, session);
+    const result = await revert_order_handler?.update_inventory_item_status();
+    const delete_order_item_doc_result = await issue_for_order_model?.deleteOne({ _id: this?.issued_order_data?._id }, { session: session });
+    if (!delete_order_item_doc_result.acknowledged || delete_order_item_doc_result.deletedCount === 0) {
+      throw new ApiError("Failed to Delete issue for order", StatusCodes.BAD_REQUEST)
+    };
+
+    const response = new ApiResponse(StatusCodes.OK, "Order Reverted Successfully");
+    return res.status(StatusCodes.OK).json(response)
+  } catch (error) {
+    await session.abortTransaction()
+    throw error
+  } finally {
+    await session?.endSession()
+  }
+
+
+
+  // const result = 
+})

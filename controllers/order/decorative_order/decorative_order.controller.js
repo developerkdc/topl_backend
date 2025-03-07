@@ -266,6 +266,58 @@ export const fetch_all_decorative_order_items = catchAsync(
         localField: 'order_id',
         foreignField: '_id',
         as: 'order_details',
+        pipeline: [
+          {
+            $lookup: {
+              from: 'users',
+              localField: 'created_by',
+              foreignField: '_id',
+              pipeline: [
+                {
+                  $project: {
+                    first_name: 1,
+                    last_name: 1,
+                    user_name: 1,
+                    user_type: 1,
+                    email_id: 1,
+                  },
+                },
+              ],
+              as: 'order_created_user_details',
+            },
+          },
+          {
+            $lookup: {
+              from: 'users',
+              localField: 'updated_by',
+              foreignField: '_id',
+              pipeline: [
+                {
+                  $project: {
+                    first_name: 1,
+                    last_name: 1,
+                    user_name: 1,
+                    user_type: 1,
+                    email_id: 1,
+                  },
+                },
+              ],
+              as: 'order_updated_user_details',
+            },
+          },
+          {
+            $unwind: {
+              path: "$order_created_user_details",
+              preserveNullAndEmptyArrays: true
+            }
+          },
+          {
+            $unwind: {
+              path: "$order_updated_user_details",
+              preserveNullAndEmptyArrays: true
+            }
+          }
+        ]
       },
     };
     const aggCreatedUserDetails = {
