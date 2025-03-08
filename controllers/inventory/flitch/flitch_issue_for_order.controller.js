@@ -1,12 +1,12 @@
 import mongoose, { isValidObjectId } from 'mongoose';
-import { log_inventory_items_model } from '../../../database/schema/inventory/log/log.schema.js';
 import ApiResponse from '../../../utils/ApiResponse.js';
 import { StatusCodes } from '../../../utils/constants.js';
 import ApiError from '../../../utils/errors/apiError.js';
 import catchAsync from '../../../utils/errors/catchAsync.js';
 import { RawOrderItemDetailsModel } from '../../../database/schema/order/raw_order/raw_order_item_details.schema.js';
+import { flitch_inventory_items_model } from '../../../database/schema/inventory/Flitch/flitch.schema.js';
 
-export const fetch_all_log_no_item_name = catchAsync(async (req, res) => {
+export const fetch_all_flitch_by_item_name = catchAsync(async (req, res) => {
   const { id } = req.params;
   if (!isValidObjectId(id)) {
     throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
@@ -31,7 +31,7 @@ export const fetch_all_log_no_item_name = catchAsync(async (req, res) => {
 
   const match_query = {
     ...search_query,
-    physical_cmt: {
+    flitch_cmt: {
       $lte: order_item_data?.cbm,
     },
     issue_status: null,
@@ -45,30 +45,30 @@ export const fetch_all_log_no_item_name = catchAsync(async (req, res) => {
     },
   ];
 
-  const result = await log_inventory_items_model
+  const result = await flitch_inventory_items_model
     ?.aggregate(pipeline)
     .collation({ caseLevel: true, locale: 'en' });
 
   const response = new ApiResponse(
     StatusCodes.OK,
-    'Log No Dropdown fetched successfully',
+    'Flitch  Dropdown fetched successfully',
     result
   );
   return res.status(StatusCodes.OK).json(response);
 });
 
-export const fetch_log_details_by_log_no = catchAsync(async (req, res) => {
+export const fetch_flitch_details_by_log_no = catchAsync(async (req, res) => {
   const { id } = req.params;
 
   if (!id || !isValidObjectId(id)) {
     throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
   }
 
-  const log_item_details = await log_inventory_items_model.findById(id);
+  const flitch_item_details = await flitch_inventory_items_model.findById(id);
   const response = new ApiResponse(
     StatusCodes.OK,
-    'Log Item Details fetched successfully',
-    log_item_details
+    'Flitch Item Details fetched successfully',
+    flitch_item_details
   );
   return res.status(StatusCodes.OK).json(response);
 });

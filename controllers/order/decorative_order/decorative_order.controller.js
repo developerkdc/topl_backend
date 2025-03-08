@@ -307,17 +307,17 @@ export const fetch_all_decorative_order_items = catchAsync(
           },
           {
             $unwind: {
-              path: "$order_created_user_details",
-              preserveNullAndEmptyArrays: true
-            }
+              path: '$order_created_user_details',
+              preserveNullAndEmptyArrays: true,
+            },
           },
           {
             $unwind: {
-              path: "$order_updated_user_details",
-              preserveNullAndEmptyArrays: true
-            }
-          }
-        ]
+              path: '$order_updated_user_details',
+              preserveNullAndEmptyArrays: true,
+            },
+          },
+        ],
       },
     };
     const aggCreatedUserDetails = {

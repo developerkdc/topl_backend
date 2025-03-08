@@ -82,13 +82,13 @@ export const order_item_status = {
 };
 
 export const item_issued_from = {
-  log: "LOG",
-  flitch: "FLITCH",
-  veneer: "VENEER",
-  plywood: "PLYWOOD",
-  core: "CORE",
-  fleece_paper: "FLEECE PAPER",
-  face: "FACE",
-  mdf: "MDF",
-  store: "OTHER GOODS"
-}
+  log: 'LOG',
+  flitch: 'FLITCH',
+  veneer: 'VENEER',
+  plywood: 'PLYWOOD',
+  core: 'CORE',
+  fleece_paper: 'FLEECE PAPER',
+  face: 'FACE',
+  mdf: 'MDF',
+  store: 'OTHER GOODS',
+};

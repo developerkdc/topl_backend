@@ -425,7 +425,7 @@ export const fetch_all_details_by_grouping_done_id = catchAsync(
       },
       {
         $lookup: {
-          from:"grouping_done_items_details",
+          from: 'grouping_done_items_details',
           localField: '_id',
           foreignField: 'grouping_done_other_details_id',
           as: 'grouping_done_items_details',
@@ -595,7 +595,7 @@ export const group_no_dropdown = catchAsync(async (req, res, next) => {
   }
   const fetch_group_no = await grouping_done_items_details_model.find(
     {
-      ...matchQuery
+      ...matchQuery,
     },
     {
       group_no: 1,

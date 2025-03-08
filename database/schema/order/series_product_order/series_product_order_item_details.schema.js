@@ -32,7 +32,7 @@ const series_product_order_item_details_schema = new mongoose.Schema(
       type: String,
       trim: true,
       uppercase: true,
-      default:null
+      default: null,
     },
     photo_id: {
       type: mongoose.Schema.Types.ObjectId,
@@ -60,11 +60,11 @@ const series_product_order_item_details_schema = new mongoose.Schema(
     },
     veneer_min_thickness: {
       type: Number,
-      default:null,
+      default: null,
     },
     base_min_thickness: {
       type: Number,
-      default:null,
+      default: null,
     },
     no_of_hours: {
       type: Number,
@@ -148,12 +148,14 @@ const series_product_order_item_details_schema = new mongoose.Schema(
       type: Number,
       default: null,
     },
-    flow_process: [{
-      type: String,
-      trim: true,
-      uppercase: true,
-      default: null,
-    }],
+    flow_process: [
+      {
+        type: String,
+        trim: true,
+        uppercase: true,
+        default: null,
+      },
+    ],
     remark: {
       type: String,
       trim: true,

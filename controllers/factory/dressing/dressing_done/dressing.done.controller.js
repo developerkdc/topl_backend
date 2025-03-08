@@ -338,9 +338,9 @@ export const fetch_all_dressing_done_items = catchAsync(async (req, res) => {
   };
   const aggSortBeforeGroup = {
     $sort: {
-      updatedAt: -1
-    }
-  }
+      updatedAt: -1,
+    },
+  };
 
   const aggGroupBy = {
     $group: {
@@ -369,7 +369,7 @@ export const fetch_all_dressing_done_items = catchAsync(async (req, res) => {
           },
         },
       },
-      latestUpdatedAt: { $max: '$updatedAt' }
+      latestUpdatedAt: { $max: '$updatedAt' },
     },
   };
   const aggLookupOtherDetails = {
@@ -442,7 +442,10 @@ export const fetch_all_dressing_done_items = catchAsync(async (req, res) => {
   };
 
   const aggSort = {
-    $sort: { [sortBy === "updatedAt" ? "latestUpdatedAt" : sortBy]: sort === 'desc' ? -1 : 1 },
+    $sort: {
+      [sortBy === 'updatedAt' ? 'latestUpdatedAt' : sortBy]:
+        sort === 'desc' ? -1 : 1,
+    },
   };
 
   const aggSkip = {
@@ -1458,8 +1461,9 @@ export const create_dressing_items_from_dressing_report = catchAsync(
         log_no_code_amount_map[item?.log_no_code] = Number(
           (
             log_no_code_factor_map[item?.log_no_code] *
-            item?.slicing_done_other_details?.total_amount //change to final amount
-          )?.toFixed(2)
+            item?.slicing_done_other_details?.total_amount
+          ) //change to final amount
+            ?.toFixed(2)
         );
       }
       const slicing_done_other_details_id_set = new Set();
