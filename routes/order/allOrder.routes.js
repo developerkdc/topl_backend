@@ -14,6 +14,6 @@ allOrderRouter.use('/series-product-order', seriesOrderRouter);
 allOrderRouter.use(orderRouter);
 allOrderRouter.use(issue_for_raw_order_router);
 //revert order route
-allOrderRouter.use("/revert-order/:id", revert_order_by_order_id)
+allOrderRouter.use('/revert-order/:id', revert_order_by_order_id);
 
 export default allOrderRouter;

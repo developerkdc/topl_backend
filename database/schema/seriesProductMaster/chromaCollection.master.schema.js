@@ -42,8 +42,8 @@ const chromaCollectionSchema = new mongoose.Schema(
             required: [true, 'Base size is required in size'],
             trim: true,
             default: function () {
-              return `${this.length}'${this.width}`
-            }
+              return `${this.length}'${this.width}`;
+            },
           },
           length: {
             type: Number,

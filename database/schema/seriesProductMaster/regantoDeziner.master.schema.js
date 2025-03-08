@@ -41,9 +41,9 @@ const regantoDezinerSchema = new mongoose.Schema(
             type: String,
             required: [true, 'Base size is required in size'],
             trim: true,
-            default:function(){
-              return `${this.length}'${this.width}`
-            }
+            default: function () {
+              return `${this.length}'${this.width}`;
+            },
           },
           length: {
             type: Number,

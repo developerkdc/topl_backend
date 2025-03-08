@@ -19,7 +19,10 @@ import {
 import AuthMiddleware from '../../../middlewares/verifyToken.js';
 import RolesPermissions from '../../../middlewares/permission.js';
 import { verifyApproval } from '../../../middlewares/approval.middleware.js';
-import { fetch_all_log_no_item_name, fetch_log_details_by_log_no } from '../../../controllers/inventory/log/log_issue_for_order.controller.js';
+import {
+  fetch_all_log_no_item_name,
+  fetch_log_details_by_log_no,
+} from '../../../controllers/inventory/log/log_issue_for_order.controller.js';
 
 const router = Router();
 
@@ -86,14 +89,17 @@ router.get(
   log_item_listing_by_invoice
 );
 
-
 //dropdown
 router.get('/item-srno-dropdown', AuthMiddleware, item_sr_no_dropdown);
 router.get('/inward-srno-dropdown', AuthMiddleware, inward_sr_no_dropdown);
 
-router.get("/list-log-details/:id", AuthMiddleware, fetch_log_details_by_log_no)
+router.get(
+  '/list-log-details/:id',
+  AuthMiddleware,
+  fetch_log_details_by_log_no
+);
 //log no dropdown by order item id
-router.get("/log-no-dropdown/:id", AuthMiddleware, fetch_all_log_no_item_name)
+router.get('/log-no-dropdown/:id', AuthMiddleware, fetch_all_log_no_item_name);
 
 //Issue for crosscutting
 router.post(

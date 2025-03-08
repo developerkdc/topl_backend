@@ -120,7 +120,7 @@ const OrderSchema = new mongoose.Schema(
       trim: true,
       default: null,
     },
-    
+
     is_close: {
       type: String,
       uppercase: true,
