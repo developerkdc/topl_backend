@@ -41,6 +41,27 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
             throw new ApiError(`Log item is already issued for ${log_item_data?.issue_status?.toUpperCase()} `)
         }
 
+        const [validate_sqm_for_order] = await issue_for_order_model.aggregate([
+            {
+                $match: {
+                    order_item_id: order_item_data?._id
+                }
+            },
+            {
+                $group: {
+                    _id: null,
+                    total_sqm: {
+                        $sum: '$item_details.physical_cmt'
+                    }
+                }
+            }
+        ]);
+
+
+        if (Number(validate_sqm_for_order?.total_sqm + Number(log_item_data?.physical_cmt)) > order_item_data?.cbm) {
+            throw new ApiError("Issued sqm is greater than order sqm", StatusCodes.BAD_REQUEST)
+        }
+
         const updated_body = {
             order_id: order_item_data?.order_id,
             order_item_id: order_item_data?._id,

@@ -15,6 +15,7 @@ import {
 import RolesPermissions from '../../../middlewares/permission.js';
 import AuthMiddleware from '../../../middlewares/verifyToken.js';
 import { verifyApproval } from '../../../middlewares/approval.middleware.js';
+import { fetch_all_flitch_by_item_name, fetch_flitch_details_by_log_no } from '../../../controllers/inventory/flitch/flitch_issue_for_order.controller.js';
 const flitch_router = express.Router();
 
 flitch_router.post(
@@ -73,6 +74,9 @@ flitch_router.patch(
   verifyApproval('flitch_inventory', 'edit'),
   edit_flitch_item_invoice_inventory
 );
+
+flitch_router.get("/list-flitch-details/:id", AuthMiddleware, fetch_flitch_details_by_log_no)
+flitch_router.get("/log-no-dropdown/:id", AuthMiddleware, fetch_all_flitch_by_item_name)
 //Dropdowns
 flitch_router.get('/item-srno-dropdown', AuthMiddleware, item_sr_no_dropdown);
 flitch_router.get(

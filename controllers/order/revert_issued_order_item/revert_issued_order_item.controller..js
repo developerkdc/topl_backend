@@ -65,9 +65,9 @@ class RevertOrderItem {
         }
 
         const is_invoice_editable = await log_inventory_items_model?.find({ _id: { $ne: update_log_item?._id }, invoice_id: update_log_item?.invoice_id, issue_status: { $ne: null } });
-
+        console.log(is_invoice_editable)
         if (is_invoice_editable && is_invoice_editable?.length === 0) {
-            const update_log_item_invoice_editable_status = await log_inventory_invoice_model?.updateOne({ _id: update_log_item?._id }, {
+            const update_log_item_invoice_editable_status = await log_inventory_invoice_model?.updateOne({ _id: update_log_item?.invoice_id }, {
                 $set: {
                     isEditable: true,
                     updated_by: this.userDetails?._id
@@ -90,7 +90,7 @@ class RevertOrderItem {
     }
     async FLITCH() {
         const update_flitch_item =
-            await flitch_inventory_items_model?.updateOne(
+            await flitch_inventory_items_model?.findOneAndUpdate(
                 { _id: this.issued_order_data?.item_details?._id },
                 {
                     $set: {
@@ -98,17 +98,17 @@ class RevertOrderItem {
                         updated_by: this?.userDetails?._id,
                     },
                 },
-                { session: this.session }
+                { session: this.session, new: true }
             );
 
-        if (update_flitch_item?.matchedCount === 0) {
+        if (!update_flitch_item) {
             throw new ApiError('Flitch item not found', StatusCodes.BAD_REQUEST);
         }
 
-        const is_invoice_editable = await flitch_inventory_items_model?.find({ _id: { $ne: update_flitch_item_invoice_editable_status?._id }, invoice_id: update_flitch_item?.invoice_id, issue_status: { $ne: null } });
+        const is_invoice_editable = await flitch_inventory_items_model?.find({ _id: { $ne: update_flitch_item?._id }, invoice_id: update_flitch_item?.invoice_id, issue_status: { $ne: null } });
 
         if (is_invoice_editable && is_invoice_editable?.length === 0) {
-            const update_flitch_item_invoice_editable_status = await flitch_inventory_invoice_model?.updateOne({ _id: update_flitch_item?._id }, {
+            const update_flitch_item_invoice_editable_status = await flitch_inventory_invoice_model?.updateOne({ _id: update_flitch_item?.invoice_id }, {
                 $set: {
                     isEditable: true,
                     updated_by: this.userDetails?._id

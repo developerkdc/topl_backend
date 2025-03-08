@@ -172,12 +172,13 @@ export const revert_order_by_order_id = catchAsync(async (req, res) => {
 
     const revert_order_handler = new RevertOrderItem(id, userDetails, session);
     const result = await revert_order_handler?.update_inventory_item_status();
-    const delete_order_item_doc_result = await issue_for_order_model?.deleteOne({ _id: this?.issued_order_data?._id }, { session: session });
+    const delete_order_item_doc_result = await issue_for_order_model?.deleteOne({ _id: id }, { session: session });
     if (!delete_order_item_doc_result.acknowledged || delete_order_item_doc_result.deletedCount === 0) {
       throw new ApiError("Failed to Delete issue for order", StatusCodes.BAD_REQUEST)
     };
 
     const response = new ApiResponse(StatusCodes.OK, "Order Reverted Successfully");
+    await session.commitTransaction()
     return res.status(StatusCodes.OK).json(response)
   } catch (error) {
     await session.abortTransaction()

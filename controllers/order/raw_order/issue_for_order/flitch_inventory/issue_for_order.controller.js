@@ -41,10 +41,31 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
             throw new ApiError(`Flitch item is already issued for ${flitch_item_data?.issue_status?.toUpperCase()} `)
         }
 
+        const [validate_sqm_for_order] = await issue_for_order_model.aggregate([
+            {
+                $match: {
+                    order_item_id: order_item_data?._id
+                }
+            },
+            {
+                $group: {
+                    _id: null,
+                    total_sqm: {
+                        $sum: '$item_details.flitch_cmt'
+                    }
+                }
+            }
+        ]);
+
+
+        if (Number(validate_sqm_for_order?.total_sqm + Number(flitch_item_data?.flitch_cmt)) > order_item_data?.cbm) {
+            throw new ApiError("Issued sqm is greater than order sqm", StatusCodes.BAD_REQUEST)
+        }
+
         const updated_body = {
             order_id: order_item_data?.order_id,
             order_item_id: order_item_data?._id,
-            issued_from: item_issued_from?.log,
+            issued_from: item_issued_from?.flitch,
             item_details: flitch_item_data,
             created_by: userDetails?._id,
             updated_by: userDetails?._id
