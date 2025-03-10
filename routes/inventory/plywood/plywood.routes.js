@@ -9,12 +9,16 @@ import {
   plywood_item_listing_by_invoice,
   plywoodLogsCsv,
   inward_sr_no_dropdown,
-  item_sr_no_dropdown, fetch_plywood_history
+  item_sr_no_dropdown,
+  fetch_plywood_history,
 } from '../../../controllers/inventory/plywood/plywood.controller.js';
 import AuthMiddleware from '../../../middlewares/verifyToken.js';
 import RolesPermissions from '../../../middlewares/permission.js';
 import { verifyApproval } from '../../../middlewares/approval.middleware.js';
-import { fetch_all_plywood_no_item_name, fetch_plywood_details_by_id } from '../../../controllers/inventory/plywood/plywood_issue_for_order.controller.js';
+import {
+  fetch_all_plywood_no_item_name,
+  fetch_plywood_details_by_id,
+} from '../../../controllers/inventory/plywood/plywood_issue_for_order.controller.js';
 
 const router = Router();
 
@@ -88,13 +92,19 @@ router.post(
 router.get('/item-srno-dropdown', AuthMiddleware, item_sr_no_dropdown);
 router.get('/inward-srno-dropdown', AuthMiddleware, inward_sr_no_dropdown);
 
+// pallete no dropdown
 
-
-// pallete no dropdown 
-
-router.get('/pallet-no-dropdown/:id', AuthMiddleware , fetch_all_plywood_no_item_name);
+router.get(
+  '/pallet-no-dropdown/:id',
+  AuthMiddleware,
+  fetch_all_plywood_no_item_name
+);
 
 //list plywood details
-router.get('/list-plywood-details/:id', AuthMiddleware,fetch_plywood_details_by_id);
+router.get(
+  '/list-plywood-details/:id',
+  AuthMiddleware,
+  fetch_plywood_details_by_id
+);
 
 export default router;
