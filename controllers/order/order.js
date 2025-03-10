@@ -208,6 +208,4 @@ export const revert_order_by_order_id = catchAsync(async (req, res) => {
   } finally {
     await session?.endSession();
   }
-
-  // const result =
 });
