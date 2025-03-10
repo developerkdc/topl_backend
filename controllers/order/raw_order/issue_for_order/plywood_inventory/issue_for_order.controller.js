@@ -13,6 +13,7 @@ import {
 } from '../../../../../database/Utils/constants/constants.js';
 import { RawOrderItemDetailsModel } from '../../../../../database/schema/order/raw_order/raw_order_item_details.schema.js';
 import issue_for_order_model from '../../../../../database/schema/order/issue_for_order/issue_for_order.schema.js';
+import plywood_history_model from '../../../../../database/schema/inventory/Plywood/plywood.history.schema.js';
 
 export const add_issue_for_order = catchAsync(async (req, res) => {
   const { order_item_id, plywood_item_details } = req.body;
@@ -50,6 +51,7 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
       throw new ApiError(`No Available sheets found. `);
     }
 
+    //fetch all issued sheets for the order
     const [validate_sqm_for_order] = await issue_for_order_model.aggregate([
       {
         $match: {
@@ -60,16 +62,17 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
         $group: {
           _id: null,
           total_sheets: {
-            $sum: '$item_details.available_sheets',
+            $sum: '$item_details.issued_sheets',
           },
         },
       },
     ]);
 
+    //validate issued sheets with order no.of sheets
     if (
       Number(
         validate_sqm_for_order?.total_sheets +
-          Number(plywood_item_details?.issued_sheets)
+        Number(plywood_item_details?.issued_sheets)
       ) > order_item_data?.no_of_sheet
     ) {
       throw new ApiError(
@@ -93,14 +96,20 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
       { session }
     );
 
+    const issued_sheets_for_order = create_order_result[0]?.item_details?.issued_sheets
+    const issued_sqm_for_order = create_order_result[0]?.item_details?.issued_sqm
+    const issue_for_order_id = create_order_result[0]?._id
     if (create_order_result?.length === 0) {
       throw new ApiError(
         'Failed to Add order details',
         StatusCodes?.BAD_REQUEST
       );
     }
+    //available sheets
     const available_sheets =
       plywood_item_data?.available_sheets - plywood_item_details?.issued_sheets;
+
+    //update plywood inventory available sheets
     const update_plywood_item_no_of_sheets =
       await plywood_inventory_items_details.updateOne(
         { _id: plywood_item_data?._id },
@@ -110,7 +119,7 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
             updated_by: userDetails?._id,
           },
         },
-        { session: session }
+        { session }
       );
 
     if (update_plywood_item_no_of_sheets?.matchedCount === 0) {
@@ -127,6 +136,7 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
       );
     }
 
+    //update plywood inventory invoice ediatble status
     const update_plywood_inventory_invoice_editable_status =
       await plywood_inventory_invoice_details?.updateOne(
         { _id: plywood_item_data?.invoice_id },
@@ -153,7 +163,22 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
         'Failed to update plywood item invoice status',
         StatusCodes.BAD_REQUEST
       );
-    }
+    };
+
+    //add data to plywood history model
+    const add_issued_data_to_plywood_history = await plywood_history_model.create([{
+      issued_for_order_id: issue_for_order_id,
+      issue_status: issues_for_status?.order,
+      plywood_item_id: plywood_item_data?._id,
+      issued_sheets: issued_sheets_for_order,
+      issued_sqm: issued_sqm_for_order,
+      created_by: userDetails?._id,
+      updated_by: userDetails?._id
+    }], { session })
+
+    if (add_issued_data_to_plywood_history?.length === 0) {
+      throw new ApiError("Failed to add data to plywood history", StatusCodes.BAD_REQUEST)
+    };
 
     const response = new ApiResponse(
       StatusCodes.CREATED,

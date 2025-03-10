@@ -14,7 +14,7 @@ import {
 import AuthMiddleware from '../../../middlewares/verifyToken.js';
 import RolesPermissions from '../../../middlewares/permission.js';
 import { verifyApproval } from '../../../middlewares/approval.middleware.js';
-import { fetch_all_plywood_no_item_name, fetch_plywood_details_by_pallet_no } from '../../../controllers/inventory/plywood/plywood_issue_for_order.controller.js';
+import { fetch_all_plywood_no_item_name, fetch_plywood_details_by_id } from '../../../controllers/inventory/plywood/plywood_issue_for_order.controller.js';
 
 const router = Router();
 
@@ -88,10 +88,6 @@ router.get('/inward-srno-dropdown', AuthMiddleware, inward_sr_no_dropdown);
 router.get('/pallet-no-dropdown/:id', AuthMiddleware , fetch_all_plywood_no_item_name);
 
 //list plywood details
+router.get('/list-plywood-details/:id', AuthMiddleware,fetch_plywood_details_by_id);
 
-router.get(
-  '/list-plywood-details/:id',
-  AuthMiddleware,
-  fetch_plywood_details_by_pallet_no
-);
 export default router;

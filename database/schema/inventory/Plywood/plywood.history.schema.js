@@ -7,6 +7,10 @@ const plywood_history_schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Plywood Item ID is required.'],
     },
+    issued_for_order_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, "Issued for order ID is required."]
+    },
     issue_status: {
       type: String,
       enum: {
@@ -18,6 +22,10 @@ const plywood_history_schema = new mongoose.Schema(
     issued_sheets: {
       type: Number,
       required: [true, 'Issued sheets are required.'],
+    },
+    issued_sqm: {
+      type: Number,
+      required: [true, 'Issued SQM are required.'],
     },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,
@@ -32,7 +40,7 @@ const plywood_history_schema = new mongoose.Schema(
 );
 
 plywood_history_schema?.index({ issue_status: 1 });
-plywood_history_schema?.index({ plywood_item_id: 1 }, { unique: true });
+// plywood_history_schema?.index({ plywood_item_id: 1 }, { unique: true });
 
 const plywood_history_model = mongoose.model(
   'plywood_history_details',

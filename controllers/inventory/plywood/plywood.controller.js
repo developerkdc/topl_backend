@@ -58,6 +58,7 @@ export const listing_plywood_inventory = catchAsync(async (req, res, next) => {
   const match_query = {
     ...filterData,
     ...search_query,
+    // available_sheets: { $ne: 0 } 
   };
 
   const aggregate_stage = [

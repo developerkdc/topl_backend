@@ -6,7 +6,7 @@ import { RawOrderItemDetailsModel } from '../../../database/schema/order/raw_ord
 import { isValidObjectId } from 'mongoose';
 import { plywood_inventory_items_details } from '../../../database/schema/inventory/Plywood/plywood.schema.js';
 
-//fetching all pallete no dropdown
+//fetching all pallet no dropdown
 export const fetch_all_plywood_no_item_name=catchAsync(async(req,res)=>{
     const {id}=req.params;
     if(!isValidObjectId(id)){
@@ -54,8 +54,7 @@ export const fetch_all_plywood_no_item_name=catchAsync(async(req,res)=>{
 })
 
 // fetching plywood details by pallet_no
-
-export const fetch_plywood_details_by_pallet_no = catchAsync(async (req, res) => {
+export const fetch_plywood_details_by_id = catchAsync(async (req, res) => {
   const { id } = req.params;
 
   if (!id || !isValidObjectId(id)) {
