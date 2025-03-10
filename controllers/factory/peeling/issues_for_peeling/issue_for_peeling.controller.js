@@ -209,6 +209,7 @@ export const addIssueForPeelingFromCrosscutDone = catchAsync(
           cost_amount: 1,
           per_cmt_cost: 1,
           expense_amount: 1,
+          remarks:1,
           issuedCrossCuttingDetails: {
             item_sr_no: 1,
             supplier_item_name: 1,
