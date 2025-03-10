@@ -136,7 +136,7 @@ export const plywood_item_details_schema = new mongoose.Schema(
     },
     issue_status: {
       type: String,
-      default: null
+      default: null,
     },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,
@@ -309,7 +309,7 @@ export const plywood_invoice_schema = new mongoose.Schema(
     },
     isEditable: {
       type: Boolean,
-      default: true
+      default: true,
     },
     approval_status: approval_status,
     invoice_Details: invoice_details,
