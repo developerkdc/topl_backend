@@ -98,6 +98,7 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
 
     const issued_sheets_for_order = create_order_result[0]?.item_details?.issued_sheets
     const issued_sqm_for_order = create_order_result[0]?.item_details?.issued_sqm
+    const issued_amount_for_order = create_order_result[0]?.item_details?.issued_amount
     const issue_for_order_id = create_order_result[0]?._id
     if (create_order_result?.length === 0) {
       throw new ApiError(
@@ -108,6 +109,13 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
     //available sheets
     const available_sheets =
       plywood_item_data?.available_sheets - plywood_item_details?.issued_sheets;
+    //available sqm
+    const available_sqm =
+      plywood_item_data?.available_sqm - plywood_item_details?.issued_sqm;
+    //available_amount
+    const available_amount =
+      plywood_item_data?.available_amount - plywood_item_details?.issued_amount;
+
 
     //update plywood inventory available sheets
     const update_plywood_item_no_of_sheets =
@@ -116,6 +124,8 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
         {
           $set: {
             available_sheets: available_sheets,
+            available_amount: available_amount,
+            available_sqm: available_sqm,
             updated_by: userDetails?._id,
           },
         },
@@ -172,6 +182,7 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
       plywood_item_id: plywood_item_data?._id,
       issued_sheets: issued_sheets_for_order,
       issued_sqm: issued_sqm_for_order,
+      issued_amount: issued_amount_for_order,
       created_by: userDetails?._id,
       updated_by: userDetails?._id
     }], { session })
