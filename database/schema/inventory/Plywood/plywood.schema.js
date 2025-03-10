@@ -81,8 +81,8 @@ export const plywood_item_details_schema = new mongoose.Schema(
     available_sheets: {
       type: Number,
       default: function () {
-        return this.sheets
-      }
+        return this.sheets;
+      },
     },
     total_sq_meter: {
       type: Number,

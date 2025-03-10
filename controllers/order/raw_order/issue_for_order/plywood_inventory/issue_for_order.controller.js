@@ -47,9 +47,7 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
     }
 
     if (plywood_item_data?.available_sheets <= 0) {
-      throw new ApiError(
-        `No Available sheets found. `
-      );
+      throw new ApiError(`No Available sheets found. `);
     }
 
     const [validate_sqm_for_order] = await issue_for_order_model.aggregate([
@@ -71,7 +69,7 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
     if (
       Number(
         validate_sqm_for_order?.total_sheets +
-        Number(plywood_item_details?.issued_sheets)
+          Number(plywood_item_details?.issued_sheets)
       ) > order_item_data?.no_of_sheet
     ) {
       throw new ApiError(
@@ -101,7 +99,8 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
         StatusCodes?.BAD_REQUEST
       );
     }
-    const available_sheets = plywood_item_data?.available_sheets - plywood_item_details?.issued_sheets
+    const available_sheets =
+      plywood_item_data?.available_sheets - plywood_item_details?.issued_sheets;
     const update_plywood_item_no_of_sheets =
       await plywood_inventory_items_details.updateOne(
         { _id: plywood_item_data?._id },
