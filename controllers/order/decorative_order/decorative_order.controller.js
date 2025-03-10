@@ -148,6 +148,7 @@ export const update_decorative_order = catchAsync(async (req, res) => {
       item.created_by = item.created_by ? item?.created_by : userDetails?._id;
       item.updated_by = userDetails?._id;
       item.createdAt = item.createdAt ? item?.createdAt : new Date();
+      item.updatedAt = new Date();
       return item;
     });
 

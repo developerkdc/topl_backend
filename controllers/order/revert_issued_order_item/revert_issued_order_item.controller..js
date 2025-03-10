@@ -157,7 +157,9 @@ class RevertOrderItem {
     //update plywood item available sheets 
     const update_plywood_item = await plywood_inventory_items_details.findOneAndUpdate({ _id: this.issued_order_data?.item_details?._id }, {
       $inc: {
-        available_sheets: this.issued_order_data?.item_details?.issued_sheets || 0
+        available_sheets: this.issued_order_data?.item_details?.issued_sheets || 0,
+        available_amount: this.issued_order_data?.item_details?.issued_amount || 0,
+        available_sqm: this.issued_order_data?.item_details?.issued_sqm || 0
       },
     }, { session: this.session });
 
@@ -203,7 +205,7 @@ class RevertOrderItem {
     };
 
     //delete the plywood history document
-    const delete_plywood_history_document_result = await plywood_history_model.deleteOne({ _id: this.issued_order_data?._id }, { session: this.session });
+    const delete_plywood_history_document_result = await plywood_history_model.deleteOne({ issued_for_order_id: this.issued_order_data?._id }, { session: this.session });
 
     if (!delete_plywood_history_document_result?.acknowledged || delete_plywood_history_document_result?.deletedCount === 0) {
       throw new ApiError("Failed to delete plywood history", StatusCodes.BAD_REQUEST)

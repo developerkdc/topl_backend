@@ -76,6 +76,12 @@ export const item_details_schema = new mongoose.Schema(
       type: Number,
       required: [true, 'Number of Sheets  is required'],
     },
+    available_sheets: {
+      type: Number,
+      default: function () {
+        return this.no_of_sheet;
+      },
+    },
     total_sq_meter: {
       type: Number,
       required: [true, 'Total square meter is required'],
@@ -140,18 +146,18 @@ export const mdf_invoice_schema = new mongoose.Schema(
       default: Date.now,
       required: [true, 'Inward Date is required'],
     },
-    inward_type: {
-      type: String,
-      enum: {
-        values: [
-          inward_type.inventory,
-          inward_type.job_work,
-          inward_type.challan,
-        ],
-        message: `Invalid status {{VALUE}} Issue Status must either be one of ${inward_type.inventory}, ${inward_type.job_work}, ${inward_type.challan}`,
-      },
-      required: [true, 'Inward Type is required'],
-    },
+    // inward_type: {
+    //   type: String,
+    //   enum: {
+    //     values: [
+    //       inward_type.inventory,
+    //       inward_type.job_work,
+    //       inward_type.challan,
+    //     ],
+    //     message: `Invalid status {{VALUE}} Issue Status must either be one of ${inward_type.inventory}, ${inward_type.job_work}, ${inward_type.challan}`,
+    //   },
+    //   required: [true, 'Inward Type is required'],
+    // },
     currency: {
       type: String,
       required: [true, 'Currency is required'],
