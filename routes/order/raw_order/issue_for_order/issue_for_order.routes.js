@@ -17,7 +17,8 @@ issue_for_raw_order_router.use(
 );
 issue_for_raw_order_router.use('/issue-raw-plywood-order', plywood_inventory_order_router)
 
-issue_for_raw_order_router.use('issue-raw-mdf-order', mdf_inventory_order_router);
-issue_for_raw_order_router.use('/issue-raw-plywood-order', plywood_inventory_order_router)
+issue_for_raw_order_router.use('/issue-raw-mdf-order', mdf_inventory_order_router);
+
+// issue_for_raw_order_router.use('/issue-raw-plywood-order', plywood_inventory_order_router)
 
 export default issue_for_raw_order_router;
