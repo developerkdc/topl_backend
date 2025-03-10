@@ -13,7 +13,10 @@ import {
   flitch_inventory_invoice_model,
   flitch_inventory_items_model,
 } from '../../../database/schema/inventory/Flitch/flitch.schema.js';
-import { plywood_inventory_invoice_details, plywood_inventory_items_details } from '../../../database/schema/inventory/Plywood/plywood.schema.js';
+import {
+  plywood_inventory_invoice_details,
+  plywood_inventory_items_details,
+} from '../../../database/schema/inventory/Plywood/plywood.schema.js';
 import plywood_history_model from '../../../database/schema/inventory/Plywood/plywood.history.schema.js';
 
 class RevertOrderItem {
@@ -154,14 +157,22 @@ class RevertOrderItem {
   }
 
   async PLYWOOD() {
-    //update plywood item available sheets 
-    const update_plywood_item = await plywood_inventory_items_details.findOneAndUpdate({ _id: this.issued_order_data?.item_details?._id }, {
-      $inc: {
-        available_sheets: this.issued_order_data?.item_details?.issued_sheets || 0,
-        available_amount: this.issued_order_data?.item_details?.issued_amount || 0,
-        available_sqm: this.issued_order_data?.item_details?.issued_sqm || 0
-      },
-    }, { session: this.session });
+    //update plywood item available sheets
+    const update_plywood_item =
+      await plywood_inventory_items_details.findOneAndUpdate(
+        { _id: this.issued_order_data?.item_details?._id },
+        {
+          $inc: {
+            available_sheets:
+              this.issued_order_data?.item_details?.issued_sheets || 0,
+            available_amount:
+              this.issued_order_data?.item_details?.issued_amount || 0,
+            available_sqm:
+              this.issued_order_data?.item_details?.issued_sqm || 0,
+          },
+        },
+        { session: this.session }
+      );
 
     if (!update_plywood_item) {
       throw new ApiError('Plywood item not found', StatusCodes.BAD_REQUEST);
@@ -182,7 +193,7 @@ class RevertOrderItem {
           {
             $set: {
               isEditable: true,
-              updated_by: this.userDetails?._id
+              updated_by: this.userDetails?._id,
             },
           },
           { session: this.session }
@@ -202,15 +213,24 @@ class RevertOrderItem {
           StatusCodes.BAD_REQUEST
         );
       }
-    };
+    }
 
     //delete the plywood history document
-    const delete_plywood_history_document_result = await plywood_history_model.deleteOne({ issued_for_order_id: this.issued_order_data?._id }, { session: this.session });
+    const delete_plywood_history_document_result =
+      await plywood_history_model.deleteOne(
+        { issued_for_order_id: this.issued_order_data?._id },
+        { session: this.session }
+      );
 
-    if (!delete_plywood_history_document_result?.acknowledged || delete_plywood_history_document_result?.deletedCount === 0) {
-      throw new ApiError("Failed to delete plywood history", StatusCodes.BAD_REQUEST)
-    };
-
+    if (
+      !delete_plywood_history_document_result?.acknowledged ||
+      delete_plywood_history_document_result?.deletedCount === 0
+    ) {
+      throw new ApiError(
+        'Failed to delete plywood history',
+        StatusCodes.BAD_REQUEST
+      );
+    }
   }
 }
 

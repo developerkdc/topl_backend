@@ -96,10 +96,13 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
       { session }
     );
 
-    const issued_sheets_for_order = create_order_result[0]?.item_details?.issued_sheets
-    const issued_sqm_for_order = create_order_result[0]?.item_details?.issued_sqm
-    const issued_amount_for_order = create_order_result[0]?.item_details?.issued_amount
-    const issue_for_order_id = create_order_result[0]?._id
+    const issued_sheets_for_order =
+      create_order_result[0]?.item_details?.issued_sheets;
+    const issued_sqm_for_order =
+      create_order_result[0]?.item_details?.issued_sqm;
+    const issued_amount_for_order =
+      create_order_result[0]?.item_details?.issued_amount;
+    const issue_for_order_id = create_order_result[0]?._id;
     if (create_order_result?.length === 0) {
       throw new ApiError(
         'Failed to Add order details',
@@ -115,7 +118,6 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
     //available_amount
     const available_amount =
       plywood_item_data?.available_amount - plywood_item_details?.issued_amount;
-
 
     //update plywood inventory available sheets
     const update_plywood_item_no_of_sheets =
@@ -173,23 +175,32 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
         'Failed to update plywood item invoice status',
         StatusCodes.BAD_REQUEST
       );
-    };
+    }
 
     //add data to plywood history model
-    const add_issued_data_to_plywood_history = await plywood_history_model.create([{
-      issued_for_order_id: issue_for_order_id,
-      issue_status: issues_for_status?.order,
-      plywood_item_id: plywood_item_data?._id,
-      issued_sheets: issued_sheets_for_order,
-      issued_sqm: issued_sqm_for_order,
-      issued_amount: issued_amount_for_order,
-      created_by: userDetails?._id,
-      updated_by: userDetails?._id
-    }], { session })
+    const add_issued_data_to_plywood_history =
+      await plywood_history_model.create(
+        [
+          {
+            issued_for_order_id: issue_for_order_id,
+            issue_status: issues_for_status?.order,
+            plywood_item_id: plywood_item_data?._id,
+            issued_sheets: issued_sheets_for_order,
+            issued_sqm: issued_sqm_for_order,
+            issued_amount: issued_amount_for_order,
+            created_by: userDetails?._id,
+            updated_by: userDetails?._id,
+          },
+        ],
+        { session }
+      );
 
     if (add_issued_data_to_plywood_history?.length === 0) {
-      throw new ApiError("Failed to add data to plywood history", StatusCodes.BAD_REQUEST)
-    };
+      throw new ApiError(
+        'Failed to add data to plywood history',
+        StatusCodes.BAD_REQUEST
+      );
+    }
 
     const response = new ApiResponse(
       StatusCodes.CREATED,

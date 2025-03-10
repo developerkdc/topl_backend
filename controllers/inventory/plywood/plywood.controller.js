@@ -60,7 +60,7 @@ export const listing_plywood_inventory = catchAsync(async (req, res, next) => {
   const match_query = {
     ...filterData,
     ...search_query,
-    available_sheets: { $ne: 0 }
+    available_sheets: { $ne: 0 },
   };
 
   const aggregate_stage = [
@@ -594,7 +594,6 @@ export const inward_sr_no_dropdown = catchAsync(async (req, res, next) => {
   });
 });
 
-
 //fetch plywood history
 export const fetch_plywood_history = catchAsync(async (req, res, next) => {
   const {
@@ -649,11 +648,11 @@ export const fetch_plywood_history = catchAsync(async (req, res, next) => {
 
   const aggLookupPlwoodItemDetails = {
     $lookup: {
-      from: "plywood_inventory_items_details",
-      foreignField: "_id",
-      localField: "plywood_item_id",
-      as: "plywood_item_details"
-    }
+      from: 'plywood_inventory_items_details',
+      foreignField: '_id',
+      localField: 'plywood_item_id',
+      as: 'plywood_item_details',
+    },
   };
   const aggCreatedUserDetails = {
     $lookup: {
