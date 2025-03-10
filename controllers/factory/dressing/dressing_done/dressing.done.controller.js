@@ -194,7 +194,7 @@ export const create_dressing = catchAsync(async (req, res, next) => {
 
       const updated_item_details = item_details?.map((item) => {
         item.dressing_done_other_details_id = add_other_details?._id;
-        item.item_sub_category_id = item?.item_sub_category_name_id;
+        // item.item_sub_category_id = item?.item_sub_category_name_id;
         item.created_by = _id;
         item.updated_by = _id;
         return item;
