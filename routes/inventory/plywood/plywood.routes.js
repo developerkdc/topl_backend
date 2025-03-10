@@ -9,7 +9,7 @@ import {
   plywood_item_listing_by_invoice,
   plywoodLogsCsv,
   inward_sr_no_dropdown,
-  item_sr_no_dropdown,
+  item_sr_no_dropdown, fetch_plywood_history
 } from '../../../controllers/inventory/plywood/plywood.controller.js';
 import AuthMiddleware from '../../../middlewares/verifyToken.js';
 import RolesPermissions from '../../../middlewares/permission.js';
@@ -33,6 +33,13 @@ router.post(
   AuthMiddleware,
   RolesPermissions('plywood_inventory', 'view'),
   listing_plywood_inventory
+);
+//plywood history 👇
+router.post(
+  '/list-plywood-history',
+  AuthMiddleware,
+  RolesPermissions('plywood_inventory', 'view'),
+  fetch_plywood_history
 );
 router.post(
   '/add-inventory',
