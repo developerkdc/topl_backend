@@ -86,6 +86,12 @@ export const item_details_schema = new mongoose.Schema(
       type: Number,
       required: [true, 'Total square meter is required'],
     },
+    available_sqm: {
+      type: Number,
+      default: function () {
+        return this.total_sq_meter;
+      },
+    },
     rate_in_currency: {
       type: Number,
       required: [true, 'Rate in currency is required'],
@@ -101,6 +107,12 @@ export const item_details_schema = new mongoose.Schema(
     amount: {
       type: Number,
       required: [true, 'Amount is required'],
+    },
+    available_amount: {
+      type: Number,
+      default: function () {
+        return this.amount;
+      },
     },
     amount_factor: {
       type: Number,
@@ -285,6 +297,10 @@ export const mdf_invoice_schema = new mongoose.Schema(
           default: null,
         },
       },
+    },
+    isEditable: {
+      type: Boolean,
+      default: true,
     },
     approval_status: approval_status,
     invoice_Details: invoice_details,
