@@ -36,14 +36,16 @@ export const fetch_all_face_inward_sr_no_by_order_item_name = catchAsync(async (
         { $match: { ...match_query } },
         {
             $project: {
-                "face_invoice_details.inward_sr_no": 1,
+                inward_sr_no: "$face_invoice_details.inward_sr_no",
+                inward_sr_no_id: "$face_invoice_details._id"
+
+
             },
         },
     ];
 
     const result = await face_inventory_items_view_modal
         ?.aggregate(pipeline)
-        .collation({ caseLevel: true, locale: 'en' });
 
     const response = new ApiResponse(
         StatusCodes.OK,

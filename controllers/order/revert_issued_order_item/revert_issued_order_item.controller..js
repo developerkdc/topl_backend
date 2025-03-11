@@ -393,7 +393,8 @@ class RevertOrderItem {
     const is_invoice_editable = await mdf_inventory_items_details?.find({
       _id: { $ne: update_mdf_item?._id },
       invoice_id: update_mdf_item?.invoice_id,
-      issue_status: { $ne: null },
+      // issue_status: { $ne: null },
+      $expr: { $ne: ["$available_sheets", "$no_of_sheet"] }
     });
 
     //if invoice is editable then update then update the editable status

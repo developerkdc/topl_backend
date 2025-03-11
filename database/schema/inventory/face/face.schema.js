@@ -56,7 +56,7 @@ export const item_details_schema = new mongoose.Schema(
     available_sheets: {
       type: Number,
       default: function () {
-        return this.sheets;
+        return this.number_of_sheets;
       },
     },
     total_sq_meter: {
@@ -154,6 +154,7 @@ export const face_invoice_schema = new mongoose.Schema(
         message: `Invalid status {{VALUE}} Issue Status must either be one of ${inward_type.inventory}, ${inward_type.job_work}, ${inward_type.challan}`,
       },
       required: [true, 'Inward Type is required'],
+      default: inward_type?.inventory
     },
     currency: {
       type: String,

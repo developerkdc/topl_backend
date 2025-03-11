@@ -4,7 +4,11 @@ import flitch_inventory_order_router from './flitch_inventory/issue_flitch_inven
 import plywood_inventory_order_router from './plywood_inventory/issue_plywood_inventory_item_order.routes.js';
 import mdf_inventory_order_router from './mdf_inventory/issue_mdf_inventory_item_order.routes.js';
 import venner_inventory_order_router from './venner_inventory/issue_venner_inventory_item_order.routes.js';
+<<<<<<< HEAD
 import core_inventory_order_router from './core_inventory/issue_core_inventory_item_order.routes.js';
+=======
+import face_inventory_order_router from './face_inventory/issue_face_inventory_item_order.routes.js';
+>>>>>>> b44951123cf07c2047dda078b8a07fe2fded46f3
 
 const issue_for_raw_order_router = Router();
 
@@ -28,6 +32,10 @@ issue_for_raw_order_router.use(
 issue_for_raw_order_router.use(
   '/issue-raw-venner-order',
   venner_inventory_order_router
+);
+issue_for_raw_order_router.use(
+  '/issue-raw-face-order',
+  face_inventory_order_router
 );
 
 issue_for_raw_order_router.use(
