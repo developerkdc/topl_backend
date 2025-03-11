@@ -14,6 +14,10 @@ import {
 import AuthMiddleware from '../../../middlewares/verifyToken.js';
 import RolesPermissions from '../../../middlewares/permission.js';
 import { verifyApproval } from '../../../middlewares/approval.middleware.js';
+import {
+  fetch_all_mdf_pallet_no_item_name,
+  fetch_mdf_details_by_id,
+} from '../../../controllers/inventory/mdf/mdf_issue_for_order.controller.js';
 
 const router = Router();
 
@@ -79,5 +83,15 @@ router.patch(
 //dropdown
 router.get('/item-srno-dropdown', AuthMiddleware, item_sr_no_dropdown);
 router.get('/inward-srno-dropdown', AuthMiddleware, inward_sr_no_dropdown);
+
+//MDF pallet no dropdown
+router.get(
+  '/pallet-no-dropdown/:id',
+  AuthMiddleware,
+  fetch_all_mdf_pallet_no_item_name
+);
+
+//list MDF details
+router.get('/list-mdf-details/:id', AuthMiddleware, fetch_mdf_details_by_id);
 
 export default router;

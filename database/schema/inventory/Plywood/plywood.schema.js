@@ -78,9 +78,21 @@ export const plywood_item_details_schema = new mongoose.Schema(
       type: Number,
       required: [true, 'sheets  is required'],
     },
+    available_sheets: {
+      type: Number,
+      default: function () {
+        return this.sheets;
+      },
+    },
     total_sq_meter: {
       type: Number,
       required: [true, 'total square meter is required'],
+    },
+    available_sqm: {
+      type: Number,
+      default: function () {
+        return this.total_sq_meter;
+      },
     },
     rate_in_currency: {
       type: Number,
@@ -97,6 +109,12 @@ export const plywood_item_details_schema = new mongoose.Schema(
     amount: {
       type: Number,
       required: [true, 'Amount is required'],
+    },
+    available_amount: {
+      type: Number,
+      default: function () {
+        return this.amount;
+      },
     },
     amount_factor: {
       type: Number,
@@ -115,6 +133,10 @@ export const plywood_item_details_schema = new mongoose.Schema(
     invoice_id: {
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Invioce Id is required'],
+    },
+    issue_status: {
+      type: String,
+      default: null,
     },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,
@@ -284,6 +306,10 @@ export const plywood_invoice_schema = new mongoose.Schema(
           default: null,
         },
       },
+    },
+    isEditable: {
+      type: Boolean,
+      default: true,
     },
     approval_status: approval_status,
     invoice_Details: invoice_details,

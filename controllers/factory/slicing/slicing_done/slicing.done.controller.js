@@ -483,6 +483,15 @@ export const fetch_slicing_done_history = catchAsync(async (req, res, next) => {
       ...match_query,
     },
   };
+
+  const aggLookupOtherDetails = {
+    $lookup: {
+      from: 'slicing_done_other_details',
+      foreignField: '_id',
+      localField: 'slicing_done_other_details_id',
+      as: 'slicing_done_other_details',
+    },
+  };
   const aggCreatedUserDetails = {
     $lookup: {
       from: 'users',
@@ -532,6 +541,12 @@ export const fetch_slicing_done_history = catchAsync(async (req, res, next) => {
       preserveNullAndEmptyArrays: true,
     },
   };
+  const aggUnwindSlicingDoneOtherDetails = {
+    $unwind: {
+      path: '$slicing_done_other_details',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
 
   const aggLimit = {
     $limit: parseInt(limit),
@@ -545,6 +560,8 @@ export const fetch_slicing_done_history = catchAsync(async (req, res, next) => {
     $sort: { [sortBy]: sort === 'desc' ? -1 : 1 },
   };
   const list_aggregate = [
+    aggLookupOtherDetails,
+    aggUnwindSlicingDoneOtherDetails,
     aggCreatedUserDetails,
     aggUpdatedUserDetails,
     aggUnwindCreatedUser,
@@ -562,6 +579,8 @@ export const fetch_slicing_done_history = catchAsync(async (req, res, next) => {
   };
 
   const count_total_docs = [
+    aggLookupOtherDetails,
+    aggUnwindSlicingDoneOtherDetails,
     aggCreatedUserDetails,
     aggUpdatedUserDetails,
     aggUnwindCreatedUser,
