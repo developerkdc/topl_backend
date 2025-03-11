@@ -715,8 +715,10 @@ export const edit_dressing_done_items = catchAsync(async (req, res) => {
 
       const updated_item_details = item_details?.map((item) => {
         item.dressing_done_other_details_id = other_details_data?._id;
-        item.created_by = _id;
+        item.created_by = item?.created_by || _id;
         item.updated_by = _id;
+        item.createdAt = item.createdAt || new Date();
+        item.updatedAt = new Date()
         return item;
       });
 
