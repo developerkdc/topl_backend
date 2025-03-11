@@ -149,6 +149,12 @@ const grouping_done_items_details_schema = new mongoose.Schema({
         return this.sqm;
       },
     },
+    amount: {
+      type: Number,
+      default: function () {
+        return this.amount;
+      },
+    },
   },
   pallet_number: {
     type: String,
@@ -225,18 +231,6 @@ const grouping_done_items_details_schema = new mongoose.Schema({
     uppercase: true,
     trim: true,
     required: [true, 'Grade Name is required'],
-  },
-  issue_status: {
-    type: String,
-    enum: {
-      values: [
-        issues_for_status.order,
-        issues_for_status.tapping_stock,
-        issues_for_status.tapping_sample,
-      ],
-      message: `Invalid type {{VALUE}} it must be one of the ${(issues_for_status.order, issues_for_status.tapping_stock, issues_for_status.tapping_sample)}`,
-    },
-    default: null,
   },
   is_damaged: {
     type: Boolean,
