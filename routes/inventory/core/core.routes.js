@@ -14,6 +14,7 @@ import {
 import AuthMiddleware from '../../../middlewares/verifyToken.js';
 import RolesPermissions from '../../../middlewares/permission.js';
 import { verifyApproval } from '../../../middlewares/approval.middleware.js';
+import { fetch_all_core_inward_sr_no_by_order_item_name, fetch_all_core_sr_no_by_inward_sr_no, fetch_core_details_by_id } from '../../../controllers/inventory/core/core.issue_for_order.controller.js';
 const router = express.Router();
 
 router.post(
@@ -69,4 +70,11 @@ router.post(
 //dropdown
 router.get('/item-srno-dropdown', AuthMiddleware, item_sr_no_dropdown);
 router.get('/inward-srno-dropdown', AuthMiddleware, inward_sr_no_dropdown);
+
+
+//order dropdowns
+router.get('/inward-sr-no-dropdown/:id', AuthMiddleware, fetch_all_core_inward_sr_no_by_order_item_name)
+router.get('/item-sr-no-dropdown/:log_no', AuthMiddleware, fetch_all_core_sr_no_by_inward_sr_no)
+router.get('/list-core-details/:id', AuthMiddleware, fetch_core_details_by_id)
+
 export default router;

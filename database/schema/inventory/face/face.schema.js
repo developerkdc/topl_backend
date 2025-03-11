@@ -284,7 +284,7 @@ export const face_invoice_schema = new mongoose.Schema(
     },
     isEditable: {
       type: Boolean,
-      default: true
+      default: true 
     },
     approval_status: approval_status,
     invoice_Details: invoice_details,
