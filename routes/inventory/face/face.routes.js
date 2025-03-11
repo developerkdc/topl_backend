@@ -11,6 +11,9 @@ import {
   item_sr_no_dropdown,
   listing_face_inventory,
 } from '../../../controllers/inventory/face/face.controller.js';
+import {
+  fetch_all_face_inward_sr_no_by_order_item_name, fetch_all_face_sr_no_by_inward_sr_no, fetch_face_details_by_id
+} from '../../../controllers/inventory/face/face.issue_for_order.controller.js';
 import AuthMiddleware from '../../../middlewares/verifyToken.js';
 import RolesPermissions from '../../../middlewares/permission.js';
 import { verifyApproval } from '../../../middlewares/approval.middleware.js';
@@ -68,5 +71,13 @@ router.post(
 //dropdown
 router.get('/item-srno-dropdown', AuthMiddleware, item_sr_no_dropdown);
 router.get('/inward-srno-dropdown', AuthMiddleware, inward_sr_no_dropdown);
+
+
+
+//order dropdowns
+router.get('/inward-sr-no-dropdown/:id', AuthMiddleware, fetch_all_face_inward_sr_no_by_order_item_name)
+router.get('/item-sr-no-dropdown/:log_no', AuthMiddleware, fetch_all_face_sr_no_by_inward_sr_no)
+router.get('/list-face-details/:id', AuthMiddleware, fetch_face_details_by_id)
+
 
 export default router;
