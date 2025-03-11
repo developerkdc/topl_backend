@@ -44,7 +44,6 @@ const mdf_history_schema = new mongoose.Schema(
 );
 
 mdf_history_schema?.index({ issue_status: 1 });
-// plywood_history_schema?.index({ plywood_item_id: 1 }, { unique: true });
 
 const mdf_history_model = mongoose.model(
   'mdf_history_details',

@@ -27,7 +27,7 @@ export const fetch_all_mdf_pallet_no_item_name = catchAsync(
     const match_query = {
       ...search_query,
       no_of_sheet: {
-        $lte: order_item_data.no_of_sheet,
+        $lte: order_item_data?.no_of_sheet,
       },
     };
 
@@ -39,7 +39,6 @@ export const fetch_all_mdf_pallet_no_item_name = catchAsync(
         },
       },
     ];
-
     const result = await mdf_inventory_items_details
       ?.aggregate(pipeline)
       .collation({ caseLevel: true, locale: 'en' });

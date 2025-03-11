@@ -5,6 +5,7 @@ import {
   edit_mdf_invoice_inventory,
   edit_mdf_item_inventory,
   edit_mdf_item_invoice_inventory,
+  fetch_mdf_history,
   inward_sr_no_dropdown,
   item_sr_no_dropdown,
   listing_mdf_inventory,
@@ -94,4 +95,12 @@ router.get(
 //list MDF details
 router.get('/list-mdf-details/:id', AuthMiddleware, fetch_mdf_details_by_id);
 
+
+//List MDF history
+router.post(
+  '/list-mdf-history',
+  AuthMiddleware,
+  RolesPermissions('mdf_inventory', 'view'),
+  fetch_mdf_history
+);
 export default router;

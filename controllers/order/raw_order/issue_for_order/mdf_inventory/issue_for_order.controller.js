@@ -6,8 +6,11 @@ import {
   mdf_inventory_invoice_details,
   mdf_inventory_items_details,
 } from '../../../../../database/schema/inventory/mdf/mdf.schema.js';
-import { item_issued_from } from '../../../../../database/Utils/constants/constants.js';
+import { issues_for_status, item_issued_from } from '../../../../../database/Utils/constants/constants.js';
+import issue_for_order_model from '../../../../../database/schema/order/issue_for_order/issue_for_order.schema.js';
 import mdf_history_model from '../../../../../database/schema/inventory/mdf/mdf.history.schema.js';
+import { RawOrderItemDetailsModel } from '../../../../../database/schema/order/raw_order/raw_order_item_details.schema.js';
+import ApiResponse from '../../../../../utils/ApiResponse.js';
 
 export const add_issue_for_order = catchAsync(async (req, res) => {
   const { order_item_id, mdf_item_details } = req.body;
@@ -104,7 +107,7 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
         StatusCodes?.BAD_REQUEST
       );
     }
-
+    
     //available sheets
     const available_sheets =
       mdf_item_data?.available_sheets - mdf_item_details?.issued_sheets;
@@ -175,7 +178,7 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
         const add_issued_data_to_mdf_history = await mdf_history_model.create([{
           issued_for_order_id: issue_for_order_id,
           issue_status: issues_for_status?.order,
-          mdf_item_id: plywood_item_data?._id,
+          mdf_item_id: mdf_item_data?._id,
           issued_sheets: issued_sheets_for_order,
           issued_sqm: issued_sqm_for_order,
           issued_amount: issued_amount_for_order,
@@ -187,16 +190,18 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
           throw new ApiError("Failed to add data to MDF history", StatusCodes.BAD_REQUEST)
         };
 
-
         const response = new ApiResponse(
           StatusCodes.CREATED,
           'Item Issued Successfully',
           updated_body
         );
+
+        
         await session.commitTransaction();
         return res.status(StatusCodes.CREATED).json(response);
   } catch (error) {
     await session.abortTransaction();
+    throw error
   } finally {
     await session.endSession();
   }
