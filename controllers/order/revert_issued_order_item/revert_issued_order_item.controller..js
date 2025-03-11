@@ -18,6 +18,11 @@ import {
   plywood_inventory_items_details,
 } from '../../../database/schema/inventory/Plywood/plywood.schema.js';
 import plywood_history_model from '../../../database/schema/inventory/Plywood/plywood.history.schema.js';
+import { veneer_inventory_invoice_model, veneer_inventory_items_model } from '../../../database/schema/inventory/venner/venner.schema.js';
+import { face_inventory_invoice_details, face_inventory_items_details } from '../../../database/schema/inventory/face/face.schema.js';
+import face_history_model from '../../../database/schema/inventory/face/face.history.schema.js';
+import { mdf_inventory_invoice_details, mdf_inventory_items_details } from '../../../database/schema/inventory/mdf/mdf.schema.js';
+import mdf_history_model from '../../../database/schema/inventory/mdf/mdf.history.schema.js';
 
 class RevertOrderItem {
   constructor(id, userDetails, session) {
@@ -183,7 +188,8 @@ class RevertOrderItem {
     const is_invoice_editable = await plywood_inventory_items_details?.find({
       _id: { $ne: update_plywood_item?._id },
       invoice_id: update_plywood_item?.invoice_id,
-      issue_status: { $ne: null },
+      // issue_status: { $ne: null },
+      $expr: { $ne: ["$available_sheets", "$sheets"] }
     });
 
     //if invoice is editable then update then update the editable status
@@ -229,6 +235,211 @@ class RevertOrderItem {
     ) {
       throw new ApiError(
         'Failed to delete plywood history',
+        StatusCodes.BAD_REQUEST
+      );
+    }
+  }
+
+  async VENEER() {
+    const update_venner_item = await veneer_inventory_items_model.findOneAndUpdate({ _id: this.issued_order_data?.item_details?._id }, {
+      $set: {
+        issue_status: null,
+        updated_by: this.userDetails?._id
+      }
+    }, {
+      session: this.session
+    });
+
+    if (!update_venner_item) {
+      throw new ApiError("Venner Item not found.", StatusCodes.BAD_REQUEST)
+    };
+
+    const is_invoice_editable = await veneer_inventory_invoice_model?.find({
+      _id: { $ne: update_venner_item?._id },
+      invoice_id: update_venner_item?.invoice_id,
+      issue_status: { $ne: null },
+    });
+
+    if (is_invoice_editable && is_invoice_editable?.length === 0) {
+      const update_venner_item_invoice_editable_status =
+        await veneer_inventory_invoice_model?.updateOne(
+          { _id: update_venner_item?.invoice_id },
+          {
+            $set: {
+              isEditable: true,
+              updated_by: this.userDetails?._id,
+            },
+          },
+          { session: this.session }
+        );
+      if (update_venner_item_invoice_editable_status?.matchedCount === 0) {
+        throw new ApiError(
+          'Venner item Invoice not found',
+          StatusCodes.BAD_REQUEST
+        );
+      }
+      if (
+        !update_venner_item_invoice_editable_status?.acknowledged ||
+        update_venner_item_invoice_editable_status?.modifiedCount === 0
+      ) {
+        throw new ApiError(
+          'Failed to update Venner Item Invoice Status',
+          StatusCodes.BAD_REQUEST
+        );
+      }
+    }
+  }
+  async FACE() {
+    //update face item available sheets
+    const update_face_item =
+      await face_inventory_items_details.findOneAndUpdate(
+        { _id: this.issued_order_data?.item_details?._id },
+        {
+          $inc: {
+            available_sheets:
+              this.issued_order_data?.item_details?.issued_sheets || 0,
+            available_amount:
+              this.issued_order_data?.item_details?.issued_amount || 0,
+            available_sqm:
+              this.issued_order_data?.item_details?.issued_sqm || 0,
+          },
+        },
+        { session: this.session }
+      );
+
+    if (!update_face_item) {
+      throw new ApiError('Face item not found', StatusCodes.BAD_REQUEST);
+    }
+
+    //check if invoice is editable
+    const is_invoice_editable = await face_inventory_items_details?.find({
+      _id: { $ne: update_face_item?._id },
+      invoice_id: update_face_item?.invoice_id,
+      // issue_status: { $ne: null },
+      $expr: { $ne: ["$available_sheets", "$number_of_sheets"] }
+    });
+
+    //if invoice is editable then update then update the editable status
+    if (is_invoice_editable && is_invoice_editable?.length === 0) {
+      const update_face_item_invoice_editable_status =
+        await face_inventory_invoice_details?.updateOne(
+          { _id: update_face_item?.invoice_id },
+          {
+            $set: {
+              isEditable: true,
+              updated_by: this.userDetails?._id,
+            },
+          },
+          { session: this.session }
+        );
+      if (update_face_item_invoice_editable_status?.matchedCount === 0) {
+        throw new ApiError(
+          'Face item Invoice not found',
+          StatusCodes.BAD_REQUEST
+        );
+      }
+      if (
+        !update_face_item_invoice_editable_status?.acknowledged ||
+        update_face_item_invoice_editable_status?.modifiedCount === 0
+      ) {
+        throw new ApiError(
+          'Failed to update Face Item Invoice Status',
+          StatusCodes.BAD_REQUEST
+        );
+      }
+    }
+
+    //delete the face history document
+    const delete_face_history_document_result =
+      await face_history_model.deleteOne(
+        { issued_for_order_id: this.issued_order_data?._id },
+        { session: this.session }
+      );
+
+    if (
+      !delete_face_history_document_result?.acknowledged ||
+      delete_face_history_document_result?.deletedCount === 0
+    ) {
+      throw new ApiError(
+        'Failed to delete face history',
+        StatusCodes.BAD_REQUEST
+      );
+    }
+  }
+
+  async MDF() {
+    //update mdf item available sheets
+    const update_mdf_item =
+      await mdf_inventory_items_details.findOneAndUpdate(
+        { _id: this.issued_order_data?.item_details?._id },
+        {
+          $inc: {
+            available_sheets:
+              this.issued_order_data?.item_details?.issued_sheets || 0,
+            available_amount:
+              this.issued_order_data?.item_details?.issued_amount || 0,
+            available_sqm:
+              this.issued_order_data?.item_details?.issued_sqm || 0,
+          },
+        },
+        { session: this.session }
+      );
+
+    if (!update_mdf_item) {
+      throw new ApiError('MDF item not found', StatusCodes.BAD_REQUEST);
+    }
+
+    //check if invoice is editable
+    const is_invoice_editable = await mdf_inventory_items_details?.find({
+      _id: { $ne: update_mdf_item?._id },
+      invoice_id: update_mdf_item?.invoice_id,
+      // issue_status: { $ne: null },
+      $expr: { $ne: ["$available_sheets", "$no_of_sheet"] }
+    });
+
+    //if invoice is editable then update then update the editable status
+    if (is_invoice_editable && is_invoice_editable?.length === 0) {
+      const update_mdf_item_invoice_editable_status =
+        await mdf_inventory_invoice_details?.updateOne(
+          { _id: update_mdf_item?.invoice_id },
+          {
+            $set: {
+              isEditable: true,
+              updated_by: this.userDetails?._id,
+            },
+          },
+          { session: this.session }
+        );
+      if (update_mdf_item_invoice_editable_status?.matchedCount === 0) {
+        throw new ApiError(
+          'MDF item Invoice not found',
+          StatusCodes.BAD_REQUEST
+        );
+      }
+      if (
+        !update_mdf_item_invoice_editable_status?.acknowledged ||
+        update_mdf_item_invoice_editable_status?.modifiedCount === 0
+      ) {
+        throw new ApiError(
+          'Failed to update MDF Item Invoice Status',
+          StatusCodes.BAD_REQUEST
+        );
+      }
+    }
+
+    //delete the mdf history document
+    const delete_mdf_history_document_result =
+      await mdf_history_model.deleteOne(
+        { issued_for_order_id: this.issued_order_data?._id },
+        { session: this.session }
+      );
+
+    if (
+      !delete_mdf_history_document_result?.acknowledged ||
+      delete_mdf_history_document_result?.deletedCount === 0
+    ) {
+      throw new ApiError(
+        'Failed to delete mdf history',
         StatusCodes.BAD_REQUEST
       );
     }

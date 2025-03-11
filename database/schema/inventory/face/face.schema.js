@@ -53,9 +53,21 @@ export const item_details_schema = new mongoose.Schema(
       type: Number,
       required: [true, 'number of sheets   is required'],
     },
+    available_sheets: {
+      type: Number,
+      default: function () {
+        return this.number_of_sheets;
+      },
+    },
     total_sq_meter: {
       type: Number,
       required: [true, 'total square meter is required'],
+    },
+    available_sqm: {
+      type: Number,
+      default: function () {
+        return this.total_sq_meter;
+      },
     },
     grade_name: {
       type: String,
@@ -82,6 +94,12 @@ export const item_details_schema = new mongoose.Schema(
     amount: {
       type: Number,
       required: [true, 'Amount is required'],
+    },
+    available_amount: {
+      type: Number,
+      default: function () {
+        return this.amount;
+      },
     },
     amount_factor: {
       type: Number,
@@ -136,6 +154,7 @@ export const face_invoice_schema = new mongoose.Schema(
         message: `Invalid status {{VALUE}} Issue Status must either be one of ${inward_type.inventory}, ${inward_type.job_work}, ${inward_type.challan}`,
       },
       required: [true, 'Inward Type is required'],
+      default: inward_type?.inventory
     },
     currency: {
       type: String,
@@ -263,6 +282,10 @@ export const face_invoice_schema = new mongoose.Schema(
           default: null,
         },
       },
+    },
+    isEditable: {
+      type: Boolean,
+      default: true
     },
     approval_status: approval_status,
     invoice_Details: invoice_details,
