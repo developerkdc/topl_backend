@@ -589,7 +589,9 @@ export const revert_all_grouping_done = catchAsync(async (req, res, next) => {
 
 export const group_no_dropdown = catchAsync(async (req, res, next) => {
   const { photo_no_id } = req.query;
-  const matchQuery = {};
+  const matchQuery = {
+    is_damaged: false
+  };
   if (photo_no_id) {
     matchQuery.photo_no_id = photo_no_id;
   }
@@ -793,78 +795,33 @@ export const fetch_all_damaged_grouping_done_items = catchAsync(
 );
 
 export const add_grouping_done_damaged = catchAsync(async (req, res, next) => {
-  const { id } = req.params;
-  const userDetails = req.userDetails;
-  if (!id && !mongoose.isValidObjectId(id)) {
-    throw new ApiError('Invalid ID', StatusCodes.NOT_FOUND);
-  }
-
-  const grouping_done_other_details =
-    await grouping_done_items_details_model.findOne({ _id: id });
-
-  if (!grouping_done_other_details) {
-    throw new ApiError('Not data found', 400);
-  }
-
-  const update_grouping_done_damaged =
-    await grouping_done_items_details_model.updateOne(
-      { _id: id },
-      {
-        $set: {
-          is_damaged: true,
-          updated_by: userDetails?._id,
-        },
-      },
-      { runValidators: true }
-    );
-
-  if (update_grouping_done_damaged.matchedCount <= 0) {
-    throw new ApiError('Failed to find grouping done', 400);
-  }
-  if (
-    !update_grouping_done_damaged.acknowledged ||
-    update_grouping_done_damaged.modifiedCount <= 0
-  ) {
-    throw new ApiError('Failed to update grouping done to damaged', 400);
-  }
-
-  const response = new ApiResponse(
-    StatusCodes.OK,
-    'Add to damaged successfully',
-    update_grouping_done_damaged
-  );
-
-  return res.status(StatusCodes.OK).json(response);
-});
-
-export const revert_grouping_done_damaged = catchAsync(
-  async (req, res, next) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
     const { id } = req.params;
     const userDetails = req.userDetails;
     if (!id && !mongoose.isValidObjectId(id)) {
       throw new ApiError('Invalid ID', StatusCodes.NOT_FOUND);
     }
 
-    const grouping_done_other_details =
-      await grouping_done_items_details_model.findOne({
-        _id: id,
-        is_damaged: true,
-      });
+    const grouping_done_item_details =
+      await grouping_done_items_details_model.findOne({ _id: id }).lean();
 
-    if (!grouping_done_other_details) {
+    if (!grouping_done_item_details) {
       throw new ApiError('Not data found', 400);
     }
 
+    const grouping_done_item_id = grouping_done_item_details?._id;
     const update_grouping_done_damaged =
       await grouping_done_items_details_model.updateOne(
-        { _id: id, is_damaged: true },
+        { _id: grouping_done_item_id },
         {
           $set: {
-            is_damaged: false,
+            is_damaged: true,
             updated_by: userDetails?._id,
           },
         },
-        { runValidators: true }
+        { runValidators: true, session }
       );
 
     if (update_grouping_done_damaged.matchedCount <= 0) {
@@ -877,14 +834,130 @@ export const revert_grouping_done_damaged = catchAsync(
       throw new ApiError('Failed to update grouping done to damaged', 400);
     }
 
+    const grouping_done_other_details_id = grouping_done_item_details?.grouping_done_other_details_id;
+    const update_grouping_done_other_details = await grouping_done_details_model.updateOne({
+      _id: grouping_done_other_details_id
+    }, {
+      $set: {
+        isEditable: false,
+        updated_by: userDetails?._id
+      }
+    });
+
+    if (update_grouping_done_other_details.matchedCount <= 0) {
+      throw new ApiError('Failed to find grouping done other details', 400);
+    }
+    if (
+      !update_grouping_done_other_details.acknowledged ||
+      update_grouping_done_other_details.modifiedCount <= 0
+    ) {
+      throw new ApiError('Failed to update grouping done other details', 400);
+    }
+    const response = new ApiResponse(
+      StatusCodes.OK,
+      'Add to damaged successfully',
+      update_grouping_done_damaged
+    );
+    
+    await session.commitTransaction();
+    return res.status(StatusCodes.OK).json(response);
+  } catch (error) {
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    await session.endSession();
+  }
+
+
+});
+
+export const revert_grouping_done_damaged = catchAsync(async (req, res, next) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const { id } = req.params;
+    const userDetails = req.userDetails;
+    if (!id && !mongoose.isValidObjectId(id)) {
+      throw new ApiError('Invalid ID', StatusCodes.NOT_FOUND);
+    }
+
+    const grouping_done_item_details =
+      await grouping_done_items_details_model.findOne({
+        _id: id,
+        is_damaged: true,
+      }).lean();
+
+    if (!grouping_done_item_details) {
+      throw new ApiError('Not data found', 400);
+    }
+
+    const grouping_done_item_id = grouping_done_item_details?._id;
+
+    const update_grouping_done_damaged =
+      await grouping_done_items_details_model.updateOne(
+        { _id: grouping_done_item_id, is_damaged: true },
+        {
+          $set: {
+            is_damaged: false,
+            updated_by: userDetails?._id,
+          },
+        },
+        { runValidators: true, session }
+      );
+
+    if (update_grouping_done_damaged.matchedCount <= 0) {
+      throw new ApiError('Failed to find grouping done', 400);
+    }
+    if (
+      !update_grouping_done_damaged.acknowledged ||
+      update_grouping_done_damaged.modifiedCount <= 0
+    ) {
+      throw new ApiError('Failed to update grouping done to damaged', 400);
+    };
+
+    const grouping_done_other_details_id = grouping_done_item_details?.grouping_done_other_details_id;
+    const isGroupingDoneOtherDetailsEditable = await grouping_done_items_details_model.find({
+      _id: { $ne: grouping_done_item_id },
+      grouping_done_other_details_id: grouping_done_other_details_id,
+      issue_status: { $ne: null }
+    }).lean();
+
+    if (isGroupingDoneOtherDetailsEditable && isGroupingDoneOtherDetailsEditable?.length <= 0) {
+      const update_grouping_done_other_details = await grouping_done_details_model.updateOne({
+        _id: grouping_done_other_details_id
+      }, {
+        $set: {
+          isEditable: true,
+          updated_by: userDetails?._id
+        }
+      });
+
+      if (update_grouping_done_other_details.matchedCount <= 0) {
+        throw new ApiError('Failed to find grouping done other details', 400);
+      }
+      if (
+        !update_grouping_done_other_details.acknowledged ||
+        update_grouping_done_other_details.modifiedCount <= 0
+      ) {
+        throw new ApiError('Failed to update grouping done other details', 400);
+      }
+    }
+
     const response = new ApiResponse(
       StatusCodes.OK,
       'Revert Damaged successfully',
       update_grouping_done_damaged
     );
-
+    
+    await session.commitTransaction();
     return res.status(StatusCodes.OK).json(response);
+  } catch (error) {
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    await session.endSession();
   }
+}
 );
 
 //re-create grouping

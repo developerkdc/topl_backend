@@ -26,6 +26,7 @@ class RevertOrderItem {
     if (!isValidObjectId(id)) {
       throw new ApiError('Invalid Order ID', StatusCodes.BAD_REQUEST);
     }
+    this.issued_order_data = null;
     this.id = id;
     this.userDetails = userDetails;
     this.session = session;
