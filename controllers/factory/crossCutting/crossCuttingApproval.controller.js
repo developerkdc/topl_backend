@@ -1,153 +1,161 @@
-import mongoose from "mongoose";
-import { crosscutting_done_model } from "../../../database/schema/factory/crossCutting/crosscutting.schema.js";
-import { crosscutting_done_approval_model } from "../../../database/schema/factory/crossCutting/crosscuttingApproval.schema.js";
-import { issues_for_crosscutting_model } from "../../../database/schema/factory/crossCutting/issuedForCutting.schema.js";
-import { dynamic_filter } from "../../../utils/dymanicFilter.js";
-import { DynamicSearch } from "../../../utils/dynamicSearch/dynamic.js";
-import ApiError from "../../../utils/errors/apiError.js";
-import catchAsync from "../../../utils/errors/catchAsync.js";
+import mongoose from 'mongoose';
+import { crosscutting_done_model } from '../../../database/schema/factory/crossCutting/crosscutting.schema.js';
+import { crosscutting_done_approval_model } from '../../../database/schema/factory/crossCutting/crosscuttingApproval.schema.js';
+import { issues_for_crosscutting_model } from '../../../database/schema/factory/crossCutting/issuedForCutting.schema.js';
+import { dynamic_filter } from '../../../utils/dymanicFilter.js';
+import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
+import ApiError from '../../../utils/errors/apiError.js';
+import catchAsync from '../../../utils/errors/catchAsync.js';
 
-export const crossCuttting_approval_listing = catchAsync(async function (
-  req,
-  res,
-  next
-) {
-  const {
-    page = 1,
-    limit = 10,
-    sortBy = "code",
-    sort = "desc",
-    search = "",
-  } = req.query;
-  const {
-    string,
-    boolean,
-    numbers,
-    arrayField = [],
-  } = req?.body?.searchFields || {};
-  const filter = req.body?.filter;
-  const user = req.userDetails;
-
-  let search_query = {};
-  if (search != "" && req?.body?.searchFields) {
-    const search_data = DynamicSearch(
-      search,
+export const crossCuttting_approval_listing = catchAsync(
+  async function (req, res, next) {
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = 'code',
+      sort = 'desc',
+      search = '',
+    } = req.query;
+    const {
+      string,
       boolean,
       numbers,
-      string,
-      arrayField
-    );
-    if (search_data?.length == 0) {
-      return res.status(404).json({
-        statusCode: 404,
-        status: false,
-        data: {
-          data: [],
-        },
-        message: "Results Not Found",
-      });
+      arrayField = [],
+    } = req?.body?.searchFields || {};
+    const filter = req.body?.filter;
+    const user = req.userDetails;
+
+    let search_query = {};
+    if (search != '' && req?.body?.searchFields) {
+      const search_data = DynamicSearch(
+        search,
+        boolean,
+        numbers,
+        string,
+        arrayField
+      );
+      if (search_data?.length == 0) {
+        return res.status(404).json({
+          statusCode: 404,
+          status: false,
+          data: {
+            data: [],
+          },
+          message: 'Results Not Found',
+        });
+      }
+      search_query = search_data;
     }
-    search_query = search_data;
-  }
 
-  const filterData = dynamic_filter(filter);
+    const filterData = dynamic_filter(filter);
 
-  const match_query = {
-    ...filterData,
-    ...search_query,
-    "approval.approvalPerson": user?._id,
-  };
+    const match_query = {
+      ...filterData,
+      ...search_query,
+      'approval.approvalPerson': user?._id,
+    };
 
-  const aggregate_stage = [
-    {
-      $lookup: {
-        from: "users",
-        localField: "approval.editedBy",
-        foreignField: "_id",
-        pipeline: [
-          {
-            $project: {
-              user_name: 1
-            }
-          }
-        ],
-        as: "user"
-      }
-    },
-    {
-      $unwind: {
-        path: "$user",
-        preserveNullAndEmptyArrays: true
-      }
-    },
-    {
-      $match: match_query,
-    },
-    {
-      $sort: {
-        [sortBy]: sort === "desc" ? -1 : 1,
-        _id: sort === "desc" ? -1 : 1,
+    const aggregate_stage = [
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'approval.editedBy',
+          foreignField: '_id',
+          pipeline: [
+            {
+              $project: {
+                user_name: 1,
+              },
+            },
+          ],
+          as: 'user',
+        },
       },
-    },
-    {
-      $skip: (parseInt(page) - 1) * parseInt(limit),
-    },
-    {
-      $limit: parseInt(limit),
-    },
-  ];
+      {
+        $unwind: {
+          path: '$user',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $match: match_query,
+      },
+      {
+        $sort: {
+          [sortBy]: sort === 'desc' ? -1 : 1,
+          _id: sort === 'desc' ? -1 : 1,
+        },
+      },
+      {
+        $skip: (parseInt(page) - 1) * parseInt(limit),
+      },
+      {
+        $limit: parseInt(limit),
+      },
+    ];
 
-  const List_log_invoice_details =
-    await crosscutting_done_approval_model.aggregate(aggregate_stage);
+    const List_log_invoice_details =
+      await crosscutting_done_approval_model.aggregate(aggregate_stage);
 
-  const totalCount = await crosscutting_done_approval_model.countDocuments({
-    ...match_query,
-  });
+    const totalCount = await crosscutting_done_approval_model.countDocuments({
+      ...match_query,
+    });
 
-  const totalPage = Math.ceil(totalCount / limit);
+    const totalPage = Math.ceil(totalCount / limit);
 
-  return res.status(200).json({
-    statusCode: 200,
-    status: "success",
-    data: List_log_invoice_details,
-    totalPage: totalPage,
-    message: "Data fetched successfully",
-  });
-});
+    return res.status(200).json({
+      statusCode: 200,
+      status: 'success',
+      data: List_log_invoice_details,
+      totalPage: totalPage,
+      message: 'Data fetched successfully',
+    });
+  }
+);
 
 export const crosscutting_approval_item_listing_by_unique_id = catchAsync(
   async (req, res, next) => {
     const issued_for_cutting_id = req.params.issued_for_cutting_id;
     const unique_identifier_id = req.params._id;
 
-    const approval_crosscutting_data = await crosscutting_done_approval_model.findOne({
-      unique_identifier: new mongoose.Types.ObjectId(unique_identifier_id),
-      issue_for_crosscutting_id: new mongoose.Types.ObjectId(issued_for_cutting_id),
-    })
+    const approval_crosscutting_data =
+      await crosscutting_done_approval_model.findOne({
+        unique_identifier: new mongoose.Types.ObjectId(unique_identifier_id),
+        issue_for_crosscutting_id: new mongoose.Types.ObjectId(
+          issued_for_cutting_id
+        ),
+      });
 
-    const isApprovalPending = approval_crosscutting_data?.approval_status?.sendForApproval?.status;
+    const isApprovalPending =
+      approval_crosscutting_data?.approval_status?.sendForApproval?.status;
 
     const aggregate_stage = [
       {
         $match: {
           unique_identifier: new mongoose.Types.ObjectId(unique_identifier_id),
-          issue_for_crosscutting_id: new mongoose.Types.ObjectId(issued_for_cutting_id),
+          issue_for_crosscutting_id: new mongoose.Types.ObjectId(
+            issued_for_cutting_id
+          ),
         },
       },
-      ...isApprovalPending ? [{
-        $lookup: {
-          from: "crosscutting_dones",
-          localField: "crosscutting_done_id",
-          foreignField: "_id",
-          as: "previous_data"
-        }
-      },
-      {
-        $unwind: {
-          path: "$previous_data",
-          preserveNullAndEmptyArrays: true
-        }
-      }] : [],
+      ...(isApprovalPending
+        ? [
+            {
+              $lookup: {
+                from: 'crosscutting_dones',
+                localField: 'crosscutting_done_id',
+                foreignField: '_id',
+                as: 'previous_data',
+              },
+            },
+            {
+              $unwind: {
+                path: '$previous_data',
+                preserveNullAndEmptyArrays: true,
+              },
+            },
+          ]
+        : []),
       {
         $sort: {
           code: 1,
@@ -155,15 +163,16 @@ export const crosscutting_approval_item_listing_by_unique_id = catchAsync(
       },
     ];
 
-    const crosscutting_details = await crosscutting_done_approval_model.aggregate(aggregate_stage);
+    const crosscutting_details =
+      await crosscutting_done_approval_model.aggregate(aggregate_stage);
 
     return res.status(200).json({
       statusCode: 200,
-      status: "success",
+      status: 'success',
       data: {
-        crosscutting_details: crosscutting_details
+        crosscutting_details: crosscutting_details,
       },
-      message: "Data fetched successfully",
+      message: 'Data fetched successfully',
     });
   }
 );
@@ -180,11 +189,11 @@ export const crosscutting_approve = catchAsync(async (req, res, next) => {
       .find({
         unique_identifier: unique_identifier_id,
         issue_for_crosscutting_id: issue_for_crosscutting_id,
-        "approval.approvalPerson": user._id,
+        'approval.approvalPerson': user._id,
       })
       .lean();
     if (items_details?.length <= 0)
-      return next(new ApiError("No items found for approval", 404));
+      return next(new ApiError('No items found for approval', 404));
 
     // update all item's approval status which are approved in approval collection
     const crosscutDone_details = await crosscutting_done_approval_model
@@ -192,7 +201,7 @@ export const crosscutting_approve = catchAsync(async (req, res, next) => {
         {
           unique_identifier: unique_identifier_id,
           issue_for_crosscutting_id: issue_for_crosscutting_id,
-          "approval.approvalPerson": user._id,
+          'approval.approvalPerson': user._id,
         },
         {
           $set: {
@@ -210,68 +219,87 @@ export const crosscutting_approve = catchAsync(async (req, res, next) => {
                 remark: null,
               },
             },
-            "approval.approvalBy.user": user._id,
+            'approval.approvalBy.user': user._id,
           },
         },
         { session, new: true }
       )
       .lean();
-    if (!crosscutDone_details.acknowledged || crosscutDone_details.modifiedCount <= 0)
-      return next(new ApiError("Failed to approve data", 404));
+    if (
+      !crosscutDone_details.acknowledged ||
+      crosscutDone_details.modifiedCount <= 0
+    )
+      return next(new ApiError('Failed to approve data', 404));
 
-    await crosscutting_done_model.deleteMany({
-      issue_for_crosscutting_id: issue_for_crosscutting_id,
-    }, { session });
+    await crosscutting_done_model.deleteMany(
+      {
+        issue_for_crosscutting_id: issue_for_crosscutting_id,
+      },
+      { session }
+    );
 
     // update the approval data in actual crossdone collection
-    const approval_crosscutDone_items_data = await crosscutting_done_approval_model.aggregate([
-      {
-        $match: {
-          unique_identifier: new mongoose.Types.ObjectId(unique_identifier_id),
-          issue_for_crosscutting_id: new mongoose.Types.ObjectId(issue_for_crosscutting_id),
+    const approval_crosscutDone_items_data =
+      await crosscutting_done_approval_model.aggregate([
+        {
+          $match: {
+            unique_identifier: new mongoose.Types.ObjectId(
+              unique_identifier_id
+            ),
+            issue_for_crosscutting_id: new mongoose.Types.ObjectId(
+              issue_for_crosscutting_id
+            ),
+          },
         },
-      },
-      {
-        $set: {
-          _id: "$crosscutting_done_id",
-          approval_status: {
-            sendForApproval: {
-              status: false,
-              remark: null,
+        {
+          $set: {
+            _id: '$crosscutting_done_id',
+            approval_status: {
+              sendForApproval: {
+                status: false,
+                remark: null,
+              },
+              approved: {
+                status: true,
+                remark: null,
+              },
+              rejected: {
+                status: false,
+                remark: null,
+              },
             },
-            approved: {
-              status: true,
-              remark: null,
-            },
-            rejected: {
-              status: false,
-              remark: null,
-            },
-          }
+          },
         },
-      },
-      {
-        $unset: ["crosscutting_done_id"],
-      },
-    ]);
+        {
+          $unset: ['crosscutting_done_id'],
+        },
+      ]);
 
-
-    await crosscutting_done_model.insertMany(approval_crosscutDone_items_data, { session })
+    await crosscutting_done_model.insertMany(approval_crosscutDone_items_data, {
+      session,
+    });
 
     // update the available qunatity data in isuue for crosscut collection
-    const available_quantity = approval_crosscutDone_items_data?.[0]
+    const available_quantity = approval_crosscutDone_items_data?.[0];
     await issues_for_crosscutting_model.findOneAndUpdate(
       {
         _id: new mongoose.Types.ObjectId(issue_for_crosscutting_id),
       },
       {
         $set: {
-          "available_quantity.physical_cmt": available_quantity?.issue_for_crosscutting_data?.physical_cmt,
-          "available_quantity.physical_length": available_quantity?.issue_for_crosscutting_data?.physical_length,
-          "available_quantity.amount": available_quantity?.issue_for_crosscutting_data?.amount,
-          "available_quantity.sqm_factor": available_quantity?.issue_for_crosscutting_data?.sqm_factor,
-          "available_quantity.expense_amount": available_quantity?.issue_for_crosscutting_data?.expense_amount,
-          crosscutting_completed: available_quantity?.issue_for_crosscutting_data?.crosscutting_completed,
+          'available_quantity.physical_cmt':
+            available_quantity?.issue_for_crosscutting_data?.physical_cmt,
+          'available_quantity.physical_length':
+            available_quantity?.issue_for_crosscutting_data?.physical_length,
+          'available_quantity.amount':
+            available_quantity?.issue_for_crosscutting_data?.amount,
+          'available_quantity.sqm_factor':
+            available_quantity?.issue_for_crosscutting_data?.sqm_factor,
+          'available_quantity.expense_amount':
+            available_quantity?.issue_for_crosscutting_data?.expense_amount,
+          crosscutting_completed:
+            available_quantity?.issue_for_crosscutting_data
+              ?.crosscutting_completed,
           approval_status: {
             sendForApproval: {
               status: false,
@@ -285,7 +313,7 @@ export const crosscutting_approve = catchAsync(async (req, res, next) => {
               status: false,
               remark: null,
             },
-          }
+          },
         },
       },
       { session, new: true }
@@ -295,8 +323,8 @@ export const crosscutting_approve = catchAsync(async (req, res, next) => {
     session.endSession();
     return res.status(200).json({
       statusCode: 200,
-      status: "success",
-      message: "Invoice has approved successfully",
+      status: 'success',
+      message: 'Invoice has approved successfully',
     });
   } catch (error) {
     console.log(error);
@@ -315,37 +343,41 @@ export const crosscut_reject = catchAsync(async (req, res, next) => {
     const remark = req.body?.remark;
     const user = req.userDetails;
 
-    const crosscutting_done_approval_details = await crosscutting_done_approval_model
-      .updateMany(
-        {
-          unique_identifier: unique_identifier_id,
-          issue_for_crosscutting_id: issue_for_crosscutting_id,
-          "approval.approvalPerson": user._id,
-        },
-        {
-          $set: {
-            approval_status: {
-              sendForApproval: {
-                status: false,
-                remark: null,
-              },
-              approved: {
-                status: false,
-                remark: null,
-              },
-              rejected: {
-                status: true,
-                remark: remark,
-              },
-            },
-            "approval.rejectedBy.user": user._id,
+    const crosscutting_done_approval_details =
+      await crosscutting_done_approval_model
+        .updateMany(
+          {
+            unique_identifier: unique_identifier_id,
+            issue_for_crosscutting_id: issue_for_crosscutting_id,
+            'approval.approvalPerson': user._id,
           },
-        },
-        { session, new: true }
-      )
-      .lean();
-    if (!crosscutting_done_approval_details.acknowledged || crosscutting_done_approval_details.modifiedCount <= 0)
-      return next(new ApiError("No invoice found for approval", 404));
+          {
+            $set: {
+              approval_status: {
+                sendForApproval: {
+                  status: false,
+                  remark: null,
+                },
+                approved: {
+                  status: false,
+                  remark: null,
+                },
+                rejected: {
+                  status: true,
+                  remark: remark,
+                },
+              },
+              'approval.rejectedBy.user': user._id,
+            },
+          },
+          { session, new: true }
+        )
+        .lean();
+    if (
+      !crosscutting_done_approval_details.acknowledged ||
+      crosscutting_done_approval_details.modifiedCount <= 0
+    )
+      return next(new ApiError('No invoice found for approval', 404));
 
     const update_crosscutting_done = await crosscutting_done_model.updateMany(
       {
@@ -375,7 +407,7 @@ export const crosscut_reject = catchAsync(async (req, res, next) => {
       !update_crosscutting_done.acknowledged ||
       update_crosscutting_done.modifiedCount <= 0
     )
-      return next(new ApiError("Failed to reject invoice"), 400);
+      return next(new ApiError('Failed to reject invoice'), 400);
 
     await issues_for_crosscutting_model.findByIdAndUpdate(
       {
@@ -406,8 +438,8 @@ export const crosscut_reject = catchAsync(async (req, res, next) => {
     session.endSession();
     return res.status(200).json({
       statusCode: 200,
-      status: "success",
-      message: "Invoice has rejected successfully",
+      status: 'success',
+      message: 'Invoice has rejected successfully',
     });
   } catch (error) {
     console.log(error);

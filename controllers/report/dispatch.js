@@ -1,25 +1,24 @@
-import mongoose from "mongoose";
-import catchAsync from "../../utils/errors/catchAsync.js";
-import { GeneratePendingRawOrdersReport } from "../../config/downloadExcel/report/dispatch/pendingRawOrders.js";
-import { GenerateDispatchedRawOrdersReport } from "../../config/downloadExcel/report/dispatch/dispatchedRawOrders.js";
-import { GeneratePendingGroupOrdersReport } from "../../config/downloadExcel/report/dispatch/pendingGroupOrders.js";
-import { GenerateCompleteRawOrdersReport } from "../../config/downloadExcel/report/dispatch/completeRawOrders.js";
-import { GenerateCompleteGroupOrdersReport } from "../../config/downloadExcel/report/dispatch/completeGroupOrders.js";
-import { GenerateDispatchedGroupDoneReport } from "../../config/downloadExcel/report/dispatch/dispatchedGroupDone.js";
+import mongoose from 'mongoose';
+import catchAsync from '../../utils/errors/catchAsync.js';
+import { GeneratePendingRawOrdersReport } from '../../config/downloadExcel/report/dispatch/pendingRawOrders.js';
+import { GenerateDispatchedRawOrdersReport } from '../../config/downloadExcel/report/dispatch/dispatchedRawOrders.js';
+import { GeneratePendingGroupOrdersReport } from '../../config/downloadExcel/report/dispatch/pendingGroupOrders.js';
+import { GenerateCompleteRawOrdersReport } from '../../config/downloadExcel/report/dispatch/completeRawOrders.js';
+import { GenerateCompleteGroupOrdersReport } from '../../config/downloadExcel/report/dispatch/completeGroupOrders.js';
+import { GenerateDispatchedGroupDoneReport } from '../../config/downloadExcel/report/dispatch/dispatchedGroupDone.js';
 
 export const DownloadPendingRawOrdersReport = catchAsync(
   async (req, res, next) => {
-    const { sortBy = "updated_at", sort = "desc" } = req.query;
+    const { sortBy = 'updated_at', sort = 'desc' } = req.query;
 
     const { to, from, ...data } = req?.body?.filters || {};
     const matchQuery = data || {};
 
     if (to && from) {
-
-      matchQuery["orderDate"] = { $gte: new Date(from), $lte: new Date(to) };
+      matchQuery['orderDate'] = { $gte: new Date(from), $lte: new Date(to) };
     }
     const issuedForFinishingView = mongoose.connection.db.collection(
-      "order_raw_pending_view"
+      'order_raw_pending_view'
     );
 
     const issuedForFinishingData = await issuedForFinishingView
@@ -31,7 +30,7 @@ export const DownloadPendingRawOrdersReport = catchAsync(
         },
         {
           $sort: {
-            [sortBy]: sort == "desc" ? -1 : 1,
+            [sortBy]: sort == 'desc' ? -1 : 1,
           },
         },
       ])
@@ -40,7 +39,7 @@ export const DownloadPendingRawOrdersReport = catchAsync(
     return res.status(200).json({
       result: excel,
       statusCode: 200,
-      status: "success",
+      status: 'success',
     });
   }
 );
@@ -49,16 +48,15 @@ export const DownloadDispatchedRawOrdersReport = catchAsync(
   async (req, res, next) => {
     const { to, from, ...data } = req?.body?.filters || {};
     const matchQuery = data || {};
-    const { sortBy = "updated_at", sort = "desc" } = req.query;
+    const { sortBy = 'updated_at', sort = 'desc' } = req.query;
     if (to && from) {
-    
-      matchQuery["dispatched_date"] = {
+      matchQuery['dispatched_date'] = {
         $gte: new Date(from),
         $lte: new Date(to),
       };
     }
     const issuedForFinishingView =
-      mongoose.connection.db.collection("dispatch_raw_view");
+      mongoose.connection.db.collection('dispatch_raw_view');
 
     const issuedForFinishingData = await issuedForFinishingView
       .aggregate([
@@ -69,7 +67,7 @@ export const DownloadDispatchedRawOrdersReport = catchAsync(
         },
         {
           $sort: {
-            [sortBy]: sort == "desc" ? -1 : 1,
+            [sortBy]: sort == 'desc' ? -1 : 1,
           },
         },
       ])
@@ -80,7 +78,7 @@ export const DownloadDispatchedRawOrdersReport = catchAsync(
     return res.status(200).json({
       result: excel,
       statusCode: 200,
-      status: "success",
+      status: 'success',
     });
   }
 );
@@ -88,15 +86,14 @@ export const DownloadDispatchedRawOrdersReport = catchAsync(
 export const DownloadPendingGroupOrdersReport = catchAsync(
   async (req, res, next) => {
     const { to, from, ...data } = req?.body?.filters || {};
-    const { sortBy = "updated_at", sort = "desc" } = req.query;
+    const { sortBy = 'updated_at', sort = 'desc' } = req.query;
     const matchQuery = data || {};
 
     if (to && from) {
-   
-      matchQuery["orderDate"] = { $gte: new Date(from), $lte: new Date(to) };
+      matchQuery['orderDate'] = { $gte: new Date(from), $lte: new Date(to) };
     }
     const issuedForFinishingView = mongoose.connection.db.collection(
-      "order_group_pending_view"
+      'order_group_pending_view'
     );
 
     const issuedForFinishingData = await issuedForFinishingView
@@ -108,7 +105,7 @@ export const DownloadPendingGroupOrdersReport = catchAsync(
         },
         {
           $sort: {
-            [sortBy]: sort == "desc" ? -1 : 1,
+            [sortBy]: sort == 'desc' ? -1 : 1,
           },
         },
       ])
@@ -119,23 +116,22 @@ export const DownloadPendingGroupOrdersReport = catchAsync(
     return res.status(200).json({
       result: excel,
       statusCode: 200,
-      status: "success",
+      status: 'success',
     });
   }
 );
 
 export const DownloadCompleteRawOrdersReport = catchAsync(
   async (req, res, next) => {
-    const { sortBy = "updated_at", sort = "desc" } = req.query;
+    const { sortBy = 'updated_at', sort = 'desc' } = req.query;
     const { to, from, ...data } = req?.body?.filters || {};
     const matchQuery = data || {};
 
     if (to && from) {
-
-      matchQuery["orderDate"] = { $gte: new Date(from), $lte: new Date(to) };
+      matchQuery['orderDate'] = { $gte: new Date(from), $lte: new Date(to) };
     }
     const issuedForFinishingView = mongoose.connection.db.collection(
-      "order_raw_complete_view"
+      'order_raw_complete_view'
     );
 
     const issuedForFinishingData = await issuedForFinishingView
@@ -147,7 +143,7 @@ export const DownloadCompleteRawOrdersReport = catchAsync(
         },
         {
           $sort: {
-            [sortBy]: sort == "desc" ? -1 : 1,
+            [sortBy]: sort == 'desc' ? -1 : 1,
           },
         },
       ])
@@ -156,23 +152,22 @@ export const DownloadCompleteRawOrdersReport = catchAsync(
     return res.status(200).json({
       result: excel,
       statusCode: 200,
-      status: "success",
+      status: 'success',
     });
   }
 );
 
 export const DownloadCompleteGroupOrdersReport = catchAsync(
   async (req, res, next) => {
-    const { sortBy = "updated_at", sort = "desc" } = req.query;
+    const { sortBy = 'updated_at', sort = 'desc' } = req.query;
     const { to, from, ...data } = req?.body?.filters || {};
     const matchQuery = data || {};
 
     if (to && from) {
-     
-      matchQuery["orderDate"] = { $gte: new Date(from), $lte: new Date(to) };
+      matchQuery['orderDate'] = { $gte: new Date(from), $lte: new Date(to) };
     }
     const issuedForFinishingView = mongoose.connection.db.collection(
-      "order_group_complete_view"
+      'order_group_complete_view'
     );
 
     const issuedForFinishingData = await issuedForFinishingView
@@ -184,7 +179,7 @@ export const DownloadCompleteGroupOrdersReport = catchAsync(
         },
         {
           $sort: {
-            [sortBy]: sort == "desc" ? -1 : 1,
+            [sortBy]: sort == 'desc' ? -1 : 1,
           },
         },
       ])
@@ -195,26 +190,25 @@ export const DownloadCompleteGroupOrdersReport = catchAsync(
     return res.status(200).json({
       result: excel,
       statusCode: 200,
-      status: "success",
+      status: 'success',
     });
   }
 );
 
 export const DispatchedGroupDoneReportExcel = catchAsync(
   async (req, res, next) => {
-    const { sortBy = "updated_at", sort = "desc" } = req.query;
+    const { sortBy = 'updated_at', sort = 'desc' } = req.query;
     const { to, from, ...data } = req?.body?.filters || {};
     const matchQuery = data || {};
 
     if (to && from) {
-
-      matchQuery["dispatched_date"] = {
+      matchQuery['dispatched_date'] = {
         $gte: new Date(from),
         $lte: new Date(to),
       };
     }
     const issuedForFinishingView = mongoose.connection.db.collection(
-      "dispatch_group_view"
+      'dispatch_group_view'
     );
 
     const issuedForFinishingData = await issuedForFinishingView
@@ -226,7 +220,7 @@ export const DispatchedGroupDoneReportExcel = catchAsync(
         },
         {
           $sort: {
-            [sortBy]: sort == "desc" ? -1 : 1,
+            [sortBy]: sort == 'desc' ? -1 : 1,
           },
         },
       ])
@@ -235,7 +229,7 @@ export const DispatchedGroupDoneReportExcel = catchAsync(
     return res.status(200).json({
       result: exl,
       statusCode: 200,
-      status: "success",
+      status: 'success',
     });
   }
 );

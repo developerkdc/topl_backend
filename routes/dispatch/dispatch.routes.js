@@ -1,5 +1,5 @@
-import express from "express";
-import CheckRoleAndTokenAccess from "../../middlewares/permission.js";
+import express from 'express';
+import CheckRoleAndTokenAccess from '../../middlewares/permission.js';
 import {
   AvailableGroupData,
   AvailableRawData,
@@ -9,35 +9,35 @@ import {
   ListGroupDispatchCreated,
   ListItemPallete,
   ListRawDispatchCreated,
-} from "../../controllers/dispatch/dispatch.js";
+} from '../../controllers/dispatch/dispatch.js';
 const router = express.Router();
 
-router.post("/create-dispatch", CheckRoleAndTokenAccess, CreateDispatch);
-router.post("/delete-raw-dispatch", CheckRoleAndTokenAccess, DeleteRawDispatch);
+router.post('/create-dispatch', CheckRoleAndTokenAccess, CreateDispatch);
+router.post('/delete-raw-dispatch', CheckRoleAndTokenAccess, DeleteRawDispatch);
 router.post(
-  "/delete-group-dispatch",
+  '/delete-group-dispatch',
   CheckRoleAndTokenAccess,
   DeleteGroupDispatch
 );
 router.post(
-  "/list-raw-dispatched",
+  '/list-raw-dispatched',
   CheckRoleAndTokenAccess,
   ListRawDispatchCreated
 );
 router.post(
-  "/list-group-dispatched",
+  '/list-group-dispatched',
   CheckRoleAndTokenAccess,
   ListGroupDispatchCreated
 );
 router.post(
-  "/get-available-group-data",
+  '/get-available-group-data',
   CheckRoleAndTokenAccess,
   AvailableGroupData
 );
 router.post(
-  "/get-available-raw-data",
+  '/get-available-raw-data',
   CheckRoleAndTokenAccess,
   AvailableRawData
 );
-router.get("/get-item-pallete", ListItemPallete);
+router.get('/get-item-pallete', ListItemPallete);
 export default router;

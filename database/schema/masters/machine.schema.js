@@ -1,23 +1,23 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
 const machineSchema = new mongoose.Schema(
   {
     sr_no: Number,
     machine_name: {
       type: String,
-      required: [true, "Machine name is required"],
-      unique: [true, "Machine Name already exist."],
+      required: [true, 'Machine name is required'],
+      unique: [true, 'Machine Name already exist.'],
       trim: true,
-      uppercase: true
+      uppercase: true,
     },
     department: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "department",
-      required: [true, "department id is required"],
+      ref: 'department',
+      required: [true, 'department id is required'],
     },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "user",
+      ref: 'user',
       default: null,
     },
   },
@@ -25,5 +25,5 @@ const machineSchema = new mongoose.Schema(
 );
 
 const machineModel =
-  mongoose.models.machines || mongoose.model("machine", machineSchema);
+  mongoose.models.machines || mongoose.model('machine', machineSchema);
 export default machineModel;

@@ -1,25 +1,24 @@
-import ExcelJS from "exceljs";
-import fs from "fs/promises";
-import convDate from "../../../../utils/date/date.js";
+import ExcelJS from 'exceljs';
+import fs from 'fs/promises';
+import convDate from '../../../../utils/date/date.js';
 
 const GenerateDispatchedGroupDoneReport = async (details) => {
-
   const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet("Dispatched Group Done Reports");
+  const worksheet = workbook.addWorksheet('Dispatched Group Done Reports');
 
   // Add headers to the worksheet
   const headers = [
-    { header: "Date", key: "orderDate", width: 25 },
-    { header: "Invoice No", key: "invoice_no", width: 25 },
-    { header: "party name", key: "customer_name", width: 25 },
-    { header: "party place.", key: "place", width: 15 },
-    { header: "Item Name", key: "item_name", width: 25 },
-    { header: "Item Type", key: "item_code", width: 25 },
-    { header: "Group No.", key: "group_no", width: 15 },
-    { header: "No. of Pcs", key: "qc_dispatched_qty", width: 15 },
-    { header: "Length", key: "qc_length", width: 15 },
-    { header: "Width", key: "qc_width", width: 15 },
-    { header: "Group Sqm", key: "group_sqm", width: 15 },
+    { header: 'Date', key: 'orderDate', width: 25 },
+    { header: 'Invoice No', key: 'invoice_no', width: 25 },
+    { header: 'party name', key: 'customer_name', width: 25 },
+    { header: 'party place.', key: 'place', width: 15 },
+    { header: 'Item Name', key: 'item_name', width: 25 },
+    { header: 'Item Type', key: 'item_code', width: 25 },
+    { header: 'Group No.', key: 'group_no', width: 15 },
+    { header: 'No. of Pcs', key: 'qc_dispatched_qty', width: 15 },
+    { header: 'Length', key: 'qc_length', width: 15 },
+    { header: 'Width', key: 'qc_width', width: 15 },
+    { header: 'Group Sqm', key: 'group_sqm', width: 15 },
   ];
   worksheet.columns = headers.map((header) => ({
     header: header.header.toUpperCase(),
@@ -28,13 +27,11 @@ const GenerateDispatchedGroupDoneReport = async (details) => {
   }));
   details.forEach((order) => {
     order.group_dispatch_details.forEach((detail) => {
-
       detail.dispatch.forEach((dispatchEntry) => {
-
         const orderItem = order.group_dispatch_details.find(
           (item) => item.item_no === detail.item_no
         );
-    
+
         const row = worksheet.addRow({
           orderDate: convDate(order.order_details.orderDate),
           invoice_no: order.invoice_no,
@@ -49,7 +46,7 @@ const GenerateDispatchedGroupDoneReport = async (details) => {
           qc_width: orderItem.dispatch[0].qc_details.qc_width,
         });
         row.eachCell({ includeEmpty: true }, (cell) => {
-          cell.alignment = { horizontal: "left" };
+          cell.alignment = { horizontal: 'left' };
         });
       });
     });
@@ -60,7 +57,7 @@ const GenerateDispatchedGroupDoneReport = async (details) => {
   headerRow.font = { bold: true };
   // Generate a temporary file path
   const filePath =
-    "public/reports/Dispatch/DispatchedGroupDoneReport/dispatched_group_done.xlsx";
+    'public/reports/Dispatch/DispatchedGroupDoneReport/dispatched_group_done.xlsx';
 
   // Save the workbook to the file
   await workbook.xlsx.writeFile(filePath);

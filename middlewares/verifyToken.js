@@ -1,7 +1,7 @@
-import jwt from "jsonwebtoken";
-import { SomethingWrong, UserNotFound } from "../utils/response/response.js";
-import getConfigs from "../config/config.js";
-import UserModel from "../database/schema/user.schema.js";
+import jwt from 'jsonwebtoken';
+import { SomethingWrong, UserNotFound } from '../utils/response/response.js';
+import getConfigs from '../config/config.js';
+import UserModel from '../database/schema/user.schema.js';
 const Configs = getConfigs();
 
 // const verifyToken = async (req, res, next) => {
@@ -33,11 +33,11 @@ const AuthMiddleware = async (req, res, next) => {
       return res.status(401).json({
         result: [],
         status: false,
-        message: "Access Denied: Token not provided",
+        message: 'Access Denied: Token not provided',
       });
     }
 
-    if (token.startsWith("Bearer ")) {
+    if (token.startsWith('Bearer ')) {
       token = token.slice(7, token.length).trimLeft();
     }
 
@@ -47,18 +47,26 @@ const AuthMiddleware = async (req, res, next) => {
       return res.status(401).json({
         result: [],
         status: false,
-        message: "Access Denied: Invalid token.",
+        message: 'Access Denied: Invalid token.',
       });
     }
 
-    const userDetails = await UserModel.findOne({ user_name: tokenDetails?.user_name }).populate("role_id");
+    const userDetails = await UserModel.findOne({
+      user_name: tokenDetails?.user_name,
+    }).populate('role_id');
 
     if (!userDetails) {
-      return res.status(400).json({ result: [], status: false, message: UserNotFound });
+      return res
+        .status(400)
+        .json({ result: [], status: false, message: UserNotFound });
     }
 
     if (userDetails?.status == false || userDetails?.deleted_at !== null) {
-      return res.status(403).json({ result: [], status: false, message: "Your account has been suspended. Please contact admin." });
+      return res.status(403).json({
+        result: [],
+        status: false,
+        message: 'Your account has been suspended. Please contact admin.',
+      });
       // return next(new ApiError("Your account has been suspended. Please contact admin.", 403));
     }
 

@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
 const ApprovalConfigSchema = new mongoose.Schema({
   configuration: {
@@ -6,7 +6,7 @@ const ApprovalConfigSchema = new mongoose.Schema({
   },
   created_employee_id: {
     type: mongoose.Types.ObjectId,
-    ref: "users",
+    ref: 'users',
     required: true,
     trim: true,
   },
@@ -15,5 +15,8 @@ const ApprovalConfigSchema = new mongoose.Schema({
   deleted_at: { type: Date, default: null },
 });
 
-const ApprovalConfigModel = mongoose.model("approval_config", ApprovalConfigSchema);
+const ApprovalConfigModel = mongoose.model(
+  'approval_config',
+  ApprovalConfigSchema
+);
 export default ApprovalConfigModel;

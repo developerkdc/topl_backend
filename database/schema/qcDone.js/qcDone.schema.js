@@ -1,10 +1,10 @@
-import mongoose from "mongoose";
-import LogSchemaFunction from "../LogsSchema/logs.schema.js";
+import mongoose from 'mongoose';
+import LogSchemaFunction from '../LogsSchema/logs.schema.js';
 
 const QcDoneInventorySchema = new mongoose.Schema({
   issued_for_finishing_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "issued_for_finishing",
+    ref: 'issued_for_finishing',
     required: true,
   },
   group_no: {
@@ -17,11 +17,11 @@ const QcDoneInventorySchema = new mongoose.Schema({
   },
   ready_sheet_form_pallete_no: {
     type: String,
-    default: "",
+    default: '',
   },
   ready_sheet_form_physical_location: {
     type: String,
-    default: "",
+    default: '',
   },
   qc_length: {
     type: Number,
@@ -38,41 +38,41 @@ const QcDoneInventorySchema = new mongoose.Schema({
 
   finishing_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "finishing",
+    ref: 'finishing',
     required: true,
   },
 
   tapping_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "taping",
+    ref: 'taping',
     required: true,
   },
   ready_sheet_form_inventory_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "ready_sheet_form_inventory",
+    ref: 'ready_sheet_form_inventory',
     required: true,
   },
   ready_sheet_form_history_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "ready_sheet_form_inventory_history",
+    ref: 'ready_sheet_form_inventory_history',
     required: true,
   },
 
   pressing_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "pressing",
+    ref: 'pressing',
     required: true,
   },
 
   status: {
     type: String,
-    enum: ["available", "not available"],
-    default: "available",
+    enum: ['available', 'not available'],
+    default: 'available',
   },
 
   created_employee_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "user",
+    ref: 'user',
     trim: true,
   },
   qc_remarks: {
@@ -84,7 +84,7 @@ const QcDoneInventorySchema = new mongoose.Schema({
 });
 
 export const QcDoneInventoryModel = mongoose.model(
-  "qc_done_inventory",
+  'qc_done_inventory',
   QcDoneInventorySchema
 );
-LogSchemaFunction("qcDoneInventory", QcDoneInventoryModel);
+LogSchemaFunction('qcDoneInventory', QcDoneInventoryModel);

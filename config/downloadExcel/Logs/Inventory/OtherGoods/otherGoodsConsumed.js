@@ -1,47 +1,47 @@
-import ExcelJS from "exceljs";
-import convDate from "../../../../../utils/date/date.js";
+import ExcelJS from 'exceljs';
+import convDate from '../../../../../utils/date/date.js';
 
 const GenerateOtherGoodsConsumedLogs = async (details) => {
   const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet("Other Goods Consumed Logs");
+  const worksheet = workbook.addWorksheet('Other Goods Consumed Logs');
 
   // Add headers to the worksheet
   const headers = [
-    { header: "Date", key: "date", width: 20 },
-    { header: "Operation Type", key: "operationType", width: 20 },
-    { header: "Done By", key: "created_by", width: 30 },
-    { header: "Date of Inward", key: "date_of_inward", width: 20 },
-    { header: "Item Name", key: "item_name", width: 25 },
-    { header: "Units", key: "units", width: 10 },
-    { header: "Rate", key: "rate", width: 15 },
-    { header: "Received Quantity", key: "received_quantity", width: 20 },
-    { header: "Available Quantity", key: "available_quantity", width: 20 },
-    { header: "Date of Consumption", key: "date_of_consumption", width: 20 },
-    { header: "Consumption Quantity", key: "consumption_quantity", width: 20 },
-    { header: "Processes", key: "processes", width: 20 },
-    { header: "Supplier Name", key: "supplier_name", width: 30 },
-    { header: "Supplier Country", key: "supplier_country", width: 25 },
-    { header: "Supplier State", key: "supplier_state", width: 30 },
-    { header: "Supplier City", key: "supplier_city", width: 25 },
-    { header: "Supplier Pincode", key: "supplier_pincode", width: 15 },
-    { header: "Supplier Bill Address", key: "bill_address", width: 40 },
-    { header: "Supplier Delivery Address", key: "delivery_address", width: 40 },
+    { header: 'Date', key: 'date', width: 20 },
+    { header: 'Operation Type', key: 'operationType', width: 20 },
+    { header: 'Done By', key: 'created_by', width: 30 },
+    { header: 'Date of Inward', key: 'date_of_inward', width: 20 },
+    { header: 'Item Name', key: 'item_name', width: 25 },
+    { header: 'Units', key: 'units', width: 10 },
+    { header: 'Rate', key: 'rate', width: 15 },
+    { header: 'Received Quantity', key: 'received_quantity', width: 20 },
+    { header: 'Available Quantity', key: 'available_quantity', width: 20 },
+    { header: 'Date of Consumption', key: 'date_of_consumption', width: 20 },
+    { header: 'Consumption Quantity', key: 'consumption_quantity', width: 20 },
+    { header: 'Processes', key: 'processes', width: 20 },
+    { header: 'Supplier Name', key: 'supplier_name', width: 30 },
+    { header: 'Supplier Country', key: 'supplier_country', width: 25 },
+    { header: 'Supplier State', key: 'supplier_state', width: 30 },
+    { header: 'Supplier City', key: 'supplier_city', width: 25 },
+    { header: 'Supplier Pincode', key: 'supplier_pincode', width: 15 },
+    { header: 'Supplier Bill Address', key: 'bill_address', width: 40 },
+    { header: 'Supplier Delivery Address', key: 'delivery_address', width: 40 },
     {
-      header: "Supplier Contact Person Name",
-      key: "contact_person_name",
+      header: 'Supplier Contact Person Name',
+      key: 'contact_person_name',
       width: 25,
     },
     {
-      header: "Supplier Contact Person Number",
-      key: "contact_person_number",
+      header: 'Supplier Contact Person Number',
+      key: 'contact_person_number',
       width: 25,
     },
-    { header: "Supplier Email ID", key: "email_id", width: 30 },
-    { header: "Supplier PAN No", key: "pan_no", width: 20 },
-    { header: "Supplier GST No", key: "gst_no", width: 20 },
+    { header: 'Supplier Email ID', key: 'email_id', width: 30 },
+    { header: 'Supplier PAN No', key: 'pan_no', width: 20 },
+    { header: 'Supplier GST No', key: 'gst_no', width: 20 },
     {
-      header: "Other Goods Consumed Remarks",
-      key: "other_goods_consumed_remarks",
+      header: 'Other Goods Consumed Remarks',
+      key: 'other_goods_consumed_remarks',
       width: 30,
     },
   ];
@@ -77,13 +77,13 @@ const GenerateOtherGoodsConsumedLogs = async (details) => {
         log.data.fullDocument.supplier_details.contact_Person_name,
       contact_person_number: `${log.data.fullDocument.supplier_details.country_code} ${log.data.fullDocument.supplier_details.contact_Person_number}`,
       email_id: log.data.fullDocument.supplier_details.email_id,
-      pan_no: log.data.fullDocument.supplier_details.pan_no || "N/A",
-      gst_no: log.data.fullDocument.supplier_details.gst_no || "N/A",
+      pan_no: log.data.fullDocument.supplier_details.pan_no || 'N/A',
+      gst_no: log.data.fullDocument.supplier_details.gst_no || 'N/A',
       other_goods_consumed_remarks:
         log.data.fullDocument.other_goods_consumed_remarks,
     });
     row.eachCell({ includeEmpty: true }, (cell) => {
-      cell.alignment = { horizontal: "left" };
+      cell.alignment = { horizontal: 'left' };
     });
   });
 

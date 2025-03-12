@@ -1,12 +1,12 @@
-import mongoose from "mongoose";
-import { CreateReadySheetFormModel } from "../../database/schema/readySheetForm/readySheetForm.schema.js";
-import { CreateTappingModel } from "../../database/schema/taping/taping.schema.js";
-import { IssueForTapingModel } from "../../database/schema/taping/issuedTaping.schema.js";
-import { DynamicSearch } from "../../utils/dynamicSearch/dynamic.js";
-import catchAsync from "../../utils/errors/catchAsync.js";
-import { GroupModel } from "../../database/schema/group/groupCreated/groupCreated.schema.js";
-import { ReadySheetFormHistoryModel } from "../../database/schema/readySheetForm/readySheetFormHistory.schema.js";
-import { IssuedForPressingModel } from "../../database/schema/pressing/issuedForPressing.schema.js";
+import mongoose from 'mongoose';
+import { CreateReadySheetFormModel } from '../../database/schema/readySheetForm/readySheetForm.schema.js';
+import { CreateTappingModel } from '../../database/schema/taping/taping.schema.js';
+import { IssueForTapingModel } from '../../database/schema/taping/issuedTaping.schema.js';
+import { DynamicSearch } from '../../utils/dynamicSearch/dynamic.js';
+import catchAsync from '../../utils/errors/catchAsync.js';
+import { GroupModel } from '../../database/schema/group/groupCreated/groupCreated.schema.js';
+import { ReadySheetFormHistoryModel } from '../../database/schema/readySheetForm/readySheetFormHistory.schema.js';
+import { IssuedForPressingModel } from '../../database/schema/pressing/issuedForPressing.schema.js';
 
 export const FetchReadySheetForm = catchAsync(async (req, res, next) => {
   const {
@@ -18,15 +18,15 @@ export const FetchReadySheetForm = catchAsync(async (req, res, next) => {
   const {
     page = 1,
     limit = 10,
-    sortBy = "updated_at",
-    sort = "desc",
+    sortBy = 'updated_at',
+    sort = 'desc',
   } = req.query;
   const skip = Math.max((page - 1) * limit, 0);
 
-  const search = req.query.search || "";
+  const search = req.query.search || '';
 
   let searchQuery = {};
-  if (search != "" && req?.body?.searchFields) {
+  if (search != '' && req?.body?.searchFields) {
     const searchdata = DynamicSearch(
       search,
       boolean,
@@ -41,7 +41,7 @@ export const FetchReadySheetForm = catchAsync(async (req, res, next) => {
         data: {
           data: [],
         },
-        message: "Results Not Found",
+        message: 'Results Not Found',
       });
     }
     searchQuery = searchdata;
@@ -52,8 +52,8 @@ export const FetchReadySheetForm = catchAsync(async (req, res, next) => {
 
   if (to && from) {
     console.log(new Date(from));
-    matchQuery["taping_done_date"] = { $gte: new Date(from) };
-    matchQuery["taping_done_date"] = { $lte: new Date(to) };
+    matchQuery['taping_done_date'] = { $gte: new Date(from) };
+    matchQuery['taping_done_date'] = { $lte: new Date(to) };
   }
 
   const totalDocuments = await CreateReadySheetFormModel.countDocuments({
@@ -65,50 +65,50 @@ export const FetchReadySheetForm = catchAsync(async (req, res, next) => {
   const issuedForGroupingData = await CreateReadySheetFormModel.aggregate([
     {
       $lookup: {
-        from: "tappings",
-        localField: "tapping_id",
-        foreignField: "_id",
-        as: "tapping_id",
+        from: 'tappings',
+        localField: 'tapping_id',
+        foreignField: '_id',
+        as: 'tapping_id',
       },
     },
     {
       $unwind: {
-        path: "$tapping_id",
+        path: '$tapping_id',
         preserveNullAndEmptyArrays: true,
       },
     },
     {
       $lookup: {
-        from: "cuttings",
-        localField: "tapping_id.cutting_id",
-        foreignField: "_id",
+        from: 'cuttings',
+        localField: 'tapping_id.cutting_id',
+        foreignField: '_id',
         pipeline: [
           {
-            $unwind: "$item_details", // Unwind to access each item_detail individually
+            $unwind: '$item_details', // Unwind to access each item_detail individually
           },
           {
             $lookup: {
-              from: "raw_materials",
-              localField: "item_details.item_id",
-              foreignField: "_id",
-              as: "item_details.item_data", // Populate item_data field with data from raw_materials
+              from: 'raw_materials',
+              localField: 'item_details.item_id',
+              foreignField: '_id',
+              as: 'item_details.item_data', // Populate item_data field with data from raw_materials
             },
           },
           {
             $group: {
-              _id: "$_id",
-              cutting_id: { $push: "$$ROOT" }, // Push back the modified cuttings documents into cutting_id array
+              _id: '$_id',
+              cutting_id: { $push: '$$ROOT' }, // Push back the modified cuttings documents into cutting_id array
             },
           },
         ],
-        as: "cutting_id",
+        as: 'cutting_id',
       },
     },
     {
       $lookup: {
-        from: "groups",
-        localField: "cutting_id.cutting_id.group_id",
-        foreignField: "_id",
+        from: 'groups',
+        localField: 'cutting_id.cutting_id.group_id',
+        foreignField: '_id',
         pipeline: [
           {
             $project: {
@@ -116,20 +116,20 @@ export const FetchReadySheetForm = catchAsync(async (req, res, next) => {
             },
           },
         ],
-        as: "group_data",
+        as: 'group_data',
       },
     },
     {
       $unwind: {
-        path: "$group_data",
+        path: '$group_data',
         preserveNullAndEmptyArrays: true,
       },
     },
     {
       $lookup: {
-        from: "users",
-        localField: "created_employee_id",
-        foreignField: "_id",
+        from: 'users',
+        localField: 'created_employee_id',
+        foreignField: '_id',
         pipeline: [
           {
             $project: {
@@ -137,12 +137,12 @@ export const FetchReadySheetForm = catchAsync(async (req, res, next) => {
             },
           },
         ],
-        as: "created_employee_id",
+        as: 'created_employee_id',
       },
     },
     {
       $unwind: {
-        path: "$created_employee_id",
+        path: '$created_employee_id',
         preserveNullAndEmptyArrays: true,
       },
     },
@@ -154,7 +154,7 @@ export const FetchReadySheetForm = catchAsync(async (req, res, next) => {
     },
     {
       $sort: {
-        [sortBy]: sort == "desc" ? -1 : 1,
+        [sortBy]: sort == 'desc' ? -1 : 1,
       },
     },
     {
@@ -168,7 +168,7 @@ export const FetchReadySheetForm = catchAsync(async (req, res, next) => {
   return res.status(200).json({
     result: issuedForGroupingData,
     statusCode: 200,
-    status: "success",
+    status: 'success',
     totalPages: totalPages,
   });
 });
@@ -183,7 +183,7 @@ export const SplitReadySheetForm = catchAsync(async (req, res, next) => {
     if (!data.ready_sheet_form_id || !data.split_no_of_pcs) {
       return res.json({
         status: false,
-        message: "Missing Required Fields",
+        message: 'Missing Required Fields',
       });
     }
     const readySheetForm = await CreateReadySheetFormModel.findById(
@@ -192,7 +192,7 @@ export const SplitReadySheetForm = catchAsync(async (req, res, next) => {
     if (!readySheetForm) {
       return res.json({
         status: false,
-        message: "Ready Sheet Form not found",
+        message: 'Ready Sheet Form not found',
       });
     }
     if (
@@ -201,7 +201,7 @@ export const SplitReadySheetForm = catchAsync(async (req, res, next) => {
       if (!readySheetForm) {
         return res.json({
           status: false,
-          message: "No Of Pcs exceeds the available quantity",
+          message: 'No Of Pcs exceeds the available quantity',
         });
       }
     }
@@ -250,7 +250,7 @@ export const SplitReadySheetForm = catchAsync(async (req, res, next) => {
     const FetchedGroupData = await GroupModel.findOne({
       group_no: readySheetForm.group_no,
     });
-    console.log(FetchedGroupData, "FetchedGroupData");
+    console.log(FetchedGroupData, 'FetchedGroupData');
 
     const { _id, group_no, ...groupDataWithoutId } =
       FetchedGroupData.toObject();
@@ -267,7 +267,7 @@ export const SplitReadySheetForm = catchAsync(async (req, res, next) => {
 
     res
       .status(200)
-      .json({ success: true, message: "Split ready sheet form successful" });
+      .json({ success: true, message: 'Split ready sheet form successful' });
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
@@ -285,7 +285,7 @@ export const RejectReadySheetForm = catchAsync(async (req, res, next) => {
     if (!data.ready_sheet_form_id || !data.no_of_pcs_to_reject) {
       return res.json({
         status: false,
-        message: "Missing Required Fields",
+        message: 'Missing Required Fields',
       });
     }
     const readySheetForm = await CreateReadySheetFormModel.findById(
@@ -294,7 +294,7 @@ export const RejectReadySheetForm = catchAsync(async (req, res, next) => {
     if (!readySheetForm) {
       return res.json({
         status: false,
-        message: "Ready Sheet Form not found",
+        message: 'Ready Sheet Form not found',
       });
     }
     if (
@@ -303,14 +303,14 @@ export const RejectReadySheetForm = catchAsync(async (req, res, next) => {
     ) {
       return res.json({
         status: false,
-        message: "No of Pcs exceeds the available quantity",
+        message: 'No of Pcs exceeds the available quantity',
       });
     }
     readySheetForm.ready_sheet_form_no_of_pcs_available -=
       data.no_of_pcs_to_reject;
     readySheetForm.ready_sheet_form_rejected_pcs += data.no_of_pcs_to_reject;
     if (readySheetForm.ready_sheet_form_no_of_pcs_available == 0) {
-      readySheetForm.status = "not available";
+      readySheetForm.status = 'not available';
     }
     const calculation =
       (readySheetForm.ready_sheet_form_length *
@@ -323,9 +323,9 @@ export const RejectReadySheetForm = catchAsync(async (req, res, next) => {
     await session.commitTransaction(); // Commit the transaction
     session.endSession();
     res.status(200).json({
-      status: "success",
+      status: 'success',
       data: {
-        message: "Ready sheet form rejected successfully",
+        message: 'Ready sheet form rejected successfully',
       },
     });
   } catch (error) {
@@ -350,7 +350,7 @@ export const ApproveReadySheetForm = catchAsync(async (req, res, next) => {
       session.endSession();
       return res.status(400).json({
         status: false,
-        message: "Missing Required Fields",
+        message: 'Missing Required Fields',
       });
     }
 
@@ -363,7 +363,7 @@ export const ApproveReadySheetForm = catchAsync(async (req, res, next) => {
       session.endSession();
       return res.status(404).json({
         status: false,
-        message: "Ready Sheet Form not found",
+        message: 'Ready Sheet Form not found',
       });
     }
 
@@ -375,7 +375,7 @@ export const ApproveReadySheetForm = catchAsync(async (req, res, next) => {
       session.endSession();
       return res.status(400).json({
         status: false,
-        message: "No of Pcs exceeds the available quantity",
+        message: 'No of Pcs exceeds the available quantity',
       });
     }
     readySheetForm.ready_sheet_form_no_of_pcs_available -=
@@ -390,7 +390,7 @@ export const ApproveReadySheetForm = catchAsync(async (req, res, next) => {
     readySheetForm.ready_sheet_form_sqm = parseFloat(calculation.toFixed(2));
 
     if (readySheetForm.ready_sheet_form_no_of_pcs_available == 0) {
-      readySheetForm.status = "not available";
+      readySheetForm.status = 'not available';
     }
     const updatedReadySheet = await readySheetForm.save();
 
@@ -424,9 +424,9 @@ export const ApproveReadySheetForm = catchAsync(async (req, res, next) => {
     session.endSession();
 
     res.status(200).json({
-      status: "success",
+      status: 'success',
       data: {
-        message: "Ready sheet form approved successfully",
+        message: 'Ready sheet form approved successfully',
       },
     });
   } catch (error) {
@@ -446,15 +446,15 @@ export const FetchReadySheetFormHistory = catchAsync(async (req, res, next) => {
   const {
     page = 1,
     limit = 10,
-    sortBy = "updated_at",
-    sort = "desc",
+    sortBy = 'updated_at',
+    sort = 'desc',
   } = req.query;
   const skip = Math.max((page - 1) * limit, 0);
 
-  const search = req.query.search || "";
+  const search = req.query.search || '';
 
   let searchQuery = {};
-  if (search != "" && req?.body?.searchFields) {
+  if (search != '' && req?.body?.searchFields) {
     const searchdata = DynamicSearch(
       search,
       boolean,
@@ -469,7 +469,7 @@ export const FetchReadySheetFormHistory = catchAsync(async (req, res, next) => {
         data: {
           data: [],
         },
-        message: "Results Not Found",
+        message: 'Results Not Found',
       });
     }
     searchQuery = searchdata;
@@ -480,8 +480,8 @@ export const FetchReadySheetFormHistory = catchAsync(async (req, res, next) => {
 
   if (to && from) {
     console.log(new Date(from));
-    matchQuery["created_at"] = { $gte: new Date(from) };
-    matchQuery["created_at"] = { $lte: new Date(to) };
+    matchQuery['created_at'] = { $gte: new Date(from) };
+    matchQuery['created_at'] = { $lte: new Date(to) };
   }
 
   const totalDocuments = await ReadySheetFormHistoryModel.countDocuments({
@@ -493,50 +493,50 @@ export const FetchReadySheetFormHistory = catchAsync(async (req, res, next) => {
   const issuedForGroupingData = await ReadySheetFormHistoryModel.aggregate([
     {
       $lookup: {
-        from: "tappings",
-        localField: "tapping_id",
-        foreignField: "_id",
-        as: "tapping_id",
+        from: 'tappings',
+        localField: 'tapping_id',
+        foreignField: '_id',
+        as: 'tapping_id',
       },
     },
     {
       $unwind: {
-        path: "$tapping_id",
+        path: '$tapping_id',
         preserveNullAndEmptyArrays: true,
       },
     },
     {
       $lookup: {
-        from: "cuttings",
-        localField: "tapping_id.cutting_id",
-        foreignField: "_id",
+        from: 'cuttings',
+        localField: 'tapping_id.cutting_id',
+        foreignField: '_id',
         pipeline: [
           {
-            $unwind: "$item_details", // Unwind to access each item_detail individually
+            $unwind: '$item_details', // Unwind to access each item_detail individually
           },
           {
             $lookup: {
-              from: "raw_materials",
-              localField: "item_details.item_id",
-              foreignField: "_id",
-              as: "item_details.item_data", // Populate item_data field with data from raw_materials
+              from: 'raw_materials',
+              localField: 'item_details.item_id',
+              foreignField: '_id',
+              as: 'item_details.item_data', // Populate item_data field with data from raw_materials
             },
           },
           {
             $group: {
-              _id: "$_id",
-              cutting_id: { $push: "$$ROOT" }, // Push back the modified cuttings documents into cutting_id array
+              _id: '$_id',
+              cutting_id: { $push: '$$ROOT' }, // Push back the modified cuttings documents into cutting_id array
             },
           },
         ],
-        as: "cutting_id",
+        as: 'cutting_id',
       },
     },
     {
       $lookup: {
-        from: "groups",
-        localField: "cutting_id.cutting_id.group_id",
-        foreignField: "_id",
+        from: 'groups',
+        localField: 'cutting_id.cutting_id.group_id',
+        foreignField: '_id',
         pipeline: [
           {
             $project: {
@@ -544,20 +544,20 @@ export const FetchReadySheetFormHistory = catchAsync(async (req, res, next) => {
             },
           },
         ],
-        as: "group_data",
+        as: 'group_data',
       },
     },
     {
       $unwind: {
-        path: "$group_data",
+        path: '$group_data',
         preserveNullAndEmptyArrays: true,
       },
     },
     {
       $lookup: {
-        from: "users",
-        localField: "created_employee_id",
-        foreignField: "_id",
+        from: 'users',
+        localField: 'created_employee_id',
+        foreignField: '_id',
         pipeline: [
           {
             $project: {
@@ -565,12 +565,12 @@ export const FetchReadySheetFormHistory = catchAsync(async (req, res, next) => {
             },
           },
         ],
-        as: "created_employee_id",
+        as: 'created_employee_id',
       },
     },
     {
       $unwind: {
-        path: "$created_employee_id",
+        path: '$created_employee_id',
         preserveNullAndEmptyArrays: true,
       },
     },
@@ -582,7 +582,7 @@ export const FetchReadySheetFormHistory = catchAsync(async (req, res, next) => {
     },
     {
       $sort: {
-        [sortBy]: sort == "desc" ? -1 : 1,
+        [sortBy]: sort == 'desc' ? -1 : 1,
       },
     },
     {
@@ -596,7 +596,7 @@ export const FetchReadySheetFormHistory = catchAsync(async (req, res, next) => {
   return res.status(200).json({
     result: issuedForGroupingData,
     statusCode: 200,
-    status: "success",
+    status: 'success',
     totalPages: totalPages,
   });
 });
@@ -610,7 +610,7 @@ export const UpdateReadySheetForm = catchAsync(async (req, res, next) => {
     if (!id) {
       return res.json({
         status: false,
-        message: "Missing Id ",
+        message: 'Missing Id ',
       });
     }
     const updateData = { ...req.body, updated_at: Date.now() };
@@ -626,7 +626,7 @@ export const UpdateReadySheetForm = catchAsync(async (req, res, next) => {
       session.endSession();
       return res.json({
         status: false,
-        message: "Ready Sheet Form not found",
+        message: 'Ready Sheet Form not found',
       });
     }
     const AllreadySheetForm = await CreateReadySheetFormModel.find();
@@ -634,9 +634,9 @@ export const UpdateReadySheetForm = catchAsync(async (req, res, next) => {
     session.endSession();
 
     res.status(200).json({
-      status: "success",
+      status: 'success',
       data: {
-        message: "Ready sheet form updated successfully",
+        message: 'Ready sheet form updated successfully',
         updatedData: AllreadySheetForm,
       },
     });
@@ -662,8 +662,8 @@ export const RevertReadySheetForm = catchAsync(async (req, res, next) => {
       },
       {
         $group: {
-          _id: "$issued_for_tapping_id",
-          documents: { $push: "$$ROOT" },
+          _id: '$issued_for_tapping_id',
+          documents: { $push: '$$ROOT' },
         },
       },
       {
@@ -672,12 +672,12 @@ export const RevertReadySheetForm = catchAsync(async (req, res, next) => {
           hasError: {
             $anyElementTrue: {
               $map: {
-                input: "$documents",
-                as: "doc",
+                input: '$documents',
+                as: 'doc',
                 in: {
                   $ne: [
-                    "$documents.ready_sheet_form_no_of_pcs_original",
-                    "$documents.ready_sheet_form_no_of_pcs_available",
+                    '$documents.ready_sheet_form_no_of_pcs_original',
+                    '$documents.ready_sheet_form_no_of_pcs_available',
                   ],
                 },
               },
@@ -693,7 +693,7 @@ export const RevertReadySheetForm = catchAsync(async (req, res, next) => {
     const result = await CreateReadySheetFormModel.aggregate(pipeline);
 
     if (result.length > 0) {
-      throw new Error("Cannot Revert Ready Sheet Form has been processed");
+      throw new Error('Cannot Revert Ready Sheet Form has been processed');
     }
 
     await CreateTappingModel.deleteMany(
@@ -708,7 +708,7 @@ export const RevertReadySheetForm = catchAsync(async (req, res, next) => {
 
     await IssueForTapingModel.findByIdAndUpdate(
       issuedId,
-      { $set: { revert_status: "active" } },
+      { $set: { revert_status: 'active' } },
       { session: session }
     );
 
@@ -718,8 +718,8 @@ export const RevertReadySheetForm = catchAsync(async (req, res, next) => {
     session.endSession();
 
     res.status(200).json({
-      status: "success",
-      message: "Ready Sheet Form Reverted",
+      status: 'success',
+      message: 'Ready Sheet Form Reverted',
     });
   } catch (error) {
     if (session) {
@@ -728,7 +728,7 @@ export const RevertReadySheetForm = catchAsync(async (req, res, next) => {
     }
     return res.status(500).json({
       status: false,
-      message: "Error occurred while reverting",
+      message: 'Error occurred while reverting',
       error: error.message,
     });
   }

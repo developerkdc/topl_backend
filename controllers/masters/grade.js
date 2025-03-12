@@ -1,7 +1,7 @@
-import mongoose from "mongoose";
-import GradeModel from "../../database/schema/masters/grade.schema.js";
-import catchAsync from "../../utils/errors/catchAsync.js";
-import { DynamicSearch } from "../../utils/dynamicSearch/dynamic.js";
+import mongoose from 'mongoose';
+import GradeModel from '../../database/schema/masters/grade.schema.js';
+import catchAsync from '../../utils/errors/catchAsync.js';
+import { DynamicSearch } from '../../utils/dynamicSearch/dynamic.js';
 export const AddGradeMaster = catchAsync(async (req, res) => {
   const authUserDetail = req.userDetails;
   const gradeData = {
@@ -13,7 +13,7 @@ export const AddGradeMaster = catchAsync(async (req, res) => {
   return res.status(201).json({
     result: savedGrade,
     status: true,
-    message: "Grade created successfully",
+    message: 'Grade created successfully',
   });
 });
 
@@ -23,7 +23,7 @@ export const UpdateGradeMaster = catchAsync(async (req, res) => {
   if (!mongoose.Types.ObjectId.isValid(userId)) {
     return res
       .status(400)
-      .json({ result: [], status: false, message: "Invalid Grade ID" });
+      .json({ result: [], status: false, message: 'Invalid Grade ID' });
   }
   const user = await GradeModel.findByIdAndUpdate(
     userId,
@@ -34,13 +34,13 @@ export const UpdateGradeMaster = catchAsync(async (req, res) => {
     return res.status(404).json({
       result: [],
       status: false,
-      message: "User not found.",
+      message: 'User not found.',
     });
   }
   res.status(200).json({
     result: user,
     status: true,
-    message: "Updated successfully",
+    message: 'Updated successfully',
   });
 });
 
@@ -54,12 +54,12 @@ export const ListGradeMaster = catchAsync(async (req, res) => {
   const {
     page = 1,
     limit = 10,
-    sortBy = "updated_at",
-    sort = "desc",
+    sortBy = 'updated_at',
+    sort = 'desc',
   } = req.query;
-  const search = req.query.search || "";
+  const search = req.query.search || '';
   let searchQuery = {};
-  if (search != "" && req?.body?.searchFields) {
+  if (search != '' && req?.body?.searchFields) {
     const searchdata = DynamicSearch(
       search,
       boolean,
@@ -74,7 +74,7 @@ export const ListGradeMaster = catchAsync(async (req, res) => {
         data: {
           user: [],
         },
-        message: "Results Not Found",
+        message: 'Results Not Found',
       });
     }
     searchQuery = searchdata;
@@ -88,9 +88,9 @@ export const ListGradeMaster = catchAsync(async (req, res) => {
   const gradeList = await GradeModel.aggregate([
     {
       $lookup: {
-        from: "users",
-        localField: "created_employee_id",
-        foreignField: "_id",
+        from: 'users',
+        localField: 'created_employee_id',
+        foreignField: '_id',
         pipeline: [
           {
             $project: {
@@ -98,12 +98,12 @@ export const ListGradeMaster = catchAsync(async (req, res) => {
             },
           },
         ],
-        as: "created_employee_id",
+        as: 'created_employee_id',
       },
     },
     {
       $unwind: {
-        path: "$created_employee_id",
+        path: '$created_employee_id',
         preserveNullAndEmptyArrays: true,
       },
     },
@@ -111,7 +111,7 @@ export const ListGradeMaster = catchAsync(async (req, res) => {
       $match: { ...searchQuery },
     },
     {
-      $sort: { [sortBy]: sort == "desc" ? -1 : 1 },
+      $sort: { [sortBy]: sort == 'desc' ? -1 : 1 },
     },
     {
       $skip: skip,
@@ -119,14 +119,14 @@ export const ListGradeMaster = catchAsync(async (req, res) => {
     {
       $limit: limit,
     },
-  ]).collation({ locale: "en", caseLevel: true });
+  ]).collation({ locale: 'en', caseLevel: true });
   if (gradeList) {
     return res.status(200).json({
       result: gradeList,
       status: true,
       totalPages: totalPages,
       currentPage: validPage,
-      message: "All Grade List",
+      message: 'All Grade List',
     });
   }
 });
@@ -135,7 +135,7 @@ export const DropdownGradeMaster = catchAsync(async (req, res) => {
   const list = await GradeModel.aggregate([
     {
       $match: {
-        status: "active",
+        status: 'active',
       },
     },
     {
@@ -150,6 +150,6 @@ export const DropdownGradeMaster = catchAsync(async (req, res) => {
   res.status(200).json({
     result: list,
     status: true,
-    message: "Grade Dropdown List",
+    message: 'Grade Dropdown List',
   });
 });

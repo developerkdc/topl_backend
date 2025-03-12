@@ -1,56 +1,60 @@
-import ExcelJS from "exceljs";
-import fs from "fs/promises";
-import convDate from "../../../../utils/date/date.js";
-import { formatDateWithTime } from "../../../../utils/date/dateAndTime.js";
+import ExcelJS from 'exceljs';
+import fs from 'fs/promises';
+import convDate from '../../../../utils/date/date.js';
+import { formatDateWithTime } from '../../../../utils/date/dateAndTime.js';
 
 const GenerateSmokedGroupsReport = async (details) => {
   const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet("Smoked Groups Reports");
+  const worksheet = workbook.addWorksheet('Smoked Groups Reports');
 
   // Add headers to the worksheet
   const headers = [
-    { header: "DATE", key: "created_at", width: 15 },
-    { header: "GROUP NO", key: "group_no", width: 15 },
-    { header: "ITEM NAME", key: "item_name", width: 30 },
-    { header: "ITEM TYPE", key: "item_code", width: 15 },
-    { header: "GROUP L", key: "group_length", width: 15 },
-    { header: "GROUP W", key: "group_width", width: 15 },
-    { header: "NO OF PATTAS", key: "group_no_of_pattas_available", width: 15 },
-    { header: "NO PCS", key: "group_pcs", width: 15 },
-    { header: "GROUP SQM", key: "group_sqm_available", width: 15 },
+    { header: 'DATE', key: 'created_at', width: 15 },
+    { header: 'GROUP NO', key: 'group_no', width: 15 },
+    { header: 'ITEM NAME', key: 'item_name', width: 30 },
+    { header: 'ITEM TYPE', key: 'item_code', width: 15 },
+    { header: 'GROUP L', key: 'group_length', width: 15 },
+    { header: 'GROUP W', key: 'group_width', width: 15 },
+    { header: 'NO OF PATTAS', key: 'group_no_of_pattas_available', width: 15 },
+    { header: 'NO PCS', key: 'group_pcs', width: 15 },
+    { header: 'GROUP SQM', key: 'group_sqm_available', width: 15 },
     {
-      header: "TOTAL ITEM SQM AVAILABLE",
-      key: "total_item_sqm_available",
+      header: 'TOTAL ITEM SQM AVAILABLE',
+      key: 'total_item_sqm_available',
       width: 15,
     },
-    { header: "In Time", key: "in_time", width: 15 },
-    { header: "Out Time", key: "out_time", width: 15 },
-    { header: "Processed Time (HR)", key: "process_time", width: 15 },
-    { header: "Consumed Item Name", key: "consumed_item_name", width: 25 },
-    { header: "Consumed Quantity Ltr", key: "liters_of_ammonia_used", width: 25 },
-    { header: "GRADE", key: "group_grade", width: 15 },
-    { header: "orientation", key: "orientation", width: 15 },
-    { header: "book_type", key: "book_type", width: 15 },
-    { header: "GROUP PALLET NO", key: "group_pallete_no", width: 20 },
+    { header: 'In Time', key: 'in_time', width: 15 },
+    { header: 'Out Time', key: 'out_time', width: 15 },
+    { header: 'Processed Time (HR)', key: 'process_time', width: 15 },
+    { header: 'Consumed Item Name', key: 'consumed_item_name', width: 25 },
     {
-      header: "GROUP physical_location",
-      key: "group_physical_location",
+      header: 'Consumed Quantity Ltr',
+      key: 'liters_of_ammonia_used',
+      width: 25,
+    },
+    { header: 'GRADE', key: 'group_grade', width: 15 },
+    { header: 'orientation', key: 'orientation', width: 15 },
+    { header: 'book_type', key: 'book_type', width: 15 },
+    { header: 'GROUP PALLET NO', key: 'group_pallete_no', width: 20 },
+    {
+      header: 'GROUP physical_location',
+      key: 'group_physical_location',
       width: 20,
     },
-    { header: "Remark", key: "group_smoked_remarks", width: 20 },
-    { header: "Log No", key: "item_log_no", width: 20 },
-    { header: "Bundle No", key: "item_bundle_no", width: 20 },
-    { header: "ITEM Length", key: "item_length", width: 20 },
-    { header: "ITEM Width", key: "item_width", width: 20 },
-    { header: "Original Pattas", key: "item_received_pattas", width: 20 },
-    { header: "Original Sqm	", key: "item_received_sqm", width: 20 },
-    { header: "Avl Pattas", key: "item_available_pattas", width: 20 },
-    { header: "Avl Total Sqm", key: "item_available_sqm", width: 20 },
-    { header: "ITEM Grade", key: "item_grade", width: 20 },
-    { header: "ITEM Pallet No", key: "item_pallete_no", width: 20 },
+    { header: 'Remark', key: 'group_smoked_remarks', width: 20 },
+    { header: 'Log No', key: 'item_log_no', width: 20 },
+    { header: 'Bundle No', key: 'item_bundle_no', width: 20 },
+    { header: 'ITEM Length', key: 'item_length', width: 20 },
+    { header: 'ITEM Width', key: 'item_width', width: 20 },
+    { header: 'Original Pattas', key: 'item_received_pattas', width: 20 },
+    { header: 'Original Sqm	', key: 'item_received_sqm', width: 20 },
+    { header: 'Avl Pattas', key: 'item_available_pattas', width: 20 },
+    { header: 'Avl Total Sqm', key: 'item_available_sqm', width: 20 },
+    { header: 'ITEM Grade', key: 'item_grade', width: 20 },
+    { header: 'ITEM Pallet No', key: 'item_pallete_no', width: 20 },
     {
-      header: "ITEM Physical Location",
-      key: "item_physical_location",
+      header: 'ITEM Physical Location',
+      key: 'item_physical_location',
       width: 20,
     },
     // { header: "Avl Natural	", key: "natural", width: 20 },
@@ -80,7 +84,8 @@ const GenerateSmokedGroupsReport = async (details) => {
         item_code: Item?.item_code,
         group_length: order?.group_id?.group_length,
         group_width: order?.group_id?.group_width,
-        group_no_of_pattas_available: order?.group_id?.group_no_of_pattas_available,
+        group_no_of_pattas_available:
+          order?.group_id?.group_no_of_pattas_available,
         group_pcs: order?.group_id?.group_pcs,
         group_sqm_available: order?.group_id?.group_sqm_available,
         total_item_sqm_available: order?.group_id?.total_item_sqm_available,
@@ -106,7 +111,7 @@ const GenerateSmokedGroupsReport = async (details) => {
         // total: Item.item_available_quantities.total,
       });
       row.eachCell({ includeEmpty: true }, (cell) => {
-        cell.alignment = { horizontal: "left" };
+        cell.alignment = { horizontal: 'left' };
       });
     });
   });
@@ -115,7 +120,8 @@ const GenerateSmokedGroupsReport = async (details) => {
   const headerRow = worksheet.getRow(1);
   headerRow.font = { bold: true };
   // Generate a temporary file path
-  const filePath = "public/reports/Smoking/SmokedGroupsReportExcel/smoked_groups_reports.xlsx";
+  const filePath =
+    'public/reports/Smoking/SmokedGroupsReportExcel/smoked_groups_reports.xlsx';
 
   // Save the workbook to the file
   await workbook.xlsx.writeFile(filePath);

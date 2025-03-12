@@ -1,59 +1,23 @@
-import express from "express";
+import express from 'express';
+import AuthMiddleware from '../../middlewares/verifyToken.js';
 import {
-  GetAllOrderNoList,
-  GetGroupNoBasedOnItemNameAndItemCode,
-  GetLatestOrderNo,
-  GetViewDetails,
-  SupplierMasterListInOrder,
-} from "../../controllers/order/orderFormsList.js";
-import {
-  AddOrder,
-  ListCompleteGroupOrders,
-  ListCompleteRawOrders,
-  ListPendingGroupOrders,
-  ListPendingRawOrders,
-  updateOrder,
-} from "../../controllers/order/order.js";
-import CheckRoleAndTokenAccess from "../../middlewares/permission.js";
+  fetch_single_order_items,
+  order_items_dropdown,
+  order_no_dropdown,
+} from '../../controllers/order/order.js';
 
-const router = express.Router();
+const orderRouter = express.Router();
 
-router.get("/get-latest-order-no", GetLatestOrderNo);
-router.get("/get-view-details", GetViewDetails);
-router.get("/get-supplier-list-in-order", SupplierMasterListInOrder);
-router.get("/get-order-no-list", GetAllOrderNoList);
-router.get(
-  "/get-group-no-based-on-item-name-and-item-code",
-  GetGroupNoBasedOnItemNameAndItemCode
+orderRouter.get('/order-no-dropdown', AuthMiddleware, order_no_dropdown);
+orderRouter.get(
+  '/order-item-no-dropdown/:order_id',
+  AuthMiddleware,
+  order_items_dropdown
+);
+orderRouter.get(
+  '/fetch-single-order-item/:order_id/:item_id',
+  AuthMiddleware,
+  fetch_single_order_items
 );
 
-router.post("/add-order", CheckRoleAndTokenAccess, AddOrder);
-router.post(
-  "/list-complete-raw-order",
-  CheckRoleAndTokenAccess,
-  ListCompleteRawOrders
-);
-router.post(
-  "/list-pending-raw-order",
-  CheckRoleAndTokenAccess,
-  ListPendingRawOrders
-);
-router.post(
-  "/list-complete-group-order",
-  CheckRoleAndTokenAccess,
-  ListCompleteGroupOrders
-);
-router.post(
-  "/list-pending-group-order",
-  CheckRoleAndTokenAccess,
-  ListPendingGroupOrders
-);
-router.patch("/update-order", CheckRoleAndTokenAccess, updateOrder);
-
-router.get("/get-latest-order-no", GetLatestOrderNo);
-router.get(
-  "/get-group-no-based-on-item-name-and-item-code",
-  GetGroupNoBasedOnItemNameAndItemCode
-);
-
-export default router;
+export default orderRouter;

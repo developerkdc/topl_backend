@@ -1,10 +1,10 @@
-import mongoose from "mongoose";
-import LogSchemaFunction from "../LogsSchema/logs.schema.js";
+import mongoose from 'mongoose';
+import LogSchemaFunction from '../LogsSchema/logs.schema.js';
 
 const PressingSchema = new mongoose.Schema({
   issued_for_pressing_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "issued_for_pressing",
+    ref: 'issued_for_pressing',
     required: true,
   },
   group_no: {
@@ -14,17 +14,17 @@ const PressingSchema = new mongoose.Schema({
 
   tapping_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "taping",
+    ref: 'taping',
     required: true,
   },
   ready_sheet_form_inventory_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "ready_sheet_form_inventory",
+    ref: 'ready_sheet_form_inventory',
     required: true,
   },
   ready_sheet_form_history_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "ready_sheet_form_inventory_history",
+    ref: 'ready_sheet_form_inventory_history',
     required: true,
   },
   consumed_quantity: {
@@ -49,12 +49,12 @@ const PressingSchema = new mongoose.Schema({
     {
       item_id: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "other_goods",
+        ref: 'other_goods',
         required: true,
       },
       other_goods_consumed_id: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "other_goods_issued",
+        ref: 'other_goods_issued',
         required: true,
       },
       consumed_quantity: {
@@ -68,7 +68,7 @@ const PressingSchema = new mongoose.Schema({
       },
       item_name: {
         type: String,
-        required: [true, "Item Name is required."],
+        required: [true, 'Item Name is required.'],
         trim: true,
       },
       units: {
@@ -94,7 +94,7 @@ const PressingSchema = new mongoose.Schema({
       supplier_details: {
         supplier_name: {
           type: String,
-          required: [true, "Supplier Name is required."],
+          required: [true, 'Supplier Name is required.'],
           trim: true,
         },
         country: {
@@ -148,7 +148,7 @@ const PressingSchema = new mongoose.Schema({
           type: String,
           minlength: 5,
           maxlength: 50,
-          required: [true, "Email ID is Required"],
+          required: [true, 'Email ID is Required'],
           trim: true,
         },
         pan_no: {
@@ -187,17 +187,17 @@ const PressingSchema = new mongoose.Schema({
   pressing_waste_sqm: {
     waste_sqm: {
       type: Number,
-      required: [true, "Waste Sqm is required"],
+      required: [true, 'Waste Sqm is required'],
     },
     waste_sqm_percentage: {
       type: Number,
-      required: [true, "Waste Sqm is required"],
+      required: [true, 'Waste Sqm is required'],
     },
   },
 
   created_employee_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "user",
+    ref: 'user',
     trim: true,
   },
 
@@ -206,5 +206,5 @@ const PressingSchema = new mongoose.Schema({
   deleted_at: { type: Date, default: null },
 });
 
-export const PressingModel = mongoose.model("pressing", PressingSchema);
-LogSchemaFunction("pressing", PressingModel);
+export const PressingModel = mongoose.model('pressing', PressingSchema);
+LogSchemaFunction('pressing', PressingModel);

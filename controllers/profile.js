@@ -1,9 +1,9 @@
-import UserModel from "../database/schema/user.schema.js";
-import { IdRequired, UserNotFound } from "../utils/response/response.js";
-import catchAsync from "../utils/errors/catchAsync.js";
-import { create, verify } from "../utils/authServices/index.js";
-import mongoose from "mongoose";
-import { FetchUserByUserName } from "../utils/fetchDetails/fetchDetailsByUserName.js";
+import UserModel from '../database/schema/user.schema.js';
+import { IdRequired, UserNotFound } from '../utils/response/response.js';
+import catchAsync from '../utils/errors/catchAsync.js';
+import { create, verify } from '../utils/authServices/index.js';
+import mongoose from 'mongoose';
+import { FetchUserByUserName } from '../utils/fetchDetails/fetchDetailsByUserName.js';
 
 export const UpdateAuthUserProfile = async (req, res) => {
   // const { first_name, last_name, phone, age, gender, country_code } =
@@ -39,19 +39,19 @@ export const UpdateAuthUserProfile = async (req, res) => {
     return res.status(400).json({
       result: [],
       status: false,
-      message: "User Not exists with this ID.",
+      message: 'User Not exists with this ID.',
     });
   }
   return res.status(200).json({
     result: userUpdate,
     status: true,
-    message: "User profile updated successfully.",
+    message: 'User profile updated successfully.',
   });
 };
 
 export const ChangeAuthUserPassword = catchAsync(async (req, res) => {
   const { new_password, old_password } = req.body;
-  const requiredFields = ["new_password", "old_password"];
+  const requiredFields = ['new_password', 'old_password'];
   for (const field of requiredFields) {
     if (!req.body[field]) {
       return res.status(400).json({
@@ -71,7 +71,7 @@ export const ChangeAuthUserPassword = catchAsync(async (req, res) => {
     return res.status(400).json({
       result: [],
       status: false,
-      message: "Incorrect old password !",
+      message: 'Incorrect old password !',
     });
   }
 
@@ -89,14 +89,14 @@ export const ChangeAuthUserPassword = catchAsync(async (req, res) => {
   if (!userUpdate) {
     return res.status(404).json({
       status: false,
-      message: "User not found.",
+      message: 'User not found.',
     });
   }
 
   return res.status(200).json({
     result: [],
     status: true,
-    message: "Password updated successfully.",
+    message: 'Password updated successfully.',
   });
 });
 
@@ -110,15 +110,15 @@ export const GetAuthUser = catchAsync(async (req, res) => {
     },
     {
       $lookup: {
-        from: "roles",
-        localField: "role_id",
-        foreignField: "_id",
-        as: "role_id",
+        from: 'roles',
+        localField: 'role_id',
+        foreignField: '_id',
+        as: 'role_id',
       },
     },
     {
       $unwind: {
-        path: "$role_id",
+        path: '$role_id',
         preserveNullAndEmptyArrays: true,
       },
     },
@@ -134,6 +134,6 @@ export const GetAuthUser = catchAsync(async (req, res) => {
   return res.status(200).json({
     result: authUserById,
     status: true,
-    message: "Login user details.",
+    message: 'Login user details.',
   });
 });

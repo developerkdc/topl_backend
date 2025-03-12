@@ -1,9 +1,10 @@
-import getConfigs from "../config/config.js";
-import userModel from "../database/schema/user.schema.js";
-import ApiResponse from "../utils/ApiResponse.js";
-import { create, generateOTP, verify } from "../utils/authServices/index.js";
-import { SendOtpEmail } from "../utils/emailServices/otp.js";
-import catchAsync from "../utils/errors/catchAsync.js";
+import getConfigs from '../config/config.js';
+import userModel from '../database/schema/user.schema.js';
+import ApiResponse from '../utils/ApiResponse.js';
+import { create, generateOTP, verify } from '../utils/authServices/index.js';
+import { StatusCodes } from '../utils/constants.js';
+import { SendOtpEmail } from '../utils/emailServices/otp.js';
+import catchAsync from '../utils/errors/catchAsync.js';
 import {
   EmailInValid,
   EmailRequired,
@@ -17,12 +18,13 @@ import {
   PasswordInValid,
   PasswordReset,
   UserNotFound,
-} from "../utils/response/response.js";
+} from '../utils/response/response.js';
+import os from 'os';
 
 const Configs = getConfigs();
 
 export const SignIn = catchAsync(async (req, res, next) => {
-  const origin = req.get("Origin");
+  const origin = req.get('Origin');
   const { user_name, password } = req.body;
   if (!user_name)
     return res.status(400).json({
@@ -40,21 +42,21 @@ export const SignIn = catchAsync(async (req, res, next) => {
 
   const user = await userModel
     .findOne({ user_name: user_name })
-    .select("-otp -verify_otp -otp_expiry_date")
-    .populate("role_id");
+    .select('-otp -verify_otp -otp_expiry_date')
+    .populate('role_id');
 
   if (!user) {
     return res.status(401).json({
       result: [],
       status: false,
-      message: "User not found with this User Name.",
+      message: 'User not found with this User Name.',
     });
   }
   if (user.status == false) {
     return res.status(401).json({
       result: [],
       status: false,
-      message: "You are Blocked By Admin",
+      message: 'You are Blocked By Admin',
     });
   }
   const passwordHash = user.password;
@@ -72,17 +74,17 @@ export const SignIn = catchAsync(async (req, res, next) => {
       Date.now() + Configs.cookie.cookie_expire * 24 * 60 * 60 * 1000
     ),
     httpOnly: true,
-    sameSite: "Lax",
+    sameSite: 'Lax',
   };
 
-  res.header("Access-Control-Allow-Origin", origin);
-  res.header("Access-Control-Allow-Credentials", "true");
+  res.header('Access-Control-Allow-Origin', origin);
+  res.header('Access-Control-Allow-Credentials', 'true');
 
-  return res.status(200).cookie("token", token, options).json({
+  return res.status(200).cookie('token', token, options).json({
     token,
     result: user,
     status: true,
-    message: "Login successfully.",
+    message: 'Login successfully.',
   });
 });
 
@@ -99,13 +101,13 @@ export const ForgetPassword = catchAsync(async (req, res) => {
   if (!user) {
     return res
       .status(401)
-      .json({ message: "User not found with this user name." });
+      .json({ message: 'User not found with this user name.' });
   }
 
   if (!user.email_id) {
     return res
       .status(401)
-      .json({ message: "Email id not found. Please contact Admin" });
+      .json({ message: 'Email id not found. Please contact Admin' });
   }
 
   // Generate OTP
@@ -127,7 +129,7 @@ export const ForgetPassword = catchAsync(async (req, res) => {
   );
 
   // Send OTP to the user's email
-  SendOtpEmail(user?.email_id, `Your OTP is: ${otp}`, "Your OTP");
+  SendOtpEmail(user?.email_id, `Your OTP is: ${otp}`, 'Your OTP');
 
   return res
     .status(200)
@@ -153,7 +155,7 @@ export const VerifyOtp = catchAsync(async (req, res) => {
     return res.status(400).json({
       result: [],
       status: false,
-      message: "Invalid username, please try again later.",
+      message: 'Invalid username, please try again later.',
     });
   }
   // Assuming user is the result of your findOneAndUpdate operation
@@ -168,10 +170,10 @@ export const VerifyOtp = catchAsync(async (req, res) => {
     if (Math.abs(Math.round(diffInHours)) > 1) {
       return res
         .status(400)
-        .json({ result: [], status: false, message: "OtpExpired" });
+        .json({ result: [], status: false, message: 'OtpExpired' });
     }
   } else {
-    console.error("Invalid otp expiry date:", user?.otp_expiry_date);
+    console.error('Invalid otp expiry date:', user?.otp_expiry_date);
   }
 
   if (user.otp != otp) {
@@ -247,3 +249,36 @@ export const ResetPassword = catchAsync(async (req, res) => {
     .status(200)
     .json({ result: [], status: true, message: PasswordReset });
 });
+
+export const checkServerHealth = async (req, res, next) => {
+  const load_time_avg = os.loadavg();
+  const server_uptime = os.uptime();
+  const uptimeMinutes = Math.floor(server_uptime / 60);
+  const uptimeHours = Math.floor(uptimeMinutes / 60);
+  const uptimeFormatted =
+    uptimeHours > 0
+      ? `${uptimeHours} hours ${uptimeMinutes % 60} minutes`
+      : `${uptimeMinutes} minutes`;
+  const total_memory = os.totalmem() / (1024 * 1024 * 1024);
+  const free_memory = os.freemem() / (1024 * 1024 * 1024);
+  const used_memory = total_memory - free_memory;
+  const cpus = os.cpus();
+
+  const cpuUsage = cpus.map((cpu, index) => {
+    const total = Object.values(cpu.times).reduce((acc, item) => acc + item, 0);
+    const usage = ((total - cpu.times.idle) / total) * 100;
+    return { core: index + 1, usage: usage?.toFixed(2) + '%' };
+  });
+
+  return res.status(StatusCodes.OK).json(
+    new ApiResponse(StatusCodes.OK, 'Server Health Fetched successfully', {
+      // uptime: uptimeFormatted,
+      cpuUsage,
+      loadAverage: load_time_avg,
+      total_memory: `${total_memory?.toFixed(2)} GB`,
+      used_memory: `${used_memory?.toFixed(2)} GB`,
+      free_memory: `${free_memory?.toFixed(2)} GB`,
+      total_cpus: cpus?.length,
+    })
+  );
+};

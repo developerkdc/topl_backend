@@ -1,34 +1,34 @@
-import ExcelJS from "exceljs";
-import fs from "fs/promises";
-import convDate from "../../../../utils/date/date.js";
+import ExcelJS from 'exceljs';
+import fs from 'fs/promises';
+import convDate from '../../../../utils/date/date.js';
 
 const GeneratePendingRawOrdersReport = async (details) => {
   const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet("Pending Raw Orders Reports");
+  const worksheet = workbook.addWorksheet('Pending Raw Orders Reports');
 
   // Add headers to the worksheet
 
   worksheet.columns = [
-    { header: "Order Date", key: "created_at", width: 15 },
-    { header: "Purchase Order No", key: "purchase_order_no", width: 15 },
-    { header: "Customer Name", key: "customer_name", width: 20 },
-    { header: "City", key: "customer_city", width: 20 },
-    { header: "Order Mode", key: "order_mode", width: 15 },
-    { header: "Order No", key: "order_no", width: 15 },
-    { header: "Item No", key: "item_no", width: 30 },
-    { header: "Item Name", key: "item_name", width: 30 },
-    { header: "Item Type", key: "item_code", width: 15 },
-    { header: "Required quantity", key: "required_quantity", width: 20 },
-    { header: "Balance quantity", key: "balance_quantity", width: 20 },
+    { header: 'Order Date', key: 'created_at', width: 15 },
+    { header: 'Purchase Order No', key: 'purchase_order_no', width: 15 },
+    { header: 'Customer Name', key: 'customer_name', width: 20 },
+    { header: 'City', key: 'customer_city', width: 20 },
+    { header: 'Order Mode', key: 'order_mode', width: 15 },
+    { header: 'Order No', key: 'order_no', width: 15 },
+    { header: 'Item No', key: 'item_no', width: 30 },
+    { header: 'Item Name', key: 'item_name', width: 30 },
+    { header: 'Item Type', key: 'item_code', width: 15 },
+    { header: 'Required quantity', key: 'required_quantity', width: 20 },
+    { header: 'Balance quantity', key: 'balance_quantity', width: 20 },
     // { header: "Natural", key: "required_natural", width: 15 },
     // { header: "Smoked", key: "required_smoked", width: 15 },
     // { header: "Dyed", key: "required_dyed", width: 15 },
-    { header: "Length", key: "item_length", width: 15 },
-    { header: "Width", key: "item_width", width: 15 },
-    { header: "Sqm", key: "item_sqm", width: 15 },
-    { header: "Rate", key: "item_remarks", width: 20 },
-    { header: "Total Amount", key: "total_amount", width: 20 },
-    { header: "Status", key: "status", width: 20 },
+    { header: 'Length', key: 'item_length', width: 15 },
+    { header: 'Width', key: 'item_width', width: 15 },
+    { header: 'Sqm', key: 'item_sqm', width: 15 },
+    { header: 'Rate', key: 'item_remarks', width: 20 },
+    { header: 'Total Amount', key: 'total_amount', width: 20 },
+    { header: 'Status', key: 'status', width: 20 },
   ];
 
   details.forEach((item) => {
@@ -56,7 +56,7 @@ const GeneratePendingRawOrdersReport = async (details) => {
         status: rawOrder.order_status,
       });
       row.eachCell({ includeEmpty: true }, (cell) => {
-        cell.alignment = { horizontal: "left" };
+        cell.alignment = { horizontal: 'left' };
       });
     });
   });
@@ -66,7 +66,7 @@ const GeneratePendingRawOrdersReport = async (details) => {
   headerRow.font = { bold: true };
   // Generate a temporary file path
   const filePath =
-    "public/reports/Dispatch/PendingRawOrdersReportExcel/pending_raw_orders.xlsx";
+    'public/reports/Dispatch/PendingRawOrdersReportExcel/pending_raw_orders.xlsx';
 
   // Save the workbook to the file
   await workbook.xlsx.writeFile(filePath);

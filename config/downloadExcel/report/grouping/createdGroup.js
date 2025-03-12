@@ -1,54 +1,53 @@
-import ExcelJS from "exceljs";
-import fs from "fs/promises";
-import convDate from "../../../../utils/date/date.js";
+import ExcelJS from 'exceljs';
+import fs from 'fs/promises';
+import convDate from '../../../../utils/date/date.js';
 
 const GenerateGroupingReport = async (details) => {
-
   const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet("Created Group Reports");
+  const worksheet = workbook.addWorksheet('Created Group Reports');
 
   // Add headers to the worksheet
   const headers = [
-    { header: "Date", key: "date_of_grouping", width: 25 },
-    { header: "Item Name", key: "item_name", width: 25 },
-    { header: "Item Type", key: "item_code", width: 25 },
-    { header: "Group No.", key: "group_no", width: 15 },
+    { header: 'Date', key: 'date_of_grouping', width: 25 },
+    { header: 'Item Name', key: 'item_name', width: 25 },
+    { header: 'Item Type', key: 'item_code', width: 25 },
+    { header: 'Group No.', key: 'group_no', width: 15 },
     {
-      header: "Original Pattas",
-      key: "group_no_of_pattas_original",
+      header: 'Original Pattas',
+      key: 'group_no_of_pattas_original',
       width: 15,
     },
     {
-      header: "Available Pattas.",
-      key: "group_no_of_pattas_available",
+      header: 'Available Pattas.',
+      key: 'group_no_of_pattas_available',
       width: 15,
     },
-    { header: "No. of Pcs", key: "group_pcs", width: 15 },
-    { header: "Length", key: "group_length", width: 15 },
-    { header: "Width", key: "group_width", width: 15 },
-    { header: "Group Sqm", key: "group_sqm_available", width: 15 },
-    { header: "Total Item Sqm", key: "total_item_sqm_available", width: 15 },
-    { header: "Pallet No. ", key: "group_pallete_no", width: 15 },
-    { header: "Physical Location ", key: "group_physical_location", width: 15 },
-    { header: "Grade ", key: "group_grade", width: 15 },
-    { header: "Orientation", key: "orientation", width: 15 },
-    { header: "Book type ", key: "book_type", width: 15 },
-    { header: "Log No", key: "log_no", width: 15 },
-    { header: "Bundle No", key: "bundle_no", width: 15 },
-    { header: "Length", key: "length", width: 15 },
-    { header: "Width", key: "width", width: 15 },
-    { header: "Original Pattas", key: "original_pattas", width: 15 },
-    { header: "Original Sqm", key: "original_sqm", width: 15 },
-    { header: "Avl Pattas", key: "avl_pattas", width: 15 },
-    { header: "Avl Total Sqm", key: "avl_total_sqm", width: 15 },
-    { header: "Grade", key: "grade", width: 15 },
-    { header: "Pallet No", key: "pallet_no", width: 15 },
-    { header: "Physical Location", key: "physical_location", width: 15 },
-    { header: "Avl Natural", key: "avl_natural", width: 15 },
-    { header: "Avl Dyed", key: "avl_dyed", width: 15 },
-    { header: "Avl Smoked", key: "avl_smoked", width: 15 },
-    { header: "Total", key: "total", width: 15 },
-    { header: "Remarks", key: "remark", width: 15 },
+    { header: 'No. of Pcs', key: 'group_pcs', width: 15 },
+    { header: 'Length', key: 'group_length', width: 15 },
+    { header: 'Width', key: 'group_width', width: 15 },
+    { header: 'Group Sqm', key: 'group_sqm_available', width: 15 },
+    { header: 'Total Item Sqm', key: 'total_item_sqm_available', width: 15 },
+    { header: 'Pallet No. ', key: 'group_pallete_no', width: 15 },
+    { header: 'Physical Location ', key: 'group_physical_location', width: 15 },
+    { header: 'Grade ', key: 'group_grade', width: 15 },
+    { header: 'Orientation', key: 'orientation', width: 15 },
+    { header: 'Book type ', key: 'book_type', width: 15 },
+    { header: 'Log No', key: 'log_no', width: 15 },
+    { header: 'Bundle No', key: 'bundle_no', width: 15 },
+    { header: 'Length', key: 'length', width: 15 },
+    { header: 'Width', key: 'width', width: 15 },
+    { header: 'Original Pattas', key: 'original_pattas', width: 15 },
+    { header: 'Original Sqm', key: 'original_sqm', width: 15 },
+    { header: 'Avl Pattas', key: 'avl_pattas', width: 15 },
+    { header: 'Avl Total Sqm', key: 'avl_total_sqm', width: 15 },
+    { header: 'Grade', key: 'grade', width: 15 },
+    { header: 'Pallet No', key: 'pallet_no', width: 15 },
+    { header: 'Physical Location', key: 'physical_location', width: 15 },
+    { header: 'Avl Natural', key: 'avl_natural', width: 15 },
+    { header: 'Avl Dyed', key: 'avl_dyed', width: 15 },
+    { header: 'Avl Smoked', key: 'avl_smoked', width: 15 },
+    { header: 'Total', key: 'total', width: 15 },
+    { header: 'Remarks', key: 'remark', width: 15 },
   ];
   worksheet.columns = headers.map((header) => {
     return {
@@ -94,7 +93,7 @@ const GenerateGroupingReport = async (details) => {
         remark: order?.group_remarks,
       });
       row.eachCell({ includeEmpty: true }, (cell) => {
-        cell.alignment = { horizontal: "left" };
+        cell.alignment = { horizontal: 'left' };
       });
     });
   });
@@ -104,7 +103,7 @@ const GenerateGroupingReport = async (details) => {
   headerRow.font = { bold: true };
   // Generate a temporary file path
   const filePath =
-    "public/reports/Group/CreatedGroupReportExcel/created_group_report.xlsx";
+    'public/reports/Group/CreatedGroupReportExcel/created_group_report.xlsx';
 
   // Save the workbook to the file
   await workbook.xlsx.writeFile(filePath);

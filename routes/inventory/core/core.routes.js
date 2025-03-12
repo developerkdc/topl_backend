@@ -1,4 +1,4 @@
-import express from "express";
+import express from 'express';
 import {
   add_core_inventory,
   add_single_core_item_inventory,
@@ -10,38 +10,71 @@ import {
   inward_sr_no_dropdown,
   item_sr_no_dropdown,
   listing_core_inventory,
-} from "../../../controllers/inventory/core/core.controller.js";
-import AuthMiddleware from "../../../middlewares/verifyToken.js";
-import RolesPermissions from "../../../middlewares/permission.js";
-import { verifyApproval } from "../../../middlewares/approval.middleware.js";
+} from '../../../controllers/inventory/core/core.controller.js';
+import AuthMiddleware from '../../../middlewares/verifyToken.js';
+import RolesPermissions from '../../../middlewares/permission.js';
+import { verifyApproval } from '../../../middlewares/approval.middleware.js';
+import { fetch_all_core_inward_sr_no_by_order_item_name, fetch_all_core_sr_no_by_inward_sr_no, fetch_core_details_by_id } from '../../../controllers/inventory/core/core.issue_for_order.controller.js';
 const router = express.Router();
 
-router.post("/list-inventory", AuthMiddleware, RolesPermissions("core_inventory", "view"), listing_core_inventory);
-router.post("/add-inventory", AuthMiddleware, RolesPermissions("core_inventory", "create"), add_core_inventory);
-router.post("/add-item-inventory", AuthMiddleware, RolesPermissions("core_inventory", "create"), add_single_core_item_inventory);
-router.patch("/edit-item-inventory/:item_id", AuthMiddleware, RolesPermissions("core_inventory", "edit"), edit_core_item_inventory);
-router.patch(
-  "/edit-invoice-inventory/:invoice_id",
+router.post(
+  '/list-inventory',
   AuthMiddleware,
-  RolesPermissions("core_inventory", "edit"),
+  RolesPermissions('core_inventory', 'view'),
+  listing_core_inventory
+);
+router.post(
+  '/add-inventory',
+  AuthMiddleware,
+  RolesPermissions('core_inventory', 'create'),
+  add_core_inventory
+);
+router.post(
+  '/add-item-inventory',
+  AuthMiddleware,
+  RolesPermissions('core_inventory', 'create'),
+  add_single_core_item_inventory
+);
+router.patch(
+  '/edit-item-inventory/:item_id',
+  AuthMiddleware,
+  RolesPermissions('core_inventory', 'edit'),
+  edit_core_item_inventory
+);
+router.patch(
+  '/edit-invoice-inventory/:invoice_id',
+  AuthMiddleware,
+  RolesPermissions('core_inventory', 'edit'),
   edit_core_invoice_inventory
 );
 router.get(
-  "/core-item-listing-by-invoice/:invoice_id",
+  '/core-item-listing-by-invoice/:invoice_id',
   AuthMiddleware,
-  RolesPermissions("core_inventory", "edit"),
+  RolesPermissions('core_inventory', 'edit'),
   core_item_listing_by_invoice
 );
 router.patch(
-  "/edit-invoice-item-inventory/:invoice_id",
+  '/edit-invoice-item-inventory/:invoice_id',
   AuthMiddleware,
-  RolesPermissions("core_inventory", "edit"),
-  verifyApproval("core_inventory", "edit"),
+  RolesPermissions('core_inventory', 'edit'),
+  verifyApproval('core_inventory', 'edit'),
   edit_core_item_invoice_inventory
 );
-router.post("/download-excel-core", AuthMiddleware, RolesPermissions("core_inventory", "view"), coreLogsCsv);
+router.post(
+  '/download-excel-core',
+  AuthMiddleware,
+  RolesPermissions('core_inventory', 'view'),
+  coreLogsCsv
+);
 
 //dropdown
-router.get("/item-srno-dropdown", AuthMiddleware, item_sr_no_dropdown);
-router.get("/inward-srno-dropdown", AuthMiddleware, inward_sr_no_dropdown);
+router.get('/item-srno-dropdown', AuthMiddleware, item_sr_no_dropdown);
+router.get('/inward-srno-dropdown', AuthMiddleware, inward_sr_no_dropdown);
+
+
+//order dropdowns
+router.get('/inward-sr-no-dropdown/:id', AuthMiddleware, fetch_all_core_inward_sr_no_by_order_item_name)
+router.get('/item-sr-no-dropdown/:log_no', AuthMiddleware, fetch_all_core_sr_no_by_inward_sr_no)
+router.get('/list-core-details/:id', AuthMiddleware, fetch_core_details_by_id)
+
 export default router;

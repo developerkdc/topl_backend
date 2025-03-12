@@ -1,26 +1,26 @@
-import ExcelJS from "exceljs";
-import fs from "fs/promises";
-import convDate from "../../../../utils/date/date.js";
+import ExcelJS from 'exceljs';
+import fs from 'fs/promises';
+import convDate from '../../../../utils/date/date.js';
 
 const GeneratePressingReport = async (details) => {
   const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet("Pressing Reports");
+  const worksheet = workbook.addWorksheet('Pressing Reports');
 
   // Add headers to the worksheet
 
   worksheet.columns = [
-    { header: "Date", key: "created_at", width: 15 },
-    { header: "Item Name", key: "item_name", width: 30 },
-    { header: "Item Type", key: "item_code", width: 15 },
-    { header: "Group No.", key: "group_no", width: 15 },
-    { header: "No. of Pcs", key: "pressing_no_of_peices", width: 15 },
-    { header: "Length", key: "pressing_length", width: 15 },
-    { header: "Width", key: "pressing_width", width: 15 },
-    { header: "Pressing Sqm", key: "pressing_sqm", width: 15 },
-    { header: "Grade ", key: "item_grade", width: 15 },
-    { header: "Pressing Remarks", key: "pressing_remarks", width: 30 },
-    { header: "Consumed Item", key: "consumed_item_name", width: 30 },
-    { header: "Consumed Quantity", key: "consumed_quantity", width: 30 },
+    { header: 'Date', key: 'created_at', width: 15 },
+    { header: 'Item Name', key: 'item_name', width: 30 },
+    { header: 'Item Type', key: 'item_code', width: 15 },
+    { header: 'Group No.', key: 'group_no', width: 15 },
+    { header: 'No. of Pcs', key: 'pressing_no_of_peices', width: 15 },
+    { header: 'Length', key: 'pressing_length', width: 15 },
+    { header: 'Width', key: 'pressing_width', width: 15 },
+    { header: 'Pressing Sqm', key: 'pressing_sqm', width: 15 },
+    { header: 'Grade ', key: 'item_grade', width: 15 },
+    { header: 'Pressing Remarks', key: 'pressing_remarks', width: 30 },
+    { header: 'Consumed Item', key: 'consumed_item_name', width: 30 },
+    { header: 'Consumed Quantity', key: 'consumed_quantity', width: 30 },
   ];
 
   details.forEach((order) => {
@@ -43,7 +43,7 @@ const GeneratePressingReport = async (details) => {
       pressing_remarks: order.pressing_remarks,
     });
     row.eachCell({ includeEmpty: true }, (cell) => {
-      cell.alignment = { horizontal: "left" };
+      cell.alignment = { horizontal: 'left' };
     });
   });
 
@@ -52,7 +52,7 @@ const GeneratePressingReport = async (details) => {
   headerRow.font = { bold: true };
   // Generate a temporary file path
   const filePath =
-    "public/reports/Pressing/PressingReportExcel/pressing_report_.xlsx";
+    'public/reports/Pressing/PressingReportExcel/pressing_report_.xlsx';
 
   // Save the workbook to the file
   await workbook.xlsx.writeFile(filePath);

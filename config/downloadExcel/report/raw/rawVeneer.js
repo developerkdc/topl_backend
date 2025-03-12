@@ -1,33 +1,36 @@
-import ExcelJS from "exceljs";
-import fs from "fs/promises";
-import convDate from "../../../../utils/date/date.js";
+import ExcelJS from 'exceljs';
+import fs from 'fs/promises';
+import convDate from '../../../../utils/date/date.js';
 
 const GenerateRawReport = async (details) => {
-
   const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet("Raw Veneer Stock Reports");
+  const worksheet = workbook.addWorksheet('Raw Veneer Stock Reports');
   // Add headers to the worksheet
   const headers = [
-    { header: "DATE", key: "date_of_inward", width: 15 },
-    { header: "Supplier Name", key: "supplier_name", width: 15 },
-    { header: "invoice no", key: "invoice_no", width: 15 },
-    { header: "ITEM NAME", key: "item_name", width: 30 },
-    { header: "ITEM TYPE", key: "item_code", width: 15 },
-    { header: "LOG NO", key: "item_log_no", width: 15 },
-    { header: "B.NO", key: "item_bundle_no", width: 15 },
-    { header: "L", key: "item_length", width: 15 },
-    { header: "W", key: "item_width", width: 15 },
-    { header: "PCS", key: "item_available_pattas", width: 15 },
-    { header: "SQM", key: "item_available_sqm", width: 15 },
-    { header: "Rate per Sqm", key: "item_rate_per_sqm", width: 15 },
-    { header: "PALLET NO", key: "item_pallete_no", width: 20 },
-    { header: "PALLET Location", key: "item_physical_location", width: 20 },
-    { header: "Status", key: "status", width: 20 },
-    { header: "REMARK", key: "item_remark", width: 20 },
-    { header: "TOTAL VALUE", key: "total_value", width: 15 },
-    { header: "currency ", key: "currency", width: 15 },
-    { header: "conversion rate ", key: "conversion_rate", width: 15 },
-    { header: "Rate per Sqm for currency", key: "item_rate_per_sqm_for_currency", width: 15 },
+    { header: 'DATE', key: 'date_of_inward', width: 15 },
+    { header: 'Supplier Name', key: 'supplier_name', width: 15 },
+    { header: 'invoice no', key: 'invoice_no', width: 15 },
+    { header: 'ITEM NAME', key: 'item_name', width: 30 },
+    { header: 'ITEM TYPE', key: 'item_code', width: 15 },
+    { header: 'LOG NO', key: 'item_log_no', width: 15 },
+    { header: 'B.NO', key: 'item_bundle_no', width: 15 },
+    { header: 'L', key: 'item_length', width: 15 },
+    { header: 'W', key: 'item_width', width: 15 },
+    { header: 'PCS', key: 'item_available_pattas', width: 15 },
+    { header: 'SQM', key: 'item_available_sqm', width: 15 },
+    { header: 'Rate per Sqm', key: 'item_rate_per_sqm', width: 15 },
+    { header: 'PALLET NO', key: 'item_pallete_no', width: 20 },
+    { header: 'PALLET Location', key: 'item_physical_location', width: 20 },
+    { header: 'Status', key: 'status', width: 20 },
+    { header: 'REMARK', key: 'item_remark', width: 20 },
+    { header: 'TOTAL VALUE', key: 'total_value', width: 15 },
+    { header: 'currency ', key: 'currency', width: 15 },
+    { header: 'conversion rate ', key: 'conversion_rate', width: 15 },
+    {
+      header: 'Rate per Sqm for currency',
+      key: 'item_rate_per_sqm_for_currency',
+      width: 15,
+    },
   ];
   worksheet.columns = headers.map((header) => {
     return {
@@ -64,16 +67,16 @@ const GenerateRawReport = async (details) => {
       ).toFixed(2),
     });
     row.eachCell({ includeEmpty: true }, (cell) => {
-      cell.alignment = { horizontal: "left" };
+      cell.alignment = { horizontal: 'left' };
     });
   });
 
   const headerRow = worksheet.getRow(1);
   headerRow.font = { bold: true };
 
-  // Generate a temporary file path 
+  // Generate a temporary file path
 
-  const filePath = "public/reports/Raw/RawReportExcel/raw_report.xlsx";
+  const filePath = 'public/reports/Raw/RawReportExcel/raw_report.xlsx';
 
   // Save the workbook to the file
   await workbook.xlsx.writeFile(filePath);

@@ -1,15 +1,15 @@
-import mongoose from "mongoose";
-import LogSchemaFunction from "../LogsSchema/logs.schema.js";
+import mongoose from 'mongoose';
+import LogSchemaFunction from '../LogsSchema/logs.schema.js';
 
 const IssuedForCuttingSchema = new mongoose.Schema({
   group_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "group",
+    ref: 'group',
     required: true,
   },
   group_history_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "group_history",
+    ref: 'group_history',
     required: true,
   },
   cutting_issued_sqm: {
@@ -20,7 +20,7 @@ const IssuedForCuttingSchema = new mongoose.Schema({
     {
       item_id: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "raw",
+        ref: 'raw',
         required: true,
       },
       cutting_quantity: {
@@ -54,7 +54,7 @@ const IssuedForCuttingSchema = new mongoose.Schema({
   ],
   created_employee_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "user",
+    ref: 'user',
     trim: true,
   },
   issued_for_cutting_remarks: {
@@ -63,8 +63,8 @@ const IssuedForCuttingSchema = new mongoose.Schema({
 
   revert_status: {
     type: String,
-    enum: ["active", "inactive"],
-    default: "active",
+    enum: ['active', 'inactive'],
+    default: 'active',
   },
 
   created_at: { type: Date, default: () => new Date().setUTCHours(0, 0, 0, 0) },
@@ -73,7 +73,7 @@ const IssuedForCuttingSchema = new mongoose.Schema({
 });
 
 export const IssuedForCuttingModel = mongoose.model(
-  "issued_for_cutting",
+  'issued_for_cutting',
   IssuedForCuttingSchema
 );
-LogSchemaFunction("issuedForCutting", IssuedForCuttingModel);
+LogSchemaFunction('issuedForCutting', IssuedForCuttingModel);

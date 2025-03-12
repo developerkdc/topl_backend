@@ -1,10 +1,10 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
 const RawImagesSchema = new mongoose.Schema({
   item_details: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "raw_material",
-    required: [true, "Item ID is required"],
+    ref: 'raw_material',
+    required: [true, 'Item ID is required'],
   },
   smoke_images: {
     type: Array,
@@ -19,5 +19,5 @@ const RawImagesSchema = new mongoose.Schema({
   deleted_at: { type: Date, default: null },
 });
 
-const RawImagesModel = mongoose.model("raw_images", RawImagesSchema);
+const RawImagesModel = mongoose.model('raw_images', RawImagesSchema);
 export default RawImagesModel;

@@ -1,8 +1,8 @@
-import mongoose from "mongoose";
-import PalleteModel from "../../database/schema/masters/pallete.schema.js";
-import catchAsync from "../../utils/errors/catchAsync.js";
-import { DynamicSearch } from "../../utils/dynamicSearch/dynamic.js";
-import XLSX from "xlsx";
+import mongoose from 'mongoose';
+import PalleteModel from '../../database/schema/masters/pallete.schema.js';
+import catchAsync from '../../utils/errors/catchAsync.js';
+import { DynamicSearch } from '../../utils/dynamicSearch/dynamic.js';
+import XLSX from 'xlsx';
 export const AddPalleteMaster = catchAsync(async (req, res) => {
   const authUserDetail = req.userDetails;
   const palleteData = {
@@ -14,7 +14,7 @@ export const AddPalleteMaster = catchAsync(async (req, res) => {
   return res.status(201).json({
     result: savedPallete,
     status: true,
-    message: "Pallete created successfully",
+    message: 'Pallete created successfully',
   });
 });
 
@@ -24,7 +24,7 @@ export const UpdatePalleteMaster = catchAsync(async (req, res) => {
   if (!mongoose.Types.ObjectId.isValid(palleteId)) {
     return res
       .status(400)
-      .json({ result: [], status: false, message: "Invalid pallete ID" });
+      .json({ result: [], status: false, message: 'Invalid pallete ID' });
   }
   const pallete = await PalleteModel.findByIdAndUpdate(
     palleteId,
@@ -35,13 +35,13 @@ export const UpdatePalleteMaster = catchAsync(async (req, res) => {
     return res.status(404).json({
       result: [],
       status: false,
-      message: "Pallete not found.",
+      message: 'Pallete not found.',
     });
   }
   res.status(200).json({
     result: pallete,
     status: true,
-    message: "Updated successfully",
+    message: 'Updated successfully',
   });
 });
 
@@ -55,12 +55,12 @@ export const ListPalleteMaster = catchAsync(async (req, res) => {
   const {
     page = 1,
     limit = 10,
-    sortBy = "updated_at",
-    sort = "desc",
+    sortBy = 'updated_at',
+    sort = 'desc',
   } = req.query;
-  const search = req.query.search || "";
+  const search = req.query.search || '';
   let searchQuery = {};
-  if (search != "" && req?.body?.searchFields) {
+  if (search != '' && req?.body?.searchFields) {
     const searchdata = DynamicSearch(
       search,
       boolean,
@@ -75,7 +75,7 @@ export const ListPalleteMaster = catchAsync(async (req, res) => {
         data: {
           user: [],
         },
-        message: "Results Not Found",
+        message: 'Results Not Found',
       });
     }
     searchQuery = searchdata;
@@ -89,9 +89,9 @@ export const ListPalleteMaster = catchAsync(async (req, res) => {
   const palleteList = await PalleteModel.aggregate([
     {
       $lookup: {
-        from: "users",
-        localField: "created_employee_id",
-        foreignField: "_id",
+        from: 'users',
+        localField: 'created_employee_id',
+        foreignField: '_id',
         pipeline: [
           {
             $project: {
@@ -99,12 +99,12 @@ export const ListPalleteMaster = catchAsync(async (req, res) => {
             },
           },
         ],
-        as: "created_employee_id",
+        as: 'created_employee_id',
       },
     },
     {
       $unwind: {
-        path: "$created_employee_id",
+        path: '$created_employee_id',
         preserveNullAndEmptyArrays: true,
       },
     },
@@ -112,7 +112,7 @@ export const ListPalleteMaster = catchAsync(async (req, res) => {
       $match: { ...searchQuery },
     },
     {
-      $sort: { [sortBy]: sort == "desc" ? -1 : 1 },
+      $sort: { [sortBy]: sort == 'desc' ? -1 : 1 },
     },
     {
       $skip: skip,
@@ -127,7 +127,7 @@ export const ListPalleteMaster = catchAsync(async (req, res) => {
       status: true,
       totalPages: totalPages,
       currentPage: validPage,
-      message: "All Pallete List",
+      message: 'All Pallete List',
     });
   }
 });
@@ -136,7 +136,7 @@ export const DropdownPalleteMaster = catchAsync(async (req, res) => {
   const list = await PalleteModel.aggregate([
     {
       $match: {
-        status: "active",
+        status: 'active',
       },
     },
     {
@@ -149,7 +149,7 @@ export const DropdownPalleteMaster = catchAsync(async (req, res) => {
   res.status(200).json({
     result: list,
     status: true,
-    message: "Pallete Dropdown List",
+    message: 'Pallete Dropdown List',
   });
 });
 
@@ -158,7 +158,7 @@ export const BulkUploadPalleteMaster = catchAsync(async (req, res, next) => {
   const workbook = XLSX.readFile(file.path);
   const worksheet = workbook.Sheets[workbook.SheetNames[0]];
   const data = XLSX.utils.sheet_to_json(worksheet);
-  console.log(data, "data");
+  console.log(data, 'data');
 
   const session = await PalleteModel.startSession();
   session.startTransaction();
@@ -168,14 +168,14 @@ export const BulkUploadPalleteMaster = catchAsync(async (req, res, next) => {
       return res.status(400).json({
         result: [],
         status: false,
-        message: "No items found in the uploaded file.",
+        message: 'No items found in the uploaded file.',
       });
     }
 
     const authUserDetail = req.userDetails;
 
     for (const item of data) {
-      const requiredFields = ["pallete_no", "item_physical_location"];
+      const requiredFields = ['pallete_no', 'item_physical_location'];
 
       for (const field of requiredFields) {
         if (!item[field]) {
@@ -194,13 +194,13 @@ export const BulkUploadPalleteMaster = catchAsync(async (req, res, next) => {
         item_physical_location: item.item_physical_location,
         pallete_remarks: item.pallete_remarks,
         created_employee_id: authUserDetail._id,
-        status: "active",
+        status: 'active',
       };
-      console.log(itemMasterData, "itemMasterData");
+      console.log(itemMasterData, 'itemMasterData');
 
       const newItemMaster = new PalleteModel(itemMasterData);
       const savedItemMaster = await newItemMaster.save({ session });
-      console.log(savedItemMaster, "savedItemMaster");
+      console.log(savedItemMaster, 'savedItemMaster');
     }
 
     await session.commitTransaction();
@@ -209,7 +209,7 @@ export const BulkUploadPalleteMaster = catchAsync(async (req, res, next) => {
     return res.status(201).json({
       result: [],
       status: true,
-      message: "Item Master bulk uploaded successfully.",
+      message: 'Item Master bulk uploaded successfully.',
     });
   } catch (error) {
     await session.abortTransaction();

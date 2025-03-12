@@ -1,118 +1,116 @@
-import mongoose from "mongoose";
-import { flitching_done_model } from "../../../database/schema/factory/flitching/flitching.schema.js";
-import { flitching_approval_model } from "../../../database/schema/factory/flitching/flitchingApproval.schema.js";
-import { dynamic_filter } from "../../../utils/dymanicFilter.js";
-import { DynamicSearch } from "../../../utils/dynamicSearch/dynamic.js";
-import ApiError from "../../../utils/errors/apiError.js";
-import catchAsync from "../../../utils/errors/catchAsync.js";
+import mongoose from 'mongoose';
+import { flitching_done_model } from '../../../database/schema/factory/flitching/flitching.schema.js';
+import { flitching_approval_model } from '../../../database/schema/factory/flitching/flitchingApproval.schema.js';
+import { dynamic_filter } from '../../../utils/dymanicFilter.js';
+import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
+import ApiError from '../../../utils/errors/apiError.js';
+import catchAsync from '../../../utils/errors/catchAsync.js';
 
-export const flitching_approval_listing = catchAsync(async function (
-  req,
-  res,
-  next
-) {
-  const {
-    page = 1,
-    limit = 10,
-    sortBy = "code",
-    sort = "desc",
-    search = "",
-  } = req.query;
-  const {
-    string,
-    boolean,
-    numbers,
-    arrayField = [],
-  } = req?.body?.searchFields || {};
-  const filter = req.body?.filter;
-  const user = req.userDetails;
-
-  let search_query = {};
-  if (search != "" && req?.body?.searchFields) {
-    const search_data = DynamicSearch(
-      search,
+export const flitching_approval_listing = catchAsync(
+  async function (req, res, next) {
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = 'code',
+      sort = 'desc',
+      search = '',
+    } = req.query;
+    const {
+      string,
       boolean,
       numbers,
-      string,
-      arrayField
-    );
-    if (search_data?.length == 0) {
-      return res.status(404).json({
-        statusCode: 404,
-        status: false,
-        data: {
-          data: [],
-        },
-        message: "Results Not Found",
-      });
+      arrayField = [],
+    } = req?.body?.searchFields || {};
+    const filter = req.body?.filter;
+    const user = req.userDetails;
+
+    let search_query = {};
+    if (search != '' && req?.body?.searchFields) {
+      const search_data = DynamicSearch(
+        search,
+        boolean,
+        numbers,
+        string,
+        arrayField
+      );
+      if (search_data?.length == 0) {
+        return res.status(404).json({
+          statusCode: 404,
+          status: false,
+          data: {
+            data: [],
+          },
+          message: 'Results Not Found',
+        });
+      }
+      search_query = search_data;
     }
-    search_query = search_data;
-  }
 
-  const filterData = dynamic_filter(filter);
+    const filterData = dynamic_filter(filter);
 
-  const match_query = {
-    ...filterData,
-    ...search_query,
-    "approval.approvalPerson": user?._id,
-  };
+    const match_query = {
+      ...filterData,
+      ...search_query,
+      'approval.approvalPerson': user?._id,
+    };
 
-  const aggregate_stage = [
-    {
-      $lookup: {
-        from: "users",
-        localField: "approval.editedBy",
-        foreignField: "_id",
-        pipeline: [
-          {
-            $project: {
-              user_name: 1
-            }
-          }
-        ],
-        as: "user"
-      }
-    },
-    {
-      $unwind: {
-        path: "$user",
-        preserveNullAndEmptyArrays: true
-      }
-    },
-    {
-      $match: match_query,
-    },
-    {
-      $sort: {
-        [sortBy]: sort === "desc" ? -1 : 1,
-        _id: sort === "desc" ? -1 : 1,
+    const aggregate_stage = [
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'approval.editedBy',
+          foreignField: '_id',
+          pipeline: [
+            {
+              $project: {
+                user_name: 1,
+              },
+            },
+          ],
+          as: 'user',
+        },
       },
-    },
-    {
-      $skip: (parseInt(page) - 1) * parseInt(limit),
-    },
-    {
-      $limit: parseInt(limit),
-    },
-  ];
+      {
+        $unwind: {
+          path: '$user',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $match: match_query,
+      },
+      {
+        $sort: {
+          [sortBy]: sort === 'desc' ? -1 : 1,
+          _id: sort === 'desc' ? -1 : 1,
+        },
+      },
+      {
+        $skip: (parseInt(page) - 1) * parseInt(limit),
+      },
+      {
+        $limit: parseInt(limit),
+      },
+    ];
 
-  const List_flitching_details =
-    await flitching_approval_model.aggregate(aggregate_stage);
+    const List_flitching_details =
+      await flitching_approval_model.aggregate(aggregate_stage);
 
-  const totalCount = await flitching_approval_model.countDocuments({
-    ...match_query,
-  });
+    const totalCount = await flitching_approval_model.countDocuments({
+      ...match_query,
+    });
 
-  const totalPage = Math.ceil(totalCount / limit);
+    const totalPage = Math.ceil(totalCount / limit);
 
-  return res.status(200).json({
-    statusCode: 200,
-    status: "success",
-    data: List_flitching_details,
-    totalPage: totalPage,
-    message: "Data fetched successfully",
-  });
-});
+    return res.status(200).json({
+      statusCode: 200,
+      status: 'success',
+      data: List_flitching_details,
+      totalPage: totalPage,
+      message: 'Data fetched successfully',
+    });
+  }
+);
 
 export const flitching_approval_item_listing_by_unique_id = catchAsync(
   async (req, res, next) => {
@@ -121,32 +119,41 @@ export const flitching_approval_item_listing_by_unique_id = catchAsync(
 
     const approval_crosscutting_data = await flitching_approval_model.findOne({
       unique_identifier: new mongoose.Types.ObjectId(unique_identifier_id),
-      "issue_for_flitching_id": new mongoose.Types.ObjectId(issue_for_flitching_id),
-    })
+      issue_for_flitching_id: new mongoose.Types.ObjectId(
+        issue_for_flitching_id
+      ),
+    });
 
-    const isApprovalPending = approval_crosscutting_data?.approval_status?.sendForApproval?.status;
+    const isApprovalPending =
+      approval_crosscutting_data?.approval_status?.sendForApproval?.status;
 
     const aggregate_stage = [
       {
         $match: {
           unique_identifier: new mongoose.Types.ObjectId(unique_identifier_id),
-          "issue_for_flitching_id": new mongoose.Types.ObjectId(issue_for_flitching_id),
+          issue_for_flitching_id: new mongoose.Types.ObjectId(
+            issue_for_flitching_id
+          ),
         },
       },
-      ...isApprovalPending ? [{
-        $lookup: {
-          from: "flitchings",
-          localField: "flitching_done_id",
-          foreignField: "_id",
-          as: "previous_data"
-        }
-      },
-      {
-        $unwind: {
-          path: "$previous_data",
-          preserveNullAndEmptyArrays: true
-        }
-      }] : [],
+      ...(isApprovalPending
+        ? [
+            {
+              $lookup: {
+                from: 'flitchings',
+                localField: 'flitching_done_id',
+                foreignField: '_id',
+                as: 'previous_data',
+              },
+            },
+            {
+              $unwind: {
+                path: '$previous_data',
+                preserveNullAndEmptyArrays: true,
+              },
+            },
+          ]
+        : []),
       {
         $sort: {
           code: 1,
@@ -154,15 +161,16 @@ export const flitching_approval_item_listing_by_unique_id = catchAsync(
       },
     ];
 
-    const flitching_approval_data = await flitching_approval_model.aggregate(aggregate_stage);
+    const flitching_approval_data =
+      await flitching_approval_model.aggregate(aggregate_stage);
 
     return res.status(200).json({
       statusCode: 200,
-      status: "success",
+      status: 'success',
       data: {
-        flitching_details: flitching_approval_data
+        flitching_details: flitching_approval_data,
       },
-      message: "Data fetched successfully",
+      message: 'Data fetched successfully',
     });
   }
 );
@@ -179,11 +187,11 @@ export const flitching_approve = catchAsync(async (req, res, next) => {
       .find({
         unique_identifier: unique_identifier_id,
         issue_for_flitching_id: issue_for_flitching_id,
-        "approval.approvalPerson": user._id,
+        'approval.approvalPerson': user._id,
       })
       .lean();
     if (items_details?.length <= 0)
-      return next(new ApiError("No invoice items found for approval", 404));
+      return next(new ApiError('No invoice items found for approval', 404));
 
     // update all item's approval status which are approved in approval collection
     const flitching_details = await flitching_approval_model
@@ -191,7 +199,7 @@ export const flitching_approve = catchAsync(async (req, res, next) => {
         {
           unique_identifier: unique_identifier_id,
           issue_for_flitching_id: issue_for_flitching_id,
-          "approval.approvalPerson": user._id,
+          'approval.approvalPerson': user._id,
         },
         {
           $set: {
@@ -209,61 +217,72 @@ export const flitching_approve = catchAsync(async (req, res, next) => {
                 remark: null,
               },
             },
-            "approval.approvalBy.user": user._id,
+            'approval.approvalBy.user': user._id,
           },
         },
         { session, new: true }
       )
       .lean();
     if (!flitching_details.acknowledged || flitching_details.modifiedCount <= 0)
-      return next(new ApiError("Failed to approve data", 404));
+      return next(new ApiError('Failed to approve data', 404));
 
     // update the approval data in actual collection
 
-    await flitching_done_model.deleteMany({
-      issue_for_flitching_id: new mongoose.Types.ObjectId(issue_for_flitching_id),
-    }, { session });
-
-
-    const approval_flitchingdone_items_data = await flitching_approval_model.aggregate([
+    await flitching_done_model.deleteMany(
       {
-        $match: {
-          unique_identifier: new mongoose.Types.ObjectId(unique_identifier_id),
-          issue_for_flitching_id: new mongoose.Types.ObjectId(issue_for_flitching_id),
+        issue_for_flitching_id: new mongoose.Types.ObjectId(
+          issue_for_flitching_id
+        ),
+      },
+      { session }
+    );
+
+    const approval_flitchingdone_items_data =
+      await flitching_approval_model.aggregate([
+        {
+          $match: {
+            unique_identifier: new mongoose.Types.ObjectId(
+              unique_identifier_id
+            ),
+            issue_for_flitching_id: new mongoose.Types.ObjectId(
+              issue_for_flitching_id
+            ),
+          },
         },
-      },
-      {
-        $set: {
-          _id: "$flitching_done_id",
-          approval_status: {
-            sendForApproval: {
-              status: false,
-              remark: null,
+        {
+          $set: {
+            _id: '$flitching_done_id',
+            approval_status: {
+              sendForApproval: {
+                status: false,
+                remark: null,
+              },
+              approved: {
+                status: true,
+                remark: null,
+              },
+              rejected: {
+                status: false,
+                remark: null,
+              },
             },
-            approved: {
-              status: true,
-              remark: null,
-            },
-            rejected: {
-              status: false,
-              remark: null,
-            },
-          }
+          },
         },
-      },
-      {
-        $unset: ["flitching_done_id"],
-      },
-    ]);
+        {
+          $unset: ['flitching_done_id'],
+        },
+      ]);
 
-    await flitching_done_model.insertMany(approval_flitchingdone_items_data, { session })
+    await flitching_done_model.insertMany(approval_flitchingdone_items_data, {
+      session,
+    });
 
     await session.commitTransaction();
     session.endSession();
     return res.status(200).json({
       statusCode: 200,
-      status: "success",
-      message: "Invoice has approved successfully",
+      status: 'success',
+      message: 'Invoice has approved successfully',
     });
   } catch (error) {
     console.log(error);
@@ -287,7 +306,7 @@ export const flitching_reject = catchAsync(async (req, res, next) => {
         {
           unique_identifier: unique_identifier_id,
           issue_for_flitching_id: issue_for_flitching_id,
-          "approval.approvalPerson": user._id,
+          'approval.approvalPerson': user._id,
         },
         {
           $set: {
@@ -305,14 +324,14 @@ export const flitching_reject = catchAsync(async (req, res, next) => {
                 remark: remark,
               },
             },
-            "approval.rejectedBy.user": user._id,
+            'approval.rejectedBy.user': user._id,
           },
         },
         { session, new: true }
       )
       .lean();
     if (!flitching_details)
-      return next(new ApiError("No Data found for approval", 404));
+      return next(new ApiError('No Data found for approval', 404));
 
     const update_flitching_details = await flitching_done_model.updateMany(
       {
@@ -342,14 +361,14 @@ export const flitching_reject = catchAsync(async (req, res, next) => {
       !update_flitching_details.acknowledged ||
       update_flitching_details.modifiedCount <= 0
     )
-      return next(new ApiError("Failed to reject invoice"), 400);
+      return next(new ApiError('Failed to reject invoice'), 400);
 
     await session.commitTransaction();
     session.endSession();
     return res.status(200).json({
       statusCode: 200,
-      status: "success",
-      message: "Rejected successfully",
+      status: 'success',
+      message: 'Rejected successfully',
     });
   } catch (error) {
     console.log(error);

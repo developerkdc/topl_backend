@@ -1,48 +1,47 @@
-import ExcelJS from "exceljs";
-import fs from "fs/promises";
-import convDate from "../../../../utils/date/date.js";
+import ExcelJS from 'exceljs';
+import fs from 'fs/promises';
+import convDate from '../../../../utils/date/date.js';
 
 const GenerateIssueForDyingReport = async (details) => {
-
   const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet("Raw issue For Dying Reports");
+  const worksheet = workbook.addWorksheet('Raw issue For Dying Reports');
   // Add headers to the worksheet
   const headers = [
-    { header: "DATE", key: "date_of_inward", width: 15 },
-    { header: "ITEM NAME", key: "item_name", width: 30 },
-    { header: "ITEM TYPE", key: "item_code", width: 15 },
-    { header: "Log No", key: "item_log_no", width: 20 },
-    { header: "Bundle No", key: "item_bundle_no", width: 20 },
-    { header: "L", key: "item_length", width: 15 },
-    { header: "W", key: "item_width", width: 15 },
-    { header: "Avl Pattas", key: "item_available_pattas", width: 20 },
-    { header: "Avl Total Sqm", key: "item_available_sqm", width: 20 },
-    { header: "GRADE", key: "item_grade", width: 15 },
-    { header: "Pallet No", key: "item_pallete_no", width: 20 },
+    { header: 'DATE', key: 'date_of_inward', width: 15 },
+    { header: 'ITEM NAME', key: 'item_name', width: 30 },
+    { header: 'ITEM TYPE', key: 'item_code', width: 15 },
+    { header: 'Log No', key: 'item_log_no', width: 20 },
+    { header: 'Bundle No', key: 'item_bundle_no', width: 20 },
+    { header: 'L', key: 'item_length', width: 15 },
+    { header: 'W', key: 'item_width', width: 15 },
+    { header: 'Avl Pattas', key: 'item_available_pattas', width: 20 },
+    { header: 'Avl Total Sqm', key: 'item_available_sqm', width: 20 },
+    { header: 'GRADE', key: 'item_grade', width: 15 },
+    { header: 'Pallet No', key: 'item_pallete_no', width: 20 },
     {
-      header: "Physical Location",
-      key: "item_physical_location",
+      header: 'Physical Location',
+      key: 'item_physical_location',
       width: 20,
     },
     {
-      header: "Issued Dying Quantity	",
-      key: "issued_dying_quantity",
+      header: 'Issued Dying Quantity	',
+      key: 'issued_dying_quantity',
       width: 20,
     },
     {
-      header: "Received Quantity	",
-      key: "item_received_pattas",
+      header: 'Received Quantity	',
+      key: 'item_received_pattas',
       width: 20,
     },
-    
+
     // {
     //   header: "Available Quantity	",
     //   key: "item_available_pattas",
     //   width: 20,
     // },
     {
-      header: "Rejected Quantity	",
-      key: "item_rejected_pattas",
+      header: 'Rejected Quantity	',
+      key: 'item_rejected_pattas',
       width: 20,
     },
     // {
@@ -76,7 +75,7 @@ const GenerateIssueForDyingReport = async (details) => {
     // { header: "Rejected Quantity Dyed	", key: "Rejected_dyed", width: 20 },
     // { header: "Rejected Quantity Smoked", key: "Rejected_smoked", width: 20 },
     // { header: "Rejected Quantity Total", key: "Rejected_total", width: 20 },
-    { header: "SUPPLIER", key: "supplier", width: 20 },
+    { header: 'SUPPLIER', key: 'supplier', width: 20 },
   ];
   worksheet.columns = headers.map((header) => {
     return {
@@ -126,7 +125,7 @@ const GenerateIssueForDyingReport = async (details) => {
       // Received_total: order.item_id.item_received_quantities.total,
     });
     row.eachCell({ includeEmpty: true }, (cell) => {
-      cell.alignment = { horizontal: "left" };
+      cell.alignment = { horizontal: 'left' };
     });
   });
 
@@ -135,7 +134,7 @@ const GenerateIssueForDyingReport = async (details) => {
 
   // Generate a temporary file path
   const filePath =
-    "public/reports/Raw/issueForDyingReportExcel/IssuedForDyingRawReport.xlsx";
+    'public/reports/Raw/issueForDyingReportExcel/IssuedForDyingRawReport.xlsx';
 
   // Save the workbook to the file
   await workbook.xlsx.writeFile(filePath);

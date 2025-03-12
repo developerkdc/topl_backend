@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
 const itemCategorySchema = new mongoose.Schema(
   {
@@ -8,20 +8,20 @@ const itemCategorySchema = new mongoose.Schema(
     },
     category: {
       type: String,
-      required: [true, "category is required"],
-      unique: [true, "Category Name already exist."],
+      required: [true, 'category is required'],
+      unique: [true, 'Category Name already exist.'],
       trim: true,
       // uppercase: true,
     },
     calculate_unit: {
       type: String,
-      required: [true, "calculate unit is required"],
+      required: [true, 'calculate unit is required'],
       trim: true,
       // uppercase: true,
     },
     product_hsn_code: {
       type: String,
-      required: [true, "hsn code is required"],
+      required: [true, 'hsn code is required'],
       trim: true,
       uppercase: true,
     },
@@ -35,6 +35,6 @@ const itemCategorySchema = new mongoose.Schema(
 
 const itemCategoryModel =
   mongoose.models.item_categories ||
-  mongoose.model("item_category", itemCategorySchema);
+  mongoose.model('item_category', itemCategorySchema);
 
 export default itemCategoryModel;

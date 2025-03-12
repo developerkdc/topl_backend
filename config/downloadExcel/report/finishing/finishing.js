@@ -1,30 +1,27 @@
-import ExcelJS from "exceljs";
-import fs from "fs/promises";
-import convDate from "../../../../utils/date/date.js";
+import ExcelJS from 'exceljs';
+import fs from 'fs/promises';
+import convDate from '../../../../utils/date/date.js';
 
 const GenerateFinishingReport = async (details) => {
-
   const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet("Finishing Reports");
+  const worksheet = workbook.addWorksheet('Finishing Reports');
 
   // Add headers to the worksheet
 
   worksheet.columns = [
-    { header: "Date", key: "created_at", width: 15 },
-    { header: "Item Name", key: "item_name", width: 30 },
-    { header: "Item Type", key: "item_code", width: 15 },
-    { header: "Group No.", key: "group_no", width: 15 },
-    { header: "No. of Pcs", key: "finishing_no_of_pcs", width: 15 },
-    { header: "Length", key: "finishing_length", width: 15 },
-    { header: "Width", key: "finishing_width", width: 15 },
-    { header: "Finishing Sqm", key: "finishing_sqm", width: 15 },
-    { header: "Finishing Remarks", key: "finishing_remarks", width: 30 },
-    { header: "Status", key: "status", width: 30 },
+    { header: 'Date', key: 'created_at', width: 15 },
+    { header: 'Item Name', key: 'item_name', width: 30 },
+    { header: 'Item Type', key: 'item_code', width: 15 },
+    { header: 'Group No.', key: 'group_no', width: 15 },
+    { header: 'No. of Pcs', key: 'finishing_no_of_pcs', width: 15 },
+    { header: 'Length', key: 'finishing_length', width: 15 },
+    { header: 'Width', key: 'finishing_width', width: 15 },
+    { header: 'Finishing Sqm', key: 'finishing_sqm', width: 15 },
+    { header: 'Finishing Remarks', key: 'finishing_remarks', width: 30 },
+    { header: 'Status', key: 'status', width: 30 },
   ];
 
   details.forEach((order) => {
-
-
     const row = worksheet.addRow({
       created_at: convDate(order.created_at),
       item_name:
@@ -40,10 +37,10 @@ const GenerateFinishingReport = async (details) => {
           .item_grade,
       finishing_remarks: order.finishing_remarks,
       finishing_sqm: order.finishing_sqm,
-      status: order.status === 'pending' ? 'qc done' : order.status, 
+      status: order.status === 'pending' ? 'qc done' : order.status,
     });
     row.eachCell({ includeEmpty: true }, (cell) => {
-      cell.alignment = { horizontal: "left" };
+      cell.alignment = { horizontal: 'left' };
     });
   });
 
@@ -52,7 +49,7 @@ const GenerateFinishingReport = async (details) => {
   headerRow.font = { bold: true };
   // Generate a temporary file path
   const filePath =
-    "public/reports/Finishing/FinishingReportExcel/finishing_report_.xlsx";
+    'public/reports/Finishing/FinishingReportExcel/finishing_report_.xlsx';
 
   // Save the workbook to the file
   await workbook.xlsx.writeFile(filePath);

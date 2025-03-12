@@ -1,84 +1,84 @@
-import exceljs from "exceljs";
-import fs from "fs/promises";
-import ApiError from "../../../../../utils/errors/apiError.js";
-import dotenv from "dotenv/config";
+import exceljs from 'exceljs';
+import fs from 'fs/promises';
+import ApiError from '../../../../../utils/errors/apiError.js';
+import dotenv from 'dotenv/config';
 
 export const createLogLogsExcel = async (newData) => {
   try {
-    const folderPath = "public/upload/reports/inventory/log";
+    const folderPath = 'public/upload/reports/inventory/log';
     try {
       await fs.access(folderPath);
     } catch (error) {
       await fs.mkdir(folderPath, { recursive: true });
     }
     const workbook = new exceljs.Workbook();
-    const worksheet = workbook.addWorksheet("log-logsreport");
+    const worksheet = workbook.addWorksheet('log-logsreport');
 
     const logColumns = [
-      { header: "Inward Sr No", key: "inward_sr_no", width: 15 },
-      { header: "Inward Date", key: "inward_date", width: 15 },
-      { header: "Item Sr No", key: "item_sr_no", width: 15 },
-      { header: "Item Name", key: "item_name", width: 20 },
-      { header: "Supplier Item Name", key: "supplier_item_name", width: 20 },
-      { header: "Log No", key: "log_no", width: 10 },
-      { header: "Log Formula", key: "log_formula", width: 15 },
-      { header: "Invoice Length", key: "invoice_length", width: 15 },
-      { header: "Invoice Diameter", key: "invoice_diameter", width: 15 },
-      { header: "Invoice CMT", key: "invoice_cmt", width: 15 },
-      { header: "Indian CMT", key: "indian_cmt", width: 15 },
-      { header: "Physical Length", key: "physical_length", width: 15 },
-      { header: "Physical Diameter", key: "physical_diameter", width: 15 },
-      { header: "Physical CMT", key: "physical_cmt", width: 15 },
-      { header: "Exchange Rate", key: "exchange_rate", width: 15 },
-      { header: "Rate in Currency", key: "rate_in_currency", width: 20 },
-      { header: "Rate in INR", key: "rate_in_inr", width: 20 },
+      { header: 'Inward Sr No', key: 'inward_sr_no', width: 15 },
+      { header: 'Inward Date', key: 'inward_date', width: 15 },
+      { header: 'Item Sr No', key: 'item_sr_no', width: 15 },
+      { header: 'Item Name', key: 'item_name', width: 20 },
+      { header: 'Supplier Item Name', key: 'supplier_item_name', width: 20 },
+      { header: 'Log No', key: 'log_no', width: 10 },
+      { header: 'Log Formula', key: 'log_formula', width: 15 },
+      { header: 'Invoice Length', key: 'invoice_length', width: 15 },
+      { header: 'Invoice Diameter', key: 'invoice_diameter', width: 15 },
+      { header: 'Invoice CMT', key: 'invoice_cmt', width: 15 },
+      { header: 'Indian CMT', key: 'indian_cmt', width: 15 },
+      { header: 'Physical Length', key: 'physical_length', width: 15 },
+      { header: 'Physical Diameter', key: 'physical_diameter', width: 15 },
+      { header: 'Physical CMT', key: 'physical_cmt', width: 15 },
+      { header: 'Exchange Rate', key: 'exchange_rate', width: 15 },
+      { header: 'Rate in Currency', key: 'rate_in_currency', width: 20 },
+      { header: 'Rate in INR', key: 'rate_in_inr', width: 20 },
 
-      { header: "Amount", key: "amount", width: 20 },
-      { header: "Remark", key: "remark", width: 20 },
-      { header: "Created Date", key: "createdAt", width: 20 },
-      { header: "Updated Date", key: "updatedAt", width: 20 },
-      { header: "Currency", key: "currency", width: 10 },
-      { header: "No of Workers", key: "no_of_workers", width: 15 },
-      { header: "Shift", key: "shift", width: 10 },
-      { header: "Working Hours", key: "working_hours", width: 15 },
-      { header: "Supplier Name", key: "supplier_name", width: 30 },
-      { header: "Supplier Type", key: "supplier_type", width: 20 },
-      { header: "Branch Name", key: "branch_name", width: 25 },
-      { header: "Contact Person Name", key: "contact_person_name", width: 25 },
+      { header: 'Amount', key: 'amount', width: 20 },
+      { header: 'Remark', key: 'remark', width: 20 },
+      { header: 'Created Date', key: 'createdAt', width: 20 },
+      { header: 'Updated Date', key: 'updatedAt', width: 20 },
+      { header: 'Currency', key: 'currency', width: 10 },
+      { header: 'No of Workers', key: 'no_of_workers', width: 15 },
+      { header: 'Shift', key: 'shift', width: 10 },
+      { header: 'Working Hours', key: 'working_hours', width: 15 },
+      { header: 'Supplier Name', key: 'supplier_name', width: 30 },
+      { header: 'Supplier Type', key: 'supplier_type', width: 20 },
+      { header: 'Branch Name', key: 'branch_name', width: 25 },
+      { header: 'Contact Person Name', key: 'contact_person_name', width: 25 },
       {
-        header: "Contact Person Email",
-        key: "contact_person_email",
+        header: 'Contact Person Email',
+        key: 'contact_person_email',
         width: 25,
       },
       {
-        header: "Contact Person Mobile Number",
-        key: "contact_person_mobile_number",
+        header: 'Contact Person Mobile Number',
+        key: 'contact_person_mobile_number',
         width: 25,
       },
       {
-        header: "Contact Person Designation",
-        key: "contact_person_designation",
+        header: 'Contact Person Designation',
+        key: 'contact_person_designation',
         width: 25,
       },
-      { header: "Branch Address", key: "address", width: 25 },
-      { header: "City", key: "city", width: 20 },
-      { header: "State", key: "state", width: 15 },
-      { header: "Country", key: "country", width: 15 },
-      { header: "Pincode", key: "pincode", width: 15 },
-      { header: "GST Number", key: "gst_number", width: 20 },
-      { header: "Web URL", key: "web_url", width: 25 },
-      { header: "Invoice Date", key: "invoice_date", width: 20 },
-      { header: "Invoice No", key: "invoice_no", width: 20 },
-      { header: "Total Item Amount", key: "total_item_amount", width: 20 },
-      { header: "Transporter Details", key: "transporter_details", width: 30 },
-      { header: "GST Percentage", key: "gst_percentage", width: 20 },
-      { header: "GST Value", key: "gst_val", width: 20 },
+      { header: 'Branch Address', key: 'address', width: 25 },
+      { header: 'City', key: 'city', width: 20 },
+      { header: 'State', key: 'state', width: 15 },
+      { header: 'Country', key: 'country', width: 15 },
+      { header: 'Pincode', key: 'pincode', width: 15 },
+      { header: 'GST Number', key: 'gst_number', width: 20 },
+      { header: 'Web URL', key: 'web_url', width: 25 },
+      { header: 'Invoice Date', key: 'invoice_date', width: 20 },
+      { header: 'Invoice No', key: 'invoice_no', width: 20 },
+      { header: 'Total Item Amount', key: 'total_item_amount', width: 20 },
+      { header: 'Transporter Details', key: 'transporter_details', width: 30 },
+      { header: 'GST Percentage', key: 'gst_percentage', width: 20 },
+      { header: 'GST Value', key: 'gst_val', width: 20 },
       {
-        header: "Invoice Value with GST",
-        key: "invoice_value_with_gst",
+        header: 'Invoice Value with GST',
+        key: 'invoice_value_with_gst',
         width: 20,
       },
-      { header: "Invoice Remark", key: "invoice_remark", width: 20 },
+      { header: 'Invoice Remark', key: 'invoice_remark', width: 20 },
     ];
 
     worksheet.columns = logColumns;
@@ -135,16 +135,16 @@ export const createLogLogsExcel = async (newData) => {
         branch_name: data.supplier_details.branch_detail.branch_name,
         contact_person_name: contactPersonData
           .map((cp) => cp.contact_person_name)
-          .join(", "),
+          .join(', '),
         contact_person_email: contactPersonData
           .map((cp) => cp.contact_person_email)
-          .join(", "),
+          .join(', '),
         contact_person_mobile_number: contactPersonData
           .map((cp) => cp.contact_person_mobile_number)
-          .join(", "),
+          .join(', '),
         contact_person_designation: contactPersonData
           .map((cp) => cp.contact_person_designation)
-          .join(", "),
+          .join(', '),
         address: data.supplier_details.branch_detail.address,
         city: data.supplier_details.branch_detail.city,
         state: data.supplier_details.branch_detail.state,
@@ -171,7 +171,7 @@ export const createLogLogsExcel = async (newData) => {
     });
 
     const filepath =
-      "public/upload/reports/inventory/log/log-inventory-report.xlsx";
+      'public/upload/reports/inventory/log/log-inventory-report.xlsx';
     await workbook.xlsx.writeFile(filepath);
 
     const timeStamp = new Date().getTime();
@@ -180,9 +180,9 @@ export const createLogLogsExcel = async (newData) => {
     await fs.rename(filepath, destinationPath);
 
     const link = `${process.env.APP_URL}${destinationPath}`;
-    console.log("link => ", link);
+    console.log('link => ', link);
     return link;
   } catch (error) {
-    throw new ApiError("Error generating  logs Excel file", 500);
+    throw new ApiError('Error generating  logs Excel file', 500);
   }
 };

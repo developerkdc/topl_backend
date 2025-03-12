@@ -1,10 +1,10 @@
-import catchAsync from "../../utils/errors/catchAsync.js";
-import { DynamicSearch } from "../../utils/dynamicSearch/dynamic.js";
-import mongoose from "mongoose";
-import { RawMaterialModel } from "../../database/schema/inventory/raw/raw.schema.js";
-import { GroupSmokeModel } from "../../database/schema/smoking/groupSmoked.js";
-import { IssuedForSmokingGroupModel } from "../../database/schema/smoking/issueForSmokingGroup.js";
-import { GroupModel } from "../../database/schema/group/groupCreated/groupCreated.schema.js";
+import catchAsync from '../../utils/errors/catchAsync.js';
+import { DynamicSearch } from '../../utils/dynamicSearch/dynamic.js';
+import mongoose from 'mongoose';
+import { RawMaterialModel } from '../../database/schema/inventory/raw/raw.schema.js';
+import { GroupSmokeModel } from '../../database/schema/smoking/groupSmoked.js';
+import { IssuedForSmokingGroupModel } from '../../database/schema/smoking/issueForSmokingGroup.js';
+import { GroupModel } from '../../database/schema/group/groupCreated/groupCreated.schema.js';
 
 export const FetchCreatedGroupSmoked = catchAsync(async (req, res, next) => {
   const {
@@ -16,15 +16,15 @@ export const FetchCreatedGroupSmoked = catchAsync(async (req, res, next) => {
   const {
     page = 1,
     limit = 10,
-    sortBy = "updated_at",
-    sort = "desc",
+    sortBy = 'updated_at',
+    sort = 'desc',
   } = req.query;
   const skip = Math.max((page - 1) * limit, 0);
 
-  const search = req.query.search || "";
+  const search = req.query.search || '';
 
   let searchQuery = {};
-  if (search != "" && req?.body?.searchFields) {
+  if (search != '' && req?.body?.searchFields) {
     const searchdata = DynamicSearch(
       search,
       boolean,
@@ -39,7 +39,7 @@ export const FetchCreatedGroupSmoked = catchAsync(async (req, res, next) => {
         data: {
           data: [],
         },
-        message: "Results Not Found",
+        message: 'Results Not Found',
       });
     }
     searchQuery = searchdata;
@@ -49,7 +49,7 @@ export const FetchCreatedGroupSmoked = catchAsync(async (req, res, next) => {
   const matchQuery = data || {};
 
   if (to && from) {
-    matchQuery["date_of_smoking"] = {
+    matchQuery['date_of_smoking'] = {
       $gte: new Date(from), // Greater than or equal to "from" date
       $lte: new Date(to), // Less than or equal to "to" date
     };
@@ -58,37 +58,37 @@ export const FetchCreatedGroupSmoked = catchAsync(async (req, res, next) => {
   const totalDocuments = await GroupSmokeModel.aggregate([
     {
       $lookup: {
-        from: "groups",
-        localField: "group_id",
-        foreignField: "_id",
-        as: "group_id",
+        from: 'groups',
+        localField: 'group_id',
+        foreignField: '_id',
+        as: 'group_id',
       },
     },
     {
       $unwind: {
-        path: "$group_id",
+        path: '$group_id',
         preserveNullAndEmptyArrays: true,
       },
     },
     {
       $lookup: {
-        from: "raw_materials",
-        localField: "item_details",
-        foreignField: "_id",
-        as: "item_details",
+        from: 'raw_materials',
+        localField: 'item_details',
+        foreignField: '_id',
+        as: 'item_details',
       },
     },
     {
       $unwind: {
-        path: "$group_id",
+        path: '$group_id',
         preserveNullAndEmptyArrays: true,
       },
     },
     {
       $lookup: {
-        from: "users",
-        localField: "created_employee_id",
-        foreignField: "_id",
+        from: 'users',
+        localField: 'created_employee_id',
+        foreignField: '_id',
         pipeline: [
           {
             $project: {
@@ -96,12 +96,12 @@ export const FetchCreatedGroupSmoked = catchAsync(async (req, res, next) => {
             },
           },
         ],
-        as: "created_employee_id",
+        as: 'created_employee_id',
       },
     },
     {
       $unwind: {
-        path: "$created_employee_id",
+        path: '$created_employee_id',
         preserveNullAndEmptyArrays: true,
       },
     },
@@ -113,11 +113,11 @@ export const FetchCreatedGroupSmoked = catchAsync(async (req, res, next) => {
     },
     {
       $sort: {
-        [sortBy]: sort == "desc" ? -1 : 1,
+        [sortBy]: sort == 'desc' ? -1 : 1,
       },
     },
     {
-      $count: "totalDocuments",
+      $count: 'totalDocuments',
     },
   ]);
   const totalPages = Math.ceil(totalDocuments?.[0]?.totalDocuments / limit);
@@ -125,37 +125,37 @@ export const FetchCreatedGroupSmoked = catchAsync(async (req, res, next) => {
   const rawVeneerData = await GroupSmokeModel.aggregate([
     {
       $lookup: {
-        from: "groups",
-        localField: "group_id",
-        foreignField: "_id",
-        as: "group_id",
+        from: 'groups',
+        localField: 'group_id',
+        foreignField: '_id',
+        as: 'group_id',
       },
     },
     {
       $unwind: {
-        path: "$group_id",
+        path: '$group_id',
         preserveNullAndEmptyArrays: true,
       },
     },
     {
       $lookup: {
-        from: "raw_materials",
-        localField: "item_details",
-        foreignField: "_id",
-        as: "item_details",
+        from: 'raw_materials',
+        localField: 'item_details',
+        foreignField: '_id',
+        as: 'item_details',
       },
     },
     {
       $unwind: {
-        path: "$group_id",
+        path: '$group_id',
         preserveNullAndEmptyArrays: true,
       },
     },
     {
       $lookup: {
-        from: "users",
-        localField: "created_employee_id",
-        foreignField: "_id",
+        from: 'users',
+        localField: 'created_employee_id',
+        foreignField: '_id',
         pipeline: [
           {
             $project: {
@@ -163,12 +163,12 @@ export const FetchCreatedGroupSmoked = catchAsync(async (req, res, next) => {
             },
           },
         ],
-        as: "created_employee_id",
+        as: 'created_employee_id',
       },
     },
     {
       $unwind: {
-        path: "$created_employee_id",
+        path: '$created_employee_id',
         preserveNullAndEmptyArrays: true,
       },
     },
@@ -180,7 +180,7 @@ export const FetchCreatedGroupSmoked = catchAsync(async (req, res, next) => {
     },
     {
       $sort: {
-        [sortBy]: sort == "desc" ? -1 : 1,
+        [sortBy]: sort == 'desc' ? -1 : 1,
       },
     },
     {
@@ -194,7 +194,7 @@ export const FetchCreatedGroupSmoked = catchAsync(async (req, res, next) => {
   return res.status(200).json({
     result: rawVeneerData,
     statusCode: 200,
-    status: "success",
+    status: 'success',
     totalPages: totalPages,
   });
 });
@@ -211,15 +211,15 @@ export const RejectGroupSmoked = catchAsync(async (req, res, next) => {
       _id: id,
     }).session(session);
     if (issueRecord) {
-      console.log(issueRecord, "issueRecord");
+      console.log(issueRecord, 'issueRecord');
       // Update the status of the corresponding ID in RawMaterialModel to "available"
       await GroupSmokeModel.updateOne(
         { _id: id },
-        { $set: { status: "rejected" } }
+        { $set: { status: 'rejected' } }
       ).session(session);
       await IssuedForSmokingGroupModel.updateOne(
         { group_id: issueRecord.group_id },
-        { $set: { status: "issued for smoking" } }
+        { $set: { status: 'issued for smoking' } }
       ).session(session);
 
       // const issuedItems = [
@@ -236,7 +236,7 @@ export const RejectGroupSmoked = catchAsync(async (req, res, next) => {
       // });
     } else {
       // If the record does not exist in IssuedForSmokingGroupModel, return error
-      throw new Error("Record not found in Issued For Smoking.");
+      throw new Error('Record not found in Issued For Smoking.');
     }
 
     // Commit the transaction
@@ -245,7 +245,7 @@ export const RejectGroupSmoked = catchAsync(async (req, res, next) => {
 
     return res.json({
       status: true,
-      message: "Rejectd successful.",
+      message: 'Rejectd successful.',
     });
   } catch (error) {
     // Rollback the transaction in case of error
@@ -254,7 +254,7 @@ export const RejectGroupSmoked = catchAsync(async (req, res, next) => {
 
     return res.status(500).json({
       status: false,
-      message: "Error occurred while cancelling smoking.",
+      message: 'Error occurred while cancelling smoking.',
       error: error.message,
     });
   }
@@ -276,7 +276,7 @@ export const PassGroupSmoked = catchAsync(async (req, res, next) => {
       // Update the status of the corresponding ID in RawMaterialModel to "available"
       await GroupSmokeModel.updateOne(
         { _id: id },
-        { $set: { status: "passed" } }
+        { $set: { status: 'passed' } }
       ).session(session);
       // const RawData = await RawMaterialModel.find({
       //   _id: {
@@ -302,7 +302,7 @@ export const PassGroupSmoked = catchAsync(async (req, res, next) => {
 
       await GroupModel.updateOne(
         { _id: issueRecord.group_id },
-        { $set: { status: "available" } }
+        { $set: { status: 'available' } }
       ).session(session);
 
       // await RawMaterialModel.updateOne(
@@ -342,7 +342,7 @@ export const PassGroupSmoked = catchAsync(async (req, res, next) => {
         },
         {
           $set: {
-            item_code: "SMOKED",
+            item_code: 'SMOKED',
           },
         },
         { session }
@@ -355,7 +355,7 @@ export const PassGroupSmoked = catchAsync(async (req, res, next) => {
       }).session(session);
     } else {
       // If the record does not exist in IssuedForSmokingGroupModel, return error
-      throw new Error("Record not found in Issued For Smoking.");
+      throw new Error('Record not found in Issued For Smoking.');
     }
 
     // Commit the transaction
@@ -364,7 +364,7 @@ export const PassGroupSmoked = catchAsync(async (req, res, next) => {
 
     return res.json({
       status: true,
-      message: "Passed successful.",
+      message: 'Passed successful.',
     });
   } catch (error) {
     // Rollback the transaction in case of error
@@ -373,7 +373,7 @@ export const PassGroupSmoked = catchAsync(async (req, res, next) => {
 
     return res.status(500).json({
       status: false,
-      message: "Error occurred while cancelling smoking.",
+      message: 'Error occurred while cancelling smoking.',
       error: error.message,
     });
   }

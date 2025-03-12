@@ -1,5 +1,11 @@
-export const DynamicSearch = (search, boolean, numbers, string, arrayField) => {
-  if (search != "") {
+export const DynamicSearch = (
+  search = '',
+  boolean = [],
+  numbers = [],
+  string = [],
+  arrayField = []
+) => {
+  if (search != '') {
     let dynamicSearchQueries = [];
     let object = [...string, ...numbers];
     let array = [...arrayField];
@@ -10,7 +16,7 @@ export const DynamicSearch = (search, boolean, numbers, string, arrayField) => {
             $regexMatch: {
               input: { $toString: `$${field}` },
               regex: new RegExp(search.toString()),
-              options: "i",
+              options: 'i',
             },
           },
         });
@@ -19,13 +25,12 @@ export const DynamicSearch = (search, boolean, numbers, string, arrayField) => {
     array?.length > 0 &&
       array?.map((field) => {
         dynamicSearchQueries.push({
-          [field]: { $regex: search, $options: "i" },
+          [field]: { $regex: search, $options: 'i' },
         });
       });
 
     const searchQuery =
       dynamicSearchQueries?.length > 0 ? { $or: dynamicSearchQueries } : [];
-
     return searchQuery;
   } else {
     return [];
