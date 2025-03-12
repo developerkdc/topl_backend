@@ -6,6 +6,7 @@ import { grouping_done_details_model, grouping_done_items_details_model } from "
 import { issues_for_status } from "../../../../database/Utils/constants/constants.js";
 import issue_for_tapping_model from "../../../../database/schema/factory/tapping/issue_for_tapping/issue_for_tapping.schema.js";
 import ApiResponse from "../../../../utils/ApiResponse.js";
+import grouping_done_history_model from "../../../../database/schema/factory/grouping/grouping_done_history.schema.js";
 
 export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(async (req, res, next) => {
     const session = await mongoose.startSession();
@@ -35,7 +36,7 @@ export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(a
         const available_details = data?.available_details;
 
         const no_of_leaves_available = available_details?.no_of_leaves - issue_no_of_leaves;
-        if(no_of_leaves_available < 0){
+        if (no_of_leaves_available < 0) {
             throw new ApiError("Not enough leaves available", StatusCodes.BAD_REQUEST)
         }
 
@@ -80,21 +81,54 @@ export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(a
             issue_status: issue_status,
             issued_from: issues_for_status.grouping,
             no_of_leaves: issue_no_of_leaves,
-            sqm:tapping_sqm,
-            amount:tapping_amount,
+            sqm: tapping_sqm,
+            amount: tapping_amount,
             created_by: userDetails?._id,
             updated_by: userDetails?._id,
         }
 
-        const insert_issue_for_tapping = await issue_for_tapping_model.create([
-            issue_for_tapping_data
-        ], { session });
+        const grouping_item_exits_in_tapping = await issue_for_tapping_model.findOne({
+            grouping_done_item_id: issue_for_tapping_data?.issue_for_tapping_data,
+            grouping_done_other_details_id: issue_for_tapping_data?.grouping_done_other_details_id,
+            group_no: issue_for_tapping_data?.group_no,
+            issue_status: issue_for_tapping_data?.issue_status
+        });
 
-        const issues_for_tapping_details = insert_issue_for_tapping?.[0];
+        let issues_for_tapping_details;
+        if (grouping_item_exits_in_tapping) {
+            const issue_for_tapping_id = grouping_item_exits_in_tapping?._id
+            const merge_issue_for_tapping = await issue_for_tapping_model.findOneAndUpdate({ _id: issue_for_tapping_id }, {
+                $set: {
+                    updated_by: userDetails?._id,
+                },
+                $inc: {
+                    "available_details.no_of_leaves": issue_for_tapping_data?.no_of_leaves,
+                    "available_details.sqm": issue_for_tapping_data?.sqm,
+                    "available_details.amount": issue_for_tapping_data?.amount,
+                }
+            }, { session, new: true, runValidators: true })
+            issues_for_tapping_details = merge_issue_for_tapping;
+        } else {
+            const insert_issue_for_tapping = await issue_for_tapping_model.create([
+                issue_for_tapping_data
+            ], { session });
+
+            issues_for_tapping_details = insert_issue_for_tapping?.[0];
+        }
+
         if (!issues_for_tapping_details) {
             throw new ApiError("Failed to create issue for tapping", StatusCodes.NOT_FOUND)
         }
 
+        //add issue for tapping items details to grouping done history
+        const insert_tapping_item_grouping_history = await grouping_done_history_model.create([
+            issue_for_tapping_data
+        ], { session });
+
+        const grouping_history_item_details = insert_tapping_item_grouping_history?.[0];
+        if (!grouping_history_item_details) {
+            throw new ApiError("Failed to add grouping history item details", StatusCodes.NOT_FOUND)
+        }
 
         // update grouping done items available details
         const update_grouping_done_item_available_quantity = await grouping_done_items_details_model.updateOne({
@@ -104,9 +138,9 @@ export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(a
                 updated_by: userDetails?._id,
             },
             $inc: {
-                "available_details.no_of_leaves": -issues_for_tapping_details?.no_of_leaves,
-                "available_details.sqm": -issues_for_tapping_details?.sqm,
-                "available_details.amount": -issues_for_tapping_details?.amount,
+                "available_details.no_of_leaves": -issue_for_tapping_data?.no_of_leaves,
+                "available_details.sqm": -issue_for_tapping_data?.sqm,
+                "available_details.amount": -issue_for_tapping_data?.amount,
             }
         }, { session });
 
@@ -149,6 +183,19 @@ export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(a
 
         await session.commitTransaction();
         return res.status(StatusCodes.OK).json(response);
+    } catch (error) {
+        await session.abortTransaction();
+        throw error;
+    } finally {
+        await session.endSession();
+    }
+});
+
+export const revert_issue_for_tapping = catchAsync(async (req, res, next) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+
     } catch (error) {
         await session.abortTransaction();
         throw error;
