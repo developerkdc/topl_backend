@@ -648,12 +648,27 @@ export const fetch_plywood_history = catchAsync(async (req, res, next) => {
 
   const aggLookupPlwoodItemDetails = {
     $lookup: {
-      from: 'plywood_inventory_items_details',
+      from: 'plywood_inventory_items_views',
       foreignField: '_id',
       localField: 'plywood_item_id',
       as: 'plywood_item_details',
+      pipeline: [
+        {
+          $project: {
+            created_user: 0
+          }
+        }
+      ]
     },
   };
+  // const aggLookupPlywoodInvoiceDetails = {
+  //   $lookup: {
+  //     from: 'plywood_inventory_invoice_details',
+  //     foreignField: '_id',
+  //     localField: 'plywood_item_details.invoice_id',
+  //     as: 'plywood_invoice_details',
+  //   },
+  // };
   const aggCreatedUserDetails = {
     $lookup: {
       from: 'users',
@@ -709,6 +724,12 @@ export const fetch_plywood_history = catchAsync(async (req, res, next) => {
       preserveNullAndEmptyArrays: true,
     },
   };
+  // const aggUnwindPlywoodInvoiceDetails = {
+  //   $unwind: {
+  //     path: '$plywood_invoice_details',
+  //     preserveNullAndEmptyArrays: true,
+  //   },
+  // };
 
   const aggLimit = {
     $limit: parseInt(limit),
@@ -724,6 +745,8 @@ export const fetch_plywood_history = catchAsync(async (req, res, next) => {
   const list_aggregate = [
     aggLookupPlwoodItemDetails,
     aggUnwindPlywoodItemDetails,
+    // aggLookupPlywoodInvoiceDetails,
+    // aggUnwindPlywoodInvoiceDetails,
     aggCreatedUserDetails,
     aggUpdatedUserDetails,
     aggUnwindCreatedUser,

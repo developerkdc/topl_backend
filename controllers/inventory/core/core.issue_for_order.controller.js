@@ -30,6 +30,7 @@ export const fetch_all_core_inward_sr_no_by_order_item_name = catchAsync(async (
         ...search_query,
         available_sqm: {
             $lte: order_item_data.sqm,
+            $gt: 0
         },
     };
 
