@@ -9,7 +9,7 @@ import {
   othergoods_item_listing_by_invoice,
   otherGoodsLogsCsv,
   inward_sr_no_dropdown,
-  item_sr_no_dropdown,
+  item_sr_no_dropdown, fetch_other_goods_history
 } from '../../../controllers/inventory/otherGoods/otherGoods.js';
 import AuthMiddleware from '../../../middlewares/verifyToken.js';
 import RolesPermissions from '../../../middlewares/permission.js';
@@ -75,4 +75,12 @@ router.get('/inward-sr-no-dropdown', AuthMiddleware, fetch_all_other_goods_inwar
 router.get('/item-sr-no-dropdown/:id/:order_id', AuthMiddleware, fetch_all_other_goods_sr_no_by_inward_sr_no)
 router.get('/list-details/:id', AuthMiddleware, fetch_other_goods_details_by_id)
 
+//history
+
+router.post(
+  '/list-history',
+  AuthMiddleware,
+  RolesPermissions('other_goods_inventory', 'view'),
+  fetch_other_goods_history
+);
 export default router;
