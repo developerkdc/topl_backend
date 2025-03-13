@@ -81,7 +81,7 @@ router.get('/inward-srno-dropdown', AuthMiddleware, inward_sr_no_dropdown);
 
 
 //order dropdowns
-router.get('/inward-sr-no-dropdown/:id', AuthMiddleware, fetch_all_face_inward_sr_no_by_order_item_name)
+router.get('/inward-sr-no-dropdown', AuthMiddleware, fetch_all_face_inward_sr_no_by_order_item_name)
 router.get('/item-sr-no-dropdown/:id/:order_id', AuthMiddleware, fetch_all_face_sr_no_by_inward_sr_no)
 router.get('/list-face-details/:id', AuthMiddleware, fetch_face_details_by_id)
 

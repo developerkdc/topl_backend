@@ -168,7 +168,7 @@ export const add_mdf_inventory = catchAsync(async (req, res, next) => {
         session,
       }
     );
-   
+
     if (add_items_details && add_items_details?.length < 0) {
       return next(new ApiError('Failed to add Items Details', 400));
     }
@@ -637,10 +637,17 @@ export const fetch_mdf_history = catchAsync(async (req, res, next) => {
 
   const aggLookupPlwoodItemDetails = {
     $lookup: {
-      from: 'mdf_inventory_items_details',
+      from: 'mdf_inventory_items_views',
       foreignField: '_id',
       localField: 'mdf_item_id',
       as: 'mdf_item_details',
+      pipeline: [
+        {
+          $project: {
+            created_user: 0
+          }
+        }
+      ]
     },
   };
   const aggCreatedUserDetails = {
