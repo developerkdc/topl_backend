@@ -43,7 +43,7 @@ export const add_peeling_done = catchAsync(async (req, res, next) => {
         throw new ApiError('Please provide wastage details', 400);
       }
     }
-    if (type === issue_for_peeling.re_flitching) {
+    if (type === issue_for_peeling.rest_roller) {
       if (!available_details) {
         throw new ApiError('Please provide available details', 400);
       }
@@ -120,7 +120,7 @@ export const add_peeling_done = catchAsync(async (req, res, next) => {
 
     if (
       issue_for_peeling_type?.type?.toLowerCase() ===
-        issue_for_peeling.wastage?.toLowerCase() &&
+      issue_for_peeling.wastage?.toLowerCase() &&
       wastage_details
     ) {
       const wastage_details_data = {
@@ -140,7 +140,7 @@ export const add_peeling_done = catchAsync(async (req, res, next) => {
 
     if (
       issue_for_peeling_type?.type?.toLowerCase() ===
-        issue_for_peeling.re_flitching?.toLowerCase() &&
+      issue_for_peeling.rest_roller?.toLowerCase() &&
       available_details
     ) {
       const re_flitching_details_data = {
@@ -207,7 +207,7 @@ export const edit_peeling_done = catchAsync(async (req, res, next) => {
         throw new ApiError('Please provide wastage details', 400);
       }
     }
-    if (type === issue_for_peeling.re_flitching) {
+    if (type === issue_for_peeling.rest_roller) {
       if (!available_details) {
         throw new ApiError('Please provide available details', 400);
       }
@@ -323,7 +323,7 @@ export const edit_peeling_done = catchAsync(async (req, res, next) => {
     //add wastage
     if (
       issue_for_peeling_type?.type?.toLowerCase() ===
-        issue_for_peeling.wastage?.toLowerCase() &&
+      issue_for_peeling.wastage?.toLowerCase() &&
       wastage_details
     ) {
       const wastage_details_data = {
@@ -345,7 +345,7 @@ export const edit_peeling_done = catchAsync(async (req, res, next) => {
     // add available
     if (
       issue_for_peeling_type?.type?.toLowerCase() ===
-        issue_for_peeling.re_flitching?.toLowerCase() &&
+      issue_for_peeling.rest_roller?.toLowerCase() &&
       available_details
     ) {
       const re_flitching_details_data = {
@@ -892,7 +892,7 @@ export const revert_all_pending_done = catchAsync(async (req, res, next) => {
       peeling_done_other_details?.issue_for_peeling_details?._id;
     const type = peeling_done_other_details?.issue_for_peeling_details?.type;
 
-    if (type === issue_for_peeling?.re_flitching) {
+    if (type === issue_for_peeling.rest_roller) {
       //delete re-flitching
       const delete_available =
         await issues_for_peeling_available_model.deleteOne(

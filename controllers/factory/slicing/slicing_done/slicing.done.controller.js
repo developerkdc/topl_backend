@@ -47,7 +47,7 @@ export const add_slicing_done = catchAsync(async (req, res, next) => {
         throw new ApiError('Please provide wastage details', 400);
       }
     }
-    if (type === issue_for_slicing.rest_roller) {
+    if (type === issue_for_slicing.balance_flitch) {
       if (!available_details) {
         throw new ApiError('Please provide available details', 400);
       }
@@ -143,7 +143,7 @@ export const add_slicing_done = catchAsync(async (req, res, next) => {
 
     if (
       issue_for_slicing_type?.type?.toLowerCase() ===
-      issue_for_slicing.rest_roller?.toLowerCase()
+      issue_for_slicing.balance_flitch?.toLowerCase()
     ) {
       const available_details_data = {
         ...available_details,
@@ -637,7 +637,7 @@ export const edit_slicing_done = catchAsync(async (req, res, next) => {
         throw new ApiError('Please provide wastage details', 400);
       }
     }
-    if (type === issue_for_slicing.rest_roller) {
+    if (type === issue_for_slicing.balance_flitch) {
       if (!available_details) {
         throw new ApiError('Please provide available details', 400);
       }
@@ -784,7 +784,7 @@ export const edit_slicing_done = catchAsync(async (req, res, next) => {
     // add available
     if (
       issue_for_slicing_type?.type?.toLowerCase() ===
-      issue_for_slicing.rest_roller?.toLowerCase() &&
+      issue_for_slicing.balance_flitch?.toLowerCase() &&
       available_details
     ) {
       const re_slicing_details_data = {
@@ -902,7 +902,7 @@ export const revert_slicing_done = catchAsync(async (req, res, next) => {
     }
     if (
       issue_for_slicing_details?.type?.toLowerCase() ===
-      issue_for_slicing?.rest_roller?.toLowerCase()
+      issue_for_slicing.balance_flitch?.toLowerCase()
     ) {
       const delete_issue_for_slicing_available_result =
         await issue_for_slicing_available_model.deleteOne(
@@ -1202,7 +1202,7 @@ export const revert_re_slicing_done = catchAsync(async (req, res, next) => {
 
     // if (
     //   issue_for_slicing_details?.type?.toLowerCase() ===
-    //   issue_for_slicing?.rest_roller?.toLowerCase()
+    //   issue_for_slicing.balance_flitch?.toLowerCase()
     // ) {
     //   const delete_issue_for_slicing_available_result =
     //     await issue_for_slicing_available_model.deleteOne(

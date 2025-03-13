@@ -137,8 +137,8 @@ const issue_for_slicing_schema = new mongoose.Schema(
       type: String,
       default: null,
       enum: {
-        values: [issue_for_slicing.rest_roller, issue_for_slicing.wastage],
-        message: `Invalid type {{VALUE}} it must be one of the ${issue_for_slicing.rest_roller} or ${issue_for_slicing.wastage} `,
+        values: [issue_for_slicing.balance_flitch, issue_for_slicing.wastage],
+        message: `Invalid type {{VALUE}} it must be one of the ${issue_for_slicing.balance_flitch} or ${issue_for_slicing.wastage} `,
       },
     },
     is_slicing_completed: {

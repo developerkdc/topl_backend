@@ -27,7 +27,7 @@ export const fetch_all_plywood_no_item_name = catchAsync(async (req, res) => {
 
   const match_query = {
     ...search_query,
-    sheets: {
+    available_sheets: {
       $lte: order_item_data.no_of_sheet,
     },
   };
