@@ -30,6 +30,7 @@ export const fetch_all_face_inward_sr_no_by_order_item_name = catchAsync(async (
         ...search_query,
         available_sheets: {
             $lte: order_item_data.no_of_sheet,
+            $gt: 0
         },
     };
 

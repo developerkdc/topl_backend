@@ -25,6 +25,8 @@ import { mdf_inventory_invoice_details, mdf_inventory_items_details } from '../.
 import mdf_history_model from '../../../database/schema/inventory/mdf/mdf.history.schema.js';
 import { core_inventory_invoice_details, core_inventory_items_details } from '../../../database/schema/inventory/core/core.schema.js';
 import core_history_model from '../../../database/schema/inventory/core/core.history.schema.js';
+import { othergoods_inventory_invoice_details, othergoods_inventory_items_details } from '../../../database/schema/inventory/otherGoods/otherGoodsNew.schema.js';
+import other_goods_history_model from '../../../database/schema/inventory/otherGoods/otherGoods.history.schema.js';
 
 class RevertOrderItem {
   constructor(id, userDetails, session) {
@@ -520,6 +522,80 @@ class RevertOrderItem {
     ) {
       throw new ApiError(
         'Failed to delete core history',
+        StatusCodes.BAD_REQUEST
+      );
+    }
+  }
+  async OTHER_GOODS() {
+    //update other goods item available quantity
+    const update_other_goods_item =
+      await othergoods_inventory_items_details.findOneAndUpdate(
+        { _id: this.issued_order_data?.item_details?._id },
+        {
+          $inc: {
+            available_quantity:
+              this.issued_order_data?.item_details?.issued_quantity || 0,
+            available_amount:
+              this.issued_order_data?.item_details?.issued_amount || 0,
+          },
+        },
+        { session: this.session }
+      );
+
+    if (!update_other_goods_item) {
+      throw new ApiError('Other Goods item not found', StatusCodes.BAD_REQUEST);
+    }
+
+    //check if invoice is editable
+    const is_invoice_editable = await othergoods_inventory_items_details?.find({
+      _id: { $ne: update_other_goods_item?._id },
+      invoice_id: update_other_goods_item?.invoice_id,
+      $expr: { $ne: ["$available_quantity", "$total_quantity"] }
+    });
+
+    //if invoice is editable then update then update the editable status
+    if (is_invoice_editable && is_invoice_editable?.length === 0) {
+      const update_other_goods_item_invoice_editable_status =
+        await othergoods_inventory_invoice_details?.updateOne(
+          { _id: update_other_goods_item?.invoice_id },
+          {
+            $set: {
+              isEditable: true,
+              updated_by: this.userDetails?._id,
+            },
+          },
+          { session: this.session }
+        );
+      if (update_other_goods_item_invoice_editable_status?.matchedCount === 0) {
+        throw new ApiError(
+          'Other Goods item Invoice not found',
+          StatusCodes.BAD_REQUEST
+        );
+      }
+      if (
+        !update_other_goods_item_invoice_editable_status?.acknowledged ||
+        update_other_goods_item_invoice_editable_status?.modifiedCount === 0
+      ) {
+        throw new ApiError(
+          'Failed to update Other Goods Item Invoice Status',
+          StatusCodes.BAD_REQUEST
+        );
+      }
+    }
+
+    //delete the other goods history document
+    const delete_other_goods_history_document_result =
+      await other_goods_history_model.deleteOne(
+        { issued_for_order_id: this.issued_order_data?._id },
+        { session: this.session }
+      );
+
+    if (
+      !delete_other_goods_history_document_result?.acknowledged ||
+      delete_other_goods_history_document_result?.deletedCount === 0
+    ) {
+      throw new ApiError(
+        'Failed to delete other goods history',
         StatusCodes.BAD_REQUEST
       );
     }
