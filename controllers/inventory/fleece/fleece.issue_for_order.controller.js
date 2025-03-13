@@ -4,11 +4,10 @@ import ApiError from '../../../utils/errors/apiError.js';
 import catchAsync from '../../../utils/errors/catchAsync.js';
 import { RawOrderItemDetailsModel } from '../../../database/schema/order/raw_order/raw_order_item_details.schema.js';
 import mongoose, { isValidObjectId } from 'mongoose';
-import { core_inventory_items_details, core_inventory_items_view_modal } from '../../../database/schema/inventory/core/core.schema.js';
+import { fleece_inventory_items_modal, fleece_inventory_items_view_modal } from '../../../database/schema/inventory/fleece/fleece.schema.js';
 
 //fetching all pallet no dropdown
-export const fetch_all_core_inward_sr_no_by_order_item_name = catchAsync(async (req, res) => {
-
+export const fetch_all_fleece_inward_sr_no_by_order_item_name = catchAsync(async (req, res) => {
     const { id } = req.params;
     if (!isValidObjectId(id)) {
         throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
@@ -28,8 +27,8 @@ export const fetch_all_core_inward_sr_no_by_order_item_name = catchAsync(async (
 
     const match_query = {
         ...search_query,
-        available_sqm: {
-            $lte: order_item_data.sqm,
+        number_of_sheets: {
+            $lte: order_item_data.no_of_sheet,
         },
     };
 
@@ -37,13 +36,13 @@ export const fetch_all_core_inward_sr_no_by_order_item_name = catchAsync(async (
         { $match: { ...match_query } },
         {
             $project: {
-                inward_sr_no: "$core_invoice_details.inward_sr_no",
-                inward_sr_no_id: "$core_invoice_details._id"
+                inward_sr_no: "$fleece_invoice_details.inward_sr_no",
+                inward_sr_no_id: "$fleece_invoice_details._id"
             },
         },
     ];
-    
-    const result = await core_inventory_items_view_modal
+
+    const result = await fleece_inventory_items_view_modal
         ?.aggregate(pipeline)
 
     const response = new ApiResponse(
@@ -54,7 +53,9 @@ export const fetch_all_core_inward_sr_no_by_order_item_name = catchAsync(async (
     return res.status(StatusCodes.OK).json(response);
 });
 
-export const fetch_all_core_sr_no_by_inward_sr_no = catchAsync(async (req, res) => {
+
+//====================
+export const fetch_all_fleece_sr_no_by_inward_sr_no = catchAsync(async (req, res) => {
     const { id } = req.params;
     if (!isValidObjectId(id)) {
         throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
@@ -73,7 +74,7 @@ export const fetch_all_core_sr_no_by_inward_sr_no = catchAsync(async (req, res) 
         },
     ];
 
-    const result = await core_inventory_items_details.aggregate(pipeline).collation({ caseLevel: true, locale: 'en' });
+    const result = await fleece_inventory_items_modal.aggregate(pipeline).collation({ caseLevel: true, locale: 'en' });
 
     const response = new ApiResponse(
         StatusCodes.OK,
@@ -83,17 +84,20 @@ export const fetch_all_core_sr_no_by_inward_sr_no = catchAsync(async (req, res) 
     return res.status(StatusCodes.OK).json(response);
 });
 
-export const fetch_core_details_by_id = catchAsync(async (req, res) => {
+
+// fetching fleece details by pallet_no
+export const fetch_fleece_details_by_id = catchAsync(async (req, res) => {
+    
     const { id } = req.params;
 
     if (!id || !isValidObjectId(id)) {
         throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
     }
 
-    const result = await core_inventory_items_details.findById(id);
+    const result = await fleece_inventory_items_modal.findById(id);
     const response = new ApiResponse(
         StatusCodes.OK,
-        'core Item Details fetched successfully',
+        'Fleece Item Details fetched successfully',
         result
     );
     return res.status(StatusCodes.OK).json(response);
