@@ -27,7 +27,7 @@ export const fetch_all_core_inward_sr_no_by_order_item_name = catchAsync(async (
 
     const match_query = {
         ...search_query,
-        number_of_sheets: {
+        available_sheets: {
             $lte: order_item_data.no_of_sheet,
         },
     };
@@ -40,7 +40,7 @@ export const fetch_all_core_inward_sr_no_by_order_item_name = catchAsync(async (
             },
         },
     ];
-    
+
     const result = await core_inventory_items_view_modal
         ?.aggregate(pipeline)
         .collation({ caseLevel: true, locale: 'en' });
