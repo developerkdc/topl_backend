@@ -28,7 +28,7 @@ export const inward_type = {
 };
 
 export const issue_for_peeling = {
-  re_flitching: 're_flitching',
+  rest_roller: 'rest_roller',
   wastage: 'wastage',
 };
 
@@ -38,7 +38,7 @@ export const peeling_done = {
   core: 'core',
 };
 export const issue_for_slicing = {
-  rest_roller: 'rest_roller',
+  balance_flitch: 'balance_flitch',
   wastage: 'wastage',
 };
 

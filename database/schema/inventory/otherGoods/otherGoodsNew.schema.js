@@ -109,6 +109,18 @@ export const item_details_schema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    available_quantity: {
+      type: Number,
+      default: function () {
+        return this.total_quantity
+      }
+    },
+    available_amount: {
+      type: Number,
+      default: function () {
+        return this.amount
+      }
+    },
     remark: {
       type: String,
       default: null,
@@ -284,6 +296,10 @@ export const othergoods_invoice_schema = new mongoose.Schema(
           default: null,
         },
       },
+    },
+    isEditable: {
+      type: Boolean,
+      default: true
     },
     approval_status: approval_status,
     invoice_Details: invoice_details,

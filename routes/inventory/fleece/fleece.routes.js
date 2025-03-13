@@ -16,6 +16,7 @@ import {
 import AuthMiddleware from '../../../middlewares/verifyToken.js';
 import RolesPermissions from '../../../middlewares/permission.js';
 import { verifyApproval } from '../../../middlewares/approval.middleware.js';
+import { fetch_all_fleece_inward_sr_no_by_order_item_name, fetch_all_fleece_sr_no_by_inward_sr_no, fetch_fleece_details_by_id } from '../../../controllers/inventory/fleece/fleece.issue_for_order.controller.js';
 
 const fleece_router = Router();
 
@@ -77,5 +78,11 @@ fleece_router.get(
   AuthMiddleware,
   inward_sr_no_dropdown
 );
+
+
+//
+fleece_router.get('/inward-sr-no-dropdown/:id', AuthMiddleware, fetch_all_fleece_inward_sr_no_by_order_item_name)
+fleece_router.get('/item-sr-no-dropdown/:id', AuthMiddleware, fetch_all_fleece_sr_no_by_inward_sr_no)
+fleece_router.get('/list-fleece-details/:id', AuthMiddleware, fetch_fleece_details_by_id)
 
 export default fleece_router;

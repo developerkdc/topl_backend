@@ -41,7 +41,7 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
 
     const face_item_data = await face_inventory_items_details
       .findById(face_item_details?._id)
-      .lean();
+    // .lean();
     if (!face_item_data) {
       throw new ApiError('Face Item Data not found.');
     }
@@ -107,7 +107,8 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
         'Failed to Add order details',
         StatusCodes?.BAD_REQUEST
       );
-    }
+    };
+
     //available sheets
     const available_sheets =
       face_item_data?.available_sheets - face_item_details?.issued_sheets;
