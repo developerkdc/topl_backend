@@ -9,30 +9,30 @@ import { face_inventory_invoice_details, face_inventory_items_details } from '..
 
 //fetching all pallet no dropdown
 export const fetch_all_face_inward_sr_no_by_order_item_name = catchAsync(async (req, res) => {
-    const { id } = req.params;
-    if (!isValidObjectId(id)) {
-        throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
-    }
+    // const { id } = req.params;
+    // if (!isValidObjectId(id)) {
+    //     throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
+    // }
 
-    const order_item_data = await RawOrderItemDetailsModel.findById(id);
+    // const order_item_data = await RawOrderItemDetailsModel.findById(id);
 
-    if (!order_item_data) {
-        throw new ApiError('Order Item Data not found', StatusCodes.NOT_FOUND);
-    }
+    // if (!order_item_data) {
+    //     throw new ApiError('Order Item Data not found', StatusCodes.NOT_FOUND);
+    // }
 
-    const search_query = {};
+    // const search_query = {};
 
-    if (order_item_data?.item_name) {
-        search_query['item_name'] = order_item_data?.item_name;
-    }
+    // if (order_item_data?.item_name) {
+    //     search_query['item_name'] = order_item_data?.item_name;
+    // }
 
-    const match_query = {
-        ...search_query,
-        available_sheets: {
-            $lte: order_item_data.no_of_sheet,
-            $gt: 0
-        },
-    };
+    // const match_query = {
+    //     ...search_query,
+    //     available_sheets: {
+    //         $lte: order_item_data.no_of_sheet,
+    //         $gt: 0
+    //     },
+    // };
 
     const pipeline = [
         // { $match: { ...match_query } },
@@ -99,7 +99,7 @@ export const fetch_all_face_sr_no_by_inward_sr_no = catchAsync(async (req, res) 
     );
     return res.status(StatusCodes.OK).json(response);
 });
-// fetching plywood details by pallet_no
+// fetching face details by id
 export const fetch_face_details_by_id = catchAsync(async (req, res) => {
     const { id } = req.params;
 
