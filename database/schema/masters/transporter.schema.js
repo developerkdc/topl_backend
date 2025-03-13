@@ -31,6 +31,10 @@ const transporterSchema = new mongoose.Schema(
       trim: true,
       default: null,
     },
+    area_of_operation: {
+      type: [String],
+      default: [],
+    },
     type: {
       type: String,
       enum: {

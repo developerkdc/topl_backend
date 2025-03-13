@@ -9,10 +9,10 @@ import transporterModel, {
 } from '../../../database/schema/masters/transporter.schema.js';
 
 export const addTransporter = catchAsync(async (req, res, next) => {
-  const { name, branch, transport_id, type } = req.body;
+  const { name, branch, transport_id, type,area_of_operation } = req.body;
   const authUserDetail = req.userDetails;
 
-  const requiredField = ['name', 'type'];
+  const requiredField = ['name', 'type',"area_of_operation"];
 
   for (let field of requiredField) {
     if (!req.body[field]) {
@@ -36,6 +36,7 @@ export const addTransporter = catchAsync(async (req, res, next) => {
     name: name,
     branch: branch,
     transport_id: transport_id,
+    area_of_operation:area_of_operation,
     type: type,
     created_by: authUserDetail?._id,
     updated_by: authUserDetail?._id,
@@ -59,7 +60,7 @@ export const addTransporter = catchAsync(async (req, res, next) => {
 
 export const updateTransporter = catchAsync(async (req, res, next) => {
   const { id } = req.params;
-  const { name, branch, transport_id, type, status } = req.body;
+  const { name, branch, transport_id, type,area_of_operation, status } = req.body;
   const authUserDetail = req.userDetails;
 
   if (!id || !mongoose.isValidObjectId(id)) {
@@ -70,6 +71,7 @@ export const updateTransporter = catchAsync(async (req, res, next) => {
     name: name,
     branch: branch,
     transport_id: transport_id,
+    area_of_operation:area_of_operation,
     type: type,
     status: status,
     updated_by: authUserDetail?._id,
@@ -102,6 +104,7 @@ export const updateTransporter = catchAsync(async (req, res, next) => {
 });
 
 export const fetchTransporterList = catchAsync(async (req, res, next) => {
+
   const {
     page = 1,
     limit = 10,
@@ -117,7 +120,7 @@ export const fetchTransporterList = catchAsync(async (req, res, next) => {
     arrayField = [],
   } = req?.body?.searchFields || {};
 
-  const filter = req.body?.filter;
+  const filter = req.body?.filters;
 
   let search_query = {};
 
