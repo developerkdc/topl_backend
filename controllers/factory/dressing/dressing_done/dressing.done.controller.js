@@ -479,12 +479,14 @@ export const fetch_all_dressing_done_items = catchAsync(async (req, res) => {
   };
 
   const aggCountTotalDocs = [
+    aggSortBeforeGroup,
     aggLookupOtherDetails,
+    aggUnwindOtherDetails,
     aggCreatedUserDetails,
     aggUpdatedUserDetails,
-    aggUnwindOtherDetails,
     aggUnwindCreatedUserDetails,
     aggUnwindUpdatedUserDetails,
+    aggGroupBy,
     aggMatch,
     aggCount,
   ];
@@ -1131,6 +1133,10 @@ export const fetch_dressing_done_history = catchAsync(
     };
 
     const count_total_docs = [
+      aggLookupDressingDoneOtherDetails,
+      aggLookupBundles,
+      aggAddGlobalFields,
+      aggUnwindDressingDoneOtherDetails,
       aggCreatedUserDetails,
       aggUpdatedUserDetails,
       aggUnwindCreatedUser,

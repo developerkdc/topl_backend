@@ -65,10 +65,10 @@ const OrderSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-    trade_discount_percentage: {
-      type: Number,
-      default: 0,
-    },
+    // trade_discount_percentage: {
+    //   type: Number,
+    //   default: 0,
+    // },
     branding_type: {
       type: String,
       enum: [branding_type.with_branding, branding_type.without_branding],
@@ -121,12 +121,12 @@ const OrderSchema = new mongoose.Schema(
       default: null,
     },
 
-    is_close: {
-      type: String,
-      uppercase: true,
-      trim: true,
-      default: null,
-    },
+    // is_close: {
+    //   type: String,
+    //   uppercase: true,
+    //   trim: true,
+    //   default: null,
+    // },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'users',

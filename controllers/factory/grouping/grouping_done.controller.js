@@ -10,6 +10,7 @@ import ApiResponse from '../../../utils/ApiResponse.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
 import { StatusCodes } from '../../../utils/constants.js';
+import grouping_done_history_model from '../../../database/schema/factory/grouping/grouping_done_history.schema.js';
 
 export const add_grouping_done = catchAsync(async (req, res, next) => {
   const session = await mongoose.startSession();
@@ -269,7 +270,7 @@ export const fetch_all_grouping_done_items = catchAsync(
     const match_common_query = {
       $match: {
         is_damaged: false,
-        issue_status: null,
+        "available_details.no_of_leaves": { $gt: 0 }
       },
     };
 
@@ -614,6 +615,167 @@ export const group_no_dropdown = catchAsync(async (req, res, next) => {
   return res.status(StatusCodes.OK).json(response);
 });
 
+export const fetch_all_grouping_history_details = catchAsync(async (req, res, next) => {
+  const {
+    page = 1,
+    limit = 10,
+    sortBy = 'updatedAt',
+    sort = 'desc',
+    search = '',
+  } = req.query;
+  const {
+    string,
+    boolean,
+    numbers,
+    arrayField = [],
+  } = req?.body?.searchFields || {};
+  const filter = req.body?.filter;
+
+  let search_query = {};
+  if (search != '' && req?.body?.searchFields) {
+    const search_data = DynamicSearch(
+      search,
+      boolean,
+      numbers,
+      string,
+      arrayField
+    );
+    if (search_data?.length == 0) {
+      return res.status(404).json({
+        statusCode: 404,
+        status: false,
+        data: {
+          data: [],
+        },
+        message: 'Results Not Found',
+      });
+    }
+    search_query = search_data;
+  }
+
+  const filterData = dynamic_filter(filter);
+
+  const match_query = {
+    ...filterData,
+    ...search_query,
+  };
+
+  // Aggregation stage
+
+  const aggCreatedByLookup = {
+    $lookup: {
+      from: 'users',
+      localField: 'created_by',
+      foreignField: '_id',
+      pipeline: [
+        {
+          $project: {
+            user_name: 1,
+            user_type: 1,
+            dept_name: 1,
+            first_name: 1,
+            last_name: 1,
+            email_id: 1,
+            mobile_no: 1,
+          },
+        },
+      ],
+      as: 'created_by',
+    },
+  };
+  const aggUpdatedByLookup = {
+    $lookup: {
+      from: 'users',
+      localField: 'updated_by',
+      foreignField: '_id',
+      pipeline: [
+        {
+          $project: {
+            user_name: 1,
+            user_type: 1,
+            dept_name: 1,
+            first_name: 1,
+            last_name: 1,
+            email_id: 1,
+            mobile_no: 1,
+          },
+        },
+      ],
+      as: 'updated_by',
+    },
+  };
+  const aggCreatedByUnwind = {
+    $unwind: {
+      path: '$created_by',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
+  const aggUpdatedByUnwind = {
+    $unwind: {
+      path: '$updated_by',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
+  const aggMatch = {
+    $match: {
+      ...match_query,
+    },
+  };
+  const aggSort = {
+    $sort: {
+      [sortBy]: sort === 'desc' ? -1 : 1,
+    },
+  };
+  const aggSkip = {
+    $skip: (parseInt(page) - 1) * parseInt(limit),
+  };
+  const aggLimit = {
+    $limit: parseInt(limit),
+  };
+
+  const listAggregate = [
+    aggCreatedByLookup,
+    aggCreatedByUnwind,
+    aggUpdatedByLookup,
+    aggUpdatedByUnwind,
+    aggMatch,
+    aggSort,
+    aggSkip,
+    aggLimit,
+  ]; // aggregation pipiline
+
+  const grouping_history =
+    await grouping_done_history_model.aggregate(listAggregate);
+
+  const aggCount = {
+    $count: 'totalCount',
+  }; // count aggregation stage
+
+  const totalAggregate = [
+    aggCreatedByLookup,
+    aggCreatedByUnwind,
+    aggUpdatedByLookup,
+    aggUpdatedByUnwind,
+    aggMatch,
+    aggCount,
+  ]; // total aggregation pipiline
+
+  const totalDocument =
+    await grouping_done_history_model.aggregate(totalAggregate);
+
+  const totalPages = Math.ceil((totalDocument?.[0]?.totalCount || 0) / limit);
+
+  const response = new ApiResponse(
+    200,
+    'Grouping History Data Fetched Successfully',
+    {
+      data: grouping_history,
+      totalPages: totalPages,
+    }
+  );
+  return res.status(200).json(response);
+});
+
 //Damaged
 export const fetch_all_damaged_grouping_done_items = catchAsync(
   async (req, res, next) => {
@@ -660,7 +822,6 @@ export const fetch_all_damaged_grouping_done_items = catchAsync(
     const match_common_query = {
       $match: {
         is_damaged: true,
-        issue_status: null,
       },
     };
     const match_query = {
@@ -858,7 +1019,7 @@ export const add_grouping_done_damaged = catchAsync(async (req, res, next) => {
       'Add to damaged successfully',
       update_grouping_done_damaged
     );
-    
+
     await session.commitTransaction();
     return res.status(StatusCodes.OK).json(response);
   } catch (error) {
@@ -919,7 +1080,7 @@ export const revert_grouping_done_damaged = catchAsync(async (req, res, next) =>
     const isGroupingDoneOtherDetailsEditable = await grouping_done_items_details_model.find({
       _id: { $ne: grouping_done_item_id },
       grouping_done_other_details_id: grouping_done_other_details_id,
-      issue_status: { $ne: null }
+      $expr: { $ne: ["$no_of_leaves", "$available_details.no_of_leaves"] }
     }).lean();
 
     if (isGroupingDoneOtherDetailsEditable && isGroupingDoneOtherDetailsEditable?.length <= 0) {
@@ -948,7 +1109,7 @@ export const revert_grouping_done_damaged = catchAsync(async (req, res, next) =>
       'Revert Damaged successfully',
       update_grouping_done_damaged
     );
-    
+
     await session.commitTransaction();
     return res.status(StatusCodes.OK).json(response);
   } catch (error) {
@@ -989,9 +1150,9 @@ export const recreate_grouping_done_items = catchAsync(
       if (!grouping_done_other_details) {
         throw new ApiError('Not data found', 400);
       }
-      if (grouping_done_other_details.issue_status) {
+      if (grouping_done_other_details?.available_details?.no_of_leaves <= 0) {
         throw new ApiError(
-          `Item already issues for ${grouping_done_other_details.issue_status}`,
+          `Some of Item leaves already issued`,
           400
         );
       }
