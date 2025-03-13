@@ -28,6 +28,7 @@ export const fetch_all_mdf_pallet_no_item_name = catchAsync(
       ...search_query,
       available_sheets: {
         $lte: order_item_data?.no_of_sheet,
+        $gt: 0
       },
     };
 

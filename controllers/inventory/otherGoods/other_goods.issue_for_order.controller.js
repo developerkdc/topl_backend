@@ -9,10 +9,10 @@ import { othergoods_inventory_invoice_details, othergoods_inventory_items_detail
 
 //fetching all inward sr no dropdown
 export const fetch_all_other_goods_inward_sr_no_by_order_item_name = catchAsync(async (req, res) => {
-    const { id } = req.params;
-    if (!isValidObjectId(id)) {
-        throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
-    }
+    // const { id } = req.params;
+    // if (!isValidObjectId(id)) {
+    //     throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
+    // }
 
     // const order_item_data = await RawOrderItemDetailsModel.findById(id);
 
@@ -76,6 +76,7 @@ export const fetch_all_other_goods_sr_no_by_inward_sr_no = catchAsync(async (req
         ...search_query,
         available_quantity: {
             $lte: order_item_data.quantity,
+            $gt: 0
         },
     };
 

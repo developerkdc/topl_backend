@@ -105,7 +105,7 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
         StatusCodes?.BAD_REQUEST
       );
     }
-    //available quantiti
+    //available quantitiy
     const available_quantity =
       other_goods_item_data?.available_quantity - other_goods_item_details?.issued_quantity;
 
