@@ -1,11 +1,11 @@
 import mongoose from "mongoose";
-import { issues_for_status } from "../../../../Utils/constants/constants.js";
+import { issues_for_status } from "../../../Utils/constants/constants.js";
 
 const validateOrderField = function () {
     return this.issue_status === issues_for_status?.order ? true : false;
 }
 
-const issue_for_tapping_schema = new mongoose.Schema({
+const grouping_done_history_schema = new mongoose.Schema({
     order_id: {
         type: mongoose.Schema.Types.ObjectId,
         default: null,
@@ -172,10 +172,6 @@ const issue_for_tapping_schema = new mongoose.Schema({
         trim: true,
         required: [true, 'Grade Name is required'],
     },
-    is_tapping_done:{
-        type:Boolean,
-        default:false
-    },
     issue_status: {
         type: String,
         enum: {
@@ -185,16 +181,6 @@ const issue_for_tapping_schema = new mongoose.Schema({
                 issues_for_status.sample,
             ],
             message: `Invalid type {{VALUE}} it must be one of the ${(issues_for_status.order, issues_for_status.stock, issues_for_status.sample)}`,
-        },
-        default: null,
-    },
-    issued_from: {
-        type: String,
-        enum: {
-            values: [
-                issues_for_status.grouping,
-            ],
-            message: `Invalid type {{VALUE}} it must be one of the ${(issues_for_status.grouping)}`,
         },
         default: null,
     },
@@ -233,5 +219,5 @@ const issue_for_tapping_schema = new mongoose.Schema({
     timestamps: true,
 });
 
-const issue_for_tapping_model = mongoose.model("issue_for_tappings", issue_for_tapping_schema, "issue_for_tappings");
-export default issue_for_tapping_model;
+const grouping_done_history_model = mongoose.model("grouping_done_history", grouping_done_history_schema, "grouping_done_history");
+export default grouping_done_history_model;
