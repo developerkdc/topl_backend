@@ -172,6 +172,10 @@ const issue_for_tapping_schema = new mongoose.Schema({
         trim: true,
         required: [true, 'Grade Name is required'],
     },
+    is_tapping_done:{
+        type:Boolean,
+        default:false
+    },
     issue_status: {
         type: String,
         enum: {
