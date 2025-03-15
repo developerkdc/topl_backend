@@ -174,7 +174,7 @@ export const create_dressing = catchAsync(async (req, res, next) => {
       }, {});
       console.log(total_no_of_leaves_by_log_no_code);
       for (let item of item_details) {
-        const slicing_done_data = slicingDoneMap[item?.log_no_code];
+        const peeling_done_data = slicingDoneMap[item?.log_no_code];
         if (
           total_no_of_leaves_by_log_no_code[item?.log_no_code] !==
           slicing_done_data?.no_of_leaves
@@ -1464,14 +1464,17 @@ export const create_dressing_items_from_dressing_report = catchAsync(
 
       //map for storing each log_no_code amount
       const log_no_code_amount_map = {};
-      //calculating amount of each log_n0_code
+      //calculating amount of each log_no_code
       for (let item of issue_for_dressing_details) {
+        const totalAmount =
+          item?.slicing_done_other_details?.final_amount ??
+          item?.peeling_done_other_details?.final_amount ??
+          0;
         log_no_code_amount_map[item?.log_no_code] = Number(
           (
             log_no_code_factor_map[item?.log_no_code] *
-            item?.slicing_done_other_details?.total_amount
-          ) //change to final amount
-            ?.toFixed(2)
+            totalAmount
+          )?.toFixed(2)
         );
       }
       const slicing_done_other_details_id_set = new Set();
@@ -1486,10 +1489,7 @@ export const create_dressing_items_from_dressing_report = catchAsync(
             item?.peeling_done_other_details_id?.toString()
           );
       }
-      console.log(
-        'slicing_done_other_details_id_set => ',
-        slicing_done_other_details_id_set
-      );
+
       for (let item of slicing_done_other_details_id_set) {
         const [add_other_details] =
           await dressing_done_other_details_model.create(
@@ -1511,7 +1511,7 @@ export const create_dressing_items_from_dressing_report = catchAsync(
       }
 
       for (let item of peeling_done_other_details_id_set) {
-        const add_other_details =
+        const [add_other_details] =
           await dressing_done_other_details_model.create(
             [
               {
@@ -1528,255 +1528,9 @@ export const create_dressing_items_from_dressing_report = catchAsync(
 
             { session }
           );
-        if (add_other_details) {
-          await add_peeling_done_items(add_other_details);
-        }
+        add_other_details && (await add_peeling_done_items(add_other_details));
       }
-      // async function add_slicing_done_items(other_details) {
-      //   const slicing_done_map = issue_for_dressing_details?.reduce(
-      //     (acc, item) => {
-      //       acc[item?.log_no_code] = item;
-      //       return acc;
-      //     },
-      //     {}
-      //   );
-      //   const { slicing_done_other_details_id } = other_details;
 
-      //   const slicing_done_items = await slicing_done_items_model.find({
-      //     slicing_done_other_details_id: slicing_done_other_details_id,
-      //   });
-      //   const slicing_done_items_log_no_code_set = new Set(
-      //     slicing_done_items?.map((item) => item?.log_no_code)
-      //   );
-
-      //   const valid_dressing_items = [],
-      //     valid_dressing_items_id = [];
-      //   for (let item of dressing_item_details) {
-      //     let is_miss_match = false;
-      //     const slicing_done_data = slicing_done_map[item?.log_no_code];
-      //     if (
-      //       !slicing_done_data ||
-      //       !slicing_done_items_log_no_code_set?.has(item?.log_no_code)
-      //     ) continue;
-
-      //     if (
-      //       total_no_of_leaves_by_log_no_code[item?.log_no_code] !==
-      //       slicing_done_data?.no_of_leaves
-      //     ) {
-      //       is_miss_match = true;
-      //       const update_proccess_status =
-      //         await dressing_miss_match_data_model?.updateOne(
-      //           { _id: item?._id },
-      //           {
-      //             $set: {
-      //               process_status:
-      //                 dressing_error_types?.no_of_leaves_missmatch,
-      //               updated_by: userDetails?._id,
-      //             },
-      //           }
-      //           // { session }
-      //         );
-
-      //       if (update_proccess_status?.matchedCount === 0) {
-      //         throw new ApiError(
-      //           'Dressing Missmacth document not found ',
-      //           StatusCodes?.NOT_FOUND
-      //         );
-      //       }
-
-      //       if (
-      //         !update_proccess_status?.acknowledged ||
-      //         update_proccess_status?.modifiedCount === 0
-      //       ) {
-      //         throw new ApiError(
-      //           'Failed to update proccess status for dressing missmatch data',
-      //           StatusCodes?.BAD_REQUEST
-      //         );
-      //       }
-      //     }
-      //     if (item?.thickness !== slicing_done_data?.thickness) {
-      //       is_miss_match = true;
-      //       const update_proccess_status =
-      //         await dressing_miss_match_data_model?.updateOne(
-      //           { _id: item?._id },
-      //           {
-      //             $set: {
-      //               process_status: dressing_error_types?.thickness_missmatch,
-      //               updated_by: userDetails?._id,
-      //             },
-      //           }
-      //           // { session }
-      //         );
-      //       if (update_proccess_status?.matchedCount === 0) {
-      //         throw new ApiError(
-      //           'Dressing Missmacth document not found ',
-      //           StatusCodes?.NOT_FOUND
-      //         );
-      //       }
-
-      //       if (
-      //         !update_proccess_status?.acknowledged ||
-      //         update_proccess_status?.modifiedCount === 0
-      //       ) {
-      //         throw new ApiError(
-      //           'Failed to update proccess status for dressing missmatch data',
-      //           StatusCodes?.BAD_REQUEST
-      //         );
-      //       }
-      //     }
-
-      //     if (!is_miss_match) {
-      //       valid_dressing_items_id?.push(item?._id);
-      //       const { _id, __v, createdAt, updatedAt, ...updated_item } = item;
-
-      //       valid_dressing_items?.push({
-      //         ...updated_item,
-      //         amount: Number(
-      //           (
-      //             (item?.sqm / total_sqm_by_log_no_code[item?.log_no_code]) *
-      //             log_no_code_amount_map[item?.log_no_code]
-      //           )?.toFixed(2)
-      //         ),
-      //         grade_id: slicing_done_data?.grade_id,
-      //         grade_name: slicing_done_data?.grade_name,
-      //         series_id: slicing_done_data?.series_id,
-      //         series_name: slicing_done_data?.series_name,
-      //         pattern_id: slicing_done_data?.pattern_id,
-      //         pattern_name: slicing_done_data?.pattern_name,
-      //         character_id: slicing_done_data?.character_id,
-      //         character_name: slicing_done_data?.character_name,
-      //         item_name: slicing_done_data?.item_name,
-      //         item_name_id: slicing_done_data?.item_name_id,
-      //         item_sub_category_id:
-      //           slicing_done_data?.item_sub_category_name_id,
-      //         item_sub_category_name: slicing_done_data?.item_sub_category_name,
-      //         dressing_done_other_details_id: other_details?._id,
-      //         created_by: userDetails?._id,
-      //         updated_by: userDetails?._id,
-      //       });
-      //     }
-      //   }
-
-      //   // if (dressing_missmatch_updates?.length > 0) {
-      //   //   const update_result = await dressing_miss_match_data_model?.bulkWrite(
-      //   //     dressing_missmatch_updates,
-      //   //     // { session }
-      //   //   );
-      //   //   console.log('update_result : ', update_result);
-      //   //   if (update_result?.modifiedCount === 0) {
-      //   //     throw new ApiError(
-      //   //       'Failed to update dressing missmatch data process status.',
-      //   //       StatusCodes?.BAD_REQUEST
-      //   //     );
-      //   //   }
-      //   // }
-
-      //   // if (valid_dressing_items?.length === 0) {
-      //   //   throw new ApiError('No Valid items found to create dressing');
-      //   // }
-
-      //   // if (insert_dressing_done_items?.length === 0) {
-      //   //   throw new ApiError(
-      //   //     'Failed to add items in dressing',
-      //   //     StatusCodes.BAD_REQUEST
-      //   //   );
-      //   // }
-      //   if (valid_dressing_items?.length > 0) {
-      //     const insert_dressing_done_items =
-      //       await dressing_done_items_model?.insertMany(valid_dressing_items, {
-      //         session,
-      //       });
-      //     const update_dressing_missmatch_status_result =
-      //       await dressing_miss_match_data_model.updateMany(
-      //         { _id: { $in: valid_dressing_items_id } },
-      //         {
-      //           $set: {
-      //             process_status: dressing_error_types?.dressing_done,
-      //             updated_by: userDetails?._id,
-      //           },
-      //         },
-      //         { session }
-      //       );
-
-      //     if (update_dressing_missmatch_status_result.matchedCount === 0) {
-      //       throw new ApiError(
-      //         'Dressing missmatch data not found',
-      //         StatusCodes.NOT_FOUND
-      //       );
-      //     }
-      //     if (
-      //       !update_dressing_missmatch_status_result?.acknowledged ||
-      //       update_dressing_missmatch_status_result.modifiedCount === 0
-      //     ) {
-      //       throw new ApiError(
-      //         'Failed to update dressing miss match status',
-      //         StatusCodes.BAD_REQUEST
-      //       );
-      //     }
-      //     const update_slicing_done_items_status_result =
-      //       await slicing_done_items_model.updateMany(
-      //         {
-      //           slicing_done_other_details_id:
-      //             other_details?.slicing_done_other_details_id,
-      //         },
-      //         {
-      //           $set: {
-      //             is_dressing_done: true,
-      //             issue_status: issues_for_status.dressing,
-      //             updated_by: userDetails?._id,
-      //           },
-      //         },
-      //         { session }
-      //       );
-
-      //     if (update_slicing_done_items_status_result?.matchedCount === 0) {
-      //       throw new ApiError(
-      //         'Slicing Done items not found..',
-      //         StatusCodes.NOT_FOUND
-      //       );
-      //     }
-      //     if (
-      //       !update_slicing_done_items_status_result?.acknowledged ||
-      //       update_slicing_done_items_status_result?.matchedCount === 0
-      //     ) {
-      //       throw new ApiError(
-      //         'Failed to update dressing done status in slicing done items',
-      //         StatusCodes.BAD_REQUEST
-      //       );
-      //     }
-
-      //     const update_slicing_done_other_details_status_result =
-      //       await slicing_done_other_details_model.updateOne(
-      //         { _id: other_details?.slicing_done_other_details_id },
-      //         {
-      //           $set: {
-      //             isEditable: false,
-      //             updated_by: userDetails?._id,
-      //           },
-      //         },
-      //         { session }
-      //       );
-
-      //     if (
-      //       update_slicing_done_other_details_status_result?.matchedCount === 0
-      //     ) {
-      //       throw new ApiError(
-      //         'Slicing Done other details not found',
-      //         StatusCodes.NOT_FOUND
-      //       );
-      //     }
-
-      //     if (
-      //       !update_slicing_done_other_details_status_result.acknowledged ||
-      //       update_slicing_done_other_details_status_result.modifiedCount === 0
-      //     ) {
-      //       throw new ApiError(
-      //         'Failed to update slicing done other details status',
-      //         StatusCodes.BAD_REQUEST
-      //       );
-      //     }
-      //   }
-      // }
       async function add_slicing_done_items(other_details) {
         const slicing_done_map = issue_for_dressing_details?.reduce(
           (acc, item) => {
@@ -1960,7 +1714,7 @@ export const create_dressing_items_from_dressing_report = catchAsync(
             update_slicing_done_other_details_status_result.modifiedCount === 0
           ) {
             throw new ApiError(
-              'Failed to update slicing done other details status',
+              'Failed to update slicing done other details editable status',
               StatusCodes.BAD_REQUEST
             );
           }
@@ -1980,15 +1734,26 @@ export const create_dressing_items_from_dressing_report = catchAsync(
         const peeling_done_items_log_no_code_set = new Set(
           peeling_done_items?.map((item) => item?.log_no_code)
         );
-        let valid_dressing_items = [];
+
+        const valid_dressing_items = [];
+        const valid_dressing_items_id = [];
+        const dressing_missmatch_updates = [];
+
+        let hasMismatch = false;
         for (let item of dressing_item_details) {
-          let is_miss_match = false;
           const peeling_done_data = peeling_done_map[item?.log_no_code];
+
+          if (
+            !peeling_done_data ||
+            !peeling_done_items_log_no_code_set.has(item?.log_no_code)
+          ) {
+            continue;
+          }
 
           for (let log_no of peeling_done_items_log_no_code_set) {
             if (!dressing_log_no_code_set?.has(log_no)) {
               is_miss_match = true;
-              console.log('Log no is not present in dressing log => ', log_no);
+
               const update_proccess_status =
                 await dressing_miss_match_data_model?.updateOne(
                   { _id: item?._id },
@@ -2024,68 +1789,39 @@ export const create_dressing_items_from_dressing_report = catchAsync(
             total_no_of_leaves_by_log_no_code[item?.log_no_code] !==
             peeling_done_data?.no_of_leaves
           ) {
-            is_miss_match = true;
-            const update_proccess_status =
-              await dressing_miss_match_data_model?.updateOne(
-                { _id: item?._id },
-                {
+            dressing_missmatch_updates.push({
+              updateOne: {
+                filter: { _id: item?._id },
+                update: {
                   $set: {
                     process_status:
                       dressing_error_types?.no_of_leaves_missmatch,
                     updated_by: userDetails?._id,
                   },
-                }
-              );
-            if (update_proccess_status?.matchedCount === 0) {
-              throw new ApiError(
-                'Dressing Missmacth document not found ',
-                StatusCodes?.NOT_FOUND
-              );
-            }
-
-            if (
-              !update_proccess_status?.acknowledged ||
-              update_proccess_status?.modifiedCount === 0
-            ) {
-              throw new ApiError(
-                'Failed to update proccess status for dressing missmatch data',
-                StatusCodes?.BAD_REQUEST
-              );
-            }
+                },
+              },
+            });
+            hasMismatch = true;
           }
+
           if (item?.thickness !== peeling_done_data?.thickness) {
-            is_miss_match = true;
-            const update_proccess_status =
-              await dressing_miss_match_data_model?.updateOne(
-                { _id: item?._id },
-                {
+            dressing_missmatch_updates.push({
+              updateOne: {
+                filter: { _id: item?._id },
+                update: {
                   $set: {
                     process_status: dressing_error_types?.thickness_missmatch,
                     updated_by: userDetails?._id,
                   },
-                }
-              );
-            if (update_proccess_status?.matchedCount === 0) {
-              throw new ApiError(
-                'Dressing Missmacth document not found ',
-                StatusCodes?.NOT_FOUND
-              );
-            }
-
-            if (
-              !update_proccess_status?.acknowledged ||
-              update_proccess_status?.modifiedCount === 0
-            ) {
-              throw new ApiError(
-                'Failed to update proccess status for dressing missmatch data',
-                StatusCodes?.BAD_REQUEST
-              );
-            }
+                },
+              },
+            });
+            hasMismatch = true;
           }
-          if (!is_miss_match) {
-            const { _id, __v, createdAt, updatedAt, ...updated_item } = item;
-            valid_dressing_items?.push({
-              ...updated_item,
+          if (!hasMismatch) {
+            valid_dressing_items_id.push(item?._id);
+            valid_dressing_items.push({
+              ...item,
               amount: Number(
                 (
                   (item?.sqm / total_sqm_by_log_no_code[item?.log_no_code]) *
@@ -2102,7 +1838,8 @@ export const create_dressing_items_from_dressing_report = catchAsync(
               character_name: peeling_done_data?.character_name,
               item_name: peeling_done_data?.item_name,
               item_name_id: peeling_done_data?.item_name_id,
-              item_sub_category_id: peeling_done_data?.item_sub_category_id,
+              item_sub_category_id:
+                peeling_done_data?.item_sub_category_id,
               item_sub_category_name: peeling_done_data?.item_sub_category_name,
               dressing_done_other_details_id: other_details?._id,
               created_by: userDetails?._id,
@@ -2111,113 +1848,96 @@ export const create_dressing_items_from_dressing_report = catchAsync(
           }
         }
 
-        if (valid_dressing_items?.length === 0) {
-          throw new ApiError('No Valid items found to create dressing');
+
+        if (hasMismatch) {
+          if (dressing_missmatch_updates?.length > 0) {
+            const update_result =
+              await dressing_miss_match_data_model.bulkWrite(
+                dressing_missmatch_updates
+              );
+            if (update_result?.modifiedCount === 0) {
+              throw new ApiError(
+                'Failed to update dressing mismatch data.',
+                StatusCodes.BAD_REQUEST
+              );
+            }
+          }
+          console.log('Mismatch detected, skipping further processing.');
+          await dressing_done_other_details_model
+            ?.findByIdAndDelete(other_details?._id)
+            .session(session);
+          return;
         }
-        const insert_dressing_done_items =
-          await dressing_done_items_model?.insertMany(valid_dressing_items, {
+
+        if (valid_dressing_items?.length > 0) {
+          await dressing_done_items_model.insertMany(valid_dressing_items, {
             session,
           });
-        console.log(
-          'insert_dressing_done_items => ',
-          insert_dressing_done_items
-        );
 
-        if (insert_dressing_done_items?.length === 0) {
-          throw new ApiError(
-            'Failed to add items in dressing',
-            StatusCodes.BAD_REQUEST
-          );
-        }
-
-        const update_dressing_missmatch_status_result =
-          await dressing_miss_match_data_model.updateMany(
-            { _id: { $in: dressing_ids } },
-            {
-              $set: {
-                process_status: dressing_error_types?.dressing_done,
-                updated_by: userDetails?._id,
+          const update_dressing_missmatch_status_result =
+            await dressing_miss_match_data_model.updateMany(
+              { _id: { $in: valid_dressing_items_id } },
+              {
+                $set: {
+                  process_status: dressing_error_types?.dressing_done,
+                  updated_by: userDetails?._id,
+                },
               },
-            },
-            { session }
-          );
+              { session }
+            );
 
-        if (update_dressing_missmatch_status_result.matchedCount === 0) {
-          throw new ApiError(
-            'Dressing missmatch data not found',
-            StatusCodes.NOT_FOUND
-          );
-        }
-        if (
-          !update_dressing_missmatch_status_result?.acknowledged ||
-          update_dressing_missmatch_status_result.modifiedCount === 0
-        ) {
-          throw new ApiError(
-            'Failed to update dressing miss match status',
-            StatusCodes.BAD_REQUEST
-          );
-        }
-        const update_peeling_done_items_status_result =
-          await peeling_done_items_model.updateMany(
-            {
-              peeling_done_other_details_id:
-                other_details?.peeling_done_other_details_id,
-              updated_by: userDetails?._id,
-            },
-            {
-              $set: {
-                is_dressing_done: true,
-                issue_status: issues_for_status.dressing,
+          if (
+            !update_dressing_missmatch_status_result.acknowledged ||
+            update_dressing_missmatch_status_result.modifiedCount === 0
+          ) {
+            throw new ApiError(
+              'Failed to update dressing mismatch status',
+              StatusCodes.BAD_REQUEST
+            );
+          }
+
+          const update_peeling_done_items_status_result =
+            await peeling_done_items_model.updateMany(
+              {
+                peeling_done_other_details_id:
+                  other_details?.peeling_done_other_details_id,
               },
-            },
-            { session }
-          );
-
-        if (update_peeling_done_items_status_result?.matchedCount === 0) {
-          throw new ApiError(
-            'Peeling Done items not found..',
-            StatusCodes.NOT_FOUND
-          );
-        }
-        if (
-          !update_peeling_done_items_status_result?.acknowledged ||
-          update_peeling_done_items_status_result?.matchedCount === 0
-        ) {
-          throw new ApiError(
-            'Failed to update dressing done status in peeling done items',
-            StatusCodes.BAD_REQUEST
-          );
-        }
-
-        const update_peeling_done_other_details_status_result =
-          await peeling_done_other_details_model.updateOne(
-            { _id: other_details?.peeling_done_other_details_id },
-            {
-              $set: {
-                isEditable: false,
-                updated_by: userDetails?._id,
+              {
+                $set: {
+                  is_dressing_done: true,
+                  issue_status: issues_for_status.dressing,
+                  updated_by: userDetails?._id,
+                },
               },
-            },
-            { session }
-          );
+              { session }
+            );
 
-        if (
-          update_peeling_done_other_details_status_result?.matchedCount === 0
-        ) {
-          throw new ApiError(
-            'Peeling Done other details not found',
-            StatusCodes.NOT_FOUND
-          );
-        }
+          if (
+            !update_peeling_done_items_status_result.acknowledged ||
+            update_peeling_done_items_status_result.modifiedCount === 0
+          ) {
+            throw new ApiError(
+              'Failed to update dressing done status in peeling done items',
+              StatusCodes.BAD_REQUEST
+            );
+          }
 
-        if (
-          !update_peeling_done_other_details_status_result.acknowledged ||
-          update_peeling_done_other_details_status_result.modifiedCount === 0
-        ) {
-          throw new ApiError(
-            'Failed to update peeling done other details status',
-            StatusCodes.BAD_REQUEST
-          );
+          const update_peeling_done_other_details_status_result =
+            await peeling_done_other_details_model.updateOne(
+              { _id: other_details?.peeling_done_other_details_id },
+              { $set: { isEditable: false, updated_by: userDetails?._id } },
+              { session }
+            );
+
+          if (
+            !update_peeling_done_other_details_status_result.acknowledged ||
+            update_peeling_done_other_details_status_result.modifiedCount === 0
+          ) {
+            throw new ApiError(
+              'Failed to update peeling done other details editable status',
+              StatusCodes.BAD_REQUEST
+            );
+          }
         }
       }
       await session.commitTransaction();
