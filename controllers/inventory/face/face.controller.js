@@ -604,10 +604,18 @@ export const fetch_face_history = catchAsync(async (req, res, next) => {
 
   const aggLookupPlwoodItemDetails = {
     $lookup: {
-      from: 'face_inventory_items_details',
+      from: 'face_inventory_items_views',
       foreignField: '_id',
       localField: 'face_item_id',
       as: 'face_item_details',
+      pipeline: [
+        {
+          $project: {
+            created_user: 0,
+            "face_invoice_details.expenses": 0
+          }
+        }
+      ]
     },
   };
   const aggCreatedUserDetails = {
