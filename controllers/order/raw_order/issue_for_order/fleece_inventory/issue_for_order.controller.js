@@ -15,6 +15,7 @@ import { fleece_inventory_invoice_modal, fleece_inventory_items_modal } from '..
 import fleece_history_model from '../../../../../database/schema/inventory/fleece/fleece.history.schema.js';
 
 export const add_issue_for_order = catchAsync(async (req, res) => {
+ 
   const { order_item_id, fleece_item_details } = req.body;
   const userDetails = req.userDetails;
   const session = await mongoose.startSession();
@@ -65,7 +66,8 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
         },
       },
     ]);
-
+ 
+    
     //validate issued no of rolls with order no.of rolls
     if (
         Number(
@@ -77,7 +79,10 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
           StatusCodes.BAD_REQUEST
         );
       }
-
+  
+      // console.log("total sqm : ",validate_sqm_for_order?.total_sqm);
+      // console.log("issued sqm : ",fleece_item_details?.issued_sqm);
+      // console.log("Orderd item sqm : ",order_item_data?.sqm)
     const updated_body = {
       order_id: order_item_data?.order_id,
       order_item_id: order_item_data?._id,

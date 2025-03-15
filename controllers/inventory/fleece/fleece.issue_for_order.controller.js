@@ -90,9 +90,6 @@ export const fetch_all_fleece_sr_no_by_inward_sr_no = catchAsync(async (req, res
     
         const order_item_data = await RawOrderItemDetailsModel.findById(order_id);
     
-        console.log("order_item_data",order_item_data);
-        console.log("invoice_id : ", mongoose.Types.ObjectId.createFromHexString(id),)
-
         const search_query = {};
     
         if (order_item_data?.item_name) {
@@ -104,6 +101,7 @@ export const fetch_all_fleece_sr_no_by_inward_sr_no = catchAsync(async (req, res
             ...search_query,
             available_sqm: {
                 $lte: order_item_data.sqm,
+                $gt:0
             },
         };
 

@@ -90,9 +90,9 @@ fleece_router.get('/list-fleece-details/:id', AuthMiddleware, fetch_fleece_detai
 //fleece history routes
 
 fleece_router.post(
-  '/list-plywood-history',
+  '/list-fleece-history',
   AuthMiddleware,
-  RolesPermissions('fleece_inventory', 'view'),
+  RolesPermissions('fleece_paper_inventory', 'view'),
   fetch_fleece_history
 );
 

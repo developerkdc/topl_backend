@@ -27,6 +27,8 @@ import { core_inventory_invoice_details, core_inventory_items_details } from '..
 import core_history_model from '../../../database/schema/inventory/core/core.history.schema.js';
 import { othergoods_inventory_invoice_details, othergoods_inventory_items_details } from '../../../database/schema/inventory/otherGoods/otherGoodsNew.schema.js';
 import other_goods_history_model from '../../../database/schema/inventory/otherGoods/otherGoods.history.schema.js';
+import { fleece_inventory_invoice_modal, fleece_inventory_items_modal } from '../../../database/schema/inventory/fleece/fleece.schema.js';
+import fleece_history_model from '../../../database/schema/inventory/fleece/fleece.history.schema.js';
 
 class RevertOrderItem {
   constructor(id, userDetails, session) {
@@ -526,6 +528,85 @@ class RevertOrderItem {
       );
     }
   }
+
+  async FLEECE_PAPER() {
+    //update fleece item available sheets
+    const update_fleece_item =
+      await fleece_inventory_items_modal.findOneAndUpdate(
+        { _id: this.issued_order_data?.item_details?._id },
+        {
+          $inc: {
+            available_number_of_roll:
+              this.issued_order_data?.item_details?.issued_number_of_roll || 0,
+            available_amount:
+              this.issued_order_data?.item_details?.issued_amount || 0,
+            available_sqm:
+              this.issued_order_data?.item_details?.issued_sqm || 0,
+          },
+        },
+        { session: this.session }
+      );
+
+    if (!update_fleece_item) {
+      throw new ApiError('Fleece item not found', StatusCodes.BAD_REQUEST);
+    }
+
+    //check if invoice is editable
+    const is_invoice_editable = await fleece_inventory_items_modal?.find({
+      _id: { $ne: update_fleece_item?._id },
+      invoice_id: update_fleece_item?.invoice_id,
+      // issue_status: { $ne: null },
+      $expr: { $ne: ["$available_number_of_roll", "$number_of_roll"] }
+    });
+
+    //if invoice is editable then update then update the editable status
+    if (is_invoice_editable && is_invoice_editable?.length === 0) {
+      const update_fleece_item_invoice_editable_status =
+        await fleece_inventory_invoice_modal?.updateOne(
+          { _id: update_fleece_item?.invoice_id },
+          {
+            $set: {
+              isEditable: true,
+              updated_by: this.userDetails?._id,
+            },
+          },
+          { session: this.session }
+        );
+      if (update_fleece_item_invoice_editable_status?.matchedCount === 0) {
+        throw new ApiError(
+          'Fleece item Invoice not found',
+          StatusCodes.BAD_REQUEST
+        );
+      }
+      if (
+        !update_fleece_item_invoice_editable_status?.acknowledged ||
+        update_fleece_item_invoice_editable_status?.modifiedCount === 0
+      ) {
+        throw new ApiError(
+          'Failed to update Fleece Item Invoice Status',
+          StatusCodes.BAD_REQUEST
+        );
+      }
+    }
+
+    //delete the fleece history document
+    const delete_fleece_history_document_result =
+      await fleece_history_model.deleteOne(
+        { issued_for_order_id: this.issued_order_data?._id },
+        { session: this.session }
+      );
+
+    if (
+      !delete_fleece_history_document_result?.acknowledged ||
+      delete_fleece_history_document_result?.deletedCount === 0
+    ) {
+      throw new ApiError(
+        'Failed to delete fleece history',
+        StatusCodes.BAD_REQUEST
+      );
+    }
+  }
+
   async OTHER_GOODS() {
     //update other goods item available quantity
     const update_other_goods_item =

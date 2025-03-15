@@ -19,9 +19,9 @@ const fleece_history_schema = new mongoose.Schema(
             },
             default: issues_for_status?.order,
         },
-        issued_sheets: {
+        issued_number_of_roll: {
             type: Number,
-            required: [true, 'Issued sheets are required.'],
+            required: [true, 'Issued No of Roll are required.'],
         },
         issued_sqm: {
             type: Number,
