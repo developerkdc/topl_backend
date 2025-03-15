@@ -50,6 +50,12 @@ export const fleece_item_details_schema = new mongoose.Schema(
       type: Number,
       required: [true, 'number of roll is required'],
     },
+    available_number_of_roll: {
+      type: Number,
+      default: function () {
+        return this.number_of_roll;
+      },
+    },
     length: {
       type: Number,
       required: [true, 'Length is required'],
@@ -70,6 +76,12 @@ export const fleece_item_details_schema = new mongoose.Schema(
       type: Number,
       required: [true, 'total square meter is required'],
     },
+    available_sqm: {
+      type: Number,
+      default: function () {
+        return this.total_sq_meter;
+      },
+    },
     rate_in_currency: {
       type: Number,
       required: [true, 'Rate in currency is required'],
@@ -85,6 +97,12 @@ export const fleece_item_details_schema = new mongoose.Schema(
     amount: {
       type: Number,
       required: [true, 'Amount is required'],
+    },
+    available_amount: {
+      type: Number,
+      default: function () {
+        return this.amount;
+      },
     },
     amount_factor: {
       type: Number,
@@ -134,18 +152,18 @@ export const fleece_invoice_schema = new mongoose.Schema(
       default: Date.now,
       required: [true, ''],
     },
-    inward_type: {
-      type: String,
-      enum: {
-        values: [
-          inward_type.inventory,
-          inward_type.job_work,
-          inward_type.challan,
-        ],
-        message: `Invalid status {{VALUE}} Issue Status must either be one of ${inward_type.inventory}, ${inward_type.job_work}, ${inward_type.challan}`,
-      },
-      required: [true, 'Inward Type is required'],
-    },
+    // inward_type: {
+    //   type: String,
+    //   enum: {
+    //     values: [
+    //       inward_type.inventory,
+    //       inward_type.job_work,
+    //       inward_type.challan,
+    //     ],
+    //     message: `Invalid status {{VALUE}} Issue Status must either be one of ${inward_type.inventory}, ${inward_type.job_work}, ${inward_type.challan}`,
+    //   },
+    //   required: [true, 'Inward Type is required'],
+    // },
     currency: {
       type: String,
       required: [true, 'currency is required'],
@@ -269,6 +287,10 @@ export const fleece_invoice_schema = new mongoose.Schema(
           default: null,
         },
       },
+    },
+    isEditable: {
+      type: Boolean,
+      default: true
     },
     approval_status: approval_status,
     invoice_Details: invoice_details,

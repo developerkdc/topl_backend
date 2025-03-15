@@ -74,8 +74,8 @@ router.get('/inward-srno-dropdown', AuthMiddleware, inward_sr_no_dropdown);
 
 
 //order dropdowns
-router.get('/inward-sr-no-dropdown/:id', AuthMiddleware, fetch_all_core_inward_sr_no_by_order_item_name)
-router.get('/item-sr-no-dropdown/:id', AuthMiddleware, fetch_all_core_sr_no_by_inward_sr_no)
+router.get('/inward-sr-no-dropdown', AuthMiddleware, fetch_all_core_inward_sr_no_by_order_item_name)
+router.get('/item-sr-no-dropdown/:id/:order_id', AuthMiddleware, fetch_all_core_sr_no_by_inward_sr_no)
 router.get('/list-core-details/:id', AuthMiddleware, fetch_core_details_by_id)
 
 //Core inventory list history
