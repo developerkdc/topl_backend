@@ -159,7 +159,7 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
       );
     if (update_core_inventory_invoice_editable_status?.matchedCount === 0) {
       throw new ApiError(
-        'Plywood item invoice not found',
+        'Core item invoice not found',
         StatusCodes.BAD_REQUEST
       );
     }
