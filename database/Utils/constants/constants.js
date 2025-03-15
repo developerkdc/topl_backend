@@ -16,8 +16,8 @@ export const issues_for_status = {
   grouping: 'grouping',
   order: 'order',
   tapping: 'tapping',
-  tapping_sample: 'tapping_sample',
-  tapping_stock: 'tapping_stock',
+  sample: 'sample',
+  stock: 'stock',
   challan: 'challan',
 };
 
@@ -90,5 +90,5 @@ export const item_issued_from = {
   fleece_paper: 'FLEECE PAPER',
   face: 'FACE',
   mdf: 'MDF',
-  store: 'OTHER GOODS',
+  store: 'OTHER_GOODS',
 };

@@ -42,10 +42,10 @@ const other_goods_history_schema = new mongoose.Schema(
 other_goods_history_schema?.index({ issue_status: 1 });
 // other_goods_history_schema?.index({ plywood_item_id: 1 }, { unique: true });
 
-const plywood_history_model = mongoose.model(
+const other_goods_history_model = mongoose.model(
   'other_goods_history_details',
   other_goods_history_schema,
   'other_goods_history_details'
 );
 
-export default plywood_history_model;
+export default other_goods_history_model;

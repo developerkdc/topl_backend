@@ -566,7 +566,6 @@ export const fetch_smoking_dying_done_history = catchAsync(
       aggUnwindCreatedUser,
       aggUnwindUpdatdUser,
       aggMatch,
-      // aggAddGlobalFields,
       aggSort,
       aggSkip,
       aggLimit,
@@ -579,10 +578,15 @@ export const fetch_smoking_dying_done_history = catchAsync(
     };
 
     const count_total_docs = [
+      aggLookupProcessDoneDetails,
+      aggLookupBundles,
+      aggAddGlobalFields,
+      aggUnwindDressingDoneOtherDetails,
       aggCreatedUserDetails,
       aggUpdatedUserDetails,
       aggUnwindCreatedUser,
       aggUnwindUpdatdUser,
+      aggMatch,
       aggMatch,
       aggCount,
     ];
