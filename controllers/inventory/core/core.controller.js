@@ -593,10 +593,17 @@ export const fetch_core_history = catchAsync(async (req, res, next) => {
 
   const aggLookupPlwoodItemDetails = {
     $lookup: {
-      from: 'core_inventory_items_details',
+      from: 'core_inventory_items_views',
       foreignField: '_id',
       localField: 'core_item_id',
       as: 'core_item_details',
+      pipeline: [
+        {
+          $project: {
+            created_user: 0
+          }
+        }
+      ]
     },
   };
   const aggCreatedUserDetails = {

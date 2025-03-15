@@ -87,7 +87,7 @@ export const item_issued_from = {
   veneer: 'VENEER',
   plywood: 'PLYWOOD',
   core: 'CORE',
-  fleece_paper: 'FLEECE PAPER',
+  fleece_paper: 'FLEECE_PAPER',
   face: 'FACE',
   mdf: 'MDF',
   store: 'OTHER_GOODS',
