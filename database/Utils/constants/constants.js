@@ -16,8 +16,8 @@ export const issues_for_status = {
   grouping: 'grouping',
   order: 'order',
   tapping: 'tapping',
-  tapping_sample: 'tapping_sample',
-  tapping_stock: 'tapping_stock',
+  sample: 'sample',
+  stock: 'stock',
   challan: 'challan',
 };
 
@@ -28,7 +28,7 @@ export const inward_type = {
 };
 
 export const issue_for_peeling = {
-  re_flitching: 're_flitching',
+  rest_roller: 'rest_roller',
   wastage: 'wastage',
 };
 
@@ -38,7 +38,7 @@ export const peeling_done = {
   core: 'core',
 };
 export const issue_for_slicing = {
-  rest_roller: 'rest_roller',
+  balance_flitch: 'balance_flitch',
   wastage: 'wastage',
 };
 
@@ -87,8 +87,8 @@ export const item_issued_from = {
   veneer: 'VENEER',
   plywood: 'PLYWOOD',
   core: 'CORE',
-  fleece_paper: 'FLEECE PAPER',
+  fleece_paper: 'FLEECE_PAPER',
   face: 'FACE',
   mdf: 'MDF',
-  store: 'OTHER GOODS',
+  store: 'OTHER_GOODS',
 };

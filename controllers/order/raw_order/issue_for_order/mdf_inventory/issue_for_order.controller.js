@@ -174,7 +174,7 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
 
 
     // =================
-    //add data to plywood history model
+    //add data to Mdf history model
         const add_issued_data_to_mdf_history = await mdf_history_model.create([{
           issued_for_order_id: issue_for_order_id,
           issue_status: issues_for_status?.order,

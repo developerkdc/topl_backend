@@ -41,7 +41,7 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
 
     const face_item_data = await face_inventory_items_details
       .findById(face_item_details?._id)
-      .lean();
+    // .lean();
     if (!face_item_data) {
       throw new ApiError('Face Item Data not found.');
     }
@@ -107,7 +107,8 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
         'Failed to Add order details',
         StatusCodes?.BAD_REQUEST
       );
-    }
+    };
+
     //available sheets
     const available_sheets =
       face_item_data?.available_sheets - face_item_details?.issued_sheets;
@@ -118,7 +119,7 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
     const available_amount =
       face_item_data?.available_amount - face_item_details?.issued_amount;
 
-    //update plywood inventory available sheets
+    //update face inventory available sheets
     const update_face_item_no_of_sheets =
       await face_inventory_items_details.updateOne(
         { _id: face_item_data?._id },
@@ -147,7 +148,7 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
       );
     }
 
-    //update plywood inventory invoice ediatble status
+    //update face inventory invoice ediatble status
     const update_face_inventory_invoice_editable_status =
       await face_inventory_invoice_details?.updateOne(
         { _id: face_item_data?.invoice_id },
@@ -161,7 +162,7 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
       );
     if (update_face_inventory_invoice_editable_status?.matchedCount === 0) {
       throw new ApiError(
-        'Plywood item invoice not found',
+        'Face item invoice not found',
         StatusCodes.BAD_REQUEST
       );
     }
@@ -171,12 +172,12 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
       update_face_inventory_invoice_editable_status?.modifiedCount === 0
     ) {
       throw new ApiError(
-        'Failed to update plywood item invoice status',
+        'Failed to update face item invoice status',
         StatusCodes.BAD_REQUEST
       );
     }
 
-    //add data to plywood history model
+    //add data to face history model
     const add_issued_data_to_face_history =
       await face_history_model.create(
         [

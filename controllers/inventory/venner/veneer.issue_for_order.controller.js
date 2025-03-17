@@ -34,6 +34,7 @@ export const fetch_all_log_no_by_item_name = catchAsync(async (req, res) => {
         ...search_query,
         total_sq_meter: {
             $lte: order_item_data?.sqm,
+            $gt: 0
         },
         issue_status: null,
     };

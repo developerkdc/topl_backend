@@ -26,8 +26,9 @@ export const fetch_all_mdf_pallet_no_item_name = catchAsync(
 
     const match_query = {
       ...search_query,
-      no_of_sheet: {
+      available_sheets: {
         $lte: order_item_data?.no_of_sheet,
+        $gt: 0
       },
     };
 

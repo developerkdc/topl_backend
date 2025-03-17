@@ -18,7 +18,11 @@ const issue_for_tapping_schema = new mongoose.Schema({
     },
     grouping_done_other_details_id: {
         type: mongoose.Schema.Types.ObjectId,
-        required: [true, 'Process done id is required'],
+        required: [true, 'grouping done id is required'],
+    },
+    grouping_done_item_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: [true, 'grouping done id is required'],
     },
     group_no: {
         type: String,
@@ -168,15 +172,19 @@ const issue_for_tapping_schema = new mongoose.Schema({
         trim: true,
         required: [true, 'Grade Name is required'],
     },
+    is_tapping_done:{
+        type:Boolean,
+        default:false
+    },
     issue_status: {
         type: String,
         enum: {
             values: [
                 issues_for_status.order,
-                issues_for_status.tapping_stock,
-                issues_for_status.tapping_sample,
+                issues_for_status.stock,
+                issues_for_status.sample,
             ],
-            message: `Invalid type {{VALUE}} it must be one of the ${(issues_for_status.order, issues_for_status.tapping_stock, issues_for_status.tapping_sample)}`,
+            message: `Invalid type {{VALUE}} it must be one of the ${(issues_for_status.order, issues_for_status.stock, issues_for_status.sample)}`,
         },
         default: null,
     },

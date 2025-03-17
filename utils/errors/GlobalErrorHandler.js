@@ -69,11 +69,18 @@ const extractDuplicateKeyFromErrorMessage = (errorMessage) => {
       console.error('Failed to parse duplicate key JSON:', e);
     }
   }
-  if (dupKey[matches[1]]) {
-    return matches ? `${dupKey[matches[1]]} - ${matches[1]}` : 'unknown key';
-  } else {
-    return matches ? `${matches[1]}` : 'unknown key';
+  let messageString = '';
+
+  for(let i in dupKey){
+    if (dupKey[i]) {
+      let message =  matches ? `${i} - ${dupKey[i]}` : 'unknown key';
+      messageString += message + ', ';
+    } else {
+      let message =  matches ? `${i}` : 'unknown key';
+      messageString += message + ', ';
+    }
   }
+  return messageString;
 };
 
 const extractValidationDetails = (errorMessage) => {

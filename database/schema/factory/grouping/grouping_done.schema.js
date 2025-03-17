@@ -59,7 +59,21 @@ export const grouping_done_details_model = mongoose.model(
   'grouping_done_details'
 );
 
+const validateOrderField = function () {
+  return this.issue_status === issues_for_status?.order ? true : false;
+}
+
 const grouping_done_items_details_schema = new mongoose.Schema({
+  order_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    default: null,
+    required: [validateOrderField, "order_id is required"],
+  },
+  order_item_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    default: null,
+    required: [validateOrderField, "order_item_id is required"],
+  },
   grouping_done_other_details_id: {
     type: mongoose.Schema.Types.ObjectId,
     required: [true, 'grouping done id is required'],
@@ -149,6 +163,12 @@ const grouping_done_items_details_schema = new mongoose.Schema({
         return this.sqm;
       },
     },
+    amount: {
+      type: Number,
+      default: function () {
+        return this.amount;
+      },
+    },
   },
   pallet_number: {
     type: String,
@@ -225,18 +245,6 @@ const grouping_done_items_details_schema = new mongoose.Schema({
     uppercase: true,
     trim: true,
     required: [true, 'Grade Name is required'],
-  },
-  issue_status: {
-    type: String,
-    enum: {
-      values: [
-        issues_for_status.order,
-        issues_for_status.tapping_stock,
-        issues_for_status.tapping_sample,
-      ],
-      message: `Invalid type {{VALUE}} it must be one of the ${(issues_for_status.order, issues_for_status.tapping_stock, issues_for_status.tapping_sample)}`,
-    },
-    default: null,
   },
   is_damaged: {
     type: Boolean,

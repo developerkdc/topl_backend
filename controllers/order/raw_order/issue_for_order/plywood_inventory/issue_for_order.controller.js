@@ -143,7 +143,7 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
       update_plywood_item_no_of_sheets?.modifiedCount === 0
     ) {
       throw new ApiError(
-        'Failed to update Plywood item status',
+        'Failed to update Plywood item sheets',
         StatusCodes.BAD_REQUEST
       );
     }
