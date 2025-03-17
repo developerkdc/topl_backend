@@ -19,6 +19,7 @@ import issueForGroupingRouter from './grouping/issues_for_grouping.routes.js';
 import groupingDoneRouter from './grouping/grouping_done.routes.js';
 import issue_for_tapping_router from './tapping/issue_for_tapping/issue_for_tapping.routes.js';
 import tapping_done_router from './tapping/tapping_done/tapping_done.routes.js';
+import tapping_wastage_router from './tapping/tapping_wastage/tapping_wastage.routes.js';
 const factoryRouter = express.Router();
 
 factoryRouter.use(`/factory/cross-cutting`, crossCuttingFactoryRoutes);
@@ -58,5 +59,6 @@ factoryRouter.use('/factory/grouping-done', groupingDoneRouter);
 //tapping
 factoryRouter.use('/factory/tapping', issue_for_tapping_router);
 factoryRouter.use('/factory/tapping-done', tapping_done_router);
+factoryRouter.use('/factory/tapping-wastage', tapping_wastage_router);
 
 export default factoryRouter;

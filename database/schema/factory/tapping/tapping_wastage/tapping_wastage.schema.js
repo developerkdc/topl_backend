@@ -64,5 +64,5 @@ const issue_for_tapping_wastage_schema = new mongoose.Schema({
 
 issue_for_tapping_wastage_schema.index({ issue_for_tapping_item_id: -1 }, { unique: true })
 
-const issue_for_tapping_wastage_model = mongoose.model("issue_for_tappings_wastage", issue_for_tapping_wastage_schema, "issue_for_tappings_wastage");
+const issue_for_tapping_wastage_model = mongoose.model("issue_for_tapping_wastages", issue_for_tapping_wastage_schema, "issue_for_tapping_wastages");
 export default issue_for_tapping_wastage_model;

@@ -967,6 +967,12 @@ export const add_grouping_done_damaged = catchAsync(async (req, res, next) => {
     if (!grouping_done_item_details) {
       throw new ApiError('Not data found', 400);
     }
+    if (grouping_done_item_details?.no_of_leaves !== grouping_done_item_details?.available_details?.no_of_leaves) {
+      throw new ApiError(
+        `Cannot add to damage because some of item leaves already issued`,
+        400
+      );
+    }
 
     const grouping_done_item_id = grouping_done_item_details?._id;
     const update_grouping_done_damaged =
@@ -1145,9 +1151,9 @@ export const recreate_grouping_done_items = catchAsync(async (req, res, next) =>
     if (!grouping_done_other_details) {
       throw new ApiError('Not data found', 400);
     }
-    if (grouping_done_other_details?.available_details?.no_of_leaves <= 0) {
+    if (grouping_done_other_details?.no_of_leaves !== grouping_done_other_details?.available_details?.no_of_leaves) {
       throw new ApiError(
-        `Some of Item leaves already issued`,
+        `Cannot recreate because some of item leaves already issued`,
         400
       );
     }
