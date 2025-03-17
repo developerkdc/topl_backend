@@ -152,18 +152,19 @@ export const fleece_invoice_schema = new mongoose.Schema(
       default: Date.now,
       required: [true, ''],
     },
-    // inward_type: {
-    //   type: String,
-    //   enum: {
-    //     values: [
-    //       inward_type.inventory,
-    //       inward_type.job_work,
-    //       inward_type.challan,
-    //     ],
-    //     message: `Invalid status {{VALUE}} Issue Status must either be one of ${inward_type.inventory}, ${inward_type.job_work}, ${inward_type.challan}`,
-    //   },
-    //   required: [true, 'Inward Type is required'],
-    // },
+    inward_type: {
+      type: String,
+      enum: {
+        values: [
+          inward_type.inventory,
+          inward_type.job_work,
+          inward_type.challan,
+        ],
+        message: `Invalid status {{VALUE}} Issue Status must either be one of ${inward_type.inventory}, ${inward_type.job_work}, ${inward_type.challan}`,
+      },
+      default: inward_type?.inventory,
+      required: [true, 'Inward Type is required'],
+    },
     currency: {
       type: String,
       required: [true, 'currency is required'],

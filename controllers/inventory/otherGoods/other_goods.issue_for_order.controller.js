@@ -75,7 +75,7 @@ export const fetch_all_other_goods_sr_no_by_inward_sr_no = catchAsync(async (req
         invoice_id: mongoose.Types.ObjectId.createFromHexString(id),
         ...search_query,
         available_quantity: {
-            $lte: order_item_data.quantity,
+            // $lte: order_item_data.quantity,
             $gt: 0
         },
     };
