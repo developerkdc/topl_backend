@@ -390,8 +390,7 @@ export const edit_reflitching_details = catchAsync(async (req, res, next) => {
       throw new ApiError('No available data found for reflitching', 404);
     }
     const issue_for_peeling_available_id = reflitching_available_data?._id;
-    const issue_for_peeling_id =
-      reflitching_available_data?.issue_for_peeling_id;
+    const issue_for_peeling_id = reflitching_available_data?.issue_for_peeling_id;
 
     // Other goods details
     const { createdAt, updatetAt, ...update_other_details } = other_details;
@@ -402,7 +401,6 @@ export const edit_reflitching_details = catchAsync(async (req, res, next) => {
           $set: {
             ...update_other_details,
             issue_for_peeling_available_id: issue_for_peeling_available_id,
-            created_by: userDetails?._id,
             updated_by: userDetails?._id,
           },
         },
