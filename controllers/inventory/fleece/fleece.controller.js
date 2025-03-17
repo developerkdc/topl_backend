@@ -61,6 +61,7 @@ export const listing_fleece_inventory = catchAsync(async (req, res, next) => {
   const match_query = {
     ...filterData,
     ...search_query,
+    available_sqm:{$ne:0}
   };
 
   const aggregate_stage = [
