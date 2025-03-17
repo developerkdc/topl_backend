@@ -84,35 +84,35 @@ export const fetch_all_fleece_sr_no_by_inward_sr_no = catchAsync(async (req, res
     // ];
 
     const { id, order_id } = req.params;
-        if (!isValidObjectId(id) || !isValidObjectId(order_id)) {
-            throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
-        }
-    
-        const order_item_data = await RawOrderItemDetailsModel.findById(order_id);
-    
-        const search_query = {};
-    
-        if (order_item_data?.item_name) {
-            search_query['item_name'] = order_item_data?.item_name;
-        }
-    
-        const match_query = {
-            invoice_id: mongoose.Types.ObjectId.createFromHexString(id),
-            ...search_query,
-            available_sqm: {
-                $lte: order_item_data.sqm,
-                $gt:0
-            },
-        };
+    if (!isValidObjectId(id) || !isValidObjectId(order_id)) {
+        throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
+    }
 
-        const pipeline = [
-            { $match: { ...match_query } },
-            {
-                $project: {
-                    item_sr_no: 1,
-                },
+    const order_item_data = await RawOrderItemDetailsModel.findById(order_id);
+
+    const search_query = {};
+
+    if (order_item_data?.item_name) {
+        search_query['item_name'] = order_item_data?.item_name;
+    }
+
+    const match_query = {
+        invoice_id: mongoose.Types.ObjectId.createFromHexString(id),
+        ...search_query,
+        available_sqm: {
+            // $lte: order_item_data.sqm,
+            $gt: 0
+        },
+    };
+
+    const pipeline = [
+        { $match: { ...match_query } },
+        {
+            $project: {
+                item_sr_no: 1,
             },
-        ];
+        },
+    ];
 
 
 
@@ -129,7 +129,7 @@ export const fetch_all_fleece_sr_no_by_inward_sr_no = catchAsync(async (req, res
 
 // fetching fleece details by pallet_no
 export const fetch_fleece_details_by_id = catchAsync(async (req, res) => {
-    
+
     const { id } = req.params;
 
     if (!id || !isValidObjectId(id)) {

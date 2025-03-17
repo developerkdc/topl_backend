@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-export const approval_status = new mongoose.Schema({
+export const approval_status = {
   sendForApproval: {
     status: {
       type: Boolean,
@@ -37,4 +37,4 @@ export const approval_status = new mongoose.Schema({
       uppercase: true,
     },
   },
-});
+};

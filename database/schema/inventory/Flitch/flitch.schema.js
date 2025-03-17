@@ -135,7 +135,7 @@ export const item_details_schema = new mongoose.Schema(
           issues_for_status?.slicing,
           issues_for_status?.slicing_peeling,
           issues_for_status?.order,
-          issues_for_status?.chalan,
+          issues_for_status?.challan,
         ],
         message: `Invalid status {{VALUE}} Issue Status must either be one of ${issues_for_status?.slicing}, ${issues_for_status?.slicing_peeling}, ${issues_for_status?.order}}, ${issues_for_status?.chalan}`,
       },

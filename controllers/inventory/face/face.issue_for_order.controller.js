@@ -77,7 +77,8 @@ export const fetch_all_face_sr_no_by_inward_sr_no = catchAsync(async (req, res) 
         invoice_id: mongoose.Types.ObjectId.createFromHexString(id),
         ...search_query,
         available_sheets: {
-            $lte: order_item_data.no_of_sheet,
+            // $lte: order_item_data.no_of_sheet,
+            $gt: 0
         },
     };
 
