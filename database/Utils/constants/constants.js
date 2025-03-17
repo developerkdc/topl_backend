@@ -90,5 +90,5 @@ export const item_issued_from = {
   fleece_paper: 'FLEECE_PAPER',
   face: 'FACE',
   mdf: 'MDF',
-  store: 'OTHER_GOODS',
+  store: 'OTHER_GOODS'
 };
