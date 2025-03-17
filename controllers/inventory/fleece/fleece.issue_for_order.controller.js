@@ -100,7 +100,7 @@ export const fetch_all_fleece_sr_no_by_inward_sr_no = catchAsync(async (req, res
         invoice_id: mongoose.Types.ObjectId.createFromHexString(id),
         ...search_query,
         available_sqm: {
-            // $lte: order_item_data.sqm,
+            $lte: order_item_data.sqm,
             $gt: 0
         },
     };

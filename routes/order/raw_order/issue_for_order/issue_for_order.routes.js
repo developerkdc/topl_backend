@@ -8,6 +8,7 @@ import core_inventory_order_router from './core_inventory/issue_core_inventory_i
 import face_inventory_order_router from './face_inventory/issue_face_inventory_item_order.routes.js';
 import other_goods_inventory_order_router from './other_goods_inventory/issue_other_goods_inventory_item_order.routes.js';
 import fleece_inventory_order_router from './fleece_inventory/issue_fleece_inventory_item_order.routes.js';
+import crosscutting_factory_order_router from './crosscutting_factory/issue_crosscutting_factory_item_order.routes.js';
 
 const issue_for_raw_order_router = Router();
 
@@ -48,6 +49,13 @@ issue_for_raw_order_router.use(
 issue_for_raw_order_router.use(
   '/issue-raw-other-goods-order',
   other_goods_inventory_order_router
+);
+
+//factory order
+
+issue_for_raw_order_router.use(
+  '/issue-raw-crosscutting-order',
+  crosscutting_factory_order_router
 );
 
 // issue_for_raw_order_router.use('/issue-raw-plywood-order', plywood_inventory_order_router)
