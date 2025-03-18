@@ -181,8 +181,8 @@ export const revert_order_by_order_id = catchAsync(async (req, res) => {
     await session.startTransaction();
 
     const revert_order_handler = new RevertOrderItem(id, userDetails, session);
-    const result = await revert_order_handler?.update_inventory_item_status();
-    const delete_order_item_doc_result = await issue_for_order_model?.deleteOne(
+    await revert_order_handler.update_inventory_item_status();
+    const delete_order_item_doc_result = await issue_for_order_model.deleteOne(
       { _id: id },
       { session: session }
     );
