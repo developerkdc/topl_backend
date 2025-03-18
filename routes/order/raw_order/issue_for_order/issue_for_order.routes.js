@@ -59,7 +59,7 @@ issue_for_raw_order_router.use(
   crosscutting_factory_order_router
 );
 issue_for_raw_order_router.use(
-  '/issue-raw-flitching_factory-order',
+  '/issue-raw-flitching-factory-order',
   flitching_factory_order_router
 );
 
