@@ -328,6 +328,7 @@ export const fetch_all_dressing_done_items = catchAsync(async (req, res) => {
   const matchQuery = {
     ...search_query,
     ...filterData,
+    available_bundles: { $gt: 0 }
   };
 
   const aggMatch = {
@@ -354,8 +355,17 @@ export const fetch_all_dressing_done_items = catchAsync(async (req, res) => {
       log_no_code: {
         $first: '$log_no_code',
       },
+      // bundles: {
+      //   $push: '$$ROOT',
+      // },
       bundles: {
-        $push: '$$ROOT',
+        $push: {
+          $cond: {
+            if: { $eq: ['$issue_status', null] },
+            then: '$$ROOT',
+            else: '$$REMOVE',
+          },
+        },
       },
       total_bundles: {
         $sum: 1,
@@ -1387,19 +1397,19 @@ export const create_dressing_items_from_dressing_report = catchAsync(
       updated_end_date?.setUTCHours(23, 59, 59, 999);
 
       //finding data by date
-      const dressing_item_details = await dressing_miss_match_data_model
+      const dressing_details = await dressing_miss_match_data_model
         .find({
           dressing_date: { $gte: updated_start_date, $lte: updated_end_date }, process_status: { $ne: dressing_error_types?.dressing_done }
         })
         .lean();
 
-      // const dressing_item_details = await dressing_miss_match_data_model
+      // const dressing_details = await dressing_miss_match_data_model
       //   .find({ _id: { $in: dressing_ids } })
       //   .lean();
-      if (dressing_item_details?.length === 0) {
+      if (dressing_details?.length === 0) {
         throw new ApiError('Items Not Found.', StatusCodes.BAD_REQUEST);
       }
-      for (let item of dressing_item_details) {
+      for (let item of dressing_details) {
         dressing_log_no_code_set?.add(item?.log_no_code);
         dressing_ids?.push(item?._id);
       }
@@ -1409,8 +1419,8 @@ export const create_dressing_items_from_dressing_report = catchAsync(
       for (let item of issue_for_dressing_details) {
         issued_log_no_code_set?.add(item?.log_no_code);
       }
-      const filtered_dressing_details = dressing_item_details?.filter(item => issued_log_no_code_set?.has(item?.log_no_code));
-      console.log("filtered_dressing_details", filtered_dressing_details)
+      const dressing_item_details = dressing_details?.filter(item => issued_log_no_code_set?.has(item?.log_no_code));
+
       //creating object to count no_of_leaves by log_no_code
       const total_no_of_leaves_by_log_no_code = dressing_item_details?.reduce(
         (acc, item) => {
@@ -1960,7 +1970,7 @@ export const create_dressing_items_from_dressing_report = catchAsync(
           throw new ApiError("No Valid Items found for dressing", StatusCodes.BAD_REQUEST)
         }
       }
-      // await session.commitTransaction();
+      await session.commitTransaction();
       const response = new ApiResponse(
         StatusCodes.CREATED,
         'Dressing Done Successfully'

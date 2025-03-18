@@ -31,6 +31,7 @@ import { fleece_inventory_invoice_modal, fleece_inventory_items_modal } from '..
 import fleece_history_model from '../../../database/schema/inventory/fleece/fleece.history.schema.js';
 import { flitching_done_model } from '../../../database/schema/factory/flitching/flitching.schema.js';
 import { crosscutting_done_model } from '../../../database/schema/factory/crossCutting/crosscutting.schema.js';
+import { dressing_done_items_model, dressing_done_other_details_model } from '../../../database/schema/factory/dressing/dressing_done/dressing.done.schema.js';
 
 class RevertOrderItem {
   constructor(id, userDetails, session) {
@@ -71,6 +72,7 @@ class RevertOrderItem {
     }
   }
 
+  //INVENTORY ORDERS
   async LOG() {
     const update_log_item = await log_inventory_items_model?.findOneAndUpdate(
       { _id: this.issued_order_data?.item_details?._id },
@@ -87,7 +89,7 @@ class RevertOrderItem {
       throw new ApiError('Log item not found', StatusCodes.BAD_REQUEST);
     }
 
-    const is_invoice_editable = await log_inventory_items_model?.find({
+    const is_dressing_item_editable = await log_inventory_items_model?.find({
       _id: { $ne: update_log_item?._id },
       invoice_id: update_log_item?.invoice_id,
       issue_status: { $ne: null },
@@ -255,14 +257,14 @@ class RevertOrderItem {
         updated_by: this.userDetails?._id
       }
     }, {
-      session: this.session
+      session: this.session, new: true
     });
 
     if (!update_venner_item) {
       throw new ApiError("Venner Item not found.", StatusCodes.BAD_REQUEST)
     };
 
-    const is_invoice_editable = await veneer_inventory_invoice_model?.find({
+    const is_invoice_editable = await veneer_inventory_items_model?.find({
       _id: { $ne: update_venner_item?._id },
       invoice_id: update_venner_item?.invoice_id,
       issue_status: { $ne: null },
@@ -312,7 +314,7 @@ class RevertOrderItem {
               this.issued_order_data?.item_details?.issued_sqm || 0,
           },
         },
-        { session: this.session }
+        { session: this.session, new: true }
       );
 
     if (!update_face_item) {
@@ -390,7 +392,7 @@ class RevertOrderItem {
               this.issued_order_data?.item_details?.issued_sqm || 0,
           },
         },
-        { session: this.session }
+        { session: this.session, new: true }
       );
 
     if (!update_mdf_item) {
@@ -468,7 +470,7 @@ class RevertOrderItem {
               this.issued_order_data?.item_details?.issued_sqm || 0,
           },
         },
-        { session: this.session }
+        { session: this.session, new: true }
       );
 
     if (!update_core_item) {
@@ -546,7 +548,7 @@ class RevertOrderItem {
               this.issued_order_data?.item_details?.issued_sqm || 0,
           },
         },
-        { session: this.session }
+        { session: this.session, new: true }
       );
 
     if (!update_fleece_item) {
@@ -622,7 +624,7 @@ class RevertOrderItem {
               this.issued_order_data?.item_details?.issued_amount || 0,
           },
         },
-        { session: this.session }
+        { session: this.session, new: true }
       );
 
     if (!update_other_goods_item) {
@@ -757,7 +759,7 @@ class RevertOrderItem {
 
     const is_crosscutting_item_editable = await crosscutting_done_model?.find({
       _id: { $ne: update_crosscutting_item?._id },
-      issue_for_crosscutting_id:update_crosscutting_item.issue_for_crosscutting_id,
+      issue_for_crosscutting_id: update_crosscutting_item.issue_for_crosscutting_id,
       issue_status: { $ne: null },
     });
 
@@ -785,6 +787,56 @@ class RevertOrderItem {
       ) {
         throw new ApiError(
           'Failed to update Flitch Item Status',
+          StatusCodes.BAD_REQUEST
+        );
+      }
+    }
+  }
+
+  async DRESSING_FACTORY() {
+    const update_dressing_item = await dressing_done_items_model.findOneAndUpdate({ _id: this.issued_order_data?.item_details?._id }, {
+      $set: {
+        issue_status: null,
+        updated_by: this.userDetails?._id
+      }
+    }, {
+      session: this.session, new: true
+    });
+
+    if (!update_dressing_item) {
+      throw new ApiError("Dressing Item not found.", StatusCodes.BAD_REQUEST)
+    };
+
+    const is_dressing_item_editable = await dressing_done_items_model?.find({
+      _id: { $ne: update_dressing_item?._id },
+      dressing_done_other_details_id: update_dressing_item?.dressing_done_other_details_id,
+      issue_status: { $ne: null },
+    });
+
+    if (is_dressing_item_editable && is_dressing_item_editable?.length === 0) {
+      const update_dressing_item_editable_status =
+        await dressing_done_other_details_model?.updateOne(
+          { _id: update_dressing_item?.dressing_done_other_details_id },
+          {
+            $set: {
+              isEditable: true,
+              updated_by: this.userDetails?._id,
+            },
+          },
+          { session: this.session }
+        );
+      if (update_dressing_item_editable_status?.matchedCount === 0) {
+        throw new ApiError(
+          'Dressing item details not found',
+          StatusCodes.BAD_REQUEST
+        );
+      }
+      if (
+        !update_dressing_item_editable_status?.acknowledged ||
+        update_dressing_item_editable_status?.modifiedCount === 0
+      ) {
+        throw new ApiError(
+          'Failed to update dressing item editable Status',
           StatusCodes.BAD_REQUEST
         );
       }
