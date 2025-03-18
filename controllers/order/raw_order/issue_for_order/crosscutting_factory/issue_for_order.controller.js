@@ -1,9 +1,5 @@
 import mongoose, { isValidObjectId } from 'mongoose';
 import ApiError from '../../../../../utils/errors/apiError.js';
-import {
-  log_inventory_invoice_model,
-  log_inventory_items_model,
-} from '../../../../../database/schema/inventory/log/log.schema.js';
 import catchAsync from '../../../../../utils/errors/catchAsync.js';
 import ApiResponse from '../../../../../utils/ApiResponse.js';
 import { StatusCodes } from '../../../../../utils/constants.js';
@@ -24,7 +20,7 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
   }
   if (!isValidObjectId(crosscutting_item_id)) {
     throw new ApiError('Invalid Log Item ID', StatusCodes.BAD_REQUEST);
-  }
+  }  
   for (let field of ['order_item_id', 'crosscutting_item_id']) {
     if (!req.body[field]) {
       throw new ApiError(`${field} is missing`, StatusCodes.NOT_FOUND);
@@ -115,7 +111,7 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
       );
 
     if (update_crosscutting_item_issue_status?.matchedCount === 0) {
-      throw new ApiError('Log item not found', StatusCodes.BAD_REQUEST);
+      throw new ApiError('Crosscutting item not found', StatusCodes.BAD_REQUEST);
     }
 
     if (
@@ -123,14 +119,14 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
       update_crosscutting_item_issue_status?.modifiedCount === 0
     ) {
       throw new ApiError(
-        'Failed to update Log item status',
+        'Failed to update Crosscutting status',
         StatusCodes.BAD_REQUEST
       );
     }
 
-    const update_log_inventory_invoice_editable_status =
-      await log_inventory_invoice_model?.updateOne(
-        { _id: log_item_data?.invoice_id },
+    const update_crosscutting_editable_status =
+      await crosscutting_done_model?.updateMany(
+        { issue_for_crosscutting_id: crosscutting_item_data?.issue_for_crosscutting_id },
         {
           $set: {
             isEditable: false,
@@ -139,16 +135,16 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
         },
         { session }
       );
-    if (update_log_inventory_invoice_editable_status?.matchedCount === 0) {
-      throw new ApiError('Log item invoice not found', StatusCodes.BAD_REQUEST);
+    if (update_crosscutting_editable_status?.matchedCount === 0) {
+      throw new ApiError('Crosscutting data not found', StatusCodes.BAD_REQUEST);
     }
 
     if (
-      !update_log_inventory_invoice_editable_status?.acknowledged ||
-      update_log_inventory_invoice_editable_status?.modifiedCount === 0
+      !update_crosscutting_editable_status?.acknowledged ||
+      update_crosscutting_editable_status?.modifiedCount === 0
     ) {
       throw new ApiError(
-        'Failed to update Log item invoice status',
+        'Failed to update crosscutting status',
         StatusCodes.BAD_REQUEST
       );
     }
