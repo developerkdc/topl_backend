@@ -93,7 +93,8 @@ export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(a
             grouping_done_item_id: issue_for_tapping_data?.issue_for_tapping_data,
             grouping_done_other_details_id: issue_for_tapping_data?.grouping_done_other_details_id,
             group_no: issue_for_tapping_data?.group_no,
-            issue_status: issue_for_tapping_data?.issue_status
+            issue_status: issue_for_tapping_data?.issue_status,
+            is_tapping_done: false
         });
 
         let issues_for_tapping_details;
