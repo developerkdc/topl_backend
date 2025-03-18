@@ -1,5 +1,8 @@
 import mongoose, { isValidObjectId } from 'mongoose';
 import ApiError from '../../../../../utils/errors/apiError.js';
+import {
+  flitching_done_model
+} from '../../../../../database/schema/factory/flitching/flitching.schema.js';
 import catchAsync from '../../../../../utils/errors/catchAsync.js';
 import ApiResponse from '../../../../../utils/ApiResponse.js';
 import { StatusCodes } from '../../../../../utils/constants.js';
@@ -9,19 +12,18 @@ import {
 } from '../../../../../database/Utils/constants/constants.js';
 import { RawOrderItemDetailsModel } from '../../../../../database/schema/order/raw_order/raw_order_item_details.schema.js';
 import issue_for_order_model from '../../../../../database/schema/order/issue_for_order/issue_for_order.schema.js';
-import { crosscutting_done_model } from '../../../../../database/schema/factory/crossCutting/crosscutting.schema.js';
 
 export const add_issue_for_order = catchAsync(async (req, res) => {
-  const { order_item_id, crosscutting_item_id } = req.body;
+  const { order_item_id, flitch_item_id } = req.body;
   const userDetails = req.userDetails;
   const session = await mongoose.startSession();
   if (!isValidObjectId(order_item_id)) {
     throw new ApiError('Invalid Order Item ID', StatusCodes.BAD_REQUEST);
   }
-  if (!isValidObjectId(crosscutting_item_id)) {
+  if (!isValidObjectId(flitch_item_id)) {
     throw new ApiError('Invalid Log Item ID', StatusCodes.BAD_REQUEST);
-  }  
-  for (let field of ['order_item_id', 'crosscutting_item_id']) {
+  }
+  for (let field of ['order_item_id', 'flitch_item_id']) {
     if (!req.body[field]) {
       throw new ApiError(`${field} is missing`, StatusCodes.NOT_FOUND);
     }
@@ -36,16 +38,14 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
       throw new ApiError('Order Item Data not found');
     }
 
-    const crosscutting_item_data = await crosscutting_done_model
-      .findById(crosscutting_item_id)
-      .lean();
-    if (!crosscutting_item_data) {
-      throw new ApiError('Crosscutting Item Data not found.');
+    const flitching_item_data = await flitching_done_model.findById(flitch_item_id)
+    if (!flitching_item_data) {
+      throw new ApiError('Flitching Item Data not found.');
     }
 
-    if (crosscutting_item_data?.issue_status !== null) {
+    if (flitching_item_data?.issue_status !== null) {
       throw new ApiError(
-        `Crosscutting item is already issued for ${crosscutting_item_data?.issue_status?.toUpperCase()} `
+        `Flitching item is already issued for ${flitching_item_data?.issue_status?.toUpperCase()} `
       );
     }
 
@@ -59,7 +59,7 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
         $group: {
           _id: null,
           total_sqm: {
-            $sum: '$item_details.crosscut_cmt',
+            $sum: '$item_details.flitch_cmt',
           },
         },
       },
@@ -67,7 +67,7 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
 
     if (
       Number(
-        validate_sqm_for_order?.total_sqm + Number(crosscutting_item_data?.crosscut_cmt)
+        validate_sqm_for_order?.total_sqm + Number(flitching_item_data?.flitch_cmt)
       ) > order_item_data?.cbm
     ) {
       throw new ApiError(
@@ -79,8 +79,8 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
     const updated_body = {
       order_id: order_item_data?.order_id,
       order_item_id: order_item_data?._id,
-      issued_from: item_issued_from?.crosscutting,
-      item_details: crosscutting_item_data,
+      issued_from: item_issued_from?.flitching_factory,
+      item_details: flitching_item_data,
       created_by: userDetails?._id,
       updated_by: userDetails?._id,
     };
@@ -98,9 +98,9 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
       );
     }
 
-    const update_crosscutting_item_issue_status =
-      await crosscutting_done_model.updateOne(
-        { _id: crosscutting_item_data?._id },
+    const update_flitching_item_issue_status =
+      await flitching_done_model.updateOne(
+        { _id: flitching_item_data?._id },
         {
           $set: {
             issue_status: issues_for_status?.order,
@@ -110,23 +110,23 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
         { session: session }
       );
 
-    if (update_crosscutting_item_issue_status?.matchedCount === 0) {
-      throw new ApiError('Crosscutting item not found', StatusCodes.BAD_REQUEST);
+    if (update_flitching_item_issue_status?.matchedCount === 0) {
+      throw new ApiError('Flitching item not found', StatusCodes.BAD_REQUEST);
     }
 
     if (
-      !update_crosscutting_item_issue_status?.acknowledged ||
-      update_crosscutting_item_issue_status?.modifiedCount === 0
+      !update_flitching_item_issue_status?.acknowledged ||
+      update_flitching_item_issue_status?.modifiedCount === 0
     ) {
       throw new ApiError(
-        'Failed to update Crosscutting status',
+        'Failed to update Flitching item status',
         StatusCodes.BAD_REQUEST
       );
     }
 
-    const update_crosscutting_editable_status =
-      await crosscutting_done_model?.updateMany(
-        { issue_for_crosscutting_id: crosscutting_item_data?.issue_for_crosscutting_id },
+    const update_flitching_factory_items_editable_status =
+      await flitching_done_model?.updateMany(
+        { issue_for_flitching_id: flitching_item_data?.issue_for_flitching_id },
         {
           $set: {
             isEditable: false,
@@ -135,16 +135,19 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
         },
         { session }
       );
-    if (update_crosscutting_editable_status?.matchedCount === 0) {
-      throw new ApiError('Crosscutting data not found', StatusCodes.BAD_REQUEST);
+    if (update_flitching_factory_items_editable_status?.matchedCount === 0) {
+      throw new ApiError(
+        'Flitch items not found',
+        StatusCodes.BAD_REQUEST
+      );
     }
 
     if (
-      !update_crosscutting_editable_status?.acknowledged ||
-      update_crosscutting_editable_status?.modifiedCount === 0
+      !update_flitching_factory_items_editable_status?.acknowledged ||
+      update_flitching_factory_items_editable_status?.modifiedCount === 0
     ) {
       throw new ApiError(
-        'Failed to update crosscutting status',
+        'Failed to update Flitch item status',
         StatusCodes.BAD_REQUEST
       );
     }
@@ -163,3 +166,5 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
     await session.endSession();
   }
 });
+
+

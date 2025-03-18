@@ -23,7 +23,7 @@ export const fetch_all_flitch_by_item_name = catchAsync(async (req, res) => {
   if (order_item_data?.item_name && order_item_data?.log_no) {
     search_query['$and'] = [
       { item_name: order_item_data?.item_name },
-      { log_no: order_item_data?.log_no },
+      { log_no_code: order_item_data?.log_no },
     ];
   } else if (order_item_data?.item_name) {
     search_query['item_name'] = order_item_data?.item_name;
@@ -41,34 +41,33 @@ export const fetch_all_flitch_by_item_name = catchAsync(async (req, res) => {
     { $match: { ...match_query } },
     {
       $project: {
-        log_no: 1,
+        log_no_code: 1,
       },
     },
   ];
 
-  const result = await flitch_inventory_items_model
-    ?.aggregate(pipeline)
+  const result = await flitching_done_model.aggregate(pipeline)
     .collation({ caseLevel: true, locale: 'en' });
 
   const response = new ApiResponse(
     StatusCodes.OK,
-    'Flitch  Dropdown fetched successfully',
+    'Flitching Done Log No Code Dropdown fetched successfully',
     result
   );
   return res.status(StatusCodes.OK).json(response);
 });
 
-export const fetch_flitch_details_by_log_no = catchAsync(async (req, res) => {
+export const fetch_flitch_details_by_log_no_code = catchAsync(async (req, res) => {
   const { id } = req.params;
 
   if (!id || !isValidObjectId(id)) {
     throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
   }
 
-  const flitch_item_details = await flitch_inventory_items_model.findById(id);
+  const flitch_item_details = await flitching_done_model.findById(id);
   const response = new ApiResponse(
     StatusCodes.OK,
-    'Flitch Item Details fetched successfully',
+    'Flitching Item Details fetched successfully',
     flitch_item_details
   );
   return res.status(StatusCodes.OK).json(response);

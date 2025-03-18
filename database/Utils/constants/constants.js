@@ -92,5 +92,5 @@ export const item_issued_from = {
   mdf: 'MDF',
   store: 'OTHER_GOODS',
   crosscutting: "CROSSCUTTING",
-  flitching: "FLITCHING"
+  flitching_factory: "FLITCHING_FACTORY"
 };

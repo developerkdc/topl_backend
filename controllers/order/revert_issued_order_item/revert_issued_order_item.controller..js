@@ -29,6 +29,7 @@ import { othergoods_inventory_invoice_details, othergoods_inventory_items_detail
 import other_goods_history_model from '../../../database/schema/inventory/otherGoods/otherGoods.history.schema.js';
 import { fleece_inventory_invoice_modal, fleece_inventory_items_modal } from '../../../database/schema/inventory/fleece/fleece.schema.js';
 import fleece_history_model from '../../../database/schema/inventory/fleece/fleece.history.schema.js';
+import { flitching_done_model } from '../../../database/schema/factory/flitching/flitching.schema.js';
 
 class RevertOrderItem {
   constructor(id, userDetails, session) {
@@ -679,6 +680,60 @@ class RevertOrderItem {
         'Failed to delete other goods history',
         StatusCodes.BAD_REQUEST
       );
+    }
+  }
+
+  //FACTORY ORDERS
+  async FLITCHING_FACTORY() {
+    const update_flitching_item =
+      await flitching_done_model?.findOneAndUpdate(
+        { _id: this.issued_order_data?.item_details?._id },
+        {
+          $set: {
+            issue_status: null,
+            updated_by: this?.userDetails?._id,
+          },
+        },
+        { session: this.session, new: true }
+      );
+
+    if (!update_flitching_item) {
+      throw new ApiError('Flitching item not found', StatusCodes.BAD_REQUEST);
+    }
+
+    const is_flitching_item_editable = await flitching_done_model?.find({
+      _id: { $ne: update_flitching_item?._id },
+      issue_for_flitching_id: update_flitching_item?.issue_for_flitching_id,
+      issue_status: { $ne: null },
+    });
+
+    if (is_flitching_item_editable && is_flitching_item_editable?.length === 0) {
+      const update_flitching_item_editable_status =
+        await flitching_done_model.updateMany(
+          { issue_for_flitching_id: update_flitching_item?.issue_for_flitching_id },
+          {
+            $set: {
+              isEditable: true,
+              updated_by: this.userDetails?._id,
+            },
+          },
+          { session: this.session }
+        );
+      if (update_flitching_item_editable_status?.matchedCount === 0) {
+        throw new ApiError(
+          'Flitching item  not found',
+          StatusCodes.BAD_REQUEST
+        );
+      }
+      if (
+        !update_flitching_item_editable_status?.acknowledged ||
+        update_flitching_item_editable_status?.modifiedCount === 0
+      ) {
+        throw new ApiError(
+          'Failed to update Flitch Item Status',
+          StatusCodes.BAD_REQUEST
+        );
+      }
     }
   }
 }

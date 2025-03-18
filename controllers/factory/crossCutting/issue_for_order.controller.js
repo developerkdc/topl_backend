@@ -43,7 +43,7 @@ export const fetch_all_log_no_item_name = catchAsync(async (req, res) => {
     { $match: { ...match_query } },
     {
       $project: {
-        log_no: 1,
+        log_no_code: 1,
       },
     },
   ];
@@ -54,7 +54,7 @@ export const fetch_all_log_no_item_name = catchAsync(async (req, res) => {
 
   const response = new ApiResponse(
     StatusCodes.OK,
-    'Log No Dropdown fetched successfully',
+    'Crosscutting Log No Dropdown fetched successfully',
     result
   );
   return res.status(StatusCodes.OK).json(response);
@@ -70,7 +70,7 @@ export const fetch_log_details_by_log_no = catchAsync(async (req, res) => {
   const log_item_details = await crosscutting_done_model.findById(id);
   const response = new ApiResponse(
     StatusCodes.OK,
-    'Log Item Details fetched successfully',
+    'Crosscutting  Details fetched successfully',
     log_item_details
   );
   return res.status(StatusCodes.OK).json(response);
