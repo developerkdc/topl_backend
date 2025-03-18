@@ -32,6 +32,7 @@ import fleece_history_model from '../../../database/schema/inventory/fleece/flee
 import { flitching_done_model } from '../../../database/schema/factory/flitching/flitching.schema.js';
 import { crosscutting_done_model } from '../../../database/schema/factory/crossCutting/crosscutting.schema.js';
 import { dressing_done_items_model, dressing_done_other_details_model } from '../../../database/schema/factory/dressing/dressing_done/dressing.done.schema.js';
+import dressing_done_history_model from '../../../database/schema/factory/dressing/dressing_done/dressing.done.history.schema.js';
 
 class RevertOrderItem {
   constructor(id, userDetails, session) {
@@ -840,6 +841,11 @@ class RevertOrderItem {
           StatusCodes.BAD_REQUEST
         );
       }
+    }
+    const delete_doc_from_dressing_history_result = await dressing_done_history_model.deleteOne({ dressing_done_other_details_id: update_dressing_item?.dressing_done_other_details_id, bundles: { $in: [update_dressing_item?._id] } }, { session: this.session });
+
+    if (!delete_doc_from_dressing_history_result?.acknowledged || delete_doc_from_dressing_history_result.deletedCount === 0) {
+      throw new ApiError("Failed to delete document from dressing history", StatusCodes.BAD_REQUEST)
     }
   }
 }

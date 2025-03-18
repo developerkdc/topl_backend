@@ -1,6 +1,4 @@
 import mongoose, { isValidObjectId } from 'mongoose';
-// import { log_inventory_items_model } from '../../../database/schema/inventory/log/log.schema.js';
-
 import catchAsync from '../../../../utils/errors/catchAsync.js';
 import ApiError from '../../../../utils/errors/apiError.js';
 import { StatusCodes } from '../../../../utils/constants.js';
@@ -22,13 +20,12 @@ export const fetch_all_log_no_code_by_item_name = catchAsync(async (req, res) =>
 
     const search_query = {};
 
-    // if (order_item_data?.item_name && order_item_data?.log_no) {
-    //     search_query['$and'] = [
-    //         { item_name: order_item_data?.item_name },
-    //         { log_code: order_item_data?.log_no },
-    //     ];
-    // } else 
-    if (order_item_data?.item_name) {
+    if (order_item_data?.item_name && order_item_data?.log_no) {
+        search_query['$and'] = [
+            { item_name: order_item_data?.item_name },
+            { log_no_code: order_item_data?.log_no },
+        ];
+    } else if (order_item_data?.item_name) {
         search_query['item_name'] = order_item_data?.item_name;
     }
 
