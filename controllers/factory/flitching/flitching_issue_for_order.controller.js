@@ -14,6 +14,7 @@ export const fetch_all_flitch_by_item_name = catchAsync(async (req, res) => {
 
   const order_item_data = await RawOrderItemDetailsModel.findById(id);
 
+
   if (!order_item_data) {
     throw new ApiError('Order Item Data not found', StatusCodes.NOT_FOUND);
   }
