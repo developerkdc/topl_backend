@@ -26,10 +26,11 @@ export const fetch_all_log_no_item_name = catchAsync(async (req, res) => {
       { item_name: order_item_data?.item_name },
       { log_no_code: order_item_data?.log_no },
     ];
-  } else if (order_item_data?.item_name) {
+  } else 
+  if (order_item_data?.item_name) {
     search_query['item_name'] = order_item_data?.item_name;
   }
-
+ 
   const match_query = {
     ...search_query,
     crosscut_cmt: {

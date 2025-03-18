@@ -30,6 +30,7 @@ import other_goods_history_model from '../../../database/schema/inventory/otherG
 import { fleece_inventory_invoice_modal, fleece_inventory_items_modal } from '../../../database/schema/inventory/fleece/fleece.schema.js';
 import fleece_history_model from '../../../database/schema/inventory/fleece/fleece.history.schema.js';
 import { flitching_done_model } from '../../../database/schema/factory/flitching/flitching.schema.js';
+import { crosscutting_done_model } from '../../../database/schema/factory/crossCutting/crosscutting.schema.js';
 
 class RevertOrderItem {
   constructor(id, userDetails, session) {
@@ -728,6 +729,59 @@ class RevertOrderItem {
       if (
         !update_flitching_item_editable_status?.acknowledged ||
         update_flitching_item_editable_status?.modifiedCount === 0
+      ) {
+        throw new ApiError(
+          'Failed to update Flitch Item Status',
+          StatusCodes.BAD_REQUEST
+        );
+      }
+    }
+  }
+
+  async CROSSCUTTING() {
+    const update_crosscutting_item =
+      await crosscutting_done_model?.findOneAndUpdate(
+        { _id: this.issued_order_data?.item_details?._id },
+        {
+          $set: {
+            issue_status: null,
+            updated_by: this?.userDetails?._id,
+          },
+        },
+        { session: this.session, new: true }
+      );
+
+    if (!update_crosscutting_item) {
+      throw new ApiError('Crosscutting item not found', StatusCodes.BAD_REQUEST);
+    }
+
+    const is_crosscutting_item_editable = await crosscutting_done_model?.find({
+      _id: { $ne: update_crosscutting_item?._id },
+      issue_for_crosscutting_id:update_crosscutting_item.issue_for_crosscutting_id,
+      issue_status: { $ne: null },
+    });
+
+    if (is_crosscutting_item_editable && is_crosscutting_item_editable?.length === 0) {
+      const update_crosscutting_item_editable_status =
+        await crosscutting_done_model.updateMany(
+          { issue_for_crosscutting_id: update_crosscutting_item?.issue_for_crosscutting_id },
+          {
+            $set: {
+              isEditable: true,
+              updated_by: this.userDetails?._id,
+            },
+          },
+          { session: this.session }
+        );
+      if (update_crosscutting_item_editable_status?.matchedCount === 0) {
+        throw new ApiError(
+          'Crosscutting item  not found',
+          StatusCodes.BAD_REQUEST
+        );
+      }
+      if (
+        !update_crosscutting_item_editable_status?.acknowledged ||
+        update_crosscutting_item_editable_status?.modifiedCount === 0
       ) {
         throw new ApiError(
           'Failed to update Flitch Item Status',
