@@ -56,7 +56,7 @@ issue_for_raw_order_router.use(
 //factory order
 
 issue_for_raw_order_router.use(
-  '/issue-raw-crosscutting-order',
+  '/issue-raw-crosscutting-factory-order',
   crosscutting_factory_order_router
 );
 issue_for_raw_order_router.use(
@@ -64,7 +64,7 @@ issue_for_raw_order_router.use(
   flitching_factory_order_router
 );
 issue_for_raw_order_router.use(
-  '/issue-raw-dressing_factory-order',
+  '/issue-raw-dressing-factory-order',
   dressing_factory_order_router
 );
 
