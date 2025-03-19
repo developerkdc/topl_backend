@@ -15,7 +15,10 @@ import CheckRoleAndTokenAccess from '../../../middlewares/permission.js';
 import AuthMiddleware from '../../../middlewares/verifyToken.js';
 import RolesPermissions from '../../../middlewares/permission.js';
 import { verifyApproval } from '../../../middlewares/approval.middleware.js';
-import { fetch_all_flitch_by_item_name, fetch_flitch_details_by_log_no_code } from '../../../controllers/factory/flitching/flitching_issue_for_order.controller.js';
+import {
+  fetch_all_flitch_by_item_name,
+  fetch_flitch_details_by_log_no_code,
+} from '../../../controllers/factory/flitching/flitching_issue_for_order.controller.js';
 const router = express.Router();
 
 router.post(
@@ -78,7 +81,15 @@ router.post(
 );
 //order dropdowns
 
-router.get('/log-no-dropdown/:id', AuthMiddleware, fetch_all_flitch_by_item_name);
-router.get('/list-flitching-details/:id', AuthMiddleware, fetch_flitch_details_by_log_no_code);
+router.get(
+  '/log-no-dropdown/:id',
+  AuthMiddleware,
+  fetch_all_flitch_by_item_name
+);
+router.get(
+  '/list-flitching-details/:id',
+  AuthMiddleware,
+  fetch_flitch_details_by_log_no_code
+);
 
 export default router;

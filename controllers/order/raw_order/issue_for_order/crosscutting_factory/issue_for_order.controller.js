@@ -20,7 +20,7 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
   }
   if (!isValidObjectId(crosscutting_item_id)) {
     throw new ApiError('Invalid Log Item ID', StatusCodes.BAD_REQUEST);
-  }  
+  }
   for (let field of ['order_item_id', 'crosscutting_item_id']) {
     if (!req.body[field]) {
       throw new ApiError(`${field} is missing`, StatusCodes.NOT_FOUND);
@@ -67,7 +67,8 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
 
     if (
       Number(
-        validate_sqm_for_order?.total_sqm + Number(crosscutting_item_data?.crosscut_cmt)
+        validate_sqm_for_order?.total_sqm +
+          Number(crosscutting_item_data?.crosscut_cmt)
       ) > order_item_data?.cbm
     ) {
       throw new ApiError(
@@ -111,7 +112,10 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
       );
 
     if (update_crosscutting_item_issue_status?.matchedCount === 0) {
-      throw new ApiError('Crosscutting item not found', StatusCodes.BAD_REQUEST);
+      throw new ApiError(
+        'Crosscutting item not found',
+        StatusCodes.BAD_REQUEST
+      );
     }
 
     if (
@@ -126,7 +130,10 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
 
     const update_crosscutting_editable_status =
       await crosscutting_done_model?.updateMany(
-        { issue_for_crosscutting_id: crosscutting_item_data?.issue_for_crosscutting_id },
+        {
+          issue_for_crosscutting_id:
+            crosscutting_item_data?.issue_for_crosscutting_id,
+        },
         {
           $set: {
             isEditable: false,
@@ -136,7 +143,10 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
         { session }
       );
     if (update_crosscutting_editable_status?.matchedCount === 0) {
-      throw new ApiError('Crosscutting data not found', StatusCodes.BAD_REQUEST);
+      throw new ApiError(
+        'Crosscutting data not found',
+        StatusCodes.BAD_REQUEST
+      );
     }
 
     if (

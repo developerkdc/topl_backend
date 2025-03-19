@@ -534,12 +534,11 @@ export const revert_issue_for_grouping = catchAsync(async (req, res, next) => {
       }
 
       // Check is dressing done is editable
-      const is_dressing_done_editable =
-        await dressing_done_items_model.find({
-          _id: { $nin: dressing_done_items_ids },
-          dressing_done_other_details_id: dressing_done_id,
-          issue_status: { $ne: null },
-        });
+      const is_dressing_done_editable = await dressing_done_items_model.find({
+        _id: { $nin: dressing_done_items_ids },
+        dressing_done_other_details_id: dressing_done_id,
+        issue_status: { $ne: null },
+      });
 
       if (is_dressing_done_editable && is_dressing_done_editable?.length <= 0) {
         const update_dressing_done_editable =

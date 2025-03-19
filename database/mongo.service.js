@@ -32,9 +32,8 @@ let connect = () => {
       });
     });
   } catch (error) {
-    console.log("err in database connection", error)
+    console.log('err in database connection', error);
   }
-
 };
 
 export default connect;

@@ -154,7 +154,7 @@ export const face_invoice_schema = new mongoose.Schema(
         message: `Invalid status {{VALUE}} Issue Status must either be one of ${inward_type.inventory}, ${inward_type.job_work}, ${inward_type.challan}`,
       },
       required: [true, 'Inward Type is required'],
-      default: inward_type?.inventory
+      default: inward_type?.inventory,
     },
     currency: {
       type: String,
@@ -285,7 +285,7 @@ export const face_invoice_schema = new mongoose.Schema(
     },
     isEditable: {
       type: Boolean,
-      default: true
+      default: true,
     },
     approval_status: approval_status,
     invoice_Details: invoice_details,

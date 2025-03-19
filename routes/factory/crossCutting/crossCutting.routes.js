@@ -18,7 +18,10 @@ import {
 import AuthMiddleware from '../../../middlewares/verifyToken.js';
 import RolesPermissions from '../../../middlewares/permission.js';
 import { verifyApproval } from '../../../middlewares/approval.middleware.js';
-import { fetch_all_log_no_item_name, fetch_log_details_by_log_no } from '../../../controllers/factory/crossCutting/issue_for_order.controller.js';
+import {
+  fetch_all_log_no_item_name,
+  fetch_log_details_by_log_no,
+} from '../../../controllers/factory/crossCutting/issue_for_order.controller.js';
 const router = express.Router();
 
 //Issue for crosscutting
@@ -100,7 +103,11 @@ router.post(
 
 //log dropdown for crosscutting issue for order
 router.get('/log-no-dropdown/:id', AuthMiddleware, fetch_all_log_no_item_name);
-// log details by id 
-router.get('/list-log-details/:id',AuthMiddleware,fetch_log_details_by_log_no);
+// log details by id
+router.get(
+  '/list-log-details/:id',
+  AuthMiddleware,
+  fetch_log_details_by_log_no
+);
 
 export default router;

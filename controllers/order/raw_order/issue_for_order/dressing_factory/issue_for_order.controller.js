@@ -9,7 +9,10 @@ import {
 } from '../../../../../database/Utils/constants/constants.js';
 import { RawOrderItemDetailsModel } from '../../../../../database/schema/order/raw_order/raw_order_item_details.schema.js';
 import issue_for_order_model from '../../../../../database/schema/order/issue_for_order/issue_for_order.schema.js';
-import { dressing_done_items_model, dressing_done_other_details_model } from '../../../../../database/schema/factory/dressing/dressing_done/dressing.done.schema.js';
+import {
+  dressing_done_items_model,
+  dressing_done_other_details_model,
+} from '../../../../../database/schema/factory/dressing/dressing_done/dressing.done.schema.js';
 import dressing_done_history_model from '../../../../../database/schema/factory/dressing/dressing_done/dressing.done.history.schema.js';
 
 export const add_issue_for_order = catchAsync(async (req, res) => {
@@ -20,7 +23,10 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
     throw new ApiError('Invalid Order Item ID', StatusCodes.BAD_REQUEST);
   }
   if (!isValidObjectId(dressing_done_item_id)) {
-    throw new ApiError('Invalid Dressing Done Item ID', StatusCodes.BAD_REQUEST);
+    throw new ApiError(
+      'Invalid Dressing Done Item ID',
+      StatusCodes.BAD_REQUEST
+    );
   }
   for (let field of ['order_item_id', 'dressing_done_item_id']) {
     if (!req.body[field]) {
@@ -112,7 +118,10 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
       );
 
     if (update_dressing_done_item_issue_status?.matchedCount === 0) {
-      throw new ApiError('Dressing Done item not found', StatusCodes.BAD_REQUEST);
+      throw new ApiError(
+        'Dressing Done item not found',
+        StatusCodes.BAD_REQUEST
+      );
     }
 
     if (
@@ -136,7 +145,9 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
         },
         { session }
       );
-    if (update_dressing_done_other_details_editable_status?.matchedCount === 0) {
+    if (
+      update_dressing_done_other_details_editable_status?.matchedCount === 0
+    ) {
       throw new ApiError('Log item invoice not found', StatusCodes.BAD_REQUEST);
     }
 
@@ -150,16 +161,25 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
       );
     }
 
-    const create_dressing_history = await dressing_done_history_model.create([{
-      dressing_done_other_details_id: dressing_done_item_data?.dressing_done_other_details_id,
-      bundles: [dressing_done_item_data?._id],
-      created_by: userDetails?._id,
-      updated_by: userDetails?._id
-    }], { session });
+    const create_dressing_history = await dressing_done_history_model.create(
+      [
+        {
+          dressing_done_other_details_id:
+            dressing_done_item_data?.dressing_done_other_details_id,
+          bundles: [dressing_done_item_data?._id],
+          created_by: userDetails?._id,
+          updated_by: userDetails?._id,
+        },
+      ],
+      { session }
+    );
 
     if (create_dressing_history?.length === 0) {
-      throw new ApiError("Failed to add dressing item to history", StatusCodes.BAD_REQUEST)
-    };
+      throw new ApiError(
+        'Failed to add dressing item to history',
+        StatusCodes.BAD_REQUEST
+      );
+    }
 
     const response = new ApiResponse(
       StatusCodes.CREATED,

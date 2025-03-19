@@ -89,7 +89,13 @@ export const editMachineDetails = catchAsync(async (req, res) => {
 });
 
 export const MachineDetails = catchAsync(async (req, res) => {
-  const { query, sortField = "updatedAt", sortOrder = "desc", page = 1, limit = 10 } = req.query;
+  const {
+    query,
+    sortField = 'updatedAt',
+    sortOrder = 'desc',
+    page = 1,
+    limit = 10,
+  } = req.query;
   const {
     string,
     boolean,
@@ -188,8 +194,8 @@ export const DropdownMachineNameMaster = catchAsync(async (req, res) => {
 
   const searchQuery = type
     ? {
-      $or: [{ 'deptDetails.dept_name': { $regex: type, $options: 'i' } }],
-    }
+        $or: [{ 'deptDetails.dept_name': { $regex: type, $options: 'i' } }],
+      }
     : {};
 
   const list = await machineModel.aggregate([

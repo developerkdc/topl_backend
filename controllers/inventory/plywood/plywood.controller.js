@@ -655,10 +655,10 @@ export const fetch_plywood_history = catchAsync(async (req, res, next) => {
       pipeline: [
         {
           $project: {
-            created_user: 0
-          }
-        }
-      ]
+            created_user: 0,
+          },
+        },
+      ],
     },
   };
   // const aggLookupPlywoodInvoiceDetails = {

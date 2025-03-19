@@ -11,11 +11,13 @@ import {
 import { RawOrderItemDetailsModel } from '../../../../../database/schema/order/raw_order/raw_order_item_details.schema.js';
 import issue_for_order_model from '../../../../../database/schema/order/issue_for_order/issue_for_order.schema.js';
 
-import { fleece_inventory_invoice_modal, fleece_inventory_items_modal } from '../../../../../database/schema/inventory/fleece/fleece.schema.js';
+import {
+  fleece_inventory_invoice_modal,
+  fleece_inventory_items_modal,
+} from '../../../../../database/schema/inventory/fleece/fleece.schema.js';
 import fleece_history_model from '../../../../../database/schema/inventory/fleece/fleece.history.schema.js';
 
 export const add_issue_for_order = catchAsync(async (req, res) => {
-
   const { order_item_id, fleece_item_details } = req.body;
   const userDetails = req.userDetails;
   const session = await mongoose.startSession();
@@ -40,8 +42,9 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
       throw new ApiError('Order Item Data not found');
     }
 
-    const fleece_item_data = await fleece_inventory_items_modal
-      .findById(fleece_item_details?._id)
+    const fleece_item_data = await fleece_inventory_items_modal.findById(
+      fleece_item_details?._id
+    );
     // .lean();
     if (!fleece_item_data) {
       throw new ApiError('Face Item Data not found.');
@@ -67,11 +70,11 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
       },
     ]);
 
-
     //validate issued no of rolls with order no.of rolls
     if (
       Number(
-        validate_sqm_for_order?.total_sqm + Number(fleece_item_details?.issued_sqm)
+        validate_sqm_for_order?.total_sqm +
+          Number(fleece_item_details?.issued_sqm)
       ) > order_item_data?.sqm
     ) {
       throw new ApiError(
@@ -110,11 +113,12 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
         'Failed to Add order details',
         StatusCodes?.BAD_REQUEST
       );
-    };
+    }
 
     //available sheets
     const available_number_of_roll =
-      fleece_item_data?.available_number_of_roll - fleece_item_details?.issued_number_of_roll;
+      fleece_item_data?.available_number_of_roll -
+      fleece_item_details?.issued_number_of_roll;
     //available sqm
     const available_sqm =
       fleece_item_data?.available_sqm - fleece_item_details?.issued_sqm;
@@ -181,22 +185,21 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
     }
 
     //add data to Fleece history model
-    const add_issued_data_to_fleece_history =
-      await fleece_history_model.create(
-        [
-          {
-            issued_for_order_id: issue_for_order_id,
-            issue_status: issues_for_status?.order,
-            fleece_item_id: fleece_item_data?._id,
-            issued_number_of_roll: issued_number_of_roll_for_order,
-            issued_sqm: issued_sqm_for_order,
-            issued_amount: issued_amount_for_order,
-            created_by: userDetails?._id,
-            updated_by: userDetails?._id,
-          },
-        ],
-        { session }
-      );
+    const add_issued_data_to_fleece_history = await fleece_history_model.create(
+      [
+        {
+          issued_for_order_id: issue_for_order_id,
+          issue_status: issues_for_status?.order,
+          fleece_item_id: fleece_item_data?._id,
+          issued_number_of_roll: issued_number_of_roll_for_order,
+          issued_sqm: issued_sqm_for_order,
+          issued_amount: issued_amount_for_order,
+          created_by: userDetails?._id,
+          updated_by: userDetails?._id,
+        },
+      ],
+      { session }
+    );
 
     if (add_issued_data_to_fleece_history?.length === 0) {
       throw new ApiError(

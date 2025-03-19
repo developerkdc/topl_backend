@@ -26,7 +26,7 @@ import mongoose from 'mongoose';
 // import { start_worker_thread } from './utils/constants.js';
 
 const Configs = getConfigs();
-mongo_service()
+mongo_service();
 
 const app = express();
 const server = http.createServer(app);
@@ -102,4 +102,3 @@ io.on('connection', (socket) => {
 server.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
 });
-

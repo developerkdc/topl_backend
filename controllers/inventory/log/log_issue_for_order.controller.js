@@ -33,7 +33,7 @@ export const fetch_all_log_no_item_name = catchAsync(async (req, res) => {
     ...search_query,
     physical_cmt: {
       $lte: order_item_data?.cbm,
-      $gt: 0
+      $gt: 0,
     },
     issue_status: null,
   };

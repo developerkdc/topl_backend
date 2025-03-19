@@ -612,10 +612,10 @@ export const fetch_face_history = catchAsync(async (req, res, next) => {
         {
           $project: {
             created_user: 0,
-            "face_invoice_details.expenses": 0
-          }
-        }
-      ]
+            'face_invoice_details.expenses': 0,
+          },
+        },
+      ],
     },
   };
   const aggCreatedUserDetails = {

@@ -72,7 +72,7 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
     if (
       Number(
         validate_sqm_for_order?.total_sheets +
-        Number(plywood_item_details?.issued_sheets)
+          Number(plywood_item_details?.issued_sheets)
       ) > order_item_data?.no_of_sheet
     ) {
       throw new ApiError(
