@@ -109,7 +109,7 @@ veneer_router.post(
 //order dropdowns
 veneer_router.get('/log-no-dropdown/:id', AuthMiddleware, fetch_all_log_no_by_item_name)
 veneer_router.get('/pallet-no-dropdown/:log_no', AuthMiddleware, fetch_all_pallet_no_by_log_no)
-veneer_router.get('/bundle-no-dropdown/:pallet_number', AuthMiddleware, fetch_all_bundles_by_pallet_number)
+veneer_router.get('/bundle-no-dropdown/:pallet_number(*)', AuthMiddleware, fetch_all_bundles_by_pallet_number)
 veneer_router.get('/list-veneer-details/:id', AuthMiddleware, fetch_veneer_details_by_bundle_id)
 
 export default veneer_router;

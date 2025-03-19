@@ -842,7 +842,7 @@ class RevertOrderItem {
         );
       }
     }
-    const delete_doc_from_dressing_history_result = await dressing_done_history_model.deleteOne({ dressing_done_other_details_id: update_dressing_item?.dressing_done_other_details_id, bundles: { $in: [update_dressing_item?._id] } }, { session: this.session });
+    const delete_doc_from_dressing_history_result = await dressing_done_history_model.deleteOne({ dressing_done_other_details_id: update_dressing_item?.dressing_done_other_details_id, bundles: update_dressing_item?._id }, { session: this.session });
 
     if (!delete_doc_from_dressing_history_result?.acknowledged || delete_doc_from_dressing_history_result.deletedCount === 0) {
       throw new ApiError("Failed to delete document from dressing history", StatusCodes.BAD_REQUEST)

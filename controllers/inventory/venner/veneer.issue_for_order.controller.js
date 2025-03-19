@@ -1,5 +1,4 @@
-import mongoose, { isValidObjectId } from 'mongoose';
-import { log_inventory_items_model } from '../../../database/schema/inventory/log/log.schema.js';
+import { isValidObjectId } from 'mongoose';
 import ApiResponse from '../../../utils/ApiResponse.js';
 import { StatusCodes } from '../../../utils/constants.js';
 import ApiError from '../../../utils/errors/apiError.js';
