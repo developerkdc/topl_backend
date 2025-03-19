@@ -147,12 +147,12 @@ export const addIssueForPeelingFromLogInventory = catchAsync(
       await session.commitTransaction();
 
       const response = new ApiResponse(
-        StatusCodes.CREATED,
+        StatusCodes.OK,
         'Issue for peeling added successfully',
         add_issue_for_peeling
       );
 
-      return res.status(StatusCodes.CREATED).json(response);
+      return res.status(StatusCodes.OK).json(response);
     } catch (error) {
       await session.abortTransaction();
       throw error;
