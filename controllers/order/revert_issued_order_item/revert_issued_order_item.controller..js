@@ -18,20 +18,41 @@ import {
   plywood_inventory_items_details,
 } from '../../../database/schema/inventory/Plywood/plywood.schema.js';
 import plywood_history_model from '../../../database/schema/inventory/Plywood/plywood.history.schema.js';
-import { veneer_inventory_invoice_model, veneer_inventory_items_model } from '../../../database/schema/inventory/venner/venner.schema.js';
-import { face_inventory_invoice_details, face_inventory_items_details } from '../../../database/schema/inventory/face/face.schema.js';
+import {
+  veneer_inventory_invoice_model,
+  veneer_inventory_items_model,
+} from '../../../database/schema/inventory/venner/venner.schema.js';
+import {
+  face_inventory_invoice_details,
+  face_inventory_items_details,
+} from '../../../database/schema/inventory/face/face.schema.js';
 import face_history_model from '../../../database/schema/inventory/face/face.history.schema.js';
-import { mdf_inventory_invoice_details, mdf_inventory_items_details } from '../../../database/schema/inventory/mdf/mdf.schema.js';
+import {
+  mdf_inventory_invoice_details,
+  mdf_inventory_items_details,
+} from '../../../database/schema/inventory/mdf/mdf.schema.js';
 import mdf_history_model from '../../../database/schema/inventory/mdf/mdf.history.schema.js';
-import { core_inventory_invoice_details, core_inventory_items_details } from '../../../database/schema/inventory/core/core.schema.js';
+import {
+  core_inventory_invoice_details,
+  core_inventory_items_details,
+} from '../../../database/schema/inventory/core/core.schema.js';
 import core_history_model from '../../../database/schema/inventory/core/core.history.schema.js';
-import { othergoods_inventory_invoice_details, othergoods_inventory_items_details } from '../../../database/schema/inventory/otherGoods/otherGoodsNew.schema.js';
+import {
+  othergoods_inventory_invoice_details,
+  othergoods_inventory_items_details,
+} from '../../../database/schema/inventory/otherGoods/otherGoodsNew.schema.js';
 import other_goods_history_model from '../../../database/schema/inventory/otherGoods/otherGoods.history.schema.js';
-import { fleece_inventory_invoice_modal, fleece_inventory_items_modal } from '../../../database/schema/inventory/fleece/fleece.schema.js';
+import {
+  fleece_inventory_invoice_modal,
+  fleece_inventory_items_modal,
+} from '../../../database/schema/inventory/fleece/fleece.schema.js';
 import fleece_history_model from '../../../database/schema/inventory/fleece/fleece.history.schema.js';
 import { flitching_done_model } from '../../../database/schema/factory/flitching/flitching.schema.js';
 import { crosscutting_done_model } from '../../../database/schema/factory/crossCutting/crosscutting.schema.js';
-import { dressing_done_items_model, dressing_done_other_details_model } from '../../../database/schema/factory/dressing/dressing_done/dressing.done.schema.js';
+import {
+  dressing_done_items_model,
+  dressing_done_other_details_model,
+} from '../../../database/schema/factory/dressing/dressing_done/dressing.done.schema.js';
 import dressing_done_history_model from '../../../database/schema/factory/dressing/dressing_done/dressing.done.history.schema.js';
 
 class RevertOrderItem {
@@ -200,7 +221,7 @@ class RevertOrderItem {
       _id: { $ne: update_plywood_item?._id },
       invoice_id: update_plywood_item?.invoice_id,
       // issue_status: { $ne: null },
-      $expr: { $ne: ["$available_sheets", "$sheets"] }
+      $expr: { $ne: ['$available_sheets', '$sheets'] },
     });
 
     //if invoice is editable then update then update the editable status
@@ -252,18 +273,24 @@ class RevertOrderItem {
   }
 
   async VENEER() {
-    const update_venner_item = await veneer_inventory_items_model.findOneAndUpdate({ _id: this.issued_order_data?.item_details?._id }, {
-      $set: {
-        issue_status: null,
-        updated_by: this.userDetails?._id
-      }
-    }, {
-      session: this.session, new: true
-    });
+    const update_venner_item =
+      await veneer_inventory_items_model.findOneAndUpdate(
+        { _id: this.issued_order_data?.item_details?._id },
+        {
+          $set: {
+            issue_status: null,
+            updated_by: this.userDetails?._id,
+          },
+        },
+        {
+          session: this.session,
+          new: true,
+        }
+      );
 
     if (!update_venner_item) {
-      throw new ApiError("Venner Item not found.", StatusCodes.BAD_REQUEST)
-    };
+      throw new ApiError('Venner Item not found.', StatusCodes.BAD_REQUEST);
+    }
 
     const is_invoice_editable = await veneer_inventory_items_model?.find({
       _id: { $ne: update_venner_item?._id },
@@ -327,7 +354,7 @@ class RevertOrderItem {
       _id: { $ne: update_face_item?._id },
       invoice_id: update_face_item?.invoice_id,
       // issue_status: { $ne: null },
-      $expr: { $ne: ["$available_sheets", "$number_of_sheets"] }
+      $expr: { $ne: ['$available_sheets', '$number_of_sheets'] },
     });
 
     //if invoice is editable then update then update the editable status
@@ -380,21 +407,19 @@ class RevertOrderItem {
 
   async MDF() {
     //update mdf item available sheets
-    const update_mdf_item =
-      await mdf_inventory_items_details.findOneAndUpdate(
-        { _id: this.issued_order_data?.item_details?._id },
-        {
-          $inc: {
-            available_sheets:
-              this.issued_order_data?.item_details?.issued_sheets || 0,
-            available_amount:
-              this.issued_order_data?.item_details?.issued_amount || 0,
-            available_sqm:
-              this.issued_order_data?.item_details?.issued_sqm || 0,
-          },
+    const update_mdf_item = await mdf_inventory_items_details.findOneAndUpdate(
+      { _id: this.issued_order_data?.item_details?._id },
+      {
+        $inc: {
+          available_sheets:
+            this.issued_order_data?.item_details?.issued_sheets || 0,
+          available_amount:
+            this.issued_order_data?.item_details?.issued_amount || 0,
+          available_sqm: this.issued_order_data?.item_details?.issued_sqm || 0,
         },
-        { session: this.session, new: true }
-      );
+      },
+      { session: this.session, new: true }
+    );
 
     if (!update_mdf_item) {
       throw new ApiError('MDF item not found', StatusCodes.BAD_REQUEST);
@@ -405,7 +430,7 @@ class RevertOrderItem {
       _id: { $ne: update_mdf_item?._id },
       invoice_id: update_mdf_item?.invoice_id,
       // issue_status: { $ne: null },
-      $expr: { $ne: ["$available_sheets", "$no_of_sheet"] }
+      $expr: { $ne: ['$available_sheets', '$no_of_sheet'] },
     });
 
     //if invoice is editable then update then update the editable status
@@ -483,7 +508,7 @@ class RevertOrderItem {
       _id: { $ne: update_core_item?._id },
       invoice_id: update_core_item?.invoice_id,
       // issue_status: { $ne: null },
-      $expr: { $ne: ["$available_sheets", "$number_of_sheets"] }
+      $expr: { $ne: ['$available_sheets', '$number_of_sheets'] },
     });
 
     //if invoice is editable then update then update the editable status
@@ -561,7 +586,7 @@ class RevertOrderItem {
       _id: { $ne: update_fleece_item?._id },
       invoice_id: update_fleece_item?.invoice_id,
       // issue_status: { $ne: null },
-      $expr: { $ne: ["$available_number_of_roll", "$number_of_roll"] }
+      $expr: { $ne: ['$available_number_of_roll', '$number_of_roll'] },
     });
 
     //if invoice is editable then update then update the editable status
@@ -636,7 +661,7 @@ class RevertOrderItem {
     const is_invoice_editable = await othergoods_inventory_items_details?.find({
       _id: { $ne: update_other_goods_item?._id },
       invoice_id: update_other_goods_item?.invoice_id,
-      $expr: { $ne: ["$available_quantity", "$total_quantity"] }
+      $expr: { $ne: ['$available_quantity', '$total_quantity'] },
     });
 
     //if invoice is editable then update then update the editable status
@@ -689,17 +714,16 @@ class RevertOrderItem {
 
   //FACTORY ORDERS
   async FLITCHING_FACTORY() {
-    const update_flitching_item =
-      await flitching_done_model?.findOneAndUpdate(
-        { _id: this.issued_order_data?.item_details?._id },
-        {
-          $set: {
-            issue_status: null,
-            updated_by: this?.userDetails?._id,
-          },
+    const update_flitching_item = await flitching_done_model?.findOneAndUpdate(
+      { _id: this.issued_order_data?.item_details?._id },
+      {
+        $set: {
+          issue_status: null,
+          updated_by: this?.userDetails?._id,
         },
-        { session: this.session, new: true }
-      );
+      },
+      { session: this.session, new: true }
+    );
 
     if (!update_flitching_item) {
       throw new ApiError('Flitching item not found', StatusCodes.BAD_REQUEST);
@@ -711,10 +735,16 @@ class RevertOrderItem {
       issue_status: { $ne: null },
     });
 
-    if (is_flitching_item_editable && is_flitching_item_editable?.length === 0) {
+    if (
+      is_flitching_item_editable &&
+      is_flitching_item_editable?.length === 0
+    ) {
       const update_flitching_item_editable_status =
         await flitching_done_model.updateMany(
-          { issue_for_flitching_id: update_flitching_item?.issue_for_flitching_id },
+          {
+            issue_for_flitching_id:
+              update_flitching_item?.issue_for_flitching_id,
+          },
           {
             $set: {
               isEditable: true,
@@ -755,19 +785,29 @@ class RevertOrderItem {
       );
 
     if (!update_crosscutting_item) {
-      throw new ApiError('Crosscutting item not found', StatusCodes.BAD_REQUEST);
+      throw new ApiError(
+        'Crosscutting item not found',
+        StatusCodes.BAD_REQUEST
+      );
     }
 
     const is_crosscutting_item_editable = await crosscutting_done_model?.find({
       _id: { $ne: update_crosscutting_item?._id },
-      issue_for_crosscutting_id: update_crosscutting_item.issue_for_crosscutting_id,
+      issue_for_crosscutting_id:
+        update_crosscutting_item.issue_for_crosscutting_id,
       issue_status: { $ne: null },
     });
 
-    if (is_crosscutting_item_editable && is_crosscutting_item_editable?.length === 0) {
+    if (
+      is_crosscutting_item_editable &&
+      is_crosscutting_item_editable?.length === 0
+    ) {
       const update_crosscutting_item_editable_status =
         await crosscutting_done_model.updateMany(
-          { issue_for_crosscutting_id: update_crosscutting_item?.issue_for_crosscutting_id },
+          {
+            issue_for_crosscutting_id:
+              update_crosscutting_item?.issue_for_crosscutting_id,
+          },
           {
             $set: {
               isEditable: true,
@@ -795,22 +835,29 @@ class RevertOrderItem {
   }
 
   async DRESSING_FACTORY() {
-    const update_dressing_item = await dressing_done_items_model.findOneAndUpdate({ _id: this.issued_order_data?.item_details?._id }, {
-      $set: {
-        issue_status: null,
-        updated_by: this.userDetails?._id
-      }
-    }, {
-      session: this.session, new: true
-    });
+    const update_dressing_item =
+      await dressing_done_items_model.findOneAndUpdate(
+        { _id: this.issued_order_data?.item_details?._id },
+        {
+          $set: {
+            issue_status: null,
+            updated_by: this.userDetails?._id,
+          },
+        },
+        {
+          session: this.session,
+          new: true,
+        }
+      );
 
     if (!update_dressing_item) {
-      throw new ApiError("Dressing Item not found.", StatusCodes.BAD_REQUEST)
-    };
+      throw new ApiError('Dressing Item not found.', StatusCodes.BAD_REQUEST);
+    }
 
     const is_dressing_item_editable = await dressing_done_items_model?.find({
       _id: { $ne: update_dressing_item?._id },
-      dressing_done_other_details_id: update_dressing_item?.dressing_done_other_details_id,
+      dressing_done_other_details_id:
+        update_dressing_item?.dressing_done_other_details_id,
       issue_status: { $ne: null },
     });
 
@@ -842,10 +889,24 @@ class RevertOrderItem {
         );
       }
     }
-    const delete_doc_from_dressing_history_result = await dressing_done_history_model.deleteOne({ dressing_done_other_details_id: update_dressing_item?.dressing_done_other_details_id, bundles: { $in: [update_dressing_item?._id] } }, { session: this.session });
+    const delete_doc_from_dressing_history_result =
+      await dressing_done_history_model.deleteOne(
+        {
+          dressing_done_other_details_id:
+            update_dressing_item?.dressing_done_other_details_id,
+          bundles: update_dressing_item?._id,
+        },
+        { session: this.session }
+      );
 
-    if (!delete_doc_from_dressing_history_result?.acknowledged || delete_doc_from_dressing_history_result.deletedCount === 0) {
-      throw new ApiError("Failed to delete document from dressing history", StatusCodes.BAD_REQUEST)
+    if (
+      !delete_doc_from_dressing_history_result?.acknowledged ||
+      delete_doc_from_dressing_history_result.deletedCount === 0
+    ) {
+      throw new ApiError(
+        'Failed to delete document from dressing history',
+        StatusCodes.BAD_REQUEST
+      );
     }
   }
 }

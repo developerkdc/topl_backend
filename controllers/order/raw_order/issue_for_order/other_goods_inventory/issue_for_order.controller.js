@@ -1,7 +1,8 @@
 import mongoose, { isValidObjectId } from 'mongoose';
 import ApiError from '../../../../../utils/errors/apiError.js';
 import {
-  othergoods_inventory_invoice_details, othergoods_inventory_items_details
+  othergoods_inventory_invoice_details,
+  othergoods_inventory_items_details,
 } from '../../../../../database/schema/inventory/otherGoods/otherGoodsNew.schema.js';
 import catchAsync from '../../../../../utils/errors/catchAsync.js';
 import ApiResponse from '../../../../../utils/ApiResponse.js';
@@ -22,7 +23,10 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
     throw new ApiError('Invalid Order Item ID', StatusCodes.BAD_REQUEST);
   }
   if (!other_goods_item_details) {
-    throw new ApiError('Other Goods Item Data is missing', StatusCodes.BAD_REQUEST);
+    throw new ApiError(
+      'Other Goods Item Data is missing',
+      StatusCodes.BAD_REQUEST
+    );
   }
   for (let field of ['order_item_id', 'other_goods_item_details']) {
     if (!req.body[field]) {
@@ -39,7 +43,10 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
       throw new ApiError('Order Item Data not found');
     }
 
-    const other_goods_item_data = await othergoods_inventory_items_details.findById(other_goods_item_details?._id)
+    const other_goods_item_data =
+      await othergoods_inventory_items_details.findById(
+        other_goods_item_details?._id
+      );
     if (!other_goods_item_data) {
       throw new ApiError('Other Goods Item Data not found.');
     }
@@ -69,7 +76,7 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
     if (
       Number(
         validate_units_for_order?.total_quantity +
-        Number(other_goods_item_details?.issued_quantity)
+          Number(other_goods_item_details?.issued_quantity)
       ) > order_item_data?.quantity
     ) {
       throw new ApiError(
@@ -107,11 +114,13 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
     }
     //available quantitiy
     const available_quantity =
-      other_goods_item_data?.available_quantity - other_goods_item_details?.issued_quantity;
+      other_goods_item_data?.available_quantity -
+      other_goods_item_details?.issued_quantity;
 
     //available_amount
     const available_amount =
-      other_goods_item_data?.available_amount - other_goods_item_details?.issued_amount;
+      other_goods_item_data?.available_amount -
+      other_goods_item_details?.issued_amount;
 
     //update other goods inventory available quantity
     const update_other_goods_item_quantity_result =
@@ -153,7 +162,9 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
         },
         { session }
       );
-    if (update_other_goods_inventory_invoice_editable_status?.matchedCount === 0) {
+    if (
+      update_other_goods_inventory_invoice_editable_status?.matchedCount === 0
+    ) {
       throw new ApiError(
         'Other Goods item invoice not found',
         StatusCodes.BAD_REQUEST

@@ -60,7 +60,6 @@ export const log_item_details_schema = new mongoose.Schema(
       required: [true, 'Log No is required'],
       trim: true,
       uppercase: true,
-
     },
     log_formula: {
       type: String,

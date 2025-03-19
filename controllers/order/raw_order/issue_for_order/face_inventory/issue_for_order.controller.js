@@ -1,7 +1,8 @@
 import mongoose, { isValidObjectId } from 'mongoose';
 import ApiError from '../../../../../utils/errors/apiError.js';
 import {
-  face_inventory_items_details, face_inventory_invoice_details
+  face_inventory_items_details,
+  face_inventory_invoice_details,
 } from '../../../../../database/schema/inventory/face/face.schema.js';
 import catchAsync from '../../../../../utils/errors/catchAsync.js';
 import ApiResponse from '../../../../../utils/ApiResponse.js';
@@ -39,8 +40,9 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
       throw new ApiError('Order Item Data not found');
     }
 
-    const face_item_data = await face_inventory_items_details
-      .findById(face_item_details?._id)
+    const face_item_data = await face_inventory_items_details.findById(
+      face_item_details?._id
+    );
     // .lean();
     if (!face_item_data) {
       throw new ApiError('Face Item Data not found.');
@@ -71,7 +73,7 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
     if (
       Number(
         validate_sqm_for_order?.total_sheets +
-        Number(face_item_details?.issued_sheets)
+          Number(face_item_details?.issued_sheets)
       ) > order_item_data?.no_of_sheet
     ) {
       throw new ApiError(
@@ -107,7 +109,7 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
         'Failed to Add order details',
         StatusCodes?.BAD_REQUEST
       );
-    };
+    }
 
     //available sheets
     const available_sheets =
@@ -178,22 +180,21 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
     }
 
     //add data to face history model
-    const add_issued_data_to_face_history =
-      await face_history_model.create(
-        [
-          {
-            issued_for_order_id: issue_for_order_id,
-            issue_status: issues_for_status?.order,
-            face_item_id: face_item_data?._id,
-            issued_sheets: issued_sheets_for_order,
-            issued_sqm: issued_sqm_for_order,
-            issued_amount: issued_amount_for_order,
-            created_by: userDetails?._id,
-            updated_by: userDetails?._id,
-          },
-        ],
-        { session }
-      );
+    const add_issued_data_to_face_history = await face_history_model.create(
+      [
+        {
+          issued_for_order_id: issue_for_order_id,
+          issue_status: issues_for_status?.order,
+          face_item_id: face_item_data?._id,
+          issued_sheets: issued_sheets_for_order,
+          issued_sqm: issued_sqm_for_order,
+          issued_amount: issued_amount_for_order,
+          created_by: userDetails?._id,
+          updated_by: userDetails?._id,
+        },
+      ],
+      { session }
+    );
 
     if (add_issued_data_to_face_history?.length === 0) {
       throw new ApiError(

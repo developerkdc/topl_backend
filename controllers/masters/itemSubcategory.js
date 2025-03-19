@@ -102,7 +102,13 @@ export const editItemSubCategory = catchAsync(async (req, res) => {
 });
 
 export const listItemSubCategories = catchAsync(async (req, res) => {
-  const { query, sortField = "updatedAt", sortOrder = "desc", page = 1, limit = 10 } = req.query;
+  const {
+    query,
+    sortField = 'updatedAt',
+    sortOrder = 'desc',
+    page = 1,
+    limit = 10,
+  } = req.query;
   const {
     string,
     boolean,

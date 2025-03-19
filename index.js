@@ -22,6 +22,7 @@ import { globalErrorHandler } from './utils/errors/GlobalErrorHandler.js';
 import { checkServerHealth } from './controllers/auth.js';
 // import { start_worker_thread } from './utils/constants.js';
 import { insert_raw_machine_data_into_machine_mismatch_model } from './utils/workers/workers.js';
+import mongoose from 'mongoose';
 // import { start_worker_thread } from './utils/constants.js';
 
 const Configs = getConfigs();

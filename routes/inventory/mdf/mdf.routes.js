@@ -95,7 +95,6 @@ router.get(
 //list MDF details
 router.get('/list-mdf-details/:id', AuthMiddleware, fetch_mdf_details_by_id);
 
-
 //List MDF history
 router.post(
   '/list-mdf-history',

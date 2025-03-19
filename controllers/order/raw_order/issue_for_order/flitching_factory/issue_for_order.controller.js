@@ -1,8 +1,6 @@
 import mongoose, { isValidObjectId } from 'mongoose';
 import ApiError from '../../../../../utils/errors/apiError.js';
-import {
-  flitching_done_model
-} from '../../../../../database/schema/factory/flitching/flitching.schema.js';
+import { flitching_done_model } from '../../../../../database/schema/factory/flitching/flitching.schema.js';
 import catchAsync from '../../../../../utils/errors/catchAsync.js';
 import ApiResponse from '../../../../../utils/ApiResponse.js';
 import { StatusCodes } from '../../../../../utils/constants.js';
@@ -38,7 +36,8 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
       throw new ApiError('Order Item Data not found');
     }
 
-    const flitching_item_data = await flitching_done_model.findById(flitch_item_id)
+    const flitching_item_data =
+      await flitching_done_model.findById(flitch_item_id);
     if (!flitching_item_data) {
       throw new ApiError('Flitching Item Data not found.');
     }
@@ -67,7 +66,8 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
 
     if (
       Number(
-        validate_sqm_for_order?.total_sqm + Number(flitching_item_data?.flitch_cmt)
+        validate_sqm_for_order?.total_sqm +
+          Number(flitching_item_data?.flitch_cmt)
       ) > order_item_data?.cbm
     ) {
       throw new ApiError(
@@ -136,10 +136,7 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
         { session }
       );
     if (update_flitching_factory_items_editable_status?.matchedCount === 0) {
-      throw new ApiError(
-        'Flitch items not found',
-        StatusCodes.BAD_REQUEST
-      );
+      throw new ApiError('Flitch items not found', StatusCodes.BAD_REQUEST);
     }
 
     if (
@@ -166,5 +163,3 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
     await session.endSession();
   }
 });
-
-

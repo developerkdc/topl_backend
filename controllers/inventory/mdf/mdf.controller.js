@@ -582,7 +582,6 @@ export const inward_sr_no_dropdown = catchAsync(async (req, res, next) => {
   });
 });
 
-
 //fetch MDF history
 export const fetch_mdf_history = catchAsync(async (req, res, next) => {
   const {
@@ -644,10 +643,10 @@ export const fetch_mdf_history = catchAsync(async (req, res, next) => {
       pipeline: [
         {
           $project: {
-            created_user: 0
-          }
-        }
-      ]
+            created_user: 0,
+          },
+        },
+      ],
     },
   };
   const aggCreatedUserDetails = {

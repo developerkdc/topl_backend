@@ -61,8 +61,8 @@ export const listing_otherGodds_inventory = catchAsync(
       ...filterData,
       ...search_query,
       available_quantity: {
-        $ne: 0
-      }
+        $ne: 0,
+      },
     };
 
     const aggregate_stage = [
@@ -666,10 +666,10 @@ export const fetch_other_goods_history = catchAsync(async (req, res, next) => {
       pipeline: [
         {
           $project: {
-            created_user: 0
-          }
-        }
-      ]
+            created_user: 0,
+          },
+        },
+      ],
     },
   };
   // const aggLookupPlywoodInvoiceDetails = {
@@ -785,7 +785,8 @@ export const fetch_other_goods_history = catchAsync(async (req, res, next) => {
     aggCount,
   ];
 
-  const total_docs = await other_goods_history_model.aggregate(count_total_docs);
+  const total_docs =
+    await other_goods_history_model.aggregate(count_total_docs);
 
   const totalPages = Math.ceil((total_docs[0]?.totalCount || 0) / limit);
 

@@ -135,8 +135,7 @@ const issues_for_peeling_schema = new mongoose.Schema(
 issues_for_peeling_schema.index({ log_inventory_item_id: 1 });
 issues_for_peeling_schema.index({ crosscut_done_id: 1 });
 
-export const 
-issues_for_peeling_model = mongoose.model(
+export const issues_for_peeling_model = mongoose.model(
   'issues_for_peelings',
   issues_for_peeling_schema,
   'issues_for_peelings'

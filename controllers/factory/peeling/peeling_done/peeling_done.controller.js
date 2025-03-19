@@ -120,7 +120,7 @@ export const add_peeling_done = catchAsync(async (req, res, next) => {
 
     if (
       issue_for_peeling_type?.type?.toLowerCase() ===
-      issue_for_peeling.wastage?.toLowerCase() &&
+        issue_for_peeling.wastage?.toLowerCase() &&
       wastage_details
     ) {
       const wastage_details_data = {
@@ -140,7 +140,7 @@ export const add_peeling_done = catchAsync(async (req, res, next) => {
 
     if (
       issue_for_peeling_type?.type?.toLowerCase() ===
-      issue_for_peeling.rest_roller?.toLowerCase() &&
+        issue_for_peeling.rest_roller?.toLowerCase() &&
       available_details
     ) {
       const re_flitching_details_data = {
@@ -323,7 +323,7 @@ export const edit_peeling_done = catchAsync(async (req, res, next) => {
     //add wastage
     if (
       issue_for_peeling_type?.type?.toLowerCase() ===
-      issue_for_peeling.wastage?.toLowerCase() &&
+        issue_for_peeling.wastage?.toLowerCase() &&
       wastage_details
     ) {
       const wastage_details_data = {
@@ -345,7 +345,7 @@ export const edit_peeling_done = catchAsync(async (req, res, next) => {
     // add available
     if (
       issue_for_peeling_type?.type?.toLowerCase() ===
-      issue_for_peeling.rest_roller?.toLowerCase() &&
+        issue_for_peeling.rest_roller?.toLowerCase() &&
       available_details
     ) {
       const re_flitching_details_data = {
