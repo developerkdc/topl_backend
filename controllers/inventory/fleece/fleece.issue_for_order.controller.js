@@ -13,51 +13,73 @@ import {
 //fetching all pallet no dropdown
 export const fetch_all_fleece_inward_sr_no_by_order_item_name = catchAsync(
   async (req, res) => {
-    // const { id } = req.params;
-    // if (!isValidObjectId(id)) {
-    //     throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
-    // }
+    const { id } = req.params;
+    if (!isValidObjectId(id)) {
+      throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
+    }
 
-    // const order_item_data = await RawOrderItemDetailsModel.findById(id);
+    const order_item_data = await RawOrderItemDetailsModel.findById(id);
 
-    // if (!order_item_data) {
-    //     throw new ApiError('Order Item Data not found', StatusCodes.NOT_FOUND);
-    // }
+    if (!order_item_data) {
+      throw new ApiError('Order Item Data not found', StatusCodes.NOT_FOUND);
+    }
 
-    // const search_query = {};
+    const search_query = {};
 
-    // if (order_item_data?.item_name) {
-    //     search_query['item_name'] = order_item_data?.item_name;
-    // }
+    if (order_item_data?.item_name) {
+      search_query['item_name'] = order_item_data?.item_name;
+    }
 
-    // const match_query = {
-    //     ...search_query,
-    //     number_of_sheets: {
-    //         $lte: order_item_data.no_of_sheet,
-    //     },
-    // };
+    const match_query = {
+      ...search_query,
+      available_sqm: {
+        $lte: order_item_data?.sqm,
+        $gt: 0,
+      },
+    };
 
     // const pipeline = [
-    //     { $match: { ...match_query } },
-    //     {
-    //         $project: {
-    //             inward_sr_no: "$fleece_invoice_details.inward_sr_no",
-    //             inward_sr_no_id: "$fleece_invoice_details._id"
-    //         },
+    //   { $match: { ...match_query } },
+    //   {
+    //     $project: {
+    //       inward_sr_no: "$fleece_invoice_details.inward_sr_no",
+    //       inward_sr_no_id: "$fleece_invoice_details._id"
     //     },
+    //   },
     // ];
 
+
+
     const pipeline = [
-      // { $match: { ...match_query } },
+      {
+        $lookup: {
+          from: "fleece_inventory_invoice_details",
+          localField: "invoice_id",
+          foreignField: "_id",
+          as: "invoice_details"
+        }
+      },
+      { $unwind: "$invoice_details" },
+      { $match: { ...match_query } },
       {
         $project: {
-          inward_sr_no: 1,
-          // inward_sr_no_id: "_id"
+          inward_sr_no: "$invoice_details.inward_sr_no",
+          _id: "$invoice_details._id"
         },
       },
     ];
 
-    const result = await fleece_inventory_invoice_modal?.aggregate(pipeline);
+    // const pipeline = [
+    //   // { $match: { ...match_query } },
+    //   {
+    //     $project: {
+    //       inward_sr_no: 1,
+    //       // inward_sr_no_id: "_id"
+    //     },
+    //   },
+    // ];
+
+    const result = await fleece_inventory_items_modal.aggregate(pipeline);
 
     const response = new ApiResponse(
       StatusCodes.OK,

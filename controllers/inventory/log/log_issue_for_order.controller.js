@@ -36,7 +36,13 @@ export const fetch_all_log_no_item_name = catchAsync(async (req, res) => {
       $gt: 0,
     },
     issue_status: null,
+    "approval_status.approved.status": true
   };
+  const aggLoookUYpInvoiceDetails = {
+    $lookup: {
+      from: "log_"
+    }
+  }
   const pipeline = [
     { $match: { ...match_query } },
     {
