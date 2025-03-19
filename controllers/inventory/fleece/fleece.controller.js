@@ -594,7 +594,6 @@ export const fleeceLogsCsv = catchAsync(async (req, res) => {
   const allData = await fleece_inventory_items_view_modal.find(match_query);
 
   const excelLink = await createFleeceLogsExcel(allData);
-  console.log('link => ', excelLink);
 
   return res.json(
     new ApiResponse(StatusCodes.OK, 'Csv downloaded successfully...', excelLink)
@@ -726,7 +725,7 @@ export const fetch_fleece_history = catchAsync(async (req, res, next) => {
   };
   const aggUnwindPlywoodItemDetails = {
     $unwind: {
-      path: '$plywood_item_details',
+      path: '$fleece_item_details',
       preserveNullAndEmptyArrays: true,
     },
   };
