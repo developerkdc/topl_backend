@@ -7,13 +7,17 @@ let connect = () => {
     const options = {
       // useNewUrlParser: true
       retryWrites: true,
+      maxPoolSize: 10,
+      minPoolSize: 2
     };
     mongoose.connect(Configs?.mongo?.url, options);
-
-    mongoose.connection.on('connected', () => {
+    const db = mongoose.connection
+    mongoose.connection.on('connected', async () => {
       console.log(
         `Connected to the MongoDB Database ${Configs?.server?.name} ${Configs?.server?.version}`
       );
+      const serverstatus = await db.db.admin().command({ serverstatus: 1 })
+      console.log(serverstatus.connections)
     });
 
     // If the connection throws an error

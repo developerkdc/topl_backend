@@ -86,7 +86,7 @@ fleece_router.get(
 
 //
 fleece_router.get(
-  '/inward-sr-no-dropdown/',
+  '/inward-sr-no-dropdown/:id',
   AuthMiddleware,
   fetch_all_fleece_inward_sr_no_by_order_item_name
 );

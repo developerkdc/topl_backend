@@ -12,42 +12,52 @@ import {
 //fetching all pallet no dropdown
 export const fetch_all_face_inward_sr_no_by_order_item_name = catchAsync(
   async (req, res) => {
-    // const { id } = req.params;
-    // if (!isValidObjectId(id)) {
-    //     throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
-    // }
+    const { id } = req.params;
+    if (!isValidObjectId(id)) {
+      throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
+    }
 
-    // const order_item_data = await RawOrderItemDetailsModel.findById(id);
+    const order_item_data = await RawOrderItemDetailsModel.findById(id);
 
-    // if (!order_item_data) {
-    //     throw new ApiError('Order Item Data not found', StatusCodes.NOT_FOUND);
-    // }
+    if (!order_item_data) {
+      throw new ApiError('Order Item Data not found', StatusCodes.NOT_FOUND);
+    }
 
-    // const search_query = {};
+    const search_query = {};
 
-    // if (order_item_data?.item_name) {
-    //     search_query['item_name'] = order_item_data?.item_name;
-    // }
+    if (order_item_data?.item_name) {
+      search_query['item_name'] = order_item_data?.item_name;
+    }
 
-    // const match_query = {
-    //     ...search_query,
-    //     available_sheets: {
-    //         $lte: order_item_data.no_of_sheet,
-    //         $gt: 0
-    //     },
-    // };
+    const match_query = {
+      ...search_query,
+      available_sheets: {
+        // $lte: order_item_data.no_of_sheet,
+        $gt: 0
+      },
+    };
 
     const pipeline = [
-      // { $match: { ...match_query } },
+      {
+        $lookup: {
+          from: "face_inventory_invoice_details",
+          localField: "invoice_id",
+          foreignField: "_id",
+          as: "invoice_details"
+        }
+      },
+      { $unwind: "$invoice_details" },
+      { $match: { ...match_query } },
       {
         $project: {
-          inward_sr_no: 1,
-          // inward_sr_no_id: "_id"
+          inward_sr_no: "$invoice_details.inward_sr_no",
+          _id: "$invoice_details._id"
         },
       },
     ];
 
-    const result = await face_inventory_invoice_details?.aggregate(pipeline);
+
+    const result = await face_inventory_items_details.aggregate(pipeline);
 
     const response = new ApiResponse(
       StatusCodes.OK,
