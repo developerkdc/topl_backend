@@ -408,6 +408,7 @@ export const edit_mdf_item_invoice_inventory = catchAsync(
           }
         }
 
+        
         const update_item_details =
           await mdf_inventory_items_details.insertMany([...items_details], {
             session,
