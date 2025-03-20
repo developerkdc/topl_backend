@@ -36,6 +36,7 @@ export const fetch_all_fleece_inward_sr_no_by_order_item_name = catchAsync(
         $lte: order_item_data?.sqm,
         $gt: 0,
       },
+      "invoice_details.approval_status.approved.status": true
     };
 
     // const pipeline = [
