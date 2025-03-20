@@ -159,7 +159,7 @@ const tapping_done_items_details_schema = new mongoose.Schema(
       default: 0,
       required: [true, 'Thickness is required'],
     },
-    no_of_sheet: {
+    no_of_sheets: {
       type: Number,
       default: 0,
       required: [true, 'No of leaves is required'],
@@ -170,10 +170,10 @@ const tapping_done_items_details_schema = new mongoose.Schema(
       required: [true, 'SQM is required'],
     },
     available_details: {
-      no_of_sheet: {
+      no_of_sheets: {
         type: Number,
         default: function () {
-          return this.no_of_sheet;
+          return this.no_of_sheets;
         },
       },
       sqm: {

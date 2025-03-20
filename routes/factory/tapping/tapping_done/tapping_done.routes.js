@@ -4,6 +4,7 @@ import {
   edit_tapping_details,
   fetch_all_details_by_tapping_id,
   fetch_all_tapping_done_items,
+  fetch_all_tapping_done_items_history,
   revert_tapping_done_details,
 } from '../../../../controllers/factory/tapping/tapping_done/tapping_done.controller.js';
 import AuthMiddleware from '../../../../middlewares/verifyToken.js';
@@ -34,6 +35,11 @@ tapping_done_router.post(
   '/revert-tapping-done-details/:id',
   AuthMiddleware,
   revert_tapping_done_details
+);
+tapping_done_router.post(
+  '/list-tapping-done-items-history',
+  AuthMiddleware,
+  fetch_all_tapping_done_items_history
 );
 
 export default tapping_done_router;

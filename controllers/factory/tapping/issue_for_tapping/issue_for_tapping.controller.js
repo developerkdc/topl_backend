@@ -78,6 +78,7 @@ export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(
       );
 
       const grouping_data = {
+        grouping_done_item_id: data?._id,
         grouping_done_other_details_id: data?.grouping_done_other_details_id,
         group_no: data?.group_no,
         photo_no: data?.photo_no,
@@ -110,7 +111,6 @@ export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(
 
       const issue_for_tapping_data = {
         ...grouping_data,
-        grouping_done_item_id: data?._id,
         issue_status: issue_status,
         issued_from: issues_for_status.grouping,
         no_of_leaves: issue_no_of_leaves,
@@ -141,10 +141,10 @@ export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(
                 updated_by: userDetails?._id,
               },
               $inc: {
-                'available_details.no_of_leaves':
+                no_of_leaves:
                   issue_for_tapping_data?.no_of_leaves,
-                'available_details.sqm': issue_for_tapping_data?.sqm,
-                'available_details.amount': issue_for_tapping_data?.amount,
+                sqm: issue_for_tapping_data?.sqm,
+                amount: issue_for_tapping_data?.amount,
               },
             },
             { session, new: true, runValidators: true }
@@ -167,13 +167,13 @@ export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(
       }
 
       //add issue for tapping items details to grouping done history
-      const insert_tapping_item_grouping_history =
+      const insert_tapping_item_to_grouping_history =
         await grouping_done_history_model.create([issue_for_tapping_data], {
           session,
         });
 
       const grouping_history_item_details =
-        insert_tapping_item_grouping_history?.[0];
+        insert_tapping_item_to_grouping_history?.[0];
       if (!grouping_history_item_details) {
         throw new ApiError(
           'Failed to add grouping history item details',
@@ -302,7 +302,7 @@ export const revert_issue_for_tapping_item = catchAsync(
         delete_issue_for_tapping_item?.grouping_done_other_details_id;
       // delete grouping done history item
       const delete_grouping_done_history_item =
-        await grouping_done_history_model.deleteOne(
+        await grouping_done_history_model.deleteMany(
           {
             grouping_done_item_id: grouping_done_item_id,
             grouping_done_other_details_id: grouping_done_other_details_id,
