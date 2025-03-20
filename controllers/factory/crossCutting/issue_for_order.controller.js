@@ -1,5 +1,4 @@
-import mongoose, { isValidObjectId } from 'mongoose';
-import { log_inventory_items_model } from '../../../database/schema/inventory/log/log.schema.js';
+import { isValidObjectId } from 'mongoose';
 import ApiResponse from '../../../utils/ApiResponse.js';
 import { StatusCodes } from '../../../utils/constants.js';
 import ApiError from '../../../utils/errors/apiError.js';
@@ -37,6 +36,7 @@ export const fetch_all_log_no_item_name = catchAsync(async (req, res) => {
       $gt: 0,
     },
     issue_status: null,
+    "approval_status.sendForApproval.status": false
   };
 
   const pipeline = [
