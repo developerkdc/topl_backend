@@ -2,15 +2,24 @@ import mongoose from 'mongoose';
 import getConfigs from '../config/config.js';
 
 const Configs = getConfigs();
+let isConnected = false;
 let connect = () => {
+  // if (isConnected) {
+  //   console.log(`🔍 4777777 Active Connections: ${mongoose.connections.length}`);
+  //   return;
+  // }
+
   try {
     const options = {
       // useNewUrlParser: true
       retryWrites: true,
-      maxPoolSize: 10,
+      maxPoolSize: 30,
       minPoolSize: 2
     };
     mongoose.connect(Configs?.mongo?.url, options);
+    // isConnected = mongoose.connection.readyState === 1
+    // console.log("status", mongoose.connection.readyState === 1)
+
     const db = mongoose.connection
     mongoose.connection.on('connected', async () => {
       console.log(

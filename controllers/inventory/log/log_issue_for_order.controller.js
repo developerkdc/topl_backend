@@ -36,14 +36,24 @@ export const fetch_all_log_no_item_name = catchAsync(async (req, res) => {
       $gt: 0,
     },
     issue_status: null,
-    "approval_status.approved.status": true
+    "invoice_details.approval_status.approved.status": true
   };
-  const aggLoookUYpInvoiceDetails = {
-    $lookup: {
-      from: "log_"
-    }
-  }
+
   const pipeline = [
+    {
+      $lookup: {
+        from: "log_inventory_invoice_details",
+        localField: "invoice_id",
+        foreignField: "_id",
+        as: "invoice_details"
+      }
+    },
+    {
+      $unwind: {
+        path: "$invoice_details",
+        preserveNullAndEmptyArrays: true
+      }
+    },
     { $match: { ...match_query } },
     {
       $project: {

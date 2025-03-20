@@ -30,9 +30,24 @@ export const fetch_all_mdf_pallet_no_item_name = catchAsync(
         // $lte: order_item_data?.no_of_sheet,
         $gt: 0,
       },
+      "invoice_details.approval_status.approved.status": true
     };
 
     const pipeline = [
+      {
+        $lookup: {
+          from: "mdf_inventory_invoice_details",
+          localField: "invoice_id",
+          foreignField: "_id",
+          as: "invoice_details"
+        }
+      },
+      {
+        $unwind: {
+          path: "$invoice_details",
+          preserveNullAndEmptyArrays: true
+        }
+      },
       { $match: { ...match_query } },
       {
         $project: {
