@@ -301,6 +301,9 @@ export const issues_for_smoking_dying_view_model = mongoose.model(
             unique_identifier: '$unique_identifier',
             pallet_number: '$pallet_number',
           },
+          issued_from: {
+            $first: '$issued_from',
+          },
           item_name: {
             $first: '$item_name',
           },

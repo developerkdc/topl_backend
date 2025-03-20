@@ -169,6 +169,26 @@ const tapping_done_items_details_schema = new mongoose.Schema(
       default: 0,
       required: [true, 'SQM is required'],
     },
+    available_details: {
+      no_of_sheet: {
+        type: Number,
+        default: function () {
+          return this.no_of_sheet;
+        },
+      },
+      sqm: {
+        type: Number,
+        default: function () {
+          return this.sqm;
+        },
+      },
+      amount: {
+        type: Number,
+        default: function () {
+          return this.amount;
+        },
+      },
+    },
     pallet_number: {
       type: String,
       trim: true,
