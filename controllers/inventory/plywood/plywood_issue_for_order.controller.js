@@ -31,7 +31,7 @@ export const fetch_all_plywood_no_item_name = catchAsync(async (req, res) => {
       // $lte: order_item_data.no_of_sheet,
       $gt: 0,
     },
-    "invoice_details.approval_status.approved.status": true
+    "invoice_details.approval_status.sendForApproval.status": false
   };
 
   const pipeline = [

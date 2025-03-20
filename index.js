@@ -19,7 +19,7 @@ import allSeriesProductMasterRouter from './routes/seriesProductMaster/allSeries
 import usersRouter from './routes/users.routes.js';
 import allOrderRouter from './routes/order/allOrder.routes.js';
 import { globalErrorHandler } from './utils/errors/GlobalErrorHandler.js';
-import { checkServerHealth } from './controllers/auth.js';
+import { checkServerHealth, fetchDBConnections } from './controllers/auth.js';
 // import { start_worker_thread } from './utils/constants.js';
 import { insert_raw_machine_data_into_machine_mismatch_model } from './utils/workers/workers.js';
 import mongoose from 'mongoose';
@@ -71,6 +71,7 @@ app.use(`/api/${Configs.server.version}/role`, rolesRouter);
 app.use(`/api/${Configs.server.version}/profile`, profileRouter);
 app.use(`/api/${Configs.server.version}/approval-config`, approvalConfigRouter);
 app.use('/server-health', checkServerHealth);
+app.use('/check-db-connections', fetchDBConnections);
 //master
 app.use(`/api/${Configs.server.version}`, allMasterRouter);
 //Series Product Master

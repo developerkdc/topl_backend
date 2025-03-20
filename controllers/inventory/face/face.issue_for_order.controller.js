@@ -35,7 +35,7 @@ export const fetch_all_face_inward_sr_no_by_order_item_name = catchAsync(
         // $lte: order_item_data.no_of_sheet,
         $gt: 0
       },
-      "invoice_details.approval_status.approved.status": true
+      "invoice_details.approval_status.sendForApproval.status": false
     };
 
     const pipeline = [

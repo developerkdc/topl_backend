@@ -140,21 +140,21 @@ export const crosscutting_approval_item_listing_by_unique_id = catchAsync(
       },
       ...(isApprovalPending
         ? [
-            {
-              $lookup: {
-                from: 'crosscutting_dones',
-                localField: 'crosscutting_done_id',
-                foreignField: '_id',
-                as: 'previous_data',
-              },
+          {
+            $lookup: {
+              from: 'crosscutting_dones',
+              localField: 'crosscutting_done_id',
+              foreignField: '_id',
+              as: 'previous_data',
             },
-            {
-              $unwind: {
-                path: '$previous_data',
-                preserveNullAndEmptyArrays: true,
-              },
+          },
+          {
+            $unwind: {
+              path: '$previous_data',
+              preserveNullAndEmptyArrays: true,
             },
-          ]
+          },
+        ]
         : []),
       {
         $sort: {

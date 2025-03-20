@@ -35,7 +35,7 @@ export const fetch_all_other_goods_inward_sr_no_by_order_item_name = catchAsync(
         // $lte: order_item_data.quantity,
         $gt: 0,
       },
-      "invoice_details.approval_status.approved.status": true
+      "invoice_details.approval_status.sendForApproval.status": false
     };
     const pipeline = [
       {
