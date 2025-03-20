@@ -111,12 +111,12 @@ class RevertOrderItem {
       throw new ApiError('Log item not found', StatusCodes.BAD_REQUEST);
     }
 
-    const is_dressing_item_editable = await log_inventory_items_model?.find({
+    const is_invoice_editable = await log_inventory_items_model?.find({
       _id: { $ne: update_log_item?._id },
       invoice_id: update_log_item?.invoice_id,
       issue_status: { $ne: null },
     });
-    console.log(is_invoice_editable);
+
     if (is_invoice_editable && is_invoice_editable?.length === 0) {
       const update_log_item_invoice_editable_status =
         await log_inventory_invoice_model?.updateOne(

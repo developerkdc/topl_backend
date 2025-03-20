@@ -497,6 +497,9 @@ export const edit_plywood_item_invoice_inventory = catchAsync(
             ...itemData,
             plywood_item_id: _id ? _id : new mongoose.Types.ObjectId(),
             approval_invoice_id: add_invoice_details[0]?._id,
+            available_sheets: ele?.available_sheets,
+            available_sqm: ele?.available_sqm,
+            available_amount: ele?.amount
           };
         });
 
