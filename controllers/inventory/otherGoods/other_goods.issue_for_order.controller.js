@@ -48,12 +48,7 @@ export const fetch_all_other_goods_inward_sr_no_by_order_item_name = catchAsync(
       },
       { $unwind: "$invoice_details" },
       { $match: { ...match_query } },
-      // {
-      //   $project: {
-      //     inward_sr_no: "$invoice_details.inward_sr_no",
-      //     _id: "$invoice_details._id"
-      //   },
-      // },
+
       {
         $group: {
           _id: "$invoice_details._id",
@@ -69,8 +64,10 @@ export const fetch_all_other_goods_inward_sr_no_by_order_item_name = catchAsync(
       }
     ];
 
+    console.log(match_query)
+
     const result =
-      await othergoods_inventory_invoice_details.aggregate(pipeline);
+      await othergoods_inventory_items_details.aggregate(pipeline);
 
     const response = new ApiResponse(
       StatusCodes.OK,

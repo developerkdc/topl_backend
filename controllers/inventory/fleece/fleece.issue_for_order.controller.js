@@ -62,12 +62,6 @@ export const fetch_all_fleece_inward_sr_no_by_order_item_name = catchAsync(
       },
       { $unwind: "$invoice_details" },
       { $match: { ...match_query } },
-      // {
-      //   $project: {
-      //     inward_sr_no: "$invoice_details.inward_sr_no",
-      //     _id: "$invoice_details._id"
-      //   },
-      // },
       {
         $group: {
           _id: "$invoice_details._id",
@@ -82,16 +76,6 @@ export const fetch_all_fleece_inward_sr_no_by_order_item_name = catchAsync(
         }
       }
     ];
-
-    // const pipeline = [
-    //   // { $match: { ...match_query } },
-    //   {
-    //     $project: {
-    //       inward_sr_no: 1,
-    //       // inward_sr_no_id: "_id"
-    //     },
-    //   },
-    // ];
 
     const result = await fleece_inventory_items_modal.aggregate(pipeline);
 
