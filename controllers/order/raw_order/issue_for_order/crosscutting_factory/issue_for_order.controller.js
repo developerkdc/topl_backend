@@ -68,7 +68,7 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
     if (
       Number(
         validate_sqm_for_order?.total_sqm +
-          Number(crosscutting_item_data?.crosscut_cmt)
+        Number(crosscutting_item_data?.crosscut_cmt)
       ) > order_item_data?.cbm
     ) {
       throw new ApiError(

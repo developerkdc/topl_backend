@@ -240,6 +240,31 @@ export const crossCuttingsDone_view_modal = mongoose.model(
       //     preserveNullAndEmptyArrays: true,
       //   },
       // },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'created_by',
+          foreignField: '_id',
+          pipeline: [
+            {
+              $project: {
+                first_name: 1,
+                last_name: 1,
+                user_name: 1,
+                user_type: 1,
+                email_id: 1,
+              },
+            },
+          ],
+          as: 'created_user_details',
+        },
+      },
+      {
+        $unwind: {
+          path: "$created_user_details",
+          preserveNullAndEmptyArrays: true
+        }
+      }
     ],
   });
 })();

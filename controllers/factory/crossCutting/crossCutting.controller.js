@@ -241,10 +241,15 @@ export const revert_issue_for_crosscutting = catchAsync(
 
 export const addCrossCutDone = catchAsync(async (req, res) => {
   const session = await mongoose.startSession();
+  const userDetails = req.userDetails;
   session.startTransaction();
   const { available_data, newData } = req.body;
 
   try {
+    const updated_items = newData?.map((item) => {
+      item.created_by = userDetails?._id;
+      return item
+    })
     const result = await crosscutting_done_model.insertMany(newData, {
       session,
     });

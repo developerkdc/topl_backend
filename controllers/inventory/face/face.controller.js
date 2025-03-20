@@ -213,6 +213,7 @@ export const edit_face_item_inventory = catchAsync(async (req, res, next) => {
     {
       $set: {
         ...item_details,
+
       },
     }
   );
@@ -235,6 +236,7 @@ export const edit_face_item_inventory = catchAsync(async (req, res, next) => {
     );
 });
 
+//useless
 export const edit_face_invoice_inventory = catchAsync(
   async (req, res, next) => {
     const invoice_id = req.params?.invoice_id;
@@ -325,9 +327,15 @@ export const edit_face_item_invoice_inventory = catchAsync(
           all_invoice_items.deletedCount <= 0
         )
           return next(new ApiError('Failed to update invoice items', 400));
-
+        const updated_items=items_details?.map((item)=>{
+            item.available_sheets=item?.number_of_sheets
+            item.available_sqm=item?.total_sq_meter,
+            item.available_amount=item?.amount
+            return item;
+        });
+ 
         const update_item_details =
-          await face_inventory_items_details.insertMany([...items_details], {
+          await face_inventory_items_details.insertMany([...updated_items], {
             session,
           });
 
@@ -412,9 +420,15 @@ export const edit_face_item_invoice_inventory = catchAsync(
           };
         });
 
+        const updated_items=itemDetailsData?.map((item)=>{
+          item.available_sheets=item?.number_of_sheets
+          item.available_sqm=item?.total_sq_meter,
+          item.available_amount=item?.amount
+          return item;
+      });
         const add_approval_item_details =
           await face_approval_inventory_items_model.insertMany(
-            itemDetailsData,
+            updated_items,
             { session }
           );
 
