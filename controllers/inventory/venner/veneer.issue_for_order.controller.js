@@ -36,7 +36,7 @@ export const fetch_all_log_no_by_item_name = catchAsync(async (req, res) => {
       $gt: 0,
     },
     issue_status: null,
-    "invoice_details.approval_status.approved.status": true
+    "invoice_details.approval_status.sendForApproval.status": false
   };
   const pipeline = [
     {

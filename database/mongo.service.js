@@ -20,13 +20,13 @@ let connect = () => {
     // isConnected = mongoose.connection.readyState === 1
     // console.log("status", mongoose.connection.readyState === 1)
 
-    const db = mongoose.connection
+    // const db = mongoose.connection
     mongoose.connection.on('connected', async () => {
       console.log(
         `Connected to the MongoDB Database ${Configs?.server?.name} ${Configs?.server?.version}`
       );
-      const serverstatus = await db.db.admin().command({ serverstatus: 1 })
-      console.log(serverstatus.connections)
+      // const serverstatus = await db.db.admin().command({ serverstatus: 1 })
+      // console.log(serverstatus.connections)
     });
 
     // If the connection throws an error
