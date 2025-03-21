@@ -99,8 +99,8 @@ const issues_for_peeling_schema = new mongoose.Schema(
     type: {
       type: String,
       enum: {
-        values: [issue_for_peeling.re_flitching, issue_for_peeling.wastage],
-        message: `Invalid type {{VALUE}} it must be one of the ${issue_for_peeling.re_flitching} or ${issue_for_peeling.wastage} `,
+        values: [issue_for_peeling.rest_roller, issue_for_peeling.wastage],
+        message: `Invalid type {{VALUE}} it must be one of the ${issue_for_peeling.rest_roller} or ${issue_for_peeling.wastage} `,
       },
       default: null,
     },

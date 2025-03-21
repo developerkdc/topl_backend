@@ -18,11 +18,11 @@ const issue_for_tapping_schema = new mongoose.Schema({
     },
     grouping_done_other_details_id: {
         type: mongoose.Schema.Types.ObjectId,
-        required: [true, 'Process done id is required'],
+        required: [true, 'grouping done id is required'],
     },
     grouping_done_item_id: {
         type: mongoose.Schema.Types.ObjectId,
-        required: [true, 'Process done id is required'],
+        required: [true, 'grouping done id is required'],
     },
     group_no: {
         type: String,
@@ -171,6 +171,10 @@ const issue_for_tapping_schema = new mongoose.Schema({
         uppercase: true,
         trim: true,
         required: [true, 'Grade Name is required'],
+    },
+    is_tapping_done:{
+        type:Boolean,
+        default:false
     },
     issue_status: {
         type: String,

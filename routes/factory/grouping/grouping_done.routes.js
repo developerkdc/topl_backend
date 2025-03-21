@@ -7,6 +7,7 @@ import {
   fetch_all_details_by_grouping_done_id,
   fetch_all_details_by_grouping_done_item_id,
   fetch_all_grouping_done_items,
+  fetch_all_grouping_history_details,
   group_no_dropdown,
   recreate_grouping_done_items,
   revert_all_grouping_done,
@@ -30,6 +31,11 @@ groupingDoneRouter.post(
   '/list-grouping-done-items',
   AuthMiddleware,
   fetch_all_grouping_done_items
+);
+groupingDoneRouter.post(
+  '/list-grouping-done-items-history',
+  AuthMiddleware,
+  fetch_all_grouping_history_details
 );
 groupingDoneRouter.get(
   '/fetch-single-grouping-done-details/:id',

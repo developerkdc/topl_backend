@@ -1,9 +1,8 @@
 import mongoose, { isValidObjectId } from 'mongoose';
 import ApiError from '../../../../../utils/errors/apiError.js';
 import {
-  plywood_inventory_invoice_details,
-  plywood_inventory_items_details,
-} from '../../../../../database/schema/inventory/Plywood/plywood.schema.js';
+  othergoods_inventory_invoice_details, othergoods_inventory_items_details
+} from '../../../../../database/schema/inventory/otherGoods/otherGoodsNew.schema.js';
 import catchAsync from '../../../../../utils/errors/catchAsync.js';
 import ApiResponse from '../../../../../utils/ApiResponse.js';
 import { StatusCodes } from '../../../../../utils/constants.js';
@@ -13,19 +12,19 @@ import {
 } from '../../../../../database/Utils/constants/constants.js';
 import { RawOrderItemDetailsModel } from '../../../../../database/schema/order/raw_order/raw_order_item_details.schema.js';
 import issue_for_order_model from '../../../../../database/schema/order/issue_for_order/issue_for_order.schema.js';
-import plywood_history_model from '../../../../../database/schema/inventory/Plywood/plywood.history.schema.js';
+import other_goods_history_model from '../../../../../database/schema/inventory/otherGoods/otherGoods.history.schema.js';
 
 export const add_issue_for_order = catchAsync(async (req, res) => {
-  const { order_item_id, plywood_item_details } = req.body;
+  const { order_item_id, other_goods_item_details } = req.body;
   const userDetails = req.userDetails;
   const session = await mongoose.startSession();
   if (!isValidObjectId(order_item_id)) {
     throw new ApiError('Invalid Order Item ID', StatusCodes.BAD_REQUEST);
   }
-  if (!plywood_item_details) {
-    throw new ApiError('Plywood Item Data is missing', StatusCodes.BAD_REQUEST);
+  if (!other_goods_item_details) {
+    throw new ApiError('Other Goods Item Data is missing', StatusCodes.BAD_REQUEST);
   }
-  for (let field of ['order_item_id', 'plywood_item_details']) {
+  for (let field of ['order_item_id', 'other_goods_item_details']) {
     if (!req.body[field]) {
       throw new ApiError(`${field} is missing`, StatusCodes.NOT_FOUND);
     }
@@ -40,19 +39,17 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
       throw new ApiError('Order Item Data not found');
     }
 
-    const plywood_item_data = await plywood_inventory_items_details
-      .findById(plywood_item_details?._id)
-      .lean();
-    if (!plywood_item_data) {
-      throw new ApiError('Plywood Item Data not found.');
+    const other_goods_item_data = await othergoods_inventory_items_details.findById(other_goods_item_details?._id)
+    if (!other_goods_item_data) {
+      throw new ApiError('Other Goods Item Data not found.');
     }
 
-    if (plywood_item_data?.available_sheets <= 0) {
+    if (other_goods_item_data?.available_sheets <= 0) {
       throw new ApiError(`No Available sheets found. `);
     }
 
     //fetch all issued sheets for the order
-    const [validate_sqm_for_order] = await issue_for_order_model.aggregate([
+    const [validate_units_for_order] = await issue_for_order_model.aggregate([
       {
         $match: {
           order_item_id: order_item_data?._id,
@@ -61,8 +58,8 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
       {
         $group: {
           _id: null,
-          total_sheets: {
-            $sum: '$item_details.issued_sheets',
+          total_quantity: {
+            $sum: '$item_details.issued_quantity',
           },
         },
       },
@@ -71,12 +68,12 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
     //validate issued sheets with order no.of sheets
     if (
       Number(
-        validate_sqm_for_order?.total_sheets +
-        Number(plywood_item_details?.issued_sheets)
-      ) > order_item_data?.no_of_sheet
+        validate_units_for_order?.total_quantity +
+        Number(other_goods_item_details?.issued_quantity)
+      ) > order_item_data?.quantity
     ) {
       throw new ApiError(
-        'Issued Sheets are greater than ordered sheets',
+        'Issued Quantity is greater than ordered quantity',
         StatusCodes.BAD_REQUEST
       );
     }
@@ -84,8 +81,8 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
     const updated_body = {
       order_id: order_item_data?.order_id,
       order_item_id: order_item_data?._id,
-      issued_from: item_issued_from?.plywood,
-      item_details: plywood_item_details,
+      issued_from: item_issued_from?.store,
+      item_details: other_goods_item_details,
       created_by: userDetails?._id,
       updated_by: userDetails?._id,
     };
@@ -96,10 +93,9 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
       { session }
     );
 
-    const issued_sheets_for_order =
-      create_order_result[0]?.item_details?.issued_sheets;
-    const issued_sqm_for_order =
-      create_order_result[0]?.item_details?.issued_sqm;
+    const issued_quantity_for_order =
+      create_order_result[0]?.item_details?.issued_quantity;
+
     const issued_amount_for_order =
       create_order_result[0]?.item_details?.issued_amount;
     const issue_for_order_id = create_order_result[0]?._id;
@@ -109,49 +105,46 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
         StatusCodes?.BAD_REQUEST
       );
     }
-    //available sheets
-    const available_sheets =
-      plywood_item_data?.available_sheets - plywood_item_details?.issued_sheets;
-    //available sqm
-    const available_sqm =
-      plywood_item_data?.available_sqm - plywood_item_details?.issued_sqm;
+    //available quantitiy
+    const available_quantity =
+      other_goods_item_data?.available_quantity - other_goods_item_details?.issued_quantity;
+
     //available_amount
     const available_amount =
-      plywood_item_data?.available_amount - plywood_item_details?.issued_amount;
+      other_goods_item_data?.available_amount - other_goods_item_details?.issued_amount;
 
-    //update plywood inventory available sheets
-    const update_plywood_item_no_of_sheets =
-      await plywood_inventory_items_details.updateOne(
-        { _id: plywood_item_data?._id },
+    //update other goods inventory available quantity
+    const update_other_goods_item_quantity_result =
+      await othergoods_inventory_items_details.updateOne(
+        { _id: other_goods_item_data?._id },
         {
           $set: {
-            available_sheets: available_sheets,
+            available_quantity: available_quantity,
             available_amount: available_amount,
-            available_sqm: available_sqm,
             updated_by: userDetails?._id,
           },
         },
         { session }
       );
 
-    if (update_plywood_item_no_of_sheets?.matchedCount === 0) {
-      throw new ApiError('Plywood item not found', StatusCodes.BAD_REQUEST);
+    if (update_other_goods_item_quantity_result?.matchedCount === 0) {
+      throw new ApiError('Other Goods item not found', StatusCodes.BAD_REQUEST);
     }
 
     if (
-      !update_plywood_item_no_of_sheets?.acknowledged ||
-      update_plywood_item_no_of_sheets?.modifiedCount === 0
+      !update_other_goods_item_quantity_result?.acknowledged ||
+      update_other_goods_item_quantity_result?.modifiedCount === 0
     ) {
       throw new ApiError(
-        'Failed to update Plywood item sheets',
+        'Failed to update Other Goods item quantity',
         StatusCodes.BAD_REQUEST
       );
     }
 
-    //update plywood inventory invoice ediatble status
-    const update_plywood_inventory_invoice_editable_status =
-      await plywood_inventory_invoice_details?.updateOne(
-        { _id: plywood_item_data?.invoice_id },
+    //update othergoods inventory invoice ediatble status
+    const update_other_goods_inventory_invoice_editable_status =
+      await othergoods_inventory_invoice_details?.updateOne(
+        { _id: other_goods_item_data?.invoice_id },
         {
           $set: {
             isEditable: false,
@@ -160,33 +153,32 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
         },
         { session }
       );
-    if (update_plywood_inventory_invoice_editable_status?.matchedCount === 0) {
+    if (update_other_goods_inventory_invoice_editable_status?.matchedCount === 0) {
       throw new ApiError(
-        'Plywood item invoice not found',
+        'Other Goods item invoice not found',
         StatusCodes.BAD_REQUEST
       );
     }
 
     if (
-      !update_plywood_inventory_invoice_editable_status?.acknowledged ||
-      update_plywood_inventory_invoice_editable_status?.modifiedCount === 0
+      !update_other_goods_inventory_invoice_editable_status?.acknowledged ||
+      update_other_goods_inventory_invoice_editable_status?.modifiedCount === 0
     ) {
       throw new ApiError(
-        'Failed to update plywood item invoice status',
+        'Failed to update other goods item invoice status',
         StatusCodes.BAD_REQUEST
       );
     }
 
-    //add data to plywood history model
-    const add_issued_data_to_plywood_history =
-      await plywood_history_model.create(
+    //add data to other goods history model
+    const add_issued_data_to_other_goods_history =
+      await other_goods_history_model.create(
         [
           {
             issued_for_order_id: issue_for_order_id,
             issue_status: issues_for_status?.order,
-            plywood_item_id: plywood_item_data?._id,
-            issued_sheets: issued_sheets_for_order,
-            issued_sqm: issued_sqm_for_order,
+            other_goods_item_id: other_goods_item_data?._id,
+            issued_quantity: issued_quantity_for_order,
             issued_amount: issued_amount_for_order,
             created_by: userDetails?._id,
             updated_by: userDetails?._id,
@@ -195,9 +187,9 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
         { session }
       );
 
-    if (add_issued_data_to_plywood_history?.length === 0) {
+    if (add_issued_data_to_other_goods_history?.length === 0) {
       throw new ApiError(
-        'Failed to add data to plywood history',
+        'Failed to add data to other goods history',
         StatusCodes.BAD_REQUEST
       );
     }

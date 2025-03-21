@@ -16,6 +16,7 @@ import {
   face_approval_inventory_invoice_model,
   face_approval_inventory_items_model,
 } from '../../../database/schema/inventory/face/faceApproval.schema.js';
+import face_history_model from '../../../database/schema/inventory/face/face.history.schema.js';
 
 export const listing_face_inventory = catchAsync(async (req, res, next) => {
   const {
@@ -60,6 +61,7 @@ export const listing_face_inventory = catchAsync(async (req, res, next) => {
   const match_query = {
     ...filterData,
     ...search_query,
+    available_sheets: { $ne: 0 },
   };
 
   const aggregate_stage = [
@@ -547,4 +549,184 @@ export const faceLogsCsv = catchAsync(async (req, res) => {
   return res.json(
     new ApiResponse(StatusCodes.OK, 'Csv downloaded successfully...', excelLink)
   );
+});
+
+export const fetch_face_history = catchAsync(async (req, res, next) => {
+  const {
+    page = 1,
+    sortBy = 'updatedAt',
+    sort = 'desc',
+    limit = 10,
+    search = '',
+  } = req.query;
+  const {
+    string,
+    boolean,
+    numbers,
+    arrayField = [],
+  } = req.body?.searchFields || {};
+
+  const filter = req.body?.filter;
+
+  let search_query = {};
+  if (search != '' && req?.body?.searchFields) {
+    const search_data = DynamicSearch(
+      search,
+      boolean,
+      numbers,
+      string,
+      arrayField
+    );
+    if (search_data?.length == 0) {
+      return res.status(404).json({
+        statusCode: 404,
+        status: false,
+        data: {
+          data: [],
+        },
+        message: 'Results Not Found',
+      });
+    }
+    search_query = search_data;
+  }
+
+  const filterData = dynamic_filter(filter);
+
+  const match_query = {
+    ...search_query,
+    ...filterData,
+  };
+  const aggMatch = {
+    $match: {
+      ...match_query,
+    },
+  };
+
+  const aggLookupPlwoodItemDetails = {
+    $lookup: {
+      from: 'face_inventory_items_views',
+      foreignField: '_id',
+      localField: 'face_item_id',
+      as: 'face_item_details',
+      pipeline: [
+        {
+          $project: {
+            created_user: 0,
+            "face_invoice_details.expenses": 0
+          }
+        }
+      ]
+    },
+  };
+  const aggCreatedUserDetails = {
+    $lookup: {
+      from: 'users',
+      localField: 'created_by',
+      foreignField: '_id',
+      pipeline: [
+        {
+          $project: {
+            first_name: 1,
+            last_name: 1,
+            user_name: 1,
+            user_type: 1,
+            email_id: 1,
+          },
+        },
+      ],
+      as: 'created_user_details',
+    },
+  };
+  const aggUpdatedUserDetails = {
+    $lookup: {
+      from: 'users',
+      localField: 'updated_by',
+      foreignField: '_id',
+      pipeline: [
+        {
+          $project: {
+            first_name: 1,
+            last_name: 1,
+            user_name: 1,
+            user_type: 1,
+          },
+        },
+      ],
+      as: 'updated_user_details',
+    },
+  };
+  const aggUnwindCreatedUser = {
+    $unwind: {
+      path: '$created_user_details',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
+  const aggUnwindUpdatdUser = {
+    $unwind: {
+      path: '$updated_user_details',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
+  const aggUnwindPlywoodItemDetails = {
+    $unwind: {
+      path: '$face_item_details',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
+
+  const aggLimit = {
+    $limit: parseInt(limit),
+  };
+
+  const aggSkip = {
+    $skip: (parseInt(page) - 1) * parseInt(limit),
+  };
+
+  const aggSort = {
+    $sort: { [sortBy]: sort === 'desc' ? -1 : 1 },
+  };
+  const list_aggregate = [
+    aggLookupPlwoodItemDetails,
+    aggUnwindPlywoodItemDetails,
+    aggCreatedUserDetails,
+    aggUpdatedUserDetails,
+    aggUnwindCreatedUser,
+    aggUnwindUpdatdUser,
+    aggMatch,
+    aggSort,
+    aggSkip,
+    aggLimit,
+  ];
+
+  const result = await face_history_model.aggregate(list_aggregate);
+
+  const aggCount = {
+    $count: 'totalCount',
+  };
+
+  const count_total_docs = [
+    aggLookupPlwoodItemDetails,
+    aggUnwindPlywoodItemDetails,
+    aggCreatedUserDetails,
+    aggUpdatedUserDetails,
+    aggUnwindCreatedUser,
+    aggUnwindUpdatdUser,
+    aggMatch,
+    aggCount,
+  ];
+
+  const total_docs = await face_history_model.aggregate(count_total_docs);
+
+  const totalPages = Math.ceil((total_docs[0]?.totalCount || 0) / limit);
+
+  const response = new ApiResponse(
+    StatusCodes.OK,
+    'Data fetched successfully...',
+    {
+      data: result,
+      totalPages: totalPages,
+    }
+  );
+
+  return res.status(StatusCodes.OK).json(response);
 });

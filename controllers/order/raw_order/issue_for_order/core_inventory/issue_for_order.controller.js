@@ -48,35 +48,35 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
       throw new ApiError(`No Available sheets found. `);
     }
 
-    //fetch all issued sheets for the order
-    const [validate_sqm_for_order] = await issue_for_order_model.aggregate([
-      {
-        $match: {
-          order_item_id: order_item_data?._id,
-        },
-      },
-      {
-        $group: {
-          _id: null,
-          total_sheets: {
-            $sum: '$item_details.issued_sheets',
-          },
-        },
-      },
-    ]);
+   
 
-    //validate issued sheets with order no.of sheets
-    if (
-      Number(
-        validate_sqm_for_order?.total_sheets +
-        Number(core_item_details?.issued_sheets)
-      ) > order_item_data?.no_of_sheet
-    ) {
-      throw new ApiError(
-        'Issued Sheets are greater than ordered sheets',
-        StatusCodes.BAD_REQUEST
-      );
-    }
+       const [validate_sqm_for_order] = await issue_for_order_model.aggregate([
+          {
+            $match: {
+              order_item_id: order_item_data?._id,
+            },
+          },
+          {
+            $group: {
+              _id: null,
+              total_sqm: {
+                $sum: '$item_details.issued_sqm',
+              },
+            },
+          },
+        ]);
+    
+        if (
+          Number(
+            validate_sqm_for_order?.total_sqm + Number(core_item_details?.issued_sqm)
+          ) > order_item_data?.sqm
+        ) {
+          throw new ApiError(
+            'Issued sqm is greater than order sqm',
+            StatusCodes.BAD_REQUEST
+          );
+        }
+    
 
     const updated_body = {
       order_id: order_item_data?.order_id,
@@ -159,7 +159,7 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
       );
     if (update_core_inventory_invoice_editable_status?.matchedCount === 0) {
       throw new ApiError(
-        'Plywood item invoice not found',
+        'Core item invoice not found',
         StatusCodes.BAD_REQUEST
       );
     }
