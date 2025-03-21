@@ -272,11 +272,16 @@ export const revert_issue_for_pressing_item = catchAsync(
                 .findOne({ _id: issue_for_pressing_id })
                 .lean();
 
-                console.log(fetch_issue_for_pressing_item_details)
             if (!fetch_issue_for_pressing_item_details) {
                 throw new ApiError(
                     'Failed to find issue for pressing item details',
                     StatusCodes.NOT_FOUND
+                );
+            }
+            if (fetch_issue_for_pressing_item_details.is_pressing_done) {
+                throw new ApiError(
+                    'Already pressing done id created',
+                    StatusCodes.BAD_REQUEST
                 );
             }
 

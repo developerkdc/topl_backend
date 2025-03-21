@@ -281,6 +281,12 @@ export const revert_issue_for_tapping_item = catchAsync(
           StatusCodes.NOT_FOUND
         );
       }
+      if (fetch_issue_for_tapping_item_details.is_tapping_done) {
+        throw new ApiError(
+          'Already tapping done id created',
+          StatusCodes.BAD_REQUEST
+        );
+      }
 
       // delete issue for tapping item
       const delete_issue_for_tapping_item = await issue_for_tapping_model
