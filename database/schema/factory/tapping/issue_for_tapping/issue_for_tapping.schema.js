@@ -31,16 +31,6 @@ const issue_for_tapping_schema = new mongoose.Schema(
       trim: true,
       required: [true, 'Group No is required'],
     },
-    photo_no: {
-      type: String,
-      uppercase: true,
-      trim: true,
-      required: [true, 'Photo No is required'],
-    },
-    photo_no_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: [true, 'Photo No ID is required'],
-    },
     item_name: {
       type: String,
       uppercase: true,
@@ -76,11 +66,6 @@ const issue_for_tapping_schema = new mongoose.Schema(
       type: Number,
       default: 0,
       required: [true, 'Width is required'],
-    },
-    height: {
-      type: Number,
-      default: 0,
-      required: [true, 'Height is required'],
     },
     thickness: {
       type: Number,

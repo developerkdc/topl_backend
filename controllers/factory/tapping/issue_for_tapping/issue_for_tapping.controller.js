@@ -81,8 +81,6 @@ export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(
         grouping_done_item_id: data?._id,
         grouping_done_other_details_id: data?.grouping_done_other_details_id,
         group_no: data?.group_no,
-        photo_no: data?.photo_no,
-        photo_no_id: data?.photo_no_id,
         item_name: data?.item_name,
         item_name_id: data?.item_name_id,
         item_sub_category_id: data?.item_sub_category_id,
@@ -90,7 +88,6 @@ export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(
         log_no_code: data?.log_no_code,
         length: data?.length,
         width: data?.width,
-        height: data?.height,
         thickness: data?.thickness,
         pallet_number: data?.pallet_number,
         process_id: data?.process_id,
@@ -120,44 +117,12 @@ export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(
         updated_by: userDetails?._id,
       };
 
-      const grouping_item_exits_in_tapping =
-        await issue_for_tapping_model.findOne({
-          grouping_done_item_id: issue_for_tapping_data?.issue_for_tapping_data,
-          grouping_done_other_details_id:
-            issue_for_tapping_data?.grouping_done_other_details_id,
-          group_no: issue_for_tapping_data?.group_no,
-          issue_status: issue_for_tapping_data?.issue_status,
-          is_tapping_done: false,
-        });
+      const insert_issue_for_tapping = await issue_for_tapping_model.create(
+        [issue_for_tapping_data],
+        { session }
+      );
 
-      let issues_for_tapping_details;
-      if (grouping_item_exits_in_tapping) {
-        const issue_for_tapping_id = grouping_item_exits_in_tapping?._id;
-        const merge_issue_for_tapping =
-          await issue_for_tapping_model.findOneAndUpdate(
-            { _id: issue_for_tapping_id },
-            {
-              $set: {
-                updated_by: userDetails?._id,
-              },
-              $inc: {
-                no_of_leaves:
-                  issue_for_tapping_data?.no_of_leaves,
-                sqm: issue_for_tapping_data?.sqm,
-                amount: issue_for_tapping_data?.amount,
-              },
-            },
-            { session, new: true, runValidators: true }
-          );
-        issues_for_tapping_details = merge_issue_for_tapping;
-      } else {
-        const insert_issue_for_tapping = await issue_for_tapping_model.create(
-          [issue_for_tapping_data],
-          { session }
-        );
-
-        issues_for_tapping_details = insert_issue_for_tapping?.[0];
-      }
+      const issues_for_tapping_details = insert_issue_for_tapping?.[0];
 
       if (!issues_for_tapping_details) {
         throw new ApiError(
@@ -167,8 +132,12 @@ export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(
       }
 
       //add issue for tapping items details to grouping done history
+      const { _id: issue_for_tapping_id, ...grouping_history_detials } = issues_for_tapping_details?.toObject();
       const insert_tapping_item_to_grouping_history =
-        await grouping_done_history_model.create([issue_for_tapping_data], {
+        await grouping_done_history_model.create([{
+          issue_for_tapping_id: issue_for_tapping_id,
+          ...grouping_history_detials
+        }], {
           session,
         });
 
@@ -225,7 +194,8 @@ export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(
               isEditable: false,
               updated_by: userDetails?._id,
             },
-          }
+          },
+          { runValidators: true, session }
         );
 
       if (update_grouping_done_other_details.matchedCount <= 0) {
@@ -302,14 +272,13 @@ export const revert_issue_for_tapping_item = catchAsync(
         );
       }
 
-      const grouping_done_item_id =
-        delete_issue_for_tapping_item?.grouping_done_item_id;
-      const grouping_done_other_details_id =
-        delete_issue_for_tapping_item?.grouping_done_other_details_id;
+      const grouping_done_item_id = delete_issue_for_tapping_item?.grouping_done_item_id;
+      const grouping_done_other_details_id = delete_issue_for_tapping_item?.grouping_done_other_details_id;
       // delete grouping done history item
       const delete_grouping_done_history_item =
-        await grouping_done_history_model.deleteMany(
+        await grouping_done_history_model.deleteOne(
           {
+            issue_for_tapping_id: delete_issue_for_tapping_item?._id,
             grouping_done_item_id: grouping_done_item_id,
             grouping_done_other_details_id: grouping_done_other_details_id,
           },
@@ -336,10 +305,12 @@ export const revert_issue_for_tapping_item = catchAsync(
           { _id: grouping_done_item_id },
           {
             $set: {
+              updated_by: userDetails?._id,
+            },
+            $inc: {
               'available_details.no_of_leaves': available_details.no_of_leaves,
               'available_details.sqm': available_details.sqm,
               'available_details.amount': available_details.amount,
-              updated_by: userDetails?._id,
             },
           },
           { session, runValidators: true }

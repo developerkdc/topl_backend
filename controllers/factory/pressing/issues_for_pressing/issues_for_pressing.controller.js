@@ -78,8 +78,6 @@ export const issue_for_pressing_from_tapping_for_stock_and_sample = catchAsync(
                 tapping_done_item_id: data?._id,
                 tapping_done_other_details_id: data?.tapping_done_other_details_id,
                 group_no: data?.group_no,
-                photo_no: data?.photo_no,
-                photo_no_id: data?.photo_no_id,
                 item_name: data?.item_name,
                 item_name_id: data?.item_name_id,
                 item_sub_category_id: data?.item_sub_category_id,
@@ -87,7 +85,6 @@ export const issue_for_pressing_from_tapping_for_stock_and_sample = catchAsync(
                 log_no_code: data?.log_no_code,
                 length: data?.length,
                 width: data?.width,
-                height: data?.height,
                 thickness: data?.thickness,
                 pallet_number: data?.pallet_number,
                 process_id: data?.process_id,
@@ -118,42 +115,13 @@ export const issue_for_pressing_from_tapping_for_stock_and_sample = catchAsync(
                 updated_by: userDetails?._id,
             };
 
-            const tapping_item_exits_in_pressing =
-                await issues_for_pressing_model.findOne({
-                    tapping_done_item_id: issue_for_pressing_data?.tapping_done_item_id,
-                    tapping_done_other_details_id: issue_for_pressing_data?.tapping_done_other_details_id,
-                    group_no: issue_for_pressing_data?.group_no,
-                    issue_status: issue_for_pressing_data?.issue_status,
-                    is_pressing_done: false,
-                });
+            const insert_issue_for_pressing = await issues_for_pressing_model.create(
+                [issue_for_pressing_data],
+                { session }
+            );
 
-            let issues_for_pressing_details;
-            if (tapping_item_exits_in_pressing) {
-                const issue_for_pressing_id = tapping_item_exits_in_pressing?._id;
-                const merge_issue_for_tapping =
-                    await issues_for_pressing_model.findOneAndUpdate(
-                        { _id: issue_for_pressing_id },
-                        {
-                            $set: {
-                                updated_by: userDetails?._id,
-                            },
-                            $inc: {
-                                no_of_sheets: issue_for_pressing_data?.no_of_sheets,
-                                sqm: issue_for_pressing_data?.sqm,
-                                amount: issue_for_pressing_data?.amount,
-                            },
-                        },
-                        { session, new: true, runValidators: true }
-                    );
-                issues_for_pressing_details = merge_issue_for_tapping;
-            } else {
-                const insert_issue_for_pressing = await issues_for_pressing_model.create(
-                    [issue_for_pressing_data],
-                    { session }
-                );
-
-                issues_for_pressing_details = insert_issue_for_pressing?.[0];
-            }
+            const issues_for_pressing_details = insert_issue_for_pressing?.[0];
+            console.log(issues_for_pressing_details)
 
             if (!issues_for_pressing_details) {
                 throw new ApiError(
@@ -163,8 +131,12 @@ export const issue_for_pressing_from_tapping_for_stock_and_sample = catchAsync(
             }
 
             //add issue for pressing items details to tapping done history
+            const { _id: issue_for_pressing_id, ...tapping_history_detials } = issues_for_pressing_details?.toObject();
             const insert_pressing_item_to_tapping_history =
-                await tapping_done_history_model.create([issue_for_pressing_data], {
+                await tapping_done_history_model.create([{
+                    issue_for_pressing_id: issue_for_pressing_id,
+                    ...tapping_history_detials
+                }], {
                     session,
                 });
 
@@ -221,7 +193,8 @@ export const issue_for_pressing_from_tapping_for_stock_and_sample = catchAsync(
                             isEditable: false,
                             updated_by: userDetails?._id,
                         },
-                    }
+                    },
+                    { runValidators: true, session }
                 );
 
             if (update_tapping_done_other_details.matchedCount <= 0) {
@@ -306,8 +279,9 @@ export const revert_issue_for_pressing_item = catchAsync(
 
             // delete tapping done history item
             const delete_tapping_done_history_item =
-                await tapping_done_history_model.deleteMany(
+                await tapping_done_history_model.deleteOne(
                     {
+                        issue_for_pressing_id:delete_issue_for_pressing_item?._id,
                         tapping_done_item_id: tapping_done_item_id,
                         tapping_done_other_details_id: tapping_done_other_details_id,
                     },
@@ -334,11 +308,13 @@ export const revert_issue_for_pressing_item = catchAsync(
                     { _id: tapping_done_item_id },
                     {
                         $set: {
+                            updated_by: userDetails?._id,
+                        },
+                        $inc: {
                             'available_details.no_of_sheets': available_details.no_of_sheets,
                             'available_details.sqm': available_details.sqm,
                             'available_details.amount': available_details.amount,
-                            updated_by: userDetails?._id,
-                        },
+                        }
                     },
                     { session, runValidators: true }
                 );

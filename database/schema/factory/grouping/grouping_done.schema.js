@@ -131,11 +131,6 @@ const grouping_done_items_details_schema = new mongoose.Schema(
       default: 0,
       required: [true, 'Width is required'],
     },
-    height: {
-      type: Number,
-      default: 0,
-      required: [true, 'Height is required'],
-    },
     thickness: {
       type: Number,
       default: 0,

@@ -17,29 +17,23 @@ const grouping_done_history_schema = new mongoose.Schema(
       default: null,
       required: [validateOrderField, 'order_item_id is required'],
     },
+    issue_for_tapping_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, 'Issue for tapping id is required'],
+    },
     grouping_done_other_details_id: {
       type: mongoose.Schema.Types.ObjectId,
-      required: [true, 'Process done id is required'],
+      required: [true, 'Grouping other details id is required'],
     },
     grouping_done_item_id: {
       type: mongoose.Schema.Types.ObjectId,
-      required: [true, 'Process done id is required'],
+      required: [true, 'Grouping item id is required'],
     },
     group_no: {
       type: String,
       uppercase: true,
       trim: true,
       required: [true, 'Group No is required'],
-    },
-    photo_no: {
-      type: String,
-      uppercase: true,
-      trim: true,
-      required: [true, 'Photo No is required'],
-    },
-    photo_no_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: [true, 'Photo No ID is required'],
     },
     item_name: {
       type: String,
@@ -76,11 +70,6 @@ const grouping_done_history_schema = new mongoose.Schema(
       type: Number,
       default: 0,
       required: [true, 'Width is required'],
-    },
-    height: {
-      type: Number,
-      default: 0,
-      required: [true, 'Height is required'],
     },
     thickness: {
       type: Number,

@@ -268,6 +268,12 @@ export const edit_tapping_details = catchAsync(async (req, res, next) => {
     }
 
     const items_details_data = items_details?.map((item, index) => {
+      const avaiable_details = {
+        no_of_sheets: item?.no_of_sheets,
+        sqm: item?.sqm,
+        amount: item?.amount,
+      }
+      item.avaiable_details = avaiable_details;
       item.tapping_done_other_details_id = other_details_id;
       item.created_by = item.created_by ? item.created_by : userDetails?._id;
       item.updated_by = userDetails?._id;
