@@ -416,6 +416,34 @@ export const fetch_all_tapping_done_items = catchAsync(async (req, res, next) =>
     ...filterData,
   };
 
+  const aggCommonMatch = {
+    $match: {
+      "available_details.no_of_sheets": { $gt: 0 }
+    }
+  }
+  const aggGroupNoLookup = {
+    $lookup: {
+      from: 'grouping_done_items_details',
+      localField: 'group_no',
+      foreignField: 'group_no',
+      pipeline: [
+        {
+          $project: {
+            group_no: 1,
+            photo_no: 1,
+            photo_id: 1
+          },
+        },
+      ],
+      as: 'grouping_done_items_details',
+    },
+  }
+  const aggGroupNoUnwind = {
+    $unwind: {
+      path: '$grouping_done_items_details',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
   const aggLookupOtherDetails = {
     $lookup: {
       from: 'tapping_done_other_details',
@@ -443,7 +471,6 @@ export const fetch_all_tapping_done_items = catchAsync(async (req, res, next) =>
       as: 'created_user_details',
     },
   };
-
   const aggUpdatedUserDetails = {
     $lookup: {
       from: 'users',
@@ -502,6 +529,9 @@ export const fetch_all_tapping_done_items = catchAsync(async (req, res, next) =>
   };
 
   const list_aggregate = [
+    aggCommonMatch,
+    aggGroupNoLookup,
+    aggGroupNoUnwind,
     aggLookupOtherDetails,
     aggUnwindOtherDetails,
     aggCreatedUserDetails,
@@ -522,6 +552,9 @@ export const fetch_all_tapping_done_items = catchAsync(async (req, res, next) =>
   };
 
   const count_total_docs = [
+    aggCommonMatch,
+    aggGroupNoLookup,
+    aggGroupNoUnwind,
     aggLookupOtherDetails,
     aggUnwindOtherDetails,
     aggCreatedUserDetails,
@@ -775,7 +808,29 @@ export const fetch_all_tapping_done_items_history = catchAsync(async (req, res, 
     ...search_query,
     ...filterData,
   };
-
+  const aggGroupNoLookup = {
+    $lookup: {
+      from: 'grouping_done_items_details',
+      localField: 'group_no',
+      foreignField: 'group_no',
+      pipeline: [
+        {
+          $project: {
+            group_no: 1,
+            photo_no: 1,
+            photo_id: 1
+          },
+        },
+      ],
+      as: 'grouping_done_items_details',
+    },
+  }
+  const aggGroupNoUnwind = {
+    $unwind: {
+      path: '$grouping_done_items_details',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
   const aggLookupOtherDetails = {
     $lookup: {
       from: 'tapping_done_other_details',
@@ -862,6 +917,8 @@ export const fetch_all_tapping_done_items_history = catchAsync(async (req, res, 
   };
 
   const list_aggregate = [
+    aggGroupNoLookup,
+    aggGroupNoUnwind,
     aggLookupOtherDetails,
     aggUnwindOtherDetails,
     aggCreatedUserDetails,
@@ -882,6 +939,8 @@ export const fetch_all_tapping_done_items_history = catchAsync(async (req, res, 
   };
 
   const count_total_docs = [
+    aggGroupNoLookup,
+    aggGroupNoUnwind,
     aggLookupOtherDetails,
     aggUnwindOtherDetails,
     aggCreatedUserDetails,

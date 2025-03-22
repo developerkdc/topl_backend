@@ -161,8 +161,7 @@ export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(
               updated_by: userDetails?._id,
             },
             $inc: {
-              'available_details.no_of_leaves':
-                -issue_for_tapping_data?.no_of_leaves,
+              'available_details.no_of_leaves': -issue_for_tapping_data?.no_of_leaves,
               'available_details.sqm': -issue_for_tapping_data?.sqm,
               'available_details.amount': -issue_for_tapping_data?.amount,
             },
@@ -332,13 +331,11 @@ export const revert_issue_for_tapping_item = catchAsync(
       const isGroupingDoneOtherDetailsEditable =
         await grouping_done_items_details_model
           .find({
-            _id: { $ne: grouping_done_item_id },
             grouping_done_other_details_id: grouping_done_other_details_id,
             $expr: {
               $ne: ['$no_of_leaves', '$available_details.no_of_leaves'],
             },
-          })
-          .lean();
+          }).session(session).lean();
 
       if (
         isGroupingDoneOtherDetailsEditable &&
@@ -354,7 +351,8 @@ export const revert_issue_for_tapping_item = catchAsync(
                 isEditable: true,
                 updated_by: userDetails?._id,
               },
-            }
+            },
+            { runValidators: true, session }
           );
 
         if (update_grouping_done_other_details.matchedCount <= 0) {
@@ -466,7 +464,29 @@ export const fetch_all_issue_for_tapping_details = catchAsync(
         is_tapping_done: false,
       },
     };
-
+    const aggGroupNoLookup = {
+      $lookup: {
+        from: 'grouping_done_items_details',
+        localField: 'group_no',
+        foreignField: 'group_no',
+        pipeline: [
+          {
+            $project: {
+              group_no: 1,
+              photo_no: 1,
+              photo_id: 1
+            },
+          },
+        ],
+        as: 'grouping_done_items_details',
+      },
+    }
+    const aggGroupNoUnwind = {
+      $unwind: {
+        path: '$grouping_done_items_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    };
     const aggCreatedByLookup = {
       $lookup: {
         from: 'users',
@@ -540,6 +560,8 @@ export const fetch_all_issue_for_tapping_details = catchAsync(
 
     const listAggregate = [
       aggCommonMatch,
+      aggGroupNoLookup,
+      aggGroupNoUnwind,
       aggCreatedByLookup,
       aggCreatedByUnwind,
       aggUpdatedByLookup,
@@ -559,6 +581,8 @@ export const fetch_all_issue_for_tapping_details = catchAsync(
 
     const totalAggregate = [
       aggCommonMatch,
+      aggGroupNoLookup,
+      aggGroupNoUnwind,
       aggCreatedByLookup,
       aggCreatedByUnwind,
       aggUpdatedByLookup,
