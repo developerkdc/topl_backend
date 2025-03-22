@@ -19,6 +19,8 @@ export const issues_for_status = {
   sample: 'sample',
   stock: 'stock',
   challan: 'challan',
+  face:'face',
+  core:'core'
 };
 
 export const inward_type = {
