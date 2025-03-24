@@ -19,6 +19,7 @@ export const issues_for_status = {
   sample: 'sample',
   stock: 'stock',
   challan: 'challan',
+  plywood_resizing: 'plywood_resizing',
 };
 
 export const inward_type = {
@@ -94,4 +95,5 @@ export const item_issued_from = {
   crosscutting: 'CROSSCUTTING',
   flitching_factory: 'FLITCHING_FACTORY',
   dressing_factory: 'DRESSING_FACTORY',
+  grouping_factory: "GROUPING_FACTORY"
 };

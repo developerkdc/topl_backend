@@ -89,11 +89,11 @@ const grouping_done_items_details_schema = new mongoose.Schema(
       type: String,
       uppercase: true,
       trim: true,
-      required: [true, 'Photo No is required'],
+      default:null
     },
     photo_no_id: {
       type: mongoose.Schema.Types.ObjectId,
-      required: [true, 'Photo No ID is required'],
+      default:null
     },
     item_name: {
       type: String,
@@ -130,11 +130,6 @@ const grouping_done_items_details_schema = new mongoose.Schema(
       type: Number,
       default: 0,
       required: [true, 'Width is required'],
-    },
-    height: {
-      type: Number,
-      default: 0,
-      required: [true, 'Height is required'],
     },
     thickness: {
       type: Number,

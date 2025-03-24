@@ -67,7 +67,7 @@ dressing_done_router.get(
   fetch_all_pallet_no_by_log_no_code
 );
 dressing_done_router.get(
-  '/bundle-no-dropdown/:pallet_number',
+  '/bundle-no-dropdown/:pallet_number(*)',
   AuthMiddleware,
   fetch_all_bundles_by_pallet_number
 );
