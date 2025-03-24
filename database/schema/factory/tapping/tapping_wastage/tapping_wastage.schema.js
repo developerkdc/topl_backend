@@ -16,11 +16,6 @@ const issue_for_tapping_wastage_schema = new mongoose.Schema(
       default: 0,
       required: [true, 'Width is required'],
     },
-    height: {
-      type: Number,
-      default: 0,
-      required: [true, 'Height is required'],
-    },
     thickness: {
       type: Number,
       default: 0,
@@ -35,11 +30,6 @@ const issue_for_tapping_wastage_schema = new mongoose.Schema(
       type: Number,
       default: 0,
       required: [true, 'SQM is required'],
-    },
-    amount: {
-      type: Number,
-      default: 0,
-      required: [true, 'Item Amount is required'],
     },
     remark: {
       type: String,

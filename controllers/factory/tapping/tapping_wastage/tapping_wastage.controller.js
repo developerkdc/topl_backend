@@ -97,9 +97,27 @@ export const fetch_all_tapping_wastage = catchAsync(async (req, res, next) => {
       as: 'updated_user_details',
     },
   };
-  const aggMatch = {
-    $match: {
-      ...match_query,
+  const aggGroupNoLookup = {
+    $lookup: {
+      from: 'grouping_done_items_details',
+      localField: 'issue_for_tapping_details.group_no',
+      foreignField: 'group_no',
+      pipeline: [
+        {
+          $project: {
+            group_no: 1,
+            photo_no: 1,
+            photo_id: 1
+          },
+        },
+      ],
+      as: 'grouping_done_items_details',
+    },
+  }
+  const aggGroupNoUnwind = {
+    $unwind: {
+      path: '$grouping_done_items_details',
+      preserveNullAndEmptyArrays: true,
     },
   };
   const aggUnwindIssueDetails = {
@@ -120,6 +138,11 @@ export const fetch_all_tapping_wastage = catchAsync(async (req, res, next) => {
       preserveNullAndEmptyArrays: true,
     },
   };
+  const aggMatch = {
+    $match: {
+      ...match_query,
+    },
+  };
   const aggSort = {
     $sort: {
       [sortBy]: sort === 'desc' ? -1 : 1,
@@ -135,6 +158,8 @@ export const fetch_all_tapping_wastage = catchAsync(async (req, res, next) => {
   const list_aggregate = [
     aggLookupIssueDetails,
     aggUnwindIssueDetails,
+    aggGroupNoLookup,
+    aggGroupNoUnwind,
     aggCreatedUserDetails,
     aggUpdatedUserDetails,
     aggUnwindCreatedUser,
@@ -155,6 +180,8 @@ export const fetch_all_tapping_wastage = catchAsync(async (req, res, next) => {
   const count_total_docs = [
     aggLookupIssueDetails,
     aggUnwindIssueDetails,
+    aggGroupNoLookup,
+    aggGroupNoUnwind,
     aggCreatedUserDetails,
     aggUpdatedUserDetails,
     aggUnwindCreatedUser,
