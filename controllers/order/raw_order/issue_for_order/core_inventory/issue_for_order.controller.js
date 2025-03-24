@@ -9,7 +9,10 @@ import {
 } from '../../../../../database/Utils/constants/constants.js';
 import { RawOrderItemDetailsModel } from '../../../../../database/schema/order/raw_order/raw_order_item_details.schema.js';
 import issue_for_order_model from '../../../../../database/schema/order/issue_for_order/issue_for_order.schema.js';
-import { core_inventory_invoice_details, core_inventory_items_details } from '../../../../../database/schema/inventory/core/core.schema.js';
+import {
+  core_inventory_invoice_details,
+  core_inventory_items_details,
+} from '../../../../../database/schema/inventory/core/core.schema.js';
 import core_history_model from '../../../../../database/schema/inventory/core/core.history.schema.js';
 
 export const add_issue_for_order = catchAsync(async (req, res) => {
@@ -48,35 +51,33 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
       throw new ApiError(`No Available sheets found. `);
     }
 
-   
+    const [validate_sqm_for_order] = await issue_for_order_model.aggregate([
+      {
+        $match: {
+          order_item_id: order_item_data?._id,
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          total_sqm: {
+            $sum: '$item_details.issued_sqm',
+          },
+        },
+      },
+    ]);
 
-       const [validate_sqm_for_order] = await issue_for_order_model.aggregate([
-          {
-            $match: {
-              order_item_id: order_item_data?._id,
-            },
-          },
-          {
-            $group: {
-              _id: null,
-              total_sqm: {
-                $sum: '$item_details.issued_sqm',
-              },
-            },
-          },
-        ]);
-    
-        if (
-          Number(
-            validate_sqm_for_order?.total_sqm + Number(core_item_details?.issued_sqm)
-          ) > order_item_data?.sqm
-        ) {
-          throw new ApiError(
-            'Issued sqm is greater than order sqm',
-            StatusCodes.BAD_REQUEST
-          );
-        }
-    
+    if (
+      Number(
+        validate_sqm_for_order?.total_sqm +
+          Number(core_item_details?.issued_sqm)
+      ) > order_item_data?.sqm
+    ) {
+      throw new ApiError(
+        'Issued sqm is greater than order sqm',
+        StatusCodes.BAD_REQUEST
+      );
+    }
 
     const updated_body = {
       order_id: order_item_data?.order_id,
@@ -175,22 +176,21 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
     }
 
     //add data to plywood history model
-    const add_issued_data_to_core_history =
-      await core_history_model.create(
-        [
-          {
-            issued_for_order_id: issue_for_order_id,
-            issue_status: issues_for_status?.order,
-            core_item_id: core_item_data?._id,
-            issued_sheets: issued_sheets_for_order,
-            issued_sqm: issued_sqm_for_order,
-            issued_amount: issued_amount_for_order,
-            created_by: userDetails?._id,
-            updated_by: userDetails?._id,
-          },
-        ],
-        { session }
-      );
+    const add_issued_data_to_core_history = await core_history_model.create(
+      [
+        {
+          issued_for_order_id: issue_for_order_id,
+          issue_status: issues_for_status?.order,
+          core_item_id: core_item_data?._id,
+          issued_sheets: issued_sheets_for_order,
+          issued_sqm: issued_sqm_for_order,
+          issued_amount: issued_amount_for_order,
+          created_by: userDetails?._id,
+          updated_by: userDetails?._id,
+        },
+      ],
+      { session }
+    );
 
     if (add_issued_data_to_core_history?.length === 0) {
       throw new ApiError(

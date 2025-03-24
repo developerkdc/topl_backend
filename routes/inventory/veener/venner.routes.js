@@ -20,7 +20,12 @@ import {
 } from '../../../controllers/inventory/venner/Excels/veneerExcels.controller.js';
 import multerFunction from '../../../config/bulkUpload/bulk.js';
 import { verifyApproval } from '../../../middlewares/approval.middleware.js';
-import { fetch_all_log_no_by_item_name, fetch_all_bundles_by_pallet_number, fetch_all_pallet_no_by_log_no, fetch_veneer_details_by_bundle_id } from '../../../controllers/inventory/venner/veneer.issue_for_order.controller.js';
+import {
+  fetch_all_log_no_by_item_name,
+  fetch_all_bundles_by_pallet_number,
+  fetch_all_pallet_no_by_log_no,
+  fetch_veneer_details_by_bundle_id,
+} from '../../../controllers/inventory/venner/veneer.issue_for_order.controller.js';
 
 const veneer_router = Router();
 
@@ -82,8 +87,6 @@ veneer_router.post(
   listing_veneer_history_inventory
 );
 
-
-
 //dropdown
 veneer_router.get('/item-srno-dropdown', AuthMiddleware, item_sr_no_dropdown);
 veneer_router.get(
@@ -105,11 +108,26 @@ veneer_router.post(
   BulkUploadVeneerData
 );
 
-
 //order dropdowns
-veneer_router.get('/log-no-dropdown/:id', AuthMiddleware, fetch_all_log_no_by_item_name)
-veneer_router.get('/pallet-no-dropdown/:log_no', AuthMiddleware, fetch_all_pallet_no_by_log_no)
-veneer_router.get('/bundle-no-dropdown/:pallet_number', AuthMiddleware, fetch_all_bundles_by_pallet_number)
-veneer_router.get('/list-veneer-details/:id', AuthMiddleware, fetch_veneer_details_by_bundle_id)
+veneer_router.get(
+  '/log-no-dropdown/:id',
+  AuthMiddleware,
+  fetch_all_log_no_by_item_name
+);
+veneer_router.get(
+  '/pallet-no-dropdown/:log_no',
+  AuthMiddleware,
+  fetch_all_pallet_no_by_log_no
+);
+veneer_router.get(
+  '/bundle-no-dropdown/:pallet_number(*)',
+  AuthMiddleware,
+  fetch_all_bundles_by_pallet_number
+);
+veneer_router.get(
+  '/list-veneer-details/:id',
+  AuthMiddleware,
+  fetch_veneer_details_by_bundle_id
+);
 
 export default veneer_router;

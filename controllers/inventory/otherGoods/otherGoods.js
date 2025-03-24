@@ -61,8 +61,8 @@ export const listing_otherGodds_inventory = catchAsync(
       ...filterData,
       ...search_query,
       available_quantity: {
-        $ne: 0
-      }
+        $ne: 0,
+      },
     };
 
     const aggregate_stage = [
@@ -422,10 +422,14 @@ export const edit_othergoods_item_invoice_inventory = catchAsync(
         //     latest_pallet_no += 1;
         //   }
         // }
-
+        const updated_items = items_details?.map((item) => {
+          item.available_amount = item?.amount
+          item.available_quantity = item?.total_quantity;
+          return item
+        })
         const update_item_details =
           await othergoods_inventory_items_details.insertMany(
-            [...items_details],
+            updated_items,
             {
               session,
             }
@@ -509,6 +513,8 @@ export const edit_othergoods_item_invoice_inventory = catchAsync(
             ...itemData,
             otherGoods_item_id: _id ? _id : new mongoose.Types.ObjectId(),
             approval_invoice_id: add_invoice_details[0]?._id,
+            available_amount: ele?.amount,
+            available_quantity: ele?.total_quantity
           };
         });
 
@@ -666,10 +672,10 @@ export const fetch_other_goods_history = catchAsync(async (req, res, next) => {
       pipeline: [
         {
           $project: {
-            created_user: 0
-          }
-        }
-      ]
+            created_user: 0,
+          },
+        },
+      ],
     },
   };
   // const aggLookupPlywoodInvoiceDetails = {
@@ -785,7 +791,8 @@ export const fetch_other_goods_history = catchAsync(async (req, res, next) => {
     aggCount,
   ];
 
-  const total_docs = await other_goods_history_model.aggregate(count_total_docs);
+  const total_docs =
+    await other_goods_history_model.aggregate(count_total_docs);
 
   const totalPages = Math.ceil((total_docs[0]?.totalCount || 0) / limit);
 

@@ -9,7 +9,7 @@ const mdf_history_schema = new mongoose.Schema(
     },
     issued_for_order_id: {
       type: mongoose.Schema.Types.ObjectId,
-      required: [true, "Issued for order ID is required."]
+      required: [true, 'Issued for order ID is required.'],
     },
     issue_status: {
       type: String,
@@ -29,7 +29,7 @@ const mdf_history_schema = new mongoose.Schema(
     },
     issued_amount: {
       type: Number,
-      required: [true, "Issued Amount is required."]
+      required: [true, 'Issued Amount is required.'],
     },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,

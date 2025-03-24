@@ -102,7 +102,13 @@ export const editItemSubCategory = catchAsync(async (req, res) => {
 });
 
 export const listItemSubCategories = catchAsync(async (req, res) => {
-  const { query, sortField = "updatedAt", sortOrder = "desc", page = 1, limit = 10 } = req.query;
+  const {
+    query,
+    sortField = 'updatedAt',
+    sortOrder = 'desc',
+    page = 1,
+    limit = 10,
+  } = req.query;
   const {
     string,
     boolean,
@@ -180,6 +186,7 @@ export const listItemSubCategories = catchAsync(async (req, res) => {
         remark: 1,
         categoryDetails: 1,
         createdAt: 1,
+        updatedAt : 1,
         created_by: 1,
         'userDetails.first_name': 1,
         'userDetails.user_name': 1,

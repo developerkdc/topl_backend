@@ -683,10 +683,10 @@ export const edit_slicing_done = catchAsync(async (req, res, next) => {
 
     const items_details_data = items_details?.map((item, index) => {
       item.slicing_done_other_details_id = add_other_details_id;
-      console.log("item.created_by", item.created_by)
+      console.log('item.created_by', item.created_by);
       item.created_by = item.created_by ? item.created_by : userDetails?._id;
       item.createdAt = item.createdAt || new Date();
-      item.updatedAt = new Date()
+      item.updatedAt = new Date();
       item.updated_by = userDetails?._id;
       return item;
     });

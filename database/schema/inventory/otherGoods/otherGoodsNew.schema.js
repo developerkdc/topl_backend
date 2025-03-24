@@ -112,14 +112,14 @@ export const item_details_schema = new mongoose.Schema(
     available_quantity: {
       type: Number,
       default: function () {
-        return this.total_quantity
-      }
+        return this.total_quantity;
+      },
     },
     available_amount: {
       type: Number,
       default: function () {
-        return this.amount
-      }
+        return this.amount;
+      },
     },
     remark: {
       type: String,
@@ -169,7 +169,7 @@ export const othergoods_invoice_schema = new mongoose.Schema(
         message: `Invalid status {{VALUE}} Issue Status must either be one of ${inward_type.inventory}, ${inward_type.job_work}, ${inward_type.challan}`,
       },
       required: [true, 'Inward Type is required'],
-      default: inward_type?.inventory
+      default: inward_type?.inventory,
     },
     currency: {
       type: String,
@@ -300,7 +300,7 @@ export const othergoods_invoice_schema = new mongoose.Schema(
     },
     isEditable: {
       type: Boolean,
-      default: true
+      default: true,
     },
     approval_status: approval_status,
     invoice_Details: invoice_details,

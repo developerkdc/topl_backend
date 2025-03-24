@@ -9,7 +9,10 @@ import {
 } from '../../../../../database/Utils/constants/constants.js';
 import { RawOrderItemDetailsModel } from '../../../../../database/schema/order/raw_order/raw_order_item_details.schema.js';
 import issue_for_order_model from '../../../../../database/schema/order/issue_for_order/issue_for_order.schema.js';
-import { veneer_inventory_invoice_model, veneer_inventory_items_model } from '../../../../../database/schema/inventory/venner/venner.schema.js';
+import {
+  veneer_inventory_invoice_model,
+  veneer_inventory_items_model,
+} from '../../../../../database/schema/inventory/venner/venner.schema.js';
 
 export const add_issue_for_order = catchAsync(async (req, res) => {
   const { order_item_id, venner_item_id } = req.body;
@@ -36,7 +39,8 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
       throw new ApiError('Order Item Data not found');
     }
 
-    const venner_item_data = await veneer_inventory_items_model.findById(venner_item_id)
+    const venner_item_data = await veneer_inventory_items_model
+      .findById(venner_item_id)
       .lean();
     if (!venner_item_data) {
       throw new ApiError('Venner Item Data not found.');
@@ -66,7 +70,8 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
 
     if (
       Number(
-        validate_sqm_for_order?.total_sqm + Number(venner_item_data?.total_sq_meter)
+        validate_sqm_for_order?.total_sqm +
+          Number(venner_item_data?.total_sq_meter)
       ) > order_item_data?.sqm
     ) {
       throw new ApiError(
@@ -165,4 +170,3 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
     await session.endSession();
   }
 });
-

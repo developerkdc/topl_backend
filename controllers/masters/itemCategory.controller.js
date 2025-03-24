@@ -98,7 +98,13 @@ export const editItemCatgory = catchAsync(async (req, res) => {
 });
 
 export const listItemCategories = catchAsync(async (req, res) => {
-  const { query, sortField = "UpdatedAt", sortOrder = "desc", page = 1, limit = 10 } = req.query;
+  const {
+    query,
+    sortField = 'UpdatedAt',
+    sortOrder = 'desc',
+    page = 1,
+    limit = 10,
+  } = req.query;
   const pageInt = parseInt(page) || 1;
   const limitInt = parseInt(limit) || 10;
   const skipped = (pageInt - 1) * limitInt;
@@ -121,24 +127,24 @@ export const listItemCategories = catchAsync(async (req, res) => {
   //   : {};
   const searchQuery = query
     ? {
-      $or: [
-        { category: { $regex: query, $options: 'i' } },
-        { calculate_unit: { $regex: query, $options: 'i' } },
-        { product_hsn_code: { $regex: query, $options: 'i' } },
-        { 'userDetails.user_name': { $regex: query, $options: 'i' } },
+        $or: [
+          { category: { $regex: query, $options: 'i' } },
+          { calculate_unit: { $regex: query, $options: 'i' } },
+          { product_hsn_code: { $regex: query, $options: 'i' } },
+          { 'userDetails.user_name': { $regex: query, $options: 'i' } },
 
-        ...(isValidDate(query)
-          ? [
-            {
-              createdAt: {
-                $gte: new Date(new Date(query).setHours(0, 0, 0, 0)), // Start of the day
-                $lt: new Date(new Date(query).setHours(23, 59, 59, 999)), // End of the day
-              },
-            },
-          ]
-          : []),
-      ],
-    }
+          ...(isValidDate(query)
+            ? [
+                {
+                  createdAt: {
+                    $gte: new Date(new Date(query).setHours(0, 0, 0, 0)), // Start of the day
+                    $lt: new Date(new Date(query).setHours(23, 59, 59, 999)), // End of the day
+                  },
+                },
+              ]
+            : []),
+        ],
+      }
     : {};
 
   function isValidDate(dateString) {
@@ -210,8 +216,8 @@ export const DropdownItemCategoryNameMaster = catchAsync(async (req, res) => {
 
   const searchQuery = type
     ? {
-      $or: [{ category: { $regex: type, $options: 'i' } }],
-    }
+        $or: [{ category: { $regex: type, $options: 'i' } }],
+      }
     : {};
 
   const list = await itemCategoryModel.aggregate([

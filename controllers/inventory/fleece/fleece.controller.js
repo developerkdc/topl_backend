@@ -61,6 +61,7 @@ export const listing_fleece_inventory = catchAsync(async (req, res, next) => {
   const match_query = {
     ...filterData,
     ...search_query,
+    available_sqm: { $ne: 0 },
   };
 
   const aggregate_stage = [
@@ -264,8 +265,14 @@ export const edit_fleece_item_invoice_inventory = catchAsync(
         )
           return next(new ApiError('Failed to update invoice items', 400));
 
+          const updated_items=items_details?.map((item)=>{
+            item.available_number_of_roll=item?.number_of_roll
+            item.available_sqm=item?.total_sq_meter,
+            item.available_amount=item?.amount
+            return item;
+        });
         const update_item_details =
-          await fleece_inventory_items_modal.insertMany([...items_details], {
+          await fleece_inventory_items_modal.insertMany([...updated_items], {
             session,
           });
 
@@ -350,9 +357,15 @@ export const edit_fleece_item_invoice_inventory = catchAsync(
           };
         });
 
+        const updated_items=itemDetailsData?.map((item)=>{
+          item.available_number_of_roll=item?.number_of_roll
+          item.available_sqm=item?.total_sq_meter,
+          item.available_amount=item?.amount
+          return item;
+      });
         const add_approval_item_details =
           await fleece_approval_inventory_items_model.insertMany(
-            itemDetailsData,
+            updated_items,
             { session }
           );
 
@@ -593,7 +606,6 @@ export const fleeceLogsCsv = catchAsync(async (req, res) => {
   const allData = await fleece_inventory_items_view_modal.find(match_query);
 
   const excelLink = await createFleeceLogsExcel(allData);
-  console.log('link => ', excelLink);
 
   return res.json(
     new ApiResponse(StatusCodes.OK, 'Csv downloaded successfully...', excelLink)
@@ -660,10 +672,10 @@ export const fetch_fleece_history = catchAsync(async (req, res, next) => {
       pipeline: [
         {
           $project: {
-            created_user: 0
-          }
-        }
-      ]
+            created_user: 0,
+          },
+        },
+      ],
     },
   };
   // const aggLookupPlywoodInvoiceDetails = {
@@ -725,7 +737,7 @@ export const fetch_fleece_history = catchAsync(async (req, res, next) => {
   };
   const aggUnwindPlywoodItemDetails = {
     $unwind: {
-      path: '$plywood_item_details',
+      path: '$fleece_item_details',
       preserveNullAndEmptyArrays: true,
     },
   };

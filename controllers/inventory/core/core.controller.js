@@ -60,6 +60,7 @@ export const listing_core_inventory = catchAsync(async (req, res, next) => {
   const match_query = {
     ...filterData,
     ...search_query,
+    available_sqm: { $ne: 0 },
   };
 
   const aggregate_stage = [
@@ -356,8 +357,14 @@ export const edit_core_item_invoice_inventory = catchAsync(
         )
           return next(new ApiError('Failed to update invoice items', 400));
 
+          const updated_items=items_details?.map((item)=>{
+            item.available_sheets=item?.number_of_sheets
+            item.available_sqm=item?.total_sq_meter,
+            item.available_amount=item?.amount
+            return item;
+        });
         const update_item_details =
-          await core_inventory_items_details.insertMany([...items_details], {
+          await core_inventory_items_details.insertMany([...updated_items], {
             session,
           });
 
@@ -442,9 +449,15 @@ export const edit_core_item_invoice_inventory = catchAsync(
           };
         });
 
+        const updated_items=itemDetailsData?.map((item)=>{
+          item.available_sheets=item?.number_of_sheets
+          item.available_sqm=item?.total_sq_meter,
+          item.available_amount=item?.amount
+          return item;
+      });
         const add_approval_item_details =
           await core_approval_inventory_items_model.insertMany(
-            itemDetailsData,
+            updated_items,
             { session }
           );
 
@@ -600,10 +613,10 @@ export const fetch_core_history = catchAsync(async (req, res, next) => {
       pipeline: [
         {
           $project: {
-            created_user: 0
-          }
-        }
-      ]
+            created_user: 0,
+          },
+        },
+      ],
     },
   };
   const aggCreatedUserDetails = {
