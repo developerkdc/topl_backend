@@ -14,6 +14,7 @@ import {
   revert_grouping_done_damaged,
 } from '../../../controllers/factory/grouping/grouping_done.controller.js';
 import AuthMiddleware from '../../../middlewares/verifyToken.js';
+import { fetch_all_group_no_by_item_name, fetch_group_details_by_id } from '../../../controllers/factory/grouping/grouping.issue_for_order.controller.js';
 
 const groupingDoneRouter = express.Router();
 
@@ -78,4 +79,7 @@ groupingDoneRouter.post(
   recreate_grouping_done_items
 );
 
+//issue for order dropdown 
+groupingDoneRouter.get("/list-group-no/:id", AuthMiddleware, fetch_all_group_no_by_item_name)
+groupingDoneRouter.get("/fetch-group-details/:id", AuthMiddleware, fetch_group_details_by_id)
 export default groupingDoneRouter;

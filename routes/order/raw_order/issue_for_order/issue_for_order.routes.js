@@ -11,6 +11,7 @@ import fleece_inventory_order_router from './fleece_inventory/issue_fleece_inven
 import crosscutting_factory_order_router from './crosscutting_factory/issue_crosscutting_factory_item_order.routes.js';
 import flitching_factory_order_router from './flitching_factory/issue_flitching_factory_item_order.routes.js';
 import dressing_factory_order_router from './dressing_factory/issue_dressing_factory_item_order.routes.js';
+import grouping_factory_order_router from './grouping_factory/issue_grouping_factory_item_order.routes.js';
 
 const issue_for_raw_order_router = Router();
 
@@ -66,6 +67,10 @@ issue_for_raw_order_router.use(
 issue_for_raw_order_router.use(
   '/issue-raw-dressing-factory-order',
   dressing_factory_order_router
+);
+issue_for_raw_order_router.use(
+  '/issue-raw-grouping-factory-order',
+  grouping_factory_order_router
 );
 
 // issue_for_raw_order_router.use('/issue-raw-plywood-order', plywood_inventory_order_router)
