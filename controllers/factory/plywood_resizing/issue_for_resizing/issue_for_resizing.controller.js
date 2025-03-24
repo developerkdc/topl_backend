@@ -14,7 +14,7 @@ export const add_issue_for_resizing_from_plywood = catchAsync(async (req, res) =
     const userDetails = req.userDetails;
     const { plywood_item_id, issued_sheets } = req.body;
     const session = await mongoose.startSession();
-    await session.startTransaction();
+    session.startTransaction();
     try {
         for (let field of ["plywood_item_id", "issued_sheets"]) {
             if (!req.body[field]) {

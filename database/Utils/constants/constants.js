@@ -20,6 +20,9 @@ export const issues_for_status = {
   stock: 'stock',
   challan: 'challan',
   plywood_resizing: 'plywood_resizing',
+  face:'face',
+  core:'core',
+  plywood_production:'plywood_production'
 };
 
 export const inward_type = {

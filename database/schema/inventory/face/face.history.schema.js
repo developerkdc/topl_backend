@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import { issues_for_status } from '../../../Utils/constants/constants.js';
 
-const face_history_schema = new mongoose.Schema(
+const face_history_schema = new mongoose.Schema( 
   {
     face_item_id: {
       type: mongoose.Schema.Types.ObjectId,
@@ -14,7 +14,7 @@ const face_history_schema = new mongoose.Schema(
     issue_status: {
       type: String,
       enum: {
-        values: [issues_for_status?.order],
+        values: [issues_for_status?.order,issues_for_status?.plywood_production],
         message: `Invalid Issue status -> {{VALUE}} it must be one of the ${issues_for_status?.order}`,
       },
       default: issues_for_status?.order,

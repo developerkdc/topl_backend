@@ -23,6 +23,8 @@ import tapping_wastage_router from './tapping/tapping_wastage/tapping_wastage.ro
 import issue_for_issue_for_resizing_router from './plywood_resizing/issue_for_resizing/issue_for_resizing.routes.js';
 import resizing_done_router from './plywood_resizing/resizing_done/resizing_done.routes.js';
 import issue_for_pressing_router from './pressing/issues_for_pressing/issues_for_pressing.routes.js';
+import plywoodProductionRouter from './plywood_production/plywood_production.routes.js';
+
 const factoryRouter = express.Router();
 
 factoryRouter.use(`/factory/cross-cutting`, crossCuttingFactoryRoutes);
@@ -70,5 +72,8 @@ factoryRouter.use("/factory/resizing-done", resizing_done_router)
 
 //pressing
 factoryRouter.use('/factory/pressing', issue_for_pressing_router);
+//Plywood production
+factoryRouter.use('/factory/plywood-production', plywoodProductionRouter);
+
 
 export default factoryRouter;
