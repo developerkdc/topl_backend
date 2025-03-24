@@ -49,8 +49,6 @@ export const add_issue_for_resizing_from_plywood = catchAsync(async (req, res) =
 
 
         const insert_issue_for_resize_result = await issue_for_plywood_resizing_model.create([issue_for_resize_data], { session });
-
-
         if (insert_issue_for_resize_result?.length === 0) {
             throw new ApiError("Failed to add issue for resize data", StatusCodes.BAD_REQUEST)
         };
@@ -193,6 +191,11 @@ export const revert_issue_for_resizing = catchAsync(async (req, res) => {
         if (!delete_issue_for_resizing_document_result?.acknowledged || delete_issue_for_resizing_document_result?.deletedCount === 0) {
             throw new ApiError("Failed to delete issue for resizing details", StatusCodes.BAD_REQUEST);
         }
+        const delete_plywood_history = await plywood_history_model.deleteOne({ plywood_item_id: resizing_item_details?.plywood_item_id });
+
+        if (!delete_plywood_history.acknowledged || delete_plywood_history.deletedCount === 0) {
+            throw new ApiError("Failed to delete plywood history", StatusCodes.BAD_REQUEST)
+        }
 
         const response = new ApiResponse(StatusCodes.OK, "Item Reverted Successfully", delete_issue_for_resizing_document_result);
         await session.commitTransaction();
@@ -250,6 +253,7 @@ export const listing_issued_for_resizing = catchAsync(
         const match_query = {
             ...filterData,
             ...search_query,
+            is_resizing_done: false
         };
 
         const aggCreatedByLookup = {
