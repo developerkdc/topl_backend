@@ -59,7 +59,7 @@ export const create_resizing = catchAsync(async (req, res) => {
         }
 
         if (resizing_details?.face_item_details?.length > 0) {
-            const restoreBulkOperations = resizing_done_data?.face_item_details?.map(face => ({
+            const restoreBulkOperations = resizing_details?.face_item_details?.map(face => ({
                 updateOne: {
                     filter: { _id: face?.face_item_id },
                     update: {
@@ -483,6 +483,20 @@ export const revert_resizing_done_items = catchAsync(async (req, res) => {
                     throw new ApiError("Failed to update face inventory item details", StatusCodes.BAD_REQUEST)
                 }
             }
+        };
+
+        const update_is_resizing_done_status_from_issue_for_resizing = await issue_for_plywood_resizing_model?.updateOne({ _id: resizing_done_data?.issue_for_resizing_id }, {
+            $set: {
+                is_resizing_done: false
+            }
+        }, { session });
+
+        if (update_is_resizing_done_status_from_issue_for_resizing.matchedCount === 0) {
+            throw new ApiError("Issue for resizing item not found.", StatusCodes.NOT_FOUND)
+        }
+
+        if (!update_is_resizing_done_status_from_issue_for_resizing?.acknowledged || update_is_resizing_done_status_from_issue_for_resizing.modifiedCount === 0) {
+            throw new ApiError("Failed to update resizind done status.", StatusCodes.NOT_FOUND)
         }
 
         const response = new ApiResponse(StatusCodes.OK, "Resizing details Reverted Successfully", delete_resizing_done_result)
