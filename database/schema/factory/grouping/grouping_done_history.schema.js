@@ -10,16 +10,17 @@ const grouping_done_history_schema = new mongoose.Schema(
     order_id: {
       type: mongoose.Schema.Types.ObjectId,
       default: null,
-      required: [validateOrderField, 'order_id is required'],
+      // required: [validateOrderField, 'order_id is required'],
     },
     order_item_id: {
       type: mongoose.Schema.Types.ObjectId,
       default: null,
-      required: [validateOrderField, 'order_item_id is required'],
+      // required: [validateOrderField, 'order_item_id is required'],
     },
     issue_for_tapping_id: {
       type: mongoose.Schema.Types.ObjectId,
-      required: [true, 'Issue for tapping id is required'],
+      default: null,
+      // required: [true, 'Issue for tapping id is required'],
     },
     grouping_done_other_details_id: {
       type: mongoose.Schema.Types.ObjectId,
