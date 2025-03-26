@@ -268,12 +268,12 @@ export const edit_tapping_details = catchAsync(async (req, res, next) => {
     }
 
     const items_details_data = items_details?.map((item, index) => {
-      const avaiable_details = {
+      const available_details = {
         no_of_sheets: item?.no_of_sheets,
         sqm: item?.sqm,
         amount: item?.amount,
       }
-      item.avaiable_details = avaiable_details;
+      item.available_details = available_details;
       item.tapping_done_other_details_id = other_details_id;
       item.created_by = item.created_by ? item.created_by : userDetails?._id;
       item.updated_by = userDetails?._id;
@@ -306,8 +306,7 @@ export const edit_tapping_details = catchAsync(async (req, res, next) => {
         );
 
       if (
-        !delete_wastage_details.acknowledged ||
-        delete_wastage_details.deletedCount <= 0
+        !delete_wastage_details.acknowledged
       ) {
         throw new ApiError(
           'Failed to delete wastage details',
@@ -354,7 +353,7 @@ export const edit_tapping_details = catchAsync(async (req, res, next) => {
     await session.commitTransaction();
     const response = new ApiResponse(
       StatusCodes.OK,
-      'Peeling Done Successfully',
+      'Tapping Done Successfully',
       {
         other_details: other_details_data,
         items_details: add_items_details_data,

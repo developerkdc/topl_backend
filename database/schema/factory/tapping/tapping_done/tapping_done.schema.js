@@ -11,6 +11,10 @@ const tapping_done_other_details_schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'issue for tapping id is required'],
     },
+    no_of_workers: {
+      type: Number,
+      required: [true, 'No.of Workers is required '],
+    },
     no_of_working_hours: {
       type: Number,
       required: [true, 'No. of Working hours is required'],
