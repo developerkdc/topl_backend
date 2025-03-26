@@ -4,6 +4,7 @@ const plywood_production_schema = new mongoose.Schema(
   {
     iscompleted: {
       type: Boolean,
+      default:true
     },
     item_name: {
       type: String,
@@ -13,15 +14,15 @@ const plywood_production_schema = new mongoose.Schema(
       type: String,
       required: [true, 'Sub Category is required'],
     },
-    new_length: {
+    length: {
       type: Number,
       required: [true, 'New Lenght is required'],
     },
-    new_width: {
+    width: {
       type: Number,
       required: [true, 'New Width is required'],
     },
-    new_thickness: {
+    thickness: {
       type: Number,
       required: [true, 'New Thickness is required'],
     },
@@ -29,25 +30,34 @@ const plywood_production_schema = new mongoose.Schema(
       type: Number,
       required: [true, 'Number of Sheets are required'],
     },
+    available_no_of_sheets:{
+      type: Number,
+      required: [true, 'Available Number of Sheets are required'],
+      default:function(){
+        return this.no_of_sheets
+      }
+    },
     total_sqm: {
       type: Number,
       required: [true, 'Total SQM is required'],
     },
-    // face_details:{
-    //     type:Array,
-    //     required:[true,"Face Details is required"]
-    // },
-    // core_details:{
-    //     type:Array,
-    //     required:[true,'Core Details is required']
-    // },
-
-    remarks: {
-      type: String,
-      default: null,
-      trim: true,
-      uppercase: true,
+    available_total_sqm:{
+      type: Number,
+      required: [true, 'Available Total SQM is required'],
+      default:function(){
+        return this.total_sqm
+      }
     },
+    is_added_to_damage:{
+      type:Boolean,
+      default:false
+    },
+    // remarks: {
+    //   type: String,
+    //   default: null,
+    //   trim: true,
+    //   uppercase: true,
+    // },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,
     },

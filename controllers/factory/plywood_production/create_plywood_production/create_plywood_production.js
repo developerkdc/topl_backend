@@ -10,10 +10,11 @@ import { StatusCodes } from '../../../../utils/constants.js';
 import ApiError from '../../../../utils/errors/apiError.js';
 import catchAsync from '../../../../utils/errors/catchAsync.js';
 import face_history_model from '../../../../database/schema/inventory/face/face.history.schema.js';
+import { issues_for_status } from '../../../../database/Utils/constants/constants.js';
+import core_history_model from '../../../../database/schema/inventory/core/core.history.schema.js';
 
 export const create_plywood_production = catchAsync(
   async function (req, res, next) {
-
     const userDetails = req.userDetails;
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -39,6 +40,19 @@ export const create_plywood_production = catchAsync(
         throw new ApiError('Core details not found.', StatusCodes.BAD_REQUEST);
       }
 
+      if (core_details_array?.length === 0) {
+        throw new ApiError(
+          'Atleast One Core required.',
+          StatusCodes.BAD_REQUEST
+        );
+      }
+
+      if (face_details_array?.length === 0) {
+        throw new ApiError(
+          'Atleast One Face required.',
+          StatusCodes.BAD_REQUEST
+        );
+      }
       const insert_plywood_production_details =
         await plywood_production_model.create(
           [
@@ -51,7 +65,6 @@ export const create_plywood_production = catchAsync(
           { session }
         );
 
-
       if (
         !insert_plywood_production_details ||
         insert_plywood_production_details.length === 0
@@ -61,23 +74,24 @@ export const create_plywood_production = catchAsync(
           StatusCodes.BAD_REQUEST
         );
       }
-
+      console.log("insert_plywood_production_details : ",insert_plywood_production_details);
+      
       const new_face_details = face_details_array?.map((item) => {
         item.face_inventory_item_id = item?._id;
-        item.no_of_sheets= item?.issued_sheets;
-        item.sqm= item?.issued_sqm;
-        item.amount= item?.issued_amount;
-        item.plywood_production_id=insert_plywood_production_details[0]?._id
-        
+        item.no_of_sheets = item?.issued_sheets;
+        item.sqm = item?.issued_sqm;
+        item.amount = item?.issued_amount;
+        item.plywood_production_id = insert_plywood_production_details[0]?._id;
+
         return item;
       });
 
       const new_core_details = core_details_array?.map((item) => {
         item.core_inventory_item_id = item?._id;
-        item.no_of_sheets= item?.issued_sheets;
-        item.sqm= item?.issued_sqm;
-        item.amount= item?.issued_amount;
-        item.plywood_production_id=insert_plywood_production_details[0]?._id
+        item.no_of_sheets = item?.issued_sheets;
+        item.sqm = item?.issued_sqm;
+        item.amount = item?.issued_amount;
+        item.plywood_production_id = insert_plywood_production_details[0]?._id;
         return item;
       });
 
@@ -97,10 +111,10 @@ export const create_plywood_production = catchAsync(
         );
       }
 
-     const is_face_details_updated = await Promise.all(
+      const is_face_details_updated = await Promise.all(
         face_details_array.map((item) =>
           face_inventory_items_details.updateOne(
-            { _id:item?._id },
+            { _id: item?._id },
             {
               $inc: {
                 available_sheets: -item.issued_sheets,
@@ -112,31 +126,41 @@ export const create_plywood_production = catchAsync(
                 updated_by: userDetails?._id,
               },
             },
-            {session}
+            { session }
           )
         )
       );
 
-      if(!is_face_details_updated || is_face_details_updated.length===0){
-        throw new ApiError("Failed to update face inventory details")
+      if (!is_face_details_updated || is_face_details_updated.length === 0) {
+        throw new ApiError('Failed to update face inventory details');
       }
-     
-     const face_details_array_for_history = face_details_array.map((item)=>{
-      
-      return item
-     })
-     const is_face_history_updated = await face_history_model.insertMany(face_details_array_for_history,{session});
 
+      const face_details_array_for_history = face_details_array.map((item) => {
+        // item.issued_for_order_id= issue_for_order_id,
+        (item.issued_for_plywood_production_id =
+          insert_plywood_production_details[0]?._id),
+          (item.issue_status = issues_for_status?.plywood_production),
+          (item.face_item_id = item?._id),
+          (item.issued_sheets = item.issued_sheets),
+          (item.issued_sqm = item?.issued_sqm),
+          (item.issued_amount = item?.issued_amount),
+          (item.created_by = userDetails?._id),
+          (item.updated_by = userDetails?._id);
+        return item;
+      });
+      const is_face_history_updated = await face_history_model.insertMany(
+        face_details_array_for_history,
+        { session }
+      );
 
-
-      if(!is_face_history_updated || is_face_history_updated.length===0){
-        throw new ApiError("Failed to update face history details")
+      if (!is_face_history_updated || is_face_history_updated.length === 0) {
+        throw new ApiError('Failed to update face history details');
       }
 
       const is_core_details_updated = await Promise.all(
         core_details_array.map((item) =>
           core_inventory_items_details.updateOne(
-            { _id:item?._id },
+            { _id: item?._id },
             {
               $inc: {
                 available_sheets: -item.issued_sheets,
@@ -148,38 +172,36 @@ export const create_plywood_production = catchAsync(
                 updated_by: userDetails?._id,
               },
             },
-            {session}
+            { session }
           )
         )
       );
 
-      
-      if(!is_core_details_updated || is_core_details_updated.length===0){
-        throw new ApiError("Failed to update core inventory details")
+      if (!is_core_details_updated || is_core_details_updated.length === 0) {
+        throw new ApiError('Failed to update core inventory details');
       }
 
-      const is_core_history_updated = await Promise.all(
-        core_details_array.map((item) =>
-          core_inventory_items_details.updateOne(
-            { _id:item?._id },
-            {
-              $inc: {
-                available_sheets: item.issued_sheets,
-                available_amount: item.issued_amount,
-                available_sqm: item.issued_sqm,
-              },
-              $set: {
-                // issue_status: issues_for_status?.plywood_resizing,
-                updated_by: userDetails?._id,
-              },
-            },
-            {session}
-          )
-        )
+      const core_details_array_for_history = core_details_array.map((item) => {
+        // item.issued_for_order_id= issue_for_order_id,
+        (item.issued_for_plywood_production_id =
+          insert_plywood_production_details[0]?._id),
+          (item.issue_status = issues_for_status?.plywood_production),
+          (item.core_item_id = item?._id),
+          (item.issued_sheets = item.issued_sheets),
+          (item.issued_sqm = item?.issued_sqm),
+          (item.issued_amount = item?.issued_amount),
+          (item.created_by = userDetails?._id),
+          (item.updated_by = userDetails?._id);
+        return item;
+      });
+
+      const is_core_history_updated = await core_history_model.insertMany(
+        core_details_array_for_history,
+        { session }
       );
 
-      if(!is_core_history_updated || is_core_history_updated.length===0){
-        throw new ApiError("Failed to update core history")
+      if (!is_core_history_updated || is_core_history_updated.length === 0) {
+        throw new ApiError('Failed to update core history');
       }
       await session.commitTransaction();
 
@@ -202,4 +224,3 @@ export const create_plywood_production = catchAsync(
     }
   }
 );
-
