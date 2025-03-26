@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 
 const plywood_production_damage_schema = new mongoose.Schema(
   {
+    sr_no: Number,
     iscompleted: {
       type: Boolean,
       default:true

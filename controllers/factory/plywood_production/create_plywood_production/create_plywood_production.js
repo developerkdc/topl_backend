@@ -53,10 +53,24 @@ export const create_plywood_production = catchAsync(
           StatusCodes.BAD_REQUEST
         );
       }
+      const maxNumber = await plywood_production_model.aggregate([
+          {
+            $group: {
+              _id: null,
+              max: {
+                $max: '$sr_no',
+              },
+            },
+          },
+        ]);
+      
+        const newMax = maxNumber.length > 0 ? maxNumber[0].max + 1 : 1;
+      
       const insert_plywood_production_details =
         await plywood_production_model.create(
           [
             {
+              sr_no:newMax,
               ...plywood_production_details,
               created_by: userDetails?._id,
               updated_by: userDetails?._id,
