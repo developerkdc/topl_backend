@@ -67,7 +67,41 @@ export const issue_for_grouping_from_smoking_dying_done = catchAsync(async (req,
         StatusCodes.NOT_FOUND
       );
     }
-    const bundle_ids = process_done_items_details?.map((e) => e._id);
+    const unique_identifier = new mongoose.Types.ObjectId();
+    const issue_for_grouping_details = process_done_items_details?.map((e) => {
+      return {
+        unique_identifier: unique_identifier,
+        process_done_item_id: e._id,
+        item_name: e?.item_name,
+        item_name_id: e?.item_name_id,
+        item_sub_category_id: e?.item_sub_category_id,
+        item_sub_category_name: e?.item_sub_category_name,
+        log_no_code: e?.log_no_code,
+        length: e?.length,
+        width: e?.width,
+        thickness: e?.thickness,
+        no_of_leaves: e?.no_of_leaves,
+        sqm: e?.sqm,
+        bundle_number: e?.bundle_number,
+        pallet_number: e?.pallet_number,
+        color_id: e?.color_id,
+        color_name: e?.color_name,
+        character_id: e?.character_id,
+        character_name: e?.character_name,
+        pattern_id: e?.pattern_id,
+        pattern_name: e?.pattern_name,
+        series_id: e?.series_id,
+        series_name: e?.series_name,
+        grade_id: e?.grade_id,
+        grade_name: e?.grade_name,
+        amount: e?.amount,
+        issued_from: issues_for_status?.smoking_dying,
+        remark: e?.remark,
+        created_by: userDetails?._id,
+        updated_by: userDetails?._id,
+      }
+    });
+
 
     const add_issues_for_grouping = await issues_for_grouping_model.create(
       [
