@@ -20,6 +20,7 @@ import {
   fetch_all_core_sr_no_by_inward_sr_no,
   fetch_core_details_by_id,
 } from '../../../controllers/inventory/core/core.issue_for_order.controller.js';
+import { fetch_all_core_inward_sr_no_for_plywood_production, fetch_all_core_sr_no_by_inward_sr_no_for_plywood_production } from '../../../controllers/inventory/core/core_plywood_production.controller.js';
 const router = express.Router();
 
 router.post(
@@ -96,4 +97,16 @@ router.post(
   RolesPermissions('core_inventory', 'view'),
   fetch_core_history
 );
+//plywood production
+router.get(
+  '/inward-sr-no-dropdown',
+  AuthMiddleware,
+  fetch_all_core_inward_sr_no_for_plywood_production
+);
+router.get(
+  '/item-sr-no-dropdown/:id',
+  AuthMiddleware,
+  fetch_all_core_sr_no_by_inward_sr_no_for_plywood_production
+);
+
 export default router;
