@@ -280,6 +280,7 @@ export const update_plywood_production_done = catchAsync(async (req, res) => {
       throw new ApiError('Atleast One Face required.', StatusCodes.BAD_REQUEST);
     }
 
+    console.log("plywood_production_details : ",plywood_production_details);
     const plywood_production_done_data = await plywood_production_model
       .findById(id)
       .lean();
@@ -296,14 +297,17 @@ export const update_plywood_production_done = catchAsync(async (req, res) => {
       await plywood_production_model.updateOne(
         { _id: plywood_production_done_data?._id },
         {
-          item_name: plywood_production_details?.item_name,
-          sub_category: plywood_production_details?.sub_category,
-          length: plywood_production_details?.length,
-          width: plywood_production_details?.width,
-          thickness: plywood_production_details?.thickness,
-          no_of_sheets: plywood_production_details?.no_of_sheets,
-          total_sqm: plywood_production_details?.total_sqm,
-          updated_by: userDetails?._id,
+          $set:{
+            item_name: plywood_production_details?.item_name,
+            sub_category: plywood_production_details?.sub_category,
+            length: plywood_production_details?.length,
+            width: plywood_production_details?.width,
+            thickness: plywood_production_details?.thickness,
+            no_of_sheets: plywood_production_details?.no_of_sheets,
+            total_sqm: plywood_production_details?.total_sqm,
+            amount:plywood_production_details?.amount,
+            updated_by: userDetails?._id,
+          },
         },
         { session }
       );

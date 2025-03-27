@@ -49,6 +49,17 @@ const plywood_production_schema = new mongoose.Schema(
         return this.total_sqm
       }
     },
+    amount: {
+      type: Number,
+      required: [true, 'Amount is required'],
+    },
+    available_amount:{
+      type: Number,
+      required: [true, 'Available Amount is required'],
+      default:function(){
+        return this.amount
+      }
+    },
     is_added_to_damage:{
       type:Boolean,
       default:false
