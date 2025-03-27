@@ -38,6 +38,26 @@ const flitching_approval_schema = new mongoose.Schema(
       trim: true,
       uppercase: true,
     },
+    item_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, 'Items id is required'],
+    },
+    item_name: {
+      type: String,
+      required: [true, 'Item Name is required'],
+      trim: true,
+      uppercase: true,
+    },
+    item_sub_category_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, 'Items Sub-Category Id is required'],
+    },
+    item_sub_category_name: {
+      type: String,
+      required: [true, 'Item Sub-Category Name is required'],
+      trim: true,
+      uppercase: true,
+    },
     color: {
       color_id: {
         type: mongoose.Schema.Types.ObjectId,
