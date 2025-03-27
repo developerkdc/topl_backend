@@ -83,6 +83,20 @@ const plywood_production_consumed_items_schema = new mongoose.Schema(
       type: Number,
       required: [true, 'Item Sr No is required'],
     },
+    sr_no_details:{
+      _id:mongoose.Schema.Types.ObjectId,
+      item_sr_no: {
+      type: Number,
+      required: [true, 'Item Sr No is required'],
+    },
+    },
+    inward_sr_no_details:{
+      _id:mongoose.Schema.Types.ObjectId,
+      inward_sr_no: {
+        type: Number,
+        required: [true, 'Inward Sr No is required']
+      }
+    },
     supplier_item_name: {
       type: String,
       required: [true, 'Supplier name is required'],
