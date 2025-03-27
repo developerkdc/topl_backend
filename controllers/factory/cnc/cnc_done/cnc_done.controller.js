@@ -12,88 +12,11 @@ import { face_inventory_items_details } from '../../../../database/schema/invent
 
 export const create_resizing = catchAsync(async (req, res) => {
     const userDetails = req.userDetails;
-    const { resizing_details, is_damage } = req.body;
 
     const session = await mongoose.startSession();
     try {
-        await session.startTransaction()
-        if (!resizing_details) {
-            throw new ApiError("Resizing Details are required.", StatusCodes.BAD_REQUEST)
-        };
-
-        const issue_for_resizing_details = await issue_for_plywood_resizing_model.findOne({ _id: resizing_details?.issue_for_resizing_id });
-
-        if (!issue_for_resizing_details) {
-            throw new ApiError("Issue for Resizing details not found.", StatusCodes.NOT_FOUND)
-        };
-
-        if (issue_for_resizing_details?.is_resizing_done) {
-            throw new ApiError("Resizing is already done for this plywood", StatusCodes.BAD_REQUEST)
-        };
-
-
-        const [add_resizing_data_result] = await plywood_resizing_done_details_model.create([{
-            ...resizing_details,
-            created_by: userDetails?._id,
-            updated_by: userDetails?._id
-        }], { session });
-
-        if (!add_resizing_data_result) {
-            throw new ApiError("Failed to add resizing details", StatusCodes.BAD_REQUEST)
-        };
-
-        if (is_damage && resizing_details?.damage_details) {
-            const updated_data = {
-                issue_for_resizing_id: issue_for_resizing_details?._id,
-                no_of_sheets: resizing_details?.damage_details?.no_of_sheets,
-                sqm: resizing_details?.damage_details?.sqm,
-                created_by: userDetails?._id,
-                updated_by: userDetails?._id
-            };
-
-            const [add_damage_data_result] = await plywood_resize_damage_model.create([updated_data], { session });
-
-            if (!add_damage_data_result) {
-                throw new ApiError("Failed to add damage details", StatusCodes.BAD_REQUEST)
-            };
-        }
-
-        if (resizing_details?.face_item_details?.length > 0) {
-            const restoreBulkOperations = resizing_details?.face_item_details?.map(face => ({
-                updateOne: {
-                    filter: { _id: face?.face_item_id },
-                    update: {
-                        $inc: {
-                            available_sheets: -face?.no_of_sheets,
-                            available_amount: -face?.amount,
-                            available_sqm: -face?.sqm
-                        },
-                        $set: { updated_by: userDetails?._id }
-                    }
-                }
-            }));
-
-            if (restoreBulkOperations?.length > 0) {
-                const result = await face_inventory_items_details.bulkWrite(restoreBulkOperations, { session });
-                if (result.modifiedCount === 0) {
-                    throw new ApiError("Failed to update face inventory details", StatusCodes.BAD_REQUEST)
-                }
-            }
-        }
-        const update_issue_for_resizing_status = await issue_for_plywood_resizing_model.updateOne({ _id: issue_for_resizing_details?._id }, {
-            $set: {
-                is_resizing_done: true,
-                updated_by: userDetails?._id
-            }
-        }, { session });
-
-        if (update_issue_for_resizing_status?.matchedCount === 0) {
-            throw new ApiError("Issue for resizing data not found", StatusCodes.NOT_FOUND);
-        }
-        if (!update_issue_for_resizing_status?.acknowledged || update_issue_for_resizing_status?.modifiedCount === 0) {
-            throw new ApiError("Failed to update status of issue for resizing", StatusCodes.BAD_REQUEST)
-        };
-
+        session.startTransaction()
+        
         const response = new ApiResponse(StatusCodes.CREATED, "Resizing Created Successfully", add_resizing_data_result);
         await session.commitTransaction()
         return res.status(StatusCodes.CREATED).json(response);
@@ -103,7 +26,8 @@ export const create_resizing = catchAsync(async (req, res) => {
     } finally {
         await session.endSession()
     }
-})
+});
+
 export const update_resizing_done = catchAsync(async (req, res) => {
     const userDetails = req.userDetails;
     const { id } = req.params;
@@ -231,7 +155,7 @@ export const update_resizing_done = catchAsync(async (req, res) => {
     } finally {
         await session.endSession()
     }
-})
+});
 
 export const listing_resizing_done = catchAsync(
     async (req, res) => {
@@ -427,27 +351,13 @@ export const fetch_single_resizing_done_item_with_issue_for_resizing_data = catc
                 path: "$issue_for_resizing_details",
                 preserveNullAndEmptyArrays: true
             }
-        },
-        {
-            $lookup: {
-                from: "plywood_resize_damage_details",
-                localField: "issue_for_resizing_id",
-                foreignField: "issue_for_resizing_id",
-                as: "damage_details"
-            }
-        },
-        {
-            $unwind: {
-                path: "$damage_details",
-                preserveNullAndEmptyArrays: true
-            }
         }
     ];
 
     const result = await plywood_resizing_done_details_model.aggregate(pipeline)
     return res.status(StatusCodes.OK).json(new ApiResponse(StatusCodes.OK, "Resizing details fetched successfully", result))
 
-})
+});
 
 export const revert_resizing_done_items = catchAsync(async (req, res) => {
     const { id } = req.params;
@@ -524,4 +434,4 @@ export const revert_resizing_done_items = catchAsync(async (req, res) => {
     }
 
 
-})
+});
