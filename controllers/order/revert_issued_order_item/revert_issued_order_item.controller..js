@@ -935,7 +935,7 @@ class RevertOrderItem {
 
     //check if invoice is editable
     const is_grouping_item_editable = await grouping_done_items_details_model?.find({
-      _id: { $ne: update_grouping_item?._id },
+      // _id: { $ne: update_grouping_item?._id },
       // issue_status: { $ne: null },
       $expr: { $ne: ['$available_details.no_of_leaves', '$no_of_leaves'] },
     }).session(this.session);

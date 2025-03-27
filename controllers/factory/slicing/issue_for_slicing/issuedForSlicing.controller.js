@@ -333,7 +333,7 @@ export const add_issue_for_slicing_from_flitching_done = catchAsync(
 
       const flitching_done_issue_ids = add_issue_for_slicing?.map(
         (ele) => ele?.flitching_done_id
-      );
+      ); 
 
       //updating flitching done status to slicing
       const update_flitching_done_status =
