@@ -88,7 +88,17 @@ export const create_plywood_production = catchAsync(
           StatusCodes.BAD_REQUEST
         );
       }
-   
+
+      const is_face_available_greater_than_consumed = await Promise.all(
+        face_details_array.map((item) =>
+          face_inventory_items_details.find(
+            { _id: item?._id,  },
+            { session }
+          )
+        )
+      );
+
+
       const new_face_details = face_details_array?.map((item) => {
         item.face_inventory_item_id = item?._id;
         item.no_of_sheets = item?.issued_sheets;
@@ -108,9 +118,7 @@ export const create_plywood_production = catchAsync(
         item.plywood_production_id = insert_plywood_production_details[0]?._id;
         return item;
       });
- console.log("face : ",new_face_details);
-
- console.log("core : ",new_core_details);
+ 
       const insert_plywood_production_consumed_items =
         await plywood_production_consumed_items_model.insertMany(
           [...new_face_details, ...new_core_details],
