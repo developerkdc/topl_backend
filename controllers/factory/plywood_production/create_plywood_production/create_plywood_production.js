@@ -133,8 +133,8 @@ export const create_plywood_production = catchAsync(
 
       const new_face_details = face_details_array?.map((item) => {
         item.face_inventory_item_id = item?._id;
-        item.no_of_sheets = item?.issued_sheets;
-        item.sqm = item?.issued_sqm;
+        item.number_of_sheets = item?.issued_sheets;
+        item.total_sq_meter = item?.issued_sqm;
         item.amount = item?.issued_amount;
         item.plywood_production_id = insert_plywood_production_details[0]?._id;
 
@@ -143,8 +143,8 @@ export const create_plywood_production = catchAsync(
 
       const new_core_details = core_details_array?.map((item) => {
         item.core_inventory_item_id = item?._id;
-        item.no_of_sheets = item?.issued_sheets;
-        item.sqm = item?.issued_sqm;
+        item.number_of_sheets = item?.issued_sheets;
+        item.total_sq_meter = item?.issued_sqm;
         item.amount = item?.issued_amount;
         item.plywood_production_id = insert_plywood_production_details[0]?._id;
         return item;
@@ -192,6 +192,7 @@ export const create_plywood_production = catchAsync(
 
       const face_details_array_for_history = face_details_array.map((item) => {
         // item.issued_for_order_id= issue_for_order_id,
+        (item.face_item_id=item?._id),
         (item.issued_for_plywood_production_id =
           insert_plywood_production_details[0]?._id),
           (item.issue_status = issues_for_status?.plywood_production),
@@ -201,6 +202,7 @@ export const create_plywood_production = catchAsync(
           (item.issued_amount = item?.issued_amount),
           (item.created_by = userDetails?._id),
           (item.updated_by = userDetails?._id);
+          delete item?._id
         return item;
       });
       const is_face_history_updated = await face_history_model.insertMany(
@@ -238,6 +240,7 @@ export const create_plywood_production = catchAsync(
 
       const core_details_array_for_history = core_details_array.map((item) => {
         // item.issued_for_order_id= issue_for_order_id,
+        (item.core_item_id=item?._id),
         (item.issued_for_plywood_production_id =
           insert_plywood_production_details[0]?._id),
           (item.issue_status = issues_for_status?.plywood_production),
@@ -247,8 +250,11 @@ export const create_plywood_production = catchAsync(
           (item.issued_amount = item?.issued_amount),
           (item.created_by = userDetails?._id),
           (item.updated_by = userDetails?._id);
+          delete item?._id
         return item;
       });
+
+      console.log("core_details_array_for_history",core_details_array_for_history);
 
       const is_core_history_updated = await core_history_model.insertMany(
         core_details_array_for_history,
