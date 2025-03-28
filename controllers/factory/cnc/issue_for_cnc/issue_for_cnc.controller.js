@@ -20,7 +20,7 @@ export const add_issue_for_cnc_from_pressing = catchAsync(async (req, res) => {
         // }
        
        
-        const response = new ApiResponse(StatusCodes.OK, "Item Reverted Successfully",{message:"this is add add_issue_for_cnc_from_pressing"});
+        const response = new ApiResponse(StatusCodes.OK, "Item Issued For CNC Successfully",{message:"this is add add_issue_for_cnc_from_pressing"});
         
         await session?.commitTransaction();
         return res.status(StatusCodes.OK).json(response)
