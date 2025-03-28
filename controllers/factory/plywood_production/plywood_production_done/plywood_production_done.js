@@ -303,9 +303,9 @@ export const update_plywood_production_done = catchAsync(async (req, res) => {
             length: plywood_production_details?.length,
             width: plywood_production_details?.width,
             thickness: plywood_production_details?.thickness,
-            no_of_sheets: plywood_production_details?.no_of_sheets,
-            total_sqm: plywood_production_details?.total_sqm,
-            amount:plywood_production_details?.amount,
+            no_of_sheets: plywood_production_details?.issued_sheets,
+            total_sqm: plywood_production_details?.issued_sqm,
+            amount:plywood_production_details?.issued_amount,
             available_sheets:plywood_production_details?.available_sheets,
             available_sqm:plywood_production_details?.available_sqm,
             available_amount:plywood_production_details?.available_amount,
@@ -507,6 +507,7 @@ export const update_plywood_production_done = catchAsync(async (req, res) => {
 
     const face_details_array_for_history = face_details_array.map((item) => {
       // item.issued_for_order_id= issue_for_order_id,
+      (item.face_item_id=item?._id),
       (item.issued_for_plywood_production_id =
         plywood_production_done_data?._id),
         (item.issue_status = issues_for_status?.plywood_production),
@@ -516,8 +517,12 @@ export const update_plywood_production_done = catchAsync(async (req, res) => {
         (item.issued_amount = item?.issued_amount),
         (item.created_by = userDetails?._id),
         (item.updated_by = userDetails?._id);
+        delete item?._id
       return item;
     });
+
+    console.log("face_details_array_for_history : ",face_details_array_for_history);
+    
     const is_face_history_updated = await face_history_model.insertMany(
       face_details_array_for_history,
       { session }
@@ -553,6 +558,7 @@ export const update_plywood_production_done = catchAsync(async (req, res) => {
 
     const core_details_array_for_history = core_details_array.map((item) => {
       // item.issued_for_order_id= issue_for_order_id,
+      (item.core_item_id=item?._id),
       (item.issued_for_plywood_production_id =
         plywood_production_done_data?._id),
         (item.issue_status = issues_for_status?.plywood_production),
@@ -562,6 +568,7 @@ export const update_plywood_production_done = catchAsync(async (req, res) => {
         (item.issued_amount = item?.issued_amount),
         (item.created_by = userDetails?._id),
         (item.updated_by = userDetails?._id);
+        delete item?._id
       return item;
     });
 
