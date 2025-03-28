@@ -25,6 +25,7 @@ import resizing_done_router from './plywood_resizing/resizing_done/resizing_done
 import issue_for_pressing_router from './pressing/issues_for_pressing/issues_for_pressing.routes.js';
 import plywoodProductionRouter from './plywood_production/plywood_production.routes.js';
 import issue_for_cnc_router from './cnc/issue_for_cnc/issue_for_cnc.routes.js';
+import cnc_done_router from './cnc/cnc_done/cnc_done.routes.js';
 
 const factoryRouter = express.Router();
 
@@ -78,6 +79,7 @@ factoryRouter.use('/factory/plywood-production', plywoodProductionRouter);
 
 //cnc
 factoryRouter.use('/factory/issue-for-cnc', issue_for_cnc_router);
+factoryRouter.use("/factory/cnc-done", cnc_done_router)
 
 
 export default factoryRouter;
