@@ -197,14 +197,13 @@ export const update_resizing_done = catchAsync(async (req, res) => {
                 updated_by: userDetails?._id
             };
              
-            const update_damage_data_result = await plywood_resize_damage_model.findOneAndUpdate({ _id: resizing_details?.issue_for_resizing_id }, { $set: updated_data }, { session });
+            const update_damage_data_result = await plywood_resize_damage_model.findOneAndUpdate({ issue_for_resizing_id: resizing_details?.issue_for_resizing_id }, { $set: updated_data }, { session });
             
             if (!update_damage_data_result) {
                 const insert_damage_data = await plywood_resize_damage_model.insertMany(
                   [{
                     issue_for_resizing_id: resizing_details?.issue_for_resizing_id,
                     ...updated_data,
-                    remark: "",
                     updated_by: userDetails?._id,
                     created_by: userDetails?._id
                   }],
