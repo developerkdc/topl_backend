@@ -110,7 +110,7 @@ export const update_resizing_done = catchAsync(async (req, res) => {
     const { resizing_details, is_damage } = req.body
     const session = await mongoose.startSession();
     try {
-        await session.startTransaction()
+        session.startTransaction()
         if (!id) {
             throw new ApiError("ID is missing.", StatusCodes.BAD_REQUEST)
         };
@@ -183,7 +183,7 @@ export const update_resizing_done = catchAsync(async (req, res) => {
         if (!is_damage) {
             const delete_damage_document_result = await plywood_resize_damage_model.deleteOne({ issue_for_resizing_id: resizing_details?.issue_for_resizing_id }, { session });
 
-            if (!delete_damage_document_result?.acknowledged || delete_damage_document_result?.deletedCount === 0) {
+            if (!delete_damage_document_result?.acknowledged) {
                 throw new ApiError("Failed to delete damage details", StatusCodes.BAD_REQUEST)
             }
         }
@@ -196,11 +196,28 @@ export const update_resizing_done = catchAsync(async (req, res) => {
                 sqm: resizing_details?.damage_details?.sqm,
                 updated_by: userDetails?._id
             };
+             
             const update_damage_data_result = await plywood_resize_damage_model.findOneAndUpdate({ _id: resizing_details?.issue_for_resizing_id }, { $set: updated_data }, { session });
-
+            
             if (!update_damage_data_result) {
-                throw new ApiError("Failed to update damage details", StatusCodes.BAD_REQUEST)
-            };
+                const insert_damage_data = await plywood_resize_damage_model.insertMany(
+                  [{
+                    issue_for_resizing_id: resizing_details?.issue_for_resizing_id,
+                    ...updated_data,
+                    remark: "",
+                    updated_by: userDetails?._id,
+                    created_by: userDetails?._id
+                  }],
+                  { session } 
+                );
+                
+                if (!insert_damage_data) {
+                    throw new ApiError("Failed to update damage details", StatusCodes.BAD_REQUEST)
+                };
+            }
+              
+           
+           
         }
         if (resizing_details?.face_item_details?.length > 0) {
             for (let face of resizing_details?.face_item_details) {
@@ -472,7 +489,7 @@ export const revert_resizing_done_items = catchAsync(async (req, res) => {
         if (!delete_resizing_done_result?.acknowledged || delete_resizing_done_result?.deletedCount === 0) {
             throw new ApiError("Failed to delete resizing done details", StatusCodes.BAD_REQUEST)
         }
-        if (!delete_resizing_damage_result?.acknowledged || delete_resizing_damage_result?.deletedCount === 0) {
+        if (!delete_resizing_damage_result?.acknowledged) {
             throw new ApiError("Failed to delete resizing damage details", StatusCodes.BAD_REQUEST)
         };
 

@@ -80,6 +80,10 @@ const plywood_production_schema = new mongoose.Schema(
   { timestamps: true }
 );
 
+plywood_production_schema.index({ sr_no: 1 }, { unique: true });
+plywood_production_schema.index({ item_name: 1 });
+plywood_production_schema.index({ sub_category: 1 });
+
 const plywood_production_consumed_items_schema = new mongoose.Schema(
   {
     core_inventory_item_id: {
@@ -206,6 +210,10 @@ const plywood_production_consumed_items_schema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+plywood_production_consumed_items_schema.index({ item_sr_no: 1 });
+plywood_production_consumed_items_schema.index({ item_id: 1 });
+plywood_production_consumed_items_schema.index({ plywood_production_id: 1 })
 
 export const plywood_production_model = mongoose.model(
   'plywood_production',

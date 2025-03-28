@@ -15,7 +15,9 @@ export const create_cnc = catchAsync(async (req, res) => {
 
     const session = await mongoose.startSession();
     try {
-        session.startTransaction()
+        session.startTransaction();
+
+
         const add_resizing_data_result=[];
         const response = new ApiResponse(StatusCodes.CREATED, "CNC Created Successfully", add_resizing_data_result);
         await session.commitTransaction()
@@ -62,7 +64,7 @@ export const update_cnc_done = catchAsync(async (req, res) => {
     }
 });
 
-export const listing_resizing_done = catchAsync(
+export const listing_cnc_done = catchAsync(
     async (req, res) => {
         const {
             page = 1,
@@ -198,7 +200,7 @@ export const listing_resizing_done = catchAsync(
             aggLimit,
         ]; // aggregation pipiline
 
-        const resizing_done_list =
+        const cnc_done_list =
             await plywood_resizing_done_details_model.aggregate(listAggregate);
 
         const aggCount = {
@@ -217,9 +219,9 @@ export const listing_resizing_done = catchAsync(
 
         const response = new ApiResponse(
             200,
-            'Resizing Done Data Fetched Successfully',
+            'CNC Done Data Fetched Successfully',
             {
-                data: resizing_done_list,
+                data: cnc_done_list,
                 totalPages: totalPages,
             }
         );
@@ -227,7 +229,7 @@ export const listing_resizing_done = catchAsync(
     }
 );
 
-export const fetch_single_resizing_done_item_with_issue_for_resizing_data = catchAsync(async (req, res) => {
+export const fetch_single_cnc_done_item_with_issue_for_cnc_data = catchAsync(async (req, res) => {
     const { id } = req.params;
 
     if (!id) {
@@ -264,7 +266,7 @@ export const fetch_single_resizing_done_item_with_issue_for_resizing_data = catc
 
 });
 
-export const revert_resizing_done_items = catchAsync(async (req, res) => {
+export const revert_cnc_done_items = catchAsync(async (req, res) => {
     const { id } = req.params;
     const userDetails = req.userDetails
     if (!id) {
@@ -275,60 +277,15 @@ export const revert_resizing_done_items = catchAsync(async (req, res) => {
     };
     const session = await mongoose.startSession()
     try {
-        await session.startTransaction()
-        const resizing_done_data = await plywood_resizing_done_details_model?.findById(id).lean();
+        session.startTransaction()
 
-        if (!resizing_done_data) {
-            throw new ApiError("Resizing done data not found", StatusCodes.NOT_FOUND)
+        const cnc_done_data = await plywood_resizing_done_details_model?.findById(id).lean();
+
+        if (!cnc_done_data) {
+            throw new ApiError("CNC done data not found", StatusCodes.NOT_FOUND)
         };
-
-        const [delete_resizing_done_result, delete_resizing_damage_result] = await Promise.all([await plywood_resizing_done_details_model?.deleteOne({ _id: resizing_done_data?._id }, { session }), await plywood_resize_damage_model.deleteOne({ issue_for_resizing_id: resizing_done_data?.issue_for_resizing_id }, { session })]);
-
-        if (!delete_resizing_done_result?.acknowledged || delete_resizing_done_result?.deletedCount === 0) {
-            throw new ApiError("Failed to delete resizing done details", StatusCodes.BAD_REQUEST)
-        }
-        if (!delete_resizing_damage_result?.acknowledged || delete_resizing_damage_result?.deletedCount === 0) {
-            throw new ApiError("Failed to delete resizing damage details", StatusCodes.BAD_REQUEST)
-        };
-
-        if (resizing_done_data?.face_item_details?.length > 0) {
-            const restoreBulkOperations = resizing_done_data?.face_item_details?.map(face => ({
-                updateOne: {
-                    filter: { _id: face?.face_item_id },
-                    update: {
-                        $inc: {
-                            available_sheets: face?.no_of_sheets,
-                            available_amount: face?.amount,
-                            available_sqm: face?.sqm
-                        },
-                        $set: { updated_by: userDetails?._id }
-                    }
-                }
-            }));
-
-            if (restoreBulkOperations?.length > 0) {
-                const result = await face_inventory_items_details.bulkWrite(restoreBulkOperations, { session });
-                if (result?.modifiedCount === 0) {
-                    throw new ApiError("Failed to update face inventory item details", StatusCodes.BAD_REQUEST)
-                }
-            }
-        };
-
-        const update_is_resizing_done_status_from_issue_for_resizing = await issue_for_plywood_resizing_model?.updateOne({ _id: resizing_done_data?.issue_for_resizing_id }, {
-            $set: {
-                is_resizing_done: false
-            }
-        }, { session });
-
-        if (update_is_resizing_done_status_from_issue_for_resizing.matchedCount === 0) {
-            throw new ApiError("Issue for resizing item not found.", StatusCodes.NOT_FOUND)
-        }
-
-        if (!update_is_resizing_done_status_from_issue_for_resizing?.acknowledged || update_is_resizing_done_status_from_issue_for_resizing.modifiedCount === 0) {
-            throw new ApiError("Failed to update resizind done status.", StatusCodes.NOT_FOUND)
-        }
-
-        const response = new ApiResponse(StatusCodes.OK, "Resizing details Reverted Successfully", delete_resizing_done_result)
+        const delete_cnc_done_result=[];
+        const response = new ApiResponse(StatusCodes.OK, "CNC details Reverted Successfully", delete_cnc_done_result)
         await session.commitTransaction();
         return res.status(StatusCodes.OK).json(response)
     } catch (error) {
