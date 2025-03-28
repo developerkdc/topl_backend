@@ -54,23 +54,23 @@ export const create_plywood_production = catchAsync(
         );
       }
       const maxNumber = await plywood_production_model.aggregate([
-          {
-            $group: {
-              _id: null,
-              max: {
-                $max: '$sr_no',
-              },
+        {
+          $group: {
+            _id: null,
+            max: {
+              $max: '$sr_no',
             },
           },
-        ]);
-      
-        const newMax = maxNumber.length > 0 ? maxNumber[0].max + 1 : 1;
-      
+        },
+      ]);
+
+      const newMax = maxNumber.length > 0 ? maxNumber[0].max + 1 : 1;
+
       const insert_plywood_production_details =
         await plywood_production_model.create(
           [
             {
-              sr_no:newMax,
+              sr_no: newMax,
               ...plywood_production_details,
               created_by: userDetails?._id,
               updated_by: userDetails?._id,
@@ -90,14 +90,46 @@ export const create_plywood_production = catchAsync(
       }
 
       const is_face_available_greater_than_consumed = await Promise.all(
-        face_details_array.map((item) =>
-          face_inventory_items_details.find(
-            { _id: item?._id,  },
-            { session }
+        face_details_array.map(async (item) => {
+          const res = await face_inventory_items_details.findOne(
+            {
+              _id: item?._id,
+              available_sheets: { $gte: item?.issued_sheets },
+              available_sqm: { $gte: item?.issued_sqm },
+              available_amount: { $gte: item?.issued_amount },
+            }
           )
-        )
+          .session(session)
+          .lean();
+          if(res){
+            return res; 
+          }
+        })
       );
+       if(is_face_available_greater_than_consumed.length !==face_details_array.length){
+        throw new ApiError("Check Face available Onece Again It might be issue for something else before you")
+       };
 
+       const is_core_available_greater_than_consumed = await Promise.all(
+        core_details_array.map(async (item) => {
+          const res = await core_inventory_items_details.findOne(
+            {
+              _id: item?._id,
+              available_sheets: { $gte: item?.issued_sheets },
+              available_sqm: { $gte: item?.issued_sqm },
+              available_amount: { $gte: item?.issued_amount },
+            }
+          )
+          .session(session)
+          .lean();
+          if(res){
+            return res; 
+          }
+        })
+      );
+       if(is_core_available_greater_than_consumed.length !==core_details_array.length){
+        throw new ApiError("Check Core available Onece Again It might be issue for something else before you")
+       };
 
       const new_face_details = face_details_array?.map((item) => {
         item.face_inventory_item_id = item?._id;
@@ -109,7 +141,6 @@ export const create_plywood_production = catchAsync(
         return item;
       });
 
-      
       const new_core_details = core_details_array?.map((item) => {
         item.core_inventory_item_id = item?._id;
         item.no_of_sheets = item?.issued_sheets;
@@ -118,7 +149,7 @@ export const create_plywood_production = catchAsync(
         item.plywood_production_id = insert_plywood_production_details[0]?._id;
         return item;
       });
- 
+
       const insert_plywood_production_consumed_items =
         await plywood_production_consumed_items_model.insertMany(
           [...new_face_details, ...new_core_details],

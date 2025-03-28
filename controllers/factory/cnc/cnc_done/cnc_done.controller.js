@@ -10,14 +10,14 @@ import { plywood_resizing_done_details_model } from '../../../../database/schema
 import plywood_resize_damage_model from '../../../../database/schema/factory/plywood_resizing_factory/resizing_damage/resizing_damage.schema.js';
 import { face_inventory_items_details } from '../../../../database/schema/inventory/face/face.schema.js';
 
-export const create_resizing = catchAsync(async (req, res) => {
+export const create_cnc = catchAsync(async (req, res) => {
     const userDetails = req.userDetails;
 
     const session = await mongoose.startSession();
     try {
         session.startTransaction()
-        
-        const response = new ApiResponse(StatusCodes.CREATED, "Resizing Created Successfully", add_resizing_data_result);
+        const add_resizing_data_result=[];
+        const response = new ApiResponse(StatusCodes.CREATED, "CNC Created Successfully", add_resizing_data_result);
         await session.commitTransaction()
         return res.status(StatusCodes.CREATED).json(response);
     } catch (error) {
@@ -28,125 +28,30 @@ export const create_resizing = catchAsync(async (req, res) => {
     }
 });
 
-export const update_resizing_done = catchAsync(async (req, res) => {
+export const update_cnc_done = catchAsync(async (req, res) => {
     const userDetails = req.userDetails;
     const { id } = req.params;
-    const { resizing_details, is_damage } = req.body
+    const { cnc_details, is_damage } = req.body
     const session = await mongoose.startSession();
     try {
-        await session.startTransaction()
+        session.startTransaction()
         if (!id) {
             throw new ApiError("ID is missing.", StatusCodes.BAD_REQUEST)
         };
         if (!resizing_details) {
-            throw new ApiError("Resizing details are missing.", StatusCodes.BAD_REQUEST)
+            throw new ApiError("CNC details are missing.", StatusCodes.BAD_REQUEST)
         };
         if (!isValidObjectId(id)) {
             throw new ApiError("Invalid ID.", StatusCodes.BAD_REQUEST)
         };
-        const resizing_done_data = await plywood_resizing_done_details_model?.findById(id).lean();
+        const cnc_done_data = await plywood_resizing_done_details_model?.findById(id).lean();
 
-        if (!resizing_done_data) {
-            throw new ApiError("Resizing done data not found", StatusCodes.NOT_FOUND)
+        if (!cnc_done_data) {
+            throw new ApiError("CNC done data not found", StatusCodes.NOT_FOUND)
         };
 
-        if (resizing_done_data?.face_item_details?.length > 0) {
-            const restoreBulkOperations = resizing_done_data?.face_item_details?.map(face => ({
-                updateOne: {
-                    filter: { _id: face?.face_item_id },
-                    update: {
-                        $inc: {
-                            available_sheets: face?.no_of_sheets,
-                            available_amount: face?.amount,
-                            available_sqm: face?.sqm
-                        },
-                        $set: { updated_by: userDetails?._id }
-                    }
-                }
-            }));
-
-            if (restoreBulkOperations?.length > 0) {
-                await face_inventory_items_details.bulkWrite(restoreBulkOperations, { session });
-            }
-        }
-        const updated_data = {
-            ...resizing_details,
-            updated_by: userDetails?._id
-        }
-        const update_resizing_done_result = await plywood_resizing_done_details_model.updateOne({ _id: id }, {
-            $set: updated_data
-        }, { session });
-
-        if (update_resizing_done_result.matchedCount === 0) {
-            throw new ApiError("Failed to add resizing details", StatusCodes.BAD_REQUEST)
-        };
-        if (!update_resizing_done_result.acknowledged || update_resizing_done_result?.modifiedCount === 0) {
-            throw new ApiError("Failed to update resizing details", StatusCodes.BAD_REQUEST)
-        };
-
-        if (resizing_details?.face_item_details?.length > 0) {
-            const restoreBulkOperations = resizing_done_data?.face_item_details?.map(face => ({
-                updateOne: {
-                    filter: { _id: face?.face_item_id },
-                    update: {
-                        $inc: {
-                            available_sheets: -face?.no_of_sheets,
-                            available_amount: -face?.amount,
-                            available_sqm: -face?.sqm
-                        },
-                        $set: { updated_by: userDetails?._id }
-                    }
-                }
-            }));
-
-            if (restoreBulkOperations?.length > 0) {
-                await face_inventory_items_details.bulkWrite(restoreBulkOperations, { session });
-            }
-        }
-
-        if (!is_damage) {
-            const delete_damage_document_result = await plywood_resize_damage_model.deleteOne({ issue_for_resizing_id: resizing_details?.issue_for_resizing_id }, { session });
-
-            if (!delete_damage_document_result?.acknowledged || delete_damage_document_result?.deletedCount === 0) {
-                throw new ApiError("Failed to delete damage details", StatusCodes.BAD_REQUEST)
-            }
-        }
-        if (is_damage) {
-            if (!resizing_details?.damage_details) {
-                throw new ApiError("Damage Details not found.", StatusCodes.NOT_FOUND)
-            }
-            const updated_data = {
-                no_of_sheets: resizing_details?.damage_details?.no_of_sheets,
-                sqm: resizing_details?.damage_details?.sqm,
-                updated_by: userDetails?._id
-            };
-            const update_damage_data_result = await plywood_resize_damage_model.findOneAndUpdate({ _id: resizing_details?.issue_for_resizing_id }, { $set: updated_data }, { session });
-
-            if (!update_damage_data_result) {
-                throw new ApiError("Failed to update damage details", StatusCodes.BAD_REQUEST)
-            };
-        }
-        if (resizing_details?.face_item_details?.length > 0) {
-            for (let face of resizing_details?.face_item_details) {
-                const update_face_inventory = await face_inventory_items_details.updateOne({ _id: face?.face_item_id }, {
-                    $inc: {
-                        available_sheets: -face?.no_of_sheets,
-                        available_amount: face?.amount,
-                        available_sqm: face?.sqm
-                    },
-                    $set: {
-                        updated_by: userDetails?._id
-                    }
-                }, { session });
-                if (update_face_inventory?.matchedCount === 0) {
-                    throw new ApiError("Face Inventory Item Not found", StatusCodes.BAD_REQUEST)
-                }
-                if (!update_face_inventory?.acknowledged || update_face_inventory?.modifiedCount === 0) {
-                    throw new ApiError("Face Inventory Item Not found", StatusCodes.BAD_REQUEST)
-                }
-            }
-        }
-        const response = new ApiResponse(StatusCodes.OK, "Resizing Item Updated Successfully", update_resizing_done_result);
+       const update_cnc_done_result=[];
+        const response = new ApiResponse(StatusCodes.OK, "Resizing Item Updated Successfully", update_cnc_done_result);
         await session.commitTransaction()
         return res.status(StatusCodes.OK).json(response);
     } catch (error) {
