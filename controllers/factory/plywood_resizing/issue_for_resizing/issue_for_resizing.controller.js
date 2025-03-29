@@ -255,7 +255,33 @@ export const listing_issued_for_resizing = catchAsync(
             ...search_query,
             is_resizing_done: false
         };
-
+        const aggInvoiceLookup = {
+            $lookup: {
+                from: 'plywood_inventory_invoice_details',
+                localField: 'invoice_id',
+                foreignField: '_id',
+                pipeline: [
+                    {
+                        $project: {
+                            inward_sr_no: 1,
+                            _id:0
+                        },
+                    },
+                ],
+                as: 'inward_sr_no',
+            },
+        };
+        const aggInvoiceUnwind={
+            $unwind:{
+                path:'$inward_sr_no',
+                preserveNullAndEmptyArrays:true,
+            }
+        }
+        const aggInvoiceAddFields = {
+            $addFields: {
+                inward_sr_no: '$inward_sr_no.inward_sr_no',
+            }
+        };
         const aggCreatedByLookup = {
             $lookup: {
                 from: 'users',
@@ -328,6 +354,9 @@ export const listing_issued_for_resizing = catchAsync(
         };
 
         const listAggregate = [
+            aggInvoiceLookup,
+            aggInvoiceUnwind,
+            aggInvoiceAddFields,
             aggCreatedByLookup,
             aggCreatedByUnwind,
             aggUpdatedByLookup,

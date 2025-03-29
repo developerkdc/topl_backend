@@ -265,6 +265,8 @@ export const update_plywood_production_done = catchAsync(async (req, res) => {
         StatusCodes.BAD_REQUEST
       );
     }
+    console.log("face_details_array : ",face_details_array);
+    
     if (!core_details_array) {
       throw new ApiError(
         'core_details_array details are missing.',
@@ -303,9 +305,9 @@ export const update_plywood_production_done = catchAsync(async (req, res) => {
             length: plywood_production_details?.length,
             width: plywood_production_details?.width,
             thickness: plywood_production_details?.thickness,
-            no_of_sheets: plywood_production_details?.issued_sheets,
-            total_sqm: plywood_production_details?.issued_sqm,
-            amount:plywood_production_details?.issued_amount,
+            no_of_sheets: plywood_production_details?.no_of_sheets,
+            total_sqm: plywood_production_details?.total_sqm,
+            amount:plywood_production_details?.amount,
             available_sheets:plywood_production_details?.available_sheets,
             available_sqm:plywood_production_details?.available_sqm,
             available_amount:plywood_production_details?.available_amount,
@@ -449,8 +451,8 @@ export const update_plywood_production_done = catchAsync(async (req, res) => {
 
     const new_face_details = face_details_array?.map((item) => {
       item.face_inventory_item_id = item?._id;
-      item.no_of_sheets = item?.issued_sheets;
-      item.sqm = item?.issued_sqm;
+      item.number_of_sheets = item?.issued_sheets;
+      item.total_sq_meter = item?.issued_sqm;
       item.amount = item?.issued_amount;
       item.plywood_production_id = plywood_production_done_data?._id;
       return item;
@@ -458,8 +460,8 @@ export const update_plywood_production_done = catchAsync(async (req, res) => {
 
     const new_core_details = core_details_array?.map((item) => {
       item.core_inventory_item_id = item?._id;
-      item.no_of_sheets = item?.issued_sheets;
-      item.sqm = item?.issued_sqm;
+      item.number_of_sheets = item?.issued_sheets;
+      item.total_sq_meter = item?.issued_sqm;
       item.amount = item?.issued_amount;
       item.plywood_production_id = plywood_production_done_data?._id;
       return item;
