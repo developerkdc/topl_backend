@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 const plywood_resizing_done_details_schema = new mongoose.Schema(
   {
-    sr_no:Number,
+    sr_no: Number,
     issue_for_resizing_id: {
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Issue for resizing ID is required.'],
@@ -174,6 +174,11 @@ const plywood_resizing_done_details_schema = new mongoose.Schema(
                 return this.sqm;
               },
             },
+          },
+          remark: {
+            type: String,
+            default: null,
+            uppercase: true,
           },
         },
       ],

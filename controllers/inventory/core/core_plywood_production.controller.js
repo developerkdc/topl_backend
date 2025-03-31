@@ -14,7 +14,6 @@ import {
 export const fetch_all_core_inward_sr_no_for_plywood_production = catchAsync(
   async (req, res) => {
    
- console.log("fetch_all_core_inward_sr_no_for_plywood_production");
     const match_query = {
       available_sheets: {
         $gt: 0
@@ -69,8 +68,7 @@ export const fetch_all_core_inward_sr_no_for_plywood_production = catchAsync(
 
 export const fetch_all_core_sr_no_by_inward_sr_no_for_plywood_production = catchAsync(
   async (req, res) => {
-    const { id } = req.params;
-    console.log("fetch_all_core_sr_no_by_inward_sr_no_for_plywood_production")
+    const { id } = req.params; 
     const match_query = {
       invoice_id: mongoose.Types.ObjectId.createFromHexString(id),
      
@@ -105,19 +103,3 @@ export const fetch_all_core_sr_no_by_inward_sr_no_for_plywood_production = catch
     return res.status(StatusCodes.OK).json(response);
   }
 );
-
-// export const fetch_core_details_by_id = catchAsync(async (req, res) => {
-//   const { id } = req.params;
-
-//   if (!id || !isValidObjectId(id)) {
-//     throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
-//   }
-
-//   const result = await core_inventory_items_details.findById(id);
-//   const response = new ApiResponse(
-//     StatusCodes.OK,
-//     'core Item Details fetched successfully',
-//     result
-//   );
-//   return res.status(StatusCodes.OK).json(response);
-// });
