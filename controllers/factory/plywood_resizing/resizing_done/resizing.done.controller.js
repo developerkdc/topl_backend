@@ -688,7 +688,7 @@ export const revert_resizing_done_items = catchAsync(async (req, res) => {
     if (!resizing_done_data) {
       throw new ApiError('Resizing done data not found', StatusCodes.NOT_FOUND);
     }
- 
+
     const [delete_resizing_done_result, delete_resizing_damage_result] =
       await Promise.all([
         await plywood_resizing_done_details_model?.deleteOne(
@@ -747,9 +747,9 @@ export const revert_resizing_done_items = catchAsync(async (req, res) => {
           );
         }
       }
-      const is_history_deleted=await face_history_model.deleteMany({issued_for_plywood_resizing_done_id:resizing_done_data?._id});
-      if(is_history_deleted?.deletedCount <=0){
-        throw new ApiError("Failed to delete face inventory history while reverting plywood resizing done",StatusCodes.BAD_REQUEST);
+      const is_history_deleted = await face_history_model.deleteMany({ issued_for_plywood_resizing_done_id: resizing_done_data?._id });
+      if (is_history_deleted?.deletedCount <= 0) {
+        throw new ApiError("Failed to delete face inventory history while reverting plywood resizing done", StatusCodes.BAD_REQUEST);
       }
     }
 
@@ -884,7 +884,7 @@ export const update_resizing_done = catchAsync(async (req, res) => {
       );
 
       if (restoreBulkOperations?.length > 0) {
-       const is_face_inv_updated= await face_inventory_items_details.bulkWrite(restoreBulkOperations, {
+        const is_face_inv_updated = await face_inventory_items_details.bulkWrite(restoreBulkOperations, {
           session,
         });
       }
@@ -1039,7 +1039,7 @@ export const update_resizing_done = catchAsync(async (req, res) => {
     //     }
     //   }
     // }
-    
+
     const updated_data = {
       ...resizing_details,
       'available_details.no_of_sheets': resizing_details.no_of_sheets,

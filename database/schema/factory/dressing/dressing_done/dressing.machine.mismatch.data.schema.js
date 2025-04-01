@@ -22,6 +22,14 @@ const dressing_miss_match_data_schema = new mongoose.Schema(
       // required: [true, 'Item ID is required.'],
       default: null,
     },
+    item_sub_category_name: {
+      type: String,
+      required: [true, 'Item SubCategory Name is required.'],
+    },
+    item_sub_category_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, 'Item SubCategory ID is required'],
+    },
     length: {
       type: Number,
       required: [true, 'Length is required. '],
