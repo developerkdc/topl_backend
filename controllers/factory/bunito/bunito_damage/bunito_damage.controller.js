@@ -7,7 +7,7 @@ import catchAsync from '../../../../utils/errors/catchAsync.js';
 import ApiError from '../../../../utils/errors/apiError.js';
 import plywood_resize_damage_model from '../../../../database/schema/factory/plywood_resizing_factory/resizing_damage/resizing_damage.schema.js';
 
-export const listing_cnc_damage = catchAsync(
+export const listing_bunito_damage = catchAsync(
     async (req, res) => {
         const {
             page = 1,
@@ -153,7 +153,7 @@ export const listing_cnc_damage = catchAsync(
             aggLimit,
         ]; // aggregation pipiline
 
-        const cnc_damage_list =
+        const bunito_damage_list =
             await plywood_resize_damage_model.aggregate(listAggregate);
 
         const aggCount = {
@@ -172,9 +172,9 @@ export const listing_cnc_damage = catchAsync(
 
         const response = new ApiResponse(
             StatusCodes.OK,
-            'CNC Damage Data Fetched Successfully',
+            'Bunito Damage Data Fetched Successfully',
             {
-                data: cnc_damage_list,
+                data: bunito_damage_list,
                 totalPages: totalPages,
             }
         );
@@ -182,7 +182,7 @@ export const listing_cnc_damage = catchAsync(
     }
 );
 
-export const add_cnc_damage = catchAsync(async (req, res) => {
+export const add_bunito_damage = catchAsync(async (req, res) => {
     const userDetails = req.userDetails;
 
     const session = await mongoose.startSession();
@@ -190,8 +190,8 @@ export const add_cnc_damage = catchAsync(async (req, res) => {
         session.startTransaction();
 
 
-        const add_cnc_damage_data_result=[];
-        const response = new ApiResponse(StatusCodes.CREATED, "CNC Damage Created Successfully", add_cnc_damage_data_result);
+        const add_bunito_damage_data_result=[];
+        const response = new ApiResponse(StatusCodes.CREATED, "Bunito Damage Created Successfully", add_bunito_damage_data_result);
         await session.commitTransaction()
         return res.status(StatusCodes.CREATED).json(response);
     } catch (error) {
