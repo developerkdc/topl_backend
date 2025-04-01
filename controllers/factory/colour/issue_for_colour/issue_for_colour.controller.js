@@ -1,14 +1,76 @@
-import mongoose, { isValidObjectId } from 'mongoose';
+import mongoose, { isValidObjectId, set } from 'mongoose';
 import ApiResponse from '../../../../utils/ApiResponse.js';
 import { StatusCodes } from '../../../../utils/constants.js';
 import { dynamic_filter } from '../../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../../utils/dynamicSearch/dynamic.js';
 import catchAsync from '../../../../utils/errors/catchAsync.js';
 import ApiError from '../../../../utils/errors/apiError.js';
-import plywood_resize_damage_model from '../../../../database/schema/factory/plywood_resizing_factory/resizing_damage/resizing_damage.schema.js';
+import issue_for_plywood_resizing_model from '../../../../database/schema/factory/plywood_resizing_factory/issue_for_resizing/issue_for_resizing.schema.js';
 
-export const listing_cnc_damage = catchAsync(
-    async (req, res) => {
+export const add_issue_for_colour_from_pressing = catchAsync(async (req, res) => {
+    const userDetails = req.userDetails;
+    const {  } = req.body;
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+        
+       const maxNumber = await plywood_production_model.aggregate([
+               {
+                 $group: {
+                   _id: null,
+                   max: {
+                     $max: '$sr_no',
+                   },
+                 },
+               },
+             ]);
+       
+        const newMax = maxNumber.length > 0 ? maxNumber[0].max + 1 : 1;
+       
+       
+        const response = new ApiResponse(StatusCodes.OK, "Item Issued For Colour Successfully",{message:"this is add add_issue_for_colour_from_pressing"});
+        
+        await session?.commitTransaction();
+        return res.status(StatusCodes.OK).json(response)
+
+    } catch (error) {
+        await session.abortTransaction()
+        throw error
+    } finally {
+        await session.endSession()
+    }
+});
+
+export const revert_issue_for_colour = catchAsync(async (req, res) => {
+    const { id } = req.params;
+
+    if (!id) {
+        throw new ApiError("ID is missing", StatusCodes.BAD_REQUEST)
+    }
+    if (!isValidObjectId(id)) {
+        throw new ApiError("Invalid ID", StatusCodes.BAD_REQUEST)
+    };
+
+    const userDetails = req.userDetails;
+    const session = await mongoose.startSession()
+    try {
+        session.startTransaction()
+        
+
+        const response = new ApiResponse(StatusCodes.OK, "Item Reverted Successfully",{message:"THis is revert cmc api"});
+        await session.commitTransaction();
+        return res.status(StatusCodes.OK).json(response)
+
+    } catch (error) {
+        await session.abortTransaction()
+        throw error
+    } finally {
+        await session.endSession()
+    }
+});
+
+export const listing_issued_for_colour = catchAsync(
+    async (req, res, next) => {
         const {
             page = 1,
             limit = 10,
@@ -50,17 +112,9 @@ export const listing_cnc_damage = catchAsync(
 
         const match_query = {
             ...filterData,
-            ...search_query
+            ...search_query,
+            is_resizing_done: false
         };
-
-        const aggLookupIssueForResizing = {
-            $lookup: {
-                from: "issued_for_plywood_resizing_items",
-                localField: "issue_for_resizing_id",
-                foreignField: "_id",
-                as: "issue_for_resizing_details"
-            }
-        }
 
         const aggCreatedByLookup = {
             $lookup: {
@@ -116,13 +170,6 @@ export const listing_cnc_damage = catchAsync(
                 preserveNullAndEmptyArrays: true,
             },
         };
-
-        const aggUnwindIssueForResizing = {
-            $unwind: {
-                path: "$issue_for_resizing_details",
-                preserveNullAndEmptyArrays: true
-            }
-        }
         const aggMatch = {
             $match: {
                 ...match_query,
@@ -141,8 +188,6 @@ export const listing_cnc_damage = catchAsync(
         };
 
         const listAggregate = [
-            aggLookupIssueForResizing,
-            aggUnwindIssueForResizing,
             aggCreatedByLookup,
             aggCreatedByUnwind,
             aggUpdatedByLookup,
@@ -153,8 +198,8 @@ export const listing_cnc_damage = catchAsync(
             aggLimit,
         ]; // aggregation pipiline
 
-        const cnc_damage_list =
-            await plywood_resize_damage_model.aggregate(listAggregate);
+        const issue_for_colour =
+            await issue_for_plywood_resizing_model.aggregate(listAggregate);
 
         const aggCount = {
             $count: 'totalCount',
@@ -165,39 +210,40 @@ export const listing_cnc_damage = catchAsync(
             aggCount,
         ]; // total aggregation pipiline
 
-        const [totalDocument] =
-            await plywood_resize_damage_model.aggregate(totalAggregate);
+        const totalDocument =
+            await issue_for_plywood_resizing_model.aggregate(totalAggregate);
 
-        const totalPages = Math.ceil((totalDocument?.totalCount || 0) / limit);
+        const totalPages = Math.ceil((totalDocument?.[0]?.totalCount || 0) / limit);
 
+        console.log("listing_issued_for_colour");
         const response = new ApiResponse(
-            StatusCodes.OK,
-            'CNC Damage Data Fetched Successfully',
+            200,
+            'Issue For Colour Data Fetched Successfully',
             {
-                data: cnc_damage_list,
+                data: issue_for_colour,
                 totalPages: totalPages,
             }
         );
-        return res.status(StatusCodes.OK).json(response);
+        return res.status(200).json(response);
     }
 );
 
-export const add_cnc_damage = catchAsync(async (req, res) => {
-    const userDetails = req.userDetails;
+export const fetch_single_issue_for_colour_item = catchAsync(async (req, res) => {
+    const { id } = req.params;
 
-    const session = await mongoose.startSession();
-    try {
-        session.startTransaction();
+    if (!id) {
+        throw new ApiError("ID is missing", StatusCodes.NOT_FOUND)
+    };
+    if (!isValidObjectId(id)) {
+        throw new ApiError("Invalid ID", StatusCodes.BAD_REQUEST)
+    };
 
+    const result = await issue_for_plywood_resizing_model.findOne({ _id: id }).lean();
 
-        const add_cnc_damage_data_result=[];
-        const response = new ApiResponse(StatusCodes.CREATED, "CNC Damage Created Successfully", add_cnc_damage_data_result);
-        await session.commitTransaction()
-        return res.status(StatusCodes.CREATED).json(response);
-    } catch (error) {
-        await session.abortTransaction()
-        throw error
-    } finally {
-        await session.endSession()
-    }
+    if (!result) {
+        throw new ApiError("Issue for Colour data not found", StatusCodes.NOT_FOUND)
+    };
+
+    const response = new ApiResponse(StatusCodes.OK, "Colour Details fetched successfully", result);
+    return res.status(StatusCodes.OK).json(response)
 });
