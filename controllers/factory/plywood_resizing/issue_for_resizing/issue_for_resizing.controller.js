@@ -54,6 +54,7 @@ export const add_issue_for_resizing_from_plywood = catchAsync(async (req, res) =
         };
 
         const plywood_inventory_item_id = insert_issue_for_resize_result?.[0]?.plywood_item_id;
+        const issue_for_resizing_id = insert_issue_for_resize_result?.[0]?._id;
 
         const update_inventory_item_issue_status_result = await plywood_inventory_items_details.updateOne({ _id: plywood_inventory_item_id }, {
             $inc: {
@@ -92,6 +93,7 @@ export const add_issue_for_resizing_from_plywood = catchAsync(async (req, res) =
             issued_sheets: issued_sheets,
             issued_sqm: issued_sqm,
             plywood_item_id: _id,
+            issued_for_plywood_resizing_id: issue_for_resizing_id,
             issued_for_order_id: null,
             created_by: userDetails?._id,
             updated_by: userDetails?._id
@@ -191,7 +193,7 @@ export const revert_issue_for_resizing = catchAsync(async (req, res) => {
         if (!delete_issue_for_resizing_document_result?.acknowledged || delete_issue_for_resizing_document_result?.deletedCount === 0) {
             throw new ApiError("Failed to delete issue for resizing details", StatusCodes.BAD_REQUEST);
         }
-        const delete_plywood_history = await plywood_history_model.deleteOne({ plywood_item_id: resizing_item_details?.plywood_item_id });
+        const delete_plywood_history = await plywood_history_model.deleteOne({ issued_for_plywood_resizing_id: resizing_item_details?._id });
 
         if (!delete_plywood_history.acknowledged || delete_plywood_history.deletedCount === 0) {
             throw new ApiError("Failed to delete plywood history", StatusCodes.BAD_REQUEST)
@@ -264,17 +266,17 @@ export const listing_issued_for_resizing = catchAsync(
                     {
                         $project: {
                             inward_sr_no: 1,
-                            _id:0
+                            _id: 0
                         },
                     },
                 ],
                 as: 'inward_sr_no',
             },
         };
-        const aggInvoiceUnwind={
-            $unwind:{
-                path:'$inward_sr_no',
-                preserveNullAndEmptyArrays:true,
+        const aggInvoiceUnwind = {
+            $unwind: {
+                path: '$inward_sr_no',
+                preserveNullAndEmptyArrays: true,
             }
         }
         const aggInvoiceAddFields = {

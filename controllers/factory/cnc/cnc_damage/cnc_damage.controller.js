@@ -190,7 +190,7 @@ export const add_cnc_damage = catchAsync(async (req, res) => {
         session.startTransaction();
 
 
-        const add_cnc_damage_data_result=[];
+        const add_cnc_damage_data_result = [];
         const response = new ApiResponse(StatusCodes.CREATED, "CNC Damage Created Successfully", add_cnc_damage_data_result);
         await session.commitTransaction()
         return res.status(StatusCodes.CREATED).json(response);

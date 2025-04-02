@@ -101,6 +101,7 @@ export const create_resizing = catchAsync(async (req, res) => {
     }
 
     if (resizing_details?.face_item_details?.length > 0) {
+
       const restoreBulkOperations = resizing_details?.face_item_details?.map(
         (face) => ({
           updateOne: {

@@ -99,18 +99,18 @@ export const create_plywood_production = catchAsync(
               available_amount: { $gte: item?.issued_amount },
             }
           )
-          .session(session)
-          .lean();
-          if(res){
-            return res; 
+            .session(session)
+            .lean();
+          if (res) {
+            return res;
           }
         })
       );
-       if(is_face_available_greater_than_consumed.length !==face_details_array.length){
+      if (is_face_available_greater_than_consumed.length !== face_details_array.length) {
         throw new ApiError("Check Face available Onece Again It might be issue for something else before you")
-       };
+      };
 
-       const is_core_available_greater_than_consumed = await Promise.all(
+      const is_core_available_greater_than_consumed = await Promise.all(
         core_details_array.map(async (item) => {
           const res = await core_inventory_items_details.findOne(
             {
@@ -120,16 +120,16 @@ export const create_plywood_production = catchAsync(
               available_amount: { $gte: item?.issued_amount },
             }
           )
-          .session(session)
-          .lean();
-          if(res){
-            return res; 
+            .session(session)
+            .lean();
+          if (res) {
+            return res;
           }
         })
       );
-       if(is_core_available_greater_than_consumed.length !==core_details_array.length){
+      if (is_core_available_greater_than_consumed.length !== core_details_array.length) {
         throw new ApiError("Check Core available Onece Again It might be issue for something else before you")
-       };
+      };
 
       const new_face_details = face_details_array?.map((item) => {
         item.face_inventory_item_id = item?._id;
@@ -166,7 +166,7 @@ export const create_plywood_production = catchAsync(
           StatusCodes.BAD_REQUEST
         );
       }
-      console.log("face_details_array : ",face_details_array);
+
       const is_face_details_updated = await Promise.all(
         face_details_array.map((item) =>
           face_inventory_items_details.updateOne(
@@ -193,19 +193,19 @@ export const create_plywood_production = catchAsync(
 
       const face_details_array_for_history = face_details_array.map((item) => {
         // item.issued_for_order_id= issue_for_order_id,
-        (item.face_item_id=item?.face_inventory_item_id),
-        (item.issued_for_plywood_production_id =
-          insert_plywood_production_details[0]?._id),
+        (item.face_item_id = item?.face_inventory_item_id),
+          (item.issued_for_plywood_production_id =
+            insert_plywood_production_details[0]?._id),
           (item.issue_status = issues_for_status?.plywood_production),
           (item.issued_sheets = item.issued_sheets),
           (item.issued_sqm = item?.issued_sqm),
           (item.issued_amount = item?.issued_amount),
           (item.created_by = userDetails?._id),
           (item.updated_by = userDetails?._id);
-          delete item?._id
+        delete item?._id
         return item;
       });
-      console.log("face_details_array_for_history : ",face_details_array_for_history)
+
       const is_face_history_updated = await face_history_model.insertMany(
         face_details_array_for_history,
         { session }
@@ -241,20 +241,20 @@ export const create_plywood_production = catchAsync(
 
       const core_details_array_for_history = core_details_array.map((item) => {
         // item.issued_for_order_id= issue_for_order_id,
-        (item.core_item_id=item?.core_inventory_item_id),
-        (item.issued_for_plywood_production_id =
-          insert_plywood_production_details[0]?._id),
+        (item.core_item_id = item?.core_inventory_item_id),
+          (item.issued_for_plywood_production_id =
+            insert_plywood_production_details[0]?._id),
           (item.issue_status = issues_for_status?.plywood_production),
           (item.issued_sheets = item.issued_sheets),
           (item.issued_sqm = item?.issued_sqm),
           (item.issued_amount = item?.issued_amount),
           (item.created_by = userDetails?._id),
           (item.updated_by = userDetails?._id);
-          delete item?._id
+        delete item?._id
         return item;
       });
 
-      console.log("core_details_array_for_history",core_details_array_for_history);
+      console.log("core_details_array_for_history", core_details_array_for_history);
 
       const is_core_history_updated = await core_history_model.insertMany(
         core_details_array_for_history,
