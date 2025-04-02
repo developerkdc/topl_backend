@@ -60,6 +60,7 @@ export const listing_plywood_production_done = catchAsync(
     const match_query = {
       ...filterData,
       ...search_query,
+      available_no_of_sheets:{$gt:0}
     };
 
     const aggCreatedByLookup = {
@@ -265,7 +266,7 @@ export const update_plywood_production_done = catchAsync(async (req, res) => {
         StatusCodes.BAD_REQUEST
       );
     }
-    console.log("face_details_array : ",face_details_array);
+    
     
     if (!core_details_array) {
       throw new ApiError(
@@ -282,11 +283,9 @@ export const update_plywood_production_done = catchAsync(async (req, res) => {
       throw new ApiError('Atleast One Face required.', StatusCodes.BAD_REQUEST);
     }
 
-    console.log("plywood_production_details : ",plywood_production_details);
     const plywood_production_done_data = await plywood_production_model
       .findById(id)
       .lean();
-    // const resizing_done_data = await plywood_resizing_done_details_model?.findById(id).lean();
 
     if (!plywood_production_done_data) {
       throw new ApiError(
@@ -326,7 +325,87 @@ export const update_plywood_production_done = catchAsync(async (req, res) => {
         StatusCodes?.BAD_REQUEST
       );
     }
-
+    //checking available details for issue face and core item is greate than issue items
+    
+          const is_face_available_greater_than_consumed = await Promise.all(
+            face_details_array.map(async (item) => {
+              const res = await face_inventory_items_details
+                .findOne({
+                  _id: item?._id,
+                  available_sheets: { $gte: item?.issued_sheets },
+                  available_sqm: { $gte: item?.issued_sqm },
+                  available_amount: { $gte: item?.issued_amount },
+                })
+                .session(session)
+                .lean();
+              return res || null; // Explicitly return `null` if no matching record is found
+            })
+          );
+    
+    
+          const missingItems = face_details_array.filter(
+            (_, index) => is_face_available_greater_than_consumed[index] === null
+          );
+    
+          
+    
+          const is_core_available_greater_than_consumed = await Promise.all(
+            core_details_array.map(async (item) => {
+              const res = await core_inventory_items_details
+                .findOne({
+                  _id: item?._id,
+                  available_sheets: { $gte: item?.issued_sheets },
+                  available_sqm: { $gte: item?.issued_sqm },
+                  available_amount: { $gte: item?.issued_amount },
+                })
+                .session(session)
+                .lean();
+              return res || null; 
+            })
+          );
+          
+          
+          const missingCoreItems = core_details_array.filter(
+            (_, index) => is_core_available_greater_than_consumed[index] === null
+          );
+    
+          if (missingItems.length > 0 && missingCoreItems.length > 0) {   
+            const newMSGDetails=missingItems.map(item=> {
+               return `Inward No : ${item.inward_sr_no} and Sr No :${item.face_sr_no}`;
+            });
+    
+            const newCoreMSGDetails = missingCoreItems.map(item => {
+              return `Inward No: ${item.inward_sr_no} and Sr No: ${item.core_sr_no}`;
+            });
+    
+            throw new ApiError(
+              `Available face sheets are issued by someone for ${newMSGDetails.join()} and Available core sheets are issued by someone for ${newCoreMSGDetails.join()}`
+            );
+          }
+    
+    
+          if (missingItems.length > 0) {   
+            const newMSGDetails=missingItems.map(item=> {
+               return `Inward No : ${item.inward_sr_no} and Sr No :${item.face_sr_no}`;
+            });
+    
+            throw new ApiError(
+              `Available face sheets are issued by someone for ${newMSGDetails.join()}`
+            );
+          }
+    
+    
+          if (missingCoreItems.length > 0) {   
+            const newCoreMSGDetails = missingCoreItems.map(item => {
+              return `Inward No: ${item.inward_sr_no} and Sr No: ${item.core_sr_no}`;
+            });
+          
+            throw new ApiError(
+              `Available core sheets are issued by someone for ${newCoreMSGDetails.join()}`
+            );
+          }
+          
+    
     //fetching all plywood_production_consumed_items_details base on plywood_production_id so we can revert sheets face and core inventory
     const plywood_production_consumed_items =
       await plywood_production_consumed_items_model.find({

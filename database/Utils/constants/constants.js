@@ -20,9 +20,12 @@ export const issues_for_status = {
   stock: 'stock',
   challan: 'challan',
   plywood_resizing: 'plywood_resizing',
-  face:'face',
-  core:'core',
-  plywood_production:'plywood_production'
+  face: 'face',
+  core: 'core',
+  plywood_production: 'plywood_production',
+  cnc_factory: "cnc",
+  color_factory: "color",
+
 };
 
 export const inward_type = {
@@ -98,5 +101,6 @@ export const item_issued_from = {
   crosscutting: 'CROSSCUTTING',
   flitching_factory: 'FLITCHING_FACTORY',
   dressing_factory: 'DRESSING_FACTORY',
-  grouping_factory: "GROUPING_FACTORY"
+  grouping_factory: "GROUPING_FACTORY",
+  pressing_factory: "PRESSING_FACTORY"
 };
