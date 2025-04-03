@@ -236,9 +236,9 @@ const issues_for_grouping_view_schema = new mongoose.Schema(
 );
 
 export const issues_for_grouping_view_model = mongoose.model(
-  'issues_for_grouping_viewssss',
+  'issues_for_grouping_views',
   issues_for_grouping_view_schema,
-  'issues_for_grouping_viewssss'
+  'issues_for_grouping_views'
 );
 
 (async function () {
