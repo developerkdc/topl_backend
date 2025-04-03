@@ -1205,6 +1205,8 @@ export const revert_dressing_done_items = catchAsync(async (req, res) => {
       dressing_done_other_details_id: other_details_data?._id,
     });
 
+    const dressing_done_items_log_no_code_map = dressing_done_items?.map((item) => item?.log_no_code)
+
     if (dressing_done_items?.length === 0) {
       throw new ApiError(
         'Dressing Done Items not found',
@@ -1240,6 +1242,13 @@ export const revert_dressing_done_items = catchAsync(async (req, res) => {
         StatusCodes.BAD_REQUEST
       );
     }
+
+    const update_dressing_missmatch_data_status_result = await dressing_miss_match_data_model.updateMany({ log_no_code: { $in: dressing_done_items_log_no_code_map } }, {
+      $set: {
+        process_status: dressing_error_types?.process_pending,
+        updated_by: _id
+      }
+    }, { session });
 
     const revert_slicing_items = async () => {
       const update_slicing_other_details_editable_status =

@@ -19,9 +19,8 @@ export const fetch_all_face_inward_sr_no_for_plywood_production = catchAsync(
     // }
 
     const match_query = {
-    //   ...search_query,
+      //   ...search_query,
       available_sheets: {
-        // $lte: order_item_data.no_of_sheet,
         $gt: 0
       },
       "invoice_details.approval_status.sendForApproval.status": false
@@ -52,8 +51,8 @@ export const fetch_all_face_inward_sr_no_for_plywood_production = catchAsync(
         }
       },
       {
-        $sort:{
-            inward_sr_no:1
+        $sort: {
+          inward_sr_no: 1
         }
       }
     ];
@@ -73,7 +72,7 @@ export const fetch_all_face_inward_sr_no_for_plywood_production = catchAsync(
 export const fetch_all_face_sr_no_by_inward_sr_no_for_plywood_production = catchAsync(
   async (req, res) => {
     const { id } = req.params;
-   
+
     const match_query = {
       invoice_id: mongoose.Types.ObjectId.createFromHexString(id),
       available_sheets: {
@@ -89,8 +88,8 @@ export const fetch_all_face_sr_no_by_inward_sr_no_for_plywood_production = catch
         },
       },
       {
-        $sort:{
-          item_sr_no:1
+        $sort: {
+          item_sr_no: 1
         }
       }
     ];
