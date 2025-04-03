@@ -49,6 +49,17 @@ const plywood_production_schema = new mongoose.Schema(
         return this.total_sqm
       }
     },
+    amount: {
+      type: Number,
+      required: [true, 'Amount is required'],
+    },
+    available_amount:{
+      type: Number,
+      required: [true, 'Available Amount is required'],
+      default:function(){
+        return this.amount
+      }
+    },
     is_added_to_damage:{
       type:Boolean,
       default:false
@@ -69,6 +80,10 @@ const plywood_production_schema = new mongoose.Schema(
   { timestamps: true }
 );
 
+plywood_production_schema.index({ sr_no: 1 }, { unique: true });
+plywood_production_schema.index({ item_name: 1 });
+plywood_production_schema.index({ sub_category: 1 });
+
 const plywood_production_consumed_items_schema = new mongoose.Schema(
   {
     core_inventory_item_id: {
@@ -82,6 +97,20 @@ const plywood_production_consumed_items_schema = new mongoose.Schema(
     item_sr_no: {
       type: Number,
       required: [true, 'Item Sr No is required'],
+    },
+    sr_no_details:{
+      _id:mongoose.Schema.Types.ObjectId,
+      item_sr_no: {
+      type: Number,
+      required: [true, 'Item Sr No is required'],
+    },
+    },
+    inward_sr_no_details:{
+      _id:mongoose.Schema.Types.ObjectId,
+      inward_sr_no: {
+        type: Number,
+        required: [true, 'Inward Sr No is required']
+      }
     },
     supplier_item_name: {
       type: String,
@@ -111,6 +140,10 @@ const plywood_production_consumed_items_schema = new mongoose.Schema(
       type:Number,
       required: [true, 'Number of Sheets are required'],
     },
+    available_sheets:{
+      type: Number,
+      required: [true, 'Available sheets is required'],
+    },
     status: {
       type: String,
       // required:[true,'Status is required']
@@ -123,7 +156,10 @@ const plywood_production_consumed_items_schema = new mongoose.Schema(
       type: Number,
       required: [true, 'Total Sq meter is required'],
     },
-
+    available_sqm:{
+      type: Number,
+      required: [true, 'Available SQM is required'],
+    },
     grade_name: {
       type: String,
       required: [true, 'Grade name is required'],
@@ -148,6 +184,10 @@ const plywood_production_consumed_items_schema = new mongoose.Schema(
       type: Number,
       required: [true, 'Amount is required'],
     },
+    available_amount:{
+      type: Number,
+      required: [true, 'Available Amount is required'],
+    },
     amount_factor: {
       type: Number,
       default: 0,
@@ -170,6 +210,10 @@ const plywood_production_consumed_items_schema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+plywood_production_consumed_items_schema.index({ item_sr_no: 1 });
+plywood_production_consumed_items_schema.index({ item_id: 1 });
+plywood_production_consumed_items_schema.index({ plywood_production_id: 1 })
 
 export const plywood_production_model = mongoose.model(
   'plywood_production',

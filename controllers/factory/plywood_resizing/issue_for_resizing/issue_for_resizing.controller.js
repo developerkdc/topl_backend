@@ -21,7 +21,7 @@ export const add_issue_for_resizing_from_plywood = catchAsync(async (req, res) =
                 throw new ApiError(`${field} is missing...`, StatusCodes.BAD_REQUEST)
             };
         }
-        const { _id, ...plywood_item_details } = await plywood_inventory_items_details.findOne({ _id: plywood_item_id, issue_status: null, available_sheets: { $ne: 0 } }).lean();
+        const { _id, createdAt, updatedAt, ...plywood_item_details } = await plywood_inventory_items_details.findOne({ _id: plywood_item_id, issue_status: null, available_sheets: { $ne: 0 } }).lean();
         if (!plywood_item_details) {
             throw new ApiError("Plywood Items not found.", StatusCodes.BAD_REQUEST)
         };
@@ -54,6 +54,7 @@ export const add_issue_for_resizing_from_plywood = catchAsync(async (req, res) =
         };
 
         const plywood_inventory_item_id = insert_issue_for_resize_result?.[0]?.plywood_item_id;
+        const issue_for_resizing_id = insert_issue_for_resize_result?.[0]?._id;
 
         const update_inventory_item_issue_status_result = await plywood_inventory_items_details.updateOne({ _id: plywood_inventory_item_id }, {
             $inc: {
@@ -92,6 +93,7 @@ export const add_issue_for_resizing_from_plywood = catchAsync(async (req, res) =
             issued_sheets: issued_sheets,
             issued_sqm: issued_sqm,
             plywood_item_id: _id,
+            issued_for_plywood_resizing_id: issue_for_resizing_id,
             issued_for_order_id: null,
             created_by: userDetails?._id,
             updated_by: userDetails?._id
@@ -186,12 +188,12 @@ export const revert_issue_for_resizing = catchAsync(async (req, res) => {
         }
 
 
-        const delete_issue_for_resizing_document_result = await issue_for_plywood_resizing_model.deleteOne({ _id: resizing_item_details?._id });
+        const delete_issue_for_resizing_document_result = await issue_for_plywood_resizing_model.deleteOne({ _id: resizing_item_details?._id }, { session });
 
         if (!delete_issue_for_resizing_document_result?.acknowledged || delete_issue_for_resizing_document_result?.deletedCount === 0) {
             throw new ApiError("Failed to delete issue for resizing details", StatusCodes.BAD_REQUEST);
         }
-        const delete_plywood_history = await plywood_history_model.deleteOne({ plywood_item_id: resizing_item_details?.plywood_item_id });
+        const delete_plywood_history = await plywood_history_model.deleteOne({ issued_for_plywood_resizing_id: resizing_item_details?._id }, { session });
 
         if (!delete_plywood_history.acknowledged || delete_plywood_history.deletedCount === 0) {
             throw new ApiError("Failed to delete plywood history", StatusCodes.BAD_REQUEST)
@@ -255,7 +257,33 @@ export const listing_issued_for_resizing = catchAsync(
             ...search_query,
             is_resizing_done: false
         };
-
+        const aggInvoiceLookup = {
+            $lookup: {
+                from: 'plywood_inventory_invoice_details',
+                localField: 'invoice_id',
+                foreignField: '_id',
+                pipeline: [
+                    {
+                        $project: {
+                            inward_sr_no: 1,
+                            _id: 0
+                        },
+                    },
+                ],
+                as: 'inward_sr_no',
+            },
+        };
+        const aggInvoiceUnwind = {
+            $unwind: {
+                path: '$inward_sr_no',
+                preserveNullAndEmptyArrays: true,
+            }
+        }
+        const aggInvoiceAddFields = {
+            $addFields: {
+                inward_sr_no: '$inward_sr_no.inward_sr_no',
+            }
+        };
         const aggCreatedByLookup = {
             $lookup: {
                 from: 'users',
@@ -328,6 +356,9 @@ export const listing_issued_for_resizing = catchAsync(
         };
 
         const listAggregate = [
+            aggInvoiceLookup,
+            aggInvoiceUnwind,
+            aggInvoiceAddFields,
             aggCreatedByLookup,
             aggCreatedByUnwind,
             aggUpdatedByLookup,
