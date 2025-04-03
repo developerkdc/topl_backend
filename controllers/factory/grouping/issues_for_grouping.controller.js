@@ -882,7 +882,6 @@ export const revert_issue_for_grouping = catchAsync(async (req, res, next) => {
       },
       { session }
     );
-    console.log(issue_for_grouping?._id, "ppppppppppppppppppppppppppp")
 
     if (
       !delete_issue_for_grouping?.acknowledged ||

@@ -246,6 +246,11 @@ export const issues_for_grouping_view_model = mongoose.model(
     viewOn: 'issues_for_groupings',
     pipeline: [
       {
+        $sort:{
+          createdAt:-1
+        }
+      },
+      {
         $lookup: {
           from: 'users',
           localField: 'created_by',
@@ -298,25 +303,6 @@ export const issues_for_grouping_view_model = mongoose.model(
           path: '$updated_by',
           preserveNullAndEmptyArrays: true,
         },
-      },
-      {
-        $lookup: {
-          from: 'process_done_details',
-          localField: 'process_done_id',
-          foreignField: '_id',
-          as: 'process_done_details',
-        },
-      },
-      {
-        $unwind: {
-          path: '$process_done_details',
-          preserveNullAndEmptyArrays: true,
-        },
-      },
-      {
-        $sort:{
-          createdAt:-1
-        }
       },
       {
         $group: {
