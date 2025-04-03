@@ -6,6 +6,16 @@ const issues_for_grouping_schema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     required: [true, 'unique identifier is required'],
   },
+  process_done_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    default: null,
+    required: [
+      function () {
+        return this.issued_from === issues_for_status.smoking_dying;
+      },
+      'process_done_id is required',
+    ],
+  },
   process_done_item_id: {
     type: mongoose.Schema.Types.ObjectId,
     default: null,
@@ -16,6 +26,16 @@ const issues_for_grouping_schema = new mongoose.Schema({
       'process_done_item_id is required',
     ],
   },
+  dressing_done_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    default: null,
+    required: [
+      function () {
+        return this.issued_from === issues_for_status.dressing;
+      },
+      'dressing_done_id is required',
+    ],
+  },
   dressing_done_item_id: {
     type: mongoose.Schema.Types.ObjectId,
     default: null,
@@ -24,6 +44,16 @@ const issues_for_grouping_schema = new mongoose.Schema({
         return this.issued_from === issues_for_status.dressing;
       },
       'dressing_done_item_id is required',
+    ],
+  },
+  veneer_inventory_invoice_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    default: null,
+    required: [
+      function () {
+        return this.issued_from === issues_for_status.veneer;
+      },
+      'veneer_inventory_invoice_id is required',
     ],
   },
   veneer_inventory_item_id: {
@@ -206,9 +236,9 @@ const issues_for_grouping_view_schema = new mongoose.Schema(
 );
 
 export const issues_for_grouping_view_model = mongoose.model(
-  'issues_for_grouping_views',
+  'issues_for_grouping_viewssss',
   issues_for_grouping_view_schema,
-  'issues_for_grouping_views'
+  'issues_for_grouping_viewssss'
 );
 
 (async function () {
@@ -284,55 +314,25 @@ export const issues_for_grouping_view_model = mongoose.model(
         },
       },
       {
-        $lookup: {
-          from: 'dressing_done_other_details',
-          localField: 'dressing_done_id',
-          foreignField: '_id',
-          as: 'dressing_done_details',
-        },
+        $sort:{
+          createdAt:-1
+        }
       },
       {
-        $unwind: {
-          path: '$dressing_done_details',
-          preserveNullAndEmptyArrays: true,
-        },
-      },
-      {
-        $lookup: {
-          from: 'process_done_items_details',
-          localField: 'bundles',
-          foreignField: '_id',
-          as: 'process_bundle_details',
-        },
-      },
-      {
-        $lookup: {
-          from: 'dressing_done_items',
-          localField: 'bundles',
-          foreignField: '_id',
-          as: 'dressing_bundle_details',
-        },
-      },
-      {
-        $set: {
-          other_details: {
-            $cond: {
-              if: '$dressing_done_details',
-              then: '$dressing_done_details',
-              else: '$process_done_details',
-            },
+        $group: {
+          _id: {
+            unique_identifier: "$unique_identifier",
+            pallet_number: "$pallet_number"
           },
           bundles_details: {
-            $cond: {
-              if: { $gt: [{ $size: '$process_bundle_details' }, 0] },
-              then: '$process_bundle_details',
-              else: '$dressing_bundle_details',
-            },
-          },
-        },
+            $push: "$$ROOT"
+          }
+        }
       },
       {
         $addFields: {
+          issued_from: { $first: '$bundles_details.issued_from' },
+          is_grouping_done: { $first: '$bundles_details.is_grouping_done' },
           item_name_id: { $first: '$bundles_details.item_name_id' },
           item_name: { $first: '$bundles_details.item_name' },
           log_no_code: { $first: '$bundles_details.log_no_code' },
@@ -349,14 +349,6 @@ export const issues_for_grouping_view_model = mongoose.model(
           total_sqm: { $sum: '$bundles_details.sqm' },
           total_amount: { $sum: '$bundles_details.amount' },
         },
-      },
-      {
-        $unset: [
-          'process_bundle_details',
-          'dressing_bundle_details',
-          'dressing_done_details',
-          'process_done_details',
-        ],
       },
     ],
   });

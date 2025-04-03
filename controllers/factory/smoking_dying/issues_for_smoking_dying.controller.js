@@ -682,7 +682,7 @@ export const revert_issued_for_smoking_dying_item = catchAsync(
           .lean();
 
         if (is_invoice_editable && is_invoice_editable?.length <= 0) {
-          await veneer_inventory_invoice_model.updateOne(
+          await veneer_inventory_invoice_model.updateMany(
             { _id: { $in: veneer_invoice_id } },
             {
               $set: {
