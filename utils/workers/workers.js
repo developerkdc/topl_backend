@@ -9,7 +9,6 @@ export const insert_raw_machine_data_into_machine_mismatch_model = async () => {
 
     dressing_raw_data_model_change_stream?.on('change', async (operation) => {
       if (operation?.operationType === 'insert') {
-        console.log('operation => ', operation?.operationType);
         const inserted_document = Array.isArray(operation?.fullDocument)
           ? operation?.fullDocument
           : [operation?.fullDocument];

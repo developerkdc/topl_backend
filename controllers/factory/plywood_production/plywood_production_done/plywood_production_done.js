@@ -60,7 +60,7 @@ export const listing_plywood_production_done = catchAsync(
     const match_query = {
       ...filterData,
       ...search_query,
-      available_no_of_sheets:{$gt:0}
+      available_no_of_sheets: { $gt: 0 }
     };
 
     const aggCreatedByLookup = {
@@ -266,8 +266,8 @@ export const update_plywood_production_done = catchAsync(async (req, res) => {
         StatusCodes.BAD_REQUEST
       );
     }
-    
-    
+
+
     if (!core_details_array) {
       throw new ApiError(
         'core_details_array details are missing.',
@@ -298,7 +298,7 @@ export const update_plywood_production_done = catchAsync(async (req, res) => {
       await plywood_production_model.updateOne(
         { _id: plywood_production_done_data?._id },
         {
-          $set:{
+          $set: {
             item_name: plywood_production_details?.item_name,
             sub_category: plywood_production_details?.sub_category,
             length: plywood_production_details?.length,
@@ -306,10 +306,10 @@ export const update_plywood_production_done = catchAsync(async (req, res) => {
             thickness: plywood_production_details?.thickness,
             no_of_sheets: plywood_production_details?.no_of_sheets,
             total_sqm: plywood_production_details?.total_sqm,
-            amount:plywood_production_details?.amount,
-            available_sheets:plywood_production_details?.available_sheets,
-            available_sqm:plywood_production_details?.available_sqm,
-            available_amount:plywood_production_details?.available_amount,
+            amount: plywood_production_details?.amount,
+            available_sheets: plywood_production_details?.available_sheets,
+            available_sqm: plywood_production_details?.available_sqm,
+            available_amount: plywood_production_details?.available_amount,
             updated_by: userDetails?._id,
           },
         },
@@ -326,86 +326,86 @@ export const update_plywood_production_done = catchAsync(async (req, res) => {
       );
     }
     //checking available details for issue face and core item is greate than issue items
-    
-          const is_face_available_greater_than_consumed = await Promise.all(
-            face_details_array.map(async (item) => {
-              const res = await face_inventory_items_details
-                .findOne({
-                  _id: item?._id,
-                  available_sheets: { $gte: item?.issued_sheets },
-                  available_sqm: { $gte: item?.issued_sqm },
-                  available_amount: { $gte: item?.issued_amount },
-                })
-                .session(session)
-                .lean();
-              return res || null; // Explicitly return `null` if no matching record is found
-            })
-          );
-    
-    
-          const missingItems = face_details_array.filter(
-            (_, index) => is_face_available_greater_than_consumed[index] === null
-          );
-    
-          
-    
-          const is_core_available_greater_than_consumed = await Promise.all(
-            core_details_array.map(async (item) => {
-              const res = await core_inventory_items_details
-                .findOne({
-                  _id: item?._id,
-                  available_sheets: { $gte: item?.issued_sheets },
-                  available_sqm: { $gte: item?.issued_sqm },
-                  available_amount: { $gte: item?.issued_amount },
-                })
-                .session(session)
-                .lean();
-              return res || null; 
-            })
-          );
-          
-          
-          const missingCoreItems = core_details_array.filter(
-            (_, index) => is_core_available_greater_than_consumed[index] === null
-          );
-    
-          if (missingItems.length > 0 && missingCoreItems.length > 0) {   
-            const newMSGDetails=missingItems.map(item=> {
-               return `Inward No : ${item.inward_sr_no} and Sr No :${item.face_sr_no}`;
-            });
-    
-            const newCoreMSGDetails = missingCoreItems.map(item => {
-              return `Inward No: ${item.inward_sr_no} and Sr No: ${item.core_sr_no}`;
-            });
-    
-            throw new ApiError(
-              `Available face sheets are issued by someone for ${newMSGDetails.join()} and Available core sheets are issued by someone for ${newCoreMSGDetails.join()}`
-            );
-          }
-    
-    
-          if (missingItems.length > 0) {   
-            const newMSGDetails=missingItems.map(item=> {
-               return `Inward No : ${item.inward_sr_no} and Sr No :${item.face_sr_no}`;
-            });
-    
-            throw new ApiError(
-              `Available face sheets are issued by someone for ${newMSGDetails.join()}`
-            );
-          }
-    
-    
-          if (missingCoreItems.length > 0) {   
-            const newCoreMSGDetails = missingCoreItems.map(item => {
-              return `Inward No: ${item.inward_sr_no} and Sr No: ${item.core_sr_no}`;
-            });
-          
-            throw new ApiError(
-              `Available core sheets are issued by someone for ${newCoreMSGDetails.join()}`
-            );
-          }
-          
-    
+
+    const is_face_available_greater_than_consumed = await Promise.all(
+      face_details_array.map(async (item) => {
+        const res = await face_inventory_items_details
+          .findOne({
+            _id: item?._id,
+            available_sheets: { $gte: item?.issued_sheets },
+            available_sqm: { $gte: item?.issued_sqm },
+            available_amount: { $gte: item?.issued_amount },
+          })
+          .session(session)
+          .lean();
+        return res || null; // Explicitly return `null` if no matching record is found
+      })
+    );
+
+
+    const missingItems = face_details_array.filter(
+      (_, index) => is_face_available_greater_than_consumed[index] === null
+    );
+
+
+
+    const is_core_available_greater_than_consumed = await Promise.all(
+      core_details_array.map(async (item) => {
+        const res = await core_inventory_items_details
+          .findOne({
+            _id: item?._id,
+            available_sheets: { $gte: item?.issued_sheets },
+            available_sqm: { $gte: item?.issued_sqm },
+            available_amount: { $gte: item?.issued_amount },
+          })
+          .session(session)
+          .lean();
+        return res || null;
+      })
+    );
+
+
+    const missingCoreItems = core_details_array.filter(
+      (_, index) => is_core_available_greater_than_consumed[index] === null
+    );
+
+    if (missingItems.length > 0 && missingCoreItems.length > 0) {
+      const newMSGDetails = missingItems.map(item => {
+        return `Inward No : ${item.inward_sr_no} and Sr No :${item.face_sr_no}`;
+      });
+
+      const newCoreMSGDetails = missingCoreItems.map(item => {
+        return `Inward No: ${item.inward_sr_no} and Sr No: ${item.core_sr_no}`;
+      });
+
+      throw new ApiError(
+        `Available face sheets are issued by someone for ${newMSGDetails.join()} and Available core sheets are issued by someone for ${newCoreMSGDetails.join()}`
+      );
+    }
+
+
+    if (missingItems.length > 0) {
+      const newMSGDetails = missingItems.map(item => {
+        return `Inward No : ${item.inward_sr_no} and Sr No :${item.face_sr_no}`;
+      });
+
+      throw new ApiError(
+        `Available face sheets are issued by someone for ${newMSGDetails.join()}`
+      );
+    }
+
+
+    if (missingCoreItems.length > 0) {
+      const newCoreMSGDetails = missingCoreItems.map(item => {
+        return `Inward No: ${item.inward_sr_no} and Sr No: ${item.core_sr_no}`;
+      });
+
+      throw new ApiError(
+        `Available core sheets are issued by someone for ${newCoreMSGDetails.join()}`
+      );
+    }
+
+
     //fetching all plywood_production_consumed_items_details base on plywood_production_id so we can revert sheets face and core inventory
     const plywood_production_consumed_items =
       await plywood_production_consumed_items_model.find({
@@ -588,9 +588,9 @@ export const update_plywood_production_done = catchAsync(async (req, res) => {
 
     const face_details_array_for_history = face_details_array.map((item) => {
       // item.issued_for_order_id= issue_for_order_id,
-      (item.face_item_id=item?._id),
-      (item.issued_for_plywood_production_id =
-        plywood_production_done_data?._id),
+      (item.face_item_id = item?._id),
+        (item.issued_for_plywood_production_id =
+          plywood_production_done_data?._id),
         (item.issue_status = issues_for_status?.plywood_production),
         (item.face_item_id = item?._id),
         (item.issued_sheets = item.issued_sheets),
@@ -598,12 +598,12 @@ export const update_plywood_production_done = catchAsync(async (req, res) => {
         (item.issued_amount = item?.issued_amount),
         (item.created_by = userDetails?._id),
         (item.updated_by = userDetails?._id);
-        delete item?._id
+      delete item?._id
       return item;
     });
 
-    console.log("face_details_array_for_history : ",face_details_array_for_history);
-    
+    console.log("face_details_array_for_history : ", face_details_array_for_history);
+
     const is_face_history_updated = await face_history_model.insertMany(
       face_details_array_for_history,
       { session }
@@ -639,9 +639,9 @@ export const update_plywood_production_done = catchAsync(async (req, res) => {
 
     const core_details_array_for_history = core_details_array.map((item) => {
       // item.issued_for_order_id= issue_for_order_id,
-      (item.core_item_id=item?._id),
-      (item.issued_for_plywood_production_id =
-        plywood_production_done_data?._id),
+      (item.core_item_id = item?._id),
+        (item.issued_for_plywood_production_id =
+          plywood_production_done_data?._id),
         (item.issue_status = issues_for_status?.plywood_production),
         (item.core_item_id = item?._id),
         (item.issued_sheets = item.issued_sheets),
@@ -649,7 +649,7 @@ export const update_plywood_production_done = catchAsync(async (req, res) => {
         (item.issued_amount = item?.issued_amount),
         (item.created_by = userDetails?._id),
         (item.updated_by = userDetails?._id);
-        delete item?._id
+      delete item?._id
       return item;
     });
 
