@@ -36,8 +36,8 @@ export const add_grouping_done = catchAsync(async (req, res, next) => {
         {
           $match: {
             _id: {
-              unique_identifier: mongoose.Types.ObjectId.createFromHexString(issue_for_grouping_unique_identifier),
-              pallet_number: issue_for_grouping_pallet_number,
+              unique_identifier: mongoose.Types.ObjectId.createFromHexString(other_details?.issue_for_grouping_unique_identifier),
+              pallet_number: other_details?.issue_for_grouping_pallet_number,
             }
           },
         }
