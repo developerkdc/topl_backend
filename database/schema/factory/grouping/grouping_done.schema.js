@@ -7,9 +7,15 @@ const grouping_done_details_schema = new mongoose.Schema(
       type: Date,
       required: [true, 'grouping Date is required'],
     },
-    issue_for_grouping_id: {
+    issue_for_grouping_unique_identifier: {
       type: mongoose.Schema.Types.ObjectId,
-      required: [true, 'Issues for grouping id is required'],
+      required: [true, 'Issues for smoking unique identifier is required'],
+    },
+    issue_for_grouping_pallet_number: {
+      type: String,
+      uppercase: true,
+      trim: true,
+      required: [true, 'Issues for smoking pallet number is required'],
     },
     no_of_workers: {
       type: Number,
@@ -89,11 +95,11 @@ const grouping_done_items_details_schema = new mongoose.Schema(
       type: String,
       uppercase: true,
       trim: true,
-      default:null
+      default: null
     },
     photo_no_id: {
       type: mongoose.Schema.Types.ObjectId,
-      default:null
+      default: null
     },
     item_name: {
       type: String,
