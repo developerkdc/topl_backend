@@ -1774,7 +1774,8 @@ export const create_dressing_items_from_dressing_report = catchAsync(
         const peeling_done_items_log_no_code_set = new Set(
           peeling_done_items?.map((item) => item?.log_no_code)
         );
-
+        console.log(peeling_done_items)
+        console.log(total_no_of_leaves_by_log_no_code)
         const valid_dressing_items = [];
         const valid_dressing_items_id = [];
         const dressing_missmatch_updates = [];
@@ -1986,7 +1987,7 @@ export const create_dressing_items_from_dressing_report = catchAsync(
       await session.commitTransaction();
       const response = new ApiResponse(
         StatusCodes.CREATED,
-        'Dressing Done Successfully'
+        'Data Processed Successfully.'
       );
       return res.status(StatusCodes.CREATED).json(response);
     } catch (error) {

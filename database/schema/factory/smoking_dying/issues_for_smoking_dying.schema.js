@@ -237,11 +237,6 @@ export const issues_for_smoking_dying_view_model = mongoose.model(
     viewOn: 'issues_for_smoking_dyings',
     pipeline: [
       {
-        $match: {
-          is_smoking_dying_done: false,
-        },
-      },
-      {
         $lookup: {
           from: 'users',
           localField: 'created_by',

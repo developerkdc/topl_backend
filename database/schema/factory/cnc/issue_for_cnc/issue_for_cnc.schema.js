@@ -4,9 +4,9 @@ import { item_issued_from } from '../../../../Utils/constants/constants.js';
 const issue_for_cnc_schema = new mongoose.Schema(
     {
         sr_no: Number,
-        pressing_done_id: {
+        pressing_details_id: {
             type: mongoose.Schema.Types.ObjectId,
-            required: [true, "Pressing Done ID is required."]
+            required: [true, "Pressing Details ID is required."]
         },
         issued_sheets: {
             type: Number,
