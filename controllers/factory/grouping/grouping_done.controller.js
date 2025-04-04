@@ -583,8 +583,8 @@ export const revert_all_grouping_done = catchAsync(async (req, res, next) => {
       throw new ApiError('Failed to delete grouping done items', 400);
     }
 
-    const unique_identifier = other_details_data?.issue_for_grouping_unique_identifier;
-    const pallet_number = other_details_data?.issue_for_grouping_pallet_number;
+    const unique_identifier = grouping_done_other_details?.issue_for_grouping_unique_identifier;
+    const pallet_number = grouping_done_other_details?.issue_for_grouping_pallet_number;
 
     const update_issue_for_grouping = await issues_for_grouping_model.updateMany(
       {
