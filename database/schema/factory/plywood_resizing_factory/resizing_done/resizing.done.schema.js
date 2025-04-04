@@ -155,15 +155,15 @@ const plywood_resizing_done_details_schema = new mongoose.Schema(
             type: Number,
             required: [true, 'SQM is required.'],
           },
-          available_sheets:{
+          available_sheets: {
             type: Number,
             required: [true, 'Available sheets is required.'],
           },
-          available_amount:{
+          available_amount: {
             type: Number,
             required: [true, 'Available Amount is required.'],
           },
-          available_sqm:{
+          available_sqm: {
             type: Number,
             required: [true, 'Available SQM is required.'],
           },

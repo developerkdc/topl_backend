@@ -18,7 +18,7 @@ export const create_cnc = catchAsync(async (req, res) => {
         session.startTransaction();
 
 
-        const add_resizing_data_result=[];
+        const add_resizing_data_result = [];
         const response = new ApiResponse(StatusCodes.CREATED, "CNC Created Successfully", add_resizing_data_result);
         await session.commitTransaction()
         return res.status(StatusCodes.CREATED).json(response);
@@ -52,7 +52,7 @@ export const update_cnc_done = catchAsync(async (req, res) => {
             throw new ApiError("CNC done data not found", StatusCodes.NOT_FOUND)
         };
 
-       const update_cnc_done_result=[];
+        const update_cnc_done_result = [];
         const response = new ApiResponse(StatusCodes.OK, "Resizing Item Updated Successfully", update_cnc_done_result);
         await session.commitTransaction()
         return res.status(StatusCodes.OK).json(response);
@@ -284,7 +284,7 @@ export const revert_cnc_done_items = catchAsync(async (req, res) => {
         if (!cnc_done_data) {
             throw new ApiError("CNC done data not found", StatusCodes.NOT_FOUND)
         };
-        const delete_cnc_done_result=[];
+        const delete_cnc_done_result = [];
         const response = new ApiResponse(StatusCodes.OK, "CNC details Reverted Successfully", delete_cnc_done_result)
         await session.commitTransaction();
         return res.status(StatusCodes.OK).json(response)
