@@ -454,8 +454,19 @@ export const fetch_all_details_by_grouping_done_id = catchAsync(
       {
         $lookup: {
           from: 'issues_for_grouping_views',
-          localField: 'issue_for_grouping_id',
-          foreignField: '_id',
+          let: { unique_identifier: "$issue_for_grouping_unique_identifier", pallet_number: "$issue_for_grouping_pallet_number" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$_id.unique_identifier", "$$unique_identifier"] },
+                    { $eq: ["$_id.pallet_number", "$$pallet_number"] },
+                  ]
+                }
+              }
+            }
+          ],
           as: 'issues_for_grouping',
         },
       },
