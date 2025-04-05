@@ -1412,7 +1412,6 @@ export const create_dressing_items_from_dressing_report = catchAsync(
           process_status: { $ne: dressing_error_types?.dressing_done },
         })
         .lean();
-
       // const dressing_details = await dressing_miss_match_data_model
       //   .find({ _id: { $in: dressing_ids } })
       //   .lean();
@@ -1432,7 +1431,6 @@ export const create_dressing_items_from_dressing_report = catchAsync(
       const dressing_item_details = dressing_details?.filter((item) =>
         issued_log_no_code_set?.has(item?.log_no_code)
       );
-
       //creating object to count no_of_leaves by log_no_code
       const total_no_of_leaves_by_log_no_code = dressing_item_details?.reduce(
         (acc, item) => {
@@ -1442,7 +1440,7 @@ export const create_dressing_items_from_dressing_report = catchAsync(
         },
         {}
       );
-
+      console.log("total_no_of_leaves_by_log_no_code : ", total_no_of_leaves_by_log_no_code)
       //creating a object to count no of leaves by log_no_code
       const total_sqm_by_log_no_code = dressing_item_details?.reduce(
         (acc, item) => {
@@ -1469,16 +1467,11 @@ export const create_dressing_items_from_dressing_report = catchAsync(
         }
         log_no_code_volume_map[item?.log_no_code] += volume;
       });
-      console.log('log_no_code_volume_map : ', log_no_code_volume_map);
 
       //calculating all items volume
       const total_dressing_item_details_volume = Object.values(
         log_no_code_volume_map
       )?.reduce((acc, item) => acc + item, 0);
-      console.log(
-        'total_dressing_item_details_volume',
-        total_dressing_item_details_volume
-      );
 
       const log_no_code_factor_map = {};
       //calculating factor for each log_no_code  based on volume

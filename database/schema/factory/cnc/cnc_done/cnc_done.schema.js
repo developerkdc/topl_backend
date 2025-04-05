@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 const cnc_done_details_schema = new mongoose.Schema(
   {
-    
+
     remark: {
       type: String,
       default: null,
@@ -25,7 +25,7 @@ const cnc_done_details_schema = new mongoose.Schema(
 //   { unique: true }
 // );
 
-export const plywood_resizing_done_details_model = mongoose.model(
+export const cnc_done_details_model = mongoose.model(
   'cnc_done_details',
   cnc_done_details_schema,
   'cnc_done_details'
