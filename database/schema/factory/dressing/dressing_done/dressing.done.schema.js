@@ -132,6 +132,16 @@ const dressing_done_items_schema = new mongoose.Schema(
       type: Number,
       required: [true, 'Amount is required'],
     },
+    color_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
+    color_name: {
+      type: String,
+      uppercase: true,
+      trim: true,
+      default: null,
+    },
     character_name: {
       type: String,
       required: [true, 'Character Name is required.'],

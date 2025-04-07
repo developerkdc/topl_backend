@@ -25,7 +25,6 @@ export const issues_for_status = {
   plywood_production: 'plywood_production',
   cnc_factory: "cnc",
   color_factory: "color",
-
 };
 
 export const inward_type = {
@@ -102,5 +101,16 @@ export const item_issued_from = {
   flitching_factory: 'FLITCHING_FACTORY',
   dressing_factory: 'DRESSING_FACTORY',
   grouping_factory: "GROUPING_FACTORY",
-  pressing_factory: "PRESSING_FACTORY"
+  pressing_factory: "PRESSING_FACTORY",
+  cnc_factory: "CNC_FACTORY",
+  color_factory: "COLOR_FACTORY",
+  polishing_factory: "POLISHING_FACTORY",
+  bunito_factory: "BUNITO_FACTORY",
 };
+
+
+export const item_issued_for = {
+  order: "ORDER",
+  stock: "STOCK",
+  sample: "SAMPLE"
+}

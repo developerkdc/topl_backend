@@ -56,7 +56,7 @@ export const add_issue_for_cnc_from_pressing = catchAsync(async (req, res) => {
             [
                 {
                     sr_no: max_sr_no,
-                    pressing_done_id: pressing_item_details?._id,
+                    pressing_details_id: pressing_item_details?._id,
                     issued_amount: issued_amount,
                     issued_sheets: issued_sheets,
                     issued_sqm: issued_sqm,
@@ -147,7 +147,7 @@ export const revert_issue_for_cnc = catchAsync(async (req, res) => {
         };
 
         //? update pressing item details 
-        const update_pressing_details_result = await pressing_item_details_model?.updateOne({ _id: issue_for_cnc_details?.pressing_done_id }, {
+        const update_pressing_details_result = await pressing_item_details_model?.updateOne({ _id: issue_for_cnc_details?.pressing_details_id }, {
             $inc: {
                 available_sheets: issue_for_cnc_details?.issued_sheets,
                 available_amount: issue_for_cnc_details?.issued_amount,
@@ -174,7 +174,7 @@ export const revert_issue_for_cnc = catchAsync(async (req, res) => {
         }
 
         //todo delete pressing document
-        const delete_pressing_history_result = await plywood_history_model.deleteOne({ plywood_item_id: issue_for_cnc_details?.pressing_done_id });
+        const delete_pressing_history_result = await plywood_history_model.deleteOne({ pressing_details_id: issue_for_cnc_details?.pressing_details_id });
 
         if (!delete_pressing_history_result.acknowledged || delete_pressing_history_result?.deletedCount === 0) {
             throw new ApiError("Failed to delete pressing history", StatusCodes.BAD_REQUEST)

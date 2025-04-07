@@ -87,6 +87,39 @@ const issues_for_pressing_schema = new mongoose.Schema({
         uppercase: true,
         required: [true, 'pallet_number is required'],
     },
+    amount: {
+        type: Number,
+        default: 0,
+        required: [true, 'Item Amount is required'],
+    },
+    amount_factor: {
+        type: Number,
+        default: 1,
+    },
+    expense_amount: {
+        type: Number,
+        default: 0,
+    },
+    available_details: {
+        no_of_sheets: {
+            type: Number,
+            default: function () {
+                return this.no_of_sheets;
+            },
+        },
+        sqm: {
+            type: Number,
+            default: function () {
+                return this.sqm;
+            },
+        },
+        amount: {
+            type: Number,
+            default: function () {
+                return this.amount;
+            },
+        },
+    },
     process_id: {
         type: mongoose.Schema.Types.ObjectId,
         required: [true, 'process id is required'],
@@ -177,22 +210,9 @@ const issues_for_pressing_schema = new mongoose.Schema({
         },
         default: null,
     },
-    is_pressing_done:{
-        type:Boolean,
-        default:false
-    },
-    amount: {
-        type: Number,
-        default: 0,
-        required: [true, 'Item Amount is required'],
-    },
-    amount_factor: {
-        type: Number,
-        default: 1,
-    },
-    expense_amount: {
-        type: Number,
-        default: 0,
+    is_pressing_done: {
+        type: Boolean,
+        default: false
     },
     remark: {
         type: String,

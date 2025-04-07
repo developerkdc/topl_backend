@@ -20,6 +20,169 @@ import ApiError from '../../../utils/errors/apiError.js';
 import catchAsync from '../../../utils/errors/catchAsync.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
+import { veneer_inventory_invoice_model, veneer_inventory_items_model } from '../../../database/schema/inventory/venner/venner.schema.js';
+
+
+export const issue_for_grouping_from_veneer_inventory = catchAsync(async (req, res, next) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const userDetails = req.userDetails;
+    const { veneer_inventory_item_ids } = req.body;
+    if (
+      !veneer_inventory_item_ids ||
+      (Array.isArray(veneer_inventory_item_ids) &&
+        veneer_inventory_item_ids?.length <= 0)
+    ) {
+      throw new ApiError(
+        'veneer_inventory_item_ids is required',
+        StatusCodes.BAD_REQUEST
+      );
+    }
+    if (!Array.isArray(veneer_inventory_item_ids)) {
+      throw new ApiError(
+        'veneer_inventory_item_ids must be array',
+        StatusCodes.BAD_REQUEST
+      );
+    }
+
+    const fetch_veneer_inventory_item_details = await veneer_inventory_items_model.find({
+      _id: { $in: veneer_inventory_item_ids },
+      issue_status: null
+    });
+    if (!fetch_veneer_inventory_item_details || fetch_veneer_inventory_item_details?.length <= 0) {
+      throw new ApiError("veneer inventory item not found", StatusCodes.NOT_FOUND);
+    }
+
+    const unique_identifier = new mongoose.Types.ObjectId();
+    const issue_for_grouping_details = fetch_veneer_inventory_item_details?.map((e) => {
+      return {
+        unique_identifier: unique_identifier,
+        veneer_inventory_invoice_id: e.invoice_id,
+        veneer_inventory_item_id: e._id,
+        item_name: e?.item_name,
+        item_name_id: e?.item_id,
+        item_sub_category_id: e?.item_sub_category_id,
+        item_sub_category_name: e?.item_sub_category_name,
+        log_no_code: e?.log_code,
+        length: e?.length,
+        width: e?.width,
+        thickness: e?.thickness,
+        no_of_leaves: e?.number_of_leaves,
+        sqm: e?.total_sq_meter,
+        bundle_number: e?.bundle_number,
+        pallet_number: e?.pallet_number,
+        color_id: e?.color?.color_id,
+        color_name: e?.color?.color_name,
+        character_id: e?.character_id,
+        character_name: e?.character_name,
+        pattern_id: e?.pattern_id,
+        pattern_name: e?.pattern_name,
+        series_id: e?.series_id,
+        series_name: e?.series_name,
+        grade_id: e?.grades_id,
+        grade_name: e?.grades_name,
+        amount: e?.amount,
+        issued_from: issues_for_status?.veneer,
+        remark: e?.remark,
+        created_by: userDetails?._id,
+        updated_by: userDetails?._id,
+      }
+    });
+
+
+    const add_issues_for_grouping = await issues_for_grouping_model.insertMany(
+      issue_for_grouping_details,
+      { session }
+    );
+
+    if (add_issues_for_grouping?.length <= 0) {
+      throw new ApiError(
+        'Failed to add data,issue for grouping',
+        StatusCodes.NOT_FOUND
+      );
+    }
+
+    const veneer_invoice_ids = add_issues_for_grouping?.map((e) => e.veneer_inventory_invoice_id);
+    const veneer_items_ids = add_issues_for_grouping?.map((e) => e.veneer_inventory_item_id);
+
+
+    // update venner items issue status to grouping
+    const update_veneer_items = await veneer_inventory_items_model.updateMany(
+      {
+        _id: { $in: veneer_items_ids },
+      },
+      {
+        $set: {
+          issue_status: issues_for_status.grouping,
+          updated_by: userDetails?._id,
+        },
+      },
+      { session }
+    );
+
+    if (update_veneer_items.matchedCount <= 0) {
+      throw new ApiError(
+        'Failed to update veneer items issue status',
+        StatusCodes.NOT_FOUND
+      );
+    }
+    if (
+      !update_veneer_items.acknowledged ||
+      update_veneer_items.matchedCount <= 0
+    ) {
+      throw new ApiError(
+        'Failed to update veneer items issue status',
+        StatusCodes.INTERNAL_SERVER_ERROR
+      );
+    }
+
+
+    // update veneer invoice editable status
+    const update_veneer_invoice_editable = await veneer_inventory_invoice_model.updateMany(
+      {
+        _id: { $in: veneer_invoice_ids },
+      },
+      {
+        $set: {
+          isEditable: false,
+          updated_by: userDetails?._id,
+        },
+      },
+      { session }
+    );
+
+    if (update_veneer_invoice_editable.matchedCount <= 0) {
+      throw new ApiError(
+        'Failed to update veneer invoice editable',
+        StatusCodes.NOT_FOUND
+      );
+    }
+    if (
+      !update_veneer_invoice_editable.acknowledged ||
+      update_veneer_invoice_editable.matchedCount <= 0
+    ) {
+      throw new ApiError(
+        'Failed to update veneer invoice editable',
+        StatusCodes.INTERNAL_SERVER_ERROR
+      );
+    }
+
+
+    const response = new ApiResponse(
+      StatusCodes.CREATED,
+      'Issue for grouping added successfully',
+      add_issues_for_grouping
+    );
+    await session.commitTransaction();
+    return res.status(StatusCodes.CREATED).json(response);
+  } catch (error) {
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    await session.endSession();
+  }
+})
 
 export const issue_for_grouping_from_smoking_dying_done = catchAsync(async (req, res, next) => {
   const session = await mongoose.startSession();
@@ -67,23 +230,49 @@ export const issue_for_grouping_from_smoking_dying_done = catchAsync(async (req,
         StatusCodes.NOT_FOUND
       );
     }
-    const bundle_ids = process_done_items_details?.map((e) => e._id);
+    const unique_identifier = new mongoose.Types.ObjectId();
+    const issue_for_grouping_details = process_done_items_details?.map((e) => {
+      return {
+        unique_identifier: unique_identifier,
+        process_done_id: e.process_done_id,
+        process_done_item_id: e._id,
+        item_name: e?.item_name,
+        item_name_id: e?.item_name_id,
+        item_sub_category_id: e?.item_sub_category_id,
+        item_sub_category_name: e?.item_sub_category_name,
+        log_no_code: e?.log_no_code,
+        length: e?.length,
+        width: e?.width,
+        thickness: e?.thickness,
+        no_of_leaves: e?.no_of_leaves,
+        sqm: e?.sqm,
+        bundle_number: e?.bundle_number,
+        pallet_number: e?.pallet_number,
+        color_id: e?.color_id,
+        color_name: e?.color_name,
+        character_id: e?.character_id,
+        character_name: e?.character_name,
+        pattern_id: e?.pattern_id,
+        pattern_name: e?.pattern_name,
+        series_id: e?.series_id,
+        series_name: e?.series_name,
+        grade_id: e?.grade_id,
+        grade_name: e?.grade_name,
+        amount: e?.amount,
+        issued_from: issues_for_status?.smoking_dying,
+        remark: e?.remark,
+        created_by: userDetails?._id,
+        updated_by: userDetails?._id,
+      }
+    });
 
-    const add_issues_for_grouping = await issues_for_grouping_model.create(
-      [
-        {
-          process_done_id: process_done_id,
-          bundles: bundle_ids,
-          issued_from: issues_for_status.smoking_dying,
-          created_by: userDetails?._id,
-          updated_by: userDetails?._id,
-        },
-      ],
+
+    const add_issues_for_grouping = await issues_for_grouping_model.insertMany(
+      issue_for_grouping_details,
       { session }
     );
 
-    const issue_for_grouping_data = add_issues_for_grouping?.[0];
-    if (!issue_for_grouping_data) {
+    if (add_issues_for_grouping?.length <= 0) {
       throw new ApiError(
         'Failed to add data,issue for grouping',
         StatusCodes.NOT_FOUND
@@ -94,7 +283,7 @@ export const issue_for_grouping_from_smoking_dying_done = catchAsync(async (req,
     const update_process_done_editable =
       await process_done_details_model.updateOne(
         {
-          _id: issue_for_grouping_data?.process_done_id,
+          _id: process_done_id,
         },
         {
           $set: {
@@ -122,11 +311,12 @@ export const issue_for_grouping_from_smoking_dying_done = catchAsync(async (req,
     }
 
     // update process done item issue status to grouping
+    const process_done_items_id_from_issue_for_grouping = add_issues_for_grouping?.map((e) => e.process_done_item_id);
     const update_process_done_items =
       await process_done_items_details_model.updateMany(
         {
-          process_done_id: issue_for_grouping_data?.process_done_id,
-          _id: { $in: issue_for_grouping_data?.bundles },
+          process_done_id: process_done_id,
+          _id: { $in: process_done_items_id_from_issue_for_grouping },
         },
         {
           $set: {
@@ -157,8 +347,8 @@ export const issue_for_grouping_from_smoking_dying_done = catchAsync(async (req,
     const add_process_done_history = await process_done_history_model.create(
       [
         {
-          process_done_id: issue_for_grouping_data?.process_done_id,
-          bundles: issue_for_grouping_data?.bundles,
+          process_done_id: process_done_id,
+          bundles: process_done_items_id_from_issue_for_grouping,
           created_by: userDetails?._id,
           updated_by: userDetails?._id,
         },
@@ -173,12 +363,12 @@ export const issue_for_grouping_from_smoking_dying_done = catchAsync(async (req,
       );
     }
 
-    await session.commitTransaction();
     const response = new ApiResponse(
       StatusCodes.CREATED,
       'Issue for grouping added successfully',
-      issue_for_grouping_data
+      add_issues_for_grouping
     );
+    await session.commitTransaction();
     return res.status(StatusCodes.CREATED).json(response);
   } catch (error) {
     await session.abortTransaction();
@@ -233,23 +423,49 @@ export const issue_for_grouping_from_dressing_done = catchAsync(async (req, res,
         StatusCodes.NOT_FOUND
       );
     }
-    const bundle_ids = dressing_done_items_details?.map((e) => e._id);
 
-    const add_issues_for_grouping = await issues_for_grouping_model.create(
-      [
-        {
-          dressing_done_id: dressing_done_id,
-          bundles: bundle_ids,
-          issued_from: issues_for_status.dressing,
-          created_by: userDetails?._id,
-          updated_by: userDetails?._id,
-        },
-      ],
+    const unique_identifier = new mongoose.Types.ObjectId();
+    const issue_for_grouping_details = dressing_done_items_details?.map((e) => {
+      return {
+        unique_identifier: unique_identifier,
+        dressing_done_id: e.dressing_done_other_details_id,
+        dressing_done_item_id: e._id,
+        item_name: e?.item_name,
+        item_name_id: e?.item_name_id,
+        item_sub_category_id: e?.item_sub_category_id,
+        item_sub_category_name: e?.item_sub_category_name,
+        log_no_code: e?.log_no_code,
+        length: e?.length,
+        width: e?.width,
+        thickness: e?.thickness,
+        no_of_leaves: e?.no_of_leaves,
+        sqm: e?.sqm,
+        bundle_number: e?.bundle_number,
+        pallet_number: e?.pallet_number,
+        color_id: e?.color_id,
+        color_name: e?.color_name,
+        character_id: e?.character_id,
+        character_name: e?.character_name,
+        pattern_id: e?.pattern_id,
+        pattern_name: e?.pattern_name,
+        series_id: e?.series_id,
+        series_name: e?.series_name,
+        grade_id: e?.grade_id,
+        grade_name: e?.grade_name,
+        amount: e?.amount,
+        issued_from: issues_for_status?.dressing,
+        remark: e?.remark,
+        created_by: userDetails?._id,
+        updated_by: userDetails?._id,
+      }
+    });
+
+    const add_issues_for_grouping = await issues_for_grouping_model.insertMany(
+      issue_for_grouping_details,
       { session }
     );
 
-    const issue_for_grouping_data = add_issues_for_grouping?.[0];
-    if (!issue_for_grouping_data) {
+    if (add_issues_for_grouping?.length <= 0) {
       throw new ApiError(
         'Failed to add data,issue for grouping',
         StatusCodes.NOT_FOUND
@@ -260,7 +476,7 @@ export const issue_for_grouping_from_dressing_done = catchAsync(async (req, res,
     const update_dressing_done_editable =
       await dressing_done_other_details_model.updateOne(
         {
-          _id: issue_for_grouping_data?.dressing_done_id,
+          _id: dressing_done_id,
         },
         {
           $set: {
@@ -288,12 +504,12 @@ export const issue_for_grouping_from_dressing_done = catchAsync(async (req, res,
     }
 
     // update dressing done item issue status to grouping
+    const dressing_done_items_id_from_issue_for_grouping = add_issues_for_grouping?.map((e) => e.dressing_done_item_id);
     const update_dressing_done_items =
       await dressing_done_items_model.updateMany(
         {
-          _id: { $in: issue_for_grouping_data?.bundles },
-          dressing_done_other_details_id:
-            issue_for_grouping_data?.dressing_done_id,
+          _id: { $in: dressing_done_items_id_from_issue_for_grouping },
+          dressing_done_other_details_id: dressing_done_id,
         },
         {
           $set: {
@@ -324,9 +540,8 @@ export const issue_for_grouping_from_dressing_done = catchAsync(async (req, res,
     const dressing_done_history = await dressing_done_history_model.create(
       [
         {
-          dressing_done_other_details_id:
-            issue_for_grouping_data?.dressing_done_id,
-          bundles: issue_for_grouping_data?.bundles,
+          dressing_done_other_details_id: dressing_done_id,
+          bundles: dressing_done_items_id_from_issue_for_grouping,
           created_by: userDetails?._id,
           updated_by: userDetails?._id,
         },
@@ -341,12 +556,14 @@ export const issue_for_grouping_from_dressing_done = catchAsync(async (req, res,
       );
     }
 
-    await session.commitTransaction();
     const response = new ApiResponse(
       StatusCodes.CREATED,
       'Issue for grouping added successfully',
-      issue_for_grouping_data
+      add_issues_for_grouping
     );
+    // console.log(add_issues_for_grouping);
+    // throw new Error("pppp")
+    await session.commitTransaction();
     return res.status(StatusCodes.CREATED).json(response);
   } catch (error) {
     await session.abortTransaction();
@@ -361,30 +578,36 @@ export const revert_issue_for_grouping = catchAsync(async (req, res, next) => {
   session.startTransaction();
   try {
     const userDetails = req.userDetails;
-    const { id } = req.params;
-    if (!id) {
-      throw new ApiError(
-        'issue for grouping id is required',
-        StatusCodes.BAD_REQUEST
-      );
+    const { unique_identifier, pallet_number } = req.params;
+    if (!unique_identifier || !pallet_number) {
+      throw new ApiError(`Please provide unique_identifier or pallet_number`, StatusCodes.BAD_REQUEST);
     }
 
-    const issue_for_grouping = await issues_for_grouping_model
-      .findOne({ _id: id })
-      .lean();
+    const fetch_issue_for_grouping_details = await issues_for_grouping_view_model.aggregate([
+      {
+        $match: {
+          _id: {
+            unique_identifier: mongoose.Types.ObjectId.createFromHexString(unique_identifier),
+            pallet_number: pallet_number,
+          }
+        }
+      }
+    ]);
+
+    const issue_for_grouping = fetch_issue_for_grouping_details?.[0]
     if (!issue_for_grouping) {
       throw new ApiError('issue for grouping not found', StatusCodes.NOT_FOUND);
     }
 
     const revert_to_process_done = async function () {
-      const process_done_id = issue_for_grouping.process_done_id;
-      const process_done_items_ids = issue_for_grouping.bundles;
+      const process_done_id = issue_for_grouping?.bundles_details?.map((e) => e.process_done_id);
+      const process_done_items_ids = issue_for_grouping?.bundles_details?.map((e) => e.process_done_item_id);
 
       // update process done item issue status to null
       const update_process_done_items =
         await process_done_items_details_model.updateMany(
           {
-            process_done_id: process_done_id,
+            process_done_id: { $in: process_done_id },
             _id: { $in: process_done_items_ids },
             issue_status: issues_for_status.grouping,
           },
@@ -417,7 +640,7 @@ export const revert_issue_for_grouping = catchAsync(async (req, res, next) => {
       const delete_process_done_history =
         await process_done_history_model.deleteMany(
           {
-            process_done_id: process_done_id,
+            process_done_id: { $in: process_done_id },
             bundles: { $all: process_done_items_ids },
           },
           { session }
@@ -437,14 +660,14 @@ export const revert_issue_for_grouping = catchAsync(async (req, res, next) => {
       const is_process_done_editable =
         await process_done_items_details_model.find({
           _id: { $nin: process_done_items_ids },
-          process_done_id: process_done_id,
+          process_done_id: { $in: process_done_id },
           issue_status: { $ne: null },
-        });
+        }).session(session);
 
       if (is_process_done_editable && is_process_done_editable?.length <= 0) {
         const update_process_done_editable =
           await process_done_details_model.updateOne(
-            { _id: process_done_id },
+            { _id: { $in: process_done_id } },
             {
               $set: {
                 isEditable: true,
@@ -456,7 +679,7 @@ export const revert_issue_for_grouping = catchAsync(async (req, res, next) => {
 
         if (update_process_done_editable.matchedCount <= 0) {
           throw new ApiError(
-            'Failed to update process done editable',
+            'Failed to find process done',
             StatusCodes.NOT_FOUND
           );
         }
@@ -473,14 +696,14 @@ export const revert_issue_for_grouping = catchAsync(async (req, res, next) => {
     };
 
     const revert_to_dressing_done = async function () {
-      const dressing_done_id = issue_for_grouping.dressing_done_id;
-      const dressing_done_items_ids = issue_for_grouping.bundles;
+      const dressing_done_id = issue_for_grouping?.bundles_details?.map((e) => e.dressing_done_id);
+      const dressing_done_items_ids = issue_for_grouping?.bundles_details?.map((e) => e.dressing_done_item_id);
 
       // update dressing done item issue status to null
       const update_dressing_done_items =
         await dressing_done_items_model.updateMany(
           {
-            dressing_done_other_details_id: dressing_done_id,
+            dressing_done_other_details_id: { $in: dressing_done_id },
             _id: { $in: dressing_done_items_ids },
             issue_status: issues_for_status.grouping,
           },
@@ -513,7 +736,7 @@ export const revert_issue_for_grouping = catchAsync(async (req, res, next) => {
       const delete_dressing_done_history =
         await dressing_done_history_model.deleteMany(
           {
-            dressing_done_other_details_id: dressing_done_id,
+            dressing_done_other_details_id: { $in: dressing_done_id },
             bundles: { $all: dressing_done_items_ids },
           },
           { session }
@@ -532,14 +755,14 @@ export const revert_issue_for_grouping = catchAsync(async (req, res, next) => {
       // Check is dressing done is editable
       const is_dressing_done_editable = await dressing_done_items_model.find({
         _id: { $nin: dressing_done_items_ids },
-        dressing_done_other_details_id: dressing_done_id,
+        dressing_done_other_details_id: { $in: dressing_done_id },
         issue_status: { $ne: null },
-      });
+      }).session(session);
 
       if (is_dressing_done_editable && is_dressing_done_editable?.length <= 0) {
         const update_dressing_done_editable =
           await dressing_done_other_details_model.updateOne(
-            { _id: dressing_done_id },
+            { _id: { $in: dressing_done_id } },
             {
               $set: {
                 isEditable: true,
@@ -551,7 +774,7 @@ export const revert_issue_for_grouping = catchAsync(async (req, res, next) => {
 
         if (update_dressing_done_editable.matchedCount <= 0) {
           throw new ApiError(
-            'Failed to update dressing done editable',
+            'Failed to find dressing done',
             StatusCodes.NOT_FOUND
           );
         }
@@ -567,24 +790,95 @@ export const revert_issue_for_grouping = catchAsync(async (req, res, next) => {
       }
     };
 
+    const revert_to_veneer_inventory = async function () {
+      const veneer_inventory_invoice_ids = issue_for_grouping?.bundles_details?.map((e) => e.veneer_inventory_invoice_id);
+      const veneer_inventory_item_ids = issue_for_grouping?.bundles_details?.map((e) => e.veneer_inventory_item_id);
+
+      // update veneer items issue status to null
+      const update_veneer_items = await veneer_inventory_items_model.updateMany(
+        {
+          _id: { $in: veneer_inventory_item_ids },
+        },
+        {
+          $set: {
+            issue_status: null,
+            updated_by: userDetails?._id,
+          },
+        },
+        { session }
+      );
+
+      if (update_veneer_items.matchedCount <= 0) {
+        throw new ApiError(
+          'Failed to update veneer items issue status',
+          StatusCodes.NOT_FOUND
+        );
+      }
+      if (
+        !update_veneer_items.acknowledged ||
+        update_veneer_items.matchedCount <= 0
+      ) {
+        throw new ApiError(
+          'Failed to update veneer items issue status',
+          StatusCodes.INTERNAL_SERVER_ERROR
+        );
+      }
+
+      //check is veneer invoice is editable
+      const veneer_invoice_editable = await veneer_inventory_items_model.find({
+        _id: { $nin: veneer_inventory_item_ids },
+        invoice_id: { $in: veneer_inventory_invoice_ids },
+        issue_status: { $ne: null }
+      });
+
+      if (veneer_invoice_editable && veneer_invoice_editable?.length <= 0) {
+        const update_veneer_invoice = await veneer_inventory_invoice_model.updateMany(
+          { _id: { $in: veneer_inventory_invoice_ids } },
+          {
+            $set: {
+              isEditable: true,
+            },
+          },
+          { session }
+        );
+        if (update_veneer_invoice.matchedCount <= 0) {
+          throw new ApiError(
+            'failed to find veneer invoice',
+            StatusCodes.NOT_FOUND
+          );
+        }
+        if (
+          !update_veneer_invoice.acknowledged ||
+          update_veneer_invoice.matchedCount <= 0
+        ) {
+          throw new ApiError(
+            'Failed to update veneer invoive isEditable status',
+            StatusCodes.INTERNAL_SERVER_ERROR
+          );
+        }
+      }
+    }
+
     if (
-      issue_for_grouping?.process_done_id &&
       issue_for_grouping.issued_from === issues_for_status.smoking_dying
     ) {
       await revert_to_process_done();
     } else if (
-      issue_for_grouping?.dressing_done_id &&
       issue_for_grouping.issued_from === issues_for_status.dressing
     ) {
       await revert_to_dressing_done();
+    } else if (
+      issue_for_grouping.issued_from === issues_for_status.veneer
+    ) {
+      await revert_to_veneer_inventory();
     } else {
       throw new ApiError('No data found to revert', StatusCodes.BAD_REQUEST);
     }
 
-    const delete_issue_for_grouping = await issues_for_grouping_model.deleteOne(
+    const delete_issue_for_grouping = await issues_for_grouping_model.deleteMany(
       {
-        _id: issue_for_grouping?._id,
-        issued_from: issue_for_grouping?.issued_from,
+        unique_identifier: issue_for_grouping?._id?.unique_identifier,
+        pallet_number: issue_for_grouping?._id?.pallet_number,
       },
       { session }
     );
@@ -594,7 +888,7 @@ export const revert_issue_for_grouping = catchAsync(async (req, res, next) => {
       delete_issue_for_grouping?.deletedCount <= 0
     ) {
       throw new ApiError(
-        'Failed to delete dressing done history',
+        'Failed to delete issue for grouping',
         StatusCodes.NOT_FOUND
       );
     }
@@ -615,14 +909,17 @@ export const revert_issue_for_grouping = catchAsync(async (req, res, next) => {
 });
 
 export const fetch_single_issue_for_grouping_details = catchAsync(async (req, res, next) => {
-  const { id } = req.params;
-  if (!id) {
-    throw new ApiError(`Please provide id`, StatusCodes.BAD_REQUEST);
+  const { unique_identifier, pallet_number } = req.params;
+  if (!unique_identifier || !pallet_number) {
+    throw new ApiError(`Please provide unique_identifier or pallet_number`, StatusCodes.BAD_REQUEST);
   }
 
   const agg_match = {
     $match: {
-      _id: mongoose.Types.ObjectId.createFromHexString(id),
+      _id: {
+        unique_identifier: mongoose.Types.ObjectId.createFromHexString(unique_identifier),
+        pallet_number: pallet_number,
+      }
     },
   };
 
