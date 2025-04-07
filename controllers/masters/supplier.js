@@ -196,7 +196,6 @@ export const addBranchToSupplier = catchAsync(async (req, res) => {
     is_main_branch,
     branch_name,
   } = req.body;
-  console.log('req body => ', req.body);
 
   const requiredFields = [
     'contact_person',
@@ -240,21 +239,6 @@ export const addBranchToSupplier = catchAsync(async (req, res) => {
       );
     }
 
-    // const existingContact = await supplierBranchModel.findOne({
-    //   $or: [
-    //     { "contact_person.email": email },
-    //     { "contact_person.mobile_number": mobile_number },
-    //   ],
-    // });
-
-    // if (existingContact) {
-    //   return res.json(
-    //     new ApiResponse(
-    //       StatusCodes.CONFLICT,
-    //       `Contact person with email ${email} or mobile number ${mobile_number} already exists`
-    //     )
-    //   );
-    // }
   }
   const newSupplierBranch = new supplierBranchModel({
     supplier_id: id,
@@ -280,74 +264,7 @@ export const addBranchToSupplier = catchAsync(async (req, res) => {
   );
 });
 
-//old
-// export const fetchAllSupplierWithBranchesDetails = catchAsync(
-//   async (req, res) => {
-//     const { query, sortField, sortOrder, page, limit } = req.query;
-//     const pageInt = parseInt(page) || 1;
-//     const limitInt = parseInt(limit) || 10;
-//     const skipped = (pageInt - 1) * limitInt;
 
-//     const sortDirection = sortOrder === "desc" ? -1 : 1;
-//     const sortObj = sortField ? { [sortField]: sortDirection } : {};
-
-//     const searchQuery = query
-//       ? {
-//           $or: [
-//             { "contact_person.name": { $regex: query, $options: "i" } },
-//             {
-//               "supplierDetails.supplier_name": { $regex: query, $options: "i" },
-//             },
-//             {
-//               "supplierDetails.supplier_type": { $regex: query, $options: "i" },
-//             },
-//           ],
-//         }
-//       : {};
-
-//     const pipeline = [
-//       { $match: searchQuery },
-//       {
-//         $lookup: {
-//           from: "suppliers",
-//           localField: "supplier_id",
-//           foreignField: "_id",
-//           as: "supplierDetails",
-//         },
-//       },
-
-//       {
-//         $unwind: "$supplierDetails",
-//       },
-//       { $skip: skipped },
-//       { $limit: limitInt },
-//       // { $sort: sortObj }
-//     ];
-
-//     if (Object.keys(sortObj).length > 0) {
-//       pipeline.push({ $sort: sortObj });
-//     }
-
-//     const allDetails = await supplierBranchModel.aggregate(pipeline);
-
-//     if (allDetails.length === 0) {
-//       return res.json(new ApiResponse(StatusCodes.OK, "NO Data found..."));
-//     }
-//     // const totalPage = allDetails.length;
-//     const totalDocs = await supplierBranchModel.countDocuments({
-//       ...searchQuery,
-//     });
-//     const totalPage = Math.ceil(totalDocs / limitInt);
-//     return res.json(
-//       new ApiResponse(StatusCodes.OK, "All Details fetched succesfully..", {
-//         allDetails,
-//         totalPage,
-//       })
-//     );
-//   }
-// );
-
-//new
 export const fetchAllSupplierWithBranchesDetails = catchAsync(
   async (req, res) => {
     const {
