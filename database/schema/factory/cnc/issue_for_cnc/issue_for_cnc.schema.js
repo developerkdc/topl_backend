@@ -1,12 +1,26 @@
 import mongoose from 'mongoose';
-import { item_issued_from } from '../../../../Utils/constants/constants.js';
+import { item_issued_for, item_issued_from } from '../../../../Utils/constants/constants.js';
+
+const validate_order_field = function () {
+    return this.issued_for === item_issued_for?.order ? true : false
+}
 
 const issue_for_cnc_schema = new mongoose.Schema(
     {
         sr_no: Number,
-        pressing_details_id: {
+        order_id: {
             type: mongoose.Schema.Types.ObjectId,
-            required: [true, "Pressing Details ID is required."]
+            required: [validate_order_field, "Order ID is required."],
+            default: null
+        },
+        order_item_id: {
+            type: mongoose.Schema.Types.ObjectId,
+            required: [validate_order_field, "Order Item ID is required."],
+            default: null
+        },
+        issued_from_id: {
+            type: mongoose.Schema.Types.ObjectId,
+            required: [true, "Issued From ID is required."]
         },
         issued_sheets: {
             type: Number,
@@ -27,10 +41,18 @@ const issue_for_cnc_schema = new mongoose.Schema(
         issued_from: {
             type: String,
             enum: {
-                values: [item_issued_from?.pressing_factory],
-                message: `Invalid Type -> {{VALUE}} , it must be one of the ${item_issued_from?.pressing_factory}`
+                values: [item_issued_from?.pressing_factory, item_issued_from?.cnc_factory, item_issued_from?.color_factory, item_issued_from?.bunito_factory, item_issued_from?.polishing_factory],
+                message: `Invalid Type -> {{VALUE}} , it must be one of the ${(item_issued_from?.pressing_factory, item_issued_from?.cnc_factory, item_issued_from?.color_factory, item_issued_from?.bunito_factory, item_issued_from?.polishing_factory)}`
             },
-            default: item_issued_from?.pressing_factory
+            required: [true, "Issued from is required."]
+        },
+        issued_for: {
+            type: String,
+            enum: {
+                values: [item_issued_for?.order, item_issued_for?.sample, item_issued_for?.stock],
+                message: `Invalid type -> {{VALUE}}, it must be one of the ${(item_issued_for?.order, item_issued_for?.sample, item_issued_for?.stock)}`
+            },
+            required: [true, "Item Issued for is required."]
         },
         remark: {
             type: String,
@@ -48,8 +70,6 @@ const issue_for_cnc_schema = new mongoose.Schema(
     { timestamps: true }
 );
 
-// issue_for_resize_schema.index({ plywood_item_id: 1 }, { unique: true })
-// issue_for_resize_schema.index({ item_sr_no: 1 });
 issue_for_cnc_schema.index({ sr_no: 1 }, { unique: true })
 
 const issue_for_cnc_model = mongoose.model('issued_for_cnc', issue_for_cnc_schema, 'issued_for_cnc');
