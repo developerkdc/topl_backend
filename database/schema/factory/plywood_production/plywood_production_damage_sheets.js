@@ -39,6 +39,10 @@ const plywood_production_damage_schema = new mongoose.Schema(
       type: Number,
       required: [true, 'Damage sheets are required'],
     },
+    damage_sqm: {
+      type: Number,
+      required: [true, 'Damage sheets are required'],
+    },
     plywood_production_id: {
       type: mongoose.Schema.Types.ObjectId,
       require: [true, "Plywood production Id is required"]

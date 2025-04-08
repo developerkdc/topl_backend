@@ -114,6 +114,8 @@ const issue_for_resize_schema = new mongoose.Schema(
     },
     { timestamps: true }
 );
+
+issue_for_resize_schema.index({ plywood_item_id: 1})
 issue_for_resize_schema.index({ item_sr_no: 1 });
 
 const issue_for_plywood_resizing_model = mongoose.model('issued_for_plywood_resizing_items', issue_for_resize_schema, 'issued_for_plywood_resizing_items');

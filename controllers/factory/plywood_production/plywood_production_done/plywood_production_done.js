@@ -60,7 +60,7 @@ export const listing_plywood_production_done = catchAsync(
     const match_query = {
       ...filterData,
       ...search_query,
-      available_no_of_sheets: { $gt: 0 }
+      available_no_of_sheets: { $gt: 0 },
     };
 
     const aggCreatedByLookup = {
@@ -267,7 +267,6 @@ export const update_plywood_production_done = catchAsync(async (req, res) => {
       );
     }
 
-
     if (!core_details_array) {
       throw new ApiError(
         'core_details_array details are missing.',
@@ -342,12 +341,9 @@ export const update_plywood_production_done = catchAsync(async (req, res) => {
       })
     );
 
-
     const missingItems = face_details_array.filter(
       (_, index) => is_face_available_greater_than_consumed[index] === null
     );
-
-
 
     const is_core_available_greater_than_consumed = await Promise.all(
       core_details_array.map(async (item) => {
@@ -364,17 +360,16 @@ export const update_plywood_production_done = catchAsync(async (req, res) => {
       })
     );
 
-
     const missingCoreItems = core_details_array.filter(
       (_, index) => is_core_available_greater_than_consumed[index] === null
     );
 
     if (missingItems.length > 0 && missingCoreItems.length > 0) {
-      const newMSGDetails = missingItems.map(item => {
+      const newMSGDetails = missingItems.map((item) => {
         return `Inward No : ${item.inward_sr_no} and Sr No :${item.face_sr_no}`;
       });
 
-      const newCoreMSGDetails = missingCoreItems.map(item => {
+      const newCoreMSGDetails = missingCoreItems.map((item) => {
         return `Inward No: ${item.inward_sr_no} and Sr No: ${item.core_sr_no}`;
       });
 
@@ -383,9 +378,8 @@ export const update_plywood_production_done = catchAsync(async (req, res) => {
       );
     }
 
-
     if (missingItems.length > 0) {
-      const newMSGDetails = missingItems.map(item => {
+      const newMSGDetails = missingItems.map((item) => {
         return `Inward No : ${item.inward_sr_no} and Sr No :${item.face_sr_no}`;
       });
 
@@ -394,9 +388,8 @@ export const update_plywood_production_done = catchAsync(async (req, res) => {
       );
     }
 
-
     if (missingCoreItems.length > 0) {
-      const newCoreMSGDetails = missingCoreItems.map(item => {
+      const newCoreMSGDetails = missingCoreItems.map((item) => {
         return `Inward No: ${item.inward_sr_no} and Sr No: ${item.core_sr_no}`;
       });
 
@@ -404,7 +397,6 @@ export const update_plywood_production_done = catchAsync(async (req, res) => {
         `Available core sheets are issued by someone for ${newCoreMSGDetails.join()}`
       );
     }
-
 
     //fetching all plywood_production_consumed_items_details base on plywood_production_id so we can revert sheets face and core inventory
     const plywood_production_consumed_items =
@@ -598,11 +590,14 @@ export const update_plywood_production_done = catchAsync(async (req, res) => {
         (item.issued_amount = item?.issued_amount),
         (item.created_by = userDetails?._id),
         (item.updated_by = userDetails?._id);
-      delete item?._id
+      delete item?._id;
       return item;
     });
 
-    console.log("face_details_array_for_history : ", face_details_array_for_history);
+    console.log(
+      'face_details_array_for_history : ',
+      face_details_array_for_history
+    );
 
     const is_face_history_updated = await face_history_model.insertMany(
       face_details_array_for_history,
@@ -649,7 +644,7 @@ export const update_plywood_production_done = catchAsync(async (req, res) => {
         (item.issued_amount = item?.issued_amount),
         (item.created_by = userDetails?._id),
         (item.updated_by = userDetails?._id);
-      delete item?._id
+      delete item?._id;
       return item;
     });
 
@@ -722,6 +717,10 @@ export const add_to_damage_from_plywood_production_done = catchAsync(
 
       const newMax = maxNumber.length > 0 ? maxNumber[0].max + 1 : 1;
 
+      const factor =
+        damage_sheets / plywood_production_data?.available_no_of_sheets;
+      const damage_sqm = plywood_production_data?.available_total_sqm * factor;
+
       const added_plywood_production_damage_sheets =
         await plywood_production_damage_model.insertMany(
           {
@@ -735,6 +734,7 @@ export const add_to_damage_from_plywood_production_done = catchAsync(
             total_sqm: plywood_production_data?.total_sqm,
             plywood_production_id: plywood_production_data?._id,
             damage_sheets: damage_sheets,
+            damage_sqm: damage_sqm,
             created_by: userDetails?._id,
             updated_by: userDetails?._id,
           },
@@ -757,6 +757,7 @@ export const add_to_damage_from_plywood_production_done = catchAsync(
           {
             $inc: {
               available_no_of_sheets: -Number(damage_sheets),
+              available_total_sqm: -Number(damage_sqm),
             },
             $set: {
               is_added_to_damage: true,
@@ -785,6 +786,148 @@ export const add_to_damage_from_plywood_production_done = catchAsync(
       return res.status(StatusCodes.OK).json(response);
     } catch (error) {
       await session.abortTransaction();
+      throw error;
+    } finally {
+      await session.endSession();
+    }
+  }
+);
+
+export const revert_plywood_production_done_items = catchAsync(
+  async (req, res) => {
+    const { id } = req.params;
+    const userDetails = req.userDetails;
+    if (!id) {
+      throw new ApiError('ID is missing', StatusCodes.BAD_REQUEST);
+    }
+    if (!isValidObjectId(id)) {
+      throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
+    }
+    const session = await mongoose.startSession();
+    try {
+      session.startTransaction();
+      const plywood_production_done_data = await plywood_production_model
+        ?.findById(id)
+        .lean();
+
+      if (!plywood_production_done_data) {
+        throw new ApiError(
+          'Plywood production done data not found',
+          StatusCodes.NOT_FOUND
+        );
+      }
+
+      const delete_plywood_production_done_result =
+        await plywood_production_model?.deleteOne(
+          { _id: plywood_production_done_data?._id },
+          { session }
+        );
+
+      if (
+        !delete_plywood_production_done_result?.acknowledged ||
+        delete_plywood_production_done_result?.deletedCount === 0
+      ) {
+        throw new ApiError(
+          'Failed to delete plywood production done details',
+          StatusCodes.BAD_REQUEST
+        );
+      }
+      
+
+      if (resizing_done_data?.face_item_details?.length > 0) {
+        const restoreBulkOperations =
+          resizing_done_data?.face_item_details?.map((face) => ({
+            updateOne: {
+              filter: { _id: face?.face_item_id },
+              update: {
+                $inc: {
+                  available_sheets: face?.no_of_sheets,
+                  available_amount: face?.amount,
+                  available_sqm: face?.sqm,
+                },
+                $set: { updated_by: userDetails?._id },
+              },
+            },
+          }));
+
+        if (restoreBulkOperations?.length > 0) {
+          const result = await face_inventory_items_details.bulkWrite(
+            restoreBulkOperations,
+            { session }
+          );
+
+          if (result?.modifiedCount === 0) {
+            throw new ApiError(
+              'Failed to update face inventory item details',
+              StatusCodes.BAD_REQUEST
+            );
+          }
+        }
+
+        
+        const is_face_history_deleted = await face_history_model.deleteMany({
+          issued_for_plywood_production_id: plywood_production_done_data?._id,
+        });
+        if (is_face_history_deleted?.deletedCount <= 0) {
+          throw new ApiError(
+            'Failed to delete face inventory history while reverting plywood resizing done',
+            StatusCodes.BAD_REQUEST
+          );
+        }
+
+        const is_core_history_deleted = await core_history_model.deleteMany({
+          issued_for_plywood_production_id: plywood_production_done_data?._id,
+        });
+        if (is_core_history_deleted?.deletedCount <= 0) {
+          throw new ApiError(
+            'Failed to delete core inventory history while reverting plywood resizing done',
+            StatusCodes.BAD_REQUEST
+          );
+        }
+
+      }
+
+      const update_is_resizing_done_status_from_issue_for_resizing =
+        await issue_for_plywood_resizing_model?.updateOne(
+          { _id: resizing_done_data?.issue_for_resizing_id },
+          {
+            $set: {
+              is_resizing_done: false,
+            },
+          },
+          { session }
+        );
+
+      if (
+        update_is_resizing_done_status_from_issue_for_resizing.matchedCount ===
+        0
+      ) {
+        throw new ApiError(
+          'Issue for resizing item not found.',
+          StatusCodes.NOT_FOUND
+        );
+      }
+
+      if (
+        !update_is_resizing_done_status_from_issue_for_resizing?.acknowledged ||
+        update_is_resizing_done_status_from_issue_for_resizing.modifiedCount ===
+          0
+      ) {
+        throw new ApiError(
+          'Failed to update resizind done status.',
+          StatusCodes.NOT_FOUND
+        );
+      }
+
+      const response = new ApiResponse(
+        StatusCodes.OK,
+        'Resizing details Reverted Successfully',
+        delete_resizing_done_result
+      );
+      await session.commitTransaction();
+      return res.status(StatusCodes.OK).json(response);
+    } catch (error) {
+      await session?.abortTransaction();
       throw error;
     } finally {
       await session.endSession();

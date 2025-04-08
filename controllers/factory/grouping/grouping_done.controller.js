@@ -179,7 +179,7 @@ export const edit_grouping_done = catchAsync(async (req, res, next) => {
         no_of_leaves: item?.no_of_leaves,
         sqm: item?.sqm,
         amount: item?.amount,
-      }
+      };
       item.avaiable_details = avaiable_details;
       item.grouping_done_other_details_id = add_other_details_id;
       item.created_by = item.created_by ? item.created_by : userDetails?._id;
@@ -1246,5 +1246,40 @@ export const recreate_grouping_done_items = catchAsync(
     } finally {
       await session.endSession();
     }
+  }
+);
+
+//group no dropdown for photo master
+export const group_no_dropdown_for_photo_master = catchAsync(
+  async (req, res, next) => {
+    const { group_no } = req.query;
+   
+    const matchQuery = {
+      is_damaged: false,
+    };
+    if (group_no) {
+      matchQuery.$or = [{ photo_no: null }, { group_no: group_no }]
+    } else {
+      matchQuery.photo_no= null,
+      matchQuery.photo_no_id= null
+    }
+
+    const fetch_group_no = await grouping_done_items_details_model.find(
+      {
+        ...matchQuery,
+      },
+      {
+        group_no: 1,
+        photo_no: 1,
+        photo_no_id: 1,
+      }
+    );
+    const response = new ApiResponse(
+      StatusCodes.OK,
+      'Details Fetched successfully',
+      fetch_group_no
+    );
+
+    return res.status(StatusCodes.OK).json(response);
   }
 );
