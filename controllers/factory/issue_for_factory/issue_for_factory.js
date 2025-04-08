@@ -1,9 +1,7 @@
 import mongoose, { isValidObjectId } from 'mongoose';
-import ApiResponse from '../../../../utils/ApiResponse.js';
 import { StatusCodes } from '../../../utils/constants.js';
-import ApiError from '../../../../utils/errors/apiError.js';
+import ApiError from '../../../utils/errors/ApiError.js';
 import issue_for_cnc_model from '../../../database/schema/factory/cnc/issue_for_cnc/issue_for_cnc.schema.js';
-import { issues_for_status } from '../../../../database/Utils/constants/constants.js';
 import {
     item_issued_for,
     item_issued_from,
@@ -75,10 +73,20 @@ class Issue_For_Factory {
                 throw new ApiError('Invalid Factory Name.', StatusCodes.BAD_REQUEST);
             }
 
+            const [max_sr_no] = await add_to_factory_model.aggregate([{
+                $group: {
+                    _id: null,
+                    max_sr_no: {
+                        $max: "$sr_no"
+                    }
+                }
+            }])
+
             //add issue data to the factory
             const [add_data_to_factory_result] = await add_to_factory_model.create(
                 [
                     {
+                        sr_no: max_sr_no ? max_sr_no?.max_sr_no + 1 : 1,
                         order_id:
                             this.issued_for === item_issued_for?.order
                                 ? this.issue_details?.order_id

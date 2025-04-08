@@ -2,9 +2,10 @@ import mongoose from "mongoose";
 
 
 const cnc_damage_schema = new mongoose.Schema({
-    issue_for_resizing_id: {
+    sr_no: Number,
+    cnc_done_id: {
         type: mongoose.Schema.Types.ObjectId,
-        required: [true, "Issue for resizing ID is required."]
+        required: [true, "CNC Done ID is required."]
     },
     no_of_sheets: {
         type: Number,
@@ -29,7 +30,8 @@ const cnc_damage_schema = new mongoose.Schema({
 
 }, { timestamps: true });
 
-cnc_damage_schema.index({ issue_for_resizing_id: 1 }, { unique: true })
+cnc_damage_schema.index({ cnc_done_id: 1 })
+cnc_damage_schema.index({ sr_no: 1 })
 
 const cnc_damage_model = mongoose.model('cnc_damage_details', cnc_damage_schema, 'cnc_damage_details');
 
