@@ -1,6 +1,6 @@
 import ApiResponse from '../../../utils/ApiResponse.js';
 import { StatusCodes } from '../../../utils/constants.js';
-import ApiError from '../../../../utils/errors/apiError.js';
+import ApiError from '../../../utils/errors/ApiError.js';
 import catchAsync from '../../../utils/errors/catchAsync.js';
 import mongoose from 'mongoose';
 import Issue_For_Factory from './issue_for_factory.js';

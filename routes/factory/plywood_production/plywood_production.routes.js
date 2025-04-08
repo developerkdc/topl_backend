@@ -5,6 +5,7 @@ import { create_plywood_production } from '../../../controllers/factory/plywood_
 import {
   add_to_damage_from_plywood_production_done,
   listing_plywood_production_done,
+  revert_plywood_production_done_items,
   single_plywood_production_done_for_update,
   update_plywood_production_done,
 } from '../../../controllers/factory/plywood_production/plywood_production_done/plywood_production_done.js';
@@ -63,4 +64,6 @@ plywoodProductionRouter.post(
   AuthMiddleware,
   listing_plywood_production_damage
 );
+
+plywoodProductionRouter.post("/revert/:id", AuthMiddleware, revert_plywood_production_done_items)
 export default plywoodProductionRouter;

@@ -38,6 +38,27 @@ const issue_for_cnc_schema = new mongoose.Schema(
             type: Boolean,
             default: false
         },
+        available_details: {
+            no_of_sheets: {
+                type: Number,
+                default: function () {
+                    return this.issued_sheets
+                }
+            },
+            sqm: {
+                type: Number,
+                default: function () {
+                    return this.issued_sqm
+                }
+            },
+            amount: {
+                type: Number,
+                default: function () {
+                    return this.issued_amount
+                }
+            },
+        },
+
         issued_from: {
             type: String,
             enum: {
@@ -69,8 +90,8 @@ const issue_for_cnc_schema = new mongoose.Schema(
     },
     { timestamps: true }
 );
+const indexed_fields = [[{ sr_no: 1 }, { unique: true }]]
+indexed_fields?.forEach((field) => issue_for_cnc_schema.index(...field))
 
-issue_for_cnc_schema.index({ sr_no: 1 }, { unique: true })
-
-const issue_for_cnc_model = mongoose.model('issued_for_cnc', issue_for_cnc_schema, 'issued_for_cnc');
+const issue_for_cnc_model = mongoose.model('issued_for_cnc_details', issue_for_cnc_schema, 'issued_for_cnc_details');
 export default issue_for_cnc_model

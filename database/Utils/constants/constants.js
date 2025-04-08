@@ -102,10 +102,11 @@ export const item_issued_from = {
   dressing_factory: 'DRESSING_FACTORY',
   grouping_factory: "GROUPING_FACTORY",
   pressing_factory: "PRESSING_FACTORY",
-  cnc_factory: "CNC_FACTORY",
-  color_factory: "COLOR_FACTORY",
-  polishing_factory: "POLISHING_FACTORY",
-  bunito_factory: "BUNITO_FACTORY",
+  cnc_factory: "CNC",
+  canvas_factory: "CANVAS",
+  color_factory: "COLOR",
+  polishing_factory: "POLISHING",
+  bunito_factory: "BUNITO",
 };
 
 

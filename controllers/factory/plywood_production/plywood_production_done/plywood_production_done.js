@@ -594,10 +594,7 @@ export const update_plywood_production_done = catchAsync(async (req, res) => {
       return item;
     });
 
-    console.log(
-      'face_details_array_for_history : ',
-      face_details_array_for_history
-    );
+  
 
     const is_face_history_updated = await face_history_model.insertMany(
       face_details_array_for_history,
@@ -832,97 +829,111 @@ export const revert_plywood_production_done_items = catchAsync(
           StatusCodes.BAD_REQUEST
         );
       }
+
+      const face_item_details =
+        await plywood_production_consumed_items_model.find({
+          plywood_production_id: plywood_production_done_data?._id,
+          core_inventory_item_id: null,
+        });
+      const core_item_details =
+        await plywood_production_consumed_items_model.find({
+          plywood_production_id: plywood_production_done_data?._id,
+          face_inventory_item_id: null,
+        });
+
+      const delete_consume_items =
+        await plywood_production_consumed_items_model.deleteMany({
+          plywood_production_id: plywood_production_done_data?._id,
+        });
+     
       
-
-      if (resizing_done_data?.face_item_details?.length > 0) {
-        const restoreBulkOperations =
-          resizing_done_data?.face_item_details?.map((face) => ({
-            updateOne: {
-              filter: { _id: face?.face_item_id },
-              update: {
-                $inc: {
-                  available_sheets: face?.no_of_sheets,
-                  available_amount: face?.amount,
-                  available_sqm: face?.sqm,
-                },
-                $set: { updated_by: userDetails?._id },
-              },
-            },
-          }));
-
-        if (restoreBulkOperations?.length > 0) {
-          const result = await face_inventory_items_details.bulkWrite(
-            restoreBulkOperations,
-            { session }
-          );
-
-          if (result?.modifiedCount === 0) {
-            throw new ApiError(
-              'Failed to update face inventory item details',
-              StatusCodes.BAD_REQUEST
-            );
-          }
-        }
-
-        
-        const is_face_history_deleted = await face_history_model.deleteMany({
-          issued_for_plywood_production_id: plywood_production_done_data?._id,
-        });
-        if (is_face_history_deleted?.deletedCount <= 0) {
-          throw new ApiError(
-            'Failed to delete face inventory history while reverting plywood resizing done',
-            StatusCodes.BAD_REQUEST
-          );
-        }
-
-        const is_core_history_deleted = await core_history_model.deleteMany({
-          issued_for_plywood_production_id: plywood_production_done_data?._id,
-        });
-        if (is_core_history_deleted?.deletedCount <= 0) {
-          throw new ApiError(
-            'Failed to delete core inventory history while reverting plywood resizing done',
-            StatusCodes.BAD_REQUEST
-          );
-        }
-
+      if (delete_consume_items?.deletedCount <= 0) {
+        throw new ApiError(
+          'Failed to delete comsume items while reverting plywood production done',
+          StatusCodes?.BAD_REQUEST
+        );
       }
 
-      const update_is_resizing_done_status_from_issue_for_resizing =
-        await issue_for_plywood_resizing_model?.updateOne(
-          { _id: resizing_done_data?.issue_for_resizing_id },
-          {
-            $set: {
-              is_resizing_done: false,
+      const restoreBulkOperations = face_item_details?.map((face) => ({
+        updateOne: {
+          filter: { _id: face?.face_inventory_item_id },
+          update: {
+            $inc: {
+              available_sheets: face?.number_of_sheets,
+              available_amount: face?.amount,
+              available_sqm: face?.total_sq_meter,
             },
+            $set: { updated_by: userDetails?._id },
           },
+        },
+      }));
+
+      if (restoreBulkOperations?.length > 0) {
+        const result = await face_inventory_items_details.bulkWrite(
+          restoreBulkOperations,
           { session }
         );
+       
+        if (result?.modifiedCount === 0) {
+          throw new ApiError(
+            'Failed to update face inventory item details',
+            StatusCodes.BAD_REQUEST
+          );
+        }
+      }
+      const restoreBulkOperations2 = core_item_details?.map((core) => ({
+        updateOne: {
+          filter: { _id: core?.core_inventory_item_id },
+          update: {
+            $inc: {
+              available_sheets: core?.number_of_sheets,
+              available_amount: core?.amount,
+              available_sqm: core?.total_sq_meter,
+            },
+            $set: { updated_by: userDetails?._id },
+          },
+        },
+      }));
 
-      if (
-        update_is_resizing_done_status_from_issue_for_resizing.matchedCount ===
-        0
-      ) {
+      if (restoreBulkOperations2?.length > 0) {
+        const result = await core_inventory_items_details.bulkWrite(
+          restoreBulkOperations2,
+          { session }
+        );
+        if (result?.modifiedCount === 0) {
+          throw new ApiError(
+            'Failed to update Core inventory item details',
+            StatusCodes.BAD_REQUEST
+          );
+        }
+      }
+
+      const is_face_history_deleted = await face_history_model.deleteMany({
+        issued_for_plywood_production_id: plywood_production_done_data?._id,
+      });
+     
+      if (is_face_history_deleted?.deletedCount <= 0) {
         throw new ApiError(
-          'Issue for resizing item not found.',
-          StatusCodes.NOT_FOUND
+          'Failed to delete face inventory history while reverting plywood production done',
+          StatusCodes.BAD_REQUEST
         );
       }
 
-      if (
-        !update_is_resizing_done_status_from_issue_for_resizing?.acknowledged ||
-        update_is_resizing_done_status_from_issue_for_resizing.modifiedCount ===
-          0
-      ) {
+      const is_core_history_deleted = await core_history_model.deleteMany({
+        issued_for_plywood_production_id: plywood_production_done_data?._id,
+      });
+     
+      if (is_core_history_deleted?.deletedCount <= 0) {
         throw new ApiError(
-          'Failed to update resizind done status.',
-          StatusCodes.NOT_FOUND
+          'Failed to delete core inventory history while reverting plywood resizing done',
+          StatusCodes.BAD_REQUEST
         );
       }
 
       const response = new ApiResponse(
         StatusCodes.OK,
-        'Resizing details Reverted Successfully',
-        delete_resizing_done_result
+        'Plywood Production details Reverted Successfully',
+        delete_plywood_production_done_result
       );
       await session.commitTransaction();
       return res.status(StatusCodes.OK).json(response);
