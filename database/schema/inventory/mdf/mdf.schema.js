@@ -51,9 +51,10 @@ export const item_details_schema = new mongoose.Schema(
     },
     mdf_type: {
       type: String,
-      required: [true, 'MDF Type is required'],
+      // required: [true, 'MDF Type is required'],
       trim: true,
       uppercase: true,
+      default: null,
     },
     pallet_number: {
       type: Number,
