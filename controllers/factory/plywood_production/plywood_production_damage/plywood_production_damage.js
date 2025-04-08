@@ -195,6 +195,7 @@ export const revert_plywood_production_damage = catchAsync(
           {
             $inc: {
               available_no_of_sheets: Number(plywood_production_damage_data?.damage_sheets),
+              available_total_sqm: Number(plywood_production_damage_data?.damage_sqm),
             },
             $set: {
               is_added_to_damage: false,

@@ -12,6 +12,36 @@ const series_product_order_item_details_schema = new mongoose.Schema(
       ref: 'orders',
       required: [true, 'Order Id is required'],
     },
+    item_name: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      default: null,
+    },
+    item_name_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
+    item_sub_category_name: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      default: null,
+    },
+    item_sub_category_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
+    photo_number: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      required: [true, 'Photo No is required'],
+    },
+    photo_number_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, 'Photo Id is required'],
+    },
     dispatch_schedule: {
       type: String,
       trim: true,
@@ -34,15 +64,29 @@ const series_product_order_item_details_schema = new mongoose.Schema(
       uppercase: true,
       default: null,
     },
-    photo_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: [true, 'Photo Id is required'],
+    veneer_min_thickness: {
+      type: Number,
+      default: null,
     },
-    photo_no: {
-      type: String,
-      trim: true,
-      uppercase: true,
-      required: [true, 'Photo No is required'],
+    sq_feet: {
+      type: Number,
+      required: [true, 'SQF is required'],
+    },
+    base_required_sheet: {
+      type: Number,
+      default: null,
+    },
+    flow_process: [
+      {
+        type: String,
+        trim: true,
+        uppercase: true,
+        default: null,
+      },
+    ],
+    no_of_hours: {
+      type: Number,
+      default: null,
     },
     base_size: {
       type: String,
@@ -50,55 +94,13 @@ const series_product_order_item_details_schema = new mongoose.Schema(
       uppercase: true,
       required: [true, 'Base Size is required'],
     },
-    base_length: {
-      type: Number,
-      required: [true, 'Base Length is required'],
-    },
-    base_width: {
-      type: Number,
-      required: [true, 'Base Width is required'],
-    },
-    veneer_min_thickness: {
-      type: Number,
+    pressing_instructions: {
+      type: String,
+      trim: true,
+      uppercase: true,
       default: null,
     },
-    base_min_thickness: {
-      type: Number,
-      default: null,
-    },
-    no_of_hours: {
-      type: Number,
-      default: null,
-    },
-    required_sheet: {
-      type: Number,
-      required: [true, 'Required sheet is required'],
-    },
-    sqm: {
-      type: Number,
-      required: [true, 'SQM is required'],
-    },
-    sq_feet: {
-      type: Number,
-      required: [true, 'SQF is required'],
-    },
-    previous_rate: {
-      type: Number,
-      default: null,
-    },
-    rate_per_sq_feet: {
-      type: Number,
-      required: [true, 'Rate per SQF is required'],
-    },
-    amount: {
-      type: Number,
-      required: [true, 'Amount is required'],
-    },
-    sub_category_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      default: null,
-    },
-    sub_category_name: {
+    base_type: {
       type: String,
       trim: true,
       uppercase: true,
@@ -114,11 +116,42 @@ const series_product_order_item_details_schema = new mongoose.Schema(
       uppercase: true,
       default: null,
     },
-    item_id: {
-      type: mongoose.Schema.Types.ObjectId,
+    base_min_thickness: {
+      type: Number,
       default: null,
     },
-    item_name: {
+    length: {
+      type: Number,
+      required: [true, 'Base Length is required'],
+    },
+    width: {
+      type: Number,
+      required: [true, 'Base Width is required'],
+    },
+    thickness: {
+      type: Number,
+    },
+    no_of_sheets: {
+      type: Number,
+      required: [true, 'Required sheet is required'],
+    },
+    sqm: {
+      type: Number,
+      required: [true, 'SQM is required'],
+    },
+    previous_rate: {
+      type: Number,
+      default: null,
+    },
+    rate_per_sq_feet: {
+      type: Number,
+      required: [true, 'Rate per SQF is required'],
+    },
+    amount: {
+      type: Number,
+      required: [true, 'Amount is required'],
+    },
+    remark: {
       type: String,
       trim: true,
       uppercase: true,
@@ -130,36 +163,6 @@ const series_product_order_item_details_schema = new mongoose.Schema(
         values: [order_item_status?.cancel],
         message: `Invalid Order Status -> {{VALUE}} it must be one of the ${order_item_status?.cancel}`,
       },
-      default: null,
-    },
-    pressing_instruction: {
-      type: String,
-      trim: true,
-      uppercase: true,
-      default: null,
-    },
-    base_type: {
-      type: String,
-      trim: true,
-      uppercase: true,
-      default: null,
-    },
-    base_required_sheet: {
-      type: Number,
-      default: null,
-    },
-    flow_process: [
-      {
-        type: String,
-        trim: true,
-        uppercase: true,
-        default: null,
-      },
-    ],
-    remark: {
-      type: String,
-      trim: true,
-      uppercase: true,
       default: null,
     },
     created_by: {

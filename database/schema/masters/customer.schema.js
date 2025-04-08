@@ -111,11 +111,11 @@ const customerSchema = new mongoose.Schema(
       trim: true,
       default: null,
     },
-    fax_number: {
-      type: String,
-      trim: true,
-      default: null,
-    },
+    // fax_number: {
+    //   type: String,
+    //   trim: true,
+    //   default: null,
+    // },
     gst_number: {
       type: String,
       trim: true,
@@ -134,24 +134,24 @@ const customerSchema = new mongoose.Schema(
       trim: true,
       required: [true, 'legal name is required'],
     },
-    ecc_number: {
-      type: String,
-      trim: true,
-      uppercase: true,
-      default: null,
-    },
-    cst_tin_number: {
-      type: String,
-      trim: true,
-      uppercase: true,
-      default: null,
-    },
-    gst_tin_number: {
-      type: String,
-      trim: true,
-      uppercase: true,
-      default: null,
-    },
+    // ecc_number: {
+    //   type: String,
+    //   trim: true,
+    //   uppercase: true,
+    //   default: null,
+    // },
+    // cst_tin_number: {
+    //   type: String,
+    //   trim: true,
+    //   uppercase: true,
+    //   default: null,
+    // },
+    // gst_tin_number: {
+    //   type: String,
+    //   trim: true,
+    //   uppercase: true,
+    //   default: null,
+    // },
     preferable_transport_for_part_load: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'transporters',

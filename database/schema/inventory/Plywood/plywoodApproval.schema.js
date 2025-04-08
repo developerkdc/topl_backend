@@ -57,9 +57,10 @@ const plywood_approval_item_details_schema = new mongoose.Schema(
     },
     plywood_type: {
       type: String,
-      required: [true, 'Plywood type is required'],
+      // required: [true, 'Plywood type is required'],
       trim: true,
       uppercase: true,
+      default:null,
     },
     // plywood_sub_type: {
     //   type: String,
