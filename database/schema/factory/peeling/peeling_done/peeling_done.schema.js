@@ -155,11 +155,11 @@ const peeling_done_items_schema = new mongoose.Schema(
       default: 0,
       required: [veneer_output_type_not_required_field, 'Width is required'],
     },
-    height: {
-      type: Number,
-      default: 0,
-      required: [veneer_output_type_not_required_field, 'Height is required'],
-    },
+    // height: {
+    //   type: Number,
+    //   default: 0,
+    //   required: [veneer_output_type_not_required_field, 'Height is required'],
+    // },
     thickness: {
       type: Number,
       default: 0,
