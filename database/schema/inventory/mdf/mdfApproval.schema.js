@@ -62,7 +62,7 @@ const mdf_approval_item_details_schema = new mongoose.Schema(
       // required: [true, 'MDF Type is required'],
       trim: true,
       uppercase: true,
-      default:null,
+      default: null,
     },
     pallet_number: {
       type: Number,

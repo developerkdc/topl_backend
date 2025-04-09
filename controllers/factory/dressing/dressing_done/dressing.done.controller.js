@@ -1205,7 +1205,9 @@ export const revert_dressing_done_items = catchAsync(async (req, res) => {
       dressing_done_other_details_id: other_details_data?._id,
     });
 
-    const dressing_done_items_log_no_code_map = dressing_done_items?.map((item) => item?.log_no_code)
+    const dressing_done_items_log_no_code_map = dressing_done_items?.map(
+      (item) => item?.log_no_code
+    );
 
     if (dressing_done_items?.length === 0) {
       throw new ApiError(
@@ -1243,12 +1245,17 @@ export const revert_dressing_done_items = catchAsync(async (req, res) => {
       );
     }
 
-    const update_dressing_missmatch_data_status_result = await dressing_miss_match_data_model.updateMany({ log_no_code: { $in: dressing_done_items_log_no_code_map } }, {
-      $set: {
-        process_status: dressing_error_types?.process_pending,
-        updated_by: _id
-      }
-    }, { session });
+    const update_dressing_missmatch_data_status_result =
+      await dressing_miss_match_data_model.updateMany(
+        { log_no_code: { $in: dressing_done_items_log_no_code_map } },
+        {
+          $set: {
+            process_status: dressing_error_types?.process_pending,
+            updated_by: _id,
+          },
+        },
+        { session }
+      );
 
     const revert_slicing_items = async () => {
       const update_slicing_other_details_editable_status =
@@ -1440,7 +1447,10 @@ export const create_dressing_items_from_dressing_report = catchAsync(
         },
         {}
       );
-      console.log("total_no_of_leaves_by_log_no_code : ", total_no_of_leaves_by_log_no_code)
+      console.log(
+        'total_no_of_leaves_by_log_no_code : ',
+        total_no_of_leaves_by_log_no_code
+      );
       //creating a object to count no of leaves by log_no_code
       const total_sqm_by_log_no_code = dressing_item_details?.reduce(
         (acc, item) => {
@@ -1767,8 +1777,8 @@ export const create_dressing_items_from_dressing_report = catchAsync(
         const peeling_done_items_log_no_code_set = new Set(
           peeling_done_items?.map((item) => item?.log_no_code)
         );
-        console.log(peeling_done_items)
-        console.log(total_no_of_leaves_by_log_no_code)
+        console.log(peeling_done_items);
+        console.log(total_no_of_leaves_by_log_no_code);
         const valid_dressing_items = [];
         const valid_dressing_items_id = [];
         const dressing_missmatch_updates = [];

@@ -132,14 +132,20 @@ export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(
       }
 
       //add issue for tapping items details to grouping done history
-      const { _id: issue_for_tapping_id, ...grouping_history_detials } = issues_for_tapping_details?.toObject();
+      const { _id: issue_for_tapping_id, ...grouping_history_detials } =
+        issues_for_tapping_details?.toObject();
       const insert_tapping_item_to_grouping_history =
-        await grouping_done_history_model.create([{
-          issue_for_tapping_id: issue_for_tapping_id,
-          ...grouping_history_detials
-        }], {
-          session,
-        });
+        await grouping_done_history_model.create(
+          [
+            {
+              issue_for_tapping_id: issue_for_tapping_id,
+              ...grouping_history_detials,
+            },
+          ],
+          {
+            session,
+          }
+        );
 
       const grouping_history_item_details =
         insert_tapping_item_to_grouping_history?.[0];
@@ -161,7 +167,8 @@ export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(
               updated_by: userDetails?._id,
             },
             $inc: {
-              'available_details.no_of_leaves': -issue_for_tapping_data?.no_of_leaves,
+              'available_details.no_of_leaves':
+                -issue_for_tapping_data?.no_of_leaves,
               'available_details.sqm': -issue_for_tapping_data?.sqm,
               'available_details.amount': -issue_for_tapping_data?.amount,
             },
@@ -271,8 +278,10 @@ export const revert_issue_for_tapping_item = catchAsync(
         );
       }
 
-      const grouping_done_item_id = delete_issue_for_tapping_item?.grouping_done_item_id;
-      const grouping_done_other_details_id = delete_issue_for_tapping_item?.grouping_done_other_details_id;
+      const grouping_done_item_id =
+        delete_issue_for_tapping_item?.grouping_done_item_id;
+      const grouping_done_other_details_id =
+        delete_issue_for_tapping_item?.grouping_done_other_details_id;
       // delete grouping done history item
       const delete_grouping_done_history_item =
         await grouping_done_history_model.deleteOne(
@@ -335,7 +344,9 @@ export const revert_issue_for_tapping_item = catchAsync(
             $expr: {
               $ne: ['$no_of_leaves', '$available_details.no_of_leaves'],
             },
-          }).session(session).lean();
+          })
+          .session(session)
+          .lean();
 
       if (
         isGroupingDoneOtherDetailsEditable &&
@@ -474,13 +485,13 @@ export const fetch_all_issue_for_tapping_details = catchAsync(
             $project: {
               group_no: 1,
               photo_no: 1,
-              photo_id: 1
+              photo_id: 1,
             },
           },
         ],
         as: 'grouping_done_items_details',
       },
-    }
+    };
     const aggGroupNoUnwind = {
       $unwind: {
         path: '$grouping_done_items_details',

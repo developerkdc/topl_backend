@@ -261,10 +261,10 @@ export const crossCuttingsDone_view_modal = mongoose.model(
       },
       {
         $unwind: {
-          path: "$created_user_details",
-          preserveNullAndEmptyArrays: true
-        }
-      }
+          path: '$created_user_details',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
     ],
   });
 })();

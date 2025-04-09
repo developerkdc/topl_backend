@@ -238,7 +238,6 @@ export const addBranchToSupplier = catchAsync(async (req, res) => {
         )
       );
     }
-
   }
   const newSupplierBranch = new supplierBranchModel({
     supplier_id: id,
@@ -263,7 +262,6 @@ export const addBranchToSupplier = catchAsync(async (req, res) => {
     )
   );
 });
-
 
 export const fetchAllSupplierWithBranchesDetails = catchAsync(
   async (req, res) => {

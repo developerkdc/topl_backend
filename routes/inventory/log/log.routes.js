@@ -117,8 +117,11 @@ router.post(
   add_issue_for_flitching
 );
 
-
 // validate log no already exist api
-router.get('/check_log_no_already_exist', AuthMiddleware, check_already_existing_log_no);
+router.get(
+  '/check_log_no_already_exist',
+  AuthMiddleware,
+  check_already_existing_log_no
+);
 
 export default router;
