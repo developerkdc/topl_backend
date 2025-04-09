@@ -36,7 +36,7 @@ export const fetch_all_flitch_by_item_name = catchAsync(async (req, res) => {
       $gt: 0,
     },
     issue_status: null,
-    "approval_status.sendForApproval.status": false
+    'approval_status.sendForApproval.status': false,
   };
   const pipeline = [
     { $match: { ...match_query } },

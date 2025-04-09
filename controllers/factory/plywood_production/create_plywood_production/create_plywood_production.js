@@ -104,12 +104,9 @@ export const create_plywood_production = catchAsync(
         })
       );
 
-
       const missingItems = face_details_array.filter(
         (_, index) => is_face_available_greater_than_consumed[index] === null
       );
-
-
 
       const is_core_available_greater_than_consumed = await Promise.all(
         core_details_array.map(async (item) => {
@@ -126,17 +123,16 @@ export const create_plywood_production = catchAsync(
         })
       );
 
-
       const missingCoreItems = core_details_array.filter(
         (_, index) => is_core_available_greater_than_consumed[index] === null
       );
 
       if (missingItems.length > 0 && missingCoreItems.length > 0) {
-        const newMSGDetails = missingItems.map(item => {
+        const newMSGDetails = missingItems.map((item) => {
           return `Inward No : ${item.inward_sr_no} and Sr No :${item.face_sr_no}`;
         });
 
-        const newCoreMSGDetails = missingCoreItems.map(item => {
+        const newCoreMSGDetails = missingCoreItems.map((item) => {
           return `Inward No: ${item.inward_sr_no} and Sr No: ${item.core_sr_no}`;
         });
 
@@ -145,9 +141,8 @@ export const create_plywood_production = catchAsync(
         );
       }
 
-
       if (missingItems.length > 0) {
-        const newMSGDetails = missingItems.map(item => {
+        const newMSGDetails = missingItems.map((item) => {
           return `Inward No : ${item.inward_sr_no} and Sr No :${item.face_sr_no}`;
         });
 
@@ -156,9 +151,8 @@ export const create_plywood_production = catchAsync(
         );
       }
 
-
       if (missingCoreItems.length > 0) {
-        const newCoreMSGDetails = missingCoreItems.map(item => {
+        const newCoreMSGDetails = missingCoreItems.map((item) => {
           return `Inward No: ${item.inward_sr_no} and Sr No: ${item.core_sr_no}`;
         });
 
@@ -166,7 +160,6 @@ export const create_plywood_production = catchAsync(
           `Available core sheets are issued by someone for ${newCoreMSGDetails.join()}`
         );
       }
-
 
       const new_face_details = face_details_array?.map((item) => {
         item.face_inventory_item_id = item?._id;
@@ -289,7 +282,6 @@ export const create_plywood_production = catchAsync(
         delete item?._id;
         return item;
       });
-
 
       const is_core_history_updated = await core_history_model.insertMany(
         core_details_array_for_history,

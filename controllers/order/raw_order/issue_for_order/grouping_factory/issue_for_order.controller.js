@@ -9,7 +9,10 @@ import {
 } from '../../../../../database/Utils/constants/constants.js';
 import { RawOrderItemDetailsModel } from '../../../../../database/schema/order/raw_order/raw_order_item_details.schema.js';
 import issue_for_order_model from '../../../../../database/schema/order/issue_for_order/issue_for_order.schema.js';
-import { grouping_done_details_model, grouping_done_items_details_model } from '../../../../../database/schema/factory/grouping/grouping_done.schema.js';
+import {
+  grouping_done_details_model,
+  grouping_done_items_details_model,
+} from '../../../../../database/schema/factory/grouping/grouping_done.schema.js';
 import grouping_done_history_model from '../../../../../database/schema/factory/grouping/grouping_done_history.schema.js';
 
 export const add_issue_for_order = catchAsync(async (req, res) => {
@@ -37,7 +40,8 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
       throw new ApiError('Order Item Data not found');
     }
 
-    const grouping_item_data = await grouping_done_items_details_model.findById(grouping_item_details?._id)
+    const grouping_item_data = await grouping_done_items_details_model
+      .findById(grouping_item_details?._id)
       .lean();
     if (!grouping_item_data) {
       throw new ApiError('Grouping Item Data not found.');
@@ -68,7 +72,7 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
     if (
       Number(
         validate_leaves_for_order?.total_sqm +
-        Number(grouping_item_details?.issued_sqm)
+          Number(grouping_item_details?.issued_sqm)
       ) > order_item_data?.sqm
     ) {
       throw new ApiError(
@@ -107,13 +111,16 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
     }
     //available leaves
     const available_leaves =
-      grouping_item_data?.available_details?.no_of_leaves - grouping_item_details?.issued_leaves;
+      grouping_item_data?.available_details?.no_of_leaves -
+      grouping_item_details?.issued_leaves;
     //available sqm
     const available_sqm =
-      grouping_item_data?.available_details?.sqm - grouping_item_details?.issued_sqm;
+      grouping_item_data?.available_details?.sqm -
+      grouping_item_details?.issued_sqm;
     //available_amount
     const available_amount =
-      grouping_item_data?.available_details?.amount - grouping_item_details?.issued_amount;
+      grouping_item_data?.available_details?.amount -
+      grouping_item_details?.issued_amount;
 
     //update grouping factory  available details
     const update_grouping_item_available_details =
@@ -121,9 +128,9 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
         { _id: grouping_item_data?._id },
         {
           $set: {
-            "available_details.no_of_leaves": available_leaves,
-            "available_details.amount": available_amount,
-            "available_details.sqm": available_sqm,
+            'available_details.no_of_leaves': available_leaves,
+            'available_details.amount': available_amount,
+            'available_details.sqm': available_sqm,
             updated_by: userDetails?._id,
             //update issue status later if required
           },
@@ -173,7 +180,7 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
         StatusCodes.BAD_REQUEST
       );
     }
-    const { _id, ...grouping_data } = grouping_item_data
+    const { _id, ...grouping_data } = grouping_item_data;
     //add data to grouping history model
     const add_issued_data_to_grouping_history =
       await grouping_done_history_model.create(
@@ -184,7 +191,8 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
             order_item_id: order_item_data?._id,
             issue_status: issues_for_status?.order,
             grouping_done_item_id: grouping_item_data?._id,
-            grouping_done_other_details_id: grouping_item_data?.grouping_done_other_details_id,
+            grouping_done_other_details_id:
+              grouping_item_data?.grouping_done_other_details_id,
             no_of_leaves: issued_leaves_for_order,
             sqm: issued_sqm_for_order,
             amount: issued_amount_for_order,

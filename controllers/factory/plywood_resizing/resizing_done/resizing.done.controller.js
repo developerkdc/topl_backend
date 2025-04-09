@@ -101,7 +101,6 @@ export const create_resizing = catchAsync(async (req, res) => {
     }
 
     if (resizing_details?.face_item_details?.length > 0) {
-
       const is_face_available_greater_than_consumed = await Promise.all(
         resizing_details?.face_item_details?.map(async (item) => {
           const res = await face_inventory_items_details

@@ -248,8 +248,8 @@ export const addCrossCutDone = catchAsync(async (req, res) => {
   try {
     const updated_items = newData?.map((item) => {
       item.created_by = userDetails?._id;
-      return item
-    })
+      return item;
+    });
     const result = await crosscutting_done_model.insertMany(newData, {
       session,
     });

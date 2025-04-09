@@ -89,11 +89,11 @@ const grouping_done_items_details_schema = new mongoose.Schema(
       type: String,
       uppercase: true,
       trim: true,
-      default:null
+      default: null,
     },
     photo_no_id: {
       type: mongoose.Schema.Types.ObjectId,
-      default:null
+      default: null,
     },
     item_name: {
       type: String,

@@ -100,13 +100,13 @@ export const item_issued_from = {
   crosscutting: 'CROSSCUTTING',
   flitching_factory: 'FLITCHING_FACTORY',
   dressing_factory: 'DRESSING_FACTORY',
-  grouping_factory: "GROUPING_FACTORY",
-  pressing_factory: "PRESSING_FACTORY",
-  cnc_factory: "CNC",
-  canvas_factory: "CANVAS",
-  color_factory: "COLOR",
-  polishing_factory: "POLISHING",
-  bunito_factory: "BUNITO",
+  grouping_factory: 'GROUPING_FACTORY',
+  pressing_factory: 'PRESSING_FACTORY',
+  cnc_factory: 'CNC',
+  canvas_factory: 'CANVAS',
+  color_factory: 'COLOR',
+  polishing_factory: 'POLISHING',
+  bunito_factory: 'BUNITO',
 };
 
 export const item_issued_for = {

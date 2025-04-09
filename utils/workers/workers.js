@@ -32,14 +32,20 @@ export const insert_raw_machine_data_into_machine_mismatch_model = async () => {
         //finding item name,id and item subcategory name and id based on log no code
         const updated_items = await Promise.all(
           inserted_document?.map(async (item) => {
-            const issue_for_dressing_data = await issue_for_dressing_model.findOne({ log_no_code: item?.Tronco }).lean();
+            const issue_for_dressing_data = await issue_for_dressing_model
+              .findOne({ log_no_code: item?.Tronco })
+              .lean();
             return {
               dressing_date: item?.Fecha,
               log_no_code: item?.Tronco,
               item_name: issue_for_dressing_data?.item_name || null,
               item_id: issue_for_dressing_data?.item_name_id || null,
-              item_sub_category_name: issue_for_dressing_data?.item_sub_category_name || null,
-              item_sub_category_id: issue_for_dressing_data?.item_sub_category_id || issue_for_dressing_data?.item_sub_category_name_id || null,
+              item_sub_category_name:
+                issue_for_dressing_data?.item_sub_category_name || null,
+              item_sub_category_id:
+                issue_for_dressing_data?.item_sub_category_id ||
+                issue_for_dressing_data?.item_sub_category_name_id ||
+                null,
               length: item?.Largo,
               width: item?.Ancho,
               thickness: item?.Grosor,
@@ -49,9 +55,9 @@ export const insert_raw_machine_data_into_machine_mismatch_model = async () => {
               pallet_number: item?.Partida,
               created_by: item?.created_by,
               updated_by: item?.updated_by,
-            }
+            };
           })
-        )
+        );
         try {
           const insert_result =
             await dressing_miss_match_data_model.create(updated_items);

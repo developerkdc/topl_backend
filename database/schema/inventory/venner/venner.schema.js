@@ -94,7 +94,11 @@ export const veneer_item_details_schema = new mongoose.Schema(
     issue_status: {
       type: String,
       enum: {
-        values: [issues_for_status?.smoking_dying, issues_for_status?.order, issues_for_status?.grouping],
+        values: [
+          issues_for_status?.smoking_dying,
+          issues_for_status?.order,
+          issues_for_status?.grouping,
+        ],
         message: `Invalid status {{VALUE}} Issue Status must either be one of ${issues_for_status?.smoking_dying}, ${issues_for_status?.order}`,
       },
       default: null,
