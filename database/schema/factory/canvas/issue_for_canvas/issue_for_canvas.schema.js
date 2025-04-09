@@ -5,7 +5,7 @@ const validate_order_field = function () {
     return this.issued_for === item_issued_for?.order ? true : false
 }
 
-const issue_for_cnc_schema = new mongoose.Schema(
+const issue_for_canvas_schema = new mongoose.Schema(
     {
         sr_no: Number,
         order_id: {
@@ -34,7 +34,7 @@ const issue_for_cnc_schema = new mongoose.Schema(
             type: Number,
             required: [true, "Issued Amount is required."]
         },
-        is_cnc_done: {
+        is_canvas_done: {
             type: Boolean,
             default: false
         },
@@ -62,8 +62,8 @@ const issue_for_cnc_schema = new mongoose.Schema(
         issued_from: {
             type: String,
             enum: {
-                values: [item_issued_from?.pressing_factory, item_issued_from?.cnc_factory, item_issued_from?.color_factory, item_issued_from?.bunito_factory, item_issued_from?.polishing_factory],
-                message: `Invalid Type -> {{VALUE}} , it must be one of the ${(item_issued_from?.pressing_factory, item_issued_from?.cnc_factory, item_issued_from?.color_factory, item_issued_from?.bunito_factory, item_issued_from?.polishing_factory)}`
+                values: [item_issued_from?.pressing_factory, item_issued_from?.canvas_factory, item_issued_from?.color_factory, item_issued_from?.bunito_factory, item_issued_from?.polishing_factory],
+                message: `Invalid Type -> {{VALUE}} , it must be one of the ${(item_issued_from?.pressing_factory, item_issued_from?.canvas_factory, item_issued_from?.color_factory, item_issued_from?.bunito_factory, item_issued_from?.polishing_factory)}`
             },
             required: [true, "Issued from is required."]
         },
@@ -91,7 +91,7 @@ const issue_for_cnc_schema = new mongoose.Schema(
     { timestamps: true }
 );
 const indexed_fields = [[{ sr_no: 1 }, { unique: true }]]
-indexed_fields?.forEach((field) => issue_for_cnc_schema.index(...field))
+indexed_fields?.forEach((field) => issue_for_canvas_schema.index(...field))
 
-const issue_for_cnc_model = mongoose.model('issued_for_cnc_details', issue_for_cnc_schema, 'issued_for_cnc_details');
-export default issue_for_cnc_model
+const issue_for_canvas_model = mongoose.model('issued_for_canvas_details', issue_for_canvas_schema, 'issued_for_canvas_details');
+export default issue_for_canvas_model

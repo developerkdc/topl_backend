@@ -5,7 +5,7 @@ const validate_order_field = function () {
     return this.issued_for === item_issued_for?.order ? true : false
 }
 
-const issue_for_cnc_schema = new mongoose.Schema(
+const issue_for_color_schema = new mongoose.Schema(
     {
         sr_no: Number,
         order_id: {
@@ -34,7 +34,7 @@ const issue_for_cnc_schema = new mongoose.Schema(
             type: Number,
             required: [true, "Issued Amount is required."]
         },
-        is_cnc_done: {
+        is_color_done: {
             type: Boolean,
             default: false
         },
@@ -91,7 +91,7 @@ const issue_for_cnc_schema = new mongoose.Schema(
     { timestamps: true }
 );
 const indexed_fields = [[{ sr_no: 1 }, { unique: true }]]
-indexed_fields?.forEach((field) => issue_for_cnc_schema.index(...field))
+indexed_fields?.forEach((field) => issue_for_color_schema.index(...field))
 
-const issue_for_cnc_model = mongoose.model('issued_for_cnc_details', issue_for_cnc_schema, 'issued_for_cnc_details');
-export default issue_for_cnc_model
+const issue_for_color_model = mongoose.model('issued_for_color_details', issue_for_color_schema, 'issued_for_color_details');
+export default issue_for_color_model

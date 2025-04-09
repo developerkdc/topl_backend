@@ -26,8 +26,16 @@ import issue_for_pressing_router from './pressing/issues_for_pressing/issues_for
 import plywoodProductionRouter from './plywood_production/plywood_production.routes.js';
 import issue_for_cnc_router from './cnc/issue_for_cnc/issue_for_cnc.routes.js';
 import cnc_done_router from './cnc/cnc_done/cnc_done.routes.js';
-import colour_done_router from './colour/colour_done/colour_done.routes.js';
-import issue_for_colour_router from './colour/issue_for_colour/issue_for_colour.routes.js';
+import { add_issue_for_factory_data } from '../../controllers/factory/issue_for_factory/issue_for_factory.controller.js';
+import color_damage_router from './colour/colour_damage/colour_damage.routes.js';
+import color_done_router from './colour/colour_done/colour_done.routes.js';
+import issue_for_color_router from './colour/issue_for_colour/issue_for_colour.routes.js';
+import canvas_damage_router from './canvas/canvas_damage/canvas_damage.routes.js';
+import canvas_done_router from './canvas/canvas_done/canvas_done.routes.js';
+import issue_for_canvas_router from './canvas/issue_for_canvas/issue_for_canvas.routes.js';
+import issue_for_polishing_router from './polishing/issue_for_polishing/issue_for_polishing.routes.js';
+import polishing_done_router from './polishing/polishing_done/polishing_done.routes.js';
+import polishing_damage_router from './polishing/polishing_damage/polishing_damage.routes.js';
 
 const factoryRouter = express.Router();
 
@@ -83,9 +91,24 @@ factoryRouter.use('/factory/plywood-production', plywoodProductionRouter);
 factoryRouter.use('/factory/issue-for-cnc', issue_for_cnc_router);
 factoryRouter.use("/factory/cnc-done", cnc_done_router)
 
-//colour
-factoryRouter.use('/factory/issue-for-colour', issue_for_colour_router);
-factoryRouter.use("/factory/colour-done", colour_done_router)
+//color
+factoryRouter.use('/factory/issue-for-color', issue_for_color_router);
+factoryRouter.use("/factory/color-done", color_done_router)
+factoryRouter.use("/factory/color-damage", color_damage_router)
 
+//canvas
+factoryRouter.use('/factory/issue-for-canvas', issue_for_canvas_router);
+factoryRouter.use("/factory/canvas-done", canvas_done_router)
+factoryRouter.use("/factory/canvas-damage", canvas_damage_router)
+
+
+//polishing
+factoryRouter.use('/factory/issue-for-polishing', issue_for_polishing_router);
+factoryRouter.use("/factory/polishing-done", polishing_done_router)
+factoryRouter.use("/factory/polishing-damage", polishing_damage_router)
+
+
+
+factoryRouter.use("/issue-for-factory", add_issue_for_factory_data)
 
 export default factoryRouter;

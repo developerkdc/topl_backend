@@ -5,33 +5,30 @@ import { dynamic_filter } from '../../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../../utils/dynamicSearch/dynamic.js';
 import catchAsync from '../../../../utils/errors/catchAsync.js';
 import ApiError from '../../../../utils/errors/apiError.js';
-import issue_for_plywood_resizing_model from '../../../../database/schema/factory/plywood_resizing_factory/issue_for_resizing/issue_for_resizing.schema.js';
 import { plywood_resizing_done_details_model } from '../../../../database/schema/factory/plywood_resizing_factory/resizing_done/resizing.done.schema.js';
-import plywood_resize_damage_model from '../../../../database/schema/factory/plywood_resizing_factory/resizing_damage/resizing_damage.schema.js';
-import { face_inventory_items_details } from '../../../../database/schema/inventory/face/face.schema.js';
-import issue_for_color_model from '../../../../database/schema/factory/colour/issue_for_colour/issue_for_colour.schema.js';
-import { color_done_details_model } from '../../../../database/schema/factory/colour/colour_done/colour_done.schema.js';
+import issue_for_canvas_model from '../../../../database/schema/factory/canvas/issue_for_canvas/issue_for_canvas.schema.js';
+import { canvas_done_details_model } from '../../../../database/schema/factory/canvas/canvas_done/canvas_done.schema.js';
 
-export const create_color = catchAsync(async (req, res) => {
+export const create_canvas = catchAsync(async (req, res) => {
     const userDetails = req.userDetails;
-    const { color_done_details } = req.body;
+    const { canvas_done_details } = req.body;
     const session = await mongoose.startSession();
     try {
         session.startTransaction();
-        if (!color_done_details) {
-            throw new ApiError("Color Done details not found.", StatusCodes.NOT_FOUND)
+        if (!canvas_done_details) {
+            throw new ApiError("canvas Done details not found.", StatusCodes.NOT_FOUND)
         }
-        if (!isValidObjectId(color_done_details?.issur_for_color_id)) {
-            throw new ApiError("Invalid Issue for Color ID.", StatusCodes.BAD_REQUEST)
+        if (!isValidObjectId(canvas_done_details?.issur_for_canvas_id)) {
+            throw new ApiError("Invalid Issue for canvas ID.", StatusCodes.BAD_REQUEST)
         };
 
-        const issue_for_color_details = await issue_for_color_model.findById(color_done_details?.issue_for_color_id).session(session).lean();
+        const issue_for_canvas_details = await issue_for_canvas_model.findById(canvas_done_details?.issue_for_canvas_id).session(session).lean();
 
-        if (!issue_for_color_details) {
-            throw new ApiError("Issue for color Details not found.", StatusCodes.NOT_FOUND)
+        if (!issue_for_canvas_details) {
+            throw new ApiError("Issue for canvas Details not found.", StatusCodes.NOT_FOUND)
         };
 
-        const [max_sr_no] = await color_done_details_model.aggregate([{
+        const [max_sr_no] = await canvas_done_details_model.aggregate([{
             $group: {
                 _id: null,
                 max_sr_no: {
@@ -39,37 +36,37 @@ export const create_color = catchAsync(async (req, res) => {
                 }
             }
         }])
-        const updated_color_done_details = {
-            ...color_done_details,
+        const updated_canvas_done_details = {
+            ...canvas_done_details,
             sr_no: max_sr_no ? max_sr_no?.max_sr_no + 1 : 1,
             created_by: userDetails?._id,
             updated_by: userDetails?._id,
         };
 
-        const [create_color_result] = await color_done_details_model.create([updated_color_done_details], { session });
+        const [create_canvas_result] = await canvas_done_details_model.create([updated_canvas_done_details], { session });
 
-        if (!create_color_result) {
-            throw new ApiError("Failed to add color done data", StatusCodes.BAD_REQUEST)
+        if (!create_canvas_result) {
+            throw new ApiError("Failed to add canvas done data", StatusCodes.BAD_REQUEST)
         };
 
-        const update_issue_for_color_details = await issue_for_color_model.updateOne({ _id: issue_for_color_details?._id }, {
+        const update_issue_for_canvas_details = await issue_for_canvas_model.updateOne({ _id: issue_for_canvas_details?._id }, {
             $inc: {
-                "available_details.no_of_sheets": -create_color_result?.no_of_sheets,
-                "available_details.sqm": -create_color_result?.sqm,
-                "available_details.amount": -create_color_result?.amount
+                "available_details.no_of_sheets": -create_canvas_result?.no_of_sheets,
+                "available_details.sqm": -create_canvas_result?.sqm,
+                "available_details.amount": -create_canvas_result?.amount
             }, $set: {
                 updated_by: userDetails?._id
             }
         }, { session });
 
-        if (update_issue_for_color_details?.matchedCount === 0) {
-            throw new ApiError("Issue for color Details not found.", StatusCodes.NOT_FOUND)
+        if (update_issue_for_canvas_details?.matchedCount === 0) {
+            throw new ApiError("Issue for canvas Details not found.", StatusCodes.NOT_FOUND)
         };
 
-        if (!update_issue_for_color_details?.acknowledged || update_issue_for_color_details?.modifiedCount === 0) {
-            throw new ApiError("Failed to update issue for color details", StatusCodes.BAD_REQUEST)
+        if (!update_issue_for_canvas_details?.acknowledged || update_issue_for_canvas_details?.modifiedCount === 0) {
+            throw new ApiError("Failed to update issue for canvas details", StatusCodes.BAD_REQUEST)
         };
-        const response = new ApiResponse(StatusCodes.CREATED, "color Created Successfully", add_resizing_data_result);
+        const response = new ApiResponse(StatusCodes.CREATED, "canvas Created Successfully", add_resizing_data_result);
         await session.commitTransaction()
         return res.status(StatusCodes.CREATED).json(response);
     } catch (error) {
@@ -80,37 +77,37 @@ export const create_color = catchAsync(async (req, res) => {
     }
 });
 
-export const update_color_done = catchAsync(async (req, res) => {
+export const update_canvas_done = catchAsync(async (req, res) => {
     const userDetails = req.userDetails;
     const { id } = req.params;
-    const { color_details } = req.body
+    const { canvas_details } = req.body
     const session = await mongoose.startSession();
     try {
         session.startTransaction()
         if (!id) {
             throw new ApiError("ID is missing.", StatusCodes.BAD_REQUEST)
         };
-        if (!color_details) {
-            throw new ApiError("color details are missing.", StatusCodes.BAD_REQUEST)
+        if (!canvas_details) {
+            throw new ApiError("canvas details are missing.", StatusCodes.BAD_REQUEST)
         };
         if (!isValidObjectId(id)) {
             throw new ApiError("Invalid ID.", StatusCodes.BAD_REQUEST)
         };
 
-        const issue_for_color_details = await issue_for_color_model.findById(id).lean().session(session);
+        const issue_for_canvas_details = await issue_for_canvas_model.findById(id).lean().session(session);
 
-        if (!issue_for_color_details) {
-            throw new ApiError("Issue for color details not found.", StatusCodes.BAD_REQUEST)
+        if (!issue_for_canvas_details) {
+            throw new ApiError("Issue for canvas details not found.", StatusCodes.BAD_REQUEST)
         }
-        const color_done_data = await plywood_resizing_done_details_model?.findById(id).lean();
+        const canvas_done_data = await plywood_resizing_done_details_model?.findById(id).lean();
 
-        if (!color_done_data) {
-            throw new ApiError("color done data not found", StatusCodes.NOT_FOUND)
+        if (!canvas_done_data) {
+            throw new ApiError("canvas done data not found", StatusCodes.NOT_FOUND)
         };
 
 
 
-        const response = new ApiResponse(StatusCodes.OK, "Resizing Item Updated Successfully", update_color_done_result);
+        const response = new ApiResponse(StatusCodes.OK, "Resizing Item Updated Successfully", update_canvas_done_result);
         await session.commitTransaction()
         return res.status(StatusCodes.OK).json(response);
     } catch (error) {
@@ -121,7 +118,7 @@ export const update_color_done = catchAsync(async (req, res) => {
     }
 });
 
-export const listing_color_done = catchAsync(
+export const listing_canvas_done = catchAsync(
     async (req, res) => {
         const {
             page = 1,
@@ -257,8 +254,8 @@ export const listing_color_done = catchAsync(
             aggLimit,
         ]; // aggregation pipiline
 
-        const color_done_list =
-            await color_done_details_model.aggregate(listAggregate);
+        const canvas_done_list =
+            await canvas_done_details_model.aggregate(listAggregate);
 
         const aggCount = {
             $count: 'totalCount',
@@ -270,15 +267,15 @@ export const listing_color_done = catchAsync(
         ]; // total aggregation pipiline
 
         const [totalDocument] =
-            await color_done_details_model.aggregate(totalAggregate);
+            await canvas_done_details_model.aggregate(totalAggregate);
 
         const totalPages = Math.ceil((totalDocument?.totalCount || 0) / limit);
 
         const response = new ApiResponse(
             StatusCodes.OK,
-            'color Done Data Fetched Successfully',
+            'canvas Done Data Fetched Successfully',
             {
-                data: color_done_list,
+                data: canvas_done_list,
                 totalPages: totalPages,
             }
         );
@@ -286,7 +283,7 @@ export const listing_color_done = catchAsync(
     }
 );
 
-export const fetch_single_color_done_item_with_issue_for_color_data = catchAsync(async (req, res) => {
+export const fetch_single_canvas_done_item_with_issue_for_canvas_data = catchAsync(async (req, res) => {
     const { id } = req.params;
 
     if (!id) {
@@ -304,26 +301,26 @@ export const fetch_single_color_done_item_with_issue_for_color_data = catchAsync
         },
         {
             $lookup: {
-                from: "issued_for_color_details",
-                localField: "issue_for_color_id",
+                from: "issued_for_canvas_details",
+                localField: "issue_for_canvas_id",
                 foreignField: "_id",
-                as: "issue_for_color_details"
+                as: "issue_for_canvas_details"
             }
         },
         {
             $unwind: {
-                path: "$issue_for_color_details",
+                path: "$issue_for_canvas_details",
                 preserveNullAndEmptyArrays: true
             }
         }
     ];
 
-    const result = await color_done_details_model.aggregate(pipeline)
-    return res.status(StatusCodes.OK).json(new ApiResponse(StatusCodes.OK, "color details fetched successfully", result))
+    const result = await canvas_done_details_model.aggregate(pipeline)
+    return res.status(StatusCodes.OK).json(new ApiResponse(StatusCodes.OK, "canvas details fetched successfully", result))
 
 });
 
-export const revert_color_done_items = catchAsync(async (req, res) => {
+export const revert_canvas_done_items = catchAsync(async (req, res) => {
     const { id } = req.params;
     const userDetails = req.userDetails
     if (!id) {
@@ -336,34 +333,34 @@ export const revert_color_done_items = catchAsync(async (req, res) => {
     try {
         session.startTransaction()
 
-        const color_done_data = await color_done_details_model.findById(id).session(session).lean();
+        const canvas_done_data = await canvas_done_details_model.findById(id).session(session).lean();
 
-        if (!color_done_data) {
-            throw new ApiError("color done data not found", StatusCodes.NOT_FOUND)
+        if (!canvas_done_data) {
+            throw new ApiError("canvas done data not found", StatusCodes.NOT_FOUND)
         };
 
-        const delete_color_done_data_result = await color_done_details_model.deleteOne({ _id: color_done_data?._id }, { session });
+        const delete_canvas_done_data_result = await canvas_done_details_model.deleteOne({ _id: canvas_done_data?._id }, { session });
 
-        if (!delete_color_done_data_result?.acknowledged || delete_color_done_data_result.deletedCount === 0) {
-            throw new ApiError("Failed to delete color done details", StatusCodes.BAD_REQUEST)
+        if (!delete_canvas_done_data_result?.acknowledged || delete_canvas_done_data_result.deletedCount === 0) {
+            throw new ApiError("Failed to delete canvas done details", StatusCodes.BAD_REQUEST)
         }
-        const update_issue_for_color_update_result = await issue_for_color_model.updateOne({ _id: color_done_data?.issue_for_color_id }, {
+        const update_issue_for_canvas_update_result = await issue_for_canvas_model.updateOne({ _id: canvas_done_data?.issue_for_canvas_id }, {
             $inc: {
-                "available_details.sqm": color_done_data?.available_details?.sqm,
-                "available_details.no_of_sheets": color_done_data?.available_details?.no_of_sheets,
-                "available_details.amount": color_done_data?.available_details?.amount,
+                "available_details.sqm": canvas_done_data?.available_details?.sqm,
+                "available_details.no_of_sheets": canvas_done_data?.available_details?.no_of_sheets,
+                "available_details.amount": canvas_done_data?.available_details?.amount,
             }, $set: {
                 updated_by: userDetails?._id
             }
         }, { session });
 
-        if (update_issue_for_color_update_result?.matchedCount === 0) {
-            throw new ApiError("Issue for color details not found.", StatusCodes.NOT_FOUND)
+        if (update_issue_for_canvas_update_result?.matchedCount === 0) {
+            throw new ApiError("Issue for canvas details not found.", StatusCodes.NOT_FOUND)
         }
-        if (!update_issue_for_color_update_result.acknowledged || update_issue_for_color_update_result?.modifiedCount === 0) {
-            throw new ApiError("Failed to update issue for color details", StatusCodes.BAD_REQUEST)
+        if (!update_issue_for_canvas_update_result.acknowledged || update_issue_for_canvas_update_result?.modifiedCount === 0) {
+            throw new ApiError("Failed to update issue for canvas details", StatusCodes.BAD_REQUEST)
         };
-        const response = new ApiResponse(StatusCodes.OK, "color items Reverted Successfully", delete_color_done_result)
+        const response = new ApiResponse(StatusCodes.OK, "canvas items Reverted Successfully", delete_canvas_done_result)
         await session.commitTransaction();
         return res.status(StatusCodes.OK).json(response)
     } catch (error) {
@@ -373,3 +370,4 @@ export const revert_color_done_items = catchAsync(async (req, res) => {
         await session.endSession()
     }
 });
+

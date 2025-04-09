@@ -1,11 +1,11 @@
 import mongoose from "mongoose";
 
 
-const cnc_damage_schema = new mongoose.Schema({
+const canvas_damage_schema = new mongoose.Schema({
     sr_no: Number,
-    cnc_done_id: {
+    canvas_done_id: {
         type: mongoose.Schema.Types.ObjectId,
-        required: [true, "CNC Done ID is required."]
+        required: [true, "canvas Done ID is required."]
     },
     no_of_sheets: {
         type: Number,
@@ -30,9 +30,9 @@ const cnc_damage_schema = new mongoose.Schema({
 
 }, { timestamps: true });
 
-cnc_damage_schema.index({ cnc_done_id: 1 })
-cnc_damage_schema.index({ sr_no: 1 })
+canvas_damage_schema.index({ canvas_done_id: 1 })
+canvas_damage_schema.index({ sr_no: 1 })
 
-const cnc_damage_model = mongoose.model('cnc_damage_details', cnc_damage_schema, 'cnc_damage_details');
+const canvas_damage_model = mongoose.model('canvas_damage_details', canvas_damage_schema, 'canvas_damage_details');
 
-export default cnc_damage_model;
+export default canvas_damage_model;

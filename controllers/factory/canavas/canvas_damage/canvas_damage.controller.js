@@ -5,9 +5,10 @@ import { dynamic_filter } from '../../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../../utils/dynamicSearch/dynamic.js';
 import catchAsync from '../../../../utils/errors/catchAsync.js';
 import ApiError from '../../../../utils/errors/apiError.js';
-import color_damage_model from '../../../../database/schema/factory/colour/colour_damage/colour_damage.schema.js';
+import canvas_damage_model from '../../../../database/schema/factory/canvas/canvas_damage/canvas_damage.schema.js';
+import { canvas_done_details_model } from '../../../../database/schema/factory/canvas/canvas_done/canvas_done.schema.js';
 
-export const listing_color_damage =catchAsync(
+export const listing_canvas_damage = catchAsync(
     async (req, res) => {
         const {
             page = 1,
@@ -53,20 +54,20 @@ export const listing_color_damage =catchAsync(
             ...search_query
         };
 
-        const aggLookupColorDoneDetails = {
+        const aggLookupCanvasDoneDetails = {
             $lookup: {
-                from: "color_done_details",
-                localField: "color_done_id",
+                from: "canvas_done_details",
+                localField: "canvas_done_id",
                 foreignField: "_id",
-                as: "color_done_details"
+                as: "canvas_done_details"
             }
         }
-        const aggLookUpIssueForColorDetails = {
+        const aggLookUpIssueForCanvasDetails = {
             $lookup: {
-                from: "issued_for_color_details",
-                localField: "color_done_details.issue_for_color_id",
+                from: "issued_for_canvas_details",
+                localField: "canvas_done_details.issue_for_canvas_id",
                 foreignField: "_id",
-                as: "issue_for_color_details"
+                as: "issue_for_canvas_details"
             }
         }
 
@@ -125,15 +126,15 @@ export const listing_color_damage =catchAsync(
             },
         };
 
-        const aggUnwindColorDoneDetails = {
+        const aggUnwindCanvasDoneDetails = {
             $unwind: {
-                path: "$color_done_details",
+                path: "$canvas_done_details",
                 preserveNullAndEmptyArrays: true
             }
         }
-        const aggUnwindIssueForColorDetails = {
+        const aggUnwindIssueForCanvasDetails = {
             $unwind: {
-                path: "$issue_for_color_details",
+                path: "$issue_for_canvas_details",
                 preserveNullAndEmptyArrays: true
             }
         }
@@ -155,10 +156,10 @@ export const listing_color_damage =catchAsync(
         };
 
         const listAggregate = [
-            aggLookupColorDoneDetails,
-            aggUnwindColorDoneDetails,
-            aggLookUpIssueForColorDetails,
-            aggUnwindIssueForColorDetails,
+            aggLookupCanvasDoneDetails,
+            aggUnwindCanvasDoneDetails,
+            aggLookUpIssueForCanvasDetails,
+            aggLookUpIssueForCanvasDetails,
             aggCreatedByLookup,
             aggCreatedByUnwind,
             aggUpdatedByLookup,
@@ -169,8 +170,8 @@ export const listing_color_damage =catchAsync(
             aggLimit,
         ]; // aggregation pipiline
 
-        const color_damage_list =
-            await color_damage_model.aggregate(listAggregate);
+        const canvas_damage_list =
+            await canvas_damage_model.aggregate(listAggregate);
 
         const aggCount = {
             $count: 'totalCount',
@@ -182,15 +183,15 @@ export const listing_color_damage =catchAsync(
         ]; // total aggregation pipiline
 
         const [totalDocument] =
-            await color_damage_model.aggregate(totalAggregate);
+            await canvas_damage_model.aggregate(totalAggregate);
 
         const totalPages = Math.ceil((totalDocument?.totalCount || 0) / limit);
 
         const response = new ApiResponse(
             StatusCodes.OK,
-            'Color Damage Data Fetched Successfully',
+            'Canvas Damage Data Fetched Successfully',
             {
-                data: color_damage_list,
+                data: canvas_damage_list,
                 totalPages: totalPages,
             }
         );
@@ -198,7 +199,7 @@ export const listing_color_damage =catchAsync(
     }
 );
 
-export const add_color_damage = catchAsync(async (req, res) => {
+export const add_canvas_damage = catchAsync(async (req, res) => {
     const userDetails = req.userDetails;
     const { id, damage_sheets } = req.query;
     const session = await mongoose.startSession();
@@ -215,19 +216,19 @@ export const add_color_damage = catchAsync(async (req, res) => {
             throw new ApiError("Damage Sheets are missing");
         };
 
-        const color_done_details = await color_done_details_model.findById(id).lean().session();
+        const canvas_done_details = await canvas_done_details_model.findById(id).lean().session();
 
-        if (!color_done_details) {
-            throw new ApiError("Color done details not found.", StatusCodes.NOT_FOUND)
+        if (!canvas_done_details) {
+            throw new ApiError("canvas done details not found.", StatusCodes.NOT_FOUND)
         };
 
-        if (color_done_details?.available_details?.no_of_sheets === 0) {
+        if (canvas_done_details?.available_details?.no_of_sheets === 0) {
             throw new ApiError("No available sheets found.", StatusCodes.NOT_FOUND)
         };
 
-        const damage_sqm = Number(((damage_sheets / color_done_details?.available_details?.no_of_sheets) * color_done_details?.available_details?.sqm)?.toFixed(3));
+        const damage_sqm = Number(((damage_sheets / canvas_done_details?.available_details?.no_of_sheets) * canvas_done_details?.available_details?.sqm)?.toFixed(3));
 
-        const [maxSrNo] = await color_damage_model.aggregate([{
+        const [maxSrNo] = await canvas_damage_model.aggregate([{
             $group: {
                 _id: null,
                 max_sr_no: {
@@ -235,8 +236,8 @@ export const add_color_damage = catchAsync(async (req, res) => {
                 }
             }
         }])
-        const [create_damage_result] = await color_damage_model.create([{
-            color_done_id: color_done_details?._id,
+        const [create_damage_result] = await canvas_damage_model.create([{
+            canvas_done_id: canvas_done_details?._id,
             no_of_sheets: damage_sheets,
             sqm: damage_sqm,
             sr_no: maxSrNo ? maxSrNo?.max_sr_no + 1 : 1,
@@ -248,7 +249,7 @@ export const add_color_damage = catchAsync(async (req, res) => {
             throw new ApiError("Failed to add damage details", StatusCodes.BAD_REQUEST)
         };
 
-        const update_color_done_result = await color_done_details_model.updateOne({ _id: color_done_details?._id }, {
+        const update_canvas_done_result = await canvas_done_details_model.updateOne({ _id: canvas_done_details?._id }, {
             $inc: {
                 "available_details.sqm": -damage_sqm,
                 "available_details.no_of_sheets": -damage_sheets,
@@ -259,15 +260,15 @@ export const add_color_damage = catchAsync(async (req, res) => {
         }, { session });
 
 
-        if (update_color_done_result.matchedCount === 0) {
-            throw new ApiError("Color done details not found.", StatusCodes.BAD_REQUEST)
+        if (update_canvas_done_result.matchedCount === 0) {
+            throw new ApiError("canvas done details not found.", StatusCodes.BAD_REQUEST)
         }
 
-        if (!update_color_done_result.acknowledged || update_color_done_result.modifiedCount === 0) {
-            throw new ApiError("Failed to update Color done details.", StatusCodes.BAD_REQUEST)
+        if (!update_canvas_done_result.acknowledged || update_canvas_done_result.modifiedCount === 0) {
+            throw new ApiError("Failed to update canvas done details.", StatusCodes.BAD_REQUEST)
         }
 
-        const response = new ApiResponse(StatusCodes.OK, "Color Item added to damage successfully.", create_damage_result);
+        const response = new ApiResponse(StatusCodes.OK, "canvas Item added to damage successfully.", create_damage_result);
         await session.commitTransaction()
         return res.status(StatusCodes.OK).json(response);
     } catch (error) {
@@ -278,7 +279,8 @@ export const add_color_damage = catchAsync(async (req, res) => {
     }
 });
 
-export const revert_from_color_damage_to_color_done = catchAsync(async (req, res) => {
+
+export const revert_damage_to_canvas_done = catchAsync(async (req, res) => {
     const userDetails = req.userDetails;
 
     const { id } = req.params;
@@ -291,34 +293,34 @@ export const revert_from_color_damage_to_color_done = catchAsync(async (req, res
             throw new ApiError("Invalid ID", StatusCodes.BAD_REQUEST)
         };
 
-        session.startTransaction();
+        await session.startTransaction();
 
-        const color_damage_details = await color_damage_model.findById(id).lean().session(session);
-        if (!color_damage_details) {
-            throw new ApiError("Color Damage details not found", StatusCodes.NOT_FOUND)
+        const canvas_damage_details = await canvas_damage_model.findById(id).lean().session(session);
+        if (!canvas_damage_details) {
+            throw new ApiError("canvas Damage details not found", StatusCodes.NOT_FOUND)
         };
 
-        const delete_damage_data_result = await color_damage_model.deleteOne({ _id: id }, { session });
+        const delete_damage_data_result = await canvas_damage_model.deleteOne({ _id: id }, { session });
 
         if (!delete_damage_data_result.acknowledged || delete_damage_data_result.deletedCount === 0) {
             throw new ApiError("Failed to delete damage data", StatusCodes.BAD_REQUEST)
         };
 
-        const update_color_done_item_result = await color_done_details_model.findOneAndUpdate({ _id: color_damage_details?.color_done_id }, {
+        const update_canvas_done_item_result = await canvas_done_details_model.findOneAndUpdate({ _id: canvas_damage_details?.canvas_done_id }, {
             $inc: {
-                "available_details.no_of_sheets": color_damage_details.no_of_sheets,
-                "available_details.sqm": color_damage_details.sqm,
+                "available_details.no_of_sheets": canvas_damage_details.no_of_sheets,
+                "available_details.sqm": canvas_damage_details.sqm,
             }
         }, { session });
 
-        if (!update_color_done_item_result) {
-            throw new ApiError("Failed to update color done details", StatusCodes.BAD_REQUEST)
+        if (!update_canvas_done_item_result) {
+            throw new ApiError("Failed to update canvas done details", StatusCodes.BAD_REQUEST)
         };
 
-        const is_item_editable = await color_done_details_model.findById(color_damage_details?.color_done_id).lean().session(session);
+        const is_item_editable = await canvas_done_details_model.findById(canvas_damage_details?.canvas_done_id).lean().session(session);
 
         if (is_item_editable?.no_of_sheets === is_item_editable?.available_details?.no_of_sheets) {
-            await color_done_details_model.updateOne({ _id: is_item_editable?._id }, {
+            await canvas_done_details_model.updateOne({ _id: is_item_editable?._id }, {
                 $set: {
                     isEditable: true,
                     updated_by: userDetails?._id
@@ -336,4 +338,4 @@ export const revert_from_color_damage_to_color_done = catchAsync(async (req, res
         await session.endSession()
     }
 
-})
+});

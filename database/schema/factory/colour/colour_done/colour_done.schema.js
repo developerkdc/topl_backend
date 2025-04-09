@@ -1,16 +1,16 @@
 import mongoose from 'mongoose';
 import { item_issued_from } from '../../../../Utils/constants/constants.js';
 
-const cnc_done_details_schema = new mongoose.Schema(
+const color_done_details_schema = new mongoose.Schema(
   {
     sr_no: Number,
-    issue_for_cnc_id: {
+    issue_for_color_id: {
       type: mongoose.Schema.Types.ObjectId,
-      required: [true, "Issue for CNC is required."]
+      required: [true, "Issue for Color is required."]
     },
-    cnc_date: {
+    color_date: {
       type: Date,
-      required: [true, "CNC Date is required."]
+      required: [true, "Color Date is required."]
     },
     no_of_workers: {
       type: Number,
@@ -89,12 +89,12 @@ const cnc_done_details_schema = new mongoose.Schema(
   { timestamps: true }
 );
 
-const indexed_fields = [[{ issue_for_cnc_id: 1 }], [{ sr_no: 1 }, { unique: true }]]
-indexed_fields?.forEach((field) => cnc_done_details_schema.index(...field))
+const indexed_fields = [[{ issue_for_color_id: 1 }], [{ sr_no: 1 }, { unique: true }]]
+indexed_fields?.forEach((field) => color_done_details_schema.index(...field))
 
 
-export const cnc_done_details_model = mongoose.model(
-  'cnc_done_details',
-  cnc_done_details_schema,
-  'cnc_done_details'
+export const color_done_details_model = mongoose.model(
+  'color_done_details',
+  color_done_details_schema,
+  'color_done_details'
 );

@@ -5,21 +5,69 @@ import { dynamic_filter } from '../../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../../utils/dynamicSearch/dynamic.js';
 import catchAsync from '../../../../utils/errors/catchAsync.js';
 import ApiError from '../../../../utils/errors/apiError.js';
-import issue_for_plywood_resizing_model from '../../../../database/schema/factory/plywood_resizing_factory/issue_for_resizing/issue_for_resizing.schema.js';
 import { plywood_resizing_done_details_model } from '../../../../database/schema/factory/plywood_resizing_factory/resizing_done/resizing.done.schema.js';
-import plywood_resize_damage_model from '../../../../database/schema/factory/plywood_resizing_factory/resizing_damage/resizing_damage.schema.js';
-import { face_inventory_items_details } from '../../../../database/schema/inventory/face/face.schema.js';
+import issue_for_cnc_model from '../../../../database/schema/factory/cnc/issue_for_cnc/issue_for_cnc.schema.js';
+import { cnc_done_details_model } from '../../../../database/schema/factory/cnc/cnc_done/cnc_done.schema.js';
 
+//done
 export const create_cnc = catchAsync(async (req, res) => {
     const userDetails = req.userDetails;
-
+    const { cnc_done_details } = req.body;
     const session = await mongoose.startSession();
     try {
         session.startTransaction();
+        if (!cnc_done_details) {
+            throw new ApiError("CNC Done details not found.", StatusCodes.NOT_FOUND)
+        }
+        if (!isValidObjectId(cnc_done_details?.issue_for_cnc_id)) {
+            throw new ApiError("Invalid Issue for CNC ID.", StatusCodes.BAD_REQUEST)
+        };
 
+        const issue_for_cnc_details = await issue_for_cnc_model.findById(cnc_done_details?.issue_for_cnc_id).session(session).lean();
 
-        const add_resizing_data_result = [];
-        const response = new ApiResponse(StatusCodes.CREATED, "CNC Created Successfully", add_resizing_data_result);
+        if (!issue_for_cnc_details) {
+            throw new ApiError("Issue for CNC Details not found.", StatusCodes.NOT_FOUND)
+        };
+
+        const [max_sr_no] = await cnc_done_details_model.aggregate([{
+            $group: {
+                _id: null,
+                max_sr_no: {
+                    $max: "$sr_no"
+                }
+            }
+        }])
+        const updated_cnc_done_details = {
+            ...cnc_done_details,
+            sr_no: max_sr_no ? max_sr_no?.max_sr_no + 1 : 1,
+            created_by: userDetails?._id,
+            updated_by: userDetails?._id,
+        };
+
+        const [create_cnc_result] = await cnc_done_details_model.create([updated_cnc_done_details], { session });
+
+        if (!create_cnc_result) {
+            throw new ApiError("Failed to add cnc done data", StatusCodes.BAD_REQUEST)
+        };
+
+        const update_issue_for_cnc_details = await issue_for_cnc_model.updateOne({ _id: issue_for_cnc_details?._id }, {
+            $inc: {
+                "available_details.no_of_sheets": -create_cnc_result?.no_of_sheets,
+                "available_details.sqm": -create_cnc_result?.sqm,
+                "available_details.amount": -create_cnc_result?.amount
+            }, $set: {
+                updated_by: userDetails?._id
+            }
+        }, { session });
+
+        if (update_issue_for_cnc_details?.matchedCount === 0) {
+            throw new ApiError("Issue for CNC Details not found.", StatusCodes.NOT_FOUND)
+        };
+
+        if (!update_issue_for_cnc_details?.acknowledged || update_issue_for_cnc_details?.modifiedCount === 0) {
+            throw new ApiError("Failed to update issue for cnc details", StatusCodes.BAD_REQUEST)
+        };
+        const response = new ApiResponse(StatusCodes.CREATED, "CNC Created Successfully", create_cnc_result);
         await session.commitTransaction()
         return res.status(StatusCodes.CREATED).json(response);
     } catch (error) {
@@ -33,26 +81,33 @@ export const create_cnc = catchAsync(async (req, res) => {
 export const update_cnc_done = catchAsync(async (req, res) => {
     const userDetails = req.userDetails;
     const { id } = req.params;
-    const { cnc_details, is_damage } = req.body
+    const { cnc_details } = req.body
     const session = await mongoose.startSession();
     try {
         session.startTransaction()
         if (!id) {
             throw new ApiError("ID is missing.", StatusCodes.BAD_REQUEST)
         };
-        if (!resizing_details) {
+        if (!cnc_details) {
             throw new ApiError("CNC details are missing.", StatusCodes.BAD_REQUEST)
         };
         if (!isValidObjectId(id)) {
             throw new ApiError("Invalid ID.", StatusCodes.BAD_REQUEST)
         };
+
+        const issue_for_cnc_details = await issue_for_cnc_model.findById(id).lean().session(session);
+
+        if (!issue_for_cnc_details) {
+            throw new ApiError("Issue for cnc details not found.", StatusCodes.BAD_REQUEST)
+        }
         const cnc_done_data = await plywood_resizing_done_details_model?.findById(id).lean();
 
         if (!cnc_done_data) {
             throw new ApiError("CNC done data not found", StatusCodes.NOT_FOUND)
         };
 
-        const update_cnc_done_result = [];
+
+
         const response = new ApiResponse(StatusCodes.OK, "Resizing Item Updated Successfully", update_cnc_done_result);
         await session.commitTransaction()
         return res.status(StatusCodes.OK).json(response);
@@ -64,6 +119,7 @@ export const update_cnc_done = catchAsync(async (req, res) => {
     }
 });
 
+//done
 export const listing_cnc_done = catchAsync(
     async (req, res) => {
         const {
@@ -107,13 +163,13 @@ export const listing_cnc_done = catchAsync(
 
         const match_query = {
             ...filterData,
-            ...search_query
+            ...search_query,
         };
 
         // Aggregation stage
         const aggCommonMatch = {
             $match: {
-                "available_details.no_of_sheets": { $ne: 0 }
+                "available_details.no_of_sheets": { $gt: 0 }
             },
         };
 
@@ -201,7 +257,7 @@ export const listing_cnc_done = catchAsync(
         ]; // aggregation pipiline
 
         const cnc_done_list =
-            await plywood_resizing_done_details_model.aggregate(listAggregate);
+            await cnc_done_details_model.aggregate(listAggregate);
 
         const aggCount = {
             $count: 'totalCount',
@@ -213,12 +269,12 @@ export const listing_cnc_done = catchAsync(
         ]; // total aggregation pipiline
 
         const [totalDocument] =
-            await plywood_resizing_done_details_model.aggregate(totalAggregate);
+            await cnc_done_details_model.aggregate(totalAggregate);
 
         const totalPages = Math.ceil((totalDocument?.totalCount || 0) / limit);
 
         const response = new ApiResponse(
-            200,
+            StatusCodes.OK,
             'CNC Done Data Fetched Successfully',
             {
                 data: cnc_done_list,
@@ -247,22 +303,22 @@ export const fetch_single_cnc_done_item_with_issue_for_cnc_data = catchAsync(asy
         },
         {
             $lookup: {
-                from: "issued_for_plywood_resizing_items",
-                localField: "issue_for_resizing_id",
+                from: "issued_for_cnc_details",
+                localField: "issue_for_cnc_id",
                 foreignField: "_id",
-                as: "issue_for_resizing_details"
+                as: "issue_for_cnc_details"
             }
         },
         {
             $unwind: {
-                path: "$issue_for_resizing_details",
+                path: "$issue_for_cnc_details",
                 preserveNullAndEmptyArrays: true
             }
         }
     ];
 
-    const result = await plywood_resizing_done_details_model.aggregate(pipeline)
-    return res.status(StatusCodes.OK).json(new ApiResponse(StatusCodes.OK, "Resizing details fetched successfully", result))
+    const result = await cnc_done_details_model.aggregate(pipeline)
+    return res.status(StatusCodes.OK).json(new ApiResponse(StatusCodes.OK, "CNC details fetched successfully", result))
 
 });
 
@@ -279,13 +335,34 @@ export const revert_cnc_done_items = catchAsync(async (req, res) => {
     try {
         session.startTransaction()
 
-        const cnc_done_data = await plywood_resizing_done_details_model?.findById(id).lean();
+        const cnc_done_data = await cnc_done_details_model.findById(id).session(session).lean();
 
         if (!cnc_done_data) {
             throw new ApiError("CNC done data not found", StatusCodes.NOT_FOUND)
         };
-        const delete_cnc_done_result = [];
-        const response = new ApiResponse(StatusCodes.OK, "CNC details Reverted Successfully", delete_cnc_done_result)
+
+        const delete_cnc_done_data_result = await cnc_done_details_model.deleteOne({ _id: cnc_done_data?._id }, { session });
+
+        if (!delete_cnc_done_data_result?.acknowledged || delete_cnc_done_data_result.deletedCount === 0) {
+            throw new ApiError("Failed to delete cnc done details", StatusCodes.BAD_REQUEST)
+        }
+        const update_issue_for_cnc_update_result = await issue_for_cnc_model.updateOne({ _id: cnc_done_data?.issue_for_cnc_id }, {
+            $inc: {
+                "available_details.sqm": cnc_done_data?.available_details?.sqm,
+                "available_details.no_of_sheets": cnc_done_data?.available_details?.no_of_sheets,
+                "available_details.amount": cnc_done_data?.available_details?.amount,
+            }, $set: {
+                updated_by: userDetails?._id
+            }
+        }, { session });
+
+        if (update_issue_for_cnc_update_result?.matchedCount === 0) {
+            throw new ApiError("Issue for cnc details not found.", StatusCodes.NOT_FOUND)
+        }
+        if (!update_issue_for_cnc_update_result.acknowledged || update_issue_for_cnc_update_result?.modifiedCount === 0) {
+            throw new ApiError("Failed to update issue for cnc details", StatusCodes.BAD_REQUEST)
+        };
+        const response = new ApiResponse(StatusCodes.OK, "CNC items Reverted Successfully", update_issue_for_cnc_update_result)
         await session.commitTransaction();
         return res.status(StatusCodes.OK).json(response)
     } catch (error) {
@@ -294,6 +371,5 @@ export const revert_cnc_done_items = catchAsync(async (req, res) => {
     } finally {
         await session.endSession()
     }
-
-
 });
+

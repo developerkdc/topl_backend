@@ -1,16 +1,16 @@
 import mongoose from 'mongoose';
 import { item_issued_from } from '../../../../Utils/constants/constants.js';
 
-const cnc_done_details_schema = new mongoose.Schema(
+const canvas_done_details_schema = new mongoose.Schema(
   {
     sr_no: Number,
-    issue_for_cnc_id: {
+    issue_for_canvas_id: {
       type: mongoose.Schema.Types.ObjectId,
-      required: [true, "Issue for CNC is required."]
+      required: [true, "Issue for canvas is required."]
     },
-    cnc_date: {
+    canvas_date: {
       type: Date,
-      required: [true, "CNC Date is required."]
+      required: [true, "canvas Date is required."]
     },
     no_of_workers: {
       type: Number,
@@ -64,8 +64,8 @@ const cnc_done_details_schema = new mongoose.Schema(
     issue_status: {
       type: String,
       enum: {
-        values: [item_issued_from?.pressing_factory, item_issued_from?.cnc_factory, item_issued_from?.color_factory, item_issued_from?.bunito_factory, item_issued_from?.polishing_factory],
-        message: `Invalid Type -> {{VALUE}} , it must be one of the ${(item_issued_from?.pressing_factory, item_issued_from?.cnc_factory, item_issued_from?.color_factory, item_issued_from?.bunito_factory, item_issued_from?.polishing_factory)}`
+        values: [item_issued_from?.pressing_factory, item_issued_from?.canvas_factory, item_issued_from?.color_factory, item_issued_from?.bunito_factory, item_issued_from?.polishing_factory],
+        message: `Invalid Type -> {{VALUE}} , it must be one of the ${(item_issued_from?.pressing_factory, item_issued_from?.canvas_factory, item_issued_from?.color_factory, item_issued_from?.bunito_factory, item_issued_from?.polishing_factory)}`
       }
     },
     isEditable: {
@@ -89,12 +89,12 @@ const cnc_done_details_schema = new mongoose.Schema(
   { timestamps: true }
 );
 
-const indexed_fields = [[{ issue_for_cnc_id: 1 }], [{ sr_no: 1 }, { unique: true }]]
-indexed_fields?.forEach((field) => cnc_done_details_schema.index(...field))
+const indexed_fields = [[{ issue_for_canvas_id: 1 }], [{ sr_no: 1 }, { unique: true }]]
+indexed_fields?.forEach((field) => canvas_done_details_schema.index(...field))
 
 
-export const cnc_done_details_model = mongoose.model(
-  'cnc_done_details',
-  cnc_done_details_schema,
-  'cnc_done_details'
+export const canvas_done_details_model = mongoose.model(
+  'canvas_done_details',
+  canvas_done_details_schema,
+  'canvas_done_details'
 );

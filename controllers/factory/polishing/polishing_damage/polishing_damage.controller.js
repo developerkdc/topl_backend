@@ -5,9 +5,10 @@ import { dynamic_filter } from '../../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../../utils/dynamicSearch/dynamic.js';
 import catchAsync from '../../../../utils/errors/catchAsync.js';
 import ApiError from '../../../../utils/errors/apiError.js';
-import color_damage_model from '../../../../database/schema/factory/colour/colour_damage/colour_damage.schema.js';
+import polishing_damage_model from '../../../../database/schema/factory/polishing/polishing_damage/polishing_damage.schema.js';
+import { polishing_done_details_model } from '../../../../database/schema/factory/polishing/polishing_done/polishing_done.schema.js';
 
-export const listing_color_damage =catchAsync(
+export const listing_polishing_damage = catchAsync(
     async (req, res) => {
         const {
             page = 1,
@@ -53,20 +54,20 @@ export const listing_color_damage =catchAsync(
             ...search_query
         };
 
-        const aggLookupColorDoneDetails = {
+        const aggLookuppolishingDoneDetails = {
             $lookup: {
-                from: "color_done_details",
-                localField: "color_done_id",
+                from: "polishing_done_details",
+                localField: "polishing_done_id",
                 foreignField: "_id",
-                as: "color_done_details"
+                as: "polishing_done_details"
             }
         }
-        const aggLookUpIssueForColorDetails = {
+        const aggLookUpIssueForpolishingDetails = {
             $lookup: {
-                from: "issued_for_color_details",
-                localField: "color_done_details.issue_for_color_id",
+                from: "issued_for_polishing_details",
+                localField: "polishing_done_details.issue_for_polishing_id",
                 foreignField: "_id",
-                as: "issue_for_color_details"
+                as: "issue_for_polishing_details"
             }
         }
 
@@ -125,15 +126,15 @@ export const listing_color_damage =catchAsync(
             },
         };
 
-        const aggUnwindColorDoneDetails = {
+        const aggUnwindpolishingDoneDetails = {
             $unwind: {
-                path: "$color_done_details",
+                path: "$polishing_done_details",
                 preserveNullAndEmptyArrays: true
             }
         }
-        const aggUnwindIssueForColorDetails = {
+        const aggUnwindIssueForpolishingDetails = {
             $unwind: {
-                path: "$issue_for_color_details",
+                path: "$issue_for_polishing_details",
                 preserveNullAndEmptyArrays: true
             }
         }
@@ -155,10 +156,10 @@ export const listing_color_damage =catchAsync(
         };
 
         const listAggregate = [
-            aggLookupColorDoneDetails,
-            aggUnwindColorDoneDetails,
-            aggLookUpIssueForColorDetails,
-            aggUnwindIssueForColorDetails,
+            aggLookuppolishingDoneDetails,
+            aggUnwindpolishingDoneDetails,
+            aggLookUpIssueForpolishingDetails,
+            aggLookUpIssueForpolishingDetails,
             aggCreatedByLookup,
             aggCreatedByUnwind,
             aggUpdatedByLookup,
@@ -169,8 +170,8 @@ export const listing_color_damage =catchAsync(
             aggLimit,
         ]; // aggregation pipiline
 
-        const color_damage_list =
-            await color_damage_model.aggregate(listAggregate);
+        const polishing_damage_list =
+            await polishing_damage_model.aggregate(listAggregate);
 
         const aggCount = {
             $count: 'totalCount',
@@ -182,15 +183,15 @@ export const listing_color_damage =catchAsync(
         ]; // total aggregation pipiline
 
         const [totalDocument] =
-            await color_damage_model.aggregate(totalAggregate);
+            await polishing_damage_model.aggregate(totalAggregate);
 
         const totalPages = Math.ceil((totalDocument?.totalCount || 0) / limit);
 
         const response = new ApiResponse(
             StatusCodes.OK,
-            'Color Damage Data Fetched Successfully',
+            'polishing Damage Data Fetched Successfully',
             {
-                data: color_damage_list,
+                data: polishing_damage_list,
                 totalPages: totalPages,
             }
         );
@@ -198,7 +199,7 @@ export const listing_color_damage =catchAsync(
     }
 );
 
-export const add_color_damage = catchAsync(async (req, res) => {
+export const add_polishing_damage = catchAsync(async (req, res) => {
     const userDetails = req.userDetails;
     const { id, damage_sheets } = req.query;
     const session = await mongoose.startSession();
@@ -215,19 +216,19 @@ export const add_color_damage = catchAsync(async (req, res) => {
             throw new ApiError("Damage Sheets are missing");
         };
 
-        const color_done_details = await color_done_details_model.findById(id).lean().session();
+        const polishing_done_details = await polishing_done_details_model.findById(id).lean().session();
 
-        if (!color_done_details) {
-            throw new ApiError("Color done details not found.", StatusCodes.NOT_FOUND)
+        if (!polishing_done_details) {
+            throw new ApiError("polishing done details not found.", StatusCodes.NOT_FOUND)
         };
 
-        if (color_done_details?.available_details?.no_of_sheets === 0) {
+        if (polishing_done_details?.available_details?.no_of_sheets === 0) {
             throw new ApiError("No available sheets found.", StatusCodes.NOT_FOUND)
         };
 
-        const damage_sqm = Number(((damage_sheets / color_done_details?.available_details?.no_of_sheets) * color_done_details?.available_details?.sqm)?.toFixed(3));
+        const damage_sqm = Number(((damage_sheets / polishing_done_details?.available_details?.no_of_sheets) * polishing_done_details?.available_details?.sqm)?.toFixed(3));
 
-        const [maxSrNo] = await color_damage_model.aggregate([{
+        const [maxSrNo] = await polishing_damage_model.aggregate([{
             $group: {
                 _id: null,
                 max_sr_no: {
@@ -235,8 +236,8 @@ export const add_color_damage = catchAsync(async (req, res) => {
                 }
             }
         }])
-        const [create_damage_result] = await color_damage_model.create([{
-            color_done_id: color_done_details?._id,
+        const [create_damage_result] = await polishing_damage_model.create([{
+            polishing_done_id: polishing_done_details?._id,
             no_of_sheets: damage_sheets,
             sqm: damage_sqm,
             sr_no: maxSrNo ? maxSrNo?.max_sr_no + 1 : 1,
@@ -248,7 +249,7 @@ export const add_color_damage = catchAsync(async (req, res) => {
             throw new ApiError("Failed to add damage details", StatusCodes.BAD_REQUEST)
         };
 
-        const update_color_done_result = await color_done_details_model.updateOne({ _id: color_done_details?._id }, {
+        const update_polishing_done_result = await polishing_done_details_model.updateOne({ _id: polishing_done_details?._id }, {
             $inc: {
                 "available_details.sqm": -damage_sqm,
                 "available_details.no_of_sheets": -damage_sheets,
@@ -259,15 +260,15 @@ export const add_color_damage = catchAsync(async (req, res) => {
         }, { session });
 
 
-        if (update_color_done_result.matchedCount === 0) {
-            throw new ApiError("Color done details not found.", StatusCodes.BAD_REQUEST)
+        if (update_polishing_done_result.matchedCount === 0) {
+            throw new ApiError("polishing done details not found.", StatusCodes.BAD_REQUEST)
         }
 
-        if (!update_color_done_result.acknowledged || update_color_done_result.modifiedCount === 0) {
-            throw new ApiError("Failed to update Color done details.", StatusCodes.BAD_REQUEST)
+        if (!update_polishing_done_result.acknowledged || update_polishing_done_result.modifiedCount === 0) {
+            throw new ApiError("Failed to update polishing done details.", StatusCodes.BAD_REQUEST)
         }
 
-        const response = new ApiResponse(StatusCodes.OK, "Color Item added to damage successfully.", create_damage_result);
+        const response = new ApiResponse(StatusCodes.OK, "polishing Item added to damage successfully.", create_damage_result);
         await session.commitTransaction()
         return res.status(StatusCodes.OK).json(response);
     } catch (error) {
@@ -278,7 +279,8 @@ export const add_color_damage = catchAsync(async (req, res) => {
     }
 });
 
-export const revert_from_color_damage_to_color_done = catchAsync(async (req, res) => {
+
+export const revert_damage_to_polishing_done = catchAsync(async (req, res) => {
     const userDetails = req.userDetails;
 
     const { id } = req.params;
@@ -291,34 +293,34 @@ export const revert_from_color_damage_to_color_done = catchAsync(async (req, res
             throw new ApiError("Invalid ID", StatusCodes.BAD_REQUEST)
         };
 
-        session.startTransaction();
+        await session.startTransaction();
 
-        const color_damage_details = await color_damage_model.findById(id).lean().session(session);
-        if (!color_damage_details) {
-            throw new ApiError("Color Damage details not found", StatusCodes.NOT_FOUND)
+        const polishing_damage_details = await polishing_damage_model.findById(id).lean().session(session);
+        if (!polishing_damage_details) {
+            throw new ApiError("polishing Damage details not found", StatusCodes.NOT_FOUND)
         };
 
-        const delete_damage_data_result = await color_damage_model.deleteOne({ _id: id }, { session });
+        const delete_damage_data_result = await polishing_damage_model.deleteOne({ _id: id }, { session });
 
         if (!delete_damage_data_result.acknowledged || delete_damage_data_result.deletedCount === 0) {
             throw new ApiError("Failed to delete damage data", StatusCodes.BAD_REQUEST)
         };
 
-        const update_color_done_item_result = await color_done_details_model.findOneAndUpdate({ _id: color_damage_details?.color_done_id }, {
+        const update_polishing_done_item_result = await polishing_done_details_model.findOneAndUpdate({ _id: polishing_damage_details?.polishing_done_id }, {
             $inc: {
-                "available_details.no_of_sheets": color_damage_details.no_of_sheets,
-                "available_details.sqm": color_damage_details.sqm,
+                "available_details.no_of_sheets": polishing_damage_details.no_of_sheets,
+                "available_details.sqm": polishing_damage_details.sqm,
             }
         }, { session });
 
-        if (!update_color_done_item_result) {
-            throw new ApiError("Failed to update color done details", StatusCodes.BAD_REQUEST)
+        if (!update_polishing_done_item_result) {
+            throw new ApiError("Failed to update polishing done details", StatusCodes.BAD_REQUEST)
         };
 
-        const is_item_editable = await color_done_details_model.findById(color_damage_details?.color_done_id).lean().session(session);
+        const is_item_editable = await polishing_done_details_model.findById(polishing_damage_details?.polishing_done_id).lean().session(session);
 
         if (is_item_editable?.no_of_sheets === is_item_editable?.available_details?.no_of_sheets) {
-            await color_done_details_model.updateOne({ _id: is_item_editable?._id }, {
+            await polishing_done_details_model.updateOne({ _id: is_item_editable?._id }, {
                 $set: {
                     isEditable: true,
                     updated_by: userDetails?._id

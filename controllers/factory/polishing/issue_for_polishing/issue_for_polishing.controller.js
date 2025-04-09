@@ -1,14 +1,14 @@
-import mongoose, { isValidObjectId, set } from 'mongoose';
+import mongoose, { isValidObjectId } from 'mongoose';
 import ApiResponse from '../../../../utils/ApiResponse.js';
 import { StatusCodes } from '../../../../utils/constants.js';
 import { dynamic_filter } from '../../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../../utils/dynamicSearch/dynamic.js';
 import catchAsync from '../../../../utils/errors/catchAsync.js';
 import ApiError from '../../../../utils/errors/apiError.js';
-import issue_for_plywood_resizing_model from '../../../../database/schema/factory/plywood_resizing_factory/issue_for_resizing/issue_for_resizing.schema.js';
-import issue_for_color_model from '../../../../database/schema/factory/colour/issue_for_colour/issue_for_colour.schema.js';
+import issue_for_polishing_model from '../../../../database/schema/factory/polishing/issue_for_polishing/issue_for_polishing.schema.js';
+import { issues_for_status } from '../../../../database/Utils/constants/constants.js';
 
-export const add_issue_for_color_from_pressing = catchAsync(async (req, res) => {
+export const add_issue_for_polishing_from_pressing = catchAsync(async (req, res) => {
     const userDetails = req.userDetails;
     const { issued_sheets, pressing_item_id } = req.body;
     const session = await mongoose.startSession();
@@ -44,7 +44,7 @@ export const add_issue_for_color_from_pressing = catchAsync(async (req, res) => 
             (factor * pressing_item_details?.available_amount)?.toFixed(3)
         );
 
-        const max_sr_no_doc = await issue_for_color_model
+        const max_sr_no_doc = await issue_for_polishing_model
             .findOne({}, { sr_no: 1 })
             .sort({ sr_no: -1 })
             .limit(1)
@@ -52,7 +52,7 @@ export const add_issue_for_color_from_pressing = catchAsync(async (req, res) => 
 
         const max_sr_no = max_sr_no_doc ? max_sr_no_doc?.sr_no + 1 : 1;
 
-        const [add_issue_for_color_result] = await issue_for_color_model.create(
+        const [add_issue_for_polishing_result] = await issue_for_polishing_model.create(
             [
                 {
                     sr_no: max_sr_no,
@@ -67,9 +67,9 @@ export const add_issue_for_color_from_pressing = catchAsync(async (req, res) => 
             { session }
         );
 
-        if (!add_issue_for_color_result) {
+        if (!add_issue_for_polishing_result) {
             throw new ApiError(
-                'Failed to add issue for color data.',
+                'Failed to add issue for polishing data.',
                 StatusCodes.BAD_REQUEST
             );
         }
@@ -99,7 +99,7 @@ export const add_issue_for_color_from_pressing = catchAsync(async (req, res) => 
 
         //create pressing history
         const [create_pressing_history] = await pressing_item_details?.create([{
-            issue_status: issues_for_status?.color_factory,
+            issue_status: issues_for_status?.polishing_factory,
             pressing_item_id: pressing_item_details?._id,
             created_by: userDetails?._id,
             updated_by: userDetails?._id,
@@ -111,8 +111,8 @@ export const add_issue_for_color_from_pressing = catchAsync(async (req, res) => 
 
         const response = new ApiResponse(
             StatusCodes.OK,
-            'Item Issued For color Successfully',
-            add_issue_for_color_result
+            'Item Issued For polishing Successfully',
+            add_issue_for_polishing_result
         );
 
         await session?.commitTransaction();
@@ -125,7 +125,7 @@ export const add_issue_for_color_from_pressing = catchAsync(async (req, res) => 
     }
 });
 
-export const revert_issue_for_color = catchAsync(async (req, res) => {
+export const revert_issue_for_polishing = catchAsync(async (req, res) => {
     const { id } = req.params;
 
     if (!id) {
@@ -140,18 +140,18 @@ export const revert_issue_for_color = catchAsync(async (req, res) => {
     try {
         session.startTransaction();
 
-        const issue_for_color_details = await issue_for_color_model.findById(id).lean();
+        const issue_for_polishing_details = await issue_for_polishing_model.findById(id).lean();
 
-        if (!issue_for_color_details) {
-            throw new ApiError("Issue for color details not found.", StatusCodes.NOT_FOUND)
+        if (!issue_for_polishing_details) {
+            throw new ApiError("Issue for polishing details not found.", StatusCodes.NOT_FOUND)
         };
 
         //? update pressing item details 
-        const update_pressing_details_result = await pressing_item_details_model?.updateOne({ _id: issue_for_color_details?.pressing_details_id }, {
+        const update_pressing_details_result = await pressing_item_details_model?.updateOne({ _id: issue_for_polishing_details?.pressing_details_id }, {
             $inc: {
-                available_sheets: issue_for_color_details?.issued_sheets,
-                available_amount: issue_for_color_details?.issued_amount,
-                available_sqm: issue_for_color_details?.issued_sqm,
+                available_sheets: issue_for_polishing_details?.issued_sheets,
+                available_amount: issue_for_polishing_details?.issued_amount,
+                available_sqm: issue_for_polishing_details?.issued_sqm,
             }, $set: {
                 updated_by: userDetails?._id
             }
@@ -166,15 +166,15 @@ export const revert_issue_for_color = catchAsync(async (req, res) => {
 
         //todo update isEditable status
 
-        // deleting issue for color documnet
-        const delete_issue_for_color_document_result = await issue_for_color_model.deleteOne({ _id: issue_for_color_details?._id }, { session });
+        // deleting issue for polishing documnet
+        const delete_issue_for_polishing_document_result = await issue_for_polishing_model.deleteOne({ _id: issue_for_polishing_details?._id }, { session });
 
-        if (!delete_issue_for_color_document_result?.acknowledged || delete_issue_for_color_document_result?.deletedCount === 0) {
-            throw new ApiError("Failed to delete issue for color details.", StatusCodes.BAD_REQUEST);
+        if (!delete_issue_for_polishing_document_result?.acknowledged || delete_issue_for_polishing_document_result?.deletedCount === 0) {
+            throw new ApiError("Failed to delete issue for polishing details.", StatusCodes.BAD_REQUEST);
         }
 
         //todo delete pressing document
-        const delete_pressing_history_result = await plywood_history_model.deleteOne({ pressing_details_id: issue_for_color_details?.pressing_details_id });
+        const delete_pressing_history_result = await plywood_history_model.deleteOne({ pressing_details_id: issue_for_polishing_details?.pressing_details_id });
 
         if (!delete_pressing_history_result.acknowledged || delete_pressing_history_result?.deletedCount === 0) {
             throw new ApiError("Failed to delete pressing history", StatusCodes.BAD_REQUEST)
@@ -182,7 +182,7 @@ export const revert_issue_for_color = catchAsync(async (req, res) => {
         const response = new ApiResponse(
             StatusCodes.OK,
             'Item Reverted Successfully',
-            delete_issue_for_color_document_result
+            delete_issue_for_polishing_document_result
         );
         await session.commitTransaction();
         return res.status(StatusCodes.OK).json(response);
@@ -194,7 +194,7 @@ export const revert_issue_for_color = catchAsync(async (req, res) => {
     }
 });
 
-export const listing_issued_for_color = catchAsync(async (req, res, next) => {
+export const listing_issued_for_polishing = catchAsync(async (req, res, next) => {
     const {
         page = 1,
         limit = 10,
@@ -237,7 +237,7 @@ export const listing_issued_for_color = catchAsync(async (req, res, next) => {
     const match_query = {
         ...filterData,
         ...search_query,
-        is_color_done: false,
+        is_polishing_done: false,
     };
 
     const aggCreatedByLookup = {
@@ -322,8 +322,8 @@ export const listing_issued_for_color = catchAsync(async (req, res, next) => {
         aggLimit,
     ]; // aggregation pipiline
 
-    const issue_for_color =
-        await issue_for_color_model.aggregate(listAggregate);
+    const issue_for_polishing =
+        await issue_for_polishing_model.aggregate(listAggregate);
 
     const aggCount = {
         $count: 'totalCount',
@@ -332,22 +332,22 @@ export const listing_issued_for_color = catchAsync(async (req, res, next) => {
     const totalAggregate = [...listAggregate?.slice(0, -2), aggCount]; // total aggregation pipiline
 
     const totalDocument =
-        await issue_for_color_model.aggregate(totalAggregate);
+        await issue_for_polishing_model.aggregate(totalAggregate);
 
     const totalPages = Math.ceil((totalDocument?.[0]?.totalCount || 0) / limit);
 
     const response = new ApiResponse(
         StatusCodes.OK,
-        'Issue For color Data Fetched Successfully',
+        'Issue For polishing Data Fetched Successfully',
         {
-            data: issue_for_color,
+            data: issue_for_polishing,
             totalPages: totalPages,
         }
     );
     return res.status(StatusCodes.OK).json(response);
 });
 
-export const fetch_single_issue_for_color_item = catchAsync(async (req, res) => {
+export const fetch_single_issue_for_polishing_item = catchAsync(async (req, res) => {
     const { id } = req.params;
 
     if (!id) {
@@ -357,17 +357,17 @@ export const fetch_single_issue_for_color_item = catchAsync(async (req, res) => 
         throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
     }
 
-    const result = await issue_for_color_model
+    const result = await issue_for_polishing_model
         .findOne({ _id: id })
         .lean();
 
     if (!result) {
-        throw new ApiError('Issue for color data not found', StatusCodes.NOT_FOUND);
+        throw new ApiError('Issue for polishing data not found', StatusCodes.NOT_FOUND);
     }
 
     const response = new ApiResponse(
         StatusCodes.OK,
-        'color Details fetched successfully',
+        'polishing Details fetched successfully',
         result
     );
     return res.status(StatusCodes.OK).json(response);
