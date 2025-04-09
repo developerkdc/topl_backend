@@ -92,9 +92,9 @@ const pressing_done_details_schema = new mongoose.Schema(
         message: 'group_no_array must contain at least one element',
       },
     },
-    order_category: {
+    product_type: {
       type: String,
-      required: [true, 'Order Category is required'],
+      required: [true, 'Product Type is required'],
       trim: true,
     },
     series_product_code: {
@@ -209,7 +209,7 @@ const indexingFields = [
   [{ isEditable: 1 }],
   [{ order_id: 1 }],
   [{ group_no: 1 }],
-  [{ pressing_id: 1 }],
+  [{ pressing_id: 1, unique: true }],
   [{ 'available_details.no_of_sheets': 1 }],
   [{ 'available_details.sqm': 1 }],
   [{ 'available_details.amount': 1 }],
