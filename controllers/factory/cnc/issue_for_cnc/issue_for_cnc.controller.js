@@ -240,6 +240,11 @@ export const listing_issued_for_cnc = catchAsync(async (req, res, next) => {
         is_cnc_done: false,
     };
 
+    const aggCommonMatch = {
+        $match: {
+            "available_details.no_of_sheets": { $gt: 0 }
+        },
+    };
     const aggCreatedByLookup = {
         $lookup: {
             from: 'users',
@@ -312,6 +317,7 @@ export const listing_issued_for_cnc = catchAsync(async (req, res, next) => {
     };
 
     const listAggregate = [
+        aggCommonMatch,
         aggCreatedByLookup,
         aggCreatedByUnwind,
         aggUpdatedByLookup,
@@ -360,10 +366,6 @@ export const fetch_single_issue_for_cnc_item = catchAsync(async (req, res) => {
     const result = await issue_for_cnc_model
         .findOne({ _id: id })
         .lean();
-
-    if (!result) {
-        throw new ApiError('Issue for CNC data not found', StatusCodes.NOT_FOUND);
-    }
 
     const response = new ApiResponse(
         StatusCodes.OK,

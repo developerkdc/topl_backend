@@ -9,6 +9,6 @@ issue_for_cnc_router.post("/issue", AuthMiddleware, add_issue_for_cnc_from_press
 issue_for_cnc_router.post("/revert/:id", AuthMiddleware, revert_issue_for_cnc);
 issue_for_cnc_router.post("/list", AuthMiddleware, listing_issued_for_cnc);
 issue_for_cnc_router.get("/fetch-single-issue-for-cnc/:id", AuthMiddleware, fetch_single_issue_for_cnc_item);
-issue_for_cnc_router.post("/list-damage", AuthMiddleware, listing_cnc_damage);
+// issue_for_cnc_router.post("/list-damage", AuthMiddleware, listing_cnc_damage);
 
 export default issue_for_cnc_router;

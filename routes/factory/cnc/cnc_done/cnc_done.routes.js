@@ -10,7 +10,5 @@ cnc_done_router.post("/update/:id", AuthMiddleware, update_cnc_done)
 cnc_done_router.post("/list", AuthMiddleware, listing_cnc_done)
 cnc_done_router.post("/revert/:id", AuthMiddleware, revert_cnc_done_items)
 cnc_done_router.get("/fetch-single-cnc-item/:id", AuthMiddleware, fetch_single_cnc_done_item_with_issue_for_cnc_data)
-cnc_done_router.post("/add-to-damage/:id", AuthMiddleware, add_cnc_damage)
-
-
+// cnc_done_router.post("/add-to-damage/:id", AuthMiddleware, add_cnc_damage)
 export default cnc_done_router;

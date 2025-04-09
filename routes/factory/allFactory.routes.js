@@ -29,6 +29,8 @@ import cnc_done_router from './cnc/cnc_done/cnc_done.routes.js';
 import colour_done_router from './colour/colour_done/colour_done.routes.js';
 import issue_for_colour_router from './colour/issue_for_colour/issue_for_colour.routes.js';
 import { add_issue_for_factory_data } from '../../controllers/factory/issue_for_factory/issue_for_factory.controller.js';
+import cnc_damage_router from './cnc/cnc_damage/cnc_damage.routes.js';
+import { revert_issue_for_factory_data } from '../../controllers/factory/issue_for_factory/revert_issue_for_factory.controller.js';
 
 const factoryRouter = express.Router();
 
@@ -83,12 +85,15 @@ factoryRouter.use('/factory/plywood-production', plywoodProductionRouter);
 //cnc
 factoryRouter.use('/factory/issue-for-cnc', issue_for_cnc_router);
 factoryRouter.use("/factory/cnc-done", cnc_done_router)
+factoryRouter.use("/factory/cnc-damage", cnc_damage_router)
 
 //colour
 factoryRouter.use('/factory/issue-for-colour', issue_for_colour_router);
 factoryRouter.use("/factory/colour-done", colour_done_router)
 
-
+//route for issuing data from factory
 factoryRouter.use("/issue-for-factory", add_issue_for_factory_data)
+//route for reverting issued data from factory
+factoryRouter.use("/issue-for-factory", revert_issue_for_factory_data)
 
 export default factoryRouter;

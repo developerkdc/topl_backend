@@ -1,6 +1,6 @@
 import mongoose, { isValidObjectId } from 'mongoose';
 import { StatusCodes } from '../../../utils/constants.js';
-import ApiError from '../../../utils/errors/ApiError.js';
+import ApiError from '../../../utils/errors/apiError.js';
 import issue_for_cnc_model from '../../../database/schema/factory/cnc/issue_for_cnc/issue_for_cnc.schema.js';
 import {
     item_issued_for,
@@ -55,7 +55,7 @@ class Issue_For_Factory {
             .session(this.session);
         if (!issued_from_data) {
             throw new ApiError(
-                `${this?.issued_from?.split('_')?.join(' ')?.toUpperCase()} Done data not found.`,
+                `${this?.issued_from} Done data not found.`,
                 StatusCodes?.NOT_FOUND
             );
         }

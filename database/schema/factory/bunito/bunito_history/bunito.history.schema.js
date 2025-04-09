@@ -2,10 +2,10 @@ import mongoose from 'mongoose';
 import { item_issued_from } from '../../../../Utils/constants/constants.js';
 
 
-const cnc_history_schema = new mongoose.Schema(
+const bunito_history_schema = new mongoose.Schema(
     {
         sr_no: Number,
-        cnc_item_id: {
+        bunito_item_id: {
             type: mongoose.Schema.Types.ObjectId,
             required: [true, 'Plywood Item ID is required.'],
         },
@@ -46,12 +46,12 @@ const cnc_history_schema = new mongoose.Schema(
     { timestamps: true }
 );
 
-const indexed_fields = [[{ issue_status: 1 }], [{ sr_no: 1 }, { unique: true }], [{ cnc_item_id: 1 }]]
-indexed_fields?.forEach((field) => cnc_history_schema.index(...field))
-const cnc_history_model = mongoose.model(
-    'cnc_history_details',
-    cnc_history_schema,
-    'cnc_history_details'
+const indexed_fields = [[{ issue_status: 1 }], [{ sr_no: 1 }, { unique: true }], [{ bunito_item_id: 1 }]]
+indexed_fields?.forEach((field) => bunito_history_schema.index(...field))
+const bunito_history_model = mongoose.model(
+    'bunito_history_details',
+    bunito_history_schema,
+    'bunito_history_details'
 );
 
-export default cnc_history_model;
+export default bunito_history_model;

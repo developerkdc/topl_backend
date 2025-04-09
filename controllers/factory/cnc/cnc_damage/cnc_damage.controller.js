@@ -159,7 +159,7 @@ export const listing_cnc_damage = catchAsync(
             aggLookupCncDoneDetails,
             aggUnwindCncDoneDetails,
             aggLookUpIssueForCncDetails,
-            aggLookUpIssueForCncDetails,
+            aggUnwindIssueForCncDetails,
             aggCreatedByLookup,
             aggCreatedByUnwind,
             aggUpdatedByLookup,
