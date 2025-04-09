@@ -1,0 +1,33 @@
+import { Router } from 'express';
+import AuthMiddleware from '../../../../middlewares/verifyToken.js';
+import {
+  create_polishing,
+  fetch_single_polishing_done_item_with_issue_for_polishing_data,
+  listing_polishing_done,
+  revert_polishing_done_items,
+  update_polishing_done,
+} from '../../../../controllers/factory/polishing/polishing_done/polishing_done.controller.js';
+
+const polishing_done_router = Router();
+
+polishing_done_router.post('/create', AuthMiddleware, create_polishing);
+polishing_done_router.post(
+  '/update/:id',
+  AuthMiddleware,
+  update_polishing_done
+);
+polishing_done_router.post('/list', AuthMiddleware, listing_polishing_done);
+polishing_done_router.post(
+  '/revert/:id',
+  AuthMiddleware,
+  revert_polishing_done_items
+);
+polishing_done_router.get(
+  '/fetch-single-polishing-item/:id',
+  AuthMiddleware,
+  fetch_single_polishing_done_item_with_issue_for_polishing_data
+);
+
+// polishing_done_router.post("/add-to-damage/:id", AuthMiddleware, add_polishing_damage)
+
+export default polishing_done_router;

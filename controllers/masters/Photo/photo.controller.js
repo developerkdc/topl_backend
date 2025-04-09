@@ -183,7 +183,7 @@ export const updatePhoto = catchAsync(async (req, res, next) => {
         },
       },
       {
-        session
+        session,
       }
     );
 
@@ -203,7 +203,7 @@ export const updatePhoto = catchAsync(async (req, res, next) => {
             images: { filename: { $in: removeImages } },
           },
         },
-        {session}
+        { session }
       );
 
       if (!removePhoto.acknowledged || removePhoto.modifiedCount <= 0) {
@@ -219,9 +219,10 @@ export const updatePhoto = catchAsync(async (req, res, next) => {
 
     if (other_details?.group_no !== fetchPhotoData?.group_no) {
       //setting current group no having field photo number as null
-      const isCurrentGroupExist = await grouping_done_items_details_model.findOne({
-        group_no: fetchPhotoData?.group_no,
-      });
+      const isCurrentGroupExist =
+        await grouping_done_items_details_model.findOne({
+          group_no: fetchPhotoData?.group_no,
+        });
       if (!isCurrentGroupExist) {
         return next(new ApiError('Current Group not exist', 400));
       }
@@ -233,10 +234,12 @@ export const updatePhoto = catchAsync(async (req, res, next) => {
           { session }
         );
 
-      if (!currentGroupDataUpdated?.acknowledged || currentGroupDataUpdated?.modifiedCount <= 0 ) {
+      if (
+        !currentGroupDataUpdated?.acknowledged ||
+        currentGroupDataUpdated?.modifiedCount <= 0
+      ) {
         return next(new ApiError('Failed to update Current group', 400));
       }
-
 
       const isGroupExist = await grouping_done_items_details_model.findOne({
         group_no: other_details?.group_no,
@@ -246,15 +249,16 @@ export const updatePhoto = catchAsync(async (req, res, next) => {
         return next(new ApiError('Group not exist', 400));
       }
 
-     
-
       const GroupDataUpdated =
         await grouping_done_items_details_model.updateOne(
           { _id: isGroupExist?._id },
-          { photo_no: fetchPhotoData?.photo_number, photo_no_id: fetchPhotoData?._id },
+          {
+            photo_no: fetchPhotoData?.photo_number,
+            photo_no_id: fetchPhotoData?._id,
+          },
           { session }
         );
-        
+
       if (!GroupDataUpdated) {
         return next(new ApiError('Failed to update group', 400));
       }
@@ -269,7 +273,7 @@ export const updatePhoto = catchAsync(async (req, res, next) => {
   } catch (error) {
     await session.abortTransaction();
     throw error;
-  }finally{
+  } finally {
     session.endSession();
   }
 });

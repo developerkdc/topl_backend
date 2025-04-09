@@ -594,8 +594,6 @@ export const update_plywood_production_done = catchAsync(async (req, res) => {
       return item;
     });
 
-  
-
     const is_face_history_updated = await face_history_model.insertMany(
       face_details_array_for_history,
       { session }
@@ -845,8 +843,7 @@ export const revert_plywood_production_done_items = catchAsync(
         await plywood_production_consumed_items_model.deleteMany({
           plywood_production_id: plywood_production_done_data?._id,
         });
-     
-      
+
       if (delete_consume_items?.deletedCount <= 0) {
         throw new ApiError(
           'Failed to delete comsume items while reverting plywood production done',
@@ -873,7 +870,7 @@ export const revert_plywood_production_done_items = catchAsync(
           restoreBulkOperations,
           { session }
         );
-       
+
         if (result?.modifiedCount === 0) {
           throw new ApiError(
             'Failed to update face inventory item details',
@@ -911,7 +908,7 @@ export const revert_plywood_production_done_items = catchAsync(
       const is_face_history_deleted = await face_history_model.deleteMany({
         issued_for_plywood_production_id: plywood_production_done_data?._id,
       });
-     
+
       if (is_face_history_deleted?.deletedCount <= 0) {
         throw new ApiError(
           'Failed to delete face inventory history while reverting plywood production done',
@@ -922,7 +919,7 @@ export const revert_plywood_production_done_items = catchAsync(
       const is_core_history_deleted = await core_history_model.deleteMany({
         issued_for_plywood_production_id: plywood_production_done_data?._id,
       });
-     
+
       if (is_core_history_deleted?.deletedCount <= 0) {
         throw new ApiError(
           'Failed to delete core inventory history while reverting plywood resizing done',

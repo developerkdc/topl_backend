@@ -107,13 +107,13 @@ export const fetch_all_tapping_wastage = catchAsync(async (req, res, next) => {
           $project: {
             group_no: 1,
             photo_no: 1,
-            photo_id: 1
+            photo_id: 1,
           },
         },
       ],
       as: 'grouping_done_items_details',
     },
-  }
+  };
   const aggGroupNoUnwind = {
     $unwind: {
       path: '$grouping_done_items_details',

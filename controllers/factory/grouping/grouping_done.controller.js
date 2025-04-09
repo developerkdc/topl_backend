@@ -1253,15 +1253,14 @@ export const recreate_grouping_done_items = catchAsync(
 export const group_no_dropdown_for_photo_master = catchAsync(
   async (req, res, next) => {
     const { group_no } = req.query;
-   
+
     const matchQuery = {
       is_damaged: false,
     };
     if (group_no) {
-      matchQuery.$or = [{ photo_no: null }, { group_no: group_no }]
+      matchQuery.$or = [{ photo_no: null }, { group_no: group_no }];
     } else {
-      matchQuery.photo_no= null,
-      matchQuery.photo_no_id= null
+      (matchQuery.photo_no = null), (matchQuery.photo_no_id = null);
     }
 
     const fetch_group_no = await grouping_done_items_details_model.find(

@@ -357,11 +357,11 @@ export const edit_core_item_invoice_inventory = catchAsync(
         )
           return next(new ApiError('Failed to update invoice items', 400));
 
-          const updated_items=items_details?.map((item)=>{
-            item.available_sheets=item?.number_of_sheets
-            item.available_sqm=item?.total_sq_meter,
-            item.available_amount=item?.amount
-            return item;
+        const updated_items = items_details?.map((item) => {
+          item.available_sheets = item?.number_of_sheets;
+          (item.available_sqm = item?.total_sq_meter),
+            (item.available_amount = item?.amount);
+          return item;
         });
         const update_item_details =
           await core_inventory_items_details.insertMany([...updated_items], {
@@ -449,17 +449,16 @@ export const edit_core_item_invoice_inventory = catchAsync(
           };
         });
 
-        const updated_items=itemDetailsData?.map((item)=>{
-          item.available_sheets=item?.number_of_sheets
-          item.available_sqm=item?.total_sq_meter,
-          item.available_amount=item?.amount
+        const updated_items = itemDetailsData?.map((item) => {
+          item.available_sheets = item?.number_of_sheets;
+          (item.available_sqm = item?.total_sq_meter),
+            (item.available_amount = item?.amount);
           return item;
-      });
+        });
         const add_approval_item_details =
-          await core_approval_inventory_items_model.insertMany(
-            updated_items,
-            { session }
-          );
+          await core_approval_inventory_items_model.insertMany(updated_items, {
+            session,
+          });
 
         await session.commitTransaction();
         session.endSession();

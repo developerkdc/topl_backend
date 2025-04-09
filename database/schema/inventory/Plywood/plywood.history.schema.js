@@ -10,11 +10,11 @@ const plywood_history_schema = new mongoose.Schema(
     issued_for_order_id: {
       type: mongoose.Schema.Types.ObjectId,
       // required: [true, 'Issued for order ID is required.'],
-      default: null
+      default: null,
     },
     issued_for_plywood_resizing_id: {
       type: mongoose.Schema.Types.ObjectId,
-      default: null
+      default: null,
     },
     issue_status: {
       type: String,

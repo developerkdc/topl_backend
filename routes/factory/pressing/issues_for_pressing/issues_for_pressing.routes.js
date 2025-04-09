@@ -1,6 +1,11 @@
 import express from 'express';
 import AuthMiddleware from '../../../../middlewares/verifyToken.js';
-import { fetch_all_issue_for_pressing_details, fetch_single_issue_for_pressing_details, issue_for_pressing_from_tapping_for_stock_and_sample, revert_issue_for_pressing_item } from '../../../../controllers/factory/pressing/issues_for_pressing/issues_for_pressing.controller.js';
+import {
+  fetch_all_issue_for_pressing_details,
+  fetch_single_issue_for_pressing_details,
+  issue_for_pressing_from_tapping_for_stock_and_sample,
+  revert_issue_for_pressing_item,
+} from '../../../../controllers/factory/pressing/issues_for_pressing/issues_for_pressing.controller.js';
 
 const issue_for_pressing_router = express.Router();
 

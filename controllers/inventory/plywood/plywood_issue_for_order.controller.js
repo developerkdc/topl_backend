@@ -31,23 +31,23 @@ export const fetch_all_plywood_no_item_name = catchAsync(async (req, res) => {
       // $lte: order_item_data.no_of_sheet,
       $gt: 0,
     },
-    "invoice_details.approval_status.sendForApproval.status": false
+    'invoice_details.approval_status.sendForApproval.status': false,
   };
 
   const pipeline = [
     {
       $lookup: {
-        from: "plywood_inventory_invoice_details",
-        localField: "invoice_id",
-        foreignField: "_id",
-        as: "invoice_details"
-      }
+        from: 'plywood_inventory_invoice_details',
+        localField: 'invoice_id',
+        foreignField: '_id',
+        as: 'invoice_details',
+      },
     },
     {
       $unwind: {
-        path: "$invoice_details",
-        preserveNullAndEmptyArrays: true
-      }
+        path: '$invoice_details',
+        preserveNullAndEmptyArrays: true,
+      },
     },
     { $match: { ...match_query } },
     {

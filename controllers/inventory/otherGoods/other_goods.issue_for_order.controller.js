@@ -35,39 +35,38 @@ export const fetch_all_other_goods_inward_sr_no_by_order_item_name = catchAsync(
         // $lte: order_item_data.quantity,
         $gt: 0,
       },
-      "invoice_details.approval_status.sendForApproval.status": false
+      'invoice_details.approval_status.sendForApproval.status': false,
     };
     const pipeline = [
       {
         $lookup: {
-          from: "othergoods_inventory_invoice_details",
-          localField: "invoice_id",
-          foreignField: "_id",
-          as: "invoice_details"
-        }
+          from: 'othergoods_inventory_invoice_details',
+          localField: 'invoice_id',
+          foreignField: '_id',
+          as: 'invoice_details',
+        },
       },
-      { $unwind: "$invoice_details" },
+      { $unwind: '$invoice_details' },
       { $match: { ...match_query } },
 
       {
         $group: {
-          _id: "$invoice_details._id",
-          inward_sr_no: { $first: "$invoice_details.inward_sr_no" },
-          invoice_id: { $first: "$invoice_details._id" }
-        }
+          _id: '$invoice_details._id',
+          inward_sr_no: { $first: '$invoice_details.inward_sr_no' },
+          invoice_id: { $first: '$invoice_details._id' },
+        },
       },
       {
         $project: {
-          _id: "$invoice_id",
-          inward_sr_no: 1
-        }
-      }
+          _id: '$invoice_id',
+          inward_sr_no: 1,
+        },
+      },
     ];
 
-    console.log(match_query)
+    console.log(match_query);
 
-    const result =
-      await othergoods_inventory_items_details.aggregate(pipeline);
+    const result = await othergoods_inventory_items_details.aggregate(pipeline);
 
     const response = new ApiResponse(
       StatusCodes.OK,

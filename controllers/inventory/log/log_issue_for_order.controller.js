@@ -36,23 +36,23 @@ export const fetch_all_log_no_item_name = catchAsync(async (req, res) => {
       $gt: 0,
     },
     issue_status: null,
-    "invoice_details.approval_status.sendForApproval.status": false
+    'invoice_details.approval_status.sendForApproval.status': false,
   };
 
   const pipeline = [
     {
       $lookup: {
-        from: "log_inventory_invoice_details",
-        localField: "invoice_id",
-        foreignField: "_id",
-        as: "invoice_details"
-      }
+        from: 'log_inventory_invoice_details',
+        localField: 'invoice_id',
+        foreignField: '_id',
+        as: 'invoice_details',
+      },
     },
     {
       $unwind: {
-        path: "$invoice_details",
-        preserveNullAndEmptyArrays: true
-      }
+        path: '$invoice_details',
+        preserveNullAndEmptyArrays: true,
+      },
     },
     { $match: { ...match_query } },
     {
