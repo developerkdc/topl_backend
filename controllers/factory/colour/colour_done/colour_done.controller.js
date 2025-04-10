@@ -56,6 +56,7 @@ export const create_color = catchAsync(async (req, res) => {
     const updated_color_done_details = {
       ...color_done_details,
       sr_no: max_sr_no ? max_sr_no?.max_sr_no + 1 : 1,
+      pressing_details_id: issue_for_color_details?.pressing_details_id,
       created_by: userDetails?._id,
       updated_by: userDetails?._id,
     };

@@ -38,6 +38,9 @@ import issue_for_canvas_router from './canvas/issue_for_canvas/issue_for_canvas.
 import issue_for_polishing_router from './polishing/issue_for_polishing/issue_for_polishing.routes.js';
 import polishing_done_router from './polishing/polishing_done/polishing_done.routes.js';
 import polishing_damage_router from './polishing/polishing_damage/polishing_damage.routes.js';
+import bunito_damage_router from './bunito/bunito_damage/bunito_damage.routes.js';
+import bunito_done_router from './bunito/bunito_done/bunito_done.routes.js';
+import issue_for_bunito_router from './bunito/issue_for_bunito/issue_for_bunito.routes.js';
 
 const factoryRouter = express.Router();
 
@@ -96,6 +99,10 @@ factoryRouter.use('/factory/plywood-production', plywoodProductionRouter);
 factoryRouter.use('/factory/issue-for-cnc', issue_for_cnc_router);
 factoryRouter.use('/factory/cnc-done', cnc_done_router);
 factoryRouter.use('/factory/cnc-damage', cnc_damage_router);
+//bunito
+factoryRouter.use('/factory/issue-for-bunito', issue_for_bunito_router);
+factoryRouter.use('/factory/bunito-done', bunito_done_router);
+factoryRouter.use('/factory/bunito-damage', bunito_damage_router);
 
 //color
 factoryRouter.use('/factory/issue-for-color', issue_for_color_router);

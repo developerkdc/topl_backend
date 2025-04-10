@@ -6,6 +6,7 @@ import { DynamicSearch } from '../../../../utils/dynamicSearch/dynamic.js';
 import catchAsync from '../../../../utils/errors/catchAsync.js';
 import ApiError from '../../../../utils/errors/apiError.js';
 import color_damage_model from '../../../../database/schema/factory/colour/colour_damage/colour_damage.schema.js';
+import { color_done_details_model } from '../../../../database/schema/factory/colour/colour_done/colour_done.schema.js';
 
 export const listing_color_damage = catchAsync(async (req, res) => {
   const {

@@ -53,6 +53,7 @@ export const create_polishing = catchAsync(async (req, res) => {
     const updated_polishing_done_details = {
       ...polishing_done_details,
       sr_no: max_sr_no ? max_sr_no?.max_sr_no + 1 : 1,
+      pressing_details_id: issue_for_polishing_details?.pressing_details_id,
       created_by: userDetails?._id,
       updated_by: userDetails?._id,
     };

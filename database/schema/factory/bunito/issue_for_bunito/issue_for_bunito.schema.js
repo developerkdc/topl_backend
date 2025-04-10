@@ -21,6 +21,10 @@ const issue_for_bunito_schema = new mongoose.Schema(
       required: [validate_order_field, 'Order Item ID is required.'],
       default: null,
     },
+    pressing_details_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, "Pressing Details ID is required"]
+    },
     issued_from_id: {
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Issued From ID is required.'],
