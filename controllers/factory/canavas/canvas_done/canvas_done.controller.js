@@ -449,8 +449,7 @@ export const revert_canvas_done_items = catchAsync(async (req, res) => {
     }
     const response = new ApiResponse(
       StatusCodes.OK,
-      'canvas items Reverted Successfully',
-      delete_canvas_done_result
+      'canvas items Reverted Successfully'
     );
     await session.commitTransaction();
     return res.status(StatusCodes.OK).json(response);

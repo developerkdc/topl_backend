@@ -170,21 +170,21 @@ const plywood_resizing_done_details_schema = new mongoose.Schema(
           available_details: {
             no_of_sheets: {
               type: Number,
-              // default: function () {
-              //   return this.no_of_sheets;
-              // },
+              default: function () {
+                return this.no_of_sheets;
+              },
             },
             amount: {
               type: Number,
-              // default: function () {
-              //   return this.amount;
-              // },
+              default: function () {
+                return this.amount;
+              },
             },
             sqm: {
               type: Number,
-              // default: function () {
-              //   return this.sqm;
-              // },
+              default: function () {
+                return this.sqm;
+              },
             },
           },
           remark: {
