@@ -14,7 +14,7 @@ polishing_damage_router.post(
   add_polishing_damage
 );
 polishing_damage_router.post(
-  '/list-damage',
+  '/list',
   AuthMiddleware,
   listing_polishing_damage
 );

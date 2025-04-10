@@ -9,7 +9,7 @@ import {
 const color_damage_router = Router();
 
 color_damage_router.post('/add-to-damage', AuthMiddleware, add_color_damage);
-color_damage_router.post('/list-damage', AuthMiddleware, listing_color_damage);
+color_damage_router.post('/list', AuthMiddleware, listing_color_damage);
 color_damage_router.post(
   '/revert/:id',
   AuthMiddleware,

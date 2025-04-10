@@ -169,7 +169,7 @@ export const listing_bunito_damage = catchAsync(async (req, res) => {
     aggLimit,
   ]; // aggregation pipiline
 
-  const cnc_damage_list = await bunito_damage_model.aggregate(listAggregate);
+  const bunito_damage_list = await bunito_damage_model.aggregate(listAggregate);
 
   const aggCount = {
     $count: 'totalCount',
@@ -185,14 +185,14 @@ export const listing_bunito_damage = catchAsync(async (req, res) => {
     StatusCodes.OK,
     'Bunito Damage Data Fetched Successfully',
     {
-      data: cnc_damage_list,
+      data: bunito_damage_list,
       totalPages: totalPages,
     }
   );
   return res.status(StatusCodes.OK).json(response);
 });
 
-export const add_cnc_damage = catchAsync(async (req, res) => {
+export const add_bunito_damage = catchAsync(async (req, res) => {
   const userDetails = req.userDetails;
   const { id, damage_sheets } = req.query;
   const session = await mongoose.startSession();
