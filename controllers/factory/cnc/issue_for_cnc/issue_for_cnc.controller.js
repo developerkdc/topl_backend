@@ -440,7 +440,7 @@ export const fetch_single_issue_for_cnc_item = catchAsync(async (req, res) => {
     throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
   }
 
-  const result = await issue_for_cnc_model.findOne({ _id: id }).lean();
+  const result = await issue_for_cnc_view_model.findOne({ _id: id }).lean();
 
   const response = new ApiResponse(
     StatusCodes.OK,

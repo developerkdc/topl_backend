@@ -63,7 +63,7 @@ export const listing_color_damage = catchAsync(async (req, res) => {
   };
   const aggLookUpIssueForColorDetails = {
     $lookup: {
-      from: 'issued_for_color_details',
+      from: 'issue_for_colour_view_model',
       localField: 'color_done_details.issue_for_color_id',
       foreignField: '_id',
       as: 'issue_for_color_details',
