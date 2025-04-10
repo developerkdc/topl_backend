@@ -321,7 +321,7 @@ export const revert_damage_to_cnc_done = catchAsync(async (req, res) => {
       throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
     }
 
-    await session.startTransaction();
+    session.startTransaction();
 
     const cnc_damage_details = await cnc_damage_model
       .findById(id)

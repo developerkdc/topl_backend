@@ -26,10 +26,6 @@ issue_for_bunito_router.get(
   AuthMiddleware,
   fetch_single_issue_for_cnc_item
 );
-issue_for_bunito_router.post(
-  '/list-damage',
-  AuthMiddleware,
-  listing_cnc_damage
-);
+
 
 export default issue_for_bunito_router;
