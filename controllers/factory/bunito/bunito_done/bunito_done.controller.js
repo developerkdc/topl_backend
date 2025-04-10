@@ -205,6 +205,15 @@ export const listing_bunito_done = catchAsync(async (req, res) => {
     },
   };
 
+  const aggLookUpIssuedDetails = {
+    $lookup: {
+      from: "issue_for_bunito_details_view",
+      localField: "issue_for_bunito_id",
+      foreignField: "_id",
+      as: "issue_for_bunito_details"
+    }
+  }
+
   const aggCreatedByLookup = {
     $lookup: {
       from: 'users',
@@ -232,7 +241,7 @@ export const listing_bunito_done = catchAsync(async (req, res) => {
       localField: 'updated_by',
       foreignField: '_id',
       pipeline: [
-        {
+        { 
           $project: {
             user_name: 1,
             user_type: 1,
@@ -259,6 +268,13 @@ export const listing_bunito_done = catchAsync(async (req, res) => {
       preserveNullAndEmptyArrays: true,
     },
   };
+
+  const aggIssuedCncDetailsUnwind = {
+    $unwind: {
+      path: '$issue_for_bunito_details',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
   const aggMatch = {
     $match: {
       ...match_query,
@@ -278,6 +294,8 @@ export const listing_bunito_done = catchAsync(async (req, res) => {
 
   const listAggregate = [
     aggCommonMatch,
+    aggLookUpIssuedDetails,
+    aggIssuedCncDetailsUnwind,
     aggCreatedByLookup,
     aggCreatedByUnwind,
     aggUpdatedByLookup,
@@ -331,7 +349,7 @@ export const fetch_single_bunito_done_item_with_issue_for_bunito_data =
       },
       {
         $lookup: {
-          from: 'issued_for_bunito_details',
+          from: 'issue_for_bunito_details_view',
           localField: 'issue_for_bunito_id',
           foreignField: '_id',
           as: 'issue_for_bunito_details',

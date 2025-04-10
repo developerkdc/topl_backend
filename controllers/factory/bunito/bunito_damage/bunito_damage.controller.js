@@ -63,7 +63,7 @@ export const listing_bunito_damage = catchAsync(async (req, res) => {
   };
   const aggLookUpIssueForCncDetails = {
     $lookup: {
-      from: 'issued_for_bunito_details',
+      from: 'issue_for_bunito_details_view',
       localField: 'bunito_done_details.issue_for_bunito_id',
       foreignField: '_id',
       as: 'issue_for_bunito_details',

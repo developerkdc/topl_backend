@@ -63,7 +63,7 @@ export const listing_polishing_damage = catchAsync(async (req, res) => {
   };
   const aggLookUpIssueForpolishingDetails = {
     $lookup: {
-      from: 'issued_for_polishing_details',
+      from: 'issue_for_polishing_details_view',
       localField: 'polishing_done_details.issue_for_polishing_id',
       foreignField: '_id',
       as: 'issue_for_polishing_details',
@@ -158,7 +158,7 @@ export const listing_polishing_damage = catchAsync(async (req, res) => {
     aggLookuppolishingDoneDetails,
     aggUnwindpolishingDoneDetails,
     aggLookUpIssueForpolishingDetails,
-    aggLookUpIssueForpolishingDetails,
+    aggUnwindIssueForpolishingDetails,
     aggCreatedByLookup,
     aggCreatedByUnwind,
     aggUpdatedByLookup,
