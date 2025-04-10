@@ -21,7 +21,7 @@ export const create_polishing = catchAsync(async (req, res) => {
         StatusCodes.NOT_FOUND
       );
     }
-    if (!isValidObjectId(polishing_done_details?.issur_for_polishing_id)) {
+    if (!isValidObjectId(polishing_done_details?.issue_for_polishing_id)) {
       throw new ApiError(
         'Invalid Issue for polishing ID.',
         StatusCodes.BAD_REQUEST
@@ -106,7 +106,7 @@ export const create_polishing = catchAsync(async (req, res) => {
     const response = new ApiResponse(
       StatusCodes.CREATED,
       'polishing Created Successfully',
-      add_resizing_data_result
+      create_polishing_result
     );
     await session.commitTransaction();
     return res.status(StatusCodes.CREATED).json(response);
@@ -457,7 +457,7 @@ export const revert_polishing_done_items = catchAsync(async (req, res) => {
     const response = new ApiResponse(
       StatusCodes.OK,
       'polishing items Reverted Successfully',
-      delete_polishing_done_result
+      delete_polishing_done_data_result
     );
     await session.commitTransaction();
     return res.status(StatusCodes.OK).json(response);

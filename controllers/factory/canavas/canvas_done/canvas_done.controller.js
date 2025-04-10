@@ -21,7 +21,7 @@ export const create_canvas = catchAsync(async (req, res) => {
         StatusCodes.NOT_FOUND
       );
     }
-    if (!isValidObjectId(canvas_done_details?.issur_for_canvas_id)) {
+    if (!isValidObjectId(canvas_done_details?.issue_for_canvas_id)) {
       throw new ApiError(
         'Invalid Issue for canvas ID.',
         StatusCodes.BAD_REQUEST
@@ -106,7 +106,7 @@ export const create_canvas = catchAsync(async (req, res) => {
     const response = new ApiResponse(
       StatusCodes.CREATED,
       'canvas Created Successfully',
-      add_resizing_data_result
+      create_canvas_result
     );
     await session.commitTransaction();
     return res.status(StatusCodes.CREATED).json(response);
