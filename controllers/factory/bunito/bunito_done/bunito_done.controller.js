@@ -5,7 +5,7 @@ import { dynamic_filter } from '../../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../../utils/dynamicSearch/dynamic.js';
 import catchAsync from '../../../../utils/errors/catchAsync.js';
 import ApiError from '../../../../utils/errors/apiError.js';
-import issue_for_bunito_model from '../../../../database/schema/factory/bunito/issue_for_bunito/issue_for_bunito.schema.js';
+import {issue_for_bunito_model} from '../../../../database/schema/factory/bunito/issue_for_bunito/issue_for_bunito.schema.js';
 import { bunito_done_details_model } from '../../../../database/schema/factory/bunito/bunito_done/bunito_done.schema.js';
 
 
@@ -44,7 +44,7 @@ export const create_bunito = catchAsync(async (req, res) => {
         },
       },
     ]);
-    const bunito_done_details = {
+    const updated_bunito_done_details = {
       ...bunito_done_details,
       sr_no: max_sr_no ? max_sr_no?.max_sr_no + 1 : 1,
       pressing_details_id: issue_for_bunito_details?.pressing_details_id,
@@ -53,7 +53,7 @@ export const create_bunito = catchAsync(async (req, res) => {
     };
 
     const [create_bunito_result] = await bunito_done_details_model.create(
-      [bunito_done_details],
+      [updated_bunito_done_details],
       { session }
     );
 
@@ -314,49 +314,46 @@ export const listing_bunito_done = catchAsync(async (req, res) => {
 
 export const fetch_single_bunito_done_item_with_issue_for_bunito_data =
   catchAsync(async (req, res) => {
-    async (req, res) => {
-      const { id } = req.params;
-
-      if (!id) {
-        throw new ApiError('ID is missing', StatusCodes.NOT_FOUND);
-      }
-      if (!isValidObjectId(id)) {
-        throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
-      }
-
-      const pipeline = [
-        {
-          $match: {
-            _id: mongoose.Types.ObjectId.createFromHexString(id),
-          },
-        },
-        {
-          $lookup: {
-            from: 'issued_for_bunito_details',
-            localField: 'issue_for_bunito_id',
-            foreignField: '_id',
-            as: 'issue_for_bunito_details',
-          },
-        },
-        {
-          $unwind: {
-            path: '$issue_for_bunito_details',
-            preserveNullAndEmptyArrays: true,
-          },
-        },
-      ];
-
-      const result = await bunito_done_details_model.aggregate(pipeline);
-      return res
-        .status(StatusCodes.OK)
-        .json(
-          new ApiResponse(
-            StatusCodes.OK,
-            'Bunito details fetched successfully',
-            result
-          )
-        );
+    const { id } = req.params;
+    if (!id) {
+      throw new ApiError('ID is missing', StatusCodes.NOT_FOUND);
     }
+
+    if (!isValidObjectId(id)) {
+      throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
+    }
+
+    const pipeline = [
+      {
+        $match: {
+          _id: mongoose.Types.ObjectId.createFromHexString(id),
+        },
+      },
+      {
+        $lookup: {
+          from: 'issued_for_bunito_details',
+          localField: 'issue_for_bunito_id',
+          foreignField: '_id',
+          as: 'issue_for_bunito_details',
+        },
+      },
+      {
+        $unwind: {
+          path: '$issue_for_bunito_details',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+    ];
+
+    const result = await bunito_done_details_model.aggregate(pipeline);
+
+    return res.status(StatusCodes.OK).json(
+      new ApiResponse(
+        StatusCodes.OK,
+        'Bunito details fetched successfully',
+        result
+      )
+    );
   });
 
 

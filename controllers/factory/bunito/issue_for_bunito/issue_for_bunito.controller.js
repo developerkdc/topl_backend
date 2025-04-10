@@ -5,7 +5,7 @@ import { dynamic_filter } from '../../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../../utils/dynamicSearch/dynamic.js';
 import catchAsync from '../../../../utils/errors/catchAsync.js';
 import ApiError from '../../../../utils/errors/apiError.js';
-import issue_for_bunito_model from '../../../../database/schema/factory/bunito/issue_for_bunito/issue_for_bunito.schema.js';
+import {issue_for_bunito_model} from '../../../../database/schema/factory/bunito/issue_for_bunito/issue_for_bunito.schema.js';
 import { issues_for_status } from '../../../../database/Utils/constants/constants.js';
 
 export const listing_issued_for_bunito = catchAsync(async (req, res, next) => {
