@@ -114,3 +114,15 @@ export const item_issued_for = {
   stock: 'STOCK',
   sample: 'SAMPLE',
 };
+
+export const base_type = {
+  plywood: 'PLYWOOD',
+  fleece_paper: 'FLEECE_PAPER',
+  mdf: 'MDF',
+};
+export const consumed_from = {
+  inventory: 'INVENTORY',
+  production: 'PRODUCTION',
+  resizing: 'RESIZING',
+  factory: 'FACTORY',
+};
