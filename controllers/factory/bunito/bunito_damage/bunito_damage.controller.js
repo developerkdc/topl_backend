@@ -63,7 +63,7 @@ export const listing_bunito_damage = catchAsync(async (req, res) => {
   };
   const aggLookUpIssueForCncDetails = {
     $lookup: {
-      from: 'issued_for_bunito_details',
+      from: 'issue_for_bunito_details_view',
       localField: 'bunito_done_details.issue_for_bunito_id',
       foreignField: '_id',
       as: 'issue_for_bunito_details',
@@ -320,14 +320,17 @@ export const revert_damage_to_bunito_done = catchAsync(async (req, res) => {
       throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
     }
 
-    await session.startTransaction();
+     session.startTransaction();
 
     const bunito_damage_details = await bunito_damage_model
       .findById(id)
       .lean()
       .session(session);
     if (!bunito_damage_details) {
-      throw new ApiError('Bunito Damage details not found', StatusCodes.NOT_FOUND);
+      throw new ApiError(
+        'bunito Damage details not found',
+        StatusCodes.NOT_FOUND
+      );
     }
 
     const delete_damage_data_result = await bunito_damage_model.deleteOne(
@@ -347,10 +350,11 @@ export const revert_damage_to_bunito_done = catchAsync(async (req, res) => {
 
     const update_bunito_done_item_result =
       await bunito_done_details_model.findOneAndUpdate(
-        { _id: bunito_damage_details?.cnc_done_id },
+        { _id: bunito_damage_details?.bunito_done_id },
         {
           $inc: {
-            'available_details.no_of_sheets': bunito_damage_details.no_of_sheets,
+            'available_details.no_of_sheets':
+              bunito_damage_details.no_of_sheets,
             'available_details.sqm': bunito_damage_details.sqm,
           },
         },
@@ -365,7 +369,7 @@ export const revert_damage_to_bunito_done = catchAsync(async (req, res) => {
     }
 
     const is_item_editable = await bunito_done_details_model
-      .findById(bunito_damage_details?.cnc_done_id)
+      .findById(bunito_damage_details?.bunito_done_id)
       .lean()
       .session(session);
 
@@ -373,7 +377,7 @@ export const revert_damage_to_bunito_done = catchAsync(async (req, res) => {
       is_item_editable?.no_of_sheets ===
       is_item_editable?.available_details?.no_of_sheets
     ) {
-      const update_bunito_result = await bunito_done_details_model.updateOne(
+      await bunito_done_details_model.updateOne(
         { _id: is_item_editable?._id },
         {
           $set: {
@@ -383,12 +387,6 @@ export const revert_damage_to_bunito_done = catchAsync(async (req, res) => {
         },
         { session }
       );
-      if (update_bunito_result.matchedCount === 0) {
-        throw new ApiError("Bunito done details not found.")
-      }
-      if (!update_bunito_result?.acknowledged || update_bunito_result.modifiedCount === 0) {
-        throw new ApiError("Failed to update bunito editable status")
-      }
     }
 
     const response = new ApiResponse(
@@ -404,3 +402,4 @@ export const revert_damage_to_bunito_done = catchAsync(async (req, res) => {
     await session.endSession();
   }
 });
+

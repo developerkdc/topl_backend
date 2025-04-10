@@ -5,7 +5,7 @@ import { dynamic_filter } from '../../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../../utils/dynamicSearch/dynamic.js';
 import catchAsync from '../../../../utils/errors/catchAsync.js';
 import ApiError from '../../../../utils/errors/apiError.js';
-import issue_for_polishing_model from '../../../../database/schema/factory/polishing/issue_for_polishing/issue_for_polishing.schema.js';
+import {issue_for_polishing_model ,issue_for_polishing_view_model} from '../../../../database/schema/factory/polishing/issue_for_polishing/issue_for_polishing.schema.js';
 import { issues_for_status } from '../../../../database/Utils/constants/constants.js';
 
 export const add_issue_for_polishing_from_pressing = catchAsync(
@@ -386,7 +386,7 @@ export const listing_issued_for_polishing = catchAsync(
     ]; // aggregation pipiline
 
     const issue_for_polishing =
-      await issue_for_polishing_model.aggregate(listAggregate);
+      await issue_for_polishing_view_model.aggregate(listAggregate);
 
     const aggCount = {
       $count: 'totalCount',
@@ -395,7 +395,7 @@ export const listing_issued_for_polishing = catchAsync(
     const totalAggregate = [...listAggregate?.slice(0, -2), aggCount]; // total aggregation pipiline
 
     const totalDocument =
-      await issue_for_polishing_model.aggregate(totalAggregate);
+      await issue_for_polishing_view_model.aggregate(totalAggregate);
 
     const totalPages = Math.ceil((totalDocument?.[0]?.totalCount || 0) / limit);
 
@@ -422,7 +422,7 @@ export const fetch_single_issue_for_polishing_item = catchAsync(
       throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
     }
 
-    const result = await issue_for_polishing_model.findOne({ _id: id }).lean();
+    const result = await issue_for_polishing_view_model.findOne({ _id: id }).lean();
 
     if (!result) {
       throw new ApiError(
