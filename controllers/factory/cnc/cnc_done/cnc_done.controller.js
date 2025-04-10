@@ -47,6 +47,7 @@ export const create_cnc = catchAsync(async (req, res) => {
     ]);
     const updated_cnc_done_details = {
       ...cnc_done_details,
+      pressing_details_id: issue_for_cnc_details?.pressing_details_id,
       sr_no: max_sr_no ? max_sr_no?.max_sr_no + 1 : 1,
       created_by: userDetails?._id,
       updated_by: userDetails?._id,

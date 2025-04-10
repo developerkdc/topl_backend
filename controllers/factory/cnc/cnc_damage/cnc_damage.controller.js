@@ -374,7 +374,7 @@ export const revert_damage_to_cnc_done = catchAsync(async (req, res) => {
       is_item_editable?.no_of_sheets ===
       is_item_editable?.available_details?.no_of_sheets
     ) {
-      await cnc_done_details_model.updateOne(
+      const update_cnc_result = await cnc_done_details_model.updateOne(
         { _id: is_item_editable?._id },
         {
           $set: {
@@ -384,6 +384,12 @@ export const revert_damage_to_cnc_done = catchAsync(async (req, res) => {
         },
         { session }
       );
+      if (update_cnc_result.matchedCount === 0) {
+        throw new ApiError("CNC done details not found.")
+      }
+      if (!update_cnc_result?.acknowledged || update_cnc_result.modifiedCount === 0) {
+        throw new ApiError("Failed to update CNC editable status")
+      }
     }
 
     const response = new ApiResponse(

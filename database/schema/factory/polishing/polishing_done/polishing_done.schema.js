@@ -8,6 +8,10 @@ const polishing_done_details_schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Issue for polishing is required.'],
     },
+    pressing_details_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, "Pressing Details ID is required"]
+    },
     polishing_date: {
       type: Date,
       required: [true, 'polishing Date is required.'],

@@ -53,6 +53,7 @@ export const create_canvas = catchAsync(async (req, res) => {
     const updated_canvas_done_details = {
       ...canvas_done_details,
       sr_no: max_sr_no ? max_sr_no?.max_sr_no + 1 : 1,
+      pressing_details_id: issue_for_canvas_details?.pressing_details_id,
       created_by: userDetails?._id,
       updated_by: userDetails?._id,
     };

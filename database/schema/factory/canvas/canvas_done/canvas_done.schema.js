@@ -8,6 +8,10 @@ const canvas_done_details_schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Issue for canvas is required.'],
     },
+    pressing_details_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, "Pressing Details ID is required"]
+    },
     canvas_date: {
       type: Date,
       required: [true, 'canvas Date is required.'],

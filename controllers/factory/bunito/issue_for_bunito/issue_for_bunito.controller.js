@@ -8,112 +8,7 @@ import ApiError from '../../../../utils/errors/apiError.js';
 import issue_for_bunito_model from '../../../../database/schema/factory/bunito/issue_for_bunito/issue_for_bunito.schema.js';
 import { issues_for_status } from '../../../../database/Utils/constants/constants.js';
 
-export const revert_issue_for_bunito = catchAsync(async (req, res) => {
-  const { id } = req.params;
-
-  if (!id) {
-    throw new ApiError('ID is missing', StatusCodes.BAD_REQUEST);
-  }
-  if (!isValidObjectId(id)) {
-    throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
-  }
-
-  const userDetails = req.userDetails;
-  const session = await mongoose.startSession();
-  try {
-    session.startTransaction();
-
-    const issue_for_cnc_details = await issue_for_bunito_model
-      .findById(id)
-      .lean();
-
-    if (!issue_for_cnc_details) {
-      throw new ApiError(
-        'Issue for cnc details not found.',
-        StatusCodes.NOT_FOUND
-      );
-    }
-
-    //? update pressing item details
-    const update_pressing_details_result =
-      await pressing_item_details_model?.updateOne(
-        { _id: issue_for_cnc_details?.pressing_details_id },
-        {
-          $inc: {
-            available_sheets: issue_for_cnc_details?.issued_sheets,
-            available_amount: issue_for_cnc_details?.issued_amount,
-            available_sqm: issue_for_cnc_details?.issued_sqm,
-          },
-          $set: {
-            updated_by: userDetails?._id,
-          },
-        },
-        { session }
-      );
-
-    if (update_pressing_details_result?.matchedCount === 0) {
-      throw new ApiError('Pressing Details not found.', StatusCodes.NOT_FOUND);
-    }
-    if (
-      !update_pressing_details_result?.acknowledged ||
-      update_pressing_details_result?.modifiedCount === 0
-    ) {
-      throw new ApiError(
-        'Failed to update pressing details.',
-        StatusCodes.NOT_FOUND
-      );
-    }
-
-    //todo update isEditable status
-
-    // deleting issue for cnc documnet
-    const delete_issue_for_cnc_document_result =
-      await issue_for_bunito_model.deleteOne(
-        { _id: issue_for_cnc_details?._id },
-        { session }
-      );
-
-    if (
-      !delete_issue_for_cnc_document_result?.acknowledged ||
-      delete_issue_for_cnc_document_result?.deletedCount === 0
-    ) {
-      throw new ApiError(
-        'Failed to delete issue for cnc details.',
-        StatusCodes.BAD_REQUEST
-      );
-    }
-
-    //todo delete pressing document
-    const delete_pressing_history_result =
-      await plywood_history_model.deleteOne({
-        pressing_details_id: issue_for_cnc_details?.pressing_details_id,
-      });
-
-    if (
-      !delete_pressing_history_result.acknowledged ||
-      delete_pressing_history_result?.deletedCount === 0
-    ) {
-      throw new ApiError(
-        'Failed to delete pressing history',
-        StatusCodes.BAD_REQUEST
-      );
-    }
-    const response = new ApiResponse(
-      StatusCodes.OK,
-      'Item Reverted Successfully',
-      delete_issue_for_cnc_document_result
-    );
-    await session.commitTransaction();
-    return res.status(StatusCodes.OK).json(response);
-  } catch (error) {
-    await session.abortTransaction();
-    throw error;
-  } finally {
-    await session.endSession();
-  }
-});
-
-export const listing_issued_for_cnc = catchAsync(async (req, res, next) => {
+export const listing_issued_for_bunito = catchAsync(async (req, res, next) => {
   const {
     page = 1,
     limit = 10,
@@ -156,7 +51,7 @@ export const listing_issued_for_cnc = catchAsync(async (req, res, next) => {
   const match_query = {
     ...filterData,
     ...search_query,
-    is_cnc_done: false,
+    is_bunito_done: false,
   };
 
   const aggCommonMatch = {
@@ -247,7 +142,7 @@ export const listing_issued_for_cnc = catchAsync(async (req, res, next) => {
     aggLimit,
   ]; // aggregation pipiline
 
-  const issue_for_cnc = await issue_for_bunito_model.aggregate(listAggregate);
+  const issue_for_bunito = await issue_for_bunito_model.aggregate(listAggregate);
 
   const aggCount = {
     $count: 'totalCount',
@@ -261,16 +156,16 @@ export const listing_issued_for_cnc = catchAsync(async (req, res, next) => {
 
   const response = new ApiResponse(
     StatusCodes.OK,
-    'Issue For CNC Data Fetched Successfully',
+    'Issue For Bunito Data Fetched Successfully',
     {
-      data: issue_for_cnc,
+      data: issue_for_bunito,
       totalPages: totalPages,
     }
   );
   return res.status(StatusCodes.OK).json(response);
 });
 
-export const fetch_single_issue_for_cnc_item = catchAsync(async (req, res) => {
+export const fetch_single_issue_for_bunito_item = catchAsync(async (req, res) => {
   const { id } = req.params;
 
   if (!id) {
@@ -284,7 +179,7 @@ export const fetch_single_issue_for_cnc_item = catchAsync(async (req, res) => {
 
   const response = new ApiResponse(
     StatusCodes.OK,
-    'CNC Details fetched successfully',
+    'Bunito Details fetched successfully',
     result
   );
   return res.status(StatusCodes.OK).json(response);
