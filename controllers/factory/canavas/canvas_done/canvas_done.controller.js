@@ -6,7 +6,7 @@ import { DynamicSearch } from '../../../../utils/dynamicSearch/dynamic.js';
 import catchAsync from '../../../../utils/errors/catchAsync.js';
 import ApiError from '../../../../utils/errors/apiError.js';
 import { plywood_resizing_done_details_model } from '../../../../database/schema/factory/plywood_resizing_factory/resizing_done/resizing.done.schema.js';
-import issue_for_canvas_model from '../../../../database/schema/factory/canvas/issue_for_canvas/issue_for_canvas.schema.js';
+import {issue_for_canvas_model} from '../../../../database/schema/factory/canvas/issue_for_canvas/issue_for_canvas.schema.js';
 import { canvas_done_details_model } from '../../../../database/schema/factory/canvas/canvas_done/canvas_done.schema.js';
 
 export const create_canvas = catchAsync(async (req, res) => {
@@ -224,6 +224,14 @@ export const listing_canvas_done = catchAsync(async (req, res) => {
     },
   };
 
+  const aggLookUpIssuedDetails = {
+    $lookup: {
+      from: "issue_for_canvas_details_view",
+      localField: "issue_for_canvas_id",
+      foreignField: "_id",
+      as: "issue_for_canvas_details"
+    }
+  }
   const aggCreatedByLookup = {
     $lookup: {
       from: 'users',
@@ -278,6 +286,12 @@ export const listing_canvas_done = catchAsync(async (req, res) => {
       preserveNullAndEmptyArrays: true,
     },
   };
+  const aggIssuedCncDetailsUnwind = {
+    $unwind: {
+      path: '$issue_for_canvas_details',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
   const aggMatch = {
     $match: {
       ...match_query,
@@ -297,6 +311,8 @@ export const listing_canvas_done = catchAsync(async (req, res) => {
 
   const listAggregate = [
     aggCommonMatch,
+    aggLookUpIssuedDetails,
+    aggIssuedCncDetailsUnwind,
     aggCreatedByLookup,
     aggCreatedByUnwind,
     aggUpdatedByLookup,
@@ -351,7 +367,7 @@ export const fetch_single_canvas_done_item_with_issue_for_canvas_data =
       },
       {
         $lookup: {
-          from: 'issued_for_canvas_details',
+          from: 'issue_for_canvas_details_view',
           localField: 'issue_for_canvas_id',
           foreignField: '_id',
           as: 'issue_for_canvas_details',

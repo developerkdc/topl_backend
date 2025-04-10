@@ -63,7 +63,7 @@ export const listing_canvas_damage = catchAsync(async (req, res) => {
   };
   const aggLookUpIssueForCanvasDetails = {
     $lookup: {
-      from: 'issued_for_canvas_details',
+      from: 'issue_for_canvas_details_view',
       localField: 'canvas_done_details.issue_for_canvas_id',
       foreignField: '_id',
       as: 'issue_for_canvas_details',
@@ -158,7 +158,7 @@ export const listing_canvas_damage = catchAsync(async (req, res) => {
     aggLookupCanvasDoneDetails,
     aggUnwindCanvasDoneDetails,
     aggLookUpIssueForCanvasDetails,
-    aggLookUpIssueForCanvasDetails,
+    aggUnwindIssueForCanvasDetails,
     aggCreatedByLookup,
     aggCreatedByUnwind,
     aggUpdatedByLookup,

@@ -5,7 +5,7 @@ import { dynamic_filter } from '../../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../../utils/dynamicSearch/dynamic.js';
 import catchAsync from '../../../../utils/errors/catchAsync.js';
 import ApiError from '../../../../utils/errors/apiError.js';
-import issue_for_canvas_model from '../../../../database/schema/factory/canvas/issue_for_canvas/issue_for_canvas.schema.js';
+import {issue_for_canvas_model} from '../../../../database/schema/factory/canvas/issue_for_canvas/issue_for_canvas.schema.js';
 import { issues_for_status } from '../../../../database/Utils/constants/constants.js';
 
 export const add_issue_for_canvas_from_pressing = catchAsync(
@@ -384,7 +384,7 @@ export const listing_issued_for_canvas = catchAsync(async (req, res, next) => {
   ]; // aggregation pipiline
 
   const issue_for_canvas =
-    await issue_for_canvas_model.aggregate(listAggregate);
+    await issue_for_canvas_view_model.aggregate(listAggregate);
 
   const aggCount = {
     $count: 'totalCount',
@@ -392,7 +392,7 @@ export const listing_issued_for_canvas = catchAsync(async (req, res, next) => {
 
   const totalAggregate = [...listAggregate?.slice(0, -2), aggCount]; // total aggregation pipiline
 
-  const totalDocument = await issue_for_canvas_model.aggregate(totalAggregate);
+  const totalDocument = await issue_for_canvas_view_model.aggregate(totalAggregate);
 
   const totalPages = Math.ceil((totalDocument?.[0]?.totalCount || 0) / limit);
 
@@ -418,7 +418,7 @@ export const fetch_single_issue_for_canvas_item = catchAsync(
       throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
     }
 
-    const result = await issue_for_canvas_model.findOne({ _id: id }).lean();
+    const result = await issue_for_canvas_view_model.findOne({ _id: id }).lean();
 
     if (!result) {
       throw new ApiError(

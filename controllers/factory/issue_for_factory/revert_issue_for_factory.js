@@ -8,13 +8,16 @@ import {
 } from '../../../database/Utils/constants/constants.js';
 import { cnc_done_details_model } from '../../../database/schema/factory/cnc/cnc_done/cnc_done.schema.js';
 import { bunito_done_details_model } from '../../../database/schema/factory/bunito/bunito_done/bunito_done.schema.js';
-import issue_for_bunito_model from '../../../database/schema/factory/bunito/issue_for_bunito/issue_for_bunito.schema.js';
+import {issue_for_bunito_model} from '../../../database/schema/factory/bunito/issue_for_bunito/issue_for_bunito.schema.js';
+import { canvas_done_details_model } from '../../../database/schema/factory/canvas/canvas_done/canvas_done.schema.js';
+import { issue_for_canvas_model } from '../../../database/schema/factory/canvas/issue_for_canvas/issue_for_canvas.schema.js';
 
 //item issued from model map
 const issued_from_factory_model_map = {
     [item_issued_from?.pressing_factory]: 'pressing_factory model',
     [item_issued_from?.cnc_factory]: cnc_done_details_model,
     [item_issued_from?.bunito_factory]: bunito_done_details_model,
+    [item_issued_from?.canvas_factory]: canvas_done_details_model,
 };
 
 //revert from factory map
@@ -22,12 +25,14 @@ const revert_from_factory_model_map = {
     [item_issued_from?.pressing_factory]: 'pressing_factory model',
     [item_issued_from?.cnc_factory]: issue_for_cnc_model,
     [item_issued_from?.bunito_factory]: issue_for_bunito_model,
+    [item_issued_from?.canvas_factory]: issue_for_canvas_model,
 };
 //revert from factory history map
 const issued_from_factory_history_model_map = {
     [item_issued_from?.pressing_factory]: 'pressing_factory model',
     [item_issued_from?.cnc_factory]: issue_for_cnc_model,
     [item_issued_from?.bunito_factory]: issue_for_bunito_model,
+    [item_issued_from?.canvas_factory]: issue_for_canvas_model,
 };
 
 class Revert_Issued_Factory_Item {
