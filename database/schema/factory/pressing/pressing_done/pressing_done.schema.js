@@ -399,7 +399,7 @@ const pressing_done_consumed_items_details_schema = new mongoose.Schema(
           trim: true,
           required: [
             requiredOnBaseType(base_type.plywood) ||
-              requiredOnBaseType(base_type.mdf),
+            requiredOnBaseType(base_type.mdf),
             'Pallet No is required.',
           ],
         },
@@ -424,7 +424,7 @@ const pressing_done_consumed_items_details_schema = new mongoose.Schema(
           default: 0,
           required: [
             requiredOnBaseType(base_type.plywood) ||
-              requiredOnBaseType(base_type.mdf),
+            requiredOnBaseType(base_type.mdf),
             'Number of Roll is required',
           ],
         },
