@@ -18,7 +18,7 @@ export const create_bunito = catchAsync(async (req, res) => {
     if (!bunito_done_details) {
       throw new ApiError('Bunito Done details not found.', StatusCodes.NOT_FOUND);
     }
-    if (!isValidObjectId(bunito_done_details?.issue_for_cnc_id)) {
+    if (!isValidObjectId(bunito_done_details?.issue_for_bunito_id)) {
       throw new ApiError('Invalid Issue for Bunito ID.', StatusCodes.BAD_REQUEST);
     }
 
@@ -398,7 +398,7 @@ export const revert_bunito_done_items = catchAsync(async (req, res) => {
     }
     const update_issue_for_bunito_update_result =
       await issue_for_bunito_model.updateOne(
-        { _id: bunito_done_data?.issue_for_cnc_id },
+        { _id: bunito_done_data?.issue_for_bunito_id },
         {
           $inc: {
             'available_details.sqm': bunito_done_data?.available_details?.sqm,
