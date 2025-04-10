@@ -215,6 +215,15 @@ export const listing_cnc_done = catchAsync(async (req, res) => {
     },
   };
 
+  const aggLookUpIssuedDetails = {
+    $lookup: {
+      from: "issue_for_cnc_details_view",
+      localField: "issue_for_cnc_id",
+      foreignField: "_id",
+      as: "issue_for_cnc_details"
+    }
+  }
+
   const aggCreatedByLookup = {
     $lookup: {
       from: 'users',
@@ -269,6 +278,12 @@ export const listing_cnc_done = catchAsync(async (req, res) => {
       preserveNullAndEmptyArrays: true,
     },
   };
+  const aggIssuedCncDetailsUnwind = {
+    $unwind: {
+      path: '$issue_for_cnc_details',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
   const aggMatch = {
     $match: {
       ...match_query,
@@ -288,6 +303,8 @@ export const listing_cnc_done = catchAsync(async (req, res) => {
 
   const listAggregate = [
     aggCommonMatch,
+    aggLookUpIssuedDetails,
+    aggIssuedCncDetailsUnwind,
     aggCreatedByLookup,
     aggCreatedByUnwind,
     aggUpdatedByLookup,
@@ -341,7 +358,7 @@ export const fetch_single_cnc_done_item_with_issue_for_cnc_data = catchAsync(
       },
       {
         $lookup: {
-          from: 'issued_for_cnc_details',
+          from: 'issue_for_cnc_details_view',
           localField: 'issue_for_cnc_id',
           foreignField: '_id',
           as: 'issue_for_cnc_details',

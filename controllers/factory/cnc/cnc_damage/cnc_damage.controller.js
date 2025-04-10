@@ -63,7 +63,7 @@ export const listing_cnc_damage = catchAsync(async (req, res) => {
   };
   const aggLookUpIssueForCncDetails = {
     $lookup: {
-      from: 'issued_for_cnc_details',
+      from: 'issue_for_cnc_details_view',
       localField: 'cnc_done_details.issue_for_cnc_id',
       foreignField: '_id',
       as: 'issue_for_cnc_details',

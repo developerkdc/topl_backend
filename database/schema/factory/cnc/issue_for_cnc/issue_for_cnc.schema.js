@@ -127,7 +127,8 @@ export const issue_for_cnc_view_model = mongoose.model('issue_for_cnc_details_vi
 
 (async function () {
   await issue_for_cnc_view_model.createCollection({
-    viewOn: "issued_for_cnc_details", pipeline: [
+    viewOn: "issued_for_cnc_details",
+    pipeline: [
       {
         $sort: {
           updatedAt: -1,
