@@ -297,6 +297,24 @@ export const listing_issued_for_cnc = catchAsync(async (req, res, next) => {
       'available_details.no_of_sheets': { $gt: 0 },
     },
   };
+
+  const aggPressingDetailsLookup = {
+    $lookup: {
+      from: 'pressing_done_details',
+      localField: 'pressing_details_id',
+      foreignField: '_id',
+      as: 'pressing_details',
+    },
+  };
+  const aggPressingConsumedDetailsLookup = {
+    $lookup: {
+      from: 'pressing_done_consumed_items_details',
+      localField: 'pressing_details._id',
+      foreignField: 'pressing_done_details_id',
+      as: 'pressing_done_consumed_items_details',
+    },
+  };
+
   const aggCreatedByLookup = {
     $lookup: {
       from: 'users',
@@ -339,6 +357,12 @@ export const listing_issued_for_cnc = catchAsync(async (req, res, next) => {
       as: 'updated_by',
     },
   };
+  const aggPressingDetailsUnwind = {
+    $unwind: {
+      path: '$pressing_details',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
   const aggCreatedByUnwind = {
     $unwind: {
       path: '$created_by',
@@ -370,6 +394,9 @@ export const listing_issued_for_cnc = catchAsync(async (req, res, next) => {
 
   const listAggregate = [
     aggCommonMatch,
+    aggPressingDetailsLookup,
+    aggPressingDetailsUnwind,
+    aggPressingConsumedDetailsLookup,
     aggCreatedByLookup,
     aggCreatedByUnwind,
     aggUpdatedByLookup,

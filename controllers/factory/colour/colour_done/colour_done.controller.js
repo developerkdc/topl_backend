@@ -24,7 +24,7 @@ export const create_color = catchAsync(async (req, res) => {
         StatusCodes.NOT_FOUND
       );
     }
-    if (!isValidObjectId(color_done_details?.issur_for_color_id)) {
+    if (!isValidObjectId(color_done_details?.issue_for_color_id)) {
       throw new ApiError(
         'Invalid Issue for Color ID.',
         StatusCodes.BAD_REQUEST
@@ -109,7 +109,7 @@ export const create_color = catchAsync(async (req, res) => {
     const response = new ApiResponse(
       StatusCodes.CREATED,
       'color Created Successfully',
-      add_resizing_data_result
+      create_color_result
     );
     await session.commitTransaction();
     return res.status(StatusCodes.CREATED).json(response);
@@ -450,7 +450,7 @@ export const revert_color_done_items = catchAsync(async (req, res) => {
     const response = new ApiResponse(
       StatusCodes.OK,
       'color items Reverted Successfully',
-      delete_color_done_result
+      delete_color_done_data_result
     );
     await session.commitTransaction();
     return res.status(StatusCodes.OK).json(response);

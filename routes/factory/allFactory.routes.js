@@ -120,8 +120,8 @@ factoryRouter.use('/factory/polishing-done', polishing_done_router);
 factoryRouter.use('/factory/polishing-damage', polishing_damage_router);
 
 //route for issuing data from factory
-factoryRouter.use('/issue-for-factory', add_issue_for_factory_data);
+factoryRouter.use('/factory/issue-for-factory', add_issue_for_factory_data);
 //route for reverting issued data from factory
-factoryRouter.use('/issue-for-factory', revert_issue_for_factory_data);
+factoryRouter.use('/factory/revert-issue-for-factory', revert_issue_for_factory_data);
 
 export default factoryRouter;
