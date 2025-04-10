@@ -12,10 +12,10 @@ import { bunito_done_details_model } from '../../../database/schema/factory/buni
 import { color_done_details_model } from '../../../database/schema/factory/colour/colour_done/colour_done.schema.js';
 import { canvas_done_details_model } from '../../../database/schema/factory/canvas/canvas_done/canvas_done.schema.js';
 import { polishing_done_details_model } from '../../../database/schema/factory/polishing/polishing_done/polishing_done.schema.js';
-import issue_for_bunito_model from '../../../database/schema/factory/bunito/issue_for_bunito/issue_for_bunito.schema.js';
+import { issue_for_bunito_model } from '../../../database/schema/factory/bunito/issue_for_bunito/issue_for_bunito.schema.js';
 import { issue_for_color_model } from '../../../database/schema/factory/colour/issue_for_colour/issue_for_colour.schema.js';
-import issue_for_polishing_model from '../../../database/schema/factory/polishing/issue_for_polishing/issue_for_polishing.schema.js';
-import issue_for_canvas_model from '../../../database/schema/factory/canvas/issue_for_canvas/issue_for_canvas.schema.js';
+import { issue_for_polishing_model } from '../../../database/schema/factory/polishing/issue_for_polishing/issue_for_polishing.schema.js';
+import { issue_for_canvas_model } from '../../../database/schema/factory/canvas/issue_for_canvas/issue_for_canvas.schema.js';
 
 //item issued from model map
 const issued_from_factory_model_map = {
