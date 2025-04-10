@@ -1,7 +1,7 @@
 import mongoose, { isValidObjectId } from 'mongoose';
 import { StatusCodes } from '../../../utils/constants.js';
 import ApiError from '../../../utils/errors/apiError.js';
-import issue_for_cnc_model from '../../../database/schema/factory/cnc/issue_for_cnc/issue_for_cnc.schema.js';
+import { issue_for_cnc_model } from '../../../database/schema/factory/cnc/issue_for_cnc/issue_for_cnc.schema.js';
 import {
     item_issued_for,
     item_issued_from,
