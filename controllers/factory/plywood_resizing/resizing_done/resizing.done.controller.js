@@ -101,7 +101,6 @@ export const create_resizing = catchAsync(async (req, res) => {
     }
 
     if (resizing_details?.face_item_details?.length > 0) {
-
       const is_face_available_greater_than_consumed = await Promise.all(
         resizing_details?.face_item_details?.map(async (item) => {
           const res = await face_inventory_items_details
@@ -609,34 +608,34 @@ export const update_resizing_done = catchAsync(async (req, res) => {
     }
 
     if (resizing_details?.face_item_details?.length > 0) {
-      const is_face_available_greater_than_consumed = await Promise.all(
-        resizing_details?.face_item_details?.map(async (item) => {
-          const res = await face_inventory_items_details
-            .findOne({
-              _id: item?.face_item_id,
-              available_sheets: { $gte: item?.no_of_sheets },
-              available_sqm: { $gte: item?.sqm },
-              available_amount: { $gte: item?.amount },
-            })
-            .session(session)
-            .lean();
-          return res || null;
-        })
-      );
+      // const is_face_available_greater_than_consumed = await Promise.all(
+      //   resizing_details?.face_item_details?.map(async (item) => {
+      //     const res = await face_inventory_items_details
+      //       .findOne({
+      //         _id: item?.face_item_id,
+      //         available_sheets: { $gte: item?.no_of_sheets },
+      //         available_sqm: { $gte: item?.sqm },
+      //         available_amount: { $gte: item?.amount },
+      //       })
+      //       .session(session)
+      //       .lean();
+      //     return res || null;
+      //   })
+      // );
 
-      const missingItems = resizing_details?.face_item_details?.filter(
-        (_, index) => is_face_available_greater_than_consumed[index] === null
-      );
+      // const missingItems = resizing_details?.face_item_details?.filter(
+      //   (_, index) => is_face_available_greater_than_consumed[index] === null
+      // );
 
-      if (missingItems.length > 0) {
-        const newMSGDetails = missingItems.map((item) => {
-          return `Inward No : ${item?.inward_sr_no_details?.inward_sr_no} and Sr No :${item.item_sr_no}`;
-        });
+      // if (missingItems.length > 0) {
+      //   const newMSGDetails = missingItems.map((item) => {
+      //     return `Inward No : ${item?.inward_sr_no_details?.inward_sr_no} and Sr No :${item.item_sr_no}`;
+      //   });
 
-        throw new ApiError(
-          `Available face sheets are issued by someone for ${newMSGDetails.join()}`
-        );
-      }
+      //   throw new ApiError(
+      //     `Available face sheets are issued by someone for ${newMSGDetails.join()}`
+      //   );
+      // }
 
       if (resizing_done_data?.face_item_details?.length > 0) {
         const is_face_details_reverted = await Promise.all(

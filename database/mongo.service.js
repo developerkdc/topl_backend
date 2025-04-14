@@ -14,7 +14,7 @@ let connect = () => {
       // useNewUrlParser: true
       retryWrites: true,
       maxPoolSize: 30,
-      minPoolSize: 2
+      minPoolSize: 2,
     };
     mongoose.connect(Configs?.mongo?.url, options);
     // isConnected = mongoose.connection.readyState === 1

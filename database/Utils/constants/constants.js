@@ -23,9 +23,8 @@ export const issues_for_status = {
   face: 'face',
   core: 'core',
   plywood_production: 'plywood_production',
-  cnc_factory: "cnc",
-  color_factory: "color",
-
+  cnc_factory: 'cnc',
+  color_factory: 'color',
 };
 
 export const inward_type = {
@@ -101,6 +100,29 @@ export const item_issued_from = {
   crosscutting: 'CROSSCUTTING',
   flitching_factory: 'FLITCHING_FACTORY',
   dressing_factory: 'DRESSING_FACTORY',
-  grouping_factory: "GROUPING_FACTORY",
-  pressing_factory: "PRESSING_FACTORY"
+  grouping_factory: 'GROUPING_FACTORY',
+  pressing_factory: 'PRESSING_FACTORY',
+  cnc_factory: 'CNC',
+  canvas_factory: 'CANVAS',
+  color_factory: 'COLOR',
+  polishing_factory: 'POLISHING',
+  bunito_factory: 'BUNITO',
+};
+
+export const item_issued_for = {
+  order: 'ORDER',
+  stock: 'STOCK',
+  sample: 'SAMPLE',
+};
+
+export const base_type = {
+  plywood: 'PLYWOOD',
+  fleece_paper: 'FLEECE_PAPER',
+  mdf: 'MDF',
+};
+export const consumed_from = {
+  inventory: 'INVENTORY',
+  production: 'PRODUCTION',
+  resizing: 'RESIZING',
+  factory: 'FACTORY',
 };

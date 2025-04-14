@@ -5,7 +5,7 @@ const plywood_production_damage_schema = new mongoose.Schema(
     sr_no: Number,
     iscompleted: {
       type: Boolean,
-      default:true
+      default: true,
     },
     item_name: {
       type: String,
@@ -35,13 +35,17 @@ const plywood_production_damage_schema = new mongoose.Schema(
       type: Number,
       required: [true, 'Total SQM is required'],
     },
-    damage_sheets:{
-      type:Number,
+    damage_sheets: {
+      type: Number,
       required: [true, 'Damage sheets are required'],
     },
-    plywood_production_id:{
-      type:mongoose.Schema.Types.ObjectId,
-      require:[true, "Plywood production Id is required"]
+    damage_sqm: {
+      type: Number,
+      required: [true, 'Damage sheets are required'],
+    },
+    plywood_production_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      require: [true, 'Plywood production Id is required'],
     },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,
@@ -58,4 +62,3 @@ export const plywood_production_damage_model = mongoose.model(
   plywood_production_damage_schema,
   'plywood_production_damage'
 );
-

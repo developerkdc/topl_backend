@@ -9,12 +9,16 @@ import {
   fetch_all_grouping_done_items,
   fetch_all_grouping_history_details,
   group_no_dropdown,
+  group_no_dropdown_for_photo_master,
   recreate_grouping_done_items,
   revert_all_grouping_done,
   revert_grouping_done_damaged,
 } from '../../../controllers/factory/grouping/grouping_done.controller.js';
 import AuthMiddleware from '../../../middlewares/verifyToken.js';
-import { fetch_all_group_no_by_item_name, fetch_group_details_by_id } from '../../../controllers/factory/grouping/grouping.issue_for_order.controller.js';
+import {
+  fetch_all_group_no_by_item_name,
+  fetch_group_details_by_id,
+} from '../../../controllers/factory/grouping/grouping.issue_for_order.controller.js';
 
 const groupingDoneRouter = express.Router();
 
@@ -79,7 +83,24 @@ groupingDoneRouter.post(
   recreate_grouping_done_items
 );
 
-//issue for order dropdown 
-groupingDoneRouter.get("/list-group-no/:id", AuthMiddleware, fetch_all_group_no_by_item_name)
-groupingDoneRouter.get("/fetch-group-details/:id", AuthMiddleware, fetch_group_details_by_id)
+//issue for order dropdown
+groupingDoneRouter.get(
+  '/list-group-no/:id',
+  AuthMiddleware,
+  fetch_all_group_no_by_item_name
+);
+groupingDoneRouter.get(
+  '/fetch-group-details/:id',
+  AuthMiddleware,
+  fetch_group_details_by_id
+);
+
+//group no dropdown for photo master
+
+groupingDoneRouter.get(
+  '/group-no-dropdown-for-photo-master',
+  AuthMiddleware,
+  group_no_dropdown_for_photo_master
+);
+
 export default groupingDoneRouter;

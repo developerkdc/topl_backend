@@ -10,16 +10,19 @@ const core_history_schema = new mongoose.Schema(
     issued_for_order_id: {
       type: mongoose.Schema.Types.ObjectId,
       // required: [true, 'Issued for order ID is required.'],
-      default:null
+      default: null,
     },
-    issued_for_plywood_production_id:{
-          type:mongoose.Schema.Types.ObjectId,
-          default:null
+    issued_for_plywood_production_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
     },
     issue_status: {
       type: String,
       enum: {
-        values: [issues_for_status?.order,issues_for_status?.plywood_production],
+        values: [
+          issues_for_status?.order,
+          issues_for_status?.plywood_production,
+        ],
         message: `Invalid Issue status -> {{VALUE}} it must be one of the ${issues_for_status?.order}`,
       },
       default: issues_for_status?.order,

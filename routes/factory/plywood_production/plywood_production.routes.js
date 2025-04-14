@@ -5,10 +5,14 @@ import { create_plywood_production } from '../../../controllers/factory/plywood_
 import {
   add_to_damage_from_plywood_production_done,
   listing_plywood_production_done,
+  revert_plywood_production_done_items,
   single_plywood_production_done_for_update,
   update_plywood_production_done,
 } from '../../../controllers/factory/plywood_production/plywood_production_done/plywood_production_done.js';
-import { listing_plywood_production_damage, revert_plywood_production_damage } from '../../../controllers/factory/plywood_production/plywood_production_damage/plywood_production_damage.js';
+import {
+  listing_plywood_production_damage,
+  revert_plywood_production_damage,
+} from '../../../controllers/factory/plywood_production/plywood_production_damage/plywood_production_damage.js';
 const plywoodProductionRouter = express.Router();
 
 plywoodProductionRouter.post(
@@ -29,7 +33,6 @@ plywoodProductionRouter.patch(
   update_plywood_production_done
 );
 
-
 plywoodProductionRouter.get(
   '/fetch-single-plywood-production-done-item/:id',
   AuthMiddleware,
@@ -42,7 +45,6 @@ plywoodProductionRouter.post(
   //   RolesPermissions('crosscut_factory', 'view'),
   //   listing_crosscutting_done_history
 );
-
 
 //damage routes
 
@@ -62,5 +64,11 @@ plywoodProductionRouter.post(
   '/listing-plywood-production-damage',
   AuthMiddleware,
   listing_plywood_production_damage
+);
+
+plywoodProductionRouter.post(
+  '/revert/:id',
+  AuthMiddleware,
+  revert_plywood_production_done_items
 );
 export default plywoodProductionRouter;

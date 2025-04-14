@@ -4,6 +4,7 @@ import {
   add_issue_for_flitching,
   add_log_inventory,
   add_single_log_item_inventory,
+  check_already_existing_log_no,
   edit_log_invoice_inventory,
   edit_log_item_inventory,
   edit_log_item_invoice_inventory,
@@ -114,6 +115,13 @@ router.post(
   AuthMiddleware,
   RolesPermissions('log_inventory', 'view'),
   add_issue_for_flitching
+);
+
+// validate log no already exist api
+router.get(
+  '/check_log_no_already_exist',
+  AuthMiddleware,
+  check_already_existing_log_no
 );
 
 export default router;

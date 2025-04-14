@@ -36,7 +36,7 @@ export const fetch_all_fleece_inward_sr_no_by_order_item_name = catchAsync(
         $lte: order_item_data?.sqm,
         $gt: 0,
       },
-      "invoice_details.approval_status.sendForApproval.status": false
+      'invoice_details.approval_status.sendForApproval.status': false,
     };
 
     // const pipeline = [
@@ -49,32 +49,30 @@ export const fetch_all_fleece_inward_sr_no_by_order_item_name = catchAsync(
     //   },
     // ];
 
-
-
     const pipeline = [
       {
         $lookup: {
-          from: "fleece_inventory_invoice_details",
-          localField: "invoice_id",
-          foreignField: "_id",
-          as: "invoice_details"
-        }
+          from: 'fleece_inventory_invoice_details',
+          localField: 'invoice_id',
+          foreignField: '_id',
+          as: 'invoice_details',
+        },
       },
-      { $unwind: "$invoice_details" },
+      { $unwind: '$invoice_details' },
       { $match: { ...match_query } },
       {
         $group: {
-          _id: "$invoice_details._id",
-          inward_sr_no: { $first: "$invoice_details.inward_sr_no" },
-          invoice_id: { $first: "$invoice_details._id" }
-        }
+          _id: '$invoice_details._id',
+          inward_sr_no: { $first: '$invoice_details.inward_sr_no' },
+          invoice_id: { $first: '$invoice_details._id' },
+        },
       },
       {
         $project: {
-          _id: "$invoice_id",
-          inward_sr_no: 1
-        }
-      }
+          _id: '$invoice_id',
+          inward_sr_no: 1,
+        },
+      },
     ];
 
     const result = await fleece_inventory_items_modal.aggregate(pipeline);

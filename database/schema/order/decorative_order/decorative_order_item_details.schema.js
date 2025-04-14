@@ -108,7 +108,7 @@ const decorative_order_item_details_schema = new mongoose.Schema(
       uppercase: true,
       default: null,
     },
-    base_required_thickness: {
+    base_min_thickness: {
       type: Number,
       default: 0,
     },

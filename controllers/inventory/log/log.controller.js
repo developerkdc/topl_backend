@@ -854,3 +854,16 @@ export const listing_log_history_inventory = catchAsync(
     });
   }
 );
+
+export const check_already_existing_log_no = catchAsync(
+  async (req, res, next) => {
+    const { log_no } = req.query;
+    const isExist = await log_inventory_items_model.findOne({ log_no });
+    if (isExist) {
+      throw new ApiError('Log No already exists', StatusCodes.BAD_REQUEST);
+    }
+    return res
+      .status(200)
+      .json(new ApiResponse(StatusCodes.OK, 'Log No. is unique'));
+  }
+);

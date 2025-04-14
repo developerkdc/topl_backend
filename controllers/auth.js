@@ -286,9 +286,17 @@ export const checkServerHealth = async (req, res, next) => {
 
 //fetch current connection on db
 export const fetchDBConnections = catchAsync(async (req, res, next) => {
-  const db = mongoose.connection
+  const db = mongoose.connection;
 
-  const serverstatus = await db.db.admin().command({ serverstatus: 1 })
+  const serverstatus = await db.db.admin().command({ serverstatus: 1 });
 
-  return res.status(StatusCodes.OK).json(new ApiResponse(StatusCodes.OK, "Database connections fetched successfully", serverstatus?.connections))
-})
+  return res
+    .status(StatusCodes.OK)
+    .json(
+      new ApiResponse(
+        StatusCodes.OK,
+        'Database connections fetched successfully',
+        serverstatus?.connections
+      )
+    );
+});

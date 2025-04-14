@@ -20,7 +20,10 @@ import {
 import AuthMiddleware from '../../../middlewares/verifyToken.js';
 import RolesPermissions from '../../../middlewares/permission.js';
 import { verifyApproval } from '../../../middlewares/approval.middleware.js';
-import { fetch_all_face_inward_sr_no_for_plywood_production, fetch_all_face_sr_no_by_inward_sr_no_for_plywood_production } from '../../../controllers/inventory/face/face_plywood_production.controller.js';
+import {
+  fetch_all_face_inward_sr_no_for_plywood_production,
+  fetch_all_face_sr_no_by_inward_sr_no_for_plywood_production,
+} from '../../../controllers/inventory/face/face_plywood_production.controller.js';
 const router = express.Router();
 router.post(
   '/list-inventory',
@@ -95,7 +98,7 @@ router.get(
 );
 router.get('/list-face-details/:id', AuthMiddleware, fetch_face_details_by_id);
 
-//plywood production 
+//plywood production
 router.get(
   '/inward-sr-no-dropdown',
   AuthMiddleware,

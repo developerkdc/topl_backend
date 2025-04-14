@@ -54,7 +54,10 @@ import {
   dressing_done_other_details_model,
 } from '../../../database/schema/factory/dressing/dressing_done/dressing.done.schema.js';
 import dressing_done_history_model from '../../../database/schema/factory/dressing/dressing_done/dressing.done.history.schema.js';
-import { grouping_done_details_model, grouping_done_items_details_model } from '../../../database/schema/factory/grouping/grouping_done.schema.js';
+import {
+  grouping_done_details_model,
+  grouping_done_items_details_model,
+} from '../../../database/schema/factory/grouping/grouping_done.schema.js';
 import grouping_done_history_model from '../../../database/schema/factory/grouping/grouping_done_history.schema.js';
 
 class RevertOrderItem {
@@ -219,12 +222,14 @@ class RevertOrderItem {
     }
 
     //check if invoice is editable
-    const is_invoice_editable = await plywood_inventory_items_details?.find({
-      // _id: { $ne: update_plywood_item?._id },
-      invoice_id: update_plywood_item?.invoice_id,
-      // issue_status: { $ne: null },
-      $expr: { $ne: ['$available_sheets', '$sheets'] },
-    },).session(this.session);
+    const is_invoice_editable = await plywood_inventory_items_details
+      ?.find({
+        // _id: { $ne: update_plywood_item?._id },
+        invoice_id: update_plywood_item?.invoice_id,
+        // issue_status: { $ne: null },
+        $expr: { $ne: ['$available_sheets', '$sheets'] },
+      })
+      .session(this.session);
 
     //if invoice is editable then update then update the editable status
     if (is_invoice_editable && is_invoice_editable?.length === 0) {
@@ -352,12 +357,14 @@ class RevertOrderItem {
     }
 
     //check if invoice is editable
-    const is_invoice_editable = await face_inventory_items_details?.find({
-      // _id: { $ne: update_face_item?._id },
-      invoice_id: update_face_item?.invoice_id,
-      // issue_status: { $ne: null },
-      $expr: { $ne: ['$available_sheets', '$number_of_sheets'] },
-    }).session(this.session);
+    const is_invoice_editable = await face_inventory_items_details
+      ?.find({
+        // _id: { $ne: update_face_item?._id },
+        invoice_id: update_face_item?.invoice_id,
+        // issue_status: { $ne: null },
+        $expr: { $ne: ['$available_sheets', '$number_of_sheets'] },
+      })
+      .session(this.session);
 
     //if invoice is editable then update then update the editable status
     if (is_invoice_editable && is_invoice_editable?.length === 0) {
@@ -428,12 +435,14 @@ class RevertOrderItem {
     }
 
     //check if invoice is editable
-    const is_invoice_editable = await mdf_inventory_items_details?.find({
-      // _id: { $ne: update_mdf_item?._id },
-      invoice_id: update_mdf_item?.invoice_id,
-      // issue_status: { $ne: null },
-      $expr: { $ne: ['$available_sheets', '$no_of_sheet'] },
-    }).session(this.session);
+    const is_invoice_editable = await mdf_inventory_items_details
+      ?.find({
+        // _id: { $ne: update_mdf_item?._id },
+        invoice_id: update_mdf_item?.invoice_id,
+        // issue_status: { $ne: null },
+        $expr: { $ne: ['$available_sheets', '$no_of_sheet'] },
+      })
+      .session(this.session);
 
     //if invoice is editable then update then update the editable status
     if (is_invoice_editable && is_invoice_editable?.length === 0) {
@@ -506,12 +515,14 @@ class RevertOrderItem {
     }
 
     //check if invoice is editable
-    const is_invoice_editable = await core_inventory_items_details?.find({
-      // _id: { $ne: update_core_item?._id },
-      invoice_id: update_core_item?.invoice_id,
-      // issue_status: { $ne: null },
-      $expr: { $ne: ['$available_sheets', '$number_of_sheets'] },
-    }).session(this.session);
+    const is_invoice_editable = await core_inventory_items_details
+      ?.find({
+        // _id: { $ne: update_core_item?._id },
+        invoice_id: update_core_item?.invoice_id,
+        // issue_status: { $ne: null },
+        $expr: { $ne: ['$available_sheets', '$number_of_sheets'] },
+      })
+      .session(this.session);
 
     //if invoice is editable then update then update the editable status
     if (is_invoice_editable && is_invoice_editable?.length === 0) {
@@ -584,12 +595,14 @@ class RevertOrderItem {
     }
 
     //check if invoice is editable
-    const is_invoice_editable = await fleece_inventory_items_modal?.find({
-      // _id: { $ne: update_fleece_item?._id },
-      invoice_id: update_fleece_item?.invoice_id,
-      // issue_status: { $ne: null },
-      $expr: { $ne: ['$available_number_of_roll', '$number_of_roll'] },
-    }).session(this.session);
+    const is_invoice_editable = await fleece_inventory_items_modal
+      ?.find({
+        // _id: { $ne: update_fleece_item?._id },
+        invoice_id: update_fleece_item?.invoice_id,
+        // issue_status: { $ne: null },
+        $expr: { $ne: ['$available_number_of_roll', '$number_of_roll'] },
+      })
+      .session(this.session);
 
     //if invoice is editable then update then update the editable status
     if (is_invoice_editable && is_invoice_editable?.length === 0) {
@@ -660,11 +673,13 @@ class RevertOrderItem {
     }
 
     //check if invoice is editable
-    const is_invoice_editable = await othergoods_inventory_items_details?.find({
-      // _id: { $ne: update_other_goods_item?._id },
-      invoice_id: update_other_goods_item?.invoice_id,
-      $expr: { $ne: ['$available_quantity', '$total_quantity'] },
-    }).session(this.session);
+    const is_invoice_editable = await othergoods_inventory_items_details
+      ?.find({
+        // _id: { $ne: update_other_goods_item?._id },
+        invoice_id: update_other_goods_item?.invoice_id,
+        $expr: { $ne: ['$available_quantity', '$total_quantity'] },
+      })
+      .session(this.session);
 
     //if invoice is editable then update then update the editable status
     if (is_invoice_editable && is_invoice_editable?.length === 0) {
@@ -918,13 +933,16 @@ class RevertOrderItem {
         { _id: this.issued_order_data?.item_details?._id },
         {
           $inc: {
-            "available_details.no_of_leaves": this.issued_order_data?.item_details?.issued_leaves,
-            "available_details.amount": this.issued_order_data?.item_details?.issued_amount,
-            "available_details.sqm": this.issued_order_data?.item_details?.issued_sqm,
+            'available_details.no_of_leaves':
+              this.issued_order_data?.item_details?.issued_leaves,
+            'available_details.amount':
+              this.issued_order_data?.item_details?.issued_amount,
+            'available_details.sqm':
+              this.issued_order_data?.item_details?.issued_sqm,
           },
           $set: {
-            updated_by: this.userDetails?._id
-          }
+            updated_by: this.userDetails?._id,
+          },
         },
         { session: this.session }
       );
@@ -934,11 +952,13 @@ class RevertOrderItem {
     }
 
     //check if invoice is editable
-    const is_grouping_item_editable = await grouping_done_items_details_model?.find({
-      // _id: { $ne: update_grouping_item?._id },
-      // issue_status: { $ne: null },
-      $expr: { $ne: ['$available_details.no_of_leaves', '$no_of_leaves'] },
-    }).session(this.session);
+    const is_grouping_item_editable = await grouping_done_items_details_model
+      ?.find({
+        // _id: { $ne: update_grouping_item?._id },
+        // issue_status: { $ne: null },
+        $expr: { $ne: ['$available_details.no_of_leaves', '$no_of_leaves'] },
+      })
+      .session(this.session);
 
     //if  editable  then update the editable status
     if (is_grouping_item_editable && is_grouping_item_editable?.length === 0) {

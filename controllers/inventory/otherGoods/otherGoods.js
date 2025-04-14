@@ -423,17 +423,14 @@ export const edit_othergoods_item_invoice_inventory = catchAsync(
         //   }
         // }
         const updated_items = items_details?.map((item) => {
-          item.available_amount = item?.amount
+          item.available_amount = item?.amount;
           item.available_quantity = item?.total_quantity;
-          return item
-        })
+          return item;
+        });
         const update_item_details =
-          await othergoods_inventory_items_details.insertMany(
-            updated_items,
-            {
-              session,
-            }
-          );
+          await othergoods_inventory_items_details.insertMany(updated_items, {
+            session,
+          });
 
         await session.commitTransaction();
         session.endSession();
@@ -514,7 +511,7 @@ export const edit_othergoods_item_invoice_inventory = catchAsync(
             otherGoods_item_id: _id ? _id : new mongoose.Types.ObjectId(),
             approval_invoice_id: add_invoice_details[0]?._id,
             available_amount: ele?.amount,
-            available_quantity: ele?.total_quantity
+            available_quantity: ele?.total_quantity,
           };
         });
 

@@ -5,7 +5,7 @@ const plywood_production_schema = new mongoose.Schema(
     sr_no: Number,
     iscompleted: {
       type: Boolean,
-      default: true
+      default: true,
     },
     item_name: {
       type: String,
@@ -35,8 +35,8 @@ const plywood_production_schema = new mongoose.Schema(
       type: Number,
       required: [true, 'Available Number of Sheets are required'],
       default: function () {
-        return this.no_of_sheets
-      }
+        return this.no_of_sheets;
+      },
     },
     total_sqm: {
       type: Number,
@@ -46,8 +46,8 @@ const plywood_production_schema = new mongoose.Schema(
       type: Number,
       required: [true, 'Available Total SQM is required'],
       default: function () {
-        return this.total_sqm
-      }
+        return this.total_sqm;
+      },
     },
     amount: {
       type: Number,
@@ -57,12 +57,12 @@ const plywood_production_schema = new mongoose.Schema(
       type: Number,
       required: [true, 'Available Amount is required'],
       default: function () {
-        return this.amount
-      }
+        return this.amount;
+      },
     },
     is_added_to_damage: {
       type: Boolean,
-      default: false
+      default: false,
     },
     // remarks: {
     //   type: String,
@@ -88,11 +88,11 @@ const plywood_production_consumed_items_schema = new mongoose.Schema(
   {
     core_inventory_item_id: {
       type: mongoose.Schema.Types.ObjectId,
-      default: null
+      default: null,
     },
     face_inventory_item_id: {
       type: mongoose.Schema.Types.ObjectId,
-      default: null
+      default: null,
     },
     item_sr_no: {
       type: Number,
@@ -109,8 +109,8 @@ const plywood_production_consumed_items_schema = new mongoose.Schema(
       _id: mongoose.Schema.Types.ObjectId,
       inward_sr_no: {
         type: Number,
-        required: [true, 'Inward Sr No is required']
-      }
+        required: [true, 'Inward Sr No is required'],
+      },
     },
     supplier_item_name: {
       type: String,
@@ -213,7 +213,7 @@ const plywood_production_consumed_items_schema = new mongoose.Schema(
 
 plywood_production_consumed_items_schema.index({ item_sr_no: 1 });
 plywood_production_consumed_items_schema.index({ item_id: 1 });
-plywood_production_consumed_items_schema.index({ plywood_production_id: 1 })
+plywood_production_consumed_items_schema.index({ plywood_production_id: 1 });
 
 export const plywood_production_model = mongoose.model(
   'plywood_production',

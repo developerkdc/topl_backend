@@ -1,7 +1,5 @@
 import mongoose, { isValidObjectId } from 'mongoose';
-import {
-  plywood_production_model,
-} from '../../../../database/schema/factory/plywood_production/plywood_production.schema.js';
+import { plywood_production_model } from '../../../../database/schema/factory/plywood_production/plywood_production.schema.js';
 import ApiResponse from '../../../../utils/ApiResponse.js';
 import { StatusCodes } from '../../../../utils/constants.js';
 import ApiError from '../../../../utils/errors/apiError.js';
@@ -9,7 +7,6 @@ import catchAsync from '../../../../utils/errors/catchAsync.js';
 import { plywood_production_damage_model } from '../../../../database/schema/factory/plywood_production/plywood_production_damage_sheets.js';
 import { DynamicSearch } from '../../../../utils/dynamicSearch/dynamic.js';
 import { dynamic_filter } from '../../../../utils/dymanicFilter.js';
-
 
 export const listing_plywood_production_damage = catchAsync(
   async (req, res, next) => {
@@ -190,20 +187,28 @@ export const revert_plywood_production_damage = catchAsync(
       }
 
       const update_plywood_production_done_on_revert =
-      await  plywood_production_model.updateOne(
+        await plywood_production_model.updateOne(
           { _id: plywood_production_damage_data?.plywood_production_id },
           {
             $inc: {
-              available_no_of_sheets: Number(plywood_production_damage_data?.damage_sheets),
+              available_no_of_sheets: Number(
+                plywood_production_damage_data?.damage_sheets
+              ),
+              available_total_sqm: Number(
+                plywood_production_damage_data?.damage_sqm
+              ),
             },
             $set: {
               is_added_to_damage: false,
             },
           },
-          {session}
+          { session }
         );
 
-      if (!update_plywood_production_done_on_revert || update_plywood_production_done_on_revert?.modifiedCount <= 0) {
+      if (
+        !update_plywood_production_done_on_revert ||
+        update_plywood_production_done_on_revert?.modifiedCount <= 0
+      ) {
         throw new ApiError(
           'Failed to Update plywood production data on damage revert',
           StatusCodes.BAD_REQUEST
@@ -211,10 +216,14 @@ export const revert_plywood_production_damage = catchAsync(
       }
 
       const revert_plywood_production_damage_data =
-        await plywood_production_damage_model.findByIdAndDelete(id,{session});
+        await plywood_production_damage_model.findByIdAndDelete(id, {
+          session,
+        });
 
-       
-      if (!revert_plywood_production_damage_data || revert_plywood_production_damage_data?.deletedCount <= 0) {
+      if (
+        !revert_plywood_production_damage_data ||
+        revert_plywood_production_damage_data?.deletedCount <= 0
+      ) {
         throw new ApiError('Failed to delete Plywood production damage data');
       }
       const result = [];

@@ -414,11 +414,11 @@ export const edit_plywood_item_invoice_inventory = catchAsync(
           }
         }
         const updated_items = items_details?.map((ele) => {
-          ele.available_sheets = ele?.sheets
-          ele.available_sqm = ele?.total_sq_meter
-          ele.available_amount = ele?.amount
-          return ele
-        })
+          ele.available_sheets = ele?.sheets;
+          ele.available_sqm = ele?.total_sq_meter;
+          ele.available_amount = ele?.amount;
+          return ele;
+        });
         const update_item_details =
           await plywood_inventory_items_details.insertMany(updated_items, {
             session,
@@ -504,7 +504,7 @@ export const edit_plywood_item_invoice_inventory = catchAsync(
             approval_invoice_id: add_invoice_details[0]?._id,
             available_sheets: ele?.sheets,
             available_sqm: ele?.total_sq_meter,
-            available_amount: ele?.amount
+            available_amount: ele?.amount,
           };
         });
 

@@ -21,42 +21,41 @@ export const fetch_all_face_inward_sr_no_for_plywood_production = catchAsync(
     const match_query = {
       //   ...search_query,
       available_sheets: {
-        $gt: 0
+        $gt: 0,
       },
-      "invoice_details.approval_status.sendForApproval.status": false
+      'invoice_details.approval_status.sendForApproval.status': false,
     };
 
     const pipeline = [
       {
         $lookup: {
-          from: "face_inventory_invoice_details",
-          localField: "invoice_id",
-          foreignField: "_id",
-          as: "invoice_details"
-        }
+          from: 'face_inventory_invoice_details',
+          localField: 'invoice_id',
+          foreignField: '_id',
+          as: 'invoice_details',
+        },
       },
-      { $unwind: "$invoice_details" },
+      { $unwind: '$invoice_details' },
       { $match: { ...match_query } },
       {
         $group: {
-          _id: "$invoice_details._id",
-          inward_sr_no: { $first: "$invoice_details.inward_sr_no" },
-          invoice_id: { $first: "$invoice_details._id" }
-        }
+          _id: '$invoice_details._id',
+          inward_sr_no: { $first: '$invoice_details.inward_sr_no' },
+          invoice_id: { $first: '$invoice_details._id' },
+        },
       },
       {
         $project: {
-          _id: "$invoice_id",
-          inward_sr_no: 1
-        }
+          _id: '$invoice_id',
+          inward_sr_no: 1,
+        },
       },
       {
         $sort: {
-          inward_sr_no: 1
-        }
-      }
+          inward_sr_no: 1,
+        },
+      },
     ];
-
 
     const result = await face_inventory_items_details.aggregate(pipeline);
 
@@ -69,8 +68,8 @@ export const fetch_all_face_inward_sr_no_for_plywood_production = catchAsync(
   }
 );
 
-export const fetch_all_face_sr_no_by_inward_sr_no_for_plywood_production = catchAsync(
-  async (req, res) => {
+export const fetch_all_face_sr_no_by_inward_sr_no_for_plywood_production =
+  catchAsync(async (req, res) => {
     const { id } = req.params;
 
     const match_query = {
@@ -89,9 +88,9 @@ export const fetch_all_face_sr_no_by_inward_sr_no_for_plywood_production = catch
       },
       {
         $sort: {
-          item_sr_no: 1
-        }
-      }
+          item_sr_no: 1,
+        },
+      },
     ];
 
     const result = await face_inventory_items_details
@@ -104,5 +103,4 @@ export const fetch_all_face_sr_no_by_inward_sr_no_for_plywood_production = catch
       result
     );
     return res.status(StatusCodes.OK).json(response);
-  }
-);
+  });

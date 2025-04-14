@@ -6,10 +6,14 @@ import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
 import photoModel from '../../../database/schema/masters/photo.schema.js';
 import fs from 'fs';
+import { grouping_done_items_details_model } from '../../../database/schema/factory/grouping/grouping_done.schema.js';
+import { isNull } from 'util';
 
 export const addPhoto = catchAsync(async (req, res, next) => {
   let { photo_number } = req.body;
+  const session = await mongoose.startSession();
   try {
+    session.startTransaction();
     photo_number = photo_number?.toUpperCase();
     const authUserDetail = req.userDetails;
 
@@ -66,12 +70,30 @@ export const addPhoto = catchAsync(async (req, res, next) => {
     };
 
     const savePhotoData = new photoModel(photoData);
-    await savePhotoData.save();
+    const savedData = await savePhotoData.save({ session });
 
-    if (!savePhotoData) {
+    if (!savedData) {
       return next(new ApiError('Failed to insert data', 400));
     }
 
+    const isGroupExist = await grouping_done_items_details_model.findOne({
+      group_no: other_details?.group_no,
+    });
+
+    if (!isGroupExist) {
+      return next(new ApiError('Group not exist', 400));
+    }
+
+    const GroupDataUpdated = await grouping_done_items_details_model.updateOne(
+      { _id: isGroupExist?._id },
+      { photo_no: savedData?.photo_number, photo_no_id: savedData?._id },
+      { session }
+    );
+
+    if (!GroupDataUpdated) {
+      return next(new ApiError('Failed to update group', 400));
+    }
+    await session.commitTransaction();
     const response = new ApiResponse(
       201,
       'Photo Added Successfully',
@@ -80,12 +102,17 @@ export const addPhoto = catchAsync(async (req, res, next) => {
 
     return res.status(201).json(response);
   } catch (error) {
+    await session.abortTransaction();
     throw error;
+  } finally {
+    session.endSession();
   }
 });
 
 export const updatePhoto = catchAsync(async (req, res, next) => {
+  const session = await mongoose.startSession();
   try {
+    session.startTransaction();
     let { photo_number, status } = req.body;
     const { id } = req.params;
     const authUserDetail = req.userDetails;
@@ -118,7 +145,6 @@ export const updatePhoto = catchAsync(async (req, res, next) => {
         }
       }
     } catch (error) {
-      console.log(error);
       error.message = 'Invalid data: removeImages field should be array';
       throw error;
     }
@@ -129,11 +155,10 @@ export const updatePhoto = catchAsync(async (req, res, next) => {
         const other_details_data = JSON.parse(req.body?.other_details);
         other_details = other_details_data;
       } catch (error) {
-        console.log('Failed to parse other details', error);
         throw error;
       }
     }
-
+    console.log('other_details : ', other_details);
     const photoData = {
       ...other_details,
       photo_number: photo_number,
@@ -156,6 +181,9 @@ export const updatePhoto = catchAsync(async (req, res, next) => {
         $push: {
           images: { $each: newPhotoImages },
         },
+      },
+      {
+        session,
       }
     );
 
@@ -174,7 +202,8 @@ export const updatePhoto = catchAsync(async (req, res, next) => {
           $pull: {
             images: { filename: { $in: removeImages } },
           },
-        }
+        },
+        { session }
       );
 
       if (!removePhoto.acknowledged || removePhoto.modifiedCount <= 0) {
@@ -188,15 +217,64 @@ export const updatePhoto = catchAsync(async (req, res, next) => {
       });
     }
 
+    if (other_details?.group_no !== fetchPhotoData?.group_no) {
+      //setting current group no having field photo number as null
+      const isCurrentGroupExist =
+        await grouping_done_items_details_model.findOne({
+          group_no: fetchPhotoData?.group_no,
+        });
+      if (!isCurrentGroupExist) {
+        return next(new ApiError('Current Group not exist', 400));
+      }
+
+      const currentGroupDataUpdated =
+        await grouping_done_items_details_model.updateOne(
+          { _id: isCurrentGroupExist?._id },
+          { photo_no: null, photo_no_id: null },
+          { session }
+        );
+
+      if (
+        !currentGroupDataUpdated?.acknowledged ||
+        currentGroupDataUpdated?.modifiedCount <= 0
+      ) {
+        return next(new ApiError('Failed to update Current group', 400));
+      }
+
+      const isGroupExist = await grouping_done_items_details_model.findOne({
+        group_no: other_details?.group_no,
+      });
+
+      if (!isGroupExist) {
+        return next(new ApiError('Group not exist', 400));
+      }
+
+      const GroupDataUpdated =
+        await grouping_done_items_details_model.updateOne(
+          { _id: isGroupExist?._id },
+          {
+            photo_no: fetchPhotoData?.photo_number,
+            photo_no_id: fetchPhotoData?._id,
+          },
+          { session }
+        );
+
+      if (!GroupDataUpdated) {
+        return next(new ApiError('Failed to update group', 400));
+      }
+    }
     const response = new ApiResponse(
       200,
       'Photo Update Successfully',
       updatePhotoData
     );
-
+    await session.commitTransaction();
     return res.status(201).json(response);
   } catch (error) {
+    await session.abortTransaction();
     throw error;
+  } finally {
+    session.endSession();
   }
 });
 
