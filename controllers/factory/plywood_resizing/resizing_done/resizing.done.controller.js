@@ -230,7 +230,7 @@ export const listing_resizing_done = catchAsync(async (req, res) => {
   const {
     page = 1,
     limit = 10,
-    sortBy = 'updatedAt',
+    sortBy = 'sr_no',
     sort = 'desc',
     search = '',
   } = req.query;

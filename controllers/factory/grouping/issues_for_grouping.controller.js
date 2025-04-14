@@ -85,6 +85,8 @@ export const issue_for_grouping_from_veneer_inventory = catchAsync(
             pallet_number: e?.pallet_number,
             color_id: e?.color?.color_id,
             color_name: e?.color?.color_name,
+            cut_id: e?.cut_id,
+            cut_name: e?.cut_name,
             character_id: e?.character_id,
             character_name: e?.character_name,
             pattern_id: e?.pattern_id,
