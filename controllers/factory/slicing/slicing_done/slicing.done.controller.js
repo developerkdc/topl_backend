@@ -658,19 +658,27 @@ export const edit_slicing_done = catchAsync(async (req, res, next) => {
         'Slicing Done item is not editable',
         StatusCodes.BAD_REQUEST
       );
+    };
+    if (type === issue_for_slicing?.balance_flitch) {
+      other_details.wastage_consumed_total_amount = 0
+      other_details.final_amount = Number((Number(other_details?.total_amount) + Number(other_details?.wastage_consumed_total_amount))?.toFixed(2));
+    } else {
+      other_details.final_amount = Number((Number(other_details?.total_amount) + Number(other_details?.wastage_consumed_total_amount))?.toFixed(2));
     }
+
+
     // Other goods details
-    const add_other_details_data =
-      await slicing_done_other_details_model.findOneAndUpdate(
-        { _id: slicing_done_id },
-        {
-          $set: {
-            ...other_details,
-            updated_by: userDetails?._id,
-          },
+    const add_other_details_data = await slicing_done_other_details_model.findOneAndUpdate(
+      { _id: slicing_done_id },
+      {
+        $set: {
+          ...other_details,
+          // wastage_consumed_total_amount: type === issue_for_slicing?.balance_flitch ? 0 : other_details?.wastage_consumed_total_amount,
+          updated_by: userDetails?._id,
         },
-        { new: true, session }
-      );
+      },
+      { new: true, session }
+    );
 
     const other_details_data = add_other_details_data;
 
@@ -683,7 +691,6 @@ export const edit_slicing_done = catchAsync(async (req, res, next) => {
 
     const items_details_data = items_details?.map((item, index) => {
       item.slicing_done_other_details_id = add_other_details_id;
-      console.log('item.created_by', item.created_by);
       item.created_by = item.created_by ? item.created_by : userDetails?._id;
       item.createdAt = item.createdAt || new Date();
       item.updatedAt = new Date();
@@ -762,7 +769,7 @@ export const edit_slicing_done = catchAsync(async (req, res, next) => {
     //add wastage
     if (
       issue_for_slicing_type?.type?.toLowerCase() ===
-        issue_for_slicing.wastage?.toLowerCase() &&
+      issue_for_slicing.wastage?.toLowerCase() &&
       wastage_details
     ) {
       const wastage_details_data = {
@@ -784,7 +791,7 @@ export const edit_slicing_done = catchAsync(async (req, res, next) => {
     // add available
     if (
       issue_for_slicing_type?.type?.toLowerCase() ===
-        issue_for_slicing.balance_flitch?.toLowerCase() &&
+      issue_for_slicing.balance_flitch?.toLowerCase() &&
       available_details
     ) {
       const re_slicing_details_data = {
