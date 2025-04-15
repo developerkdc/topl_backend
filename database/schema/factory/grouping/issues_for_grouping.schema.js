@@ -316,11 +316,6 @@ export const issues_for_grouping_view_model = mongoose.model(
         },
       },
       {
-        $sort: {
-          "_id.unique_identifier": -1
-        }
-      },
-      {
         $addFields: {
           issued_from: { $first: '$bundles_details.issued_from' },
           is_grouping_done: { $first: '$bundles_details.is_grouping_done' },
