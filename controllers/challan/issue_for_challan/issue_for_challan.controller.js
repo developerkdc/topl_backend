@@ -7,7 +7,7 @@ import IssueForChallan from './issue_for_challan.js';
 
 
 export const add_issue_for_challan_data = catchAsync(async (req, res) => {
-    const { issued_from, issued_item_ids, issued_data } = req.body;
+    const { issued_from, issued_item_ids, issued_data = null } = req.body;
     const userDetails = req.userDetails
     const required_fields = ['issued_from', 'issued_item_id'];
     for (let field of required_fields) {
