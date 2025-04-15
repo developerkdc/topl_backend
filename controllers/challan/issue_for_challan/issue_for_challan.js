@@ -744,7 +744,7 @@ class IssueForChallan {
 
     // const newMax = maxNumber.length > 0 ? maxNumber[0].max + 1 : 1;
     const factor =
-      this.issued_data / this.issued_item_details?.available_sheets;
+      this.issued_data / this.issued_item_details?.available_number_of_roll;
     const issued_sqm = this.issued_item_details?.available_sqm * factor;
     const issued_amount = this.issued_item_details?.available_amount * factor;
     const updated_issued_item_details = {
@@ -775,7 +775,7 @@ class IssueForChallan {
       { _id: this.issued_item_id },
       {
         $inc: {
-          available_sheets: -this.issued_data,
+          available_number_of_roll: -this.issued_data,
           available_sqm: -issued_sqm,
           available_amount: -issued_amount,
         },
@@ -838,7 +838,7 @@ class IssueForChallan {
             issued_for_challan_id: result?._id,
             issue_status: issues_for_status?.challan,
             fleece_item_id: this.issued_item_details?._id,
-            issued_sheets: this.issued_data,
+            issued_number_of_roll: this.issued_data,
             issued_sqm: issued_sqm,
             issued_amount: issued_amount,
             created_by: this.userDetails?._id,
