@@ -4,9 +4,9 @@ import { StatusCodes } from '../../../utils/constants.js';
 import {
   issues_for_status,
   item_issued_from,
-} from '../../../database/Utils/constants/constants';
+} from '../../../database/Utils/constants/constants.js';
 import { log_inventory_items_model } from '../../../database/schema/inventory/log/log.schema.js';
-import { flitch_inventory_items_model } from '../../../database/schema/inventory/Flitch/flitch.schema';
+import { flitch_inventory_items_model } from '../../../database/schema/inventory/Flitch/flitch.schema.js';
 import {
   plywood_inventory_invoice_details,
   plywood_inventory_items_details,
