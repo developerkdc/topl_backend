@@ -41,6 +41,7 @@ import polishing_damage_router from './polishing/polishing_damage/polishing_dama
 import bunito_damage_router from './bunito/bunito_damage/bunito_damage.routes.js';
 import bunito_done_router from './bunito/bunito_done/bunito_done.routes.js';
 import issue_for_bunito_router from './bunito/issue_for_bunito/issue_for_bunito.routes.js';
+import issue_for_challan_router from './challan/issue_for_challlan/issue_for_challan.js';
 
 const factoryRouter = express.Router();
 
@@ -123,5 +124,8 @@ factoryRouter.use('/factory/polishing-damage', polishing_damage_router);
 factoryRouter.use('/factory/issue-for-factory', add_issue_for_factory_data);
 //route for reverting issued data from factory
 factoryRouter.use('/factory/revert-issue-for-factory', revert_issue_for_factory_data);
+
+//challan
+factoryRouter.use('/factory/issue-for-challan', issue_for_challan_router);
 
 export default factoryRouter;
