@@ -17,9 +17,9 @@ const issue_for_challan_schema = new mongoose.Schema({
     type: {},
     required: [true, 'Issued Item details is required.'],
   },
-  is_challan_done :{
-    type : Boolean,
-    default : false
+  is_challan_done: {
+    type: Boolean,
+    default: false
   },
   created_by: {
     type: mongoose.Schema.Types.ObjectId,
@@ -29,9 +29,9 @@ const issue_for_challan_schema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     required: [true, 'Updated By is required'],
   },
-},{timestamps : true});
+}, { timestamps: true });
 
 
-const issue_for_challan_model = mongoose.model('issue_for_challan_details',issue_for_challan_schema,'issue_for_challan_details');
+const issue_for_challan_model = mongoose.model('issue_for_challan_details', issue_for_challan_schema, 'issue_for_challan_details');
 
 export default issue_for_challan_model;

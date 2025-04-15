@@ -9,13 +9,17 @@ const other_goods_history_schema = new mongoose.Schema(
     },
     issued_for_order_id: {
       type: mongoose.Schema.Types.ObjectId,
-      required: [true, 'Issued for order ID is required.'],
+      // required: [true, 'Issued for order ID is required.'],
+    },
+    issued_for_challan_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      // required: [true, 'Issued for order ID is required.'],
     },
     issue_status: {
       type: String,
       enum: {
-        values: [issues_for_status?.order],
-        message: `Invalid Issue status -> {{VALUE}} it must be one of the ${issues_for_status?.order}`,
+        values: [issues_for_status?.order, issues_for_status?.challan],
+        message: `Invalid Issue status -> {{VALUE}} it must be one of the ${issues_for_status?.order}, ${issues_for_status?.challan}`,
       },
       default: issues_for_status?.order,
     },
