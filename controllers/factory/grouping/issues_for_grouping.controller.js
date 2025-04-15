@@ -987,7 +987,7 @@ export const fetch_all_issue_for_grouping_details = catchAsync(
   async (req, res, next) => {
     const {
       page = 1,
-      sortBy = 'updatedAt',
+      sortBy = '_id.unique_identifier',
       sort = 'desc',
       limit = 10,
       search = '',
@@ -1031,6 +1031,7 @@ export const fetch_all_issue_for_grouping_details = catchAsync(
         [sortBy]: sort === 'desc' ? -1 : 1,
       },
     };
+    console.log(agg_sort)
     const agg_skip = {
       $skip: (parseInt(page) - 1) * parseInt(limit),
     };
