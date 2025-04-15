@@ -22,6 +22,8 @@ import { core_inventory_invoice_details, core_inventory_items_details } from '..
 import core_history_model from '../../../database/schema/inventory/core/core.history.schema.js';
 import { fleece_inventory_invoice_modal, fleece_inventory_items_modal } from '../../../database/schema/inventory/fleece/fleece.schema.js';
 import fleece_history_model from '../../../database/schema/inventory/fleece/fleece.history.schema.js';
+import { othergoods_inventory_invoice_details, othergoods_inventory_items_details } from '../../../database/schema/inventory/otherGoods/otherGoodsNew.schema.js';
+import other_goods_history_model from '../../../database/schema/inventory/otherGoods/otherGoods.history.schema.js';
 
 //add for each inventory and factory item
 const issued_from_map = {
@@ -103,6 +105,7 @@ class IssueForChallan {
     //       ]);
 
     // const newMax = maxNumber.length > 0 ? maxNumber[0].max + 1 : 1;
+    const issued_item_details_obj = this.issued_item_details[0];
     const factor =
       this.issued_data / this.issued_item_details?.available_sheets;
     const issued_sqm = this.issued_item_details?.available_sqm * factor;
@@ -218,133 +221,7 @@ class IssueForChallan {
     return result;
   }
   //add data from VENEER inventory
-  async VENEER() {
-    // const maxNumber = await issue_for_challan_model.aggregate([
-    //         {
-    //           $group: {
-    //             _id: null,
-    //             max: {
-    //               $max: '$sr_no',
-    //             },
-    //           },
-    //         },
-    //       ]);
-
-    // const newMax = maxNumber.length > 0 ? maxNumber[0].max + 1 : 1;
-    const factor =
-      this.issued_data / this.issued_item_details?.available_sheets;
-    const issued_sqm = this.issued_item_details?.available_sqm * factor;
-    const issued_amount = this.issued_item_details?.available_amount * factor;
-    const updated_issued_item_details = {
-      ...this.issued_item_details,
-      issued_sqm: issued_sqm,
-      issued_amount: issued_amount,
-    };
-
-    const result = await issue_for_challan_model.create(
-      {
-        // sr_no: newMax,
-        issued_from: this.issued_from,
-        issued_item_details: updated_issued_item_details,
-        created_by: this.userDetails?._id,
-        updated_by: this.userDetails?._id,
-      },
-      { session }
-    );
-
-    if (!result) {
-      throw new ApiError(
-        'Failed to issue for challan',
-        StatusCodes?.BAD_REQUEST
-      );
-    }
-
-    const update_veneer_inventory = veneer_inventory_items_model.updateOne(
-      { _id: this.issued_item_id },
-      {
-        $inc: {
-          available_sheets: -this.issued_data,
-          available_sqm: -issued_sqm,
-          available_amount: -issued_amount,
-        },
-        $set:{
-            issue_status:issues_for_status?.challan,
-            updated_by: this.userDetails?._id,
-        }
-      },
-      { session }
-    );
-
-    if (update_veneer_inventory?.matchedCount === 0) {
-      throw new ApiError('Veneer item not found', StatusCodes.BAD_REQUEST);
-    }
-
-    if (
-      !update_veneer_inventory?.acknowledged ||
-      update_veneer_inventory?.modifiedCount <= 0
-    ) {
-      throw new ApiError(
-        'Failed to update Veneer inventory',
-        StatusCodes?.BAD_REQUEST
-      );
-    }
-
-    //update veneer inventory invoice ediatble status
-    const update_veneer_inventory_invoice_editable_status =
-      await veneer_inventory_invoice_model?.updateOne(
-        { _id: this.issued_item_details?.invoice_id },
-        {
-          $set: {
-            isEditable: false,
-            updated_by: userDetails?._id,
-          },
-        },
-        { session }
-      );
-    if (update_veneer_inventory_invoice_editable_status?.matchedCount === 0) {
-      throw new ApiError(
-        'Venner item invoice not found',
-        StatusCodes.BAD_REQUEST
-      );
-    }
-
-    if (
-      !update_veneer_inventory_invoice_editable_status?.acknowledged ||
-      update_veneer_inventory_invoice_editable_status?.modifiedCount === 0
-    ) {
-      throw new ApiError(
-        'Failed to update veneer item invoice status',
-        StatusCodes.BAD_REQUEST
-      );
-    }
-
-    //add data to plywood history model
-    // const add_issued_data_to_veneer_history =
-    //   await plywood_history_model.create(
-    //     [
-    //       {
-    //         issued_for_challan_id: result?._id,
-    //         issue_status: issues_for_status?.challan,
-    //         plywood_item_id: this.issued_item_details?._id,
-    //         issued_sheets: this.issued_data,
-    //         issued_sqm: issued_sqm,
-    //         issued_amount: issued_amount,
-    //         created_by: this.userDetails?._id,
-    //         updated_by: this.userDetails?._id,
-    //       },
-    //     ],
-    //     { session }
-    //   );
-
-    // if (add_issued_data_to_plywood_history?.length === 0) {
-    //   throw new ApiError(
-    //     'Failed to add data to plywood history',
-    //     StatusCodes.BAD_REQUEST
-    //   );
-    // }
-
-    return result;
-  }
+  async VENEER() {}
   //add data from MDF inventory
   async MDF() {
     // const maxNumber = await issue_for_challan_model.aggregate([
@@ -858,7 +735,133 @@ class IssueForChallan {
     return result;
   }
   //add data from OTHER GOODS inventory
-  async OTHER_GOODS() {}
+  async OTHER_GOODS() {
+    // const maxNumber = await issue_for_challan_model.aggregate([
+    //         {
+    //           $group: {
+    //             _id: null,
+    //             max: {
+    //               $max: '$sr_no',
+    //             },
+    //           },
+    //         },
+    //       ]);
+
+    // const newMax = maxNumber.length > 0 ? maxNumber[0].max + 1 : 1;
+    const factor =
+      this.issued_data / this.issued_item_details?.available_quantity;
+    // const issued_sqm = this.issued_item_details?.available_sqm * factor;
+    const issued_amount = this.issued_item_details?.available_amount * factor;
+    const updated_issued_item_details = {
+      ...this.issued_item_details,
+    //   issued_sqm: issued_sqm,
+      issued_amount: issued_amount,
+    };
+
+    const result = await issue_for_challan_model.create(
+      {
+        // sr_no: newMax,
+        issued_from: this.issued_from,
+        issued_item_details: updated_issued_item_details,
+        created_by: this.userDetails?._id,
+        updated_by: this.userDetails?._id,
+      },
+      { session }
+    );
+
+    if (!result) {
+      throw new ApiError(
+        'Failed to issue for challan',
+        StatusCodes?.BAD_REQUEST
+      );
+    }
+
+    const update_other_goods_inventory = othergoods_inventory_items_details.updateOne(
+      { _id: this.issued_item_id },
+      {
+        $inc: {
+          available_quantity: -this.issued_data,
+        //   available_sqm: -issued_sqm,
+          available_amount: -issued_amount,
+        },
+        $set: {
+            issue_status:issues_for_status?.challan,
+            updated_by: this.userDetails?._id,
+        }
+      },
+      { session }
+    );
+
+    if (update_other_goods_inventory?.matchedCount === 0) {
+      throw new ApiError('Other Goods item not found', StatusCodes.BAD_REQUEST);
+    }
+
+    if (
+      !update_other_goods_inventory?.acknowledged ||
+      update_other_goods_inventory?.modifiedCount <= 0
+    ) {
+      throw new ApiError(
+        'Failed to update Other Goods inventory',
+        StatusCodes?.BAD_REQUEST
+      );
+    }
+
+    //update Face inventory invoice ediatble status
+    const update_other_goods_inventory_invoice_editable_status =
+      await othergoods_inventory_invoice_details?.updateOne(
+        { _id: this.issued_item_details?.invoice_id },
+        {
+          $set: {
+            isEditable: false,
+            updated_by: userDetails?._id,
+          },
+        },
+        { session }
+      );
+    if (update_other_goods_inventory_invoice_editable_status?.matchedCount === 0) {
+      throw new ApiError(
+        'Fleece paper item invoice not found',
+        StatusCodes.BAD_REQUEST
+      );
+    }
+
+    if (
+      !update_other_goods_inventory_invoice_editable_status?.acknowledged ||
+      update_other_goods_inventory_invoice_editable_status?.modifiedCount === 0
+    ) {
+      throw new ApiError(
+        'Failed to update Other Goods item invoice status',
+        StatusCodes.BAD_REQUEST
+      );
+    }
+
+    //add data to plywood history model
+    const add_issued_data_to_other_goods_history =
+      await other_goods_history_model.create(
+        [
+          {
+            issued_for_challan_id: result?._id,
+            issue_status: issues_for_status?.challan,
+            other_goods_item_id: this.issued_item_details?._id,
+            issued_quantity: this.issued_data,
+            // issued_sqm: issued_sqm,
+            issued_amount: issued_amount,
+            created_by: this.userDetails?._id,
+            updated_by: this.userDetails?._id,
+          },
+        ],
+        { session }
+      );
+
+    if (add_issued_data_to_other_goods_history?.length === 0) {
+      throw new ApiError(
+        'Failed to add data to Other Goods history',
+        StatusCodes.BAD_REQUEST
+      );
+    }
+
+    return result;
+  }
 }
 
 export default IssueForChallan;
