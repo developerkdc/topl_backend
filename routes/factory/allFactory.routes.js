@@ -38,6 +38,7 @@ import issue_for_canvas_router from './canvas/issue_for_canvas/issue_for_canvas.
 import issue_for_polishing_router from './polishing/issue_for_polishing/issue_for_polishing.routes.js';
 import polishing_done_router from './polishing/polishing_done/polishing_done.routes.js';
 import polishing_damage_router from './polishing/polishing_damage/polishing_damage.routes.js';
+import pressing_done_router from './pressing/pressing_done/pressing_done.routes.js';
 
 const factoryRouter = express.Router();
 
@@ -89,6 +90,8 @@ factoryRouter.use('/factory/resizing-done', resizing_done_router);
 
 //pressing
 factoryRouter.use('/factory/pressing', issue_for_pressing_router);
+factoryRouter.use('/factory/pressing-done', pressing_done_router);
+
 //Plywood production
 factoryRouter.use('/factory/plywood-production', plywoodProductionRouter);
 
@@ -115,6 +118,6 @@ factoryRouter.use('/factory/polishing-damage', polishing_damage_router);
 //route for issuing data from factory
 factoryRouter.use('/issue-for-factory', add_issue_for_factory_data);
 //route for reverting issued data from factory
-factoryRouter.use('/issue-for-factory', revert_issue_for_factory_data);
+factoryRouter.use('/revert-issue-for-factory', revert_issue_for_factory_data);
 
 export default factoryRouter;

@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import {
-  base_type,
-  consumed_from,
+  base_type_constants,
+  consumed_from_constants,
   issues_for_status,
 } from '../../../../Utils/constants/constants.js';
 
@@ -15,10 +15,10 @@ const pressing_done_details_schema = new mongoose.Schema(
       type: Date,
       required: [true, 'Pressing Date is required'],
     },
-    issue_for_pressing_item_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: [true, 'issue for pressing id is required'],
-    },
+    // issue_for_pressing_item_id: {
+    //   type: mongoose.Schema.Types.ObjectId,
+    //   required: [true, 'issue for pressing id is required'],
+    // },
     no_of_workers: {
       type: Number,
       required: [true, 'No.of Workers is required '],
@@ -232,24 +232,20 @@ function validateConsumedFrom(value) {
   if (!baseType) return true; // Skip if base_type not set yet
 
   const allowedForPlywood = [
-    consumed_from.inventory,
-    consumed_from.production,
-    consumed_from.resizing,
+    consumed_from_constants.inventory,
+    consumed_from_constants.production,
+    consumed_from_constants.resizing,
   ];
 
-  if (baseType === base_type.plywood) {
+  if (baseType === base_type_constants.plywood) {
     return allowedForPlywood.includes(value);
   }
 
-  if (baseType === base_type.mdf || baseType === base_type.fleece_paper) {
-    return value === consumed_from.inventory;
+  if (baseType === base_type_constants.mdf || baseType === base_type_constants.fleece_paper) {
+    return value === consumed_from_constants.inventory;
   }
 
   return false;
-}
-
-function requiredOnBaseType(base) {
-  return this.base_type === base ? true : false;
 }
 
 const pressing_done_consumed_items_details_schema = new mongoose.Schema(
@@ -339,8 +335,8 @@ const pressing_done_consumed_items_details_schema = new mongoose.Schema(
           type: String,
           required: [true, 'Base Type is required'],
           enum: {
-            values: [base_type.plywood, base_type.mdf, base_type.fleece_paper],
-            message: `Invalid type {{VALUE}} it must be one of the ${[base_type.plywood, base_type.mdf, base_type.fleece_paper]}`,
+            values: [base_type_constants.plywood, base_type_constants.mdf, base_type_constants.fleece_paper],
+            message: `Invalid type {{VALUE}} it must be one of the ${[base_type_constants.plywood, base_type_constants.mdf, base_type_constants.fleece_paper]}`,
           },
         },
 
@@ -348,26 +344,26 @@ const pressing_done_consumed_items_details_schema = new mongoose.Schema(
           type: String,
           enum: {
             values: [
-              consumed_from.inventory,
-              consumed_from.production,
-              consumed_from.resizing,
+              consumed_from_constants.inventory,
+              consumed_from_constants.production,
+              consumed_from_constants.resizing,
             ],
-            message: `Invalid type {{VALUE}} it must be one of the ${[consumed_from.inventory, consumed_from.production, consumed_from.resizing, consumed_from.factory]}`,
+            message: `Invalid type {{VALUE}} it must be one of the ${[consumed_from_constants.inventory, consumed_from_constants.production, consumed_from_constants.resizing, consumed_from_constants.factory]}`,
           },
           validate: {
             validator: validateConsumedFrom,
             message: function (props) {
               if (
-                this.base_type === base_type.mdf ||
-                this.base_type === base_type.fleece_paper
+                this.base_type === base_type_constants.mdf ||
+                this.base_type === base_type_constants.fleece_paper
               ) {
-                return `'${props.value}' is not allowed when base_type is '${this.base_type}'. Only ${consumed_from.inventory} is allowed.`;
+                return `'${props.value}' is not allowed when base_type is '${this.base_type}'. Only ${consumed_from_constants.inventory} is allowed.`;
               }
               return `'${props.value}' is not valid for base_type '${this.base_type}'`;
             },
           },
 
-          default: consumed_from.inventory,
+          default: consumed_from_constants.inventory,
         },
         consumed_from_item_id: {
           type: mongoose.Schema.Types.ObjectId,
@@ -398,8 +394,14 @@ const pressing_done_consumed_items_details_schema = new mongoose.Schema(
           uppercase: true,
           trim: true,
           required: [
-            requiredOnBaseType(base_type.plywood) ||
-              requiredOnBaseType(base_type.mdf),
+            // requiredOnBaseType(base_type.plywood) ||
+            //   requiredOnBaseType(base_type.mdf),
+            function () {
+              return this.base_type === base_type_constants.plywood ||
+                this.base_type === base_type_constants.mdf
+                ? true
+                : false;
+            },
             'Pallet No is required.',
           ],
         },
@@ -423,8 +425,14 @@ const pressing_done_consumed_items_details_schema = new mongoose.Schema(
           type: Number,
           default: 0,
           required: [
-            requiredOnBaseType(base_type.plywood) ||
-              requiredOnBaseType(base_type.mdf),
+            // requiredOnBaseType(base_type.plywood) ||
+            //   requiredOnBaseType(base_type.mdf),
+            function () {
+              return this.base_type === base_type_constants.plywood ||
+                this.base_type === base_type_constants.mdf
+                ? true
+                : false;
+            },
             'Number of Roll is required',
           ],
         },
@@ -432,7 +440,10 @@ const pressing_done_consumed_items_details_schema = new mongoose.Schema(
           type: Number,
           default: 0,
           required: [
-            requiredOnBaseType(base_type.fleece_paper),
+            // requiredOnBaseType(base_type.fleece_paper),
+            function () {
+              return this.base_type === base_type_constants.fleece_paper ? true : false;
+            },
             'Number of Roll is required',
           ],
         },
@@ -452,7 +463,10 @@ const pressing_done_consumed_items_details_schema = new mongoose.Schema(
           type: Number,
           default: null,
           required: [
-            requiredOnBaseType(base_type.fleece_paper),
+            // requiredOnBaseType(base_type.fleece_paper),
+            function () {
+              return this.base_type === base_type_constants.fleece_paper ? true : false;
+            },
             'Inward Sr No is required for Fleece Paper',
           ],
         },
@@ -461,7 +475,10 @@ const pressing_done_consumed_items_details_schema = new mongoose.Schema(
           type: Number,
           default: null,
           required: [
-            requiredOnBaseType(base_type.fleece_paper),
+            // requiredOnBaseType(base_type.fleece_paper),
+            function () {
+              return this.base_type === base_type_constants.fleece_paper ? true : false;
+            },
             'Item Sr No is required for Fleece Paper.',
           ],
         },
@@ -473,13 +490,13 @@ const pressing_done_consumed_items_details_schema = new mongoose.Schema(
         consumed_from: {
           type: String,
           enum: {
-            values: [consumed_from.inventory, consumed_from.factory],
+            values: [consumed_from_constants.inventory, consumed_from_constants.factory],
             message: `Invalid type {{VALUE}} it must be one of the ${[
-              consumed_from.inventory,
-              consumed_from.factory,
+              consumed_from_constants.inventory,
+              consumed_from_constants.factory,
             ]}`,
           },
-          default: consumed_from.inventory,
+          default: consumed_from_constants.inventory,
         },
         consumed_from_item_id: {
           type: mongoose.Schema.Types.ObjectId,
@@ -566,6 +583,10 @@ const pressing_done_consumed_items_details_schema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+// function requiredOnBaseType(base) {
+//   return this.base_type === base ? true : false;
+// }
 
 export const pressing_done_consumed_items_details_model = mongoose.model(
   'pressing_done_consumed_items_details',
