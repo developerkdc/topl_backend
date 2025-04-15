@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { issues_for_status } from '../../../../Utils/constants/constants.js';
+import { issues_for_status, order_category } from '../../../../Utils/constants/constants.js';
 
 const validateOrderField = function () {
   return this.issue_status === issues_for_status?.order ? true : false;
@@ -11,6 +11,16 @@ const issue_for_tapping_schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       default: null,
       required: [validateOrderField, 'order_id is required'],
+    },
+    order_category: {
+      type: String,
+      enum: [
+        order_category.decorative,
+        order_category.series_product,
+      ],
+      required: true,
+      uppercase: true,
+      trim: true,
     },
     order_item_id: {
       type: mongoose.Schema.Types.ObjectId,
