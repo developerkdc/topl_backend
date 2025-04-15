@@ -9,7 +9,7 @@ import IssueForChallan from './issue_for_challan.js';
 export const add_issue_for_challan_data = catchAsync(async (req, res) => {
     const { issued_from, issued_item_ids, issued_data = null } = req.body;
     const userDetails = req.userDetails
-    const required_fields = ['issued_from', 'issued_item_id'];
+    const required_fields = ['issued_from', 'issued_item_ids'];
     for (let field of required_fields) {
         if (!req.body[field]) {
             throw new ApiError(`${field} is missing..`, StatusCodes.NOT_FOUND)

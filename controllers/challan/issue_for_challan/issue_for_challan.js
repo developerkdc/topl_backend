@@ -5,8 +5,8 @@ import {
   issues_for_status,
   item_issued_from,
 } from '../../../database/Utils/constants/constants.js';
-import { log_inventory_items_model } from '../../../database/schema/inventory/log/log.schema.js';
-import { flitch_inventory_items_model } from '../../../database/schema/inventory/Flitch/flitch.schema.js';
+import { log_inventory_invoice_model, log_inventory_items_model } from '../../../database/schema/inventory/log/log.schema.js';
+import { flitch_inventory_invoice_model, flitch_inventory_items_model } from '../../../database/schema/inventory/Flitch/flitch.schema.js';
 import {
   plywood_inventory_invoice_details,
   plywood_inventory_items_details,
@@ -45,9 +45,9 @@ class IssueForChallan {
     issued_item_id,
     issued_data
   ) {
-    if (!isValidObjectId(issued_item_id)) {
-      throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
-    }
+    // if (!isValidObjectId(issued_item_id)) {
+    //   throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
+    // }
     this.session = session;
     this.userDetails = userDetails;
     this.issued_from = issued_from;
