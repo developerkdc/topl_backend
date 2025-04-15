@@ -1,19 +1,46 @@
 import mongoose from 'mongoose';
 import catchAsync from '../../../../utils/errors/catchAsync.js';
-import issue_for_tapping_model from '../../../../database/schema/factory/tapping/issue_for_tapping/issue_for_tapping.schema.js';
-import {
-  tapping_done_items_details_model,
-  tapping_done_other_details_model,
-} from '../../../../database/schema/factory/tapping/tapping_done/tapping_done.schema.js';
 import ApiResponse from '../../../../utils/ApiResponse.js';
-import issue_for_tapping_wastage_model from '../../../../database/schema/factory/tapping/tapping_wastage/tapping_wastage.schema.js';
 import ApiError from '../../../../utils/errors/apiError.js';
 import { dynamic_filter } from '../../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../../utils/dynamicSearch/dynamic.js';
 import { StatusCodes } from '../../../../utils/constants.js';
-import { tapping_done_history_model } from '../../../../database/schema/factory/tapping/tapping_history/tapping_done_history.schema.js';
-import { pressing_done_details_model } from '../../../../database/schema/factory/pressing/pressing_done/pressing_done.schema.js';
+import {
+  pressing_done_consumed_items_details_model,
+  pressing_done_details_model,
+} from '../../../../database/schema/factory/pressing/pressing_done/pressing_done.schema.js';
+import { issues_for_pressing_model } from '../../../../database/schema/factory/pressing/issues_for_pressing/issues_for_pressing.schema.js';
+import {
+  base_type_constants,
+  consumed_from_constants,
+  issues_for_status,
+} from '../../../../database/Utils/constants/constants.js';
+import {
+  plywood_inventory_invoice_details,
+  plywood_inventory_items_details,
+} from '../../../../database/schema/inventory/Plywood/plywood.schema.js';
+import plywood_history_model from '../../../../database/schema/inventory/Plywood/plywood.history.schema.js';
+import { plywood_resizing_done_details_model } from '../../../../database/schema/factory/plywood_resizing_factory/resizing_done/resizing.done.schema.js';
+import plywood_resizing_history_model from '../../../../database/schema/factory/plywood_resizing_factory/resizing_history/resizing_history.schema.js';
+import { plywood_production_model } from '../../../../database/schema/factory/plywood_production/plywood_production.schema.js';
+import {
+  mdf_inventory_invoice_details,
+  mdf_inventory_items_details,
+} from '../../../../database/schema/inventory/mdf/mdf.schema.js';
+import mdf_history_model from '../../../../database/schema/inventory/mdf/mdf.history.schema.js';
+import {
+  fleece_inventory_invoice_modal,
+  fleece_inventory_items_modal,
+} from '../../../../database/schema/inventory/fleece/fleece.schema.js';
+import fleece_history_model from '../../../../database/schema/inventory/fleece/fleece.history.schema.js';
+import {
+  face_inventory_invoice_details,
+  face_inventory_items_details,
+} from '../../../../database/schema/inventory/face/face.schema.js';
+import face_history_model from '../../../../database/schema/inventory/face/face.history.schema.js';
 
+
+// Add pressing Api
 export const add_pressing_details = catchAsync(async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -53,6 +80,15 @@ export const add_pressing_details = catchAsync(async (req, res, next) => {
       }
     }
 
+    //checking weather base details only contain one type of base_type
+    const baseTypeValues = new Set(base_details.map((item) => item.base_type));
+    if (baseTypeValues.size > 1) {
+      throw new ApiError(
+        `Base details must contain only one type of base_type.`,
+        StatusCodes.BAD_REQUEST
+      );
+    }
+
     // validation the face details if pressing instruction is FACE WITH LAYER
     if (
       pressing_details?.pressing_instructions &&
@@ -79,134 +115,791 @@ export const add_pressing_details = catchAsync(async (req, res, next) => {
     }
 
     // Adding pressing details in db with session
-
     const pressing_details_data = {
       ...pressing_details,
       created_by: userDetails?._id,
       updated_by: userDetails?._id,
     };
+
     const add_pressing_details_data = await pressing_done_details_model.create(
       [pressing_details_data],
       { session }
     );
 
-    // issue for tapping
-    const fetch_issue_for_tapping_data = await issue_for_tapping_model.findOne({
-      _id: other_details?.issue_for_tapping_item_id,
-    });
-    if (!fetch_issue_for_tapping_data) {
+    const added_pressing_details = add_pressing_details_data?.[0];
+
+    console.log('added_pressing_details_data', added_pressing_details);
+
+    if (!added_pressing_details) {
       throw new ApiError(
-        'Issue for tapping data not found',
-        StatusCodes.BAD_REQUEST
-      );
-    }
-    if (fetch_issue_for_tapping_data?.is_tapping_done) {
-      throw new ApiError(
-        'Already created tapping done for this issue for tapping',
+        'Pressing details not added.',
         StatusCodes.BAD_REQUEST
       );
     }
 
-    // Other goods details
-    const add_other_details_data =
-      await tapping_done_other_details_model.create(
-        [
-          {
-            ...other_details,
-            created_by: userDetails?._id,
-            updated_by: userDetails?._id,
-          },
-        ],
-        {
-          session,
-        }
-      );
-    const other_details_data = add_other_details_data?.[0];
+    // ==========================Handling pressing Done consumed item details=======================
+    //initializing the object to be inserted in pressing_done_consumed_item_details collection
+    var pressingDoneConsumedItemsDetailsObject = {
+      pressing_done_id: added_pressing_details?._id,
+      group_details: [],
+      base_details: [],
+      face_details: null,
+      created_by: userDetails?._id,
+      updated_by: userDetails?._id,
+    };
 
-    if (!other_details_data) {
-      throw new ApiError(
-        'Failed to add other details',
-        StatusCodes.BAD_REQUEST
-      );
-    }
-    const add_other_details_id = other_details_data?._id;
+    // ================ grouping details handling ========================
 
-    // item details
-    const items_details_data = items_details?.map((item, index) => {
-      item.tapping_done_other_details_id = add_other_details_id;
-      item.created_by = userDetails?._id;
-      item.updated_by = userDetails?._id;
-      return item;
-    });
-    const add_items_details_data =
-      await tapping_done_items_details_model.insertMany(items_details_data, {
-        session,
-      });
-    if (add_items_details_data?.length <= 0) {
-      throw new ApiError(
-        'Failed to add Items details',
-        StatusCodes.BAD_REQUEST
-      );
-    }
+    for (const group of group_details) {
+      const { issue_for_pressing_id, no_of_sheets, sqm, amount, group_no } =
+        group;
 
-    const issue_for_tapping_item_id =
-      other_details_data?.issue_for_tapping_item_id;
-    // Wastage
-    if (is_wastage && wastage_details) {
-      const wastage_details_data = {
-        ...wastage_details,
-        issue_for_tapping_item_id: issue_for_tapping_item_id,
-        created_by: userDetails?._id,
-        updated_by: userDetails?._id,
-      };
-      const add_wastage_details_data =
-        await issue_for_tapping_wastage_model.create([wastage_details_data], {
-          session,
-        });
-      if (add_wastage_details_data?.length <= 0) {
+      // Validate issue_for_pressing_id
+      const issueForPressing = await issues_for_pressing_model
+        .findById(issue_for_pressing_id)
+        .session(session);
+      if (!issueForPressing) {
         throw new ApiError(
-          'Failed to add wastage details',
+          `Invalid issue_for_pressing_id: ${issue_for_pressing_id}`,
           StatusCodes.BAD_REQUEST
         );
       }
-    }
 
-    // update issue for tapping issue status
-    const update_issue_for_tapping = await issue_for_tapping_model.updateOne(
-      { _id: issue_for_tapping_item_id },
-      {
-        $set: {
-          is_tapping_done: true,
-          updated_by: userDetails?._id,
+      // Validate and update no_of_sheets
+      if (issueForPressing.available_details?.no_of_sheets < no_of_sheets) {
+        throw new ApiError(
+          `Not enough sheets available for group ${group_no}. Requested: ${no_of_sheets}, Available: ${issueForPressing.available_details.no_of_sheets}`,
+          StatusCodes.BAD_REQUEST
+        );
+      }
+
+      await issues_for_pressing_model.updateOne(
+        { _id: issue_for_pressing_id },
+        {
+          $inc: {
+            'available_details.no_of_sheets': -no_of_sheets,
+            'available_details.sqm': -sqm,
+            'available_details.amount': -amount,
+          },
         },
-      },
-      { runValidators: true, session }
-    );
-
-    if (update_issue_for_tapping.matchedCount <= 0) {
-      throw new ApiError(
-        'Failed to find Issue for tapping',
-        StatusCodes.BAD_REQUEST
+        { session }
       );
+
+      pressingDoneConsumedItemsDetailsObject.group_details.push({ ...group });
     }
-    if (
-      !update_issue_for_tapping.acknowledged ||
-      update_issue_for_tapping.modifiedCount <= 0
-    ) {
+
+    // ================ Base details handling ========================
+
+    for (const base of base_details) {
+      const { base_type, consumed_from, consumed_from_item_id } = base;
+
+      for (let i of ['base_type', 'consumed_from', 'consumed_from_item_id']) {
+        if (!base?.[i]) {
+          throw new ApiError(
+            `Please provide ${i} in base details`,
+            StatusCodes.BAD_REQUEST
+          );
+        }
+      }
+
+      // ====================== If base is Plywood =======================
+
+      if (base_type === base_type_constants.plywood) {
+        // ======================If consumed_from is INVENTORY, validate consumed_from_item_id ===================
+        if (consumed_from === consumed_from_constants.inventory) {
+          for (let i of ['pallet_no', 'no_of_sheets', 'sqm', 'amount']) {
+            if (!base?.[i]) {
+              throw new ApiError(
+                `Please provide ${i} in base details`,
+                StatusCodes.BAD_REQUEST
+              );
+            }
+          }
+
+          const { pallet_no, no_of_sheets, sqm, amount } = base;
+
+          const inventoryItem = await plywood_inventory_items_details
+            .findById(consumed_from_item_id)
+            .session(session);
+
+          if (!inventoryItem) {
+            throw new ApiError(
+              `Invalid Plywood Inventory consumed_from_item_id: ${consumed_from_item_id}`,
+              StatusCodes.BAD_REQUEST
+            );
+          }
+
+          // Validate and update no_of_sheets
+          const { available_sheets, available_sqm, available_amount } =
+            inventoryItem;
+
+          if (
+            available_sheets < no_of_sheets ||
+            available_sqm < sqm ||
+            available_amount < amount
+          ) {
+            throw new ApiError(
+              `Not enough sheets available for Pallet No ${pallet_no} Inventory. Requested: ${no_of_sheets}, Available: ${inventoryItem.available_sheets}`,
+              StatusCodes.BAD_REQUEST
+            );
+          }
+
+          // update the consumed quantity in inventory
+          const plywoodInventoryUpdateData =
+            await plywood_inventory_items_details.updateOne(
+              { _id: consumed_from_item_id },
+              {
+                $inc: {
+                  available_sheets: -no_of_sheets,
+                  available_sqm: -sqm,
+                  available_amount: -amount,
+                },
+              },
+              { session }
+            );
+          if (
+            !plywoodInventoryUpdateData.acknowledged ||
+            plywoodInventoryUpdateData.modifiedCount === 0
+          ) {
+            throw new ApiError(
+              `Plywood Inventory details not updated.`,
+              StatusCodes.BAD_REQUEST
+            );
+          }
+
+          // updated same in plywood inventory history
+          const plywood_history_data = {
+            plywood_item_id: consumed_from_item_id,
+            pressing_done_id: add_pressing_details_data?._id,
+            issued_sheets: no_of_sheets,
+            issued_sqm: sqm,
+            issued_amount: amount,
+            issue_status: issues_for_status?.pressing,
+            created_by: userDetails?._id,
+            updated_by: userDetails?._id,
+          };
+          const [plywoodHistoryAddedData] = await plywood_history_model.create(
+            [plywood_history_data],
+            { session }
+          );
+
+          if (!plywoodHistoryAddedData) {
+            throw new ApiError(
+              'Plywood Inventory history details not added.',
+              StatusCodes.BAD_REQUEST
+            );
+          }
+
+          // update the plywood inventory invoice details
+          const plyInventoryInvoiceDetails =
+            await plywood_inventory_invoice_details.updateOne(
+              {
+                _id: inventoryItem?.invoice_id,
+              },
+              {
+                $set: {
+                  isEditable: false,
+                },
+              },
+              { session }
+            );
+
+          if (
+            !plyInventoryInvoiceDetails.acknowledged ||
+            plyInventoryInvoiceDetails.modifiedCount === 0
+          ) {
+            throw new ApiError(
+              `Plywood Inventory Invoice details not updated.`,
+              StatusCodes.BAD_REQUEST
+            );
+          }
+
+          pressingDoneConsumedItemsDetailsObject.base_details.push({
+            ...base,
+          });
+        }
+
+        // ===================== If consumed_from is RESIZING, validate consumed_from_item_id ===================
+        else if (consumed_from === consumed_from_constants?.resizing) {
+          for (let i of ['no_of_sheets', 'sqm', 'amount']) {
+            if (!base?.[i]) {
+              throw new ApiError(
+                `Please provide ${i} in base details`,
+                StatusCodes.BAD_REQUEST
+              );
+            }
+          }
+
+          const { no_of_sheets, sqm, amount } = base;
+
+          const resizingItem = await plywood_resizing_done_details_model
+            .findById(consumed_from_item_id)
+            .session(session);
+
+          if (!resizingItem) {
+            throw new ApiError(
+              `Invalid Plywood Resizing consumed_from_item_id: ${consumed_from_item_id}`,
+              StatusCodes.BAD_REQUEST
+            );
+          }
+
+          // Validate and update no_of_sheets
+          const { available_details, sr_no } = resizingItem;
+
+          if (
+            available_details?.no_of_sheets < no_of_sheets ||
+            available_details?.sqm < sqm ||
+            available_details?.amount < amount
+          ) {
+            throw new ApiError(
+              `Not enough sheets available for Sr.No ${sr_no} resizing. Requested: ${no_of_sheets}, Available: ${available_sheets}`,
+              StatusCodes.BAD_REQUEST
+            );
+          }
+
+          // update the consumed quantity in plywood resizing
+          const plywoodResizingUpdateData =
+            await plywood_resizing_done_details_model.updateOne(
+              { _id: consumed_from_item_id },
+              {
+                $inc: {
+                  'available_details.no_of_sheets': -no_of_sheets,
+                  'available_details.sqm': -sqm,
+                  'available_details.amount': -amount,
+                },
+              },
+              { session }
+            );
+          if (
+            !plywoodResizingUpdateData.acknowledged ||
+            plywoodResizingUpdateData.modifiedCount === 0
+          ) {
+            throw new ApiError(
+              `Plywood Resizing details not updated.`,
+              StatusCodes.BAD_REQUEST
+            );
+          }
+
+          // updated same in plywood inventory history
+          const plywood_resizing_history_data = {
+            plywood_resizing_done_id: consumed_from_item_id,
+            issued_for_id: add_pressing_details_data?._id, //it is issued for pressing, so we are storing the Pressing Done id
+            issue_status: issues_for_status?.pressing,
+            issued_sheets: no_of_sheets,
+            issued_sqm: sqm,
+            issued_amount: amount,
+            created_by: userDetails?._id,
+            updated_by: userDetails?._id,
+          };
+          const [plywoodResizingHistoryAddedData] =
+            await plywood_resizing_history_model.create(
+              [plywood_resizing_history_data],
+              { session }
+            );
+
+          if (!plywoodResizingHistoryAddedData) {
+            throw new ApiError(
+              'Plywood Resizing history details not added.',
+              StatusCodes.BAD_REQUEST
+            );
+          }
+
+          pressingDoneConsumedItemsDetailsObject.base_details.push({
+            ...base,
+          });
+        }
+
+        // ===================== If consumed_from is Plywood Production, validate consumed_from_item_id ===================
+        else if (consumed_from === consumed_from_constants?.production) {
+          for (let i of ['no_of_sheets', 'sqm', 'amount']) {
+            if (!base?.[i]) {
+              throw new ApiError(
+                `Please provide ${i} in base details`,
+                StatusCodes.BAD_REQUEST
+              );
+            }
+          }
+
+          const { no_of_sheets, sqm, amount } = base;
+
+          const plywoodProductionItem = await plywood_production_model
+            .findById(consumed_from_item_id)
+            .session(session);
+
+          if (!plywoodProductionItem) {
+            throw new ApiError(
+              `Invalid Plywood Production consumed_from_item_id: ${consumed_from_item_id}`,
+              StatusCodes.BAD_REQUEST
+            );
+          }
+
+          // Validate and update no_of_sheets
+          const {
+            available_no_of_sheets,
+            available_total_sqm,
+            available_amount,
+          } = plywoodProductionItem;
+
+          if (
+            available_no_of_sheets < no_of_sheets ||
+            available_total_sqm < sqm ||
+            available_amount < amount
+          ) {
+            throw new ApiError(
+              `Not enough sheets available for Sr.No ${sr_no} Production. Requested: ${no_of_sheets}, Available: ${available_no_of_sheets}`,
+              StatusCodes.BAD_REQUEST
+            );
+          }
+
+          // update the consumed quantity in inventory
+          const plywoodProductionUpdateData =
+            await plywood_production_model.updateOne(
+              { _id: consumed_from_item_id },
+              {
+                $inc: {
+                  available_no_of_sheets: -no_of_sheets,
+                  available_total_sqm: -sqm,
+                  available_amount: -amount,
+                },
+              },
+              { session }
+            );
+          if (
+            !plywoodProductionUpdateData.acknowledged ||
+            plywoodProductionUpdateData.modifiedCount === 0
+          ) {
+            throw new ApiError(
+              `Plywood Production details not updated.`,
+              StatusCodes.BAD_REQUEST
+            );
+          }
+
+          // updated same in plywood production history
+          const plywood_production_history_data = {
+            plywood_production_done_id: consumed_from_item_id,
+            issued_for_id: add_pressing_details_data?._id,
+            issue_status: issues_for_status?.pressing,
+            issued_sheets: no_of_sheets,
+            issued_sqm: sqm,
+            issued_amount: amount,
+            created_by: userDetails?._id,
+            updated_by: userDetails?._id,
+          };
+          const [plywoodProductionHistoryAddedData] =
+            await plywood_resizing_history_model.create(
+              [plywood_production_history_data],
+              { session }
+            );
+
+          if (!plywoodProductionHistoryAddedData) {
+            throw new ApiError(
+              'Plywood Inventory history details not added.',
+              StatusCodes.BAD_REQUEST
+            );
+          }
+
+          pressingDoneConsumedItemsDetailsObject.base_details.push({
+            ...base,
+          });
+        }
+      }
+
+      // ====================== If base is MDF =======================
+      else if (base_type === base_type_constants.mdf) {
+        for (let i of ['pallet_no', 'no_of_sheets', 'sqm', 'amount']) {
+          if (!base?.[i]) {
+            throw new ApiError(
+              `Please provide ${i} in base details`,
+              StatusCodes.BAD_REQUEST
+            );
+          }
+        }
+
+        const { pallet_no, no_of_sheets, sqm, amount } = base;
+
+        if (consumed_from === consumed_from_constants?.inventory) {
+          const inventoryItem = await mdf_inventory_items_details
+            .findById(consumed_from_item_id)
+            .session(session);
+
+          if (!inventoryItem) {
+            throw new ApiError(
+              `Invalid MDF Inventory consumed_from_item_id: ${consumed_from_item_id}`,
+              StatusCodes.BAD_REQUEST
+            );
+          }
+
+          // Validate and update no_of_sheets
+          const { available_sheets, available_sqm, available_amount } =
+            inventoryItem;
+          if (
+            available_sheets < no_of_sheets ||
+            available_sqm < sqm ||
+            available_amount < amount
+          ) {
+            throw new ApiError(
+              `Not enough sheets available for Pallet No ${pallet_no} Inventory. Requested: ${no_of_sheets}, Available: ${available_sheets}`,
+              StatusCodes.BAD_REQUEST
+            );
+          }
+
+          // update the consumed quantity in inventory
+          const mdfInventoryUpdateData =
+            await mdf_inventory_items_details.updateOne(
+              { _id: consumed_from_item_id },
+              {
+                $inc: {
+                  available_sheets: -no_of_sheets,
+                  available_sqm: -sqm,
+                  available_amount: -amount,
+                },
+              },
+              { session }
+            );
+          if (
+            !mdfInventoryUpdateData.acknowledged ||
+            mdfInventoryUpdateData.modifiedCount === 0
+          ) {
+            throw new ApiError(
+              `MDF Inventory details not updated.`,
+              StatusCodes.BAD_REQUEST
+            );
+          }
+
+          // updated same in MDF inventory history
+          const mdf_history_data = {
+            mdf_item_id: consumed_from_item_id,
+            pressing_done_id: add_pressing_details_data?._id,
+            issued_sheets: no_of_sheets,
+            issued_sqm: sqm,
+            issued_amount: amount,
+            issue_status: issues_for_status?.pressing,
+            created_by: userDetails?._id,
+            updated_by: userDetails?._id,
+          };
+          const [mdfHistoryAddedData] = await mdf_history_model.create(
+            [mdf_history_data],
+            { session }
+          );
+          if (!mdfHistoryAddedData) {
+            throw new ApiError(
+              'MDF Inventory history details not added.',
+              StatusCodes.BAD_REQUEST
+            );
+          }
+
+          // update the MDF inventory invoice details
+          const mdfInventoryInvoiceDetails =
+            await mdf_inventory_invoice_details.updateOne(
+              {
+                _id: inventoryItem?.invoice_id,
+              },
+              {
+                $set: {
+                  isEditable: false,
+                },
+              },
+              { session }
+            );
+          if (
+            !mdfInventoryInvoiceDetails.acknowledged ||
+            mdfInventoryInvoiceDetails.modifiedCount === 0
+          ) {
+            throw new ApiError(
+              `MDF Inventory Invoice details not updated.`,
+              StatusCodes.BAD_REQUEST
+            );
+          }
+
+          pressingDoneConsumedItemsDetailsObject.base_details.push({
+            ...base,
+          });
+        }
+      }
+
+      // ====================== If base is Fleece Paper Production =======================
+      else if (base_type === base_type_constants.fleece_paper) {
+        for (let i of [
+          'inward_sr_no',
+          'item_sr_no',
+          'number_of_roll',
+          'sqm',
+          'amount',
+        ]) {
+          if (!base?.[i]) {
+            throw new ApiError(
+              `Please provide ${i} in base details`,
+              StatusCodes.BAD_REQUEST
+            );
+          }
+        }
+
+        const { inward_sr_no, item_sr_no, number_of_roll, sqm, amount } = base;
+
+        const fleecePaperInventoryItem = await fleece_inventory_items_modal
+          .findById(consumed_from_item_id)
+          .session(session);
+
+        if (!fleecePaperInventoryItem) {
+          throw new ApiError(
+            `Invalid Fleece Paper Inventory consumed_from_item_id: ${consumed_from_item_id}`,
+            StatusCodes.BAD_REQUEST
+          );
+        }
+
+        // Validate and update no_of_sheets
+        const { available_number_of_roll, available_sqm, available_amount } =
+          fleecePaperInventoryItem;
+
+        if (
+          available_number_of_roll < number_of_roll ||
+          available_sqm < sqm ||
+          available_amount < amount
+        ) {
+          throw new ApiError(
+            `Not enough Rolls available for Inward Sr.No ${inward_sr_no} and Item SR.No ${item_sr_no} in Fleece Paper Inventory. Requested: ${number_of_roll}, Available: ${available_number_of_roll}`,
+            StatusCodes.BAD_REQUEST
+          );
+        }
+
+        // update the consumed quantity in inventory
+        const fleecePaperInventoryUpdateData =
+          await fleece_inventory_items_modal.updateOne(
+            { _id: consumed_from_item_id },
+            {
+              $inc: {
+                available_number_of_roll: -number_of_roll,
+                available_sqm: -sqm,
+                available_amount: -amount,
+              },
+            },
+            { session }
+          );
+        if (
+          !fleecePaperInventoryUpdateData.acknowledged ||
+          fleecePaperInventoryUpdateData.modifiedCount === 0
+        ) {
+          throw new ApiError(
+            `Fleece Paper Inventory details not updated.`,
+            StatusCodes.BAD_REQUEST
+          );
+        }
+
+        // updated same in Fleece Paper inventory history
+        const fleecePaper_history_data = {
+          fleece_item_id: consumed_from_item_id,
+          pressing_done_id: add_pressing_details_data?._id,
+          issue_status: issues_for_status?.pressing,
+          issued_number_of_roll: number_of_roll,
+          issued_sqm: sqm,
+          issued_amount: amount,
+          created_by: userDetails?._id,
+          updated_by: userDetails?._id,
+        };
+        const [fleecePaperHistoryAddedData] = await fleece_history_model.create(
+          [fleecePaper_history_data],
+          { session }
+        );
+
+        if (!fleecePaperHistoryAddedData) {
+          throw new ApiError(
+            'Fleece Paper history details not added.',
+            StatusCodes.BAD_REQUEST
+          );
+        }
+
+        // update the Fleece Paper inventory invoice details
+        const fleecePaperInventoryInvoiceDetails =
+          await fleece_inventory_invoice_modal.updateOne(
+            {
+              _id: fleecePaperInventoryItem?.invoice_id,
+            },
+            {
+              $set: {
+                isEditable: false,
+              },
+            },
+            { session }
+          );
+
+        if (
+          !fleecePaperInventoryInvoiceDetails.acknowledged ||
+          fleecePaperInventoryInvoiceDetails.modifiedCount === 0
+        ) {
+          throw new ApiError(
+            `Fleece Paper Inventory Invoice details not updated.`,
+            StatusCodes.BAD_REQUEST
+          );
+        }
+
+        pressingDoneConsumedItemsDetailsObject.base_details.push({
+          ...base,
+        });
+      }
+    }
+
+    // ================ Face details handling ========================
+    if (face_details && Array.isArray(face_details)) {
+      for (const face of face_details) {
+        for (let i of [
+          'inward_sr_no',
+          'item_sr_no',
+          'consumed_from',
+          'consumed_from_item_id',
+          'no_of_sheets',
+          'sqm',
+          'amount',
+        ]) {
+          if (!face_details?.[i]) {
+            throw new ApiError(
+              `Please provide ${i} in Face Details.`,
+              StatusCodes.BAD_REQUEST
+            );
+          }
+        }
+
+        const {
+          no_of_sheets,
+          sqm,
+          amount,
+          inward_sr_no,
+          item_sr_no,
+          consumed_from,
+          consumed_from_item_id,
+        } = face;
+
+        if (consumed_from === consumed_from_constants?.inventory) {
+          const faceInventoryItem = await face_inventory_items_details
+            .findById(consumed_from_item_id)
+            .session(session);
+
+          if (!faceInventoryItem) {
+            throw new ApiError(
+              `Invalid Face Inventory consumed_from_item_id: ${consumed_from_item_id}`,
+              StatusCodes.BAD_REQUEST
+            );
+          }
+
+          // Validate and update no_of_sheets
+          const { available_sheets, available_sqm, available_amount } =
+            faceInventoryItem;
+          if (
+            available_sheets < no_of_sheets ||
+            available_sqm < sqm ||
+            available_amount < amount
+          ) {
+            throw new ApiError(
+              `Not enough sheets available for Inward Sr.No ${inward_sr_no} and Item SR.No ${item_sr_no} Inventory. Requested: ${no_of_sheets}, Available: ${available_sheets}`,
+              StatusCodes.BAD_REQUEST
+            );
+          }
+
+          // update the consumed quantity in inventory
+          const faceInventoryUpdateData =
+            await face_inventory_items_details.updateOne(
+              { _id: consumed_from_item_id },
+              {
+                $inc: {
+                  available_sheets: -no_of_sheets,
+                  available_sqm: -sqm,
+                  available_amount: -amount,
+                },
+              },
+              { session }
+            );
+          if (
+            !faceInventoryUpdateData.acknowledged ||
+            faceInventoryUpdateData.modifiedCount === 0
+          ) {
+            throw new ApiError(
+              `Face Inventory details not updated.`,
+              StatusCodes.BAD_REQUEST
+            );
+          }
+
+          // updated same in Face inventory history
+          const face_history_data = {
+            face_item_id: consumed_from_item_id,
+            pressing_done_id: add_pressing_details_data?._id,
+            issued_sheets: no_of_sheets,
+            issued_sqm: sqm,
+            issued_amount: amount,
+            issue_status: issues_for_status?.pressing,
+            created_by: userDetails?._id,
+            updated_by: userDetails?._id,
+          };
+          const [faceHistoryAddedData] = await face_history_model.create(
+            [face_history_data],
+            { session }
+          );
+          if (!faceHistoryAddedData) {
+            throw new ApiError(
+              'Face Inventory history details not added.',
+              StatusCodes.BAD_REQUEST
+            );
+          }
+
+          // update the Face inventory invoice details
+          const faceInventoryInvoiceDetails =
+            await face_inventory_invoice_details.updateOne(
+              {
+                _id: faceInventoryItem?.invoice_id,
+              },
+              {
+                $set: {
+                  isEditable: false,
+                },
+              },
+              { session }
+            );
+          if (
+            !faceInventoryInvoiceDetails.acknowledged ||
+            faceInventoryInvoiceDetails.modifiedCount === 0
+          ) {
+            throw new ApiError(
+              `Face Inventory Invoice details not updated.`,
+              StatusCodes.BAD_REQUEST
+            );
+          }
+
+          if (pressingDoneConsumedItemsDetailsObject.face_details === null) {
+            pressingDoneConsumedItemsDetailsObject.face_details = [
+              {
+                ...face,
+              },
+            ];
+          } else if (
+            Array.isArray(
+              pressingDoneConsumedItemsDetailsObject.face_details
+            ) &&
+            pressingDoneConsumedItemsDetailsObject.face_details.length > 0
+          ) {
+            pressingDoneConsumedItemsDetailsObject.face_details.push({
+              ...face,
+            });
+          }
+        }
+      }
+    }
+
+    // ==========================Handling pressing_done_consumed_items_details_model=======================
+    const pressingDoneConsumedItemsDetails =
+      await pressing_done_consumed_items_details_model.create(
+        [pressingDoneConsumedItemsDetailsObject],
+        { session }
+      );
+    if (!pressingDoneConsumedItemsDetails) {
       throw new ApiError(
-        'Failed to update Issue for tapping',
+        'Pressing Done consumed items details not added.',
         StatusCodes.BAD_REQUEST
       );
     }
 
     await session.commitTransaction();
+
     const response = new ApiResponse(
       StatusCodes.CREATED,
-      'tapping Done Successfully',
-      {
-        other_details: other_details_data,
-        items_details: add_items_details_data,
-      }
+      'Pressing created successfully.'
     );
 
     return res.status(StatusCodes.CREATED).json(response);

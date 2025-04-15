@@ -120,7 +120,7 @@ export const fleece_item_details_schema = new mongoose.Schema(
     },
     invoice_id: {
       type: mongoose.Schema.Types.ObjectId,
-      required: [true, 'Invioce Id is required'],
+      required: [true, 'Invoice Id is required'],
     },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,
