@@ -9,12 +9,16 @@ const fleece_history_schema = new mongoose.Schema(
     },
     issued_for_order_id: {
       type: mongoose.Schema.Types.ObjectId,
-      // required: [true, 'Issued for order ID is required.'],
+      // // required: [true, 'Issued for order ID is required.'],
       default: null,
     },
     pressing_done_id: {
       type: mongoose.Schema.Types.ObjectId,
       default: null,
+    },
+    issued_for_challan_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default:null
     },
     issue_status: {
       type: String,

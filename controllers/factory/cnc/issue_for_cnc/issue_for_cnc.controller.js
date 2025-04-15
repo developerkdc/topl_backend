@@ -5,7 +5,7 @@ import { dynamic_filter } from '../../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../../utils/dynamicSearch/dynamic.js';
 import catchAsync from '../../../../utils/errors/catchAsync.js';
 import ApiError from '../../../../utils/errors/apiError.js';
-import issue_for_cnc_model from '../../../../database/schema/factory/cnc/issue_for_cnc/issue_for_cnc.schema.js';
+import { issue_for_cnc_model, issue_for_cnc_view_model } from '../../../../database/schema/factory/cnc/issue_for_cnc/issue_for_cnc.schema.js';
 import { issues_for_status } from '../../../../database/Utils/constants/constants.js';
 
 export const add_issue_for_cnc_from_pressing = catchAsync(async (req, res) => {
@@ -297,60 +297,84 @@ export const listing_issued_for_cnc = catchAsync(async (req, res, next) => {
       'available_details.no_of_sheets': { $gt: 0 },
     },
   };
-  const aggCreatedByLookup = {
-    $lookup: {
-      from: 'users',
-      localField: 'created_by',
-      foreignField: '_id',
-      pipeline: [
-        {
-          $project: {
-            user_name: 1,
-            user_type: 1,
-            dept_name: 1,
-            first_name: 1,
-            last_name: 1,
-            email_id: 1,
-            mobile_no: 1,
-          },
-        },
-      ],
-      as: 'created_by',
-    },
-  };
-  const aggUpdatedByLookup = {
-    $lookup: {
-      from: 'users',
-      localField: 'updated_by',
-      foreignField: '_id',
-      pipeline: [
-        {
-          $project: {
-            user_name: 1,
-            user_type: 1,
-            dept_name: 1,
-            first_name: 1,
-            last_name: 1,
-            email_id: 1,
-            mobile_no: 1,
-          },
-        },
-      ],
-      as: 'updated_by',
-    },
-  };
-  const aggCreatedByUnwind = {
-    $unwind: {
-      path: '$created_by',
-      preserveNullAndEmptyArrays: true,
-    },
-  };
-  const aggUpdatedByUnwind = {
-    $unwind: {
-      path: '$updated_by',
-      preserveNullAndEmptyArrays: true,
-    },
-  };
+
+  // const aggPressingDetailsLookup = {
+  //   $lookup: {
+  //     from: 'pressing_done_details',
+  //     localField: 'pressing_details_id',
+  //     foreignField: '_id',
+  //     as: 'pressing_details',
+  //   },
+  // };
+  // const aggPressingConsumedDetailsLookup = {
+  //   $lookup: {
+  //     from: 'pressing_done_consumed_items_details',
+  //     localField: 'pressing_details._id',
+  //     foreignField: 'pressing_done_details_id',
+  //     as: 'pressing_done_consumed_items_details',
+  //   },
+  // };
+
+  // const aggCreatedByLookup = {
+  //   $lookup: {
+  //     from: 'users',
+  //     localField: 'created_by',
+  //     foreignField: '_id',
+  //     pipeline: [
+  //       {
+  //         $project: {
+  //           user_name: 1,
+  //           user_type: 1,
+  //           dept_name: 1,
+  //           first_name: 1,
+  //           last_name: 1,
+  //           email_id: 1,
+  //           mobile_no: 1,
+  //         },
+  //       },
+  //     ],
+  //     as: 'created_by',
+  //   },
+  // };
+  // const aggUpdatedByLookup = {
+  //   $lookup: {
+  //     from: 'users',
+  //     localField: 'updated_by',
+  //     foreignField: '_id',
+  //     pipeline: [
+  //       {
+  //         $project: {
+  //           user_name: 1,
+  //           user_type: 1,
+  //           dept_name: 1,
+  //           first_name: 1,
+  //           last_name: 1,
+  //           email_id: 1,
+  //           mobile_no: 1,
+  //         },
+  //       },
+  //     ],
+  //     as: 'updated_by',
+  //   },
+  // };
+  // const aggPressingDetailsUnwind = {
+  //   $unwind: {
+  //     path: '$pressing_details',
+  //     preserveNullAndEmptyArrays: true,
+  //   },
+  // };
+  // const aggCreatedByUnwind = {
+  //   $unwind: {
+  //     path: '$created_by',
+  //     preserveNullAndEmptyArrays: true,
+  //   },
+  // };
+  // const aggUpdatedByUnwind = {
+  //   $unwind: {
+  //     path: '$updated_by',
+  //     preserveNullAndEmptyArrays: true,
+  //   },
+  // };
   const aggMatch = {
     $match: {
       ...match_query,
@@ -370,17 +394,20 @@ export const listing_issued_for_cnc = catchAsync(async (req, res, next) => {
 
   const listAggregate = [
     aggCommonMatch,
-    aggCreatedByLookup,
-    aggCreatedByUnwind,
-    aggUpdatedByLookup,
-    aggUpdatedByUnwind,
+    // aggPressingDetailsLookup,
+    // aggPressingDetailsUnwind,
+    // aggPressingConsumedDetailsLookup,
+    // aggCreatedByLookup,
+    // aggCreatedByUnwind,
+    // aggUpdatedByLookup,
+    // aggUpdatedByUnwind,
     aggMatch,
     aggSort,
     aggSkip,
     aggLimit,
   ]; // aggregation pipiline
 
-  const issue_for_cnc = await issue_for_cnc_model.aggregate(listAggregate);
+  const issue_for_cnc = await issue_for_cnc_view_model.aggregate(listAggregate);
 
   const aggCount = {
     $count: 'totalCount',
@@ -388,7 +415,7 @@ export const listing_issued_for_cnc = catchAsync(async (req, res, next) => {
 
   const totalAggregate = [...listAggregate?.slice(0, -2), aggCount]; // total aggregation pipiline
 
-  const totalDocument = await issue_for_cnc_model.aggregate(totalAggregate);
+  const totalDocument = await issue_for_cnc_view_model.aggregate(totalAggregate);
 
   const totalPages = Math.ceil((totalDocument?.[0]?.totalCount || 0) / limit);
 
@@ -413,7 +440,7 @@ export const fetch_single_issue_for_cnc_item = catchAsync(async (req, res) => {
     throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
   }
 
-  const result = await issue_for_cnc_model.findOne({ _id: id }).lean();
+  const result = await issue_for_cnc_view_model.findOne({ _id: id }).lean();
 
   const response = new ApiResponse(
     StatusCodes.OK,

@@ -251,11 +251,6 @@ export const issues_for_grouping_view_model = mongoose.model(
     viewOn: 'issues_for_groupings',
     pipeline: [
       {
-        $sort: {
-          createdAt: -1,
-        },
-      },
-      {
         $lookup: {
           from: 'users',
           localField: 'created_by',

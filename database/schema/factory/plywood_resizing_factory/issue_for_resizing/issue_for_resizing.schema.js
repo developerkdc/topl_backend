@@ -43,7 +43,8 @@ const issue_for_resize_schema = new mongoose.Schema(
     },
     plywood_type: {
       type: String,
-      required: [true, 'Plywood type is required'],
+      // required: [true, 'Plywood type is required'],
+      default: null,
       trim: true,
       uppercase: true,
     },

@@ -8,6 +8,10 @@ const bunito_done_details_schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Issue for Bunito is required.'],
     },
+    pressing_details_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, "Pressing Details ID is required"]
+    },
     bunito_date: {
       type: Date,
       required: [true, 'Bunito Date is required.'],

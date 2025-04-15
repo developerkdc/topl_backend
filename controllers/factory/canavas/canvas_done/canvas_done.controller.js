@@ -6,7 +6,7 @@ import { DynamicSearch } from '../../../../utils/dynamicSearch/dynamic.js';
 import catchAsync from '../../../../utils/errors/catchAsync.js';
 import ApiError from '../../../../utils/errors/apiError.js';
 import { plywood_resizing_done_details_model } from '../../../../database/schema/factory/plywood_resizing_factory/resizing_done/resizing.done.schema.js';
-import issue_for_canvas_model from '../../../../database/schema/factory/canvas/issue_for_canvas/issue_for_canvas.schema.js';
+import {issue_for_canvas_model} from '../../../../database/schema/factory/canvas/issue_for_canvas/issue_for_canvas.schema.js';
 import { canvas_done_details_model } from '../../../../database/schema/factory/canvas/canvas_done/canvas_done.schema.js';
 
 export const create_canvas = catchAsync(async (req, res) => {
@@ -21,7 +21,7 @@ export const create_canvas = catchAsync(async (req, res) => {
         StatusCodes.NOT_FOUND
       );
     }
-    if (!isValidObjectId(canvas_done_details?.issur_for_canvas_id)) {
+    if (!isValidObjectId(canvas_done_details?.issue_for_canvas_id)) {
       throw new ApiError(
         'Invalid Issue for canvas ID.',
         StatusCodes.BAD_REQUEST
@@ -53,6 +53,7 @@ export const create_canvas = catchAsync(async (req, res) => {
     const updated_canvas_done_details = {
       ...canvas_done_details,
       sr_no: max_sr_no ? max_sr_no?.max_sr_no + 1 : 1,
+      pressing_details_id: issue_for_canvas_details?.pressing_details_id,
       created_by: userDetails?._id,
       updated_by: userDetails?._id,
     };
@@ -105,7 +106,7 @@ export const create_canvas = catchAsync(async (req, res) => {
     const response = new ApiResponse(
       StatusCodes.CREATED,
       'canvas Created Successfully',
-      add_resizing_data_result
+      create_canvas_result
     );
     await session.commitTransaction();
     return res.status(StatusCodes.CREATED).json(response);
@@ -223,6 +224,14 @@ export const listing_canvas_done = catchAsync(async (req, res) => {
     },
   };
 
+  const aggLookUpIssuedDetails = {
+    $lookup: {
+      from: "issue_for_canvas_details_view",
+      localField: "issue_for_canvas_id",
+      foreignField: "_id",
+      as: "issue_for_canvas_details"
+    }
+  }
   const aggCreatedByLookup = {
     $lookup: {
       from: 'users',
@@ -277,6 +286,12 @@ export const listing_canvas_done = catchAsync(async (req, res) => {
       preserveNullAndEmptyArrays: true,
     },
   };
+  const aggIssuedCncDetailsUnwind = {
+    $unwind: {
+      path: '$issue_for_canvas_details',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
   const aggMatch = {
     $match: {
       ...match_query,
@@ -296,6 +311,8 @@ export const listing_canvas_done = catchAsync(async (req, res) => {
 
   const listAggregate = [
     aggCommonMatch,
+    aggLookUpIssuedDetails,
+    aggIssuedCncDetailsUnwind,
     aggCreatedByLookup,
     aggCreatedByUnwind,
     aggUpdatedByLookup,
@@ -350,7 +367,7 @@ export const fetch_single_canvas_done_item_with_issue_for_canvas_data =
       },
       {
         $lookup: {
-          from: 'issued_for_canvas_details',
+          from: 'issue_for_canvas_details_view',
           localField: 'issue_for_canvas_id',
           foreignField: '_id',
           as: 'issue_for_canvas_details',
@@ -448,8 +465,7 @@ export const revert_canvas_done_items = catchAsync(async (req, res) => {
     }
     const response = new ApiResponse(
       StatusCodes.OK,
-      'canvas items Reverted Successfully',
-      delete_canvas_done_result
+      'canvas items Reverted Successfully'
     );
     await session.commitTransaction();
     return res.status(StatusCodes.OK).json(response);

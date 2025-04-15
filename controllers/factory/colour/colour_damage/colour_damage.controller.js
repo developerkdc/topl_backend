@@ -6,6 +6,7 @@ import { DynamicSearch } from '../../../../utils/dynamicSearch/dynamic.js';
 import catchAsync from '../../../../utils/errors/catchAsync.js';
 import ApiError from '../../../../utils/errors/apiError.js';
 import color_damage_model from '../../../../database/schema/factory/colour/colour_damage/colour_damage.schema.js';
+import { color_done_details_model } from '../../../../database/schema/factory/colour/colour_done/colour_done.schema.js';
 
 export const listing_color_damage = catchAsync(async (req, res) => {
   const {
@@ -62,7 +63,7 @@ export const listing_color_damage = catchAsync(async (req, res) => {
   };
   const aggLookUpIssueForColorDetails = {
     $lookup: {
-      from: 'issued_for_color_details',
+      from: 'issue_for_colour_view_model',
       localField: 'color_done_details.issue_for_color_id',
       foreignField: '_id',
       as: 'issue_for_color_details',

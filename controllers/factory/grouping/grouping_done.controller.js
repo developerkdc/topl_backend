@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import catchAsync from '../../../utils/errors/catchAsync.js';
 import ApiError from '../../../utils/errors/apiError.js';
-import { issues_for_grouping_model } from '../../../database/schema/factory/grouping/issues_for_grouping.schema.js';
+import { issues_for_grouping_model, issues_for_grouping_view_model } from '../../../database/schema/factory/grouping/issues_for_grouping.schema.js';
 import {
   grouping_done_details_model,
   grouping_done_items_details_model,
@@ -31,10 +31,19 @@ export const add_grouping_done = catchAsync(async (req, res, next) => {
     }
 
     // issue for grouping
-    const fetch_issue_for_grouping_data =
-      await issues_for_grouping_model.findOne({
-        _id: other_details?.issue_for_grouping_id,
-      });
+    const fetch_issue_for_grouping_details =
+      await issues_for_grouping_view_model.aggregate([
+        {
+          $match: {
+            _id: {
+              unique_identifier: mongoose.Types.ObjectId.createFromHexString(other_details?.issue_for_grouping_unique_identifier),
+              pallet_number: other_details?.issue_for_grouping_pallet_number,
+            }
+          },
+        }
+      ]);
+
+    const fetch_issue_for_grouping_data = fetch_issue_for_grouping_details?.[0]
     if (!fetch_issue_for_grouping_data) {
       throw new ApiError('Issue for grouping data not found', 400);
     }
@@ -81,9 +90,13 @@ export const add_grouping_done = catchAsync(async (req, res, next) => {
     }
 
     // update issue for grouping issue status
-    const issue_for_grouping_id = other_details_data?.issue_for_grouping_id;
-    const update_issue_for_grouping = await issues_for_grouping_model.updateOne(
-      { _id: issue_for_grouping_id },
+    const unique_identifier = other_details_data?.issue_for_grouping_unique_identifier;
+    const pallet_number = other_details_data?.issue_for_grouping_pallet_number;
+    const update_issue_for_grouping = await issues_for_grouping_model.updateMany(
+      {
+        unique_identifier: unique_identifier,
+        pallet_number: pallet_number,
+      },
       {
         $set: {
           is_grouping_done: true,
@@ -441,8 +454,19 @@ export const fetch_all_details_by_grouping_done_id = catchAsync(
       {
         $lookup: {
           from: 'issues_for_grouping_views',
-          localField: 'issue_for_grouping_id',
-          foreignField: '_id',
+          let: { unique_identifier: "$issue_for_grouping_unique_identifier", pallet_number: "$issue_for_grouping_pallet_number" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$_id.unique_identifier", "$$unique_identifier"] },
+                    { $eq: ["$_id.pallet_number", "$$pallet_number"] },
+                  ]
+                }
+              }
+            }
+          ],
           as: 'issues_for_grouping',
         },
       },
@@ -559,11 +583,14 @@ export const revert_all_grouping_done = catchAsync(async (req, res, next) => {
       throw new ApiError('Failed to delete grouping done items', 400);
     }
 
-    const issue_for_grouping_id =
-      delete_grouping_done_other_details?.issue_for_grouping_id;
+    const unique_identifier = grouping_done_other_details?.issue_for_grouping_unique_identifier;
+    const pallet_number = grouping_done_other_details?.issue_for_grouping_pallet_number;
 
-    const update_issue_for_grouping = await issues_for_grouping_model.updateOne(
-      { _id: issue_for_grouping_id },
+    const update_issue_for_grouping = await issues_for_grouping_model.updateMany(
+      {
+        unique_identifier: unique_identifier,
+        pallet_number: pallet_number,
+      },
       {
         $set: {
           is_grouping_done: false,
@@ -667,6 +694,29 @@ export const fetch_all_grouping_history_details = catchAsync(
       ...search_query,
     };
 
+    const aggGroupNoLookup = {
+      $lookup: {
+        from: 'grouping_done_items_details',
+        localField: 'group_no',
+        foreignField: 'group_no',
+        pipeline: [
+          {
+            $project: {
+              group_no: 1,
+              photo_no: 1,
+              photo_id: 1,
+            },
+          },
+        ],
+        as: 'grouping_done_items_details',
+      },
+    };
+    const aggGroupNoUnwind = {
+      $unwind: {
+        path: '$grouping_done_items_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    };
     // Aggregation stage
 
     const aggCreatedByLookup = {
@@ -741,6 +791,8 @@ export const fetch_all_grouping_history_details = catchAsync(
     };
 
     const listAggregate = [
+      aggGroupNoLookup,
+      aggGroupNoUnwind,
       aggCreatedByLookup,
       aggCreatedByUnwind,
       aggUpdatedByLookup,

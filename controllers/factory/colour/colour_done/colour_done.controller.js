@@ -5,11 +5,8 @@ import { dynamic_filter } from '../../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../../utils/dynamicSearch/dynamic.js';
 import catchAsync from '../../../../utils/errors/catchAsync.js';
 import ApiError from '../../../../utils/errors/apiError.js';
-import issue_for_plywood_resizing_model from '../../../../database/schema/factory/plywood_resizing_factory/issue_for_resizing/issue_for_resizing.schema.js';
 import { plywood_resizing_done_details_model } from '../../../../database/schema/factory/plywood_resizing_factory/resizing_done/resizing.done.schema.js';
-import plywood_resize_damage_model from '../../../../database/schema/factory/plywood_resizing_factory/resizing_damage/resizing_damage.schema.js';
-import { face_inventory_items_details } from '../../../../database/schema/inventory/face/face.schema.js';
-import issue_for_color_model from '../../../../database/schema/factory/colour/issue_for_colour/issue_for_colour.schema.js';
+import { issue_for_color_model, } from '../../../../database/schema/factory/colour/issue_for_colour/issue_for_colour.schema.js';
 import { color_done_details_model } from '../../../../database/schema/factory/colour/colour_done/colour_done.schema.js';
 
 export const create_color = catchAsync(async (req, res) => {
@@ -24,7 +21,7 @@ export const create_color = catchAsync(async (req, res) => {
         StatusCodes.NOT_FOUND
       );
     }
-    if (!isValidObjectId(color_done_details?.issur_for_color_id)) {
+    if (!isValidObjectId(color_done_details?.issue_for_color_id)) {
       throw new ApiError(
         'Invalid Issue for Color ID.',
         StatusCodes.BAD_REQUEST
@@ -56,6 +53,7 @@ export const create_color = catchAsync(async (req, res) => {
     const updated_color_done_details = {
       ...color_done_details,
       sr_no: max_sr_no ? max_sr_no?.max_sr_no + 1 : 1,
+      pressing_details_id: issue_for_color_details?.pressing_details_id,
       created_by: userDetails?._id,
       updated_by: userDetails?._id,
     };
@@ -108,7 +106,7 @@ export const create_color = catchAsync(async (req, res) => {
     const response = new ApiResponse(
       StatusCodes.CREATED,
       'color Created Successfully',
-      add_resizing_data_result
+      create_color_result
     );
     await session.commitTransaction();
     return res.status(StatusCodes.CREATED).json(response);
@@ -222,6 +220,20 @@ export const listing_color_done = catchAsync(async (req, res) => {
       'available_details.no_of_sheets': { $gt: 0 },
     },
   };
+  const aggLookUpColourIssuedDetails = {
+    $lookup: {
+      from: "issue_for_colour_details_view",
+      localField: "issue_for_cnc_id",
+      foreignField: "_id",
+      as: "issue_for_colour_details"
+    }
+  }
+  const aggIssuedColourDetailsUnwind = {
+    $unwind: {
+      path: '$issue_for_colour_details',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
 
   const aggCreatedByLookup = {
     $lookup: {
@@ -296,6 +308,8 @@ export const listing_color_done = catchAsync(async (req, res) => {
 
   const listAggregate = [
     aggCommonMatch,
+    aggLookUpColourIssuedDetails,
+    aggIssuedColourDetailsUnwind,
     aggCreatedByLookup,
     aggCreatedByUnwind,
     aggUpdatedByLookup,
@@ -350,7 +364,7 @@ export const fetch_single_color_done_item_with_issue_for_color_data =
       },
       {
         $lookup: {
-          from: 'issued_for_color_details',
+          from: 'issue_for_colour_view_model',
           localField: 'issue_for_color_id',
           foreignField: '_id',
           as: 'issue_for_color_details',
@@ -449,7 +463,7 @@ export const revert_color_done_items = catchAsync(async (req, res) => {
     const response = new ApiResponse(
       StatusCodes.OK,
       'color items Reverted Successfully',
-      delete_color_done_result
+      delete_color_done_data_result
     );
     await session.commitTransaction();
     return res.status(StatusCodes.OK).json(response);

@@ -63,7 +63,7 @@ export const listing_cnc_damage = catchAsync(async (req, res) => {
   };
   const aggLookUpIssueForCncDetails = {
     $lookup: {
-      from: 'issued_for_cnc_details',
+      from: 'issue_for_cnc_details_view',
       localField: 'cnc_done_details.issue_for_cnc_id',
       foreignField: '_id',
       as: 'issue_for_cnc_details',
@@ -321,7 +321,7 @@ export const revert_damage_to_cnc_done = catchAsync(async (req, res) => {
       throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
     }
 
-    await session.startTransaction();
+    session.startTransaction();
 
     const cnc_damage_details = await cnc_damage_model
       .findById(id)
@@ -374,7 +374,7 @@ export const revert_damage_to_cnc_done = catchAsync(async (req, res) => {
       is_item_editable?.no_of_sheets ===
       is_item_editable?.available_details?.no_of_sheets
     ) {
-      await cnc_done_details_model.updateOne(
+      const update_cnc_result = await cnc_done_details_model.updateOne(
         { _id: is_item_editable?._id },
         {
           $set: {
@@ -384,6 +384,12 @@ export const revert_damage_to_cnc_done = catchAsync(async (req, res) => {
         },
         { session }
       );
+      if (update_cnc_result.matchedCount === 0) {
+        throw new ApiError("CNC done details not found.")
+      }
+      if (!update_cnc_result?.acknowledged || update_cnc_result.modifiedCount === 0) {
+        throw new ApiError("Failed to update CNC editable status")
+      }
     }
 
     const response = new ApiResponse(

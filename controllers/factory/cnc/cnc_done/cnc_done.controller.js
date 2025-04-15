@@ -6,7 +6,7 @@ import { DynamicSearch } from '../../../../utils/dynamicSearch/dynamic.js';
 import catchAsync from '../../../../utils/errors/catchAsync.js';
 import ApiError from '../../../../utils/errors/apiError.js';
 import { plywood_resizing_done_details_model } from '../../../../database/schema/factory/plywood_resizing_factory/resizing_done/resizing.done.schema.js';
-import issue_for_cnc_model from '../../../../database/schema/factory/cnc/issue_for_cnc/issue_for_cnc.schema.js';
+import { issue_for_cnc_model } from '../../../../database/schema/factory/cnc/issue_for_cnc/issue_for_cnc.schema.js';
 import { cnc_done_details_model } from '../../../../database/schema/factory/cnc/cnc_done/cnc_done.schema.js';
 
 //done
@@ -47,6 +47,7 @@ export const create_cnc = catchAsync(async (req, res) => {
     ]);
     const updated_cnc_done_details = {
       ...cnc_done_details,
+      pressing_details_id: issue_for_cnc_details?.pressing_details_id,
       sr_no: max_sr_no ? max_sr_no?.max_sr_no + 1 : 1,
       created_by: userDetails?._id,
       updated_by: userDetails?._id,
@@ -214,6 +215,15 @@ export const listing_cnc_done = catchAsync(async (req, res) => {
     },
   };
 
+  const aggLookUpIssuedDetails = {
+    $lookup: {
+      from: "issue_for_cnc_details_view",
+      localField: "issue_for_cnc_id",
+      foreignField: "_id",
+      as: "issue_for_cnc_details"
+    }
+  }
+
   const aggCreatedByLookup = {
     $lookup: {
       from: 'users',
@@ -268,6 +278,12 @@ export const listing_cnc_done = catchAsync(async (req, res) => {
       preserveNullAndEmptyArrays: true,
     },
   };
+  const aggIssuedCncDetailsUnwind = {
+    $unwind: {
+      path: '$issue_for_cnc_details',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
   const aggMatch = {
     $match: {
       ...match_query,
@@ -287,6 +303,8 @@ export const listing_cnc_done = catchAsync(async (req, res) => {
 
   const listAggregate = [
     aggCommonMatch,
+    aggLookUpIssuedDetails,
+    aggIssuedCncDetailsUnwind,
     aggCreatedByLookup,
     aggCreatedByUnwind,
     aggUpdatedByLookup,
@@ -340,7 +358,7 @@ export const fetch_single_cnc_done_item_with_issue_for_cnc_data = catchAsync(
       },
       {
         $lookup: {
-          from: 'issued_for_cnc_details',
+          from: 'issue_for_cnc_details_view',
           localField: 'issue_for_cnc_id',
           foreignField: '_id',
           as: 'issue_for_cnc_details',

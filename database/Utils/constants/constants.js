@@ -98,6 +98,7 @@ export const item_issued_from = {
   face: 'FACE',
   mdf: 'MDF',
   store: 'OTHER_GOODS',
+  other_goods: 'OTHER_GOODS',
   crosscutting: 'CROSSCUTTING',
   flitching_factory: 'FLITCHING_FACTORY',
   dressing_factory: 'DRESSING_FACTORY',
