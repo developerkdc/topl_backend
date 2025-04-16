@@ -6,7 +6,6 @@ import mongoose from 'mongoose';
 import IssueForChallan from './issue_for_challan.js';
 import RevertIssueForChallan from './revert_issue_for_challan.js';
 import issue_for_challan_model from '../../../database/schema/challan/issue_for_challan/issue_for_challan.schema.js';
-import issue_for_challan_model from '../../../database/schema/challan/issue_for_challan/issue_for_challan.schema.js';
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 
