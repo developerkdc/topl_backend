@@ -86,63 +86,63 @@ export const listing_issued_for_challan = catchAsync(async (req, res, next) => {
   const match_query = {
     ...filterData,
     ...search_query,
-    is_color_done: false,
+    is_challan_done: false,
   };
 
-  // const aggCreatedByLookup = {
-  //   $lookup: {
-  //     from: 'users',
-  //     localField: 'created_by',
-  //     foreignField: '_id',
-  //     pipeline: [
-  //       {
-  //         $project: {
-  //           user_name: 1,
-  //           user_type: 1,
-  //           dept_name: 1,
-  //           first_name: 1,
-  //           last_name: 1,
-  //           email_id: 1,
-  //           mobile_no: 1,
-  //         },
-  //       },
-  //     ],
-  //     as: 'created_by',
-  //   },
-  // };
-  // const aggUpdatedByLookup = {
-  //   $lookup: {
-  //     from: 'users',
-  //     localField: 'updated_by',
-  //     foreignField: '_id',
-  //     pipeline: [
-  //       {
-  //         $project: {
-  //           user_name: 1,
-  //           user_type: 1,
-  //           dept_name: 1,
-  //           first_name: 1,
-  //           last_name: 1,
-  //           email_id: 1,
-  //           mobile_no: 1,
-  //         },
-  //       },
-  //     ],
-  //     as: 'updated_by',
-  //   },
-  // };
-  // const aggCreatedByUnwind = {
-  //   $unwind: {
-  //     path: '$created_by',
-  //     preserveNullAndEmptyArrays: true,
-  //   },
-  // };
-  // const aggUpdatedByUnwind = {
-  //   $unwind: {
-  //     path: '$updated_by',
-  //     preserveNullAndEmptyArrays: true,
-  //   },
-  // };
+  const aggCreatedByLookup = {
+    $lookup: {
+      from: 'users',
+      localField: 'created_by',
+      foreignField: '_id',
+      pipeline: [
+        {
+          $project: {
+            user_name: 1,
+            user_type: 1,
+            dept_name: 1,
+            first_name: 1,
+            last_name: 1,
+            email_id: 1,
+            mobile_no: 1,
+          },
+        },
+      ],
+      as: 'created_by',
+    },
+  };
+  const aggUpdatedByLookup = {
+    $lookup: {
+      from: 'users',
+      localField: 'updated_by',
+      foreignField: '_id',
+      pipeline: [
+        {
+          $project: {
+            user_name: 1,
+            user_type: 1,
+            dept_name: 1,
+            first_name: 1,
+            last_name: 1,
+            email_id: 1,
+            mobile_no: 1,
+          },
+        },
+      ],
+      as: 'updated_by',
+    },
+  };
+  const aggCreatedByUnwind = {
+    $unwind: {
+      path: '$created_by',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
+  const aggUpdatedByUnwind = {
+    $unwind: {
+      path: '$updated_by',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
   const aggMatch = {
     $match: {
       ...match_query,
@@ -161,10 +161,10 @@ export const listing_issued_for_challan = catchAsync(async (req, res, next) => {
   };
 
   const listAggregate = [
-    // aggCreatedByLookup,
-    // aggCreatedByUnwind,
-    // aggUpdatedByLookup,
-    // aggUpdatedByUnwind,
+    aggCreatedByLookup,
+    aggCreatedByUnwind,
+    aggUpdatedByLookup,
+    aggUpdatedByUnwind,
     aggMatch,
     aggSort,
     aggSkip,
