@@ -208,26 +208,30 @@ class IssueForChallan {
     //       ]);
 
     // const newMax = maxNumber.length > 0 ? maxNumber[0].max + 1 : 1;
-    const issued_item_details_obj = this.issued_item_details[0];
+    if(this.issued_item_details?.available_sheets < this.issued_data){
+      throw new ApiError('Available sheets are less than issued sheets');
+    };
+
     const factor =
       this.issued_data / this.issued_item_details?.available_sheets;
     const issued_sqm = this.issued_item_details?.available_sqm * factor;
     const issued_amount = this.issued_item_details?.available_amount * factor;
     const updated_issued_item_details = {
       ...this.issued_item_details,
+      issued_sheets:this.issued_data,
       issued_sqm: issued_sqm,
       issued_amount: issued_amount,
     };
 
-    const result = await issue_for_challan_model.create(
-      {
+    const [result] = await issue_for_challan_model.create(
+        [{
         // sr_no: newMax,
         issued_from: this.issued_from,
         issued_item_details: updated_issued_item_details,
         created_by: this.userDetails?._id,
         updated_by: this.userDetails?._id,
-      },
-      { session }
+      }],
+      { session : this.session}
     );
 
     if (!result) {
@@ -237,8 +241,8 @@ class IssueForChallan {
       );
     }
 
-    const update_plywood_inventory = plywood_inventory_items_details.updateOne(
-      { _id: this.issued_item_id },
+    const update_plywood_inventory = await plywood_inventory_items_details.updateOne(
+      { _id: this.issued_item_details?._id },
       {
         $inc: {
           available_sheets: -this.issued_data,
@@ -250,7 +254,7 @@ class IssueForChallan {
           updated_by: this.userDetails?._id,
         }
       },
-      { session }
+      { session : this.session}
     );
 
     if (update_plywood_inventory?.matchedCount === 0) {
@@ -274,11 +278,12 @@ class IssueForChallan {
         {
           $set: {
             isEditable: false,
-            updated_by: userDetails?._id,
+            updated_by: this.userDetails?._id,
           },
         },
-        { session }
+        { session : this.session}
       );
+
     if (update_plywood_inventory_invoice_editable_status?.matchedCount === 0) {
       throw new ApiError(
         'Plywood item invoice not found',
@@ -311,7 +316,7 @@ class IssueForChallan {
             updated_by: this.userDetails?._id,
           },
         ],
-        { session }
+        { session :this.session}
       );
 
     if (add_issued_data_to_plywood_history?.length === 0) {
@@ -320,8 +325,6 @@ class IssueForChallan {
         StatusCodes.BAD_REQUEST
       );
     }
-
-    return result;
   }
   //add data from VENEER inventory
   async VENEER() {
@@ -385,6 +388,9 @@ class IssueForChallan {
     //       ]);
 
     // const newMax = maxNumber.length > 0 ? maxNumber[0].max + 1 : 1;
+    if(this.issued_item_details?.available_sheets < this.issued_data){
+      throw new ApiError('Available sheets are less than issued sheets');
+    };
     const factor =
       this.issued_data / this.issued_item_details?.available_sheets;
     const issued_sqm = this.issued_item_details?.available_sqm * factor;
@@ -395,15 +401,15 @@ class IssueForChallan {
       issued_amount: issued_amount,
     };
 
-    const result = await issue_for_challan_model.create(
-      {
+    const [result] = await issue_for_challan_model.create(
+      [{
         // sr_no: newMax,
         issued_from: this.issued_from,
         issued_item_details: updated_issued_item_details,
         created_by: this.userDetails?._id,
         updated_by: this.userDetails?._id,
-      },
-      { session }
+      }],
+      { session : this.session }
     );
 
     if (!result) {
@@ -412,9 +418,8 @@ class IssueForChallan {
         StatusCodes?.BAD_REQUEST
       );
     }
-
-    const update_mdf_inventory = mdf_inventory_items_details.updateOne(
-      { _id: this.issued_item_id },
+    const update_mdf_inventory =await mdf_inventory_items_details.updateOne(
+      { _id: this.issued_item_details._id },
       {
         $inc: {
           available_sheets: -this.issued_data,
@@ -426,7 +431,7 @@ class IssueForChallan {
           updated_by: this.userDetails?._id,
         }
       },
-      { session }
+      { session :this.session}
     );
 
     if (update_mdf_inventory?.matchedCount === 0) {
@@ -450,11 +455,12 @@ class IssueForChallan {
         {
           $set: {
             isEditable: false,
-            updated_by: userDetails?._id,
+            updated_by: this.userDetails?._id,
           },
         },
-        { session }
+        { session : this.session }
       );
+
     if (update_mdf_inventory_invoice_editable_status?.matchedCount === 0) {
       throw new ApiError(
         'MDF item invoice not found',
@@ -487,7 +493,7 @@ class IssueForChallan {
             updated_by: this.userDetails?._id,
           },
         ],
-        { session }
+        { session :this.session }
       );
 
     if (add_issued_data_to_mdf_history?.length === 0) {
@@ -497,7 +503,6 @@ class IssueForChallan {
       );
     }
 
-    return result;
   }
   //add data from Face inventory
   async FACE() {
@@ -513,6 +518,9 @@ class IssueForChallan {
     //       ]);
 
     // const newMax = maxNumber.length > 0 ? maxNumber[0].max + 1 : 1;
+    if(this.issued_item_details?.available_sheets < this.issued_data){
+      throw new ApiError('Available sheets are less than issued sheets');
+    };
     const factor =
       this.issued_data / this.issued_item_details?.available_sheets;
     const issued_sqm = this.issued_item_details?.available_sqm * factor;
@@ -523,15 +531,15 @@ class IssueForChallan {
       issued_amount: issued_amount,
     };
 
-    const result = await issue_for_challan_model.create(
-      {
+    const [result] = await issue_for_challan_model.create(
+      [{
         // sr_no: newMax,
         issued_from: this.issued_from,
         issued_item_details: updated_issued_item_details,
         created_by: this.userDetails?._id,
         updated_by: this.userDetails?._id,
-      },
-      { session }
+      }],
+      { session :this.session }
     );
 
     if (!result) {
@@ -541,8 +549,8 @@ class IssueForChallan {
       );
     }
 
-    const update_face_inventory = face_inventory_items_details.updateOne(
-      { _id: this.issued_item_id },
+    const update_face_inventory =await face_inventory_items_details.updateOne(
+      { _id: this.issued_item_details._id },
       {
         $inc: {
           available_sheets: -this.issued_data,
@@ -554,7 +562,7 @@ class IssueForChallan {
           updated_by: this.userDetails?._id,
         }
       },
-      { session }
+      { session : this.session}
     );
 
     if (update_face_inventory?.matchedCount === 0) {
@@ -578,10 +586,10 @@ class IssueForChallan {
         {
           $set: {
             isEditable: false,
-            updated_by: userDetails?._id,
+            updated_by: this.userDetails?._id,
           },
         },
-        { session }
+        { session :this.session}
       );
     if (update_face_inventory_invoice_editable_status?.matchedCount === 0) {
       throw new ApiError(
@@ -615,7 +623,7 @@ class IssueForChallan {
             updated_by: this.userDetails?._id,
           },
         ],
-        { session }
+        { session :this.session }
       );
 
     if (add_issued_data_to_face_history?.length === 0) {
@@ -641,6 +649,9 @@ class IssueForChallan {
     //       ]);
 
     // const newMax = maxNumber.length > 0 ? maxNumber[0].max + 1 : 1;
+    if(this.issued_item_details?.available_sheets < this.issued_data){
+      throw new ApiError('Available sheets are less than issued sheets');
+    };
     const factor =
       this.issued_data / this.issued_item_details?.available_sheets;
     const issued_sqm = this.issued_item_details?.available_sqm * factor;
@@ -651,15 +662,15 @@ class IssueForChallan {
       issued_amount: issued_amount,
     };
 
-    const result = await issue_for_challan_model.create(
-      {
+    const [result] = await issue_for_challan_model.create(
+      [{
         // sr_no: newMax,
         issued_from: this.issued_from,
         issued_item_details: updated_issued_item_details,
         created_by: this.userDetails?._id,
         updated_by: this.userDetails?._id,
-      },
-      { session }
+      }],
+      { session : this.session}
     );
 
     if (!result) {
@@ -669,8 +680,8 @@ class IssueForChallan {
       );
     }
 
-    const update_core_inventory = core_inventory_items_details.updateOne(
-      { _id: this.issued_item_id },
+    const update_core_inventory =await core_inventory_items_details.updateOne(
+      { _id: this.issued_item_details._id },
       {
         $inc: {
           available_sheets: -this.issued_data,
@@ -682,7 +693,7 @@ class IssueForChallan {
           updated_by: this.userDetails?._id,
         }
       },
-      { session }
+      { session : this.session}
     );
 
     if (update_core_inventory?.matchedCount === 0) {
@@ -706,10 +717,10 @@ class IssueForChallan {
         {
           $set: {
             isEditable: false,
-            updated_by: userDetails?._id,
+            updated_by: this.userDetails?._id,
           },
         },
-        { session }
+        { session : this.session}
       );
     if (update_core_inventory_invoice_editable_status?.matchedCount === 0) {
       throw new ApiError(
@@ -743,7 +754,7 @@ class IssueForChallan {
             updated_by: this.userDetails?._id,
           },
         ],
-        { session }
+        { session :this.session }
       );
 
     if (add_issued_data_to_core_history?.length === 0) {
@@ -752,8 +763,6 @@ class IssueForChallan {
         StatusCodes.BAD_REQUEST
       );
     }
-
-    return result;
   }
   //add data from FLEECE PAPER inventory
   async FLEECE_PAPER() {
@@ -769,6 +778,9 @@ class IssueForChallan {
     //       ]);
 
     // const newMax = maxNumber.length > 0 ? maxNumber[0].max + 1 : 1;
+    if(this.issued_item_details?.available_number_of_roll < this.issued_data){
+      throw new ApiError('Available NO. of Rolls are less than issued NO. of Rolls');
+    };
     const factor =
       this.issued_data / this.issued_item_details?.available_number_of_roll;
     const issued_sqm = this.issued_item_details?.available_sqm * factor;
@@ -779,15 +791,15 @@ class IssueForChallan {
       issued_amount: issued_amount,
     };
 
-    const result = await issue_for_challan_model.create(
-      {
+    const [result] = await issue_for_challan_model.create(
+      [{
         // sr_no: newMax,
         issued_from: this.issued_from,
         issued_item_details: updated_issued_item_details,
         created_by: this.userDetails?._id,
         updated_by: this.userDetails?._id,
-      },
-      { session }
+      }],
+      { session : this.session }
     );
 
     if (!result) {
@@ -797,8 +809,8 @@ class IssueForChallan {
       );
     }
 
-    const update_fleece_paper_inventory = fleece_inventory_items_modal.updateOne(
-      { _id: this.issued_item_id },
+    const update_fleece_paper_inventory =await fleece_inventory_items_modal.updateOne(
+      { _id: this.issued_item_details._id },
       {
         $inc: {
           available_number_of_roll: -this.issued_data,
@@ -810,7 +822,7 @@ class IssueForChallan {
           updated_by: this.userDetails?._id,
         }
       },
-      { session }
+      { session : this.session}
     );
 
     if (update_fleece_paper_inventory?.matchedCount === 0) {
@@ -834,10 +846,10 @@ class IssueForChallan {
         {
           $set: {
             isEditable: false,
-            updated_by: userDetails?._id,
+            updated_by: this.userDetails?._id,
           },
         },
-        { session }
+        { session : this.session }
       );
     if (update_fleece_paper_inventory_invoice_editable_status?.matchedCount === 0) {
       throw new ApiError(
@@ -871,7 +883,7 @@ class IssueForChallan {
             updated_by: this.userDetails?._id,
           },
         ],
-        { session }
+        { session : this.session}
       );
 
     if (add_issued_data_to_fleece_paper_history?.length === 0) {
@@ -880,8 +892,6 @@ class IssueForChallan {
         StatusCodes.BAD_REQUEST
       );
     }
-
-    return result;
   }
   //add data from OTHER GOODS inventory
   async OTHER_GOODS() {
@@ -897,6 +907,9 @@ class IssueForChallan {
     //       ]);
 
     // const newMax = maxNumber.length > 0 ? maxNumber[0].max + 1 : 1;
+    if(this.issued_item_details?.available_quantity < this.issued_data){
+      throw new ApiError('Available Quantiry is less than issued quantity');
+    };
     const factor =
       this.issued_data / this.issued_item_details?.available_quantity;
     // const issued_sqm = this.issued_item_details?.available_sqm * factor;
@@ -907,15 +920,15 @@ class IssueForChallan {
       issued_amount: issued_amount,
     };
 
-    const result = await issue_for_challan_model.create(
-      {
+    const [result] = await issue_for_challan_model.create(
+      [{
         // sr_no: newMax,
         issued_from: this.issued_from,
         issued_item_details: updated_issued_item_details,
         created_by: this.userDetails?._id,
         updated_by: this.userDetails?._id,
-      },
-      { session }
+      }],
+      { session : this.session }
     );
 
     if (!result) {
@@ -925,8 +938,8 @@ class IssueForChallan {
       );
     }
 
-    const update_other_goods_inventory = othergoods_inventory_items_details.updateOne(
-      { _id: this.issued_item_id },
+    const update_other_goods_inventory =await othergoods_inventory_items_details.updateOne(
+      { _id: this.issued_item_details._id },
       {
         $inc: {
           available_quantity: -this.issued_data,
@@ -938,7 +951,7 @@ class IssueForChallan {
           updated_by: this.userDetails?._id,
         }
       },
-      { session }
+      { session : this.session }
     );
 
     if (update_other_goods_inventory?.matchedCount === 0) {
@@ -962,10 +975,10 @@ class IssueForChallan {
         {
           $set: {
             isEditable: false,
-            updated_by: userDetails?._id,
+            updated_by: this.userDetails?._id,
           },
         },
-        { session }
+        { session : this.session }
       );
     if (update_other_goods_inventory_invoice_editable_status?.matchedCount === 0) {
       throw new ApiError(
@@ -999,7 +1012,7 @@ class IssueForChallan {
             updated_by: this.userDetails?._id,
           },
         ],
-        { session }
+        { session : this.session }
       );
 
     if (add_issued_data_to_other_goods_history?.length === 0) {
@@ -1009,7 +1022,6 @@ class IssueForChallan {
       );
     }
 
-    return result;
   }
 }
 
