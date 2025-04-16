@@ -212,9 +212,9 @@ export const issue_for_tapping_from_grouping_for_order = catchAsync(async (req, 
 
     const issue_for_tapping_data = {
       ...grouping_data,
-      order_id: order_id,
-      order_item_id: order_item_id,
-      order_category: order_category_status,
+      order_id: order_item_details?.order_id,
+      order_item_id: order_item_details?._id,
+      order_category: order_item_details?.order_details?.order_category,
       issue_status: issues_for_status.order,
       issued_from: issues_for_status.grouping,
       no_of_leaves: issue_no_of_leaves,
