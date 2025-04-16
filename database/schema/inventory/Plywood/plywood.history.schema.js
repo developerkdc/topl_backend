@@ -21,13 +21,21 @@ const plywood_history_schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       default: null,
     },
+    pressing_done_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
     issue_status: {
       type: String,
       enum: {
-        values: [issues_for_status?.order, issues_for_status?.plywood_resizing,issues_for_status?.challan],
-        message: `Invalid Issue status -> {{VALUE}} it must be one of the ${issues_for_status?.order}, ${issues_for_status?.plywood_resizing}, ${issues_for_status?.challan}`,
+        values: [
+          issues_for_status?.order,
+          issues_for_status?.plywood_resizing,issues_for_status?.challan,
+          issues_for_status?.pressing,
+        ],
+        message: `Invalid Issue status -> {{VALUE}} it must be one of the ${issues_for_status?.order}, ${issues_for_status?.plywood_resizing}, ${issues_for_status?.challan},${issues_for_status?.pressing}`,
       },
-      default: issues_for_status?.order,
+      default: null,
     },
     issued_sheets: {
       type: Number,
