@@ -23,6 +23,7 @@ import { checkServerHealth, fetchDBConnections } from './controllers/auth.js';
 // import { start_worker_thread } from './utils/constants.js';
 import { insert_raw_machine_data_into_machine_mismatch_model } from './utils/workers/workers.js';
 import mongoose from 'mongoose';
+import all_challan_router from './routes/challan/all_challan.routes.js';
 // import { start_worker_thread } from './utils/constants.js';
 
 const Configs = getConfigs();
@@ -84,6 +85,8 @@ app.use(`/api/${Configs.server.version}`, factoryRouter);
 app.use(`/api/${Configs.server.version}`, approvalRouters);
 // orders
 app.use(`/api/${Configs.server.version}/order`, allOrderRouter);
+//challan routes
+app.use(`/api/${Configs.server.version}/challan`, all_challan_router)
 
 app.use(globalErrorHandler);
 

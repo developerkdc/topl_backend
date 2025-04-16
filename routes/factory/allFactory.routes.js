@@ -38,9 +38,11 @@ import issue_for_canvas_router from './canvas/issue_for_canvas/issue_for_canvas.
 import issue_for_polishing_router from './polishing/issue_for_polishing/issue_for_polishing.routes.js';
 import polishing_done_router from './polishing/polishing_done/polishing_done.routes.js';
 import polishing_damage_router from './polishing/polishing_damage/polishing_damage.routes.js';
+import pressing_done_router from './pressing/pressing_done/pressing_done.routes.js';
 import bunito_damage_router from './bunito/bunito_damage/bunito_damage.routes.js';
 import bunito_done_router from './bunito/bunito_done/bunito_done.routes.js';
 import issue_for_bunito_router from './bunito/issue_for_bunito/issue_for_bunito.routes.js';
+import issue_for_challan_router from './challan/issue_for_challlan/issue_for_challan.js';
 
 const factoryRouter = express.Router();
 
@@ -92,6 +94,8 @@ factoryRouter.use('/factory/resizing-done', resizing_done_router);
 
 //pressing
 factoryRouter.use('/factory/pressing', issue_for_pressing_router);
+factoryRouter.use('/factory/pressing-done', pressing_done_router);
+
 //Plywood production
 factoryRouter.use('/factory/plywood-production', plywoodProductionRouter);
 
@@ -122,6 +126,9 @@ factoryRouter.use('/factory/polishing-damage', polishing_damage_router);
 //route for issuing data from factory
 factoryRouter.use('/factory/issue-for-factory', add_issue_for_factory_data);
 //route for reverting issued data from factory
-factoryRouter.use('/factory/revert-issue-for-factory', revert_issue_for_factory_data);
+factoryRouter.use('/revert-issue-for-factory', revert_issue_for_factory_data);
+
+//challan
+factoryRouter.use('/factory/issue-for-challan', issue_for_challan_router);
 
 export default factoryRouter;

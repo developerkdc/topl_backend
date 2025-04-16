@@ -1,30 +1,19 @@
 import mongoose from 'mongoose';
 import { issues_for_status } from '../../../Utils/constants/constants.js';
 
-const plywood_history_schema = new mongoose.Schema(
+const plywood_production_history_schema = new mongoose.Schema(
   {
-    plywood_item_id: {
+    plywood_production_done_id: {
       type: mongoose.Schema.Types.ObjectId,
-      required: [true, 'Plywood Item ID is required.'],
+      required: [true, 'Plywood Resizing Done ID is required.'],
     },
-    issued_for_order_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      // required: [true, 'Issued for order ID is required.'],
-      default: null,
-    },
-    issued_for_challan_id: {
+    issued_for_id: {
+      //this is the Id of the document to which the item is been issued
       type: mongoose.Schema.Types.ObjectId,
       // required: [true, 'Issued for order ID is required.'],
       default: null,
     },
-    issued_for_plywood_resizing_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      default: null,
-    },
-    pressing_done_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      default: null,
-    },
+
     issue_status: {
       type: String,
       enum: {
@@ -61,13 +50,22 @@ const plywood_history_schema = new mongoose.Schema(
   { timestamps: true }
 );
 
-plywood_history_schema?.index({ issue_status: 1 });
-// plywood_history_schema?.index({ plywood_item_id: 1 }, { unique: true });
+// indexing
+const indexingFields = [
+  [{ plywood_resizing_done_id: 1 }],
+  [{ issue_status: 1 }],
+  [{ created_by: 1 }],
+  [{ updatedAt: 1 }],
+];
 
-const plywood_history_model = mongoose.model(
-  'plywood_history_details',
-  plywood_history_schema,
-  'plywood_history_details'
+indexingFields.forEach((index) =>
+  plywood_production_history_schema.index(...index)
 );
 
-export default plywood_history_model;
+const plywood_resizing_history_model = mongoose.model(
+  'plywood_production_history_details',
+  plywood_production_history_schema,
+  'plywood_production_history_details'
+);
+
+export default plywood_resizing_history_model;

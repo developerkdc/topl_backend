@@ -16,6 +16,7 @@ export const issues_for_status = {
   grouping: 'grouping',
   order: 'order',
   tapping: 'tapping',
+  pressing: 'pressing',
   sample: 'sample',
   stock: 'stock',
   challan: 'challan',
@@ -97,6 +98,7 @@ export const item_issued_from = {
   face: 'FACE',
   mdf: 'MDF',
   store: 'OTHER_GOODS',
+  other_goods: 'OTHER_GOODS',
   crosscutting: 'CROSSCUTTING',
   flitching_factory: 'FLITCHING_FACTORY',
   dressing_factory: 'DRESSING_FACTORY',
@@ -115,12 +117,12 @@ export const item_issued_for = {
   sample: 'SAMPLE',
 };
 
-export const base_type = {
+export const base_type_constants = {
   plywood: 'PLYWOOD',
   fleece_paper: 'FLEECE_PAPER',
   mdf: 'MDF',
 };
-export const consumed_from = {
+export const consumed_from_constants = {
   inventory: 'INVENTORY',
   production: 'PRODUCTION',
   resizing: 'RESIZING',
