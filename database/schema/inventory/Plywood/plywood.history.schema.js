@@ -30,10 +30,10 @@ const plywood_history_schema = new mongoose.Schema(
       enum: {
         values: [
           issues_for_status?.order,
-          issues_for_status?.plywood_resizing,
+          issues_for_status?.plywood_resizing,issues_for_status?.challan,
           issues_for_status?.pressing,
         ],
-        message: `Invalid Issue status -> {{VALUE}} it must be one of the ${issues_for_status?.order},${issues_for_status?.plywood_resizing},${issues_for_status?.pressing}`,
+        message: `Invalid Issue status -> {{VALUE}} it must be one of the ${issues_for_status?.order}, ${issues_for_status?.plywood_resizing}, ${issues_for_status?.challan},${issues_for_status?.pressing}`,
       },
       default: null,
     },
