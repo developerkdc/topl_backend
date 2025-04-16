@@ -12,20 +12,21 @@ const issue_for_tapping_schema = new mongoose.Schema(
       default: null,
       required: [validateOrderField, 'order_id is required'],
     },
-    order_category: {
-      type: String,
-      enum: [
-        order_category.decorative,
-        order_category.series_product,
-      ],
-      required: true,
-      uppercase: true,
-      trim: true,
-    },
     order_item_id: {
       type: mongoose.Schema.Types.ObjectId,
       default: null,
       required: [validateOrderField, 'order_item_id is required'],
+    },
+    order_category: {
+      type: String,
+      enum: {
+        values: [order_category.decorative, order_category.series_product],
+        message: `Invalid type {{VALUE}} it must be one of the ${order_category.decorative},${order_category.series_product}`,
+      },
+      uppercase: true,
+      trim: true,
+      default: null,
+      required: [validateOrderField, 'order_category is required'],
     },
     grouping_done_other_details_id: {
       type: mongoose.Schema.Types.ObjectId,

@@ -1,6 +1,7 @@
 import express from 'express';
 import {
   fetch_all_issue_for_tapping_details,
+  fetch_all_issue_for_tapping_details_for_orders,
   fetch_single_issue_for_tapping_details,
   issue_for_tapping_from_grouping_for_stock_and_sample,
   revert_issue_for_tapping_item,
@@ -28,6 +29,11 @@ issue_for_tapping_router.post(
   '/revert-issue-for-tapping-item/:issue_for_tapping_id',
   AuthMiddleware,
   revert_issue_for_tapping_item
+);
+issue_for_tapping_router.get(
+  '/fetch-issue-for-tapping-item-for-order-details/:order_id/:order_item_id',
+  AuthMiddleware,
+  fetch_all_issue_for_tapping_details_for_orders
 );
 
 export default issue_for_tapping_router;

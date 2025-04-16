@@ -422,6 +422,31 @@ export const fetch_single_issue_for_tapping_details = catchAsync(
     return res.status(StatusCodes.OK).json(response);
   }
 );
+export const fetch_all_issue_for_tapping_details_for_orders = catchAsync(
+  async (req, res, next) => {
+    const { order_id, order_item_id } = req.params;
+    if (!order_id || !order_item_id) {
+      throw new ApiError(`Please provide order id or order item id`, StatusCodes.BAD_REQUEST);
+    }
+
+    const agg_match = {
+      $match: {
+        order_id: mongoose.Types.ObjectId.createFromHexString(order_id),
+        order_item_id: mongoose.Types.ObjectId.createFromHexString(order_item_id),
+      },
+    };
+
+    const aggregation_pipeline = [agg_match];
+    const issue_for_tapping_details = await issue_for_tapping_model.aggregate(aggregation_pipeline);
+
+    const response = new ApiResponse(
+      StatusCodes.OK,
+      'Fetch data successfully',
+      issue_for_tapping_details
+    );
+    return res.status(StatusCodes.OK).json(response);
+  }
+);
 
 export const fetch_all_issue_for_tapping_details = catchAsync(
   async (req, res, next) => {

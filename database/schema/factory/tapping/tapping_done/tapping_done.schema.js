@@ -97,6 +97,17 @@ const tapping_done_items_details_schema = new mongoose.Schema(
       default: null,
       required: [validateOrderField, 'order_item_id is required'],
     },
+    order_category: {
+      type: String,
+      enum: {
+        values: [order_category.decorative, order_category.series_product],
+        message: `Invalid type {{VALUE}} it must be one of the ${order_category.decorative},${order_category.series_product}`,
+      },
+      uppercase: true,
+      trim: true,
+      default: null,
+      required: [validateOrderField, 'order_category is required'],
+    },
     tapping_done_other_details_id: {
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'tapping done id is required'],
