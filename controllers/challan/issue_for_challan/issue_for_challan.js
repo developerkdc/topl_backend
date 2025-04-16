@@ -45,9 +45,9 @@ class IssueForChallan {
     issued_item_id,
     issued_data
   ) {
-    if (!isValidObjectId(issued_item_id)) {
-      throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
-    }
+    // if (!isValidObjectId(issued_item_id)) {
+    //   throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
+    // }
     this.session = session;
     this.userDetails = userDetails;
     this.issued_from = issued_from;
@@ -208,27 +208,33 @@ class IssueForChallan {
     //       ]);
 
     // const newMax = maxNumber.length > 0 ? maxNumber[0].max + 1 : 1;
-    const issued_item_details_obj = this.issued_item_details[0];
     const factor =
       this.issued_data / this.issued_item_details?.available_sheets;
     const issued_sqm = this.issued_item_details?.available_sqm * factor;
     const issued_amount = this.issued_item_details?.available_amount * factor;
     const updated_issued_item_details = {
       ...this.issued_item_details,
+      issued_sheets:this.issued_data,
       issued_sqm: issued_sqm,
       issued_amount: issued_amount,
     };
 
-    const result = await issue_for_challan_model.create(
-      {
+    
+
+    console.log("updated_issued_item_details : ",updated_issued_item_details);
+
+    const [result] = await issue_for_challan_model.create(
+        [{
         // sr_no: newMax,
         issued_from: this.issued_from,
         issued_item_details: updated_issued_item_details,
         created_by: this.userDetails?._id,
         updated_by: this.userDetails?._id,
-      },
-      { session }
+      }],
+      { session : this.session}
     );
+
+    console.log("result : ",result);
 
     if (!result) {
       throw new ApiError(
@@ -237,8 +243,8 @@ class IssueForChallan {
       );
     }
 
-    const update_plywood_inventory = plywood_inventory_items_details.updateOne(
-      { _id: this.issued_item_id },
+    const update_plywood_inventory = await plywood_inventory_items_details.updateOne(
+      { _id: this.issued_item_details?._id },
       {
         $inc: {
           available_sheets: -this.issued_data,
@@ -250,8 +256,10 @@ class IssueForChallan {
           updated_by: this.userDetails?._id,
         }
       },
-      { session }
+      { session : this.session}
     );
+
+    console.log("update_plywood_inventory : ",update_plywood_inventory);
 
     if (update_plywood_inventory?.matchedCount === 0) {
       throw new ApiError('Plywood item not found', StatusCodes.BAD_REQUEST);
@@ -274,11 +282,13 @@ class IssueForChallan {
         {
           $set: {
             isEditable: false,
-            updated_by: userDetails?._id,
+            updated_by: this.userDetails?._id,
           },
         },
-        { session }
+        { session : this.session}
       );
+
+      console.log("update_plywood_inventory_invoice_editable_status : ",update_plywood_inventory_invoice_editable_status);
     if (update_plywood_inventory_invoice_editable_status?.matchedCount === 0) {
       throw new ApiError(
         'Plywood item invoice not found',
@@ -311,8 +321,10 @@ class IssueForChallan {
             updated_by: this.userDetails?._id,
           },
         ],
-        { session }
+        { session :this.session}
       );
+
+      console.log("add_issued_data_to_plywood_history : ",add_issued_data_to_plywood_history);
 
     if (add_issued_data_to_plywood_history?.length === 0) {
       throw new ApiError(
@@ -320,8 +332,6 @@ class IssueForChallan {
         StatusCodes.BAD_REQUEST
       );
     }
-
-    return result;
   }
   //add data from VENEER inventory
   async VENEER() {
@@ -403,7 +413,7 @@ class IssueForChallan {
         created_by: this.userDetails?._id,
         updated_by: this.userDetails?._id,
       },
-      { session }
+      { session : this.session }
     );
 
     if (!result) {
@@ -426,7 +436,7 @@ class IssueForChallan {
           updated_by: this.userDetails?._id,
         }
       },
-      { session }
+      { session :this.session}
     );
 
     if (update_mdf_inventory?.matchedCount === 0) {
@@ -453,7 +463,7 @@ class IssueForChallan {
             updated_by: userDetails?._id,
           },
         },
-        { session }
+        { session : this.session }
       );
     if (update_mdf_inventory_invoice_editable_status?.matchedCount === 0) {
       throw new ApiError(
@@ -487,7 +497,7 @@ class IssueForChallan {
             updated_by: this.userDetails?._id,
           },
         ],
-        { session }
+        { session :this.session }
       );
 
     if (add_issued_data_to_mdf_history?.length === 0) {
@@ -531,7 +541,7 @@ class IssueForChallan {
         created_by: this.userDetails?._id,
         updated_by: this.userDetails?._id,
       },
-      { session }
+      { session :this.session }
     );
 
     if (!result) {
@@ -554,7 +564,7 @@ class IssueForChallan {
           updated_by: this.userDetails?._id,
         }
       },
-      { session }
+      { session : this.session}
     );
 
     if (update_face_inventory?.matchedCount === 0) {
@@ -581,7 +591,7 @@ class IssueForChallan {
             updated_by: userDetails?._id,
           },
         },
-        { session }
+        { session :this.session}
       );
     if (update_face_inventory_invoice_editable_status?.matchedCount === 0) {
       throw new ApiError(
@@ -615,7 +625,7 @@ class IssueForChallan {
             updated_by: this.userDetails?._id,
           },
         ],
-        { session }
+        { session :this.session }
       );
 
     if (add_issued_data_to_face_history?.length === 0) {
@@ -659,7 +669,7 @@ class IssueForChallan {
         created_by: this.userDetails?._id,
         updated_by: this.userDetails?._id,
       },
-      { session }
+      { session : this.session}
     );
 
     if (!result) {
@@ -682,7 +692,7 @@ class IssueForChallan {
           updated_by: this.userDetails?._id,
         }
       },
-      { session }
+      { session : this.session}
     );
 
     if (update_core_inventory?.matchedCount === 0) {
@@ -709,7 +719,7 @@ class IssueForChallan {
             updated_by: userDetails?._id,
           },
         },
-        { session }
+        { session : this.session}
       );
     if (update_core_inventory_invoice_editable_status?.matchedCount === 0) {
       throw new ApiError(
@@ -743,7 +753,7 @@ class IssueForChallan {
             updated_by: this.userDetails?._id,
           },
         ],
-        { session }
+        { session :this.session }
       );
 
     if (add_issued_data_to_core_history?.length === 0) {
@@ -787,7 +797,7 @@ class IssueForChallan {
         created_by: this.userDetails?._id,
         updated_by: this.userDetails?._id,
       },
-      { session }
+      { session : this.session }
     );
 
     if (!result) {
@@ -810,7 +820,7 @@ class IssueForChallan {
           updated_by: this.userDetails?._id,
         }
       },
-      { session }
+      { session : this.session}
     );
 
     if (update_fleece_paper_inventory?.matchedCount === 0) {
@@ -837,7 +847,7 @@ class IssueForChallan {
             updated_by: userDetails?._id,
           },
         },
-        { session }
+        { session : this.session }
       );
     if (update_fleece_paper_inventory_invoice_editable_status?.matchedCount === 0) {
       throw new ApiError(
@@ -871,7 +881,7 @@ class IssueForChallan {
             updated_by: this.userDetails?._id,
           },
         ],
-        { session }
+        { session : this.session}
       );
 
     if (add_issued_data_to_fleece_paper_history?.length === 0) {
@@ -915,7 +925,7 @@ class IssueForChallan {
         created_by: this.userDetails?._id,
         updated_by: this.userDetails?._id,
       },
-      { session }
+      { session : this.session }
     );
 
     if (!result) {
@@ -938,7 +948,7 @@ class IssueForChallan {
           updated_by: this.userDetails?._id,
         }
       },
-      { session }
+      { session : this.session }
     );
 
     if (update_other_goods_inventory?.matchedCount === 0) {
@@ -965,7 +975,7 @@ class IssueForChallan {
             updated_by: userDetails?._id,
           },
         },
-        { session }
+        { session : this.session }
       );
     if (update_other_goods_inventory_invoice_editable_status?.matchedCount === 0) {
       throw new ApiError(
@@ -999,7 +1009,7 @@ class IssueForChallan {
             updated_by: this.userDetails?._id,
           },
         ],
-        { session }
+        { session : this.session }
       );
 
     if (add_issued_data_to_other_goods_history?.length === 0) {
