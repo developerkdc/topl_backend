@@ -237,7 +237,7 @@ export const add_canvas_damage = catchAsync(async (req, res) => {
         $group: {
           _id: null,
           max_sr_no: {
-            $max: 'sr_no',
+            $max: '$sr_no',
           },
         },
       },

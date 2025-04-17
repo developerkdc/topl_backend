@@ -223,7 +223,7 @@ export const listing_color_done = catchAsync(async (req, res) => {
   const aggLookUpColourIssuedDetails = {
     $lookup: {
       from: "issue_for_colour_details_view",
-      localField: "issue_for_cnc_id",
+      localField: "issue_for_color_id",
       foreignField: "_id",
       as: "issue_for_colour_details"
     }

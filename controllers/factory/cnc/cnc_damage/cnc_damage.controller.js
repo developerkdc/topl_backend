@@ -235,11 +235,12 @@ export const add_cnc_damage = catchAsync(async (req, res) => {
         $group: {
           _id: null,
           max_sr_no: {
-            $max: 'sr_no',
+            $max: '$sr_no',
           },
         },
       },
     ]);
+    console.log(maxSrNo.max_sr_no)
     const [create_damage_result] = await cnc_damage_model.create(
       [
         {
