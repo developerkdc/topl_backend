@@ -73,7 +73,7 @@ class RevertIssueForChallan {
     }
 
     async fetch_issue_for_challan_data() {
-        const issued_challan_data = await issue_for_challan_model.findById(this.id);
+        const issued_challan_data = await issue_for_challan_model.findById(this.id).lean();
         if (!issued_challan_data) {
             throw new ApiError('Issue for challan data not found', StatusCodes.BAD_REQUEST);
         }
@@ -265,7 +265,7 @@ class RevertIssueForChallan {
         //delete the plywood history document
         const delete_plywood_history_document_result =
             await plywood_history_model.deleteOne(
-                { issued_for_order_id: this.issued_challan_data?._id },
+                { issued_for_challan_id: this.issued_challan_data?._id },
                 { session: this.session }
             );
 
@@ -400,7 +400,7 @@ class RevertIssueForChallan {
         //delete the face history document
         const delete_face_history_document_result =
             await face_history_model.deleteOne(
-                { issued_for_order_id: this.issued_challan_data?._id },
+                { issued_for_challan_id: this.issued_challan_data?._id },
                 { session: this.session }
             );
 
@@ -478,7 +478,7 @@ class RevertIssueForChallan {
         //delete the mdf history document
         const delete_mdf_history_document_result =
             await mdf_history_model.deleteOne(
-                { issued_for_order_id: this.issued_challan_data?._id },
+                { issued_for_challan_id: this.issued_challan_data?._id },
                 { session: this.session }
             );
 
@@ -558,7 +558,7 @@ class RevertIssueForChallan {
         //delete the core history document
         const delete_core_history_document_result =
             await core_history_model.deleteOne(
-                { issued_for_order_id: this.issued_challan_data?._id },
+                { issued_for_challan_id: this.issued_challan_data?._id },
                 { session: this.session }
             );
 
@@ -638,7 +638,7 @@ class RevertIssueForChallan {
         //delete the fleece history document
         const delete_fleece_history_document_result =
             await fleece_history_model.deleteOne(
-                { issued_for_order_id: this.issued_challan_data?._id },
+                { issued_for_challan_id: this.issued_challan_data?._id },
                 { session: this.session }
             );
 
@@ -715,7 +715,7 @@ class RevertIssueForChallan {
         //delete the other goods history document
         const delete_other_goods_history_document_result =
             await other_goods_history_model.deleteOne(
-                { issued_for_order_id: this.issued_challan_data?._id },
+                { issued_for_challan_id: this.issued_challan_data?._id },
                 { session: this.session }
             );
 
@@ -935,7 +935,7 @@ class RevertIssueForChallan {
                 {
                     $inc: {
                         'available_details.no_of_leaves':
-                            this.issued_challan_data?.issued_item_details?.issued_leaves,
+                            this.issued_challan_data?.issued_item_details?.issued_no_of_leaves,
                         'available_details.amount':
                             this.issued_challan_data?.issued_item_details?.issued_amount,
                         'available_details.sqm':
@@ -994,7 +994,7 @@ class RevertIssueForChallan {
         //delete the grouping history document
         const delete_grouping_history_document_result =
             await grouping_done_history_model.deleteOne(
-                { order_id: this.issued_challan_data?._id },
+                { issued_for_challan_id: this.issued_challan_data?._id },
                 { session: this.session }
             );
 
