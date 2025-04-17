@@ -104,7 +104,7 @@ export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(
         series_name: data?.series_name,
         grade_id: data?.grade_id,
         grade_name: data?.grade_name,
-        remark: data?.remark
+        remark: data?.remark,
       };
 
       const issue_for_tapping_data = {

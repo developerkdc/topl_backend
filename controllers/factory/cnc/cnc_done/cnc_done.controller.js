@@ -217,12 +217,12 @@ export const listing_cnc_done = catchAsync(async (req, res) => {
 
   const aggLookUpIssuedDetails = {
     $lookup: {
-      from: "issue_for_cnc_details_view",
-      localField: "issue_for_cnc_id",
-      foreignField: "_id",
-      as: "issue_for_cnc_details"
-    }
-  }
+      from: 'issue_for_cnc_details_view',
+      localField: 'issue_for_cnc_id',
+      foreignField: '_id',
+      as: 'issue_for_cnc_details',
+    },
+  };
 
   const aggCreatedByLookup = {
     $lookup: {

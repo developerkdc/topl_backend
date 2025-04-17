@@ -995,38 +995,14 @@ export const fetch_dressing_done_history = catchAsync(
     const match_query = {
       ...search_query,
       ...filterData,
-      issue_status: { $ne: null },
+      // issue_status: { $ne: null },
     };
     const aggMatch = {
       $match: {
         ...match_query,
       },
     };
-    // const aggGroupBy = {
-    //     $group: {
-    //         _id: { pallet_number: "$bundle_details.pallet_number" },
 
-    //         item_name: { $first: "$bundle_details.item_name" },
-    //         item_sub_cat: { $first: "$bundle_details.item_sub_category_name" },
-    //         issue_status: { $first: "$bundle_details.issue_status" },
-    //         // bundles: {
-    //         //     $push: "$$ROOT"
-    //         // },
-    //         // total_bundles: {
-    //         //     $sum: 1
-    //         // },
-    //         // available_bundles: {
-    //         //     $sum: {
-    //         //         $cond: {
-    //         //             if: { $eq: ["$issue_status", null] },
-    //         //             then: 1,
-    //         //             else: 0
-    //         //         }
-    //         //     }
-    //         // }
-    //     }
-
-    // }
     const aggAddGlobalFields = {
       $addFields: {
         item_name: { $arrayElemAt: ['$bundle_details.item_name', 0] },
@@ -1036,6 +1012,7 @@ export const fetch_dressing_done_history = catchAsync(
         issue_status: { $arrayElemAt: ['$bundle_details.issue_status', 0] },
         log_no_code: { $arrayElemAt: ['$bundle_details.log_no_code', 0] },
       },
+
     };
     const aggLookupDressingDoneOtherDetails = {
       $lookup: {
@@ -1412,6 +1389,9 @@ export const create_dressing_items_from_dressing_report = catchAsync(
       updated_start_date?.setUTCHours(0, 0, 0, 0);
       updated_end_date?.setUTCHours(23, 59, 59, 999);
 
+      console.log(updated_start_date)
+      console.log(updated_end_date)
+
       //finding data by date
       const dressing_details = await dressing_miss_match_data_model
         .find({
@@ -1419,9 +1399,7 @@ export const create_dressing_items_from_dressing_report = catchAsync(
           process_status: { $ne: dressing_error_types?.dressing_done },
         })
         .lean();
-      // const dressing_details = await dressing_miss_match_data_model
-      //   .find({ _id: { $in: dressing_ids } })
-      //   .lean();
+
       if (dressing_details?.length === 0) {
         throw new ApiError('Items Not Found.', StatusCodes.BAD_REQUEST);
       }
@@ -1478,11 +1456,13 @@ export const create_dressing_items_from_dressing_report = catchAsync(
         log_no_code_volume_map[item?.log_no_code] += volume;
       });
 
+
       //calculating all items volume
       const total_dressing_item_details_volume = Object.values(
         log_no_code_volume_map
       )?.reduce((acc, item) => acc + item, 0);
 
+      console.log("total  volume => ", total_dressing_item_details_volume)
       const log_no_code_factor_map = {};
       //calculating factor for each log_no_code  based on volume
       Object.entries(log_no_code_volume_map)?.forEach(
@@ -1503,9 +1483,10 @@ export const create_dressing_items_from_dressing_report = catchAsync(
           item?.slicing_done_other_details?.final_amount ??
           item?.peeling_done_other_details?.final_amount ??
           0;
-        log_no_code_amount_map[item?.log_no_code] = Number(
-          (log_no_code_factor_map[item?.log_no_code] * totalAmount)?.toFixed(2)
-        );
+        // log_no_code_amount_map[item?.log_no_code] = Number(
+        //   (log_no_code_factor_map[item?.log_no_code] * totalAmount)?.toFixed(2)
+        // );
+        log_no_code_amount_map[item?.log_no_code] = Number(totalAmount.toFixed(2));
       }
       console.log('amount map => ', log_no_code_amount_map);
       const slicing_done_other_details_id_set = new Set();
