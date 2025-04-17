@@ -109,6 +109,9 @@ export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(
 
       const issue_for_tapping_data = {
         ...grouping_data,
+        order_id: null,
+        order_item_id: null,
+        order_category: null,
         issue_status: issue_status,
         issued_from: issues_for_status.grouping,
         no_of_leaves: issue_no_of_leaves,
@@ -422,6 +425,7 @@ export const fetch_single_issue_for_tapping_details = catchAsync(
     return res.status(StatusCodes.OK).json(response);
   }
 );
+
 export const fetch_all_issue_for_tapping_details_for_orders = catchAsync(
   async (req, res, next) => {
     const { order_id, order_item_id } = req.params;

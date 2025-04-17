@@ -19,73 +19,27 @@ const order_items_collections = {
   [order_category.series_product]: "series_product_order_item_details"
 }
 
-export const issue_for_pressing_from_tapping_for_order = catchAsync(
+export const issue_for_pressing_from_tapping = catchAsync(
   async (req, res, next) => {
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
       const userDetails = req.userDetails;
       const { tapping_done_item_id } = req.params;
-      const { order_id, order_item_id, order_category_status, issue_no_of_sheets } = req.body;
+      const { issue_no_of_sheets } = req.body;
       if (
         !tapping_done_item_id ||
         !mongoose.isValidObjectId(tapping_done_item_id)
       ) {
         throw new ApiError(
-          'Invalid grouping done item id',
+          'Invalid tapping done item id',
           StatusCodes.BAD_REQUEST
         );
       }
-      if (!order_id || !order_item_id || !issue_no_of_sheets || !order_category_status) {
+      if (!issue_no_of_sheets) {
         throw new ApiError(
-          'Required order id or order item id or issue no of sheets or order category status',
+          'Required issue status or issue no of sheets',
           StatusCodes.BAD_REQUEST
-        );
-      };
-      if (![order_category.decorative, order_category.series_product].includes(order_category_status)) {
-        throw new ApiError(
-          `Invalid order category status : ${order_category_status}`,
-          StatusCodes.BAD_REQUEST
-        );
-      }
-
-      const fetch_order_details = await OrderModel.findOne({
-        _id: order_id
-      }).lean();
-      if (!fetch_order_details) {
-        throw new ApiError("order details not found", StatusCodes?.NOT_FOUND);
-      }
-      if (fetch_order_details?.order_category !== order_category_status) {
-        throw new ApiError(`Mismatch order category : ${order_category_status} - ${fetch_order_details?.order_category}`)
-      };
-
-      const fetch_order_item_details = await mongoose.model(order_items_collections?.[order_category_status]).aggregate([
-        {
-          $match: {
-            _id: mongoose.Types.ObjectId.createFromHexString(order_item_id),
-            order_id: fetch_order_details?._id,
-          }
-        },
-        {
-          $lookup: {
-            from: "orders",
-            localField: "order_id",
-            foreignField: "_id",
-            as: "order_details"
-          }
-        },
-        {
-          $unwind: {
-            path: "$order_details",
-            preserveNullAndEmptyArrays: true
-          }
-        }
-      ]);
-      const order_item_details = fetch_order_item_details?.[0];
-      if (!order_item_details) {
-        throw new ApiError(
-          `order items not found`,
-          StatusCodes.NOT_FOUND
         );
       }
 
@@ -95,7 +49,7 @@ export const issue_for_pressing_from_tapping_for_order = catchAsync(
           .lean();
       if (!fetch_tapping_done_item_details) {
         throw new ApiError(
-          'Grouping done item not found',
+          'Tapping done item not found',
           StatusCodes.NOT_FOUND
         );
       }
@@ -154,10 +108,10 @@ export const issue_for_pressing_from_tapping_for_order = catchAsync(
 
       const issue_for_pressing_data = {
         ...tapping_data,
-        order_id: order_item_details?.order_id,
-        order_item_id: order_item_details?._id,
-        order_category: order_item_details?.order_details?.order_category,
-        issue_status: issues_for_status.order,
+        order_id: data?.order_id,
+        order_item_id: data?.order_item_id,
+        order_category: data?.order_category,
+        issue_status: data?.issue_status,
         issued_from: issues_for_status.tapping,
         no_of_sheets: issue_no_of_sheets,
         sqm: pressing_sqm,
@@ -172,7 +126,6 @@ export const issue_for_pressing_from_tapping_for_order = catchAsync(
       );
 
       const issues_for_pressing_details = insert_issue_for_pressing?.[0];
-      console.log(issues_for_pressing_details);
 
       if (!issues_for_pressing_details) {
         throw new ApiError(
@@ -280,35 +233,75 @@ export const issue_for_pressing_from_tapping_for_order = catchAsync(
     }
   }
 );
-export const issue_for_pressing_from_tapping_for_stock_and_sample = catchAsync(
+
+export const issue_for_pressing_from_tapping_for_order = catchAsync(
   async (req, res, next) => {
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
       const userDetails = req.userDetails;
       const { tapping_done_item_id } = req.params;
-      const { issue_status, issue_no_of_sheets } = req.body;
+      const { order_id, order_item_id, order_category_status, issue_no_of_sheets } = req.body;
       if (
         !tapping_done_item_id ||
         !mongoose.isValidObjectId(tapping_done_item_id)
       ) {
         throw new ApiError(
-          'Invalid tapping done item id',
+          'Invalid grouping done item id',
           StatusCodes.BAD_REQUEST
         );
       }
-      if (!issue_status || !issue_no_of_sheets) {
+      if (!order_id || !order_item_id || !issue_no_of_sheets || !order_category_status) {
         throw new ApiError(
-          'Required issue status or issue no of sheets',
+          'Required order id or order item id or issue no of sheets or order category status',
+          StatusCodes.BAD_REQUEST
+        );
+      };
+      if (![order_category.decorative, order_category.series_product].includes(order_category_status)) {
+        throw new ApiError(
+          `Invalid order category status : ${order_category_status}`,
           StatusCodes.BAD_REQUEST
         );
       }
-      if (
-        ![issues_for_status?.stock, issues_for_status?.sample].includes(
-          issue_status
-        )
-      ) {
-        throw new ApiError('Invalid issue status', StatusCodes.BAD_REQUEST);
+
+      const fetch_order_details = await OrderModel.findOne({
+        _id: order_id
+      }).lean();
+      if (!fetch_order_details) {
+        throw new ApiError("order details not found", StatusCodes?.NOT_FOUND);
+      }
+      if (fetch_order_details?.order_category !== order_category_status) {
+        throw new ApiError(`Mismatch order category : ${order_category_status} - ${fetch_order_details?.order_category}`)
+      };
+
+      const fetch_order_item_details = await mongoose.model(order_items_collections?.[order_category_status]).aggregate([
+        {
+          $match: {
+            _id: mongoose.Types.ObjectId.createFromHexString(order_item_id),
+            order_id: fetch_order_details?._id,
+          }
+        },
+        {
+          $lookup: {
+            from: "orders",
+            localField: "order_id",
+            foreignField: "_id",
+            as: "order_details"
+          }
+        },
+        {
+          $unwind: {
+            path: "$order_details",
+            preserveNullAndEmptyArrays: true
+          }
+        }
+      ]);
+      const order_item_details = fetch_order_item_details?.[0];
+      if (!order_item_details) {
+        throw new ApiError(
+          `order items not found`,
+          StatusCodes.NOT_FOUND
+        );
       }
 
       const fetch_tapping_done_item_details =
@@ -317,7 +310,7 @@ export const issue_for_pressing_from_tapping_for_stock_and_sample = catchAsync(
           .lean();
       if (!fetch_tapping_done_item_details) {
         throw new ApiError(
-          'Grouping done item not found',
+          'Tapping done item not found',
           StatusCodes.NOT_FOUND
         );
       }
@@ -376,7 +369,10 @@ export const issue_for_pressing_from_tapping_for_stock_and_sample = catchAsync(
 
       const issue_for_pressing_data = {
         ...tapping_data,
-        issue_status: issue_status,
+        order_id: order_item_details?.order_id,
+        order_item_id: order_item_details?._id,
+        order_category: order_item_details?.order_details?.order_category,
+        issue_status: issues_for_status.order,
         issued_from: issues_for_status.tapping,
         no_of_sheets: issue_no_of_sheets,
         sqm: pressing_sqm,
@@ -391,7 +387,6 @@ export const issue_for_pressing_from_tapping_for_stock_and_sample = catchAsync(
       );
 
       const issues_for_pressing_details = insert_issue_for_pressing?.[0];
-      console.log(issues_for_pressing_details);
 
       if (!issues_for_pressing_details) {
         throw new ApiError(

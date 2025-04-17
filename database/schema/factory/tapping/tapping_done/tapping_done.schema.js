@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { issues_for_status } from '../../../../Utils/constants/constants.js';
+import { issues_for_status, order_category } from '../../../../Utils/constants/constants.js';
 
 const tapping_done_other_details_schema = new mongoose.Schema(
   {

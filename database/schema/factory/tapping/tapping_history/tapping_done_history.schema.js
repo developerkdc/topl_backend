@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { issues_for_status } from '../../../../Utils/constants/constants.js';
+import { issues_for_status, order_category } from '../../../../Utils/constants/constants.js';
 
 const validateOrderField = function () {
   return this.issue_status === issues_for_status?.order ? true : false;
