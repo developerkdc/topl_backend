@@ -240,7 +240,7 @@ export const add_cnc_damage = catchAsync(async (req, res) => {
         },
       },
     ]);
-    console.log(maxSrNo.max_sr_no)
+    console.log(maxSrNo.max_sr_no);
     const [create_damage_result] = await cnc_damage_model.create(
       [
         {
@@ -386,10 +386,13 @@ export const revert_damage_to_cnc_done = catchAsync(async (req, res) => {
         { session }
       );
       if (update_cnc_result.matchedCount === 0) {
-        throw new ApiError("CNC done details not found.")
+        throw new ApiError('CNC done details not found.');
       }
-      if (!update_cnc_result?.acknowledged || update_cnc_result.modifiedCount === 0) {
-        throw new ApiError("Failed to update CNC editable status")
+      if (
+        !update_cnc_result?.acknowledged ||
+        update_cnc_result.modifiedCount === 0
+      ) {
+        throw new ApiError('Failed to update CNC editable status');
       }
     }
 

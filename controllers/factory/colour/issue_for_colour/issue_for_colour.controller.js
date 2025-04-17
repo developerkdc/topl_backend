@@ -6,7 +6,10 @@ import { DynamicSearch } from '../../../../utils/dynamicSearch/dynamic.js';
 import catchAsync from '../../../../utils/errors/catchAsync.js';
 import ApiError from '../../../../utils/errors/apiError.js';
 import issue_for_plywood_resizing_model from '../../../../database/schema/factory/plywood_resizing_factory/issue_for_resizing/issue_for_resizing.schema.js';
-import { issue_for_color_model, issue_for_colour_view_model } from '../../../../database/schema/factory/colour/issue_for_colour/issue_for_colour.schema.js';
+import {
+  issue_for_color_model,
+  issue_for_colour_view_model,
+} from '../../../../database/schema/factory/colour/issue_for_colour/issue_for_colour.schema.js';
 
 export const add_issue_for_color_from_pressing = catchAsync(
   async (req, res) => {
@@ -383,7 +386,8 @@ export const listing_issued_for_color = catchAsync(async (req, res, next) => {
     aggLimit,
   ]; // aggregation pipiline
 
-  const issue_for_color = await issue_for_colour_view_model.aggregate(listAggregate);
+  const issue_for_color =
+    await issue_for_colour_view_model.aggregate(listAggregate);
 
   const aggCount = {
     $count: 'totalCount',
@@ -391,7 +395,8 @@ export const listing_issued_for_color = catchAsync(async (req, res, next) => {
 
   const totalAggregate = [...listAggregate?.slice(0, -2), aggCount]; // total aggregation pipiline
 
-  const totalDocument = await issue_for_colour_view_model.aggregate(totalAggregate);
+  const totalDocument =
+    await issue_for_colour_view_model.aggregate(totalAggregate);
 
   const totalPages = Math.ceil((totalDocument?.[0]?.totalCount || 0) / limit);
 
@@ -417,7 +422,9 @@ export const fetch_single_issue_for_color_item = catchAsync(
       throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
     }
 
-    const result = await issue_for_colour_view_model.findOne({ _id: id }).lean();
+    const result = await issue_for_colour_view_model
+      .findOne({ _id: id })
+      .lean();
 
     if (!result) {
       throw new ApiError(

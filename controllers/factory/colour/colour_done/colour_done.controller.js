@@ -6,7 +6,7 @@ import { DynamicSearch } from '../../../../utils/dynamicSearch/dynamic.js';
 import catchAsync from '../../../../utils/errors/catchAsync.js';
 import ApiError from '../../../../utils/errors/apiError.js';
 import { plywood_resizing_done_details_model } from '../../../../database/schema/factory/plywood_resizing_factory/resizing_done/resizing.done.schema.js';
-import { issue_for_color_model, } from '../../../../database/schema/factory/colour/issue_for_colour/issue_for_colour.schema.js';
+import { issue_for_color_model } from '../../../../database/schema/factory/colour/issue_for_colour/issue_for_colour.schema.js';
 import { color_done_details_model } from '../../../../database/schema/factory/colour/colour_done/colour_done.schema.js';
 
 export const create_color = catchAsync(async (req, res) => {
@@ -222,12 +222,12 @@ export const listing_color_done = catchAsync(async (req, res) => {
   };
   const aggLookUpColourIssuedDetails = {
     $lookup: {
-      from: "issue_for_colour_details_view",
-      localField: "issue_for_color_id",
-      foreignField: "_id",
-      as: "issue_for_colour_details"
-    }
-  }
+      from: 'issue_for_colour_details_view',
+      localField: 'issue_for_color_id',
+      foreignField: '_id',
+      as: 'issue_for_colour_details',
+    },
+  };
   const aggIssuedColourDetailsUnwind = {
     $unwind: {
       path: '$issue_for_colour_details',

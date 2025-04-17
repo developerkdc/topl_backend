@@ -108,7 +108,8 @@ class IssueForChallan {
         .session(this.session);
     } else {
       issued_item_details = await issued_from_map[this.issued_from]
-        ?.findOne({ _id: { $in: this.issued_item_id } }).lean()
+        ?.findOne({ _id: { $in: this.issued_item_id } })
+        .lean()
         .session(this.session);
     }
     if (issued_item_details?.length === 0) {

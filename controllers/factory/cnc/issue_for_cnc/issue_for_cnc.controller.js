@@ -5,7 +5,10 @@ import { dynamic_filter } from '../../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../../utils/dynamicSearch/dynamic.js';
 import catchAsync from '../../../../utils/errors/catchAsync.js';
 import ApiError from '../../../../utils/errors/apiError.js';
-import { issue_for_cnc_model, issue_for_cnc_view_model } from '../../../../database/schema/factory/cnc/issue_for_cnc/issue_for_cnc.schema.js';
+import {
+  issue_for_cnc_model,
+  issue_for_cnc_view_model,
+} from '../../../../database/schema/factory/cnc/issue_for_cnc/issue_for_cnc.schema.js';
 import { issues_for_status } from '../../../../database/Utils/constants/constants.js';
 
 export const add_issue_for_cnc_from_pressing = catchAsync(async (req, res) => {
@@ -415,7 +418,8 @@ export const listing_issued_for_cnc = catchAsync(async (req, res, next) => {
 
   const totalAggregate = [...listAggregate?.slice(0, -2), aggCount]; // total aggregation pipiline
 
-  const totalDocument = await issue_for_cnc_view_model.aggregate(totalAggregate);
+  const totalDocument =
+    await issue_for_cnc_view_model.aggregate(totalAggregate);
 
   const totalPages = Math.ceil((totalDocument?.[0]?.totalCount || 0) / limit);
 
