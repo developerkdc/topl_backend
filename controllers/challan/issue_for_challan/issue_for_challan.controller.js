@@ -9,39 +9,47 @@ import issue_for_challan_model from '../../../database/schema/challan/issue_for_
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 
-
 export const add_issue_for_challan_data = catchAsync(async (req, res) => {
   const { issued_from, issued_item_ids, issued_data = null } = req.body;
-  const userDetails = req.userDetails
+  const userDetails = req.userDetails;
   const required_fields = ['issued_from', 'issued_item_ids'];
   for (let field of required_fields) {
     if (!req.body[field]) {
-      throw new ApiError(`${field} is missing..`, StatusCodes.NOT_FOUND)
+      throw new ApiError(`${field} is missing..`, StatusCodes.NOT_FOUND);
     }
-  };
+  }
 
   if (issued_item_ids?.length === 0) {
-    throw new ApiError('Issued item must have at least one item', StatusCodes.BAD_REQUEST)
-  };
-  const session = await mongoose.startSession()
+    throw new ApiError(
+      'Issued item must have at least one item',
+      StatusCodes.BAD_REQUEST
+    );
+  }
+  const session = await mongoose.startSession();
   try {
     session.startTransaction();
-    const issue_for_challan_handler = new IssueForChallan(session, userDetails, issued_from, issued_item_ids, issued_data);
+    const issue_for_challan_handler = new IssueForChallan(
+      session,
+      userDetails,
+      issued_from,
+      issued_item_ids,
+      issued_data
+    );
 
     await issue_for_challan_handler?.add_issue_data_to_challan();
 
-    const response = new ApiResponse(StatusCodes.OK, "Items issued for challan successfully");
+    const response = new ApiResponse(
+      StatusCodes.OK,
+      'Items issued for challan successfully'
+    );
     await session.commitTransaction();
-    return res.status(StatusCodes.OK).json(response)
+    return res.status(StatusCodes.OK).json(response);
   } catch (error) {
     await session.endSession();
-    throw error
+    throw error;
   } finally {
-    await session.endSession()
+    await session.endSession();
   }
-
-
-
 });
 
 export const listing_issued_for_challan = catchAsync(async (req, res, next) => {
@@ -172,7 +180,8 @@ export const listing_issued_for_challan = catchAsync(async (req, res, next) => {
     aggLimit,
   ]; // aggregation pipiline
 
-  const issue_for_color = await issue_for_challan_model.aggregate(listAggregate);
+  const issue_for_color =
+    await issue_for_challan_model.aggregate(listAggregate);
 
   const aggCount = {
     $count: 'totalCount',
@@ -224,7 +233,6 @@ export const fetch_single_issued_for_challan_item = catchAsync(
   }
 );
 
-
 export const revert_issued_challan_data_by_id = catchAsync(async (req, res) => {
   const { id } = req.params;
   const userDetails = req.userDetails;
@@ -236,12 +244,17 @@ export const revert_issued_challan_data_by_id = catchAsync(async (req, res) => {
   try {
     await session.startTransaction();
 
-    const revert_issued_challan_handler = new RevertIssueForChallan(id, userDetails, session);
-    await revert_issued_challan_handler?.update_inventory_item_status()
-    const delete_order_item_doc_result = await issue_for_challan_model.deleteOne(
-      { _id: id },
-      { session: session }
+    const revert_issued_challan_handler = new RevertIssueForChallan(
+      id,
+      userDetails,
+      session
     );
+    await revert_issued_challan_handler?.update_inventory_item_status();
+    const delete_order_item_doc_result =
+      await issue_for_challan_model.deleteOne(
+        { _id: id },
+        { session: session }
+      );
     if (
       !delete_order_item_doc_result.acknowledged ||
       delete_order_item_doc_result.deletedCount === 0

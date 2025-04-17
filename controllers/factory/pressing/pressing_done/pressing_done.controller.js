@@ -39,7 +39,6 @@ import {
 } from '../../../../database/schema/inventory/face/face.schema.js';
 import face_history_model from '../../../../database/schema/inventory/face/face.history.schema.js';
 
-
 // Add pressing Api
 export const add_pressing_details = catchAsync(async (req, res, next) => {
   const session = await mongoose.startSession();

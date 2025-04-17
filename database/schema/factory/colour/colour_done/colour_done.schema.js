@@ -10,7 +10,7 @@ const color_done_details_schema = new mongoose.Schema(
     },
     pressing_details_id: {
       type: mongoose.Schema.Types.ObjectId,
-      required: [true, "Pressing Details ID is required"]
+      required: [true, 'Pressing Details ID is required'],
     },
     color_date: {
       type: Date,

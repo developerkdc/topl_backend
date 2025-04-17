@@ -119,7 +119,10 @@ class Issue_For_Factory {
             issued_sheets: this.issue_details?.issued_sheets,
             issued_amount: this.issue_details?.issued_amount,
             issued_sqm: this.issue_details?.issued_sqm,
-            pressing_details_id: this.issued_from === item_issued_from?.pressing_factory ? this.issued_from_details?._id : this?.issued_from_details?.pressing_details_id,
+            pressing_details_id:
+              this.issued_from === item_issued_from?.pressing_factory
+                ? this.issued_from_details?._id
+                : this?.issued_from_details?.pressing_details_id,
             created_by: this.userDetails?._id,
             updated_by: this.userDetails?._id,
           },

@@ -666,7 +666,7 @@ export const revert_issued_for_smoking_dying_item = catchAsync(
 
         const veneer_inventory_details = await veneer_inventory_items_model
           .find({
-            _id: { $in: veneer_inventory_ids }, //removed $nin and updated to $in  
+            _id: { $in: veneer_inventory_ids }, //removed $nin and updated to $in
           })
           .lean();
         const veneer_invoice_id = veneer_inventory_details.map(

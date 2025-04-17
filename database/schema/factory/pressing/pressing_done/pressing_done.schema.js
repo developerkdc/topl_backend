@@ -241,7 +241,10 @@ function validateConsumedFrom(value) {
     return allowedForPlywood.includes(value);
   }
 
-  if (baseType === base_type_constants.mdf || baseType === base_type_constants.fleece_paper) {
+  if (
+    baseType === base_type_constants.mdf ||
+    baseType === base_type_constants.fleece_paper
+  ) {
     return value === consumed_from_constants.inventory;
   }
 
@@ -335,7 +338,11 @@ const pressing_done_consumed_items_details_schema = new mongoose.Schema(
           type: String,
           required: [true, 'Base Type is required'],
           enum: {
-            values: [base_type_constants.plywood, base_type_constants.mdf, base_type_constants.fleece_paper],
+            values: [
+              base_type_constants.plywood,
+              base_type_constants.mdf,
+              base_type_constants.fleece_paper,
+            ],
             message: `Invalid type {{VALUE}} it must be one of the ${[base_type_constants.plywood, base_type_constants.mdf, base_type_constants.fleece_paper]}`,
           },
         },
@@ -442,7 +449,9 @@ const pressing_done_consumed_items_details_schema = new mongoose.Schema(
           required: [
             // requiredOnBaseType(base_type.fleece_paper),
             function () {
-              return this.base_type === base_type_constants.fleece_paper ? true : false;
+              return this.base_type === base_type_constants.fleece_paper
+                ? true
+                : false;
             },
             'Number of Roll is required',
           ],
@@ -465,7 +474,9 @@ const pressing_done_consumed_items_details_schema = new mongoose.Schema(
           required: [
             // requiredOnBaseType(base_type.fleece_paper),
             function () {
-              return this.base_type === base_type_constants.fleece_paper ? true : false;
+              return this.base_type === base_type_constants.fleece_paper
+                ? true
+                : false;
             },
             'Inward Sr No is required for Fleece Paper',
           ],
@@ -477,7 +488,9 @@ const pressing_done_consumed_items_details_schema = new mongoose.Schema(
           required: [
             // requiredOnBaseType(base_type.fleece_paper),
             function () {
-              return this.base_type === base_type_constants.fleece_paper ? true : false;
+              return this.base_type === base_type_constants.fleece_paper
+                ? true
+                : false;
             },
             'Item Sr No is required for Fleece Paper.',
           ],
@@ -490,7 +503,10 @@ const pressing_done_consumed_items_details_schema = new mongoose.Schema(
         consumed_from: {
           type: String,
           enum: {
-            values: [consumed_from_constants.inventory, consumed_from_constants.factory],
+            values: [
+              consumed_from_constants.inventory,
+              consumed_from_constants.factory,
+            ],
             message: `Invalid type {{VALUE}} it must be one of the ${[
               consumed_from_constants.inventory,
               consumed_from_constants.factory,

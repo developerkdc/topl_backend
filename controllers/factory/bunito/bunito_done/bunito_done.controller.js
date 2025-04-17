@@ -5,9 +5,8 @@ import { dynamic_filter } from '../../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../../utils/dynamicSearch/dynamic.js';
 import catchAsync from '../../../../utils/errors/catchAsync.js';
 import ApiError from '../../../../utils/errors/apiError.js';
-import {issue_for_bunito_model} from '../../../../database/schema/factory/bunito/issue_for_bunito/issue_for_bunito.schema.js';
+import { issue_for_bunito_model } from '../../../../database/schema/factory/bunito/issue_for_bunito/issue_for_bunito.schema.js';
 import { bunito_done_details_model } from '../../../../database/schema/factory/bunito/bunito_done/bunito_done.schema.js';
-
 
 export const create_bunito = catchAsync(async (req, res) => {
   const userDetails = req.userDetails;
@@ -16,10 +15,16 @@ export const create_bunito = catchAsync(async (req, res) => {
   try {
     session.startTransaction();
     if (!bunito_done_details) {
-      throw new ApiError('Bunito Done details not found.', StatusCodes.NOT_FOUND);
+      throw new ApiError(
+        'Bunito Done details not found.',
+        StatusCodes.NOT_FOUND
+      );
     }
     if (!isValidObjectId(bunito_done_details?.issue_for_bunito_id)) {
-      throw new ApiError('Invalid Issue for Bunito ID.', StatusCodes.BAD_REQUEST);
+      throw new ApiError(
+        'Invalid Issue for Bunito ID.',
+        StatusCodes.BAD_REQUEST
+      );
     }
 
     const issue_for_bunito_details = await issue_for_bunito_model
@@ -64,20 +69,22 @@ export const create_bunito = catchAsync(async (req, res) => {
       );
     }
 
-    const update_issue_for_bunito_details = await issue_for_bunito_model.updateOne(
-      { _id: issue_for_bunito_details?._id },
-      {
-        $inc: {
-          'available_details.no_of_sheets': -create_bunito_result?.no_of_sheets,
-          'available_details.sqm': -create_bunito_result?.sqm,
-          'available_details.amount': -create_bunito_result?.amount,
+    const update_issue_for_bunito_details =
+      await issue_for_bunito_model.updateOne(
+        { _id: issue_for_bunito_details?._id },
+        {
+          $inc: {
+            'available_details.no_of_sheets':
+              -create_bunito_result?.no_of_sheets,
+            'available_details.sqm': -create_bunito_result?.sqm,
+            'available_details.amount': -create_bunito_result?.amount,
+          },
+          $set: {
+            updated_by: userDetails?._id,
+          },
         },
-        $set: {
-          updated_by: userDetails?._id,
-        },
-      },
-      { session }
-    );
+        { session }
+      );
 
     if (update_issue_for_bunito_details?.matchedCount === 0) {
       throw new ApiError(
@@ -207,12 +214,12 @@ export const listing_bunito_done = catchAsync(async (req, res) => {
 
   const aggLookUpIssuedDetails = {
     $lookup: {
-      from: "issue_for_bunito_details_view",
-      localField: "issue_for_bunito_id",
-      foreignField: "_id",
-      as: "issue_for_bunito_details"
-    }
-  }
+      from: 'issue_for_bunito_details_view',
+      localField: 'issue_for_bunito_id',
+      foreignField: '_id',
+      as: 'issue_for_bunito_details',
+    },
+  };
 
   const aggCreatedByLookup = {
     $lookup: {
@@ -241,7 +248,7 @@ export const listing_bunito_done = catchAsync(async (req, res) => {
       localField: 'updated_by',
       foreignField: '_id',
       pipeline: [
-        { 
+        {
           $project: {
             user_name: 1,
             user_type: 1,
@@ -306,7 +313,8 @@ export const listing_bunito_done = catchAsync(async (req, res) => {
     aggLimit,
   ]; // aggregation pipiline
 
-  const bunito_done_list = await bunito_done_details_model.aggregate(listAggregate);
+  const bunito_done_list =
+    await bunito_done_details_model.aggregate(listAggregate);
 
   const aggCount = {
     $count: 'totalCount',
@@ -365,15 +373,16 @@ export const fetch_single_bunito_done_item_with_issue_for_bunito_data =
 
     const result = await bunito_done_details_model.aggregate(pipeline);
 
-    return res.status(StatusCodes.OK).json(
-      new ApiResponse(
-        StatusCodes.OK,
-        'Bunito details fetched successfully',
-        result
-      )
-    );
+    return res
+      .status(StatusCodes.OK)
+      .json(
+        new ApiResponse(
+          StatusCodes.OK,
+          'Bunito details fetched successfully',
+          result
+        )
+      );
   });
-
 
 export const revert_bunito_done_items = catchAsync(async (req, res) => {
   const { id } = req.params;
@@ -397,10 +406,11 @@ export const revert_bunito_done_items = catchAsync(async (req, res) => {
       throw new ApiError('Bunito done data not found', StatusCodes.NOT_FOUND);
     }
 
-    const delete_bunito_done_data_result = await bunito_done_details_model.deleteOne(
-      { _id: bunito_done_data?._id },
-      { session }
-    );
+    const delete_bunito_done_data_result =
+      await bunito_done_details_model.deleteOne(
+        { _id: bunito_done_data?._id },
+        { session }
+      );
 
     if (
       !delete_bunito_done_data_result?.acknowledged ||
