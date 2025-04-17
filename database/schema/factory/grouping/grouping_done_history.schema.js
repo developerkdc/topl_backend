@@ -22,6 +22,10 @@ const grouping_done_history_schema = new mongoose.Schema(
       default: null,
       // required: [true, 'Issue for tapping id is required'],
     },
+    issued_for_challan_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
     grouping_done_other_details_id: {
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Grouping other details id is required'],
@@ -167,11 +171,12 @@ const grouping_done_history_schema = new mongoose.Schema(
       type: String,
       enum: {
         values: [
-          issues_for_status.order,
-          issues_for_status.stock,
-          issues_for_status.sample,
+          issues_for_status?.order,
+          issues_for_status?.stock,
+          issues_for_status?.sample,
+          issues_for_status?.challan,
         ],
-        message: `Invalid type {{VALUE}} it must be one of the ${(issues_for_status.order, issues_for_status.stock, issues_for_status.sample)}`,
+        message: `Invalid type {{VALUE}} it must be one of the ${(issues_for_status.order, issues_for_status.stock, issues_for_status.sample, issues_for_status?.challan)}`,
       },
       default: null,
     },
