@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { item_issued_from } from '../../../Utils/constants/constants.js';
+import { challan_status, item_issued_from } from '../../../Utils/constants/constants.js';
 const issued_from_values = Object.values(item_issued_from);
 const cnc_done_schema = new mongoose.Schema(
     {
@@ -150,6 +150,14 @@ const cnc_done_schema = new mongoose.Schema(
         grand_total: {
             type: Number,
             required: [true, 'Grand total is required.'],
+        },
+        inward_challan_status: {
+            type: String,
+            default: challan_status?.not_received,
+            enum: {
+                values: [challan_status?.not_received, challan_status?.received],
+                message: `Invalid Status -> {{VALUE}} it must be one of the ${(challan_status?.not_received, challan_status?.received)}`
+            }
         },
         created_by: {
             type: mongoose.Schema.Types.ObjectId,
