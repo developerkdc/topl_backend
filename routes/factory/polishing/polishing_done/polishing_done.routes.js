@@ -4,6 +4,7 @@ import {
   create_polishing,
   fetch_single_polishing_done_item_with_issue_for_polishing_data,
   listing_polishing_done,
+  listing_polishing_history,
   revert_polishing_done_items,
   update_polishing_done,
 } from '../../../../controllers/factory/polishing/polishing_done/polishing_done.controller.js';
@@ -29,5 +30,6 @@ polishing_done_router.get(
 );
 
 // polishing_done_router.post("/add-to-damage/:id", AuthMiddleware, add_polishing_damage)
+polishing_done_router.post('/history-list', AuthMiddleware, listing_polishing_history);
 
 export default polishing_done_router;

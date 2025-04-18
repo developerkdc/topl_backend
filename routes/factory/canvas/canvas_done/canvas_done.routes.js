@@ -4,6 +4,7 @@ import {
   create_canvas,
   fetch_single_canvas_done_item_with_issue_for_canvas_data,
   listing_canvas_done,
+  listing_canvas_history,
   revert_canvas_done_items,
   update_canvas_done,
 } from '../../../../controllers/factory/canavas/canvas_done/canvas_done.controller.js';
@@ -23,7 +24,7 @@ canvas_done_router.get(
   AuthMiddleware,
   fetch_single_canvas_done_item_with_issue_for_canvas_data
 );
-
+canvas_done_router.post('/history-list', AuthMiddleware, listing_canvas_history);
 // canvas_done_router.post("/add-to-damage/:id", AuthMiddleware, add_canvas_damage)
 
 export default canvas_done_router;

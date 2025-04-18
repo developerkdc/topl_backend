@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import AuthMiddleware from '../../../../middlewares/verifyToken.js';
 import {
-  create_bunito, fetch_single_bunito_done_item_with_issue_for_bunito_data, listing_bunito_done, revert_bunito_done_items, update_bunito_done
+  create_bunito, fetch_single_bunito_done_item_with_issue_for_bunito_data, listing_bunito_done, listing_bunito_history, revert_bunito_done_items, update_bunito_done
 } from '../../../../controllers/factory/bunito/bunito_done/bunito_done.controller.js';
 
 
@@ -17,4 +17,5 @@ bunito_done_router.get(
   fetch_single_bunito_done_item_with_issue_for_bunito_data
 );
 
+bunito_done_router.post('/history-list', AuthMiddleware, listing_bunito_history);
 export default bunito_done_router;
