@@ -437,6 +437,7 @@ export const fetch_all_issue_for_tapping_details_for_orders = catchAsync(
       $match: {
         order_id: mongoose.Types.ObjectId.createFromHexString(order_id),
         order_item_id: mongoose.Types.ObjectId.createFromHexString(order_item_id),
+        is_tapping_done:false
       },
     };
 
