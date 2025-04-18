@@ -6,7 +6,7 @@ import { DynamicSearch } from '../../../../utils/dynamicSearch/dynamic.js';
 import catchAsync from '../../../../utils/errors/catchAsync.js';
 import ApiError from '../../../../utils/errors/apiError.js';
 import { plywood_resizing_done_details_model } from '../../../../database/schema/factory/plywood_resizing_factory/resizing_done/resizing.done.schema.js';
-import {issue_for_canvas_model} from '../../../../database/schema/factory/canvas/issue_for_canvas/issue_for_canvas.schema.js';
+import { issue_for_canvas_model } from '../../../../database/schema/factory/canvas/issue_for_canvas/issue_for_canvas.schema.js';
 import { canvas_done_details_model } from '../../../../database/schema/factory/canvas/canvas_done/canvas_done.schema.js';
 import canvas_history_model from '../../../../database/schema/factory/canvas/canvas_history/canvas.history.schema.js';
 
@@ -227,12 +227,12 @@ export const listing_canvas_done = catchAsync(async (req, res) => {
 
   const aggLookUpIssuedDetails = {
     $lookup: {
-      from: "issue_for_canvas_details_view",
-      localField: "issue_for_canvas_id",
-      foreignField: "_id",
-      as: "issue_for_canvas_details"
-    }
-  }
+      from: 'issue_for_canvas_details_view',
+      localField: 'issue_for_canvas_id',
+      foreignField: '_id',
+      as: 'issue_for_canvas_details',
+    },
+  };
   const aggCreatedByLookup = {
     $lookup: {
       from: 'users',

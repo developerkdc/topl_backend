@@ -5,7 +5,7 @@ import { dynamic_filter } from '../../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../../utils/dynamicSearch/dynamic.js';
 import catchAsync from '../../../../utils/errors/catchAsync.js';
 import ApiError from '../../../../utils/errors/apiError.js';
-import { issue_for_bunito_view_model} from '../../../../database/schema/factory/bunito/issue_for_bunito/issue_for_bunito.schema.js';
+import { issue_for_bunito_view_model } from '../../../../database/schema/factory/bunito/issue_for_bunito/issue_for_bunito.schema.js';
 import { issues_for_status } from '../../../../database/Utils/constants/constants.js';
 
 export const listing_issued_for_bunito = catchAsync(async (req, res, next) => {
@@ -142,7 +142,8 @@ export const listing_issued_for_bunito = catchAsync(async (req, res, next) => {
     aggLimit,
   ]; // aggregation pipiline
 
-  const issue_for_bunito = await issue_for_bunito_view_model.aggregate(listAggregate);
+  const issue_for_bunito =
+    await issue_for_bunito_view_model.aggregate(listAggregate);
 
   const aggCount = {
     $count: 'totalCount',
@@ -150,7 +151,8 @@ export const listing_issued_for_bunito = catchAsync(async (req, res, next) => {
 
   const totalAggregate = [...listAggregate?.slice(0, -2), aggCount]; // total aggregation pipiline
 
-  const totalDocument = await issue_for_bunito_view_model.aggregate(totalAggregate);
+  const totalDocument =
+    await issue_for_bunito_view_model.aggregate(totalAggregate);
 
   const totalPages = Math.ceil((totalDocument?.[0]?.totalCount || 0) / limit);
 
@@ -165,22 +167,26 @@ export const listing_issued_for_bunito = catchAsync(async (req, res, next) => {
   return res.status(StatusCodes.OK).json(response);
 });
 
-export const fetch_single_issue_for_bunito_item = catchAsync(async (req, res) => {
-  const { id } = req.params;
+export const fetch_single_issue_for_bunito_item = catchAsync(
+  async (req, res) => {
+    const { id } = req.params;
 
-  if (!id) {
-    throw new ApiError('ID is missing', StatusCodes.NOT_FOUND);
+    if (!id) {
+      throw new ApiError('ID is missing', StatusCodes.NOT_FOUND);
+    }
+    if (!isValidObjectId(id)) {
+      throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
+    }
+
+    const result = await issue_for_bunito_view_model
+      .findOne({ _id: id })
+      .lean();
+
+    const response = new ApiResponse(
+      StatusCodes.OK,
+      'Bunito Details fetched successfully',
+      result
+    );
+    return res.status(StatusCodes.OK).json(response);
   }
-  if (!isValidObjectId(id)) {
-    throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
-  }
-
-  const result = await issue_for_bunito_view_model.findOne({ _id: id }).lean();
-
-  const response = new ApiResponse(
-    StatusCodes.OK,
-    'Bunito Details fetched successfully',
-    result
-  );
-  return res.status(StatusCodes.OK).json(response);
-});
+);

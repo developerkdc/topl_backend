@@ -6,7 +6,10 @@ import { DynamicSearch } from '../../../../utils/dynamicSearch/dynamic.js';
 import catchAsync from '../../../../utils/errors/catchAsync.js';
 import ApiError from '../../../../utils/errors/apiError.js';
 import { plywood_resizing_done_details_model } from '../../../../database/schema/factory/plywood_resizing_factory/resizing_done/resizing.done.schema.js';
-import {issue_for_polishing_model , issue_for_polishing_view_model} from '../../../../database/schema/factory/polishing/issue_for_polishing/issue_for_polishing.schema.js';
+import {
+  issue_for_polishing_model,
+  issue_for_polishing_view_model,
+} from '../../../../database/schema/factory/polishing/issue_for_polishing/issue_for_polishing.schema.js';
 import { polishing_done_details_model } from '../../../../database/schema/factory/polishing/polishing_done/polishing_done.schema.js';
 import polishing_history_model from '../../../../database/schema/factory/polishing/polishing_history/polishing.history.schema.js';
 
@@ -230,12 +233,12 @@ export const listing_polishing_done = catchAsync(async (req, res) => {
 
   const aggLookUpIssuedDetails = {
     $lookup: {
-      from: "issue_for_polishing_details_view",
-      localField: "issue_for_polishing_id",
-      foreignField: "_id",
-      as: "issue_for_polishing_details"
-    }
-  }
+      from: 'issue_for_polishing_details_view',
+      localField: 'issue_for_polishing_id',
+      foreignField: '_id',
+      as: 'issue_for_polishing_details',
+    },
+  };
   const aggCreatedByLookup = {
     $lookup: {
       from: 'users',

@@ -9,11 +9,7 @@ import {
 const canvas_damage_router = Router();
 
 canvas_damage_router.post('/add-to-damage', AuthMiddleware, add_canvas_damage);
-canvas_damage_router.post(
-  '/list',
-  AuthMiddleware,
-  listing_canvas_damage
-);
+canvas_damage_router.post('/list', AuthMiddleware, listing_canvas_damage);
 canvas_damage_router.post(
   '/revert/:id',
   AuthMiddleware,

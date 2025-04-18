@@ -129,5 +129,4 @@ factoryRouter.use('/factory/issue-for-factory', add_issue_for_factory_data);
 //route for reverting issued data from factory
 factoryRouter.use('/revert-issue-for-factory', revert_issue_for_factory_data);
 
-
 export default factoryRouter;

@@ -27,7 +27,7 @@ const issue_for_polishing_schema = new mongoose.Schema(
     },
     pressing_details_id: {
       type: mongoose.Schema.Types.ObjectId,
-      required: [true, "Pressing Details ID is required"]
+      required: [true, 'Pressing Details ID is required'],
     },
     issued_sheets: {
       type: Number,
@@ -116,87 +116,95 @@ export const issue_for_polishing_model = mongoose.model(
   'issued_for_polishing_details'
 );
 
-const issue_for_polishing_view_schema = new mongoose.Schema({}, { autoCreate: false, autoIndex: false, strict: false });
-export const issue_for_polishing_view_model = mongoose.model('issue_for_polishing_details_view', issue_for_polishing_view_schema, 'issue_for_polishing_details_view');
+const issue_for_polishing_view_schema = new mongoose.Schema(
+  {},
+  { autoCreate: false, autoIndex: false, strict: false }
+);
+export const issue_for_polishing_view_model = mongoose.model(
+  'issue_for_polishing_details_view',
+  issue_for_polishing_view_schema,
+  'issue_for_polishing_details_view'
+);
 
 (async function () {
   await issue_for_polishing_view_model.createCollection({
-    viewOn: "issued_for_polishing_details", pipeline: [
+    viewOn: 'issued_for_polishing_details',
+    pipeline: [
       {
         $sort: {
           updatedAt: -1,
-          _id: -1
-        }
+          _id: -1,
+        },
       },
 
       {
         $lookup: {
-          from: "pressing_done_details",
-          localField: "pressing_details_id",
-          foreignField: "_id",
-          as: "pressing_details"
-        }
+          from: 'pressing_done_details',
+          localField: 'pressing_details_id',
+          foreignField: '_id',
+          as: 'pressing_details',
+        },
       },
       {
         $unwind: {
-          path: "$pressing_details",
-          preserveNullAndEmptyArrays: true
-        }
+          path: '$pressing_details',
+          preserveNullAndEmptyArrays: true,
+        },
       },
       {
         $lookup: {
-          from: "pressing_done_consumed_items_details",
-          localField: "pressing_details._id",
-          foreignField: "pressing_done_details_id",
-          as: "pressing_done_consumed_items_details"
-        }
+          from: 'pressing_done_consumed_items_details',
+          localField: 'pressing_details._id',
+          foreignField: 'pressing_done_details_id',
+          as: 'pressing_done_consumed_items_details',
+        },
       },
       {
         $lookup: {
-          from: "orders",
-          localField: "order_id",
-          foreignField: "_id",
-          as: "order_details"
-        }
+          from: 'orders',
+          localField: 'order_id',
+          foreignField: '_id',
+          as: 'order_details',
+        },
       },
       {
         $unwind: {
-          path: "$order_details",
-          preserveNullAndEmptyArrays: true
-        }
+          path: '$order_details',
+          preserveNullAndEmptyArrays: true,
+        },
       },
       {
         $lookup: {
-          from: "series_order_item_details",
-          localField: "order_item_id",
-          foreignField: "_id",
-          as: "series_items"
-        }
+          from: 'series_order_item_details',
+          localField: 'order_item_id',
+          foreignField: '_id',
+          as: 'series_items',
+        },
       },
       {
         $lookup: {
-          from: "decorative_order_item_details",
-          localField: "order_item_id",
-          foreignField: "_id",
-          as: "decorative_items"
-        }
+          from: 'decorative_order_item_details',
+          localField: 'order_item_id',
+          foreignField: '_id',
+          as: 'decorative_items',
+        },
       },
       {
         $addFields: {
           order_item_details: {
             $cond: {
               if: {
-                $gt: [{ $size: "$series_items" }, 0]
+                $gt: [{ $size: '$series_items' }, 0],
               },
               then: {
-                $arrayElemAt: ["$series_items", 0]
+                $arrayElemAt: ['$series_items', 0],
               },
               else: {
-                $arrayElemAt: ["$decorative_items", 0]
-              }
-            }
-          }
-        }
+                $arrayElemAt: ['$decorative_items', 0],
+              },
+            },
+          },
+        },
       },
       {
         $lookup: {
@@ -251,9 +259,9 @@ export const issue_for_polishing_view_model = mongoose.model('issue_for_polishin
       {
         $project: {
           decorative_items: 0,
-          series_items: 0
-        }
-      }
-    ]
-  })
-})()
+          series_items: 0,
+        },
+      },
+    ],
+  });
+})();

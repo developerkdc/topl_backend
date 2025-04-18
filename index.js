@@ -86,7 +86,7 @@ app.use(`/api/${Configs.server.version}`, approvalRouters);
 // orders
 app.use(`/api/${Configs.server.version}/order`, allOrderRouter);
 //challan routes
-app.use(`/api/${Configs.server.version}/challan`, all_challan_router)
+app.use(`/api/${Configs.server.version}/challan`, all_challan_router);
 
 app.use(globalErrorHandler);
 

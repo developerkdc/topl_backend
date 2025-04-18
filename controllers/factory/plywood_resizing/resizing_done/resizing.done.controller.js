@@ -79,8 +79,6 @@ export const create_resizing = catchAsync(async (req, res) => {
     }
 
     if (is_damage && resizing_details?.damage_details) {
-     
-
       const maxNumber = await plywood_resize_damage_model?.aggregate([
         {
           $group: {
@@ -91,11 +89,11 @@ export const create_resizing = catchAsync(async (req, res) => {
           },
         },
       ]);
-  
+
       const newMax = maxNumber.length > 0 ? maxNumber[0].max + 1 : 1;
 
       const updated_data = {
-        sr_no:newMax,
+        sr_no: newMax,
         issue_for_resizing_id: issue_for_resizing_details?._id,
         no_of_sheets: resizing_details?.damage_details?.no_of_sheets,
         sqm: resizing_details?.damage_details?.sqm,
@@ -823,12 +821,12 @@ export const update_resizing_done = catchAsync(async (req, res) => {
             },
           },
         ]);
-    
+
         const newMax = maxNumber.length > 0 ? maxNumber[0].max + 1 : 1;
         const insert_damage_data = await plywood_resize_damage_model.insertMany(
           [
             {
-              sr_no:newMax,
+              sr_no: newMax,
               issue_for_resizing_id: resizing_details?.issue_for_resizing_id,
               ...updated_data,
               updated_by: userDetails?._id,
