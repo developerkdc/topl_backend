@@ -128,3 +128,8 @@ export const consumed_from_constants = {
   resizing: 'RESIZING',
   factory: 'FACTORY',
 };
+
+export const challan_status = {
+  received: "RECEIVED",
+  not_received: "NOT RECEIVED"
+}

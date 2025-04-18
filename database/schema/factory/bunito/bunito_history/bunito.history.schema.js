@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { item_issued_from } from '../../../../Utils/constants/constants.js';
+import { issues_for_status, item_issued_from } from '../../../../Utils/constants/constants.js';
 
 const bunito_history_schema = new mongoose.Schema(
   {
@@ -8,7 +8,7 @@ const bunito_history_schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Plywood Item ID is required.'],
     },
-    issued_for_order_id: {
+    issue_for_bunito_id: {
       type: mongoose.Schema.Types.ObjectId,
       // required: [true, 'Issued for order ID is required.'],
       default: null,
