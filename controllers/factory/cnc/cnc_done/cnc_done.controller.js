@@ -8,6 +8,7 @@ import ApiError from '../../../../utils/errors/apiError.js';
 import { plywood_resizing_done_details_model } from '../../../../database/schema/factory/plywood_resizing_factory/resizing_done/resizing.done.schema.js';
 import { issue_for_cnc_model } from '../../../../database/schema/factory/cnc/issue_for_cnc/issue_for_cnc.schema.js';
 import { cnc_done_details_model } from '../../../../database/schema/factory/cnc/cnc_done/cnc_done.schema.js';
+import cnc_history_model from '../../../../database/schema/factory/cnc/cnc_history/cnc.history.schema.js';
 
 //done
 export const create_cnc = catchAsync(async (req, res) => {
@@ -467,4 +468,180 @@ export const revert_cnc_done_items = catchAsync(async (req, res) => {
   } finally {
     await session.endSession();
   }
+});
+
+export const listing_cnc_history = catchAsync(async (req, res) => {
+  const {
+    page = 1,
+    limit = 10,
+    sortBy = 'updatedAt',
+    sort = 'desc',
+    search = '',
+  } = req.query;
+  const {
+    string,
+    boolean,
+    numbers,
+    arrayField = [],
+  } = req?.body?.searchFields || {};
+  const filter = req.body?.filter;
+
+  let search_query = {};
+  if (search != '' && req?.body?.searchFields) {
+    const search_data = DynamicSearch(
+      search,
+      boolean,
+      numbers,
+      string,
+      arrayField
+    );
+    if (search_data?.length == 0) {
+      return res.status(404).json({
+        statusCode: 404,
+        status: false,
+        data: {
+          data: [],
+        },
+        message: 'Results Not Found',
+      });
+    }
+    search_query = search_data;
+  }
+
+  const filterData = dynamic_filter(filter);
+
+  const match_query = {
+    ...filterData,
+    ...search_query,
+  };
+
+  // Aggregation stage
+  // const aggCommonMatch = {
+  //   $match: {
+  //     'available_details.no_of_sheets': { $gt: 0 },
+  //   },
+  // };
+
+  const aggLookUpIssuedDetails = {
+    $lookup: {
+      from: "issue_for_cnc_details_view",
+      localField: "issue_for_cnc_id",
+      foreignField: "_id",
+      as: "issue_for_cnc_details"
+    }
+  }
+
+  const aggCreatedByLookup = {
+    $lookup: {
+      from: 'users',
+      localField: 'created_by',
+      foreignField: '_id',
+      pipeline: [
+        {
+          $project: {
+            user_name: 1,
+            user_type: 1,
+            dept_name: 1,
+            first_name: 1,
+            last_name: 1,
+            email_id: 1,
+            mobile_no: 1,
+          },
+        },
+      ],
+      as: 'created_by',
+    },
+  };
+  const aggUpdatedByLookup = {
+    $lookup: {
+      from: 'users',
+      localField: 'updated_by',
+      foreignField: '_id',
+      pipeline: [
+        {
+          $project: {
+            user_name: 1,
+            user_type: 1,
+            dept_name: 1,
+            first_name: 1,
+            last_name: 1,
+            email_id: 1,
+            mobile_no: 1,
+          },
+        },
+      ],
+      as: 'updated_by',
+    },
+  };
+  const aggCreatedByUnwind = {
+    $unwind: {
+      path: '$created_by',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
+  const aggUpdatedByUnwind = {
+    $unwind: {
+      path: '$updated_by',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
+  const aggIssuedCncDetailsUnwind = {
+    $unwind: {
+      path: '$issue_for_cnc_details',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
+  const aggMatch = {
+    $match: {
+      ...match_query,
+    },
+  };
+  const aggSort = {
+    $sort: {
+      [sortBy]: sort === 'desc' ? -1 : 1,
+    },
+  };
+  const aggSkip = {
+    $skip: (parseInt(page) - 1) * parseInt(limit),
+  };
+  const aggLimit = {
+    $limit: parseInt(limit),
+  };
+
+  const listAggregate = [
+    // aggCommonMatch,
+    aggLookUpIssuedDetails,
+    aggIssuedCncDetailsUnwind,
+    aggCreatedByLookup,
+    aggCreatedByUnwind,
+    aggUpdatedByLookup,
+    aggUpdatedByUnwind,
+    aggMatch,
+    aggSort,
+    aggSkip,
+    aggLimit,
+  ]; // aggregation pipiline
+
+  const cnc_history_list = await cnc_history_model.aggregate(listAggregate);
+
+  const aggCount = {
+    $count: 'totalCount',
+  }; // count aggregation stage
+
+  const totalAggregate = [...listAggregate?.slice(0, -2), aggCount]; // total aggregation pipiline
+
+  const [totalDocument] =
+    await cnc_history_model.aggregate(totalAggregate);
+
+  const totalPages = Math.ceil((totalDocument?.totalCount || 0) / limit);
+
+  const response = new ApiResponse(
+    StatusCodes.OK,
+    'CNC History Data Fetched Successfully',
+    {
+      data: cnc_history_list,
+      totalPages: totalPages,
+    }
+  );
+  return res.status(200).json(response);
 });
