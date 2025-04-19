@@ -192,11 +192,11 @@ export const revert_issue_for_resizing = catchAsync(async (req, res) => {
   if (!isValidObjectId(id)) {
     throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
   }
-
-  const userDetails = req.userDetails;
+  
+  const userDetails = req?.userDetails;
   const session = await mongoose.startSession();
   try {
-    await session.startTransaction();
+     session.startTransaction();
     const resizing_item_details = await issue_for_plywood_resizing_model
       .findById(id)
       .lean();
@@ -249,10 +249,10 @@ export const revert_issue_for_resizing = catchAsync(async (req, res) => {
           {
             $set: {
               isEditable: true,
-              updated_by: this.userDetails?._id,
+              updated_by: userDetails?._id,
             },
           },
-          { session: this.session }
+          { session: session }
         );
       if (update_plywood_item_invoice_editable_status?.matchedCount === 0) {
         throw new ApiError(
