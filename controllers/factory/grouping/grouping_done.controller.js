@@ -14,6 +14,9 @@ import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
 import { StatusCodes } from '../../../utils/constants.js';
 import grouping_done_history_model from '../../../database/schema/factory/grouping/grouping_done_history.schema.js';
+import issue_for_tapping_model from '../../../database/schema/factory/tapping/issue_for_tapping/issue_for_tapping.schema.js';
+import { tapping_done_items_details_model } from '../../../database/schema/factory/tapping/tapping_done/tapping_done.schema.js';
+import { issues_for_pressing_model } from '../../../database/schema/factory/pressing/issues_for_pressing/issues_for_pressing.schema.js';
 
 export const add_grouping_done = catchAsync(async (req, res, next) => {
   const session = await mongoose.startSession();
@@ -530,10 +533,63 @@ export const fetch_all_details_by_grouping_done_item_id = catchAsync(
     ];
     const result = await grouping_done_items_details_model.aggregate(pipeline);
 
+    const group_no = result?.[0]?.group_no;
+    const issue_for_tapping = await issue_for_tapping_model.aggregate([
+      {
+        $match:{
+          group_no:group_no,
+          is_tapping_done:false
+        }
+      },
+      {
+        $group: {
+          _id: "$group_no",
+          total_no_of_sheets: {
+            $sum: "$no_of_leaves"
+          }
+        }
+      },
+    ]);
+    const tapping_done = await tapping_done_items_details_model.aggregate([
+      {
+        $match:{
+          group_no:group_no
+        }
+      },
+      {
+        $group: {
+          _id: "$group_no",
+          total_no_of_sheets: {
+            $sum: "$available_details.no_of_sheets"
+          }
+        }
+      },
+    ]);
+    const issue_for_pressing = await issues_for_pressing_model.aggregate([
+      {
+        $match:{
+          group_no:group_no
+        }
+      },
+      {
+        $group: {
+          _id: "$group_no",
+          total_no_of_sheets: {
+            $sum: "$available_details.no_of_sheets"
+          }
+        }
+      },
+    ]);
+
+    const data_result = result?.[0];
+    data_result.grouping_available_no_of_sheets = data_result?.available_details?.no_of_leaves || 0;
+    data_result.tapping_available_no_of_sheets = (issue_for_tapping?.[0]?.total_no_of_sheets || 0) + (tapping_done?.[0]?.total_no_of_sheets || 0);
+    data_result.pressing_available_no_of_sheets = issue_for_pressing?.[0]?.total_no_of_sheets || 0;
+    
     const response = new ApiResponse(
       StatusCodes.OK,
       'Details Fetched successfully',
-      result?.[0]
+      data_result
     );
 
     return res.status(StatusCodes.OK).json(response);
@@ -786,6 +842,96 @@ export const fetch_all_grouping_history_details = catchAsync(
         preserveNullAndEmptyArrays: true,
       },
     };
+    const aggOrderRelatedData = [
+      {
+        $lookup: {
+          from: "orders",
+          localField: "order_id",
+          pipeline: [
+            {
+              $project: {
+                order_no: 1,
+                owner_name: 1,
+                orderDate: 1,
+                order_category: 1,
+                series_product: 1
+              }
+            }
+          ],
+          foreignField: "_id",
+          as: "order_details"
+        }
+      },
+      {
+        $unwind: {
+          path: "$order_details",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $lookup: {
+          from: "series_product_order_item_details",
+          localField: "order_item_id",
+          foreignField: "_id",
+          pipeline: [
+            {
+              $project: {
+                item_no: 1,
+                order_id: 1,
+                item_name: 1,
+                item_sub_category_name: 1,
+                group_no:1,
+                photo_number: 1
+              }
+            }
+          ],
+          as: "series_product_order_item_details"
+        }
+      },
+      {
+        $unwind: {
+          path: "$series_product_order_item_details",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $lookup: {
+          from: "decorative_order_item_details",
+          localField: "order_item_id",
+          pipeline: [
+            {
+              $project: {
+                item_no: 1,
+                order_id: 1,
+                item_name: 1,
+                item_sub_category_name: 1,
+                group_no:1,
+                photo_number: 1
+              }
+            }
+          ],
+          foreignField: "_id",
+          as: "decorative_order_item_details"
+        }
+      },
+      {
+        $unwind: {
+          path: "$decorative_order_item_details",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $addFields: {
+          order_item_details: {
+            $cond: {
+              if: { $ne: [{ $type: "$decorative_order_item_details" }, "missing"] },
+              then: "$decorative_order_item_details",
+              else: "$series_product_order_item_details"
+            }
+          }
+        }
+      }
+    ]
     const aggMatch = {
       $match: {
         ...match_query,
@@ -810,6 +956,7 @@ export const fetch_all_grouping_history_details = catchAsync(
       aggCreatedByUnwind,
       aggUpdatedByLookup,
       aggUpdatedByUnwind,
+      ...aggOrderRelatedData,
       aggMatch,
       aggSort,
       aggSkip,
@@ -828,6 +975,7 @@ export const fetch_all_grouping_history_details = catchAsync(
       aggCreatedByUnwind,
       aggUpdatedByLookup,
       aggUpdatedByUnwind,
+      ...aggOrderRelatedData,
       aggMatch,
       aggCount,
     ]; // total aggregation pipiline
