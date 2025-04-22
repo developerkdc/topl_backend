@@ -109,6 +109,9 @@ export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(
 
       const issue_for_tapping_data = {
         ...grouping_data,
+        order_id: null,
+        order_item_id: null,
+        order_category: null,
         issue_status: issue_status,
         issued_from: issues_for_status.grouping,
         no_of_leaves: issue_no_of_leaves,
@@ -423,6 +426,33 @@ export const fetch_single_issue_for_tapping_details = catchAsync(
   }
 );
 
+export const fetch_all_issue_for_tapping_details_for_orders = catchAsync(
+  async (req, res, next) => {
+    const { order_id, order_item_id } = req.params;
+    if (!order_id || !order_item_id) {
+      throw new ApiError(`Please provide order id or order item id`, StatusCodes.BAD_REQUEST);
+    }
+
+    const agg_match = {
+      $match: {
+        order_id: mongoose.Types.ObjectId.createFromHexString(order_id),
+        order_item_id: mongoose.Types.ObjectId.createFromHexString(order_item_id),
+        is_tapping_done:false
+      },
+    };
+
+    const aggregation_pipeline = [agg_match];
+    const issue_for_tapping_details = await issue_for_tapping_model.aggregate(aggregation_pipeline);
+
+    const response = new ApiResponse(
+      StatusCodes.OK,
+      'Fetch data successfully',
+      issue_for_tapping_details
+    );
+    return res.status(StatusCodes.OK).json(response);
+  }
+);
+
 export const fetch_all_issue_for_tapping_details = catchAsync(
   async (req, res, next) => {
     const {
@@ -499,6 +529,96 @@ export const fetch_all_issue_for_tapping_details = catchAsync(
         preserveNullAndEmptyArrays: true,
       },
     };
+    const aggOrderRelatedData = [
+      {
+        $lookup: {
+          from: "orders",
+          localField: "order_id",
+          pipeline: [
+            {
+              $project: {
+                order_no: 1,
+                owner_name: 1,
+                orderDate: 1,
+                order_category: 1,
+                series_product: 1
+              }
+            }
+          ],
+          foreignField: "_id",
+          as: "order_details"
+        }
+      },
+      {
+        $unwind: {
+          path: "$order_details",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $lookup: {
+          from: "series_product_order_item_details",
+          localField: "order_item_id",
+          foreignField: "_id",
+          pipeline: [
+            {
+              $project: {
+                item_no: 1,
+                order_id: 1,
+                item_name: 1,
+                item_sub_category_name: 1,
+                group_no:1,
+                photo_number: 1
+              }
+            }
+          ],
+          as: "series_product_order_item_details"
+        }
+      },
+      {
+        $unwind: {
+          path: "$series_product_order_item_details",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $lookup: {
+          from: "decorative_order_item_details",
+          localField: "order_item_id",
+          pipeline: [
+            {
+              $project: {
+                item_no: 1,
+                order_id: 1,
+                item_name: 1,
+                item_sub_category_name: 1,
+                group_no:1,
+                photo_number: 1
+              }
+            }
+          ],
+          foreignField: "_id",
+          as: "decorative_order_item_details"
+        }
+      },
+      {
+        $unwind: {
+          path: "$decorative_order_item_details",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $addFields: {
+          order_item_details: {
+            $cond: {
+              if: { $ne: [{ $type: "$decorative_order_item_details" }, "missing"] },
+              then: "$decorative_order_item_details",
+              else: "$series_product_order_item_details"
+            }
+          }
+        }
+      }
+    ];
     const aggCreatedByLookup = {
       $lookup: {
         from: 'users',
@@ -578,6 +698,7 @@ export const fetch_all_issue_for_tapping_details = catchAsync(
       aggCreatedByUnwind,
       aggUpdatedByLookup,
       aggUpdatedByUnwind,
+      ...aggOrderRelatedData,
       aggMatch,
       aggSort,
       aggSkip,
@@ -599,6 +720,7 @@ export const fetch_all_issue_for_tapping_details = catchAsync(
       aggCreatedByUnwind,
       aggUpdatedByLookup,
       aggUpdatedByUnwind,
+      ...aggOrderRelatedData,
       aggMatch,
       aggCount,
     ]; // total aggregation pipiline

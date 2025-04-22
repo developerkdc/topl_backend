@@ -18,6 +18,7 @@ import AuthMiddleware from '../../../middlewares/verifyToken.js';
 import {
   fetch_all_group_no_by_item_name,
   fetch_group_details_by_id,
+  issue_for_tapping_from_grouping_for_order,
 } from '../../../controllers/factory/grouping/grouping.issue_for_order.controller.js';
 
 const groupingDoneRouter = express.Router();
@@ -93,6 +94,12 @@ groupingDoneRouter.get(
   '/fetch-group-details/:id',
   AuthMiddleware,
   fetch_group_details_by_id
+);
+
+groupingDoneRouter.post(
+  '/issue-for-tapping-from-grouping-for-order/:grouping_done_item_id',
+  AuthMiddleware,
+  issue_for_tapping_from_grouping_for_order
 );
 
 //group no dropdown for photo master

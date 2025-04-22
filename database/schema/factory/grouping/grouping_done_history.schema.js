@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { issues_for_status } from '../../../Utils/constants/constants.js';
+import { issues_for_status, order_category } from '../../../Utils/constants/constants.js';
 
 const validateOrderField = function () {
   return this.issue_status === issues_for_status?.order ? true : false;
@@ -10,12 +10,23 @@ const grouping_done_history_schema = new mongoose.Schema(
     order_id: {
       type: mongoose.Schema.Types.ObjectId,
       default: null,
-      // required: [validateOrderField, 'order_id is required'],
+      required: [validateOrderField, 'order_id is required'],
     },
     order_item_id: {
       type: mongoose.Schema.Types.ObjectId,
       default: null,
-      // required: [validateOrderField, 'order_item_id is required'],
+      required: [validateOrderField, 'order_item_id is required'],
+    },
+    order_category: {
+      type: String,
+      enum: {
+        values: [order_category.decorative, order_category.series_product],
+        message: `Invalid type {{VALUE}} it must be one of the ${order_category.decorative},${order_category.series_product}`,
+      },
+      uppercase: true,
+      trim: true,
+      default: null,
+      required: [validateOrderField, 'order_category is required'],
     },
     issue_for_tapping_id: {
       type: mongoose.Schema.Types.ObjectId,
