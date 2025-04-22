@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
-import { challan_status, item_issued_from } from '../../../Utils/constants/constants.js';
+import { challan_status, item_issued_from, transaction_type } from '../../../Utils/constants/constants.js';
 const issued_from_values = Object.values(item_issued_from);
+const transaction_type_values = Object.values(transaction_type);
 const cnc_done_schema = new mongoose.Schema(
     {
         challan_date: {
@@ -48,46 +49,60 @@ const cnc_done_schema = new mongoose.Schema(
         },
         transaction_type: {
             type: String,
-            uppercase: true,
             required: [true, 'Transaction Type is required.'],
+            enum: {
+                values: transaction_type_values,
+                message:
+                    'Invalid transaction type -> {{VALUE}}. It must be one of the : ' +
+                    transaction_type_values?.join(', '),
+            }
         },
         address_of_buyer: {
             type: String,
             uppercase: true,
-            required: [true, 'Address of buyer is required.'],
+            // required: [true, 'Address of buyer is required.'],
+            default: null
         },
         address_of_buyer_id: {
             type: mongoose.Schema.Types.ObjectId,
-            required: [true, 'Address of buyer is required.'],
+            // required: [true, 'Address of buyer is required.'],
+            default: null
         },
         address_of_seller: {
             type: String,
             uppercase: true,
-            required: [true, 'Address of seller is required.'],
+            // required: [true, 'Address of seller is required.'],
+            default: null
         },
         address_of_seller_id: {
             type: mongoose.Schema.Types.ObjectId,
-            required: [true, 'Address of seller is required.'],
+            // required: [true, 'Address of seller is required.'],
+            default: null
         },
         approx_distance: {
             type: Number,
-            required: [true, 'Approx Distance is required.'],
+            // required: [true, 'Approx Distance is required.'],
+            default: null
         },
         irn_number: {
             type: Number,
-            required: [true, 'IRN Number is required.'],
+            // required: [true, 'IRN Number is required.'],
+            default: null
         },
         acknowledgement_number: {
             type: Number,
-            required: [true, 'Acknowledgement Number is required.'],
+            // required: [true, 'Acknowledgement Number is required.'],
+            default: null
         },
         eway_bill_no: {
             type: Number,
-            required: [true, 'EWAY bill number is required.'],
+            // required: [true, 'EWAY bill number is required.'],
+            default: null
         },
         eway_bill_date: {
             type: Date,
-            required: [true, 'EWAY bill date is required.'],
+            // required: [true, 'EWAY bill date is required.'],
+            default: null
         },
         raw_material: {
             type: String,
