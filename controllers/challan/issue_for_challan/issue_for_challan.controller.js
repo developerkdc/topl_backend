@@ -278,3 +278,24 @@ export const revert_issued_challan_data_by_id = catchAsync(async (req, res) => {
     await session?.endSession();
   }
 });
+
+export const fetch_all_items_by_raw_material = catchAsync(async (req, res) => {
+  const { raw_material } = req.query;
+
+  if (!raw_material) {
+    throw new ApiError("Raw material type is required", StatusCodes.BAD_REQUEST);
+  };
+
+  const pipeline = [
+    {
+      $match: {
+        issued_from: raw_material,
+        is_challan_done: false
+      }
+    }
+  ];
+
+  const issue_for_challan_items = await issue_for_challan_model.aggregate(pipeline);
+  const response = new ApiResponse(StatusCodes.OK, "Issue for challan items fetched successfully", issue_for_challan_items);
+  return res.status(StatusCodes.OK).json(response)
+})

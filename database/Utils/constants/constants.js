@@ -130,6 +130,14 @@ export const consumed_from_constants = {
 };
 
 export const challan_status = {
-  received: "RECEIVED",
-  not_received: "NOT RECEIVED"
-}
+  received: 'RECEIVED',
+  not_received: 'NOT RECEIVED',
+};
+
+export const transaction_type = {
+  regular: 'REGULAR',
+  bill_to_ship_to: 'BILL TO SHIP TO',
+  bill_from_dispatch_from: 'Bill Form Dispatch From',
+  bill_to_ship_to_and_bill_from_dispatch_from:
+    'BILL TO SHIP TO AND BILL FROM DISPATCH FROM',
+};
