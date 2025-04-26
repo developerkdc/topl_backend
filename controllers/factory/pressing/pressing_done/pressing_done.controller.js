@@ -39,7 +39,6 @@ import {
 } from '../../../../database/schema/inventory/face/face.schema.js';
 import face_history_model from '../../../../database/schema/inventory/face/face.history.schema.js';
 
-
 // Add pressing Api
 export const add_pressing_details = catchAsync(async (req, res, next) => {
   const session = await mongoose.startSession();
@@ -140,7 +139,7 @@ export const add_pressing_details = catchAsync(async (req, res, next) => {
     // ==========================Handling pressing Done consumed item details=======================
     //initializing the object to be inserted in pressing_done_consumed_item_details collection
     var pressingDoneConsumedItemsDetailsObject = {
-      pressing_done_id: added_pressing_details?._id,
+      pressing_done_details_id: added_pressing_details?._id,
       group_details: [],
       base_details: [],
       face_details: null,
@@ -910,3 +909,307 @@ export const add_pressing_details = catchAsync(async (req, res, next) => {
     await session.endSession();
   }
 });
+
+export const fetch_all_pressing_done_items = catchAsync(
+  async (req, res, next) => {
+    const {
+      page = 1,
+      sortBy = 'updatedAt',
+      sort = 'desc',
+      limit = 10,
+      search = '',
+    } = req.query;
+    const {
+      string,
+      boolean,
+      numbers,
+      arrayField = [],
+    } = req.body?.searchFields || {};
+
+    const filter = req.body?.filter;
+
+    let search_query = {};
+    if (search != '' && req?.body?.searchFields) {
+      const search_data = DynamicSearch(
+        search,
+        boolean,
+        numbers,
+        string,
+        arrayField
+      );
+      if (search_data?.length == 0) {
+        return res.status(404).json({
+          statusCode: 404,
+          status: false,
+          data: {
+            data: [],
+          },
+          message: 'Results Not Found',
+        });
+      }
+      search_query = search_data;
+    }
+
+    const filterData = dynamic_filter(filter);
+
+    const match_query = {
+      ...search_query,
+      ...filterData,
+    };
+
+    const aggCommonMatch = {
+      $match: {
+        'available_details.no_of_sheets': { $gt: 0 },
+      },
+    };
+    const aggGroupNoLookup = {
+      $lookup: {
+        from: 'grouping_done_items_details',
+        localField: 'group_no',
+        foreignField: 'group_no',
+        pipeline: [
+          {
+            $project: {
+              group_no: 1,
+              photo_no: 1,
+              photo_id: 1,
+            },
+          },
+        ],
+        as: 'grouping_done_items_details',
+      },
+    };
+    const aggGroupNoUnwind = {
+      $unwind: {
+        path: '$grouping_done_items_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    };
+    const aggCreatedUserDetails = {
+      $lookup: {
+        from: 'users',
+        localField: 'created_by',
+        foreignField: '_id',
+        pipeline: [
+          {
+            $project: {
+              first_name: 1,
+              last_name: 1,
+              user_name: 1,
+              user_type: 1,
+              email_id: 1,
+            },
+          },
+        ],
+        as: 'created_user_details',
+      },
+    };
+    const aggUpdatedUserDetails = {
+      $lookup: {
+        from: 'users',
+        localField: 'updated_by',
+        foreignField: '_id',
+        pipeline: [
+          {
+            $project: {
+              first_name: 1,
+              last_name: 1,
+              user_name: 1,
+              user_type: 1,
+              email_id: 1,
+            },
+          },
+        ],
+        as: 'updated_user_details',
+      },
+    };
+    const aggMatch = {
+      $match: {
+        ...match_query,
+      },
+    };
+
+    const aggUnwindCreatedUser = {
+      $unwind: {
+        path: '$created_user_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    };
+    const aggUnwindUpdatedUser = {
+      $unwind: {
+        path: '$updated_user_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    };
+    const aggSort = {
+      $sort: {
+        [sortBy]: sort === 'desc' ? -1 : 1,
+      },
+    };
+
+    const aggSkip = {
+      $skip: (parseInt(page) - 1) * parseInt(limit),
+    };
+
+    const aggLimit = {
+      $limit: parseInt(limit),
+    };
+
+    const list_aggregate = [
+      aggCommonMatch,
+      aggGroupNoLookup,
+      aggGroupNoUnwind,
+      aggCreatedUserDetails,
+      aggUpdatedUserDetails,
+      aggUnwindCreatedUser,
+      aggUnwindUpdatedUser,
+      aggMatch,
+      aggSort,
+      aggSkip,
+      aggLimit,
+    ];
+
+    const result = await pressing_done_details_model.aggregate(list_aggregate);
+
+    const aggCount = {
+      $count: 'totalCount',
+    };
+
+    const count_total_docs = [
+      aggCommonMatch,
+      aggGroupNoLookup,
+      aggGroupNoUnwind,
+      aggCreatedUserDetails,
+      aggUpdatedUserDetails,
+      aggUnwindCreatedUser,
+      aggUnwindUpdatedUser,
+      aggMatch,
+      aggCount,
+    ];
+
+    const total_docs =
+      await pressing_done_details_model.aggregate(count_total_docs);
+
+    const totalPages = Math.ceil((total_docs[0]?.totalCount || 0) / limit);
+
+    const response = new ApiResponse(
+      StatusCodes.OK,
+      'Data Fetched Successfully',
+      {
+        data: result,
+        totalPages: totalPages,
+      }
+    );
+    return res.status(StatusCodes.OK).json(response);
+  }
+);
+
+export const fetch_pressing_done_consumed_item_details = catchAsync(
+  async (req, res, next) => {
+    const { id } = req.params;
+
+    if (!id && !mongoose.isValidObjectId(id)) {
+      throw new ApiError('Invalid ID', StatusCodes.NOT_FOUND);
+    }
+
+    const result = await pressing_done_consumed_items_details_model.aggregate([
+      {
+        $match: {
+          pressing_done_details_id:
+            mongoose.Types.ObjectId.createFromHexString(id),
+        },
+      },
+      {
+        $lookup: {
+          from: 'pressing_done_details',
+          localField: 'pressing_done_details_id',
+          foreignField: '_id',
+          as: 'pressing_done_details',
+        },
+      },
+      {
+        $unwind: {
+          path: '$pressing_done_details',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+
+      {
+        $unwind: '$group_details',
+      },
+      {
+        $lookup: {
+          from: 'grouping_done_items_details',
+          localField: 'group_details.group_no',
+          foreignField: 'group_no',
+          pipeline: [
+            {
+              $project: {
+                group_no: 1,
+                photo_no: 1,
+                photo_id: 1,
+              },
+            },
+          ],
+          as: 'grouping_done_items_details',
+        },
+      },
+    ]);
+
+    const response = new ApiResponse(
+      StatusCodes.OK,
+      'Details Fetched successfully',
+      result
+    );
+
+    return res.status(StatusCodes.OK).json(response);
+  }
+);
+
+export const revert_pressing_done_details = catchAsync(
+  async (req, res, next) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+      const userDetails = req.userDetails;
+      const { id } = req.params;
+      if (!id && !mongoose.isValidObjectId(id)) {
+        throw new ApiError('Invalid ID', StatusCodes.NOT_FOUND);
+      }
+
+      const fetch_pressing_done__details =
+        await pressing_done_details_model.findOne({ _id: id }).lean();
+      if (!fetch_pressing_done__details) {
+        throw new ApiError(
+          'Pressing Done Details Not Found.',
+          StatusCodes.NOT_FOUND
+        );
+      }
+      if (!fetch_pressing_done__details?.isEditable) {
+        throw new ApiError(
+          'Pressing Done Details Not Editable',
+          StatusCodes.BAD_REQUEST
+        );
+      }
+
+      // revert group details to issue for pressing details
+
+      const response = new ApiResponse(
+        StatusCodes.CREATED,
+        'Revert tapping details successfully',
+        {
+          other_details: delete_tapping_done_other_details,
+          items_details: delete_tapping_done_items,
+        }
+      );
+
+      await session.commitTransaction();
+      return res.status(StatusCodes.CREATED).json(response);
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      await session.endSession();
+    }
+  }
+);
