@@ -13,11 +13,7 @@ polishing_damage_router.post(
   AuthMiddleware,
   add_polishing_damage
 );
-polishing_damage_router.post(
-  '/list',
-  AuthMiddleware,
-  listing_polishing_damage
-);
+polishing_damage_router.post('/list', AuthMiddleware, listing_polishing_damage);
 polishing_damage_router.post(
   '/revert/:id',
   AuthMiddleware,

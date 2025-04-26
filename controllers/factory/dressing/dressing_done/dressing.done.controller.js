@@ -3,7 +3,7 @@ import ApiResponse from '../../../../utils/ApiResponse.js';
 import ApiError from '../../../../utils/errors/apiError.js';
 import catchAsync from '../../../../utils/errors/catchAsync.js';
 import { dynamic_filter } from '../../../../utils/dymanicFilter.js';
-import { DynamicSearch } from '../../../../utils/dynamicSearch/dynamic.js';
+// import { DynamicSearch } from '../../../../utils/dynamicSearch/dynamic.js';
 import {
   dressing_error_types,
   issues_for_status,
@@ -24,6 +24,7 @@ import {
 } from '../../../../database/schema/factory/dressing/dressing_done/dressing.done.schema.js';
 import dressing_done_history_model from '../../../../database/schema/factory/dressing/dressing_done/dressing.done.history.schema.js';
 import dressing_miss_match_data_model from '../../../../database/schema/factory/dressing/dressing_done/dressing.machine.mismatch.data.schema.js';
+import { DynamicSearch } from '../../../../utils/dynamicSearch/dynamic.js';
 
 export const create_dressing = catchAsync(async (req, res, next) => {
   const { _id } = req.userDetails;
@@ -756,7 +757,7 @@ export const edit_dressing_done_items = catchAsync(async (req, res) => {
     };
 
     const add_slicing_done_item = async () => {
-      console.log('inside');
+   
       const delete_existing_item_result =
         await dressing_done_items_model.deleteMany(
           {
@@ -838,7 +839,7 @@ export const edit_dressing_done_items = catchAsync(async (req, res) => {
       // if (!update_dressing_done_status.acknowledged || update_dressing_done_status.modifiedCount === 0) {
       //     throw new ApiError("Failed to updated dressing done status ", StatusCodes.BAD_REQUEST)
       // };
-      console.log('executed');
+
     };
     if (other_details_data?.peeling_done_other_details_id) {
       await add_peeling_done_item();
@@ -846,7 +847,7 @@ export const edit_dressing_done_items = catchAsync(async (req, res) => {
     if (other_details_data?.slicing_done_other_details_id) {
       await add_slicing_done_item();
     }
-    console.log('outside');
+    
     await session.commitTransaction();
     const response = new ApiResponse(
       StatusCodes.OK,
@@ -959,6 +960,8 @@ export const fetch_dressing_done_history = catchAsync(
       limit = 10,
       search = '',
     } = req.query;
+   
+
     const {
       string,
       boolean,
@@ -995,38 +998,14 @@ export const fetch_dressing_done_history = catchAsync(
     const match_query = {
       ...search_query,
       ...filterData,
-      issue_status: { $ne: null },
+      // issue_status: { $ne: null },
     };
     const aggMatch = {
       $match: {
         ...match_query,
       },
     };
-    // const aggGroupBy = {
-    //     $group: {
-    //         _id: { pallet_number: "$bundle_details.pallet_number" },
 
-    //         item_name: { $first: "$bundle_details.item_name" },
-    //         item_sub_cat: { $first: "$bundle_details.item_sub_category_name" },
-    //         issue_status: { $first: "$bundle_details.issue_status" },
-    //         // bundles: {
-    //         //     $push: "$$ROOT"
-    //         // },
-    //         // total_bundles: {
-    //         //     $sum: 1
-    //         // },
-    //         // available_bundles: {
-    //         //     $sum: {
-    //         //         $cond: {
-    //         //             if: { $eq: ["$issue_status", null] },
-    //         //             then: 1,
-    //         //             else: 0
-    //         //         }
-    //         //     }
-    //         // }
-    //     }
-
-    // }
     const aggAddGlobalFields = {
       $addFields: {
         item_name: { $arrayElemAt: ['$bundle_details.item_name', 0] },
@@ -1036,6 +1015,7 @@ export const fetch_dressing_done_history = catchAsync(
         issue_status: { $arrayElemAt: ['$bundle_details.issue_status', 0] },
         log_no_code: { $arrayElemAt: ['$bundle_details.log_no_code', 0] },
       },
+
     };
     const aggLookupDressingDoneOtherDetails = {
       $lookup: {
@@ -1419,9 +1399,7 @@ export const create_dressing_items_from_dressing_report = catchAsync(
           process_status: { $ne: dressing_error_types?.dressing_done },
         })
         .lean();
-      // const dressing_details = await dressing_miss_match_data_model
-      //   .find({ _id: { $in: dressing_ids } })
-      //   .lean();
+
       if (dressing_details?.length === 0) {
         throw new ApiError('Items Not Found.', StatusCodes.BAD_REQUEST);
       }
@@ -1447,10 +1425,7 @@ export const create_dressing_items_from_dressing_report = catchAsync(
         },
         {}
       );
-      console.log(
-        'total_no_of_leaves_by_log_no_code : ',
-        total_no_of_leaves_by_log_no_code
-      );
+
       //creating a object to count no of leaves by log_no_code
       const total_sqm_by_log_no_code = dressing_item_details?.reduce(
         (acc, item) => {
@@ -1478,11 +1453,13 @@ export const create_dressing_items_from_dressing_report = catchAsync(
         log_no_code_volume_map[item?.log_no_code] += volume;
       });
 
+
       //calculating all items volume
       const total_dressing_item_details_volume = Object.values(
         log_no_code_volume_map
       )?.reduce((acc, item) => acc + item, 0);
 
+      
       const log_no_code_factor_map = {};
       //calculating factor for each log_no_code  based on volume
       Object.entries(log_no_code_volume_map)?.forEach(
@@ -1494,7 +1471,7 @@ export const create_dressing_items_from_dressing_report = catchAsync(
         }
       );
 
-      console.log('log_no_code_factor_map : ', log_no_code_factor_map);
+      
       //map for storing each log_no_code amount
       const log_no_code_amount_map = {};
       //calculating amount of each log_no_code
@@ -1503,11 +1480,12 @@ export const create_dressing_items_from_dressing_report = catchAsync(
           item?.slicing_done_other_details?.final_amount ??
           item?.peeling_done_other_details?.final_amount ??
           0;
-        log_no_code_amount_map[item?.log_no_code] = Number(
-          (log_no_code_factor_map[item?.log_no_code] * totalAmount)?.toFixed(2)
-        );
+        // log_no_code_amount_map[item?.log_no_code] = Number(
+        //   (log_no_code_factor_map[item?.log_no_code] * totalAmount)?.toFixed(2)
+        // );
+        log_no_code_amount_map[item?.log_no_code] = Number(totalAmount.toFixed(2));
       }
-      console.log('amount map => ', log_no_code_amount_map);
+     
       const slicing_done_other_details_id_set = new Set();
       const peeling_done_other_details_id_set = new Set();
       for (let item of issue_for_dressing_details) {
@@ -1675,7 +1653,7 @@ export const create_dressing_items_from_dressing_report = catchAsync(
               );
             }
           }
-          console.log('Mismatch detected, skipping further processing.');
+        
           await dressing_done_other_details_model
             ?.findByIdAndDelete(other_details?._id)
             .session(session);
@@ -1760,7 +1738,7 @@ export const create_dressing_items_from_dressing_report = catchAsync(
       }
 
       async function add_peeling_done_items(other_details) {
-        console.log('called');
+      
         const peeling_done_map = issue_for_dressing_details?.reduce(
           (acc, item) => {
             acc[item?.log_no_code] = item;
@@ -1777,8 +1755,7 @@ export const create_dressing_items_from_dressing_report = catchAsync(
         const peeling_done_items_log_no_code_set = new Set(
           peeling_done_items?.map((item) => item?.log_no_code)
         );
-        console.log(peeling_done_items);
-        console.log(total_no_of_leaves_by_log_no_code);
+     
         const valid_dressing_items = [];
         const valid_dressing_items_id = [];
         const dressing_missmatch_updates = [];
@@ -1904,7 +1881,6 @@ export const create_dressing_items_from_dressing_report = catchAsync(
               );
             }
           }
-          console.log('Mismatch detected, skipping further processing.');
           await dressing_done_other_details_model
             ?.findByIdAndDelete(other_details?._id)
             .session(session);

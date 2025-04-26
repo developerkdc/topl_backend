@@ -1181,8 +1181,8 @@ export const add_crosscut_issue_for_flitching = catchAsync(
       created_by: created_by,
       color: {
         color_id: crosscut_done_details?.color?.color_id,
-        color_name: crosscut_done_details?.color?.color_name
-      }
+        color_name: crosscut_done_details?.color?.color_name,
+      },
     };
 
     const issue_for_flitching_data =

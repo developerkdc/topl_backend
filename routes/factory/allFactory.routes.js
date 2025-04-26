@@ -42,6 +42,7 @@ import pressing_done_router from './pressing/pressing_done/pressing_done.routes.
 import bunito_damage_router from './bunito/bunito_damage/bunito_damage.routes.js';
 import bunito_done_router from './bunito/bunito_done/bunito_done.routes.js';
 import issue_for_bunito_router from './bunito/issue_for_bunito/issue_for_bunito.routes.js';
+import dropdown_for_pressing_router from './pressing/issues_for_pressing/dropdown_for_create_pressing.js';
 
 const factoryRouter = express.Router();
 
@@ -93,6 +94,7 @@ factoryRouter.use('/factory/resizing-done', resizing_done_router);
 
 //pressing
 factoryRouter.use('/factory/pressing', issue_for_pressing_router);
+factoryRouter.use('/factory/pressing', dropdown_for_pressing_router);
 factoryRouter.use('/factory/pressing-done', pressing_done_router);
 
 //Plywood production
@@ -126,6 +128,5 @@ factoryRouter.use('/factory/polishing-damage', polishing_damage_router);
 factoryRouter.use('/factory/issue-for-factory', add_issue_for_factory_data);
 //route for reverting issued data from factory
 factoryRouter.use('/revert-issue-for-factory', revert_issue_for_factory_data);
-
 
 export default factoryRouter;

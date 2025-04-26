@@ -234,7 +234,7 @@ export const add_bunito_damage = catchAsync(async (req, res) => {
         $group: {
           _id: null,
           max_sr_no: {
-            $max: 'sr_no',
+            $max: '$sr_no',
           },
         },
       },
@@ -320,7 +320,7 @@ export const revert_damage_to_bunito_done = catchAsync(async (req, res) => {
       throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
     }
 
-     session.startTransaction();
+    session.startTransaction();
 
     const bunito_damage_details = await bunito_damage_model
       .findById(id)
@@ -402,4 +402,3 @@ export const revert_damage_to_bunito_done = catchAsync(async (req, res) => {
     await session.endSession();
   }
 });
-

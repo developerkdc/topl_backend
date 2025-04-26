@@ -112,7 +112,7 @@ export const fetch_all_bundles_by_pallet_number = catchAsync(
     const match__query = {
       $match: {
         pallet_number: pallet_number,
-        issue_status: null
+        issue_status: null,
       },
     };
     const aggProject = {

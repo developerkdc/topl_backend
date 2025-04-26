@@ -18,12 +18,16 @@ const mdf_history_schema = new mongoose.Schema(
     },
     issued_for_challan_id: {
       type: mongoose.Schema.Types.ObjectId,
-      default:null
+      default: null,
     },
     issue_status: {
       type: String,
       enum: {
-        values: [issues_for_status?.order, issues_for_status?.pressing,issues_for_status?.challan],
+        values: [
+          issues_for_status?.order,
+          issues_for_status?.pressing,
+          issues_for_status?.challan,
+        ],
         message: `Invalid Issue status -> {{VALUE}} it must be one of the ${issues_for_status?.order}, ${issues_for_status?.pressing}, ${issues_for_status?.challan}`,
       },
       default: issues_for_status?.order,

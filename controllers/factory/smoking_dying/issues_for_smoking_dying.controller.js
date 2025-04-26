@@ -242,7 +242,7 @@ export const add_issue_for_smoking_dying_from_dressing_done_factory =
             height: item?.height,
             thickness: item?.thickness,
             no_of_leaves: item?.no_of_leaves,
-            sqm: item?.total_sq_meter,
+            sqm: item?.sqm,
             bundle_number: item?.bundle_number,
             pallet_number: item?.pallet_number,
             color_id: item?.color?.color_id,
@@ -605,6 +605,8 @@ export const revert_issued_for_smoking_dying_item = catchAsync(
             },
           },
         ]);
+
+       
       if (!issue_for_smoking_dying || !issue_for_smoking_dying?.[0]) {
         throw new ApiError('No Data Found', StatusCodes.BAD_GATEWAY);
       }
@@ -666,7 +668,7 @@ export const revert_issued_for_smoking_dying_item = catchAsync(
 
         const veneer_inventory_details = await veneer_inventory_items_model
           .find({
-            _id: { $in: veneer_inventory_ids }, //removed $nin and updated to $in  
+            _id: { $in: veneer_inventory_ids }, //removed $nin and updated to $in
           })
           .lean();
         const veneer_invoice_id = veneer_inventory_details.map(
@@ -727,7 +729,7 @@ export const revert_issued_for_smoking_dying_item = catchAsync(
         const dressing_done_other_details_id = dressing_done_item_details.map(
           (ele) => ele.dressing_done_other_details_id
         );
-
+      
         const delete_dressing_done_history_doc =
           await dressing_done_history_model.deleteOne(
             {
