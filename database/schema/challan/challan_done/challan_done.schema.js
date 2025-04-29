@@ -30,11 +30,11 @@ const address_schema = {
         trim: true,
         required: [true, 'pincode is required'],
     },
-    gst_no:{
-        type:String,
-        uppercase:true,
-        trim:true,
-        default:null
+    gst_no: {
+        type: String,
+        uppercase: true,
+        trim: true,
+        default: null
     }
 }
 
@@ -94,10 +94,10 @@ const cnc_done_schema = new mongoose.Schema(
             }
         },
         address: {
-            bill_from_address:address_schema,
-            dispatch_from_address:address_schema,
-            bill_to_address:address_schema,
-            ship_to_address:address_schema,
+            bill_from_address: address_schema,
+            dispatch_from_address: address_schema,
+            bill_to_address: address_schema,
+            ship_to_address: address_schema,
         },
         address_of_buyer_id: {
             type: mongoose.Schema.Types.ObjectId,
@@ -106,6 +106,18 @@ const cnc_done_schema = new mongoose.Schema(
         },
         address_of_seller_id: {
             type: mongoose.Schema.Types.ObjectId,
+            // required: [true, 'Address of seller is required.'],
+            default: null
+        },
+        address_of_buyer: {
+            type: String,
+            uppercase: true,
+            // required: [true, 'Address of buyer is required.'],
+            default: null
+        },
+        address_of_seller: {
+            type: String,
+            uppercase: true,
             // required: [true, 'Address of seller is required.'],
             default: null
         },

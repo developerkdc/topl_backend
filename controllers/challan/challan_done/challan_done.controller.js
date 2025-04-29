@@ -445,7 +445,6 @@ export const edit_challan_details = catchAsync(async (req, res) => {
   }
 });
 
-
 export const update_inward_challan_status_by_challan_id = catchAsync(async (req, res) => {
   const { id } = req.params;
   const userDetails = req.userDetails;
@@ -472,4 +471,147 @@ export const update_inward_challan_status_by_challan_id = catchAsync(async (req,
   };
   const response = new ApiResponse(StatusCodes.OK, "Inward Challan received successfully");
   return res.status(StatusCodes.OK).json(response);
-})
+});
+
+export const listing_single_challan = catchAsync(async (req, res, next) => {
+  const { id } = req.params
+
+
+
+  const matchquery = {
+    $match: {
+      _id: mongoose.Types.ObjectId.createFromHexString(id)
+    }
+  }
+  const aggIssuedChallanDetailsLookup = {
+    $lookup: {
+      from: 'issue_for_challan_details',
+      localField: 'raw_material_items',
+      foreignField: '_id',
+      as: 'issue_for_challan_item_details',
+    },
+  };
+  // const aggCustomerDetailsLookup = {
+  //   $lookup: {
+  //     from: 'customers',
+  //     localField: 'customer_id',
+  //     foreignField: '_id',
+  //     as: 'customer_details',
+  //   },
+  // };
+
+  // const aggTransporterLookup = {
+  //   $lookup: {
+  //     from: 'transporters',
+  //     localField: 'transporter_id',
+  //     foreignField: '_id',
+  //     as: 'transporter_details',
+  //   },
+  // };
+  // const aggVehicleLookup = {
+  //   $lookup: {
+  //     from: 'vehicles',
+  //     localField: 'vehicle_id',
+  //     foreignField: '_id',
+  //     as: 'vehicle_details',
+  //   },
+  // };
+
+  // const aggCreatedByLookup = {
+  //   $lookup: {
+  //     from: 'users',
+  //     localField: 'created_by',
+  //     foreignField: '_id',
+  //     pipeline: [
+  //       {
+  //         $project: {
+  //           user_name: 1,
+  //           user_type: 1,
+  //           dept_name: 1,
+  //           first_name: 1,
+  //           last_name: 1,
+  //           email_id: 1,
+  //           mobile_no: 1,
+  //         },
+  //       },
+  //     ],
+  //     as: 'created_by',
+  //   },
+  // };
+  // const aggUpdatedByLookup = {
+  //   $lookup: {
+  //     from: 'users',
+  //     localField: 'updated_by',
+  //     foreignField: '_id',
+  //     pipeline: [
+  //       {
+  //         $project: {
+  //           user_name: 1,
+  //           user_type: 1,
+  //           dept_name: 1,
+  //           first_name: 1,
+  //           last_name: 1,
+  //           email_id: 1,
+  //           mobile_no: 1,
+  //         },
+  //       },
+  //     ],
+  //     as: 'updated_by',
+  //   },
+  // };
+  const aggIssueForChallanUnwind = {
+    $unwind: {
+      path: '$issue_for_challan_item_details',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
+  // const aggUpdatedByUnwind = {
+  //   $unwind: {
+  //     path: '$updated_by',
+  //     preserveNullAndEmptyArrays: true,
+  //   },
+  // };
+  // const aggCustomerDetailsUnwind = {
+  //   $unwind: {
+  //     path: '$customer_details',
+  //     preserveNullAndEmptyArrays: true,
+  //   },
+  // };
+  // const aggTransporterDetailsUnwind = {
+  //   $unwind: {
+  //     path: '$transporter_details',
+  //     preserveNullAndEmptyArrays: true,
+  //   },
+  // };
+  // const aggVehiclesDetailsUnwind = {
+  //   $unwind: {
+  //     path: '$vehicle_details',
+  //     preserveNullAndEmptyArrays: true,
+  //   },
+  // };
+
+  const listAggregate = [
+    matchquery,
+    aggIssuedChallanDetailsLookup,
+    // aggIssueForChallanUnwind
+    // aggCustomerDetailsLookup,
+    // aggCustomerDetailsUnwind,
+    // aggTransporterLookup,
+    // aggTransporterDetailsUnwind,
+    // aggVehicleLookup,
+    // aggVehiclesDetailsUnwind,
+    // aggCreatedByLookup,
+    // aggCreatedByUnwind,
+    // aggUpdatedByLookup,
+    // aggUpdatedByUnwind,
+  ]; // aggregation pipiline
+
+  const issue_for_color = await challan_done_model.aggregate(listAggregate);
+
+  const response = new ApiResponse(
+    StatusCodes.OK,
+    'Challan details fetched successfully',
+    issue_for_color
+  );
+  return res.status(StatusCodes.OK).json(response);
+});
