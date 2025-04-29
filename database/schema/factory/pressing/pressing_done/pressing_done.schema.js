@@ -125,6 +125,7 @@ const pressing_done_details_schema = new mongoose.Schema(
       required: [true, 'Pressing Id is required'],
       trim: true,
       uppercase: true,
+      unique: true,
     },
     length: {
       type: Number,
