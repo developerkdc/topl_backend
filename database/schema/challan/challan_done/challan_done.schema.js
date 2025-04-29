@@ -229,9 +229,9 @@ const cnc_done_schema = new mongoose.Schema(
 );
 
 const indexed_fields = [
-    [{ irn_number: 1 }, { unique: true }],
-    [{ acknowledgement_number: 1 }, { unique: true }],
-    [{ eway_bill_no: 1 }, { unique: true }],
+    [{ irn_number: 1 }],
+    [{ acknowledgement_number: 1 }],
+    [{ eway_bill_no: 1 }],
     [{ challan_no: 1 }],
     [{ transport_document_no: 1 }],
     [{ raw_material: 1 }],
