@@ -1177,8 +1177,9 @@ export const revert_pressing_done_details = catchAsync(
         throw new ApiError('Invalid ID', StatusCodes.NOT_FOUND);
       }
 
-      const fetch_pressing_done__details =
-        await pressing_done_details_model.findOne({ _id: id }).lean();
+      const fetch_pressing_done__details = await pressing_done_details_model
+        .findOne({ _id: id })
+        .lean();
       if (!fetch_pressing_done__details) {
         throw new ApiError(
           'Pressing Done Details Not Found.',
@@ -1187,19 +1188,70 @@ export const revert_pressing_done_details = catchAsync(
       }
       if (!fetch_pressing_done__details?.isEditable) {
         throw new ApiError(
-          'Pressing Done Details Not Editable',
+          "Pressing Done can't be revert.",
           StatusCodes.BAD_REQUEST
         );
       }
+      console.log(fetch_pressing_done__details, 'fetch_pressing_done__details');
 
-      // revert group details to issue for pressing details
+      //finding the pressing done consumed items details
+      const pressing_done_consumed_items_details =
+        await pressing_done_consumed_items_details_model
+          .findOne({ pressing_done_details_id: id })
+          .session(session);
+      if (!pressing_done_consumed_items_details) {
+        throw new ApiError(
+          'Pressing Done Consumed Items Details Not Found.',
+          StatusCodes.NOT_FOUND
+        );
+      }
+      console.log(
+        pressing_done_consumed_items_details,
+        'pressing_done_consumed_items_details'
+      );
+
+      const { group_details, base_details, face_details } =
+        pressing_done_consumed_items_details;
+
+      // revert group details to issue_for_pressing from pressing_done_consumed_items_details
+      if (group_details && Array.isArray(group_details)) {
+        for (const group of group_details) {
+          const { issue_for_pressing_id, group_no, no_of_sheets, sqm, amount } =
+            group;
+
+          const isIssueForPressingUpdated =
+            await issues_for_pressing_model.updateOne(
+              { _id: issue_for_pressing_id },
+              {
+                $inc: {
+                  'available_details.no_of_sheets': no_of_sheets,
+                  'available_details.sqm': sqm,
+                  'available_details.amount': amount,
+                },
+              },
+              { session }
+            );
+
+          if (
+            !isIssueForPressingUpdated.acknowledged ||
+            isIssueForPressingUpdated.modifiedCount === 0
+          ) {
+            throw new ApiError(
+              `Issue For Pressing details not reverted for group No. ${group_no} .`,
+              StatusCodes.BAD_REQUEST
+            );
+          }
+        }
+      }
+
+      // revert base details to consumed_from_item_id from pressing_done_consumed_items_details
 
       const response = new ApiResponse(
         StatusCodes.CREATED,
         'Revert tapping details successfully',
         {
-          other_details: delete_tapping_done_other_details,
-          items_details: delete_tapping_done_items,
+          // other_details: delete_tapping_done_other_details,
+          // items_details: delete_tapping_done_items,
         }
       );
 

@@ -533,12 +533,18 @@ const pressing_done_consumed_items_details_schema = new mongoose.Schema(
         },
 
         inward_sr_no: {
-          type: Number,
+          type: {
+            inward_sr_no: Number,
+            _id: mongoose.Schema.Types.ObjectId,
+          },
           default: null,
           required: [true, 'Inward Sr No is required for Fleece Paper'],
         },
         item_sr_no: {
-          type: Number,
+          type: {
+            item_sr_no: Number,
+            _id: mongoose.Schema.Types.ObjectId,
+          },
           default: null,
           required: [true, 'Item Sr No is required for Fleece Paper.'],
         },
