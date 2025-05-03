@@ -7,6 +7,10 @@ const plywood_production_schema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    isEditable: {
+      type: Boolean,
+      default: true,
+    },
     item_name: {
       type: String,
       required: [true, 'Item Name is required'],

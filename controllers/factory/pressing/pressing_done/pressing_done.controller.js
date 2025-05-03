@@ -366,6 +366,9 @@ export const add_pressing_details = catchAsync(async (req, res, next) => {
                   'available_details.sqm': -sqm,
                   'available_details.amount': -amount,
                 },
+                $set: {
+                  isEditable: false,
+                },
               },
               { session }
             );
@@ -1210,6 +1213,8 @@ export const revert_pressing_done_details = catchAsync(
         'pressing_done_consumed_items_details'
       );
 
+      // ==================== Revert the pressing done consumed item details ====================
+
       const { group_details, base_details, face_details } =
         pressing_done_consumed_items_details;
 
@@ -1246,16 +1251,603 @@ export const revert_pressing_done_details = catchAsync(
 
       // revert base details to consumed_from_item_id from pressing_done_consumed_items_details
 
+      if (base_details && Array.isArray(base_details)) {
+        for (const base of base_details) {
+          const { consumed_from, consumed_from_item_id, base_type } = base;
+
+          // ===================== reverting plywood consumed details ===================
+
+          if (base_type === base_type_constants.plywood) {
+            // ===================== If consumed_from is Plywood Inventory ===================
+            if (consumed_from === consumed_from_constants?.inventory) {
+              const plywoodInventoryItem = await plywood_inventory_items_details
+                .findById(consumed_from_item_id)
+                .session(session);
+
+              if (!plywoodInventoryItem) {
+                throw new ApiError(
+                  `Invalid Plywood Inventory consumed_from_item_id: ${consumed_from_item_id}`,
+                  StatusCodes.BAD_REQUEST
+                );
+              }
+
+              // revert the consumed details to plywood inventory
+              const { pallet_no, no_of_sheets, sqm, amount } = base;
+
+              const plywoodInventoryUpdateData =
+                await plywood_inventory_items_details.updateOne(
+                  { _id: consumed_from_item_id, pallet_no: pallet_no },
+                  {
+                    $inc: {
+                      available_sheets: no_of_sheets,
+                      available_sqm: sqm,
+                      available_amount: amount,
+                    },
+                  },
+                  { session }
+                );
+
+              if (
+                !plywoodInventoryUpdateData.acknowledged ||
+                plywoodInventoryUpdateData.modifiedCount === 0
+              ) {
+                throw new ApiError(
+                  `Plywood Inventory details not reverted for Pallet No ${pallet_no}.`,
+                  StatusCodes.BAD_REQUEST
+                );
+              }
+
+              // if available_sheets are equal to sheets, then update the invoice details
+              if (
+                plywoodInventoryItem?.available_sheets ===
+                plywoodInventoryItem?.available_sheets + no_of_sheets
+              ) {
+                const plywoodInventoryInvoiceDetails =
+                  await plywood_inventory_invoice_details.updateOne(
+                    {
+                      _id: plywoodInventoryItem?.invoice_id,
+                    },
+                    {
+                      $set: {
+                        isEditable: true,
+                      },
+                    },
+                    { session }
+                  );
+                if (
+                  !plywoodInventoryInvoiceDetails.acknowledged ||
+                  plywoodInventoryInvoiceDetails.modifiedCount === 0
+                ) {
+                  throw new ApiError(
+                    `Plywood Inventory Invoice details not updated.`,
+                    StatusCodes.BAD_REQUEST
+                  );
+                }
+              }
+
+              // delete the plywood inventory history details
+              const plywoodInventoryHistoryDeleteData =
+                await plywood_history_model.deleteOne(
+                  {
+                    $and: [
+                      { plywood_item_id: consumed_from_item_id },
+                      { pressing_done_id: id },
+                    ],
+                  },
+                  { session }
+                );
+              if (
+                !plywoodInventoryHistoryDeleteData.acknowledged ||
+                plywoodInventoryHistoryDeleteData.deletedCount === 0
+              ) {
+                throw new ApiError(
+                  `Plywood Inventory history details not deleted for Pallet No ${pallet_no}.`,
+                  StatusCodes.BAD_REQUEST
+                );
+              }
+            }
+
+            // ===================== If consumed_from is Plywood Resizing ===================
+            else if (consumed_from === consumed_from_constants?.resizing) {
+              const plywoodResizingItem =
+                await plywood_resizing_done_details_model
+                  .findById(consumed_from_item_id)
+                  .session(session);
+
+              if (!plywoodResizingItem) {
+                throw new ApiError(
+                  `Invalid Plywood Resizing consumed_from_item_id: ${consumed_from_item_id}`,
+                  StatusCodes.BAD_REQUEST
+                );
+              }
+
+              // revert the consumed details to plywood resizing
+              const { no_of_sheets, sqm, amount } = base;
+
+              const plywoodResizingUpdateData =
+                await plywood_resizing_done_details_model.updateOne(
+                  { _id: consumed_from_item_id },
+                  {
+                    $inc: {
+                      'available_details.no_of_sheets': no_of_sheets,
+                      'available_details.sqm': sqm,
+                      'available_details.amount': amount,
+                    },
+                  },
+                  { session }
+                );
+
+              if (
+                !plywoodResizingUpdateData.acknowledged ||
+                plywoodResizingUpdateData.modifiedCount === 0
+              ) {
+                throw new ApiError(
+                  `Plywood Resizing details not reverted.`,
+                  StatusCodes.BAD_REQUEST
+                );
+              }
+
+              // if available_sheets are equal to sheets, then update the invoice details
+              if (
+                plywoodResizingItem?.available_details?.no_of_sheets ===
+                plywoodResizingItem?.available_details?.no_of_sheets +
+                  no_of_sheets
+              ) {
+                const plywoodResizingInvoiceDetails =
+                  await plywood_resizing_done_details_model.updateOne(
+                    {
+                      _id: plywoodResizingItem?._id,
+                    },
+                    {
+                      $set: {
+                        isEditable: true,
+                      },
+                    },
+                    { session }
+                  );
+                if (
+                  !plywoodResizingInvoiceDetails.acknowledged ||
+                  plywoodResizingInvoiceDetails.modifiedCount === 0
+                ) {
+                  throw new ApiError(
+                    `Plywood Resizing Invoice details not updated.`,
+                    StatusCodes.BAD_REQUEST
+                  );
+                }
+              }
+
+              // delete the plywood resizing history details
+              const plywoodResizingHistoryDeleteData =
+                await plywood_resizing_history_model.deleteOne(
+                  {
+                    $and: [
+                      { plywood_resizing_done_id: plywoodResizingItem?._id },
+                      { issued_for_id: id },
+                    ],
+                  },
+                  { session }
+                );
+              if (
+                !plywoodResizingHistoryDeleteData.acknowledged ||
+                plywoodResizingHistoryDeleteData.deletedCount === 0
+              ) {
+                throw new ApiError(
+                  `Plywood Resizing history details not deleted.`,
+                  StatusCodes.BAD_REQUEST
+                );
+              }
+            }
+
+            // ===================== If consumed_from is Plywood Production ===================
+            else if (consumed_from === consumed_from_constants?.production) {
+              const plywoodProductionItem = await plywood_production_model
+                .findById(consumed_from_item_id)
+                .session(session);
+
+              if (!plywoodProductionItem) {
+                throw new ApiError(
+                  `Invalid Plywood Production consumed_from_item_id: ${consumed_from_item_id}`,
+                  StatusCodes.BAD_REQUEST
+                );
+              }
+
+              // revert the consumed details to plywood production
+              const { no_of_sheets, sqm, amount } = base;
+
+              const plywoodProductionUpdateData =
+                await plywood_production_model.updateOne(
+                  { _id: consumed_from_item_id },
+                  {
+                    $inc: {
+                      available_no_of_sheets: no_of_sheets,
+                      available_total_sqm: sqm,
+                      available_amount: amount,
+                    },
+                  },
+                  { session }
+                );
+
+              if (
+                !plywoodProductionUpdateData.acknowledged ||
+                plywoodProductionUpdateData.modifiedCount === 0
+              ) {
+                throw new ApiError(
+                  `Plywood Production details not reverted.`,
+                  StatusCodes.BAD_REQUEST
+                );
+              }
+
+              // if available_sheets are equal to sheets, then update the invoice details
+              if (
+                plywoodProductionItem?.available_no_of_sheets ===
+                plywoodProductionItem?.available_no_of_sheets + no_of_sheets
+              ) {
+                const plywoodProductionInvoiceDetails =
+                  await plywood_production_model.updateOne(
+                    {
+                      _id: plywoodProductionItem?._id,
+                    },
+                    {
+                      $set: {
+                        isEditable: true,
+                      },
+                    },
+                    { session }
+                  );
+                if (
+                  !plywoodProductionInvoiceDetails.acknowledged ||
+                  plywoodProductionInvoiceDetails.modifiedCount === 0
+                ) {
+                  throw new ApiError(
+                    `Plywood Production Invoice details not updated.`,
+                    StatusCodes.BAD_REQUEST
+                  );
+                }
+              }
+
+              // delete the plywood production history details
+              const plywoodProductionHistoryDeleteData =
+                await plywood_resizing_history_model.deleteOne(
+                  {
+                    $and: [
+                      {
+                        plywood_production_done_id: plywoodProductionItem?._id,
+                        issued_for_id: id,
+                      },
+                    ],
+                  },
+                  { session }
+                );
+              if (
+                !plywoodProductionHistoryDeleteData.acknowledged ||
+                plywoodProductionHistoryDeleteData.deletedCount === 0
+              ) {
+                throw new ApiError(
+                  `Plywood Production history details not deleted.`,
+                  StatusCodes.BAD_REQUEST
+                );
+              }
+            }
+          }
+
+          // ===================== If consumed_from is MDF Inventory ===================
+          else if (base_type === base_type_constants.mdf) {
+            const mdfInventoryItem = await mdf_inventory_items_details
+              .findById(consumed_from_item_id)
+              .session(session);
+
+            if (!mdfInventoryItem) {
+              throw new ApiError(
+                `Invalid MDF Inventory consumed_from_item_id: ${consumed_from_item_id}`,
+                StatusCodes.BAD_REQUEST
+              );
+            }
+
+            // revert the consumed details to MDF inventory
+            const { no_of_sheets, sqm, amount } = base;
+
+            const mdfInventoryUpdateData =
+              await mdf_inventory_items_details.updateOne(
+                { _id: consumed_from_item_id },
+                {
+                  $inc: {
+                    available_sheets: no_of_sheets,
+                    available_sqm: sqm,
+                    available_amount: amount,
+                  },
+                },
+                { session }
+              );
+            if (
+              !mdfInventoryUpdateData.acknowledged ||
+              mdfInventoryUpdateData.modifiedCount === 0
+            ) {
+              throw new ApiError(
+                `MDF Inventory details not reverted.`,
+                StatusCodes.BAD_REQUEST
+              );
+            }
+
+            // if available_sheets are equal to sheets, then update the invoice details
+            if (
+              mdfInventoryItem?.available_sheets ===
+              mdfInventoryItem?.available_sheets + no_of_sheets
+            ) {
+              const mdfInventoryInvoiceDetails =
+                await mdf_inventory_invoice_details.updateOne(
+                  {
+                    _id: mdfInventoryItem?.invoice_id,
+                  },
+                  {
+                    $set: {
+                      isEditable: true,
+                    },
+                  },
+                  { session }
+                );
+              if (
+                !mdfInventoryInvoiceDetails.acknowledged ||
+                mdfInventoryInvoiceDetails.modifiedCount === 0
+              ) {
+                throw new ApiError(
+                  `MDF Inventory Invoice details not updated.`,
+                  StatusCodes.BAD_REQUEST
+                );
+              }
+            }
+
+            // delete the MDF inventory history details
+            const delete_mdf_history_details =
+              await mdf_history_model.deleteOne(
+                {
+                  $and: [
+                    { mdf_item_id: consumed_from_item_id },
+                    { pressing_done_id: id },
+                  ],
+                },
+                { session }
+              );
+            if (
+              !delete_mdf_history_details.acknowledged ||
+              delete_mdf_history_details.deletedCount === 0
+            ) {
+              throw new ApiError(
+                `MDF Inventory history details not deleted.`,
+                StatusCodes.BAD_REQUEST
+              );
+            }
+          }
+
+          // ===================== If consumed_from Fleece Paper ===================
+          else if (base_type === base_type_constants.fleece_paper) {
+            const fleecePaperInventoryItem = await fleece_inventory_items_modal
+              .findById(consumed_from_item_id)
+              .session(session);
+
+            if (!fleecePaperInventoryItem) {
+              throw new ApiError(
+                `Invalid Fleece Paper Inventory consumed_from_item_id: ${consumed_from_item_id}`,
+                StatusCodes.BAD_REQUEST
+              );
+            }
+
+            // revert the consumed details to Fleece paper inventory
+            const { number_of_roll, sqm, amount } = base;
+
+            const fleecePaperInventoryUpdateData =
+              await fleece_inventory_items_modal.updateOne(
+                { _id: consumed_from_item_id },
+                {
+                  $inc: {
+                    available_number_of_roll: number_of_roll,
+                    available_sqm: sqm,
+                    available_amount: amount,
+                  },
+                },
+                { session }
+              );
+            if (
+              !fleecePaperInventoryUpdateData.acknowledged ||
+              fleecePaperInventoryUpdateData.modifiedCount === 0
+            ) {
+              throw new ApiError(
+                `Fleece Paper Inventory details not reverted.`,
+                StatusCodes.BAD_REQUEST
+              );
+            }
+
+            // if available_number_of_roll are equal to number_of_roll, then update the invoice details
+            if (
+              fleecePaperInventoryItem?.available_number_of_roll ===
+              fleecePaperInventoryItem?.available_number_of_roll +
+                number_of_roll
+            ) {
+              const fleecePaperInventoryInvoiceDetails =
+                await fleece_inventory_invoice_modal.updateOne(
+                  {
+                    _id: fleecePaperInventoryItem?.invoice_id,
+                  },
+                  {
+                    $set: {
+                      isEditable: true,
+                    },
+                  },
+                  { session }
+                );
+              if (
+                !fleecePaperInventoryInvoiceDetails.acknowledged ||
+                fleecePaperInventoryInvoiceDetails.modifiedCount === 0
+              ) {
+                throw new ApiError(
+                  `Fleece Paper Inventory Invoice details not updated.`,
+                  StatusCodes.BAD_REQUEST
+                );
+              }
+            }
+
+            // delete the Fleece paper inventory history details
+            const fleecePaperInventoryHistoryDeleteData =
+              await fleece_history_model.deleteOne(
+                {
+                  $and: [
+                    { fleece_item_id: consumed_from_item_id },
+                    { pressing_done_id: id },
+                  ],
+                },
+                { session }
+              );
+            if (
+              !fleecePaperInventoryHistoryDeleteData.acknowledged ||
+              fleecePaperInventoryHistoryDeleteData.deletedCount === 0
+            ) {
+              throw new ApiError(
+                `Fleece Paper Inventory history details not deleted.`,
+                StatusCodes.BAD_REQUEST
+              );
+            }
+          }
+        }
+      }
+
+      // revert face details to consumed_from_item_id from pressing_done_consumed_items_details
+      if (face_details && Array.isArray(face_details)) {
+        for (const face of face_details) {
+          const { consumed_from, consumed_from_item_id } = face;
+
+          // ===================== reverting face consumed details ===================
+
+          if (consumed_from === consumed_from_constants?.inventory) {
+            const faceInventoryItem = await face_inventory_items_details
+              .findById(consumed_from_item_id)
+              .session(session);
+
+            if (!faceInventoryItem) {
+              throw new ApiError(
+                `Invalid Face Inventory consumed_from_item_id: ${consumed_from_item_id}`,
+                StatusCodes.BAD_REQUEST
+              );
+            }
+
+            // revert the consumed details to face inventory
+            const { no_of_sheets, sqm, amount } = face;
+
+            const faceInventoryUpdateData =
+              await face_inventory_items_details.updateOne(
+                { _id: consumed_from_item_id },
+                {
+                  $inc: {
+                    available_sheets: no_of_sheets,
+                    available_sqm: sqm,
+                    available_amount: amount,
+                  },
+                },
+                { session }
+              );
+            if (
+              !faceInventoryUpdateData.acknowledged ||
+              faceInventoryUpdateData.modifiedCount === 0
+            ) {
+              throw new ApiError(
+                `Face Inventory details not reverted.`,
+                StatusCodes.BAD_REQUEST
+              );
+            }
+
+            // if available_sheets are equal to sheets, then update the invoice details
+            if (
+              faceInventoryItem?.available_sheets ===
+              faceInventoryItem?.available_sheets + no_of_sheets
+            ) {
+              const faceInventoryInvoiceDetails =
+                await face_inventory_invoice_details.updateOne(
+                  {
+                    _id: faceInventoryItem?.invoice_id,
+                  },
+                  {
+                    $set: {
+                      isEditable: true,
+                    },
+                  },
+                  { session }
+                );
+              if (
+                !faceInventoryInvoiceDetails.acknowledged ||
+                faceInventoryInvoiceDetails.modifiedCount === 0
+              ) {
+                throw new ApiError(
+                  `Face Inventory Invoice details not updated.`,
+                  StatusCodes.BAD_REQUEST
+                );
+              }
+            }
+
+            // delete the face inventory history details
+            const delete_face_history_details =
+              await face_history_model.deleteOne(
+                {
+                  $and: [
+                    { face_item_id: consumed_from_item_id },
+                    { pressing_done_id: id },
+                  ],
+                },
+                { session }
+              );
+            if (
+              !delete_face_history_details.acknowledged ||
+              delete_face_history_details.deletedCount === 0
+            ) {
+              throw new ApiError(
+                `Face Inventory history details not deleted.`,
+                StatusCodes.BAD_REQUEST
+              );
+            }
+          }
+        }
+      }
+
+      // ==================== Deleting pressing done consumed item details ====================
+      const delete_pressing_done_consumed_items_details =
+        await pressing_done_consumed_items_details_model.deleteOne(
+          {
+            pressing_done_details_id: id,
+          },
+          { session }
+        );
+      if (
+        !delete_pressing_done_consumed_items_details.acknowledged ||
+        delete_pressing_done_consumed_items_details.deletedCount === 0
+      ) {
+        throw new ApiError(
+          'Pressing Done consumed items details not deleted.',
+          StatusCodes.BAD_REQUEST
+        );
+      }
+
+      // ==================== Deleting pressing done details ====================
+      const delete_pressing_done_details =
+        await pressing_done_details_model.deleteOne(
+          {
+            _id: id,
+          },
+          { session }
+        );
+      if (
+        !delete_pressing_done_details.acknowledged ||
+        delete_pressing_done_details.deletedCount === 0
+      ) {
+        throw new ApiError(
+          'Pressing Done details not deleted.',
+          StatusCodes.BAD_REQUEST
+        );
+      }
+
+      // if all done, then commit the transaction
+      await session.commitTransaction();
+
       const response = new ApiResponse(
         StatusCodes.CREATED,
-        'Revert tapping details successfully',
-        {
-          // other_details: delete_tapping_done_other_details,
-          // items_details: delete_tapping_done_items,
-        }
+        'Revert tapping details successfully'
       );
-
-      await session.commitTransaction();
       return res.status(StatusCodes.CREATED).json(response);
     } catch (error) {
       await session.abortTransaction();
