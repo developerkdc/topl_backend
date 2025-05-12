@@ -752,7 +752,7 @@ export const add_pressing_details = catchAsync(async (req, res, next) => {
           'sqm',
           'amount',
         ]) {
-          if (!face_details?.[i]) {
+          if (!face?.[i]) {
             throw new ApiError(
               `Please provide ${i} in Face Details.`,
               StatusCodes.BAD_REQUEST
