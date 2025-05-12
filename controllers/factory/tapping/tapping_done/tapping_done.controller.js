@@ -1,17 +1,17 @@
 import mongoose from 'mongoose';
-import catchAsync from '../../../../utils/errors/catchAsync.js';
 import issue_for_tapping_model from '../../../../database/schema/factory/tapping/issue_for_tapping/issue_for_tapping.schema.js';
 import {
   tapping_done_items_details_model,
   tapping_done_other_details_model,
 } from '../../../../database/schema/factory/tapping/tapping_done/tapping_done.schema.js';
-import ApiResponse from '../../../../utils/ApiResponse.js';
+import { tapping_done_history_model } from '../../../../database/schema/factory/tapping/tapping_history/tapping_done_history.schema.js';
 import issue_for_tapping_wastage_model from '../../../../database/schema/factory/tapping/tapping_wastage/tapping_wastage.schema.js';
-import ApiError from '../../../../utils/errors/apiError.js';
+import ApiResponse from '../../../../utils/ApiResponse.js';
+import { StatusCodes } from '../../../../utils/constants.js';
 import { dynamic_filter } from '../../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../../utils/dynamicSearch/dynamic.js';
-import { StatusCodes } from '../../../../utils/constants.js';
-import { tapping_done_history_model } from '../../../../database/schema/factory/tapping/tapping_history/tapping_done_history.schema.js';
+import ApiError from '../../../../utils/errors/apiError.js';
+import catchAsync from '../../../../utils/errors/catchAsync.js';
 
 export const add_tapping_details = catchAsync(async (req, res, next) => {
   const session = await mongoose.startSession();
@@ -526,7 +526,7 @@ export const fetch_all_tapping_done_items = catchAsync(
                 order_id: 1,
                 item_name: 1,
                 item_sub_category_name: 1,
-                group_no:1,
+                group_no: 1,
                 photo_number: 1
               }
             }
@@ -551,7 +551,7 @@ export const fetch_all_tapping_done_items = catchAsync(
                 order_id: 1,
                 item_name: 1,
                 item_sub_category_name: 1,
-                group_no:1,
+                group_no: 1,
                 photo_number: 1
               }
             }
@@ -680,6 +680,97 @@ export const fetch_all_details_by_tapping_id = catchAsync(
       throw new ApiError('Invalid ID', StatusCodes.NOT_FOUND);
     }
 
+    const aggOrderRelatedData = [
+      {
+        $lookup: {
+          from: "orders",
+          localField: "order_id",
+          pipeline: [
+            {
+              $project: {
+                order_no: 1,
+                owner_name: 1,
+                orderDate: 1,
+                order_category: 1,
+                series_product: 1
+              }
+            }
+          ],
+          foreignField: "_id",
+          as: "order_details"
+        }
+      },
+      {
+        $unwind: {
+          path: "$order_details",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $lookup: {
+          from: "series_product_order_item_details",
+          localField: "order_item_id",
+          foreignField: "_id",
+          pipeline: [
+            {
+              $project: {
+                item_no: 1,
+                order_id: 1,
+                item_name: 1,
+                item_sub_category_name: 1,
+                group_no: 1,
+                photo_number: 1
+              }
+            }
+          ],
+          as: "series_product_order_item_details"
+        }
+      },
+      {
+        $unwind: {
+          path: "$series_product_order_item_details",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $lookup: {
+          from: "decorative_order_item_details",
+          localField: "order_item_id",
+          pipeline: [
+            {
+              $project: {
+                item_no: 1,
+                order_id: 1,
+                item_name: 1,
+                item_sub_category_name: 1,
+                group_no: 1,
+                photo_number: 1
+              }
+            }
+          ],
+          foreignField: "_id",
+          as: "decorative_order_item_details"
+        }
+      },
+      {
+        $unwind: {
+          path: "$decorative_order_item_details",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $addFields: {
+          order_item_details: {
+            $cond: {
+              if: { $ne: [{ $type: "$decorative_order_item_details" }, "missing"] },
+              then: "$decorative_order_item_details",
+              else: "$series_product_order_item_details"
+            }
+          }
+        }
+      }
+    ];
+
     const pipeline = [
       {
         $match: {
@@ -691,6 +782,9 @@ export const fetch_all_details_by_tapping_id = catchAsync(
           from: 'issue_for_tappings',
           foreignField: '_id',
           localField: 'issue_for_tapping_item_id',
+          pipeline: [
+            ...aggOrderRelatedData
+          ],
           as: 'issue_for_tapping_details',
         },
       },
@@ -1012,7 +1106,7 @@ export const fetch_all_tapping_done_items_history = catchAsync(
                 order_id: 1,
                 item_name: 1,
                 item_sub_category_name: 1,
-                group_no:1,
+                group_no: 1,
                 photo_number: 1
               }
             }
@@ -1037,7 +1131,7 @@ export const fetch_all_tapping_done_items_history = catchAsync(
                 order_id: 1,
                 item_name: 1,
                 item_sub_category_name: 1,
-                group_no:1,
+                group_no: 1,
                 photo_number: 1
               }
             }
