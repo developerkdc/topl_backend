@@ -558,16 +558,16 @@ const pressing_done_consumed_items_details_schema = new mongoose.Schema(
           type: mongoose.Schema.Types.ObjectId,
           required: [true, 'Item Name ID is required'],
         },
-        item_sub_category_id: {
-          type: mongoose.Schema.Types.ObjectId,
-          required: [true, 'Items Sub-Category Id is required'],
-        },
-        item_sub_category_name: {
-          type: String,
-          required: [true, 'Item Sub-Category Name is required'],
-          trim: true,
-          uppercase: true,
-        },
+        // item_sub_category_id: {
+        //   type: mongoose.Schema.Types.ObjectId,
+        //   required: [true, 'Items Sub-Category Id is required'],
+        // },
+        // item_sub_category_name: {
+        //   type: String,
+        //   required: [true, 'Item Sub-Category Name is required'],
+        //   trim: true,
+        //   uppercase: true,
+        // },
         length: {
           type: Number,
           default: 0,

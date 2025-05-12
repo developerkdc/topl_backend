@@ -62,12 +62,44 @@ export const fetch_issued_for_pressing_details_based_on_group_no = catchAsync(
       throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
     }
 
-    const result = await issues_for_pressing_model.findOne({ _id: id });
+    const aggCommonMatch = {
+      $match: {
+        _id: mongoose.Types.ObjectId.createFromHexString(id),
+      },
+    };
+
+    const aggGroupNoLookup = {
+      $lookup: {
+        from: 'grouping_done_items_details',
+        localField: 'group_no',
+        foreignField: 'group_no',
+        pipeline: [
+          {
+            $project: {
+              group_no: 1,
+              photo_no: 1,
+              photo_id: 1,
+            },
+          },
+        ],
+        as: 'grouping_done_items_details',
+      },
+    };
+    const aggGroupNoUnwind = {
+      $unwind: {
+        path: '$grouping_done_items_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    };
+
+    const list_aggregate = [aggCommonMatch, aggGroupNoLookup, aggGroupNoUnwind];
+    // const result = await issues_for_pressing_model.findOne({ _id: id });
+    const result = await issues_for_pressing_model.aggregate(list_aggregate);
 
     const response = new ApiResponse(
       StatusCodes.OK,
       'Issued Item details fetched successfully',
-      result
+      result[0] || {}
     );
     return res.status(StatusCodes.OK).json(response);
   }
@@ -78,7 +110,10 @@ export const getPlywoodPalletDropdown = catchAsync(async (req, res) => {
   const { base_sub_category } = req.query;
 
   if (!base_sub_category) {
-    throw new ApiError('Base Sub Category is required', StatusCodes.BAD_REQUEST);
+    throw new ApiError(
+      'Base Sub Category is required',
+      StatusCodes.BAD_REQUEST
+    );
   }
 
   const pipeline = [
@@ -113,7 +148,7 @@ export const getPlywoodDetailsByPalletNo = catchAsync(async (req, res) => {
   const result = await plywood_inventory_items_details.findOne({ _id: id });
 
   if (!result) {
-    throw new ApiError("Plywood details not found", StatusCodes?.NOT_FOUND);
+    throw new ApiError('Plywood details not found', StatusCodes?.NOT_FOUND);
   }
   const response = new ApiResponse(
     StatusCodes.OK,
@@ -128,7 +163,10 @@ export const getMdfPalletDropdown = catchAsync(async (req, res) => {
   const { consume_from, base_sub_category } = req.query;
 
   if (!base_sub_category) {
-    throw new ApiError('Base Sub Category is required', StatusCodes.BAD_REQUEST);
+    throw new ApiError(
+      'Base Sub Category is required',
+      StatusCodes.BAD_REQUEST
+    );
   }
 
   const pipeline = [
@@ -163,7 +201,7 @@ export const getMdfDetailsByPalletNo = catchAsync(async (req, res) => {
   const result = await mdf_inventory_items_details.findOne({ _id: id });
 
   if (!result) {
-    throw new ApiError("MDF details not found", StatusCodes?.NOT_FOUND);
+    throw new ApiError('MDF details not found', StatusCodes?.NOT_FOUND);
   }
   const response = new ApiResponse(
     StatusCodes.OK,
@@ -176,37 +214,40 @@ export const getMdfDetailsByPalletNo = catchAsync(async (req, res) => {
 
 //item name dropdown for base details for PLYWOOD
 //cosume from resizing
-export const getPlywoodResizingItemNameDropdown = catchAsync(async (req, res) => {
-  const pipeline = [
-    {
-      $match: {
-        'available_details.no_of_sheets': { $gt: 0 },
+export const getPlywoodResizingItemNameDropdown = catchAsync(
+  async (req, res) => {
+    const pipeline = [
+      {
+        $match: {
+          'available_details.no_of_sheets': { $gt: 0 },
+        },
       },
-    },
-    {
-      $project: {
-        sr_no: 1,
-        item_name: 1,
+      {
+        $project: {
+          sr_no: 1,
+          item_name: 1,
+        },
       },
-    },
-    {
-      $sort: {
-        sr_no: 1,
-        item_name: 1,
+      {
+        $sort: {
+          sr_no: 1,
+          item_name: 1,
+        },
       },
-    },
-  ];
+    ];
 
-  const result = await plywood_resizing_done_details_model.aggregate(pipeline);
+    const result =
+      await plywood_resizing_done_details_model.aggregate(pipeline);
 
-  const response = new ApiResponse(
-    StatusCodes.OK,
-    'Plywood Resizing item name dropdown fetched successfully',
-    result
-  );
+    const response = new ApiResponse(
+      StatusCodes.OK,
+      'Plywood Resizing item name dropdown fetched successfully',
+      result
+    );
 
-  return res.status(StatusCodes.OK).json(response);
-});
+    return res.status(StatusCodes.OK).json(response);
+  }
+);
 
 export const getPlywoodResizingItemDetails = catchAsync(async (req, res) => {
   const { id } = req.params;
@@ -218,7 +259,10 @@ export const getPlywoodResizingItemDetails = catchAsync(async (req, res) => {
   const result = await plywood_resizing_done_details_model.findOne({ _id: id });
 
   if (!result) {
-    throw new ApiError('Plywood Resizing record not found', StatusCodes.NOT_FOUND);
+    throw new ApiError(
+      'Plywood Resizing record not found',
+      StatusCodes.NOT_FOUND
+    );
   }
 
   const response = new ApiResponse(
@@ -231,37 +275,39 @@ export const getPlywoodResizingItemDetails = catchAsync(async (req, res) => {
 });
 
 //cosume from production
-export const getPlywoodProductionItemNameDropdown = catchAsync(async (req, res) => {
-  const pipeline = [
-    {
-      $match: {
-        available_no_of_sheets: { $gt: 0 },
+export const getPlywoodProductionItemNameDropdown = catchAsync(
+  async (req, res) => {
+    const pipeline = [
+      {
+        $match: {
+          available_no_of_sheets: { $gt: 0 },
+        },
       },
-    },
-    {
-      $project: {
-        item_sr_no: 1,
-        item_name: 1,
+      {
+        $project: {
+          item_sr_no: 1,
+          item_name: 1,
+        },
       },
-    },
-    {
-      $sort: {
-        item_sr_no: 1,
-        item_name: 1,
+      {
+        $sort: {
+          item_sr_no: 1,
+          item_name: 1,
+        },
       },
-    },
-  ];
+    ];
 
-  const result = await plywood_production_model.aggregate(pipeline);
+    const result = await plywood_production_model.aggregate(pipeline);
 
-  const response = new ApiResponse(
-    StatusCodes.OK,
-    'Plywood Production item name dropdown fetched successfully',
-    result
-  );
+    const response = new ApiResponse(
+      StatusCodes.OK,
+      'Plywood Production item name dropdown fetched successfully',
+      result
+    );
 
-  return res.status(StatusCodes.OK).json(response);
-});
+    return res.status(StatusCodes.OK).json(response);
+  }
+);
 
 export const getPlywoodProductionItemDetails = catchAsync(async (req, res) => {
   const { id } = req.params;
@@ -273,7 +319,10 @@ export const getPlywoodProductionItemDetails = catchAsync(async (req, res) => {
   const result = await plywood_production_model.findOne({ _id: id });
 
   if (!result) {
-    throw new ApiError('Plywood Production record not found', StatusCodes.NOT_FOUND);
+    throw new ApiError(
+      'Plywood Production record not found',
+      StatusCodes.NOT_FOUND
+    );
   }
 
   const response = new ApiResponse(
