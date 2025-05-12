@@ -7,6 +7,10 @@ const plywood_resizing_done_details_schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Issue for resizing ID is required.'],
     },
+    isEditable: {
+      type: Boolean,
+      default: true,
+    },
     item_id: {
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Items id is required'],
