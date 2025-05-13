@@ -38,6 +38,7 @@ import {
   face_inventory_items_details,
 } from '../../../../database/schema/inventory/face/face.schema.js';
 import face_history_model from '../../../../database/schema/inventory/face/face.history.schema.js';
+import plywood_production_history_model from '../../../../database/schema/factory/plywood_production/plywood_production_history.schema.js';
 
 // Add pressing Api
 export const add_pressing_details = catchAsync(async (req, res, next) => {
@@ -488,14 +489,14 @@ export const add_pressing_details = catchAsync(async (req, res, next) => {
             updated_by: userDetails?._id,
           };
           const [plywoodProductionHistoryAddedData] =
-            await plywood_resizing_history_model.create(
+            await plywood_production_history_model.create(
               [plywood_production_history_data],
               { session }
             );
 
           if (!plywoodProductionHistoryAddedData) {
             throw new ApiError(
-              'Plywood Inventory history details not added.',
+              'Plywood production history details not added.',
               StatusCodes.BAD_REQUEST
             );
           }
@@ -1507,7 +1508,7 @@ export const revert_pressing_done_details = catchAsync(
 
               // delete the plywood production history details
               const plywoodProductionHistoryDeleteData =
-                await plywood_resizing_history_model.deleteOne(
+                await plywood_production_history_model.deleteOne(
                   {
                     $and: [
                       {
