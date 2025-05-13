@@ -62,10 +62,10 @@ indexingFields.forEach((index) =>
   plywood_production_history_schema.index(...index)
 );
 
-const plywood_resizing_history_model = mongoose.model(
+const plywood_production_history_model = mongoose.model(
   'plywood_production_history_details',
   plywood_production_history_schema,
   'plywood_production_history_details'
 );
 
-export default plywood_resizing_history_model;
+export default plywood_production_history_model;

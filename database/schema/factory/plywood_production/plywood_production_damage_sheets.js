@@ -11,13 +11,21 @@ const plywood_production_damage_schema = new mongoose.Schema(
       type: String,
       required: [true, 'Item Name is required'],
     },
+    item_name_id: {
+      type: String,
+      required: [true, 'Item Name Id is required'],
+    },
     sub_category: {
       type: String,
       required: [true, 'Sub Category is required'],
     },
+    sub_category_id: {
+      type: String,
+      required: [true, 'Sub Category Id is required'],
+    },
     length: {
       type: Number,
-      required: [true, 'New Lenght is required'],
+      required: [true, 'New Length is required'],
     },
     width: {
       type: Number,
