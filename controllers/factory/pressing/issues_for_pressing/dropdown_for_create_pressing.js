@@ -285,13 +285,13 @@ export const getPlywoodProductionItemNameDropdown = catchAsync(
       },
       {
         $project: {
-          item_sr_no: 1,
+          sr_no: 1,
           item_name: 1,
         },
       },
       {
         $sort: {
-          item_sr_no: 1,
+          sr_no: 1,
           item_name: 1,
         },
       },
