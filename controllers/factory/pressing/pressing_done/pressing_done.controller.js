@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import mongoose, { isValidObjectId } from 'mongoose';
 import catchAsync from '../../../../utils/errors/catchAsync.js';
 import ApiResponse from '../../../../utils/ApiResponse.js';
 import ApiError from '../../../../utils/errors/apiError.js';
@@ -39,6 +39,7 @@ import {
 } from '../../../../database/schema/inventory/face/face.schema.js';
 import face_history_model from '../../../../database/schema/inventory/face/face.history.schema.js';
 import plywood_production_history_model from '../../../../database/schema/factory/plywood_production/plywood_production_history.schema.js';
+import { pressing_damage_model } from '../../../../database/schema/factory/pressing/pressing_damage/pressing_damage.schema.js';
 
 // Add pressing Api
 export const add_pressing_details = catchAsync(async (req, res, next) => {
@@ -1858,3 +1859,126 @@ export const revert_pressing_done_details = catchAsync(
     }
   }
 );
+
+export const add_to_damage_from_pressing_done = catchAsync(async (req, res) => {
+  const userDetails = req.userDetails;
+  const { id } = req.params;
+  const { damage_sheets } = req.body;
+
+  const session = await mongoose.startSession();
+  try {
+    session.startTransaction();
+    if (!id) {
+      throw new ApiError('ID is missing.', StatusCodes.BAD_REQUEST);
+    }
+
+    if (!isValidObjectId(id)) {
+      throw new ApiError('Invalid ID.', StatusCodes.BAD_REQUEST);
+    }
+
+    if (!damage_sheets) {
+      throw new ApiError('Damage sheets are missing.', StatusCodes.BAD_REQUEST);
+    }
+
+    const pressing_done_details = await pressing_done_details_model
+      .findById(id)
+      // .lean()
+      .session();
+
+    if (!pressing_done_details) {
+      throw new ApiError(
+        "Pressing Done can't be revert.",
+        StatusCodes.BAD_REQUEST
+      );
+    }
+
+    if (pressing_done_details?.available_details?.no_of_sheets === 0) {
+      throw new ApiError('No available sheets found.', StatusCodes.NOT_FOUND);
+    }
+
+    const maxNumber = await pressing_damage_model.aggregate([
+      {
+        $group: {
+          _id: null,
+          max: {
+            $max: '$sr_no',
+          },
+        },
+      },
+    ]);
+
+    const newMax = maxNumber.length > 0 ? maxNumber[0].max + 1 : 1;
+
+    const factor =
+      damage_sheets / pressing_done_details?.available_details?.no_of_sheets;
+    const damage_sqm = Number(
+      pressing_done_details?.available_details?.sqm * factor
+    )?.toFixed(3);
+
+    const added_pressing_damage_sheets = await pressing_damage_model.create(
+      [
+        {
+          sr_no: newMax,
+          pressing_done_details_id: pressing_done_details?._id,
+          no_of_sheets: damage_sheets,
+          sqm: damage_sqm,
+          created_by: userDetails?._id,
+          updated_by: userDetails?._id,
+        },
+      ],
+      { session }
+    );
+
+    if (
+      !added_pressing_damage_sheets ||
+      added_pressing_damage_sheets.length === 0
+    ) {
+      throw new ApiError(
+        'Failed to insert pressing damage data',
+        StatusCodes.BAD_REQUEST
+      );
+    }
+
+    const update_pressing_done_after_added_to_damage =
+      await pressing_done_details_model.updateOne(
+        { _id: pressing_done_details?._id },
+        {
+          $inc: {
+            'available_details.no_of_sheets': -Number(damage_sheets),
+            'available_details.sqm': -Number(damage_sqm),
+          },
+          $set: {
+            isEditable: false,
+          },
+        },
+        { session }
+      );
+    console.log(
+      'update_pressing_done_after_added_to_damage',
+      update_pressing_done_after_added_to_damage
+    );
+    if (
+      !update_pressing_done_after_added_to_damage ||
+      update_pressing_done_after_added_to_damage?.modifiedCount <= 0
+    ) {
+      throw new ApiError(
+        'Failed update pressing done details after added to damage',
+        StatusCodes.BAD_REQUEST
+      );
+    }
+
+    const response = new ApiResponse(
+      StatusCodes.OK,
+      'Damage sheets added Successfully',
+      added_pressing_damage_sheets
+    );
+
+    await session.commitTransaction();
+    return res.status(StatusCodes.OK).json(response);
+  } catch (error) {
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    await session.endSession();
+  }
+});
