@@ -186,15 +186,18 @@ const cnc_done_schema = new mongoose.Schema(
         },
         igst: {
             type: Number,
-            required: [true, 'IGST is required.'],
+            // required: [true, 'IGST is required.'],
+            default: 0
         },
         cgst: {
             type: Number,
-            required: [true, 'CGST is required.'],
+            // required: [true, 'CGST is required.'],
+            default: 0
         },
         sgst: {
             type: Number,
-            required: [true, 'SGST is required.'],
+            // required: [true, 'SGST is required.'],
+            default: 0
         },
         gst_amount: {
             type: Number,
