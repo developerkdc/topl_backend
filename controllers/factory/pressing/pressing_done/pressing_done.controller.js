@@ -40,6 +40,7 @@ import {
 import face_history_model from '../../../../database/schema/inventory/face/face.history.schema.js';
 import plywood_production_history_model from '../../../../database/schema/factory/plywood_production/plywood_production_history.schema.js';
 import { pressing_damage_model } from '../../../../database/schema/factory/pressing/pressing_damage/pressing_damage.schema.js';
+import { pressing_done_history_model } from '../../../../database/schema/factory/pressing/pressing_history/pressing_done_history.schema.js';
 
 // Add pressing Api
 export const add_pressing_details = catchAsync(async (req, res, next) => {
@@ -1982,3 +1983,310 @@ export const add_to_damage_from_pressing_done = catchAsync(async (req, res) => {
     await session.endSession();
   }
 });
+
+export const fetch_all_pressing_done_items_history = catchAsync(
+  async (req, res, next) => {
+    const {
+      page = 1,
+      sortBy = 'updatedAt',
+      sort = 'desc',
+      limit = 10,
+      search = '',
+    } = req.query;
+    const {
+      string,
+      boolean,
+      numbers,
+      arrayField = [],
+    } = req.body?.searchFields || {};
+
+    const filter = req.body?.filter;
+
+    let search_query = {};
+    if (search != '' && req?.body?.searchFields) {
+      const search_data = DynamicSearch(
+        search,
+        boolean,
+        numbers,
+        string,
+        arrayField
+      );
+      if (search_data?.length == 0) {
+        return res.status(404).json({
+          statusCode: 404,
+          status: false,
+          data: {
+            data: [],
+          },
+          message: 'Results Not Found',
+        });
+      }
+      search_query = search_data;
+    }
+
+    const filterData = dynamic_filter(filter);
+
+    const match_query = {
+      ...search_query,
+      ...filterData,
+    };
+
+    // stage for getting pressing done details
+    const aggLookupPressingDoneDetails = {
+      $lookup: {
+        from: 'pressing_done_details',
+        localField: 'pressing_done_details_id',
+        foreignField: '_id',
+        as: 'pressing_done_details',
+      },
+    };
+    const aggUnwindPressingDoneDetails = {
+      $unwind: {
+        path: '$pressing_done_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    };
+
+    const aggGroupNoLookup = {
+      $lookup: {
+        from: 'grouping_done_items_details',
+        localField: 'pressing_done_details.group_no',
+        foreignField: 'group_no',
+        pipeline: [
+          {
+            $project: {
+              group_no: 1,
+              photo_no: 1,
+              photo_id: 1,
+            },
+          },
+        ],
+        as: 'grouping_done_items_details',
+      },
+    };
+    const aggGroupNoUnwind = {
+      $unwind: {
+        path: '$grouping_done_items_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    };
+
+    // stage for getting created user details
+    const aggCreatedUserDetails = {
+      $lookup: {
+        from: 'users',
+        localField: 'created_by',
+        foreignField: '_id',
+        pipeline: [
+          {
+            $project: {
+              first_name: 1,
+              last_name: 1,
+              user_name: 1,
+              user_type: 1,
+              email_id: 1,
+            },
+          },
+        ],
+        as: 'created_user_details',
+      },
+    };
+    const aggUnwindCreatedUser = {
+      $unwind: {
+        path: '$created_user_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    };
+
+    // stage for getting updated user details
+    const aggUpdatedUserDetails = {
+      $lookup: {
+        from: 'users',
+        localField: 'updated_by',
+        foreignField: '_id',
+        pipeline: [
+          {
+            $project: {
+              first_name: 1,
+              last_name: 1,
+              user_name: 1,
+              user_type: 1,
+              email_id: 1,
+            },
+          },
+        ],
+        as: 'updated_user_details',
+      },
+    };
+    const aggUnwindUpdatedUser = {
+      $unwind: {
+        path: '$updated_user_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    };
+
+    // stage for getting order details
+    const aggOrderRelatedData = [
+      {
+        $lookup: {
+          from: 'orders',
+          localField: 'order_id',
+          pipeline: [
+            {
+              $project: {
+                order_no: 1,
+                owner_name: 1,
+                orderDate: 1,
+                order_category: 1,
+                series_product: 1,
+              },
+            },
+          ],
+          foreignField: '_id',
+          as: 'order_details',
+        },
+      },
+      {
+        $unwind: {
+          path: '$order_details',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $lookup: {
+          from: 'series_product_order_item_details',
+          localField: 'order_item_id',
+          foreignField: '_id',
+          pipeline: [
+            {
+              $project: {
+                item_no: 1,
+                order_id: 1,
+                item_name: 1,
+                item_sub_category_name: 1,
+                group_no: 1,
+                photo_number: 1,
+              },
+            },
+          ],
+          as: 'series_product_order_item_details',
+        },
+      },
+      {
+        $unwind: {
+          path: '$series_product_order_item_details',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $lookup: {
+          from: 'decorative_order_item_details',
+          localField: 'order_item_id',
+          pipeline: [
+            {
+              $project: {
+                item_no: 1,
+                order_id: 1,
+                item_name: 1,
+                item_sub_category_name: 1,
+                group_no: 1,
+                photo_number: 1,
+              },
+            },
+          ],
+          foreignField: '_id',
+          as: 'decorative_order_item_details',
+        },
+      },
+      {
+        $unwind: {
+          path: '$decorative_order_item_details',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $addFields: {
+          order_item_details: {
+            $cond: {
+              if: {
+                $ne: [{ $type: '$decorative_order_item_details' }, 'missing'],
+              },
+              then: '$decorative_order_item_details',
+              else: '$series_product_order_item_details',
+            },
+          },
+        },
+      },
+    ];
+    const aggMatch = {
+      $match: {
+        ...match_query,
+      },
+    };
+
+    const aggSort = {
+      $sort: {
+        [sortBy]: sort === 'desc' ? -1 : 1,
+      },
+    };
+
+    const aggSkip = {
+      $skip: (parseInt(page) - 1) * parseInt(limit),
+    };
+
+    const aggLimit = {
+      $limit: parseInt(limit),
+    };
+
+    const list_aggregate = [
+      aggLookupPressingDoneDetails,
+      aggUnwindPressingDoneDetails,
+      aggGroupNoLookup,
+      aggGroupNoUnwind,
+      aggCreatedUserDetails,
+      aggUpdatedUserDetails,
+      aggUnwindCreatedUser,
+      aggUnwindUpdatedUser,
+      ...aggOrderRelatedData,
+      aggMatch,
+      aggSort,
+      aggSkip,
+      aggLimit,
+    ];
+
+    const result = await pressing_done_history_model.aggregate(list_aggregate);
+
+    const aggCount = {
+      $count: 'totalCount',
+    };
+
+    const count_total_docs = [
+      aggLookupPressingDoneDetails,
+      aggUnwindPressingDoneDetails,
+      // aggGroupNoLookup,
+      // aggGroupNoUnwind,
+      // aggCreatedUserDetails,
+      // aggUpdatedUserDetails,
+      // aggUnwindCreatedUser,
+      // aggUnwindUpdatedUser,
+      // ...aggOrderRelatedData,
+      aggMatch,
+      aggCount,
+    ];
+
+    const total_docs =
+      await pressing_done_history_model.aggregate(count_total_docs);
+
+    const totalPages = Math.ceil((total_docs[0]?.totalCount || 0) / limit);
+
+    const response = new ApiResponse(
+      StatusCodes.OK,
+      'Data Fetched Successfully',
+      {
+        data: result,
+        totalPages: totalPages,
+      }
+    );
+    return res.status(StatusCodes.OK).json(response);
+  }
+);
