@@ -22,6 +22,7 @@ import bunito_history_model from '../../../database/schema/factory/bunito/bunito
 import cnc_history_model from '../../../database/schema/factory/cnc/cnc_history/cnc.history.schema.js';
 import { issues_for_pressing_model } from '../../../database/schema/factory/pressing/issues_for_pressing/issues_for_pressing.schema.js';
 import { pressing_done_consumed_items_details_model } from '../../../database/schema/factory/pressing/pressing_done/pressing_done.schema.js';
+import { pressing_done_history_model } from '../../../database/schema/factory/pressing/pressing_history/pressing_done_history.schema.js';
 
 //item issued from model map
 const issued_from_factory_model_map = {
@@ -45,7 +46,7 @@ const revert_from_factory_model_map = {
 };
 //revert from factory history map
 const issued_from_factory_history_model_map = {
-  [item_issued_from?.pressing_factory]: 'pressing history model',
+  [item_issued_from?.pressing_factory]: pressing_done_history_model,
   [item_issued_from?.cnc_factory]: cnc_history_model,
   [item_issued_from?.bunito_factory]: bunito_history_model,
   [item_issued_from?.canvas_factory]: canvas_history_model,
