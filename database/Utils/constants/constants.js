@@ -109,6 +109,7 @@ export const item_issued_from = {
   color_factory: 'COLOR',
   polishing_factory: 'POLISHING',
   bunito_factory: 'BUNITO',
+  packing: 'PACKING',
 };
 
 export const item_issued_for = {

@@ -119,6 +119,12 @@ export const list_pressing_damage = catchAsync(async (req, res, next) => {
       as: 'updated_by',
     },
   };
+  const aggPressingDoneUnwind = {
+    $unwind: {
+      path: '$pressing_done_details',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
   const aggCreatedByUnwind = {
     $unwind: {
       path: '$created_by',
@@ -150,6 +156,7 @@ export const list_pressing_damage = catchAsync(async (req, res, next) => {
 
   const listAggregate = [
     aggPressingDoneLookup,
+    aggPressingDoneUnwind,
     aggCreatedByLookup,
     aggCreatedByUnwind,
     aggUpdatedByLookup,
