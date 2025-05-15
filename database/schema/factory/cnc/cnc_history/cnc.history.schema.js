@@ -1,5 +1,8 @@
 import mongoose from 'mongoose';
-import { issues_for_status, item_issued_from } from '../../../../Utils/constants/constants.js';
+import {
+  issues_for_status,
+  item_issued_from,
+} from '../../../../Utils/constants/constants.js';
 
 const cnc_history_schema = new mongoose.Schema(
   {
@@ -7,6 +10,10 @@ const cnc_history_schema = new mongoose.Schema(
     cnc_item_id: {
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Plywood Item ID is required.'],
+    },
+    issued_for_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, 'Issued to flow id is required.'],
     },
     issue_for_cnc_id: {
       type: mongoose.Schema.Types.ObjectId,

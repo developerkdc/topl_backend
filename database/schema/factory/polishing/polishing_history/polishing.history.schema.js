@@ -8,11 +8,16 @@ const polishing_history_schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Plywood Item ID is required.'],
     },
+    issued_for_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, 'Issued to flow id is required.'],
+    },
     issue_for_polishing_id: {
       type: mongoose.Schema.Types.ObjectId,
       // required: [true, 'Issued for order ID is required.'],
       default: null,
     },
+
     issue_status: {
       type: String,
       enum: {

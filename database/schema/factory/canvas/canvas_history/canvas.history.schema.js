@@ -6,6 +6,10 @@ const canvas_history_schema = new mongoose.Schema(
     sr_no: Number,
     canvas_item_id: {
       type: mongoose.Schema.Types.ObjectId,
+      required: [true, 'Canvas Item ID is required.'],
+    },
+    issued_for_id: {
+      type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Plywood Item ID is required.'],
     },
     issue_for_cnavas_id: {

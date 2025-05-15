@@ -13,6 +13,10 @@ const color_history_schema = new mongoose.Schema(
       // required: [true, 'Issued for order ID is required.'],
       default: null,
     },
+    issued_for_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, 'Issued to flow id is required.'],
+    },
     issue_status: {
       type: String,
       enum: {

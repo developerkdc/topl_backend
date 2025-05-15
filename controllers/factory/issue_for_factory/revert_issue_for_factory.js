@@ -21,13 +21,16 @@ import canvas_history_model from '../../../database/schema/factory/canvas/canvas
 import bunito_history_model from '../../../database/schema/factory/bunito/bunito_history/bunito.history.schema.js';
 import cnc_history_model from '../../../database/schema/factory/cnc/cnc_history/cnc.history.schema.js';
 import { issues_for_pressing_model } from '../../../database/schema/factory/pressing/issues_for_pressing/issues_for_pressing.schema.js';
-import { pressing_done_consumed_items_details_model } from '../../../database/schema/factory/pressing/pressing_done/pressing_done.schema.js';
+import {
+  pressing_done_consumed_items_details_model,
+  pressing_done_details_model,
+} from '../../../database/schema/factory/pressing/pressing_done/pressing_done.schema.js';
+import { pressing_done_history_model } from '../../../database/schema/factory/pressing/pressing_history/pressing_done_history.schema.js';
 import { pressing_done_history_model } from '../../../database/schema/factory/pressing/pressing_history/pressing_done_history.schema.js';
 
 //item issued from model map
 const issued_from_factory_model_map = {
-  [item_issued_from?.pressing_factory]:
-    pressing_done_consumed_items_details_model,
+  [item_issued_from?.pressing_factory]: pressing_done_details_model,
   [item_issued_from?.cnc_factory]: cnc_done_details_model,
   [item_issued_from?.bunito_factory]: bunito_done_details_model,
   [item_issued_from?.canvas_factory]: canvas_done_details_model,
@@ -174,7 +177,7 @@ class Revert_Issued_Factory_Item {
       await issued_from_factory_history_model_map[
         this.issued_item_details?.issued_from
       ]?.deleteOne(
-        { item_issued_for_id: this.issued_item_details?._id },
+        { issued_for_id: this.issued_item_details?._id },
         { session: this.session }
       );
     if (

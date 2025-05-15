@@ -44,6 +44,7 @@ import bunito_done_router from './bunito/bunito_done/bunito_done.routes.js';
 import issue_for_bunito_router from './bunito/issue_for_bunito/issue_for_bunito.routes.js';
 import dropdown_for_pressing_router from './pressing/issues_for_pressing/dropdown_for_create_pressing.js';
 import pressing_damage_router from './pressing/pressing_damage/pressing_damage.routes.js';
+import AuthMiddleware from '../../middlewares/verifyToken.js';
 
 const factoryRouter = express.Router();
 
@@ -127,8 +128,16 @@ factoryRouter.use('/factory/polishing-done', polishing_done_router);
 factoryRouter.use('/factory/polishing-damage', polishing_damage_router);
 
 //route for issuing data from factory
-factoryRouter.use('/factory/issue-for-factory', add_issue_for_factory_data);
+factoryRouter.use(
+  '/factory/issue-for-factory',
+  AuthMiddleware,
+  add_issue_for_factory_data
+);
 //route for reverting issued data from factory
-factoryRouter.use('/revert-issue-for-factory', revert_issue_for_factory_data);
+factoryRouter.post(
+  '/factory/revert-issue-for-factory',
+  AuthMiddleware,
+  revert_issue_for_factory_data
+);
 
 export default factoryRouter;
