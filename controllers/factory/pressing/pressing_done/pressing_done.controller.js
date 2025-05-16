@@ -272,7 +272,7 @@ export const add_pressing_details = catchAsync(async (req, res, next) => {
           // updated same in plywood inventory history
           const plywood_history_data = {
             plywood_item_id: consumed_from_item_id,
-            pressing_done_id: add_pressing_details_data?._id,
+            pressing_done_id: added_pressing_details?._id,
             issued_sheets: no_of_sheets,
             issued_sqm: sqm,
             issued_amount: amount,
@@ -385,10 +385,10 @@ export const add_pressing_details = catchAsync(async (req, res, next) => {
             );
           }
 
-          // updated same in plywood inventory history
+          // updated same in plywood resizing history
           const plywood_resizing_history_data = {
             plywood_resizing_done_id: consumed_from_item_id,
-            issued_for_id: add_pressing_details_data?._id, //it is issued for pressing, so we are storing the Pressing Done id
+            issued_for_id: added_pressing_details?._id, //it is issued for pressing, so we are storing the Pressing Done id
             issue_status: issues_for_status?.pressing,
             issued_sheets: no_of_sheets,
             issued_sqm: sqm,
@@ -482,7 +482,7 @@ export const add_pressing_details = catchAsync(async (req, res, next) => {
           // updated same in plywood production history
           const plywood_production_history_data = {
             plywood_production_done_id: consumed_from_item_id,
-            issued_for_id: add_pressing_details_data?._id,
+            issued_for_id: added_pressing_details?._id,
             issue_status: issues_for_status?.pressing,
             issued_sheets: no_of_sheets,
             issued_sqm: sqm,
@@ -574,7 +574,7 @@ export const add_pressing_details = catchAsync(async (req, res, next) => {
           // updated same in MDF inventory history
           const mdf_history_data = {
             mdf_item_id: consumed_from_item_id,
-            pressing_done_id: add_pressing_details_data?._id,
+            pressing_done_id: added_pressing_details?._id,
             issued_sheets: no_of_sheets,
             issued_sqm: sqm,
             issued_amount: amount,
@@ -693,7 +693,7 @@ export const add_pressing_details = catchAsync(async (req, res, next) => {
         // updated same in Fleece Paper inventory history
         const fleecePaper_history_data = {
           fleece_item_id: consumed_from_item_id,
-          pressing_done_id: add_pressing_details_data?._id,
+          pressing_done_id: added_pressing_details?._id,
           issue_status: issues_for_status?.pressing,
           issued_number_of_roll: number_of_roll,
           issued_sqm: sqm,
@@ -825,7 +825,7 @@ export const add_pressing_details = catchAsync(async (req, res, next) => {
           // updated same in Face inventory history
           const face_history_data = {
             face_item_id: consumed_from_item_id,
-            pressing_done_id: add_pressing_details_data?._id,
+            pressing_done_id: added_pressing_details?._id,
             issued_sheets: no_of_sheets,
             issued_sqm: sqm,
             issued_amount: amount,
@@ -1276,10 +1276,9 @@ export const revert_pressing_done_details = catchAsync(
 
               // revert the consumed details to plywood inventory
               const { pallet_no, no_of_sheets, sqm, amount } = base;
-
               const plywoodInventoryUpdateData =
                 await plywood_inventory_items_details.updateOne(
-                  { _id: consumed_from_item_id, pallet_no: pallet_no },
+                  { _id: consumed_from_item_id, pallet_number: pallet_no },
                   {
                     $inc: {
                       available_sheets: no_of_sheets,
@@ -1849,7 +1848,7 @@ export const revert_pressing_done_details = catchAsync(
 
       const response = new ApiResponse(
         StatusCodes.CREATED,
-        'Revert tapping details successfully'
+        'Revert pressing details successfully'
       );
       return res.status(StatusCodes.CREATED).json(response);
     } catch (error) {
