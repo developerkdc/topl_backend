@@ -1,20 +1,52 @@
 import mongoose from 'mongoose';
-import { issues_for_status, item_issued_from } from '../../../../Utils/constants/constants.js';
-
+import { issues_for_status, item_issued_for, item_issued_from, order_category } from '../../../../Utils/constants/constants.js';
+const validateOrderField = function () {
+  return this.issued_for === item_issued_for?.order ? true : false;
+};
+const issued_for_values = Object.values(item_issued_for)
 const canvas_history_schema = new mongoose.Schema(
   {
     sr_no: Number,
-    canvas_item_id: {
+    issue_for_canvas_id: {
       type: mongoose.Schema.Types.ObjectId,
-      required: [true, 'Canvas Item ID is required.'],
+      required: [true, 'Issue for canvas id is required.'],
     },
     issued_for_id: {
       type: mongoose.Schema.Types.ObjectId,
-      required: [true, 'Plywood Item ID is required.'],
+      required: [true, 'Issued to flow id is required.'],
     },
-    issue_for_cnavas_id: {
+    issued_item_id: {
       type: mongoose.Schema.Types.ObjectId,
       // required: [true, 'Issued for order ID is required.'],
+      default: null,
+    },
+    order_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+      required: [validateOrderField, 'order_id is required'],
+    },
+    order_item_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+      required: [validateOrderField, 'order_item_id is required'],
+    },
+    order_category: {
+      type: String,
+      enum: {
+        values: [order_category.decorative, order_category.series_product],
+        message: `Invalid type {{VALUE}} it must be one of the ${order_category.decorative},${order_category.series_product}`,
+      },
+      uppercase: true,
+      trim: true,
+      default: null,
+      required: [validateOrderField, 'order_category is required'],
+    },
+    issued_for: {
+      type: String,
+      enum: {
+        values: issued_for_values,
+        message: `Invalid type {{VALUE}} it must be one of the ${issued_for_values?.join(",")}`,
+      },
       default: null,
     },
     issue_status: {
@@ -22,12 +54,12 @@ const canvas_history_schema = new mongoose.Schema(
       enum: {
         values: [
           item_issued_from?.pressing_factory,
-          item_issued_from?.canvas_factory,
+          item_issued_from?.cnc_factory,
           item_issued_from?.color_factory,
           item_issued_from?.bunito_factory,
           item_issued_from?.polishing_factory,
         ],
-        message: `Invalid Type -> {{VALUE}} , it must be one of the ${(item_issued_from?.pressing_factory, item_issued_from?.canvas_factory, item_issued_from?.color_factory, item_issued_from?.bunito_factory, item_issued_from?.polishing_factory)}`,
+        message: `Invalid Type -> {{VALUE}} , it must be one of the ${(item_issued_from?.pressing_factory, item_issued_from?.cnc_factory, item_issued_from?.color_factory, item_issued_from?.bunito_factory, item_issued_from?.polishing_factory)}`,
       },
       default: issues_for_status?.order,
     },
@@ -58,7 +90,7 @@ const canvas_history_schema = new mongoose.Schema(
 const indexed_fields = [
   [{ issue_status: 1 }],
   [{ sr_no: 1 }, { unique: true }],
-  [{ canvas_item_id: 1 }],
+  [{ issued_item_id: 1 }],
 ];
 indexed_fields?.forEach((field) => canvas_history_schema.index(...field));
 const canvas_history_model = mongoose.model(

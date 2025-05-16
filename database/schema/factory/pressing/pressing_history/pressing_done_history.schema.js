@@ -12,13 +12,6 @@ const validateOrderField = function () {
 
 const pressing_done_history_schema = new mongoose.Schema(
   {
-    pressing_id: {
-      type: String,
-      // required: [true, 'Pressing ID is required'],
-      default: null,
-      trim: true,
-      uppercase: true,
-    },
     issued_item_id: {
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Pressing Done Details Id is required'],
