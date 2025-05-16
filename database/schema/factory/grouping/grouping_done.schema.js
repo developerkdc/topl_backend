@@ -65,22 +65,8 @@ export const grouping_done_details_model = mongoose.model(
   'grouping_done_details'
 );
 
-const validateOrderField = function () {
-  return this.issue_status === issues_for_status?.order ? true : false;
-};
-
 const grouping_done_items_details_schema = new mongoose.Schema(
   {
-    order_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      default: null,
-      required: [validateOrderField, 'order_id is required'],
-    },
-    order_item_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      default: null,
-      required: [validateOrderField, 'order_item_id is required'],
-    },
     grouping_done_other_details_id: {
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'grouping done id is required'],
