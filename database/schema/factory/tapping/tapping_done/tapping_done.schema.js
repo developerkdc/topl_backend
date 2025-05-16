@@ -82,7 +82,7 @@ export const tapping_done_other_details_model = mongoose.model(
 );
 
 const validateOrderField = function () {
-  return this.issue_status === issues_for_status?.order ? true : false;
+  return this.issue_for === issues_for_status?.order ? true : false;
 };
 
 const tapping_done_items_details_schema = new mongoose.Schema(
@@ -265,7 +265,7 @@ const tapping_done_items_details_schema = new mongoose.Schema(
       trim: true,
       required: [true, 'Grade Name is required'],
     },
-    issue_status: {
+    issue_for: {
       type: String,
       enum: {
         values: [

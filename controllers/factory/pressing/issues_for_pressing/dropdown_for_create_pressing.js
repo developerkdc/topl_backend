@@ -16,7 +16,7 @@ export const fetch_all_group_no_based_on_issued_status = catchAsync(
   async (req, res) => {
     const { type, order_id, order_item_id } = req.query;
     const search_query = {
-      issue_status: type,
+      issue_for: type,
     };
     if (type === issues_for_status?.order) {
       search_query.order_id = new mongoose.Types.ObjectId(order_id);

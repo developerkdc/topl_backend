@@ -202,7 +202,7 @@ const issues_for_pressing_schema = new mongoose.Schema(
       trim: true,
       required: [true, 'Grade Name is required'],
     },
-    issue_status: {
+    issue_for: {
       type: String,
       enum: {
         values: [
