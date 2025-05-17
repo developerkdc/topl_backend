@@ -85,6 +85,7 @@ export const add_tapping_details = catchAsync(async (req, res, next) => {
     // item details
     const items_details_data = items_details?.map((item, index) => {
       item.tapping_done_other_details_id = add_other_details_id;
+      item.order_category = fetch_issue_for_tapping_data?.order_category || null;
       item.created_by = userDetails?._id;
       item.updated_by = userDetails?._id;
       return item;
@@ -275,6 +276,7 @@ export const edit_tapping_details = catchAsync(async (req, res, next) => {
       };
       item.available_details = available_details;
       item.tapping_done_other_details_id = other_details_id;
+      item.order_category = fetch_issue_for_tapping_data?.order_category || null;
       item.created_by = item.created_by ? item.created_by : userDetails?._id;
       item.updated_by = userDetails?._id;
       item.createdAt = item.createdAt ? item.createdAt : new Date();

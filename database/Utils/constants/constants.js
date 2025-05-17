@@ -138,7 +138,7 @@ export const challan_status = {
 export const transaction_type = {
   regular: 'REGULAR',
   bill_to_ship_to: 'BILL TO SHIP TO',
-  bill_from_dispatch_from: 'Bill Form Dispatch From',
+  bill_from_dispatch_from: 'BILL FORM DISPATCH FROM',
   bill_to_ship_to_and_bill_from_dispatch_from:
     'BILL TO SHIP TO AND BILL FROM DISPATCH FROM',
 };

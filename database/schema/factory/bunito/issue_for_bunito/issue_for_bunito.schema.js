@@ -71,12 +71,12 @@ const issue_for_bunito_schema = new mongoose.Schema(
       enum: {
         values: [
           item_issued_from?.pressing_factory,
-          item_issued_from?.bunito_factory,
           item_issued_from?.color_factory,
           item_issued_from?.bunito_factory,
           item_issued_from?.polishing_factory,
+          item_issued_from?.cnc_factory,
         ],
-        message: `Invalid Type -> {{VALUE}} , it must be one of the ${(item_issued_from?.pressing_factory, item_issued_from?.bunito_factory, item_issued_from?.color_factory, item_issued_from?.bunito_factory, item_issued_from?.polishing_factory)}`,
+        message: `Invalid Type -> {{VALUE}} , it must be one of the ${(item_issued_from?.pressing_factory, item_issued_from?.cnc_factory, item_issued_from?.color_factory, item_issued_from?.bunito_factory, item_issued_from?.polishing_factory)}`,
       },
       required: [true, 'Issued from is required.'],
     },

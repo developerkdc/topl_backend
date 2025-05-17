@@ -10,7 +10,7 @@ import { plywood_resizing_done_details_model } from '../../../../database/schema
 import { mdf_inventory_items_details } from '../../../../database/schema/inventory/mdf/mdf.schema.js';
 import { plywood_production_model } from '../../../../database/schema/factory/plywood_production/plywood_production.schema.js';
 import { fleece_inventory_items_modal } from '../../../../database/schema/inventory/fleece/fleece.schema.js';
-import { issues_for_status } from '../../../../database/Utils/constants/constants.js';
+import { issues_for_status, item_issued_for } from '../../../../database/Utils/constants/constants.js';
 
 export const fetch_all_group_no_based_on_issued_status = catchAsync(
   async (req, res) => {
@@ -18,7 +18,7 @@ export const fetch_all_group_no_based_on_issued_status = catchAsync(
     const search_query = {
       issued_for: type,
     };
-    if (type === issues_for_status?.order) {
+    if (type === item_issued_for.order) {
       search_query.order_id = new mongoose.Types.ObjectId(order_id);
       search_query.order_item_id = new mongoose.Types.ObjectId(order_item_id);
     }

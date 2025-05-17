@@ -5,7 +5,7 @@ import ApiError from '../../../utils/errors/apiError.js';
 import catchAsync from '../../../utils/errors/catchAsync.js';
 import { RawOrderItemDetailsModel } from '../../../database/schema/order/raw_order/raw_order_item_details.schema.js';
 import { grouping_done_details_model, grouping_done_items_details_model } from '../../../database/schema/factory/grouping/grouping_done.schema.js';
-import { order_category } from '../../../database/Utils/constants/constants.js';
+import { item_issued_for, order_category } from '../../../database/Utils/constants/constants.js';
 import { decorative_order_item_details_model } from '../../../database/schema/order/decorative_order/decorative_order_item_details.schema.js';
 import series_product_order_item_details_model from '../../../database/schema/order/series_product_order/series_product_order_item_details.schema.js';
 import mongoose from 'mongoose';
@@ -229,7 +229,7 @@ export const issue_for_tapping_from_grouping_for_order = catchAsync(async (req, 
       order_id: order_item_details?.order_id,
       order_item_id: order_item_details?._id,
       order_category: order_item_details?.order_details?.order_category,
-      issued_for: issues_for_status.order,
+      issued_for: item_issued_for.order,
       issued_from: issues_for_status.grouping,
       no_of_leaves: issue_no_of_leaves,
       sqm: tapping_sqm,
