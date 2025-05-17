@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import { issues_for_status, order_category } from '../../../../Utils/constants/constants.js';
 
 const validateOrderField = function () {
-  return this.issue_status === issues_for_status?.order ? true : false;
+  return this.issued_for === issues_for_status?.order ? true : false;
 };
 
 const issue_for_tapping_schema = new mongoose.Schema(
@@ -173,7 +173,7 @@ const issue_for_tapping_schema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    issue_status: {
+    issued_for: {
       type: String,
       enum: {
         values: [

@@ -178,16 +178,26 @@ const grouping_done_history_schema = new mongoose.Schema(
       trim: true,
       required: [true, 'Grade Name is required'],
     },
-    issue_status: {
+    issued_for: {
       type: String,
       enum: {
         values: [
           issues_for_status?.order,
           issues_for_status?.stock,
           issues_for_status?.sample,
-          issues_for_status?.challan,
         ],
-        message: `Invalid type {{VALUE}} it must be one of the ${(issues_for_status.order, issues_for_status.stock, issues_for_status.sample, issues_for_status?.challan)}`,
+        message: `Invalid type {{VALUE}} it must be one of the ${(issues_for_status.order, issues_for_status.stock, issues_for_status.sample)}`,
+      },
+      default: null,
+    },
+    issue_status: {
+      type: String,
+      enum: {
+        values: [
+          issues_for_status?.challan,
+          issues_for_status?.tapping,
+        ],
+        message: `Invalid type {{VALUE}} it must be one of the ${(issues_for_status?.challan, issues_for_status?.tapping)}`,
       },
       default: null,
     },

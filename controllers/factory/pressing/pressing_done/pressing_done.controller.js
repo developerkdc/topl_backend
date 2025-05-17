@@ -443,6 +443,7 @@ export const add_pressing_details = catchAsync(async (req, res, next) => {
             available_no_of_sheets,
             available_total_sqm,
             available_amount,
+            sr_no
           } = plywoodProductionItem;
 
           if (

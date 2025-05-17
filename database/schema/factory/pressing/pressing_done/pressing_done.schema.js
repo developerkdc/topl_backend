@@ -7,7 +7,7 @@ import {
 } from '../../../../Utils/constants/constants.js';
 
 const validateOrderField = function () {
-  return this.issue_status === issues_for_status?.order ? true : false;
+  return this.issued_for === issues_for_status?.order ? true : false;
 };
 
 const pressing_done_details_schema = new mongoose.Schema(
@@ -63,7 +63,7 @@ const pressing_done_details_schema = new mongoose.Schema(
       default: null,
       required: [validateOrderField, 'order_category is required'],
     },
-    issue_status: {
+    issued_for: {
       type: String,
       enum: {
         values: [
@@ -417,7 +417,7 @@ const pressing_done_consumed_items_details_schema = new mongoose.Schema(
             // requiredOnBaseType(base_type.plywood) ||
             //   requiredOnBaseType(base_type.mdf),
             function () {
-              return this.base_type === base_type_constants.plywood ||
+              return (this.base_type === base_type_constants.plywood && this.consumed_from === consumed_from_constants.inventory) ||
                 this.base_type === base_type_constants.mdf
                 ? true
                 : false;

@@ -20,7 +20,7 @@ export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(
     try {
       const userDetails = req.userDetails;
       const { grouping_done_item_id } = req.params;
-      const { issue_status, issue_no_of_leaves } = req.body;
+      const { issued_for, issue_no_of_leaves } = req.body;
       if (
         !grouping_done_item_id ||
         !mongoose.isValidObjectId(grouping_done_item_id)
@@ -30,7 +30,7 @@ export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(
           StatusCodes.BAD_REQUEST
         );
       }
-      if (!issue_status || !issue_no_of_leaves) {
+      if (!issued_for || !issue_no_of_leaves) {
         throw new ApiError(
           'Required issue status or issue no of leaves',
           StatusCodes.BAD_REQUEST
@@ -38,7 +38,7 @@ export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(
       }
       if (
         ![issues_for_status?.stock, issues_for_status?.sample].includes(
-          issue_status
+          issued_for
         )
       ) {
         throw new ApiError('Invalid issue status', StatusCodes.BAD_REQUEST);
@@ -112,7 +112,7 @@ export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(
         order_id: null,
         order_item_id: null,
         order_category: null,
-        issue_status: issue_status,
+        issued_for: issued_for,
         issued_from: issues_for_status.grouping,
         no_of_leaves: issue_no_of_leaves,
         sqm: tapping_sqm,
@@ -144,6 +144,7 @@ export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(
             {
               issue_for_tapping_id: issue_for_tapping_id,
               ...grouping_history_detials,
+              issue_status:issues_for_status.tapping
             },
           ],
           {

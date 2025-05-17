@@ -55,8 +55,6 @@ export const fetch_all_group_no_by_item_name = catchAsync(async (req, res) => {
     'available_details.no_of_leaves': {
       $gt: 0,
     },
-    // issue_status: null,
-    // "invoice_details.approval_status.sendForApproval.status": false
   };
   const pipeline = [
     { $match: { ...match_query } },
@@ -231,7 +229,7 @@ export const issue_for_tapping_from_grouping_for_order = catchAsync(async (req, 
       order_id: order_item_details?.order_id,
       order_item_id: order_item_details?._id,
       order_category: order_item_details?.order_details?.order_category,
-      issue_status: issues_for_status.order,
+      issued_for: issues_for_status.order,
       issued_from: issues_for_status.grouping,
       no_of_leaves: issue_no_of_leaves,
       sqm: tapping_sqm,
