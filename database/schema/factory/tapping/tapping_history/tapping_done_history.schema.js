@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import { issues_for_status, order_category } from '../../../../Utils/constants/constants.js';
 
 const validateOrderField = function () {
-  return this.issue_for === issues_for_status?.order ? true : false;
+  return this.issued_for === issues_for_status?.order ? true : false;
 };
 
 const tapping_done_history_schema = new mongoose.Schema(
@@ -173,7 +173,7 @@ const tapping_done_history_schema = new mongoose.Schema(
       trim: true,
       required: [true, 'Grade Name is required'],
     },
-    issue_for: {
+    issued_for: {
       type: String,
       enum: {
         values: [

@@ -178,7 +178,7 @@ const grouping_done_history_schema = new mongoose.Schema(
       trim: true,
       required: [true, 'Grade Name is required'],
     },
-    issue_for: {
+    issued_for: {
       type: String,
       enum: {
         values: [
