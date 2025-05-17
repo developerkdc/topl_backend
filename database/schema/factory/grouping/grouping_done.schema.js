@@ -1,5 +1,4 @@
 import mongoose from 'mongoose';
-import { issues_for_status } from '../../../Utils/constants/constants.js';
 
 const grouping_done_details_schema = new mongoose.Schema(
   {

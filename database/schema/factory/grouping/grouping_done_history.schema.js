@@ -1,8 +1,8 @@
 import mongoose from 'mongoose';
-import { issues_for_status, order_category } from '../../../Utils/constants/constants.js';
+import { issues_for_status, item_issued_for, order_category } from '../../../Utils/constants/constants.js';
 
 const validateOrderField = function () {
-  return this.issue_status === issues_for_status?.order ? true : false;
+  return this.issue_status === item_issued_for.order ? true : false;
 };
 
 const grouping_done_history_schema = new mongoose.Schema(
@@ -182,11 +182,11 @@ const grouping_done_history_schema = new mongoose.Schema(
       type: String,
       enum: {
         values: [
-          issues_for_status?.order,
-          issues_for_status?.stock,
-          issues_for_status?.sample,
+          item_issued_for?.order,
+          item_issued_for?.stock,
+          item_issued_for?.sample,
         ],
-        message: `Invalid type {{VALUE}} it must be one of the ${(issues_for_status.order, issues_for_status.stock, issues_for_status.sample)}`,
+        message: `Invalid type {{VALUE}} it must be one of the ${(item_issued_for?.order, item_issued_for?.stock, item_issued_for?.sample)}`,
       },
       default: null,
     },

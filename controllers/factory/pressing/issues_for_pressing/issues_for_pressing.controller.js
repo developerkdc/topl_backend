@@ -5,7 +5,7 @@ import {
   tapping_done_other_details_model,
 } from '../../../../database/schema/factory/tapping/tapping_done/tapping_done.schema.js';
 import { tapping_done_history_model } from '../../../../database/schema/factory/tapping/tapping_history/tapping_done_history.schema.js';
-import { issues_for_status, order_category } from '../../../../database/Utils/constants/constants.js';
+import { issues_for_status, item_issued_for, order_category } from '../../../../database/Utils/constants/constants.js';
 import ApiResponse from '../../../../utils/ApiResponse.js';
 import { StatusCodes } from '../../../../utils/constants.js';
 import { dynamic_filter } from '../../../../utils/dymanicFilter.js';
@@ -372,7 +372,7 @@ export const issue_for_pressing_from_tapping_for_order = catchAsync(
         order_id: order_item_details?.order_id,
         order_item_id: order_item_details?._id,
         order_category: order_item_details?.order_details?.order_category,
-        issued_for: issues_for_status.order,
+        issued_for: item_issued_for.order,
         issued_from: issues_for_status.tapping,
         no_of_sheets: issue_no_of_sheets,
         sqm: pressing_sqm,

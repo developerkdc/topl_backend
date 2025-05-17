@@ -6,7 +6,7 @@ import {
   grouping_done_details_model,
   grouping_done_items_details_model,
 } from '../../../../database/schema/factory/grouping/grouping_done.schema.js';
-import { issues_for_status } from '../../../../database/Utils/constants/constants.js';
+import { issues_for_status, item_issued_for } from '../../../../database/Utils/constants/constants.js';
 import issue_for_tapping_model from '../../../../database/schema/factory/tapping/issue_for_tapping/issue_for_tapping.schema.js';
 import ApiResponse from '../../../../utils/ApiResponse.js';
 import grouping_done_history_model from '../../../../database/schema/factory/grouping/grouping_done_history.schema.js';
@@ -37,7 +37,7 @@ export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(
         );
       }
       if (
-        ![issues_for_status?.stock, issues_for_status?.sample].includes(
+        ![item_issued_for.stock, item_issued_for.sample].includes(
           issued_for
         )
       ) {
