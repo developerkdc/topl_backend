@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import {
   issues_for_status,
+  item_issued_for,
   item_issued_from,
   order_category,
 } from '../../../../Utils/constants/constants.js';
@@ -11,17 +12,12 @@ const validateOrderField = function () {
 
 const pressing_done_history_schema = new mongoose.Schema(
   {
-    pressing_id: {
-      type: String,
-      required: [true, 'Pressing ID is required'],
-      trim: true,
-      uppercase: true,
-    },
-    pressing_done_details_id: {
+    issued_item_id: {
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Pressing Done Details Id is required'],
     },
-    issued_to_flow: {  //name of factory where item has been issue
+    issue_status: {
+      //name of factory where item has been issue
       type: String,
       enum: {
         values: [
@@ -34,9 +30,9 @@ const pressing_done_history_schema = new mongoose.Schema(
         ],
         message: `Invalid Type -> {{VALUE}} , it must be one of the ${(item_issued_from?.packing, item_issued_from?.cnc_factory, item_issued_from?.color_factory, item_issued_from?.bunito_factory, item_issued_from?.polishing_factory)}`,
       },
-      required: [true, 'Issued to flow is required.'],
+      required: [true, 'Issued for  is required.'],
     },
-    issued_to_flow_id: {
+    issued_for_id: {
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Issued to flow id is required.'],
     },
@@ -71,13 +67,13 @@ const pressing_done_history_schema = new mongoose.Schema(
       default: 0,
       required: [true, 'SQM is required'],
     },
-    issue_status: {
+    issued_for: {
       type: String,
       enum: {
         values: [
-          issues_for_status.order,
-          issues_for_status.stock,
-          issues_for_status.sample,
+          item_issued_for.order,
+          item_issued_for.stock,
+          item_issued_for.sample,
         ],
         message: `Invalid type {{VALUE}} it must be one of the ${(issues_for_status.order, issues_for_status.stock, issues_for_status.sample)}`,
       },

@@ -1,16 +1,57 @@
 import mongoose from 'mongoose';
-import { issues_for_status, item_issued_from } from '../../../../Utils/constants/constants.js';
+import {
+  issues_for_status,
+  item_issued_from, item_issued_for,
+  order_category
+} from '../../../../Utils/constants/constants.js';
 
+const validateOrderField = function () {
+  return this.issued_for === item_issued_for?.order ? true : false;
+};
+const issued_for_values = Object.values(item_issued_for)
 const cnc_history_schema = new mongoose.Schema(
   {
     sr_no: Number,
-    cnc_item_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: [true, 'Plywood Item ID is required.'],
-    },
     issue_for_cnc_id: {
       type: mongoose.Schema.Types.ObjectId,
+      required: [true, 'Issue for cnc id is required.'],
+    },
+    issued_for_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, 'Issued to flow id is required.'],
+    },
+    issued_item_id: {
+      type: mongoose.Schema.Types.ObjectId,
       // required: [true, 'Issued for order ID is required.'],
+      default: null,
+    },
+    order_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+      required: [validateOrderField, 'order_id is required'],
+    },
+    order_item_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+      required: [validateOrderField, 'order_item_id is required'],
+    },
+    order_category: {
+      type: String,
+      enum: {
+        values: [order_category.decorative, order_category.series_product],
+        message: `Invalid type {{VALUE}} it must be one of the ${order_category.decorative},${order_category.series_product}`,
+      },
+      uppercase: true,
+      trim: true,
+      default: null,
+      required: [validateOrderField, 'order_category is required'],
+    },
+    issued_for: {
+      type: String,
+      enum: {
+        values: issued_for_values,
+        message: `Invalid type {{VALUE}} it must be one of the ${issued_for_values?.join(",")}`,
+      },
       default: null,
     },
     issue_status: {
@@ -27,6 +68,7 @@ const cnc_history_schema = new mongoose.Schema(
       },
       default: issues_for_status?.order,
     },
+
     no_of_sheets: {
       type: Number,
       required: [true, 'Issued sheets are required.'],
@@ -54,7 +96,7 @@ const cnc_history_schema = new mongoose.Schema(
 const indexed_fields = [
   [{ issue_status: 1 }],
   [{ sr_no: 1 }, { unique: true }],
-  [{ cnc_item_id: 1 }],
+  [{ issued_item_id: 1 }],
 ];
 indexed_fields?.forEach((field) => cnc_history_schema.index(...field));
 const cnc_history_model = mongoose.model(

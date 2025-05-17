@@ -12,6 +12,7 @@ export const add_issue_for_factory_data = catchAsync(async (req, res) => {
 
   const session = await mongoose.startSession();
   try {
+    session.startTransaction();
     for (let field of [
       'issued_from',
       'issue_details',
@@ -22,7 +23,7 @@ export const add_issue_for_factory_data = catchAsync(async (req, res) => {
         throw new ApiError(`${field} is missing.`, StatusCodes.BAD_REQUEST);
       }
     }
-    session.startTransaction();
+
     const add_to_factory_handler = new Issue_For_Factory(
       session,
       userDetails,
