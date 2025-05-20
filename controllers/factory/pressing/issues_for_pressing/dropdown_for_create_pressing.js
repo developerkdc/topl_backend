@@ -3,22 +3,22 @@ import { issues_for_pressing_model } from '../../../../database/schema/factory/p
 import ApiResponse from '../../../../utils/ApiResponse.js';
 import { StatusCodes } from '../../../../utils/constants.js';
 
-import catchAsync from '../../../../utils/errors/catchAsync.js';
-import ApiError from '../../../../utils/errors/apiError.js';
-import { plywood_inventory_items_details } from '../../../../database/schema/inventory/Plywood/plywood.schema.js';
-import { plywood_resizing_done_details_model } from '../../../../database/schema/factory/plywood_resizing_factory/resizing_done/resizing.done.schema.js';
-import { mdf_inventory_items_details } from '../../../../database/schema/inventory/mdf/mdf.schema.js';
 import { plywood_production_model } from '../../../../database/schema/factory/plywood_production/plywood_production.schema.js';
+import { plywood_resizing_done_details_model } from '../../../../database/schema/factory/plywood_resizing_factory/resizing_done/resizing.done.schema.js';
 import { fleece_inventory_items_modal } from '../../../../database/schema/inventory/fleece/fleece.schema.js';
-import { issues_for_status, item_issued_for } from '../../../../database/Utils/constants/constants.js';
+import { mdf_inventory_items_details } from '../../../../database/schema/inventory/mdf/mdf.schema.js';
+import { plywood_inventory_items_details } from '../../../../database/schema/inventory/Plywood/plywood.schema.js';
+import { item_issued_for } from '../../../../database/Utils/constants/constants.js';
+import ApiError from '../../../../utils/errors/apiError.js';
+import catchAsync from '../../../../utils/errors/catchAsync.js';
 
 export const fetch_all_group_no_based_on_issued_status = catchAsync(
   async (req, res) => {
     const { type, order_id, order_item_id } = req.query;
     const search_query = {
-      issued_for: type,
+      issued_for: type?.toUpperCase(),
     };
-    if (type === item_issued_for.order) {
+    if (type?.toUpperCase() === item_issued_for.order) {
       search_query.order_id = new mongoose.Types.ObjectId(order_id);
       search_query.order_item_id = new mongoose.Types.ObjectId(order_item_id);
     }
