@@ -522,6 +522,8 @@ export const listing_cnc_history = catchAsync(async (req, res) => {
   //   },
   // };
 
+
+
   const aggLookUpIssuedDetails = {
     $lookup: {
       from: "issue_for_cnc_details_view",
