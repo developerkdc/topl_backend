@@ -6,6 +6,7 @@ import {
   fetchPhotoList,
   fetchSinglePhoto,
   updatePhoto,
+  updatePhotoStatus,
 } from '../../../controllers/masters/Photo/photo.controller.js';
 import { MulterFunction } from '../../../config/multer/multer.js';
 
@@ -30,6 +31,7 @@ photoRouter.patch(
   updatePhoto
 );
 
+photoRouter.patch('/update-status-photo/:id', AuthMiddleware, updatePhotoStatus);
 photoRouter.get('/single-photo/:id', AuthMiddleware, fetchSinglePhoto);
 photoRouter.post('/list-photo', AuthMiddleware, fetchPhotoList);
 
