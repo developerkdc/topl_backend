@@ -1,13 +1,13 @@
+import fs from 'fs';
 import mongoose from 'mongoose';
+import { grouping_done_items_details_model } from '../../../database/schema/factory/grouping/grouping_done.schema.js';
+import photoModel from '../../../database/schema/masters/photo.schema.js';
 import ApiResponse from '../../../utils/ApiResponse.js';
+import { dynamic_filter } from '../../../utils/dymanicFilter.js';
+import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import ApiError from '../../../utils/errors/apiError.js';
 import catchAsync from '../../../utils/errors/catchAsync.js';
-import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
-import { dynamic_filter } from '../../../utils/dymanicFilter.js';
-import photoModel from '../../../database/schema/masters/photo.schema.js';
-import fs from 'fs';
-import { grouping_done_items_details_model } from '../../../database/schema/factory/grouping/grouping_done.schema.js';
-import { isNull } from 'util';
+import { StatusCodes } from '../../../utils/constants.js';
 
 export const addPhoto = catchAsync(async (req, res, next) => {
   let { photo_number } = req.body;
@@ -276,6 +276,46 @@ export const updatePhoto = catchAsync(async (req, res, next) => {
   } finally {
     session.endSession();
   }
+});
+export const updatePhotoStatus = catchAsync(async (req, res, next) => {
+  let { status } = req.body;
+  const { id } = req.params;
+  const authUserDetail = req.userDetails;
+
+  if (!id || !mongoose.isValidObjectId(id)) {
+    return next(new ApiError('Invalid Params Id', 400));
+  }
+
+  const photoData = {
+    status: status,
+    updated_by: authUserDetail?._id,
+  };
+
+  const fetchPhotoData = await photoModel.findOne({ _id: id });
+  if (!fetchPhotoData) {
+    return next(new ApiError("Photo Details not found", StatusCodes.NOT_FOUND))
+  }
+
+  const updatePhotoData = await photoModel.updateOne(
+    { _id: id },
+    {
+      $set: photoData,
+    },
+  );
+
+  if (updatePhotoData.matchedCount <= 0) {
+    return next(new ApiError('Document not found', 404));
+  }
+  if (!updatePhotoData.acknowledged || updatePhotoData.modifiedCount <= 0) {
+    return next(new ApiError('Failed to update document', 400));
+  }
+
+  const response = new ApiResponse(
+    200,
+    'Photo Update Successfully',
+    updatePhotoData
+  );
+  return res.status(201).json(response);
 });
 
 export const fetchPhotoList = catchAsync(async (req, res, next) => {
