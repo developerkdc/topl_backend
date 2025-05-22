@@ -129,13 +129,13 @@ factoryRouter.use('/factory/polishing-damage', polishing_damage_router);
 
 //route for issuing data from factory
 factoryRouter.use(
-  '/issue-for-factory',
+  '/factory/issue-for-factory',
   AuthMiddleware,
   add_issue_for_factory_data
 );
 //route for reverting issued data from factory
 factoryRouter.post(
-  '/revert-issue-for-factory',
+  '/factory/revert-issue-for-factory',
   AuthMiddleware,
   revert_issue_for_factory_data
 );
