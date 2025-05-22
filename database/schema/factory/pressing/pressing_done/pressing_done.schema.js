@@ -3,6 +3,7 @@ import {
   base_type_constants,
   consumed_from_constants,
   issues_for_status,
+  item_issued_for,
   order_category,
 } from '../../../../Utils/constants/constants.js';
 
