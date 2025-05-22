@@ -67,11 +67,11 @@ const pressing_done_details_schema = new mongoose.Schema(
       type: String,
       enum: {
         values: [
-          issues_for_status.order,
-          issues_for_status.stock,
-          issues_for_status.sample,
+          item_issued_for.order,
+          item_issued_for.stock,
+          item_issued_for.sample,
         ],
-        message: `Invalid type {{VALUE}} it must be one of the ${(issues_for_status.order, issues_for_status.stock, issues_for_status.sample)}`,
+        message: `Invalid type {{VALUE}} it must be one of the ${(item_issued_for.order, item_issued_for.stock, item_issued_for.sample)}`,
       },
       default: null,
     },
