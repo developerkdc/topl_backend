@@ -22,28 +22,28 @@ const order_items_collections = {
 export const fetch_all_group_no_by_item_name = catchAsync(async (req, res) => {
   const { id } = req.params;
   const category = req?.query?.category;
-  console.log("category : ",category);
+  console.log("category : ", category);
   if (!isValidObjectId(id)) {
     throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
   }
   let order_item_data;
   const search_query = {};
-  if(category === order_category?.raw){
-     order_item_data = await RawOrderItemDetailsModel.findById(id);
-     if (!order_item_data) {
-       throw new ApiError('Order Item Data not found', StatusCodes.NOT_FOUND);
-     }
-     if (order_item_data?.item_name) {
-       search_query['item_name'] = order_item_data?.item_name;
-     }
+  if (category === order_category?.raw) {
+    order_item_data = await RawOrderItemDetailsModel.findById(id);
+    if (!order_item_data) {
+      throw new ApiError('Order Item Data not found', StatusCodes.NOT_FOUND);
+    }
+    if (order_item_data?.item_name) {
+      search_query['item_name'] = order_item_data?.item_name;
+    }
   }
-  if(category === order_category?.decorative){
+  if (category === order_category?.decorative) {
     order_item_data = await decorative_order_item_details_model.findById(id);
     // if (!order_item_data) {
     //   throw new ApiError('Order Item Data not found', StatusCodes.NOT_FOUND);
     // }
   }
-  if(category === order_category?.series_product){
+  if (category === order_category?.series_product) {
     order_item_data = await series_product_order_item_details_model.findById(id);
     // if (!order_item_data) {
     //   throw new ApiError('Order Item Data not found', StatusCodes.NOT_FOUND);
