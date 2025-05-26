@@ -443,7 +443,7 @@ export const add_pressing_details = catchAsync(async (req, res, next) => {
             available_no_of_sheets,
             available_total_sqm,
             available_amount,
-            sr_no
+            sr_no,
           } = plywoodProductionItem;
 
           if (
@@ -741,6 +741,14 @@ export const add_pressing_details = catchAsync(async (req, res, next) => {
         pressingDoneConsumedItemsDetailsObject.base_details.push({
           ...base,
         });
+      }
+
+      // Handle error if base type is not recognized
+      else {
+        throw new ApiError(
+          `Invalid base_type: ${base_type}. Supported types are: ${Object.values(base_type_constants).join(', ')}`,
+          StatusCodes.BAD_REQUEST
+        );
       }
     }
 
