@@ -39,7 +39,7 @@ const canvas_history_schema = new mongoose.Schema(
       uppercase: true,
       trim: true,
       default: null,
-      required: [validateOrderField, 'order_category is required'],
+      // required: [validateOrderField, 'order_category is required'],
     },
     issued_for: {
       type: String,
