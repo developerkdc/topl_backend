@@ -232,7 +232,14 @@ const indexingFields = [
   [{ updatedAt: 1 }],
 ];
 
-indexingFields.forEach((index) => pressing_done_details_schema.index(...index));
+// indexingFields.forEach((index) => pressing_done_details_schema.index(...index));
+indexingFields.forEach((index) => {
+  if (index.length === 2) {
+    pressing_done_details_schema.index(index[0], index[1]); // fields, options
+  } else {
+    pressing_done_details_schema.index(index[0]); // only fields
+  }
+});
 
 export const pressing_done_details_model = mongoose.model(
   'pressing_done_details',
