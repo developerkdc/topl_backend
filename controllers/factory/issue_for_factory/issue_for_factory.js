@@ -232,7 +232,7 @@ class Issue_For_Factory {
         updated_by: this.userDetails?._id,
         issue_status: this.add_to_factory,
         order_id: this.issue_details?.order_id,
-        order_id: this.issue_details?.order_item_id
+        order_item_id: this.issue_details?.order_item_id
         // order_category,
       };
       console.log(history_payload);
