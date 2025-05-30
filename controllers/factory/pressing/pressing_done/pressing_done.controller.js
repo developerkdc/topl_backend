@@ -2043,7 +2043,7 @@ export const fetch_all_pressing_done_items_history = catchAsync(
     const aggLookupPressingDoneDetails = {
       $lookup: {
         from: 'pressing_done_details',
-        localField: 'pressing_done_details_id',
+        localField: 'issued_item_id',
         foreignField: '_id',
         as: 'pressing_done_details',
       },

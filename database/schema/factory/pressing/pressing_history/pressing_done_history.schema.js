@@ -108,6 +108,21 @@ const pressing_done_history_schema = new mongoose.Schema(
   }
 );
 
+// indexing
+const indexingFields = [
+  [{ issued_item_id: 1 }],
+  [{ issue_status: 1 }],
+  [{ isEditable: 1 }],
+  [{ order_id: 1 }],
+  [{ order_item_id: 1 }],
+  [{ group_no: 1 }],
+  [{ flow_process: 1 }],
+  [{ created_by: 1 }],
+  [{ updatedAt: 1 }],
+];
+
+indexingFields.forEach((index) => pressing_done_history_schema.index(...index));
+
 export const pressing_done_history_model = mongoose.model(
   'pressing_done_history',
   pressing_done_history_schema,
