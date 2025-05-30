@@ -126,7 +126,7 @@ const pressing_done_details_schema = new mongoose.Schema(
       required: [true, 'Pressing Id is required'],
       trim: true,
       uppercase: true,
-      unique: true,
+      // unique: true,
     },
     length: {
       type: Number,
@@ -223,7 +223,7 @@ const indexingFields = [
   [{ isEditable: 1 }],
   [{ order_id: 1 }],
   [{ group_no: 1 }],
-  [{ pressing_id: 1, unique: true }],
+  [{ pressing_id: 1 }, { unique: true }],
   [{ 'available_details.no_of_sheets': 1 }],
   [{ 'available_details.sqm': 1 }],
   [{ 'available_details.amount': 1 }],
@@ -232,7 +232,14 @@ const indexingFields = [
   [{ updatedAt: 1 }],
 ];
 
-indexingFields.forEach((index) => pressing_done_details_schema.index(...index));
+// indexingFields.forEach((index) => pressing_done_details_schema.index(...index));
+indexingFields.forEach((index) => {
+  if (index.length === 2) {
+    pressing_done_details_schema.index(index[0], index[1]); // fields, options
+  } else {
+    pressing_done_details_schema.index(index[0]); // only fields
+  }
+});
 
 export const pressing_done_details_model = mongoose.model(
   'pressing_done_details',
@@ -418,7 +425,8 @@ const pressing_done_consumed_items_details_schema = new mongoose.Schema(
             // requiredOnBaseType(base_type.plywood) ||
             //   requiredOnBaseType(base_type.mdf),
             function () {
-              return (this.base_type === base_type_constants.plywood && this.consumed_from === consumed_from_constants.inventory) ||
+              return (this.base_type === base_type_constants.plywood &&
+                this.consumed_from === consumed_from_constants.inventory) ||
                 this.base_type === base_type_constants.mdf
                 ? true
                 : false;
