@@ -244,7 +244,15 @@ const indexed_fields = [
     [{ raw_material: 1 }],
 ];
 
-indexed_fields.forEach((index) => cnc_done_schema.index(...index));
+// indexed_fields.forEach((index) => cnc_done_schema.index(...index));
+ indexed_fields.forEach((index) => {
+  if (index.length === 2) {
+    cnc_done_schema.index(index[0], index[1]); // fields, options
+  } else {
+    cnc_done_schema.index(index[0]); // only fields
+  }
+});
+
 const challan_done_model = mongoose.model(
     'challan_done_details',
     cnc_done_schema,

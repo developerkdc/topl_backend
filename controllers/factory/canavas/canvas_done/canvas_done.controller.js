@@ -18,7 +18,7 @@ export const create_canvas = catchAsync(async (req, res) => {
     session.startTransaction();
     if (!canvas_done_details) {
       throw new ApiError(
-        'canvas Done details not found.',
+        'Canvas Done details not found.',
         StatusCodes.NOT_FOUND
       );
     }
@@ -106,7 +106,7 @@ export const create_canvas = catchAsync(async (req, res) => {
     }
     const response = new ApiResponse(
       StatusCodes.CREATED,
-      'canvas Created Successfully',
+      'Canvas Created Successfully',
       create_canvas_result
     );
     await session.commitTransaction();

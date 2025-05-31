@@ -109,7 +109,7 @@ export const create_polishing = catchAsync(async (req, res) => {
     }
     const response = new ApiResponse(
       StatusCodes.CREATED,
-      'polishing Created Successfully',
+      'Polishing Created Successfully',
       create_polishing_result
     );
     await session.commitTransaction();
