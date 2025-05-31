@@ -293,14 +293,14 @@ export const updatePhotoStatus = catchAsync(async (req, res, next) => {
 
   const fetchPhotoData = await photoModel.findOne({ _id: id });
   if (!fetchPhotoData) {
-    return next(new ApiError("Photo Details not found", StatusCodes.NOT_FOUND))
+    return next(new ApiError('Photo Details not found', StatusCodes.NOT_FOUND));
   }
-
+  console.log(photoData, ' photoData');
   const updatePhotoData = await photoModel.updateOne(
     { _id: id },
     {
       $set: photoData,
-    },
+    }
   );
 
   if (updatePhotoData.matchedCount <= 0) {

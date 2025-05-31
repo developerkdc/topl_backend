@@ -31,7 +31,14 @@ photoRouter.patch(
   updatePhoto
 );
 
-photoRouter.patch('/update-status-photo/:id', AuthMiddleware, updatePhotoStatus);
+photoRouter.patch(
+  '/update-status-photo/:id',
+  AuthMiddleware,
+  MulterFunction(`public/upload/images/photo_no`).fields([
+    { name: 'images' },
+  ]),
+  updatePhotoStatus
+);
 photoRouter.get('/single-photo/:id', AuthMiddleware, fetchSinglePhoto);
 photoRouter.post('/list-photo', AuthMiddleware, fetchPhotoList);
 
