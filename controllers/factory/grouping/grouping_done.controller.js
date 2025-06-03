@@ -198,12 +198,12 @@ export const edit_grouping_done = catchAsync(async (req, res, next) => {
     // item details
 
     const items_details_data = items_details?.map((item, index) => {
-      const avaiable_details = {
+      const available_details = {
         no_of_leaves: item?.no_of_leaves,
         sqm: item?.sqm,
         amount: item?.amount,
       };
-      item.avaiable_details = avaiable_details;
+      item.available_details = available_details;
       item.grouping_done_other_details_id = add_other_details_id;
       item.created_by = item.created_by ? item.created_by : userDetails?._id;
       item.updated_by = userDetails?._id;
