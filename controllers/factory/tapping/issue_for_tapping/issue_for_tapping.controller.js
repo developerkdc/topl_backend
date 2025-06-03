@@ -144,7 +144,7 @@ export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(
             {
               issue_for_tapping_id: issue_for_tapping_id,
               ...grouping_history_detials,
-              issue_status:issues_for_status.tapping
+              issue_status: issues_for_status.tapping
             },
           ],
           {
@@ -623,7 +623,31 @@ export const fetch_all_issue_for_tapping_details_for_orders = catchAsync(
       }
     ];
 
-    const aggregation_pipeline = [agg_match, ...aggOrderRelatedData];
+    const aggGroupNoLookup = {
+      $lookup: {
+        from: 'grouping_done_items_details',
+        localField: 'group_no',
+        foreignField: 'group_no',
+        pipeline: [
+          {
+            $project: {
+              group_no: 1,
+              photo_no: 1,
+              photo_id: 1,
+            },
+          },
+        ],
+        as: 'grouping_done_items_details',
+      },
+    };
+    const aggGroupNoUnwind = {
+      $unwind: {
+        path: '$grouping_done_items_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    };
+
+    const aggregation_pipeline = [agg_match, ...aggOrderRelatedData, aggGroupNoLookup, aggGroupNoUnwind];
     const issue_for_tapping_details = await issue_for_tapping_model.aggregate(aggregation_pipeline);
 
     const response = new ApiResponse(
