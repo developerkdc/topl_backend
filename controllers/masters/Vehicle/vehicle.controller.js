@@ -5,13 +5,18 @@ import catchAsync from '../../../utils/errors/catchAsync.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
 import vehicleModel from '../../../database/schema/masters/vehicle.js';
+import transporterModel from '../../../database/schema/masters/transporter.schema.js';
 
 export const addVehicle = catchAsync(async (req, res, next) => {
-  const { vehicle_number } = req.body;
+  const { vehicle_number, transporter_id } = req.body;
   const authUserDetail = req.userDetails;
 
-  if (!vehicle_number) {
-    return next(new ApiError('Vehicle Number is required', 400));
+  const transporterDetailsByID = await transporterModel.findOne({
+    _id: transporter_id,
+  });
+
+  if (!transporterDetailsByID) {
+    return next(new ApiError('Transporter not found', 404));
   }
 
   const maxNumber = await vehicleModel.aggregate([
@@ -27,13 +32,15 @@ export const addVehicle = catchAsync(async (req, res, next) => {
 
   const vehicleData = {
     sr_no: maxSrNo,
-    vehicle_number: vehicle_number,
+    ...req.body,
+    transporter_details: { ...transporterDetailsByID },
     created_by: authUserDetail?._id,
     updated_by: authUserDetail?._id,
   };
 
-  const saveVehicleData = new vehicleModel(vehicleData);
-  await saveVehicleData.save();
+  const saveVehicleData = await vehicleModel.create(vehicleData);
+  // new vehicleModel(vehicleData);
+  // await saveVehicleData.save();
 
   if (!saveVehicleData) {
     return next(new ApiError('Failed to insert data', 400));
@@ -50,15 +57,19 @@ export const addVehicle = catchAsync(async (req, res, next) => {
 
 export const updateVehicle = catchAsync(async (req, res, next) => {
   const { id } = req.params;
-  const { vehicle_number, status } = req.body;
+  const { vehicle_number, status, transporter_id } = req.body;
   const authUserDetail = req.userDetails;
 
-  if (!id || !mongoose.isValidObjectId(id)) {
-    return next(new ApiError('Invalid Params Id', 400));
-  }
+  const transporterDetailsByID = await transporterModel.findOne({
+    _id: transporter_id,
+  });
 
+  if (!transporterDetailsByID) {
+    return next(new ApiError('Transporter not found', 404));
+  }
   const vehicleData = {
-    vehicle_number: vehicle_number,
+    ...req.body,
+    transporter_details: { ...transporterDetailsByID },
     status: status,
     updated_by: authUserDetail?._id,
   };
@@ -86,162 +97,192 @@ export const updateVehicle = catchAsync(async (req, res, next) => {
   return res.status(200).json(response);
 });
 
-export const fetchVehicleList = catchAsync(async (req, res, next) => {
-  const {
-    page = 1,
-    limit = 10,
-    sortBy = 'createdAt',
-    sort = 'desc',
-    search = '',
-  } = req.query;
+export const updateVehicleStatus = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
 
-  const {
-    string,
-    boolean,
-    numbers,
-    arrayField = [],
-  } = req?.body?.searchFields || {};
+  const vehicleData = {
+    ...req.body,
+  };
 
-  const filter = req.body?.filter;
-
-  let search_query = {};
-
-  if (search != '' && req?.body?.searchFields) {
-    const search_data = DynamicSearch(
-      search,
-      boolean,
-      numbers,
-      string,
-      arrayField
-    );
-    if (search_data?.length == 0) {
-      return res.status(404).json({
-        statusCode: 404,
-        status: false,
-        data: {
-          data: [],
-        },
-        message: 'Results Not Found',
-      });
+  const updateVehicleData = await vehicleModel.updateOne(
+    { _id: id },
+    {
+      $set: vehicleData,
     }
-    search_query = search_data;
+  );
+
+  if (updateVehicleData.matchedCount <= 0) {
+    return next(new ApiError('Document not found', 404));
+  }
+  if (!updateVehicleData.acknowledged || updateVehicleData.modifiedCount <= 0) {
+    return next(new ApiError('Failed to update document', 400));
   }
 
-  const filterData = dynamic_filter(filter);
+  const response = new ApiResponse(
+    200,
+    'Vehicle Update Successfully',
+    updateVehicleData
+  );
 
-  const match_query = {
-    ...filterData,
-    ...search_query,
-  };
-
-  // Aggregation stage
-  const aggCreatedByLookup = {
-    $lookup: {
-      from: 'users',
-      localField: 'created_by',
-      foreignField: '_id',
-      pipeline: [
-        {
-          $project: {
-            user_name: 1,
-            user_type: 1,
-            dept_name: 1,
-            first_name: 1,
-            last_name: 1,
-            email_id: 1,
-            mobile_no: 1,
-          },
-        },
-      ],
-      as: 'created_by',
-    },
-  };
-  const aggUpdatedByLookup = {
-    $lookup: {
-      from: 'users',
-      localField: 'updated_by',
-      foreignField: '_id',
-      pipeline: [
-        {
-          $project: {
-            user_name: 1,
-            user_type: 1,
-            dept_name: 1,
-            first_name: 1,
-            last_name: 1,
-            email_id: 1,
-            mobile_no: 1,
-          },
-        },
-      ],
-      as: 'updated_by',
-    },
-  };
-  const aggCreatedByUnwind = {
-    $unwind: {
-      path: '$created_by',
-      preserveNullAndEmptyArrays: true,
-    },
-  };
-  const aggUpdatedByUnwind = {
-    $unwind: {
-      path: '$updated_by',
-      preserveNullAndEmptyArrays: true,
-    },
-  };
-  const aggMatch = {
-    $match: {
-      ...match_query,
-    },
-  };
-  const aggSort = {
-    $sort: {
-      [sortBy]: sort === 'desc' ? -1 : 1,
-    },
-  };
-  const aggSkip = {
-    $skip: (parseInt(page) - 1) * parseInt(limit),
-  };
-  const aggLimit = {
-    $limit: parseInt(limit),
-  };
-
-  const listAggregate = [
-    aggCreatedByLookup,
-    aggCreatedByUnwind,
-    aggUpdatedByLookup,
-    aggUpdatedByUnwind,
-    aggMatch,
-    aggSort,
-    aggSkip,
-    aggLimit,
-  ]; // aggregation pipiline
-
-  const vehicleData = await vehicleModel.aggregate(listAggregate);
-
-  const aggCount = {
-    $count: 'totalCount',
-  }; // count aggregation stage
-
-  const totalAggregate = [
-    aggCreatedByLookup,
-    aggCreatedByUnwind,
-    aggUpdatedByLookup,
-    aggUpdatedByUnwind,
-    aggMatch,
-    aggCount,
-  ]; // total aggregation pipiline
-
-  const totalDocument = await vehicleModel.aggregate(totalAggregate);
-
-  const totalPages = Math.ceil((totalDocument?.[0]?.totalCount || 0) / limit);
-
-  const response = new ApiResponse(200, 'Vehicle Data Fetched Successfully', {
-    data: vehicleData,
-    totalPages: totalPages,
-  });
   return res.status(200).json(response);
 });
+
+// export const fetchVehicleList = catchAsync(async (req, res, next) => {
+//   const {
+//     page = 1,
+//     limit = 10,
+//     sortBy = 'createdAt',
+//     sort = 'desc',
+//     search = '',
+//   } = req.query;
+
+//   const {
+//     string,
+//     boolean,
+//     numbers,
+//     arrayField = [],
+//   } = req?.body?.searchFields || {};
+
+//   const filter = req.body?.filter;
+
+//   let search_query = {};
+
+//   if (search != '' && req?.body?.searchFields) {
+//     const search_data = DynamicSearch(
+//       search,
+//       boolean,
+//       numbers,
+//       string,
+//       arrayField
+//     );
+//     if (search_data?.length == 0) {
+//       return res.status(404).json({
+//         statusCode: 404,
+//         status: false,
+//         data: {
+//           data: [],
+//         },
+//         message: 'Results Not Found',
+//       });
+//     }
+//     search_query = search_data;
+//   }
+
+//   const filterData = dynamic_filter(filter);
+
+//   const match_query = {
+//     ...filterData,
+//     ...search_query,
+//   };
+
+//   // Aggregation stage
+//   const aggCreatedByLookup = {
+//     $lookup: {
+//       from: 'users',
+//       localField: 'created_by',
+//       foreignField: '_id',
+//       pipeline: [
+//         {
+//           $project: {
+//             user_name: 1,
+//             user_type: 1,
+//             dept_name: 1,
+//             first_name: 1,
+//             last_name: 1,
+//             email_id: 1,
+//             mobile_no: 1,
+//           },
+//         },
+//       ],
+//       as: 'created_by',
+//     },
+//   };
+//   const aggUpdatedByLookup = {
+//     $lookup: {
+//       from: 'users',
+//       localField: 'updated_by',
+//       foreignField: '_id',
+//       pipeline: [
+//         {
+//           $project: {
+//             user_name: 1,
+//             user_type: 1,
+//             dept_name: 1,
+//             first_name: 1,
+//             last_name: 1,
+//             email_id: 1,
+//             mobile_no: 1,
+//           },
+//         },
+//       ],
+//       as: 'updated_by',
+//     },
+//   };
+//   const aggCreatedByUnwind = {
+//     $unwind: {
+//       path: '$created_by',
+//       preserveNullAndEmptyArrays: true,
+//     },
+//   };
+//   const aggUpdatedByUnwind = {
+//     $unwind: {
+//       path: '$updated_by',
+//       preserveNullAndEmptyArrays: true,
+//     },
+//   };
+//   const aggMatch = {
+//     $match: {
+//       ...match_query,
+//     },
+//   };
+//   const aggSort = {
+//     $sort: {
+//       [sortBy]: sort === 'desc' ? -1 : 1,
+//     },
+//   };
+//   const aggSkip = {
+//     $skip: (parseInt(page) - 1) * parseInt(limit),
+//   };
+//   const aggLimit = {
+//     $limit: parseInt(limit),
+//   };
+
+//   const listAggregate = [
+//     aggCreatedByLookup,
+//     aggCreatedByUnwind,
+//     aggUpdatedByLookup,
+//     aggUpdatedByUnwind,
+//     aggMatch,
+//     aggSort,
+//     aggSkip,
+//     aggLimit,
+//   ]; // aggregation pipiline
+
+//   const vehicleData = await vehicleModel.aggregate(listAggregate);
+
+//   const aggCount = {
+//     $count: 'totalCount',
+//   }; // count aggregation stage
+
+//   const totalAggregate = [
+//     aggCreatedByLookup,
+//     aggCreatedByUnwind,
+//     aggUpdatedByLookup,
+//     aggUpdatedByUnwind,
+//     aggMatch,
+//     aggCount,
+//   ]; // total aggregation pipiline
+
+//   const totalDocument = await vehicleModel.aggregate(totalAggregate);
+
+//   const totalPages = Math.ceil((totalDocument?.[0]?.totalCount || 0) / limit);
+
+//   const response = new ApiResponse(200, 'Vehicle Data Fetched Successfully', {
+//     data: vehicleData,
+//     totalPages: totalPages,
+//   });
+//   return res.status(200).json(response);
+// });
 
 export const fetchSingleVehicle = catchAsync(async (req, res, next) => {
   const { id } = req.params;
@@ -345,5 +386,152 @@ export const dropdownVehicle = catchAsync(async (req, res, next) => {
     'Vehicle Dropdown Fetched Successfully',
     vehicleList
   );
+  return res.status(200).json(response);
+});
+
+export const fetchVehicleList = catchAsync(async (req, res, next) => {
+  const {
+    page = 1,
+    limit = 10,
+    sortBy = 'createdAt',
+    sort = 'desc',
+    search = '',
+  } = req.query;
+
+  const {
+    string,
+    boolean,
+    numbers,
+    arrayField = [],
+  } = req?.body?.searchFields || {};
+
+  const filter = req.body?.filter;
+  let search_query = {};
+
+  if (search != '' && req?.body?.searchFields) {
+    const search_data = DynamicSearch(
+      search,
+      boolean,
+      numbers,
+      string,
+      arrayField
+    );
+    if (search_data?.length == 0) {
+      return res.status(404).json({
+        statusCode: 404,
+        status: false,
+        data: {
+          data: [],
+        },
+        message: 'Results Not Found',
+      });
+    }
+    search_query = search_data;
+  }
+
+  const filterData = dynamic_filter(filter);
+
+  const match_query = {
+    ...filterData,
+    ...search_query,
+  };
+
+  const userLookup = {
+    $lookup: {
+      from: 'users',
+      let: { createdId: '$created_by', updatedId: '$updated_by' },
+      pipeline: [
+        {
+          $match: {
+            $expr: {
+              $or: [
+                { $eq: ['$_id', '$$createdId'] },
+                { $eq: ['$_id', '$$updatedId'] },
+              ],
+            },
+          },
+        },
+        {
+          $project: {
+            _id: 1,
+            user_name: 1,
+            user_type: 1,
+            dept_name: 1,
+            first_name: 1,
+            last_name: 1,
+            email_id: 1,
+            mobile_no: 1,
+          },
+        },
+      ],
+      as: 'user_data',
+    },
+  };
+
+  const pipeline = [
+    userLookup,
+    {
+      $addFields: {
+        created_by: {
+          $arrayElemAt: [
+            {
+              $filter: {
+                input: '$user_data',
+                as: 'user',
+                cond: { $eq: ['$$user._id', '$created_by'] },
+              },
+            },
+            0,
+          ],
+        },
+        updated_by: {
+          $arrayElemAt: [
+            {
+              $filter: {
+                input: '$user_data',
+                as: 'user',
+                cond: { $eq: ['$$user._id', '$updated_by'] },
+              },
+            },
+            0,
+          ],
+        },
+      },
+    },
+    {
+      $project: {
+        user_data: 0,
+      },
+    },
+    {
+      $match: match_query,
+    },
+    {
+      $sort: {
+        [sortBy]: sort === 'desc' ? -1 : 1,
+      },
+    },
+    {
+      $facet: {
+        paginatedResults: [
+          { $skip: (parseInt(page) - 1) * parseInt(limit) },
+          { $limit: parseInt(limit) },
+        ],
+        totalCount: [{ $count: 'count' }],
+      },
+    },
+  ];
+
+  const result = await vehicleModel.aggregate(pipeline);
+
+  const vehicleData = result[0]?.paginatedResults || [];
+  const totalCount = result[0]?.totalCount?.[0]?.count || 0;
+  const totalPages = Math.ceil(totalCount / limit);
+
+  const response = new ApiResponse(200, 'Vehicle Data Fetched Successfully', {
+    data: vehicleData,
+    totalPages,
+  });
+
   return res.status(200).json(response);
 });

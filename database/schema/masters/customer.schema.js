@@ -1,4 +1,9 @@
 import mongoose from 'mongoose';
+import {
+  branding_type,
+  credit_schedule_type,
+  customer_supplier_type,
+} from '../../Utils/constants/constants.js';
 
 const contactPersonSchema = new mongoose.Schema({
   person_name: {
@@ -87,8 +92,18 @@ const customerSchema = new mongoose.Schema(
       type: String,
       uppercase: true,
       enum: {
-        values: ['B2B', 'B2C'],
-        message: 'Invalid supplier type {{VALUE}}, should be B2B, B2C',
+        values: [
+          customer_supplier_type.b2b,
+          customer_supplier_type.b2c,
+          customer_supplier_type.sezwp,
+          customer_supplier_type.sezwop,
+          customer_supplier_type.expwp,
+          customer_supplier_type.expwop,
+          customer_supplier_type.dexp,
+          customer_supplier_type.merchant_export,
+        ],
+        message:
+          'Invalid supplier type {{VALUE}}, should be B2B, B2C, SEZWP, SEZWOP, EXPWP, EXPWOP, DEXP, MERCHANT EXPORT',
       },
       trim: true,
       required: [true, 'Supplier type is required'],
@@ -111,11 +126,6 @@ const customerSchema = new mongoose.Schema(
       trim: true,
       default: null,
     },
-    // fax_number: {
-    //   type: String,
-    //   trim: true,
-    //   default: null,
-    // },
     gst_number: {
       type: String,
       trim: true,
@@ -134,24 +144,6 @@ const customerSchema = new mongoose.Schema(
       trim: true,
       required: [true, 'legal name is required'],
     },
-    // ecc_number: {
-    //   type: String,
-    //   trim: true,
-    //   uppercase: true,
-    //   default: null,
-    // },
-    // cst_tin_number: {
-    //   type: String,
-    //   trim: true,
-    //   uppercase: true,
-    //   default: null,
-    // },
-    // gst_tin_number: {
-    //   type: String,
-    //   trim: true,
-    //   uppercase: true,
-    //   default: null,
-    // },
     preferable_transport_for_part_load: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'transporters',
@@ -215,6 +207,47 @@ const customerSchema = new mongoose.Schema(
         type: Number,
         default: null,
       },
+    },
+    is_insurance_applicable: {
+      type: Boolean,
+      default: false,
+    },
+    branding_type: {
+      type: String,
+      uppercase: true,
+      trim: true,
+      enum: {
+        values: [branding_type.with_branding, branding_type.without_branding],
+        message:
+          'Invalid branding type {{VALUE}}, should be WITH BRANDING, WITHOUT BRANDING',
+      },
+      required: [true, 'Branding type is required'],
+    },
+    credit_schedule: {
+      type: String,
+      uppercase: true,
+      trim: true,
+      enum: {
+        values: [
+          credit_schedule_type.advance,
+          credit_schedule_type.against_dispatch,
+          credit_schedule_type['15_days'],
+          credit_schedule_type['30_days'],
+          credit_schedule_type['45_days'],
+          credit_schedule_type['60_days'],
+        ],
+        message:
+          'Invalid credit schedule type {{VALUE}}, should be ADVANCE, AGAINST DISPATCH, 15 DAYS, 30 DAYS, 45 DAYS, 60 DAYS',
+      },
+      default: null,
+    },
+    freight: {
+      type: Number,
+      default: 0,
+    },
+    local_freight: {
+      type: Number,
+      default: 0,
     },
     status: {
       type: Boolean,
