@@ -291,66 +291,138 @@ export const fetchSingleVehicle = catchAsync(async (req, res, next) => {
     return next(new ApiError('Invalid Params Id', 400));
   }
 
+  const userLookup = [
+    {
+      $lookup: {
+        from: 'users',
+        let: { createdId: '$created_by', updatedId: '$updated_by' },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $or: [
+                  { $eq: ['$_id', '$$createdId'] },
+                  { $eq: ['$_id', '$$updatedId'] },
+                ],
+              },
+            },
+          },
+          {
+            $project: {
+              _id: 1,
+              user_name: 1,
+              user_type: 1,
+              dept_name: 1,
+              first_name: 1,
+              last_name: 1,
+              email_id: 1,
+              mobile_no: 1,
+            },
+          },
+        ],
+        as: 'user_data',
+      },
+    },
+    {
+      $addFields: {
+        created_by: {
+          $arrayElemAt: [
+            {
+              $filter: {
+                input: '$user_data',
+                as: 'user',
+                cond: { $eq: ['$$user._id', '$created_by'] },
+              },
+            },
+            0,
+          ],
+        },
+        updated_by: {
+          $arrayElemAt: [
+            {
+              $filter: {
+                input: '$user_data',
+                as: 'user',
+                cond: { $eq: ['$$user._id', '$updated_by'] },
+              },
+            },
+            0,
+          ],
+        },
+      },
+    },
+  ];
+
   const aggregate = [
     {
       $match: {
         _id: mongoose.Types.ObjectId.createFromHexString(id),
       },
     },
+    ...userLookup,
     {
-      $lookup: {
-        from: 'users',
-        localField: 'created_by',
-        foreignField: '_id',
-        pipeline: [
-          {
-            $project: {
-              user_name: 1,
-              user_type: 1,
-              dept_name: 1,
-              first_name: 1,
-              last_name: 1,
-              email_id: 1,
-              mobile_no: 1,
-            },
-          },
-        ],
-        as: 'created_by',
+      $project: {
+        user_data: 0,
       },
     },
-    {
-      $lookup: {
-        from: 'users',
-        localField: 'updated_by',
-        foreignField: '_id',
-        pipeline: [
-          {
-            $project: {
-              user_name: 1,
-              user_type: 1,
-              dept_name: 1,
-              first_name: 1,
-              last_name: 1,
-              email_id: 1,
-              mobile_no: 1,
-            },
-          },
-        ],
-        as: 'updated_by',
-      },
-    },
-    {
-      $unwind: {
-        path: '$created_by',
-        preserveNullAndEmptyArrays: true,
-      },
-    },
-    {
-      $unwind: {
-        path: '$updated_by',
-        preserveNullAndEmptyArrays: true,
-      },
-    },
+
+
+
+
+    // {
+    //   $lookup: {
+    //     from: 'users',
+    //     localField: 'created_by',
+    //     foreignField: '_id',
+    //     pipeline: [
+    //       {
+    //         $project: {
+    //           user_name: 1,
+    //           user_type: 1,
+    //           dept_name: 1,
+    //           first_name: 1,
+    //           last_name: 1,
+    //           email_id: 1,
+    //           mobile_no: 1,
+    //         },
+    //       },
+    //     ],
+    //     as: 'created_by',
+    //   },
+    // },
+    // {
+    //   $lookup: {
+    //     from: 'users',
+    //     localField: 'updated_by',
+    //     foreignField: '_id',
+    //     pipeline: [
+    //       {
+    //         $project: {
+    //           user_name: 1,
+    //           user_type: 1,
+    //           dept_name: 1,
+    //           first_name: 1,
+    //           last_name: 1,
+    //           email_id: 1,
+    //           mobile_no: 1,
+    //         },
+    //       },
+    //     ],
+    //     as: 'updated_by',
+    //   },
+    // },
+    // {
+    //   $unwind: {
+    //     path: '$created_by',
+    //     preserveNullAndEmptyArrays: true,
+    //   },
+    // },
+    // {
+    //   $unwind: {
+    //     path: '$updated_by',
+    //     preserveNullAndEmptyArrays: true,
+    //   },
+    // },
   ];
 
   const vehicleData = await vehicleModel.aggregate(aggregate);
@@ -368,15 +440,35 @@ export const fetchSingleVehicle = catchAsync(async (req, res, next) => {
 });
 
 export const dropdownVehicle = catchAsync(async (req, res, next) => {
+  const { invoice_date, type, transporter_id } = req.query;
+  var matchQuery = {
+    status: true,
+  };
+
+  if (invoice_date) {
+    const date = new Date(invoice_date);
+    matchQuery.invoice_date = {
+      $gte: new Date(date.setHours(0, 0, 0, 0)),
+      $lte: new Date(date.setHours(23, 59, 59, 999)),
+    };
+  }
+
+  if (type) {
+    matchQuery.type = type;
+  }
+
+  if (transporter_id) {
+    if (!mongoose.isValidObjectId(transporter_id)) {
+      return next(new ApiError('Invalid Transporter ID', 400));
+    }
+    matchQuery.transporter_id =
+      mongoose.Types.ObjectId.createFromHexString(transporter_id);
+  }
+
   const vehicleList = await vehicleModel.aggregate([
     {
       $match: {
-        status: true,
-      },
-    },
-    {
-      $project: {
-        vehicle_number: 1,
+        ...matchQuery,
       },
     },
   ]);
