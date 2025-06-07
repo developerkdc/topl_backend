@@ -4,9 +4,7 @@ import ApiError from '../../../utils/errors/apiError.js';
 import catchAsync from '../../../utils/errors/catchAsync.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
-import transporterModel, {
-  transporter_type,
-} from '../../../database/schema/masters/transporter.schema.js';
+import transporterModel from '../../../database/schema/masters/transporter.schema.js';
 
 export const addTransporter = catchAsync(async (req, res, next) => {
   const { name, branch, transport_id, type, area_of_operation } = req.body;
@@ -349,18 +347,33 @@ export const fetchSingleTransporter = catchAsync(async (req, res, next) => {
 });
 
 export const dropdownTransporter = catchAsync(async (req, res, next) => {
+  const { type } = req.query;
+  let matchQuery = {
+    status: true,
+  };
+
+  if (type) {
+    matchQuery = {
+      ...matchQuery,
+      $or: [{ type: type }, { type: 'BOTH' }],
+    };
+  }
+
   const transporterList = await transporterModel.aggregate([
     {
       $match: {
-        status: true,
+        ...matchQuery,
       },
     },
     {
       $project: {
+        _id: 1,
+        sr_no: 1,
         name: 1,
         branch: 1,
         transport_id: 1,
-        transporter_type: 1,
+        area_of_operation: 1,
+        type: 1,
       },
     },
   ]);
