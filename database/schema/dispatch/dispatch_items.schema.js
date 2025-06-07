@@ -2,6 +2,10 @@ import mongoose from "mongoose";
 import { order_category } from "../../Utils/constants/constants";
 
 const dispatch_items_schema = new mongoose.Schema({
+    packing_done_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: [true, "Packing Done ID is required."],
+    },
     dispatch_id: {
         type: mongoose.Schema.Types.ObjectId,
         required: [true, "Dispatch ID is required."],
@@ -9,12 +13,12 @@ const dispatch_items_schema = new mongoose.Schema({
     order_id: {
         type: mongoose.Schema.Types.ObjectId,
         default: null,
-        required: [validateOrderField, 'order_id is required'],
+        required: [true, 'order_id is required'],
     },
     order_item_id: {
         type: mongoose.Schema.Types.ObjectId,
         default: null,
-        required: [validateOrderField, 'order_item_id is required'],
+        required: [true, 'order_item_id is required'],
     },
     invoice_no: {
         type: String,

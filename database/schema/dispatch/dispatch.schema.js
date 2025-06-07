@@ -107,7 +107,7 @@ const dispatchSchema = new mongoose.Schema({
     trim: true,
     uppercase: true,
   },
-  packing_ids: {
+  packing_done_ids: {
     type: Array,
     default: [],
     validate: {
