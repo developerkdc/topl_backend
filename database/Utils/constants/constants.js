@@ -142,3 +142,27 @@ export const transaction_type = {
   bill_to_ship_to_and_bill_from_dispatch_from:
     'BILL TO SHIP TO AND BILL FROM DISPATCH FROM',
 };
+export const customer_supplier_type = {
+  b2b: 'B2B',
+  b2c: 'B2C',
+  sezwp: 'SEZWP',
+  sezwop: 'SEZWOP',
+  expwp: 'EXPWP',
+  expwop: 'EXPWOP',
+  dexp: 'DEXP',
+  merchant_export: 'MERCHANT EXPORT',
+};
+export const credit_schedule_type = {
+  advance: 'ADVANCE',
+  against_dispatch: 'AGAINST DISPATCH',
+  '15_days': '15 DAYS',
+  '30_days': '30 DAYS',
+  '45_days': '45 DAYS',
+  '60_days': '60 DAYS',
+};
+
+export const transporter_type = {
+  part_load: 'PART_LOAD',
+  full_load: 'FULL_LOAD',
+  both: 'BOTH',
+};
