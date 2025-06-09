@@ -43,9 +43,7 @@ export const addItems = catchAsync(async (req, res) => {
   // const newMax = 1
   const newItemCatgory = new itemCategoryModel({
     sr_no: newMax,
-    category,
-    product_hsn_code,
-    calculate_unit,
+    ...req.body,
     created_by,
   });
   await newItemCatgory.save();
@@ -100,7 +98,7 @@ export const editItemCatgory = catchAsync(async (req, res) => {
 export const listItemCategories = catchAsync(async (req, res) => {
   const {
     query,
-    sortField = 'UpdatedAt',
+    sortField = 'sr_no',
     sortOrder = 'desc',
     page = 1,
     limit = 10,
@@ -113,24 +111,31 @@ export const listItemCategories = catchAsync(async (req, res) => {
   const sortObj = sortField
     ? { [sortField]: sortDirection }
     : { updatedAt: -1 };
-  // const searchQuery = query
-  //   ? {
-  //       $or: [
-  //         { "category": { $regex: query, $options: "i" } },
-  //         { "calculate_unit": { $regex: query, $options: "i" } },
-  //         { "product_hsn_code": { $regex: query, $options: "i" } },
-  //         { "userDetails.first_name": { $regex: query, $options: "i" } },
-  //         { "userDetails.last_name": { $regex: query, $options: "i" } },
-  //         // { "createdAt": { $regex: query, $options: "i" } },
-  //       ],
-  //     }
-  //   : {};
   const searchQuery = query
     ? {
         $or: [
           { category: { $regex: query, $options: 'i' } },
           { calculate_unit: { $regex: query, $options: 'i' } },
           { product_hsn_code: { $regex: query, $options: 'i' } },
+          // { gst_percentage: Number(query) },
+          {
+            $expr: {
+              $regexMatch: {
+                input: { $toString: `$gst_percentage` },
+                regex: new RegExp(query.toString()),
+                options: 'i',
+              },
+            },
+          },
+          {
+            $expr: {
+              $regexMatch: {
+                input: { $toString: `$sr_no` },
+                regex: new RegExp(query.toString()),
+                options: 'i',
+              },
+            },
+          },
           { 'userDetails.user_name': { $regex: query, $options: 'i' } },
 
           ...(isValidDate(query)
@@ -161,7 +166,12 @@ export const listItemCategories = catchAsync(async (req, res) => {
         as: 'userDetails',
       },
     },
-    { $unwind: '$userDetails' },
+    {
+      $unwind: {
+        path: '$userDetails',
+        preserveNullAndEmptyArrays: true, // This will keep the item even if userDetails is null
+      },
+    },
     { $match: searchQuery },
     {
       $project: {
@@ -169,6 +179,7 @@ export const listItemCategories = catchAsync(async (req, res) => {
         category: 1,
         calculate_unit: 1,
         product_hsn_code: 1,
+        gst_percentage: 1,
         createdAt: 1,
         created_by: 1,
         'userDetails.first_name': 1,
@@ -229,7 +240,12 @@ export const DropdownItemCategoryNameMaster = catchAsync(async (req, res) => {
     },
     {
       $project: {
+        _id: 1,
+        sr_no: 1,
         category: 1,
+        calculate_unit: 1,
+        gst_percentage: 1,
+        product_hsn_code: 1,
       },
     },
   ]);

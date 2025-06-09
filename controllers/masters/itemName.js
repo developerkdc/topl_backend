@@ -34,11 +34,7 @@ export const AddItemNameMaster = catchAsync(async (req, res) => {
   const newMax = maxNumber.length > 0 ? maxNumber[0].max + 1 : 1;
   const itemNameData = {
     sr_no: newMax,
-    item_name,
-    color,
-    category,
-    item_subcategory,
-    item_name_code,
+    ...req.body,
     created_by,
   };
   const newItemNameList = new ItemNameModel(itemNameData);
@@ -152,8 +148,10 @@ export const ListItemNameMaster = catchAsync(async (req, res) => {
 
     {
       $project: {
+        _id: 1,
         sr_no: 1,
         item_name: 1,
+        alternate_item_name_details: 1,
         createdAt: 1,
         created_by: 1,
         'userDetails.first_name': 1,
@@ -190,7 +188,7 @@ export const ListItemNameMaster = catchAsync(async (req, res) => {
 });
 
 export const DropdownItemNameMaster = catchAsync(async (req, res) => {
-  const { type, subcategory } = req.query;
+  const { type, subcategory, process } = req.query;
 
   const searchQuery = {};
 
@@ -243,11 +241,14 @@ export const DropdownItemNameMaster = catchAsync(async (req, res) => {
     },
     {
       $project: {
+        _id: 1,
+        sr_no: 1,
         item_name: 1,
         category: 1,
         item_subcategory: 1,
         color: 1,
         item_name_code: 1,
+        alternate_item_name_details: 1,
       },
     },
     {
