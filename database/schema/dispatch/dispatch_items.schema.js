@@ -1,9 +1,13 @@
 import mongoose from "mongoose";
-import { order_category } from "../../Utils/constants/constants";
+import { order_category } from "../../Utils/constants/constants.js";
 
 const dispatch_items_schema = new mongoose.Schema({
-    packing_done_id: {
+    packing_done_mongodb_id: {
         type: mongoose.Schema.Types.ObjectId,
+        required: [true, "Packing Done Mongodb ID is required."],
+    },
+    packing_done_id: {
+        type: String,
         required: [true, "Packing Done ID is required."],
     },
     dispatch_id: {
@@ -118,3 +122,6 @@ const dispatch_items_schema = new mongoose.Schema({
 }, {
     timestamps: true,
 });
+
+const dispatchItemsModel = mongoose.model('dispatch_items', dispatch_items_schema, "dispatch_items");
+export default dispatchItemsModel;

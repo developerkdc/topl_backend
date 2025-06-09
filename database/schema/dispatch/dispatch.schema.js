@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { order_category, transaction_type } from "../../Utils/constants/constants";
+import { order_category, transaction_type } from "../../Utils/constants/constants.js";
 const transaction_type_values = Object.values(transaction_type);
 
 const address_schema = {
@@ -108,7 +108,18 @@ const dispatchSchema = new mongoose.Schema({
     uppercase: true,
   },
   packing_done_ids: {
-    type: Array,
+    type: [
+      {
+        packing_done_mongodb_id: {
+          type: mongoose.Schema.Types.ObjectId,
+          required: [true, "Packing Done Mongodb ID is required."],
+        },
+        packing_done_id: {
+          type: String,
+          required: [true, "Packing Done ID is required."],
+        },
+      }
+    ],
     default: [],
     validate: {
       validator: (v) => v.length > 0,
@@ -284,3 +295,6 @@ const dispatchSchema = new mongoose.Schema({
 }, {
   timestamps: true,
 });
+
+const diapatchModel = mongoose.model('dispatches', dispatchSchema, "dispatches");
+export default diapatchModel;
