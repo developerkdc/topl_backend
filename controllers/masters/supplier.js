@@ -35,8 +35,7 @@ export const AddSupplierMaster = catchAsync(async (req, res) => {
 
   const newSupplier = new SupplierModel({
     sr_no: newMax,
-    supplier_name,
-    supplier_type,
+    ...req.body,
   });
   await newSupplier.save();
   return res.json(

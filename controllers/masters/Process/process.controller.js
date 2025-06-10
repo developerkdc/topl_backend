@@ -5,6 +5,7 @@ import catchAsync from '../../../utils/errors/catchAsync.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
 import processModel from '../../../database/schema/masters/process.schema.js';
+import { process_type } from '../../../database/Utils/constants/constants.js';
 
 export const addProcess = catchAsync(async (req, res, next) => {
   const { name } = req.body;
@@ -25,8 +26,8 @@ export const addProcess = catchAsync(async (req, res, next) => {
 
   const maxSrNo = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1;
   const processData = {
-    name: name,
     sr_no: maxSrNo,
+    ...req.body,
     created_by: authUserDetail?._id,
     updated_by: authUserDetail?._id,
   };
@@ -57,8 +58,7 @@ export const updateProcess = catchAsync(async (req, res, next) => {
   }
 
   const processData = {
-    name: name,
-    status: status,
+    ...req.body,
     updated_by: authUserDetail?._id,
   };
 
@@ -326,15 +326,23 @@ export const fetchSingleProcess = catchAsync(async (req, res, next) => {
 });
 
 export const dropdownProcess = catchAsync(async (req, res, next) => {
+  const { process_type } = req.query;
+  var match_query = { status: true };
+
+  if (process_type) {
+    match_query.process_type = process_type;
+  }
   const processList = await processModel.aggregate([
     {
       $match: {
-        status: true,
+        ...match_query,
       },
     },
     {
       $project: {
+        _id: 1,
         name: 1,
+        process_type: 1,
       },
     },
   ]);
