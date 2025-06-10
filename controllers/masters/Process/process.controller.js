@@ -345,6 +345,11 @@ export const dropdownProcess = catchAsync(async (req, res, next) => {
         process_type: 1,
       },
     },
+    {
+      $sort: {
+        sr_no: 1,
+      },
+    },
   ]);
 
   const response = new ApiResponse(
