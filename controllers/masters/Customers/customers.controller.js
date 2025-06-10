@@ -131,6 +131,11 @@ export const editCustomer = catchAsync(async (req, res, next) => {
     'photo_type.photo_type_b': customer?.photo_type?.photo_type_b,
     'photo_type.photo_type_c': customer?.photo_type?.photo_type_c,
     updated_by: authUserDetail?._id,
+    is_insurance_applicable: customer?.is_insurance_applicable,
+    branding_type: customer?.branding_type,
+    credit_schedule: customer?.credit_schedule,
+    freight: customer?.freight,
+    local_freight: customer?.local_freight,
   };
 
   const updateCustomerData = await customer_model.updateOne(

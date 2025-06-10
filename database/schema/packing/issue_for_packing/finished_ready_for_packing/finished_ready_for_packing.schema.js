@@ -17,13 +17,11 @@ const finished_ready_for_packing_schema = new mongoose.Schema({
     },
     order_id: {
         type: mongoose.Schema.Types.ObjectId,
-        // required: [validate_order_field, 'Order ID is required.'],
-        default: null,
+        required: [true, 'Order ID is required.']
     },
     order_item_id: {
         type: mongoose.Schema.Types.ObjectId,
-        // required: [validate_order_field, 'Order Item ID is required.'],
-        default: null,
+        required: [true, 'Order Item ID is required.']
     },
     order_number: {
         type: Number,
@@ -106,8 +104,10 @@ const finished_ready_for_packing_schema = new mongoose.Schema({
                 item_issued_from?.color_factory,
                 item_issued_from?.bunito_factory,
                 item_issued_from?.polishing_factory,
+                item_issued_from?.canvas_factory,
+
             ],
-            message: `Invalid Type -> {{VALUE}} , it must be one of the ${(item_issued_from?.pressing_factory, item_issued_from?.cnc_factory, item_issued_from?.color_factory, item_issued_from?.bunito_factory, item_issued_from?.polishing_factory)}`,
+            message: `Invalid Type -> {{VALUE}} , it must be one of the ${(item_issued_from?.pressing_factory, item_issued_from?.cnc_factory, item_issued_from?.color_factory, item_issued_from?.bunito_factory, item_issued_from?.polishing_factory, item_issued_from?.canvas_factory)}`,
         },
         required: [true, 'Issued from is required.'],
     },
