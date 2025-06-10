@@ -166,3 +166,7 @@ export const transporter_type = {
   full_load: 'FULL_LOAD',
   both: 'BOTH',
 };
+export const process_type = {
+  pre_pressing: 'PRE_PRESSING',
+  post_pressing: 'POST_PRESSING',
+};

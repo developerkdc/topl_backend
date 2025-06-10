@@ -1,6 +1,22 @@
 import mongoose from 'mongoose';
 import LogSchemaFunction from '../LogsSchema/logs.schema.js';
 
+const alternateItemNameObjectSchema = {
+  process_name: {
+    type: String,
+    uppercase: true,
+    trim: true,
+    unique: [true, 'Process Name already exists.'],
+    required: [true, 'Process Name is required.'],
+  },
+  alternate_item_name: {
+    type: String,
+    uppercase: true,
+    trim: true,
+    required: [true, 'Alternate Item Name is required.'],
+  },
+};
+
 const ItemNameSchema = new mongoose.Schema(
   {
     sr_no: Number,
@@ -37,6 +53,10 @@ const ItemNameSchema = new mongoose.Schema(
       type: [mongoose.Schema.Types.ObjectId],
       ref: 'item_subcategory',
       required: [true, 'subcategory id is required'],
+    },
+    alternate_item_name_details: {
+      type: [alternateItemNameObjectSchema],
+      default: null,
     },
     created_by: {
       type: mongoose.Types.ObjectId,
