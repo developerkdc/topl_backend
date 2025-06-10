@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { order_category, transaction_type } from "../../Utils/constants/constants.js";
+import { dispatch_status, order_category, transaction_type } from "../../Utils/constants/constants.js";
 const transaction_type_values = Object.values(transaction_type);
 
 const address_schema = {
@@ -13,6 +13,7 @@ const address_schema = {
     type: String,
     trim: true,
     required: [true, 'country is required'],
+    default: 'india',
   },
   state: {
     type: String,
@@ -127,6 +128,19 @@ const dispatchSchema = new mongoose.Schema({
     },
     required: [true, 'Packing Ids is required'],
   },
+  dispatch_status: {
+    type: String,
+    enum: {
+      values: [
+        dispatch_status?.cancelled
+      ],
+      message: `Invalid type {{VALUE}} it must be one of the ${[
+        dispatch_status?.cancelled
+      ]?.join(', ')}`,
+    },
+    required: [true, 'Order category is required'],
+    trim: true,
+  },
   supp_type: {
     type: String,
     required: [true, 'supp type is required'],
@@ -191,7 +205,13 @@ const dispatchSchema = new mongoose.Schema({
   },
   qr_code_link: {
     type: [{
-      name: String,
+      name: {
+        type: String,
+        enum: {
+          values: ['irn_number', 'eway_bill'],
+          message: 'Invalid name {{VALUE}}. It must be "irn_number", "eway_bill"',
+        },
+      },
       url: String,
     }],
     default: null,
@@ -296,5 +316,5 @@ const dispatchSchema = new mongoose.Schema({
   timestamps: true,
 });
 
-const diapatchModel = mongoose.model('dispatches', dispatchSchema, "dispatches");
-export default diapatchModel;
+const dispatchModel = mongoose.model('dispatches', dispatchSchema, "dispatches");
+export default dispatchModel;
