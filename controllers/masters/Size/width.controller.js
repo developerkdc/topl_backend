@@ -4,18 +4,17 @@ import ApiError from '../../../utils/errors/apiError.js';
 import catchAsync from '../../../utils/errors/catchAsync.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
-import processModel from '../../../database/schema/masters/process.schema.js';
-import { process_type } from '../../../database/Utils/constants/constants.js';
+import { widthModel } from '../../../database/schema/masters/size.schema.js';
 
-export const addProcess = catchAsync(async (req, res, next) => {
-  const { name } = req.body;
+export const addWidth = catchAsync(async (req, res, next) => {
+  const { width } = req.body;
   const authUserDetail = req.userDetails;
 
-  if (!name) {
-    return next(new ApiError('Process Name is required', 400));
+  if (!width) {
+    return next(new ApiError('Width is required', 400));
   }
 
-  const maxNumber = await processModel.aggregate([
+  const maxNumber = await widthModel.aggregate([
     {
       $group: {
         _id: null,
@@ -25,30 +24,30 @@ export const addProcess = catchAsync(async (req, res, next) => {
   ]);
 
   const maxSrNo = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1;
-  const processData = {
+  const widthData = {
     sr_no: maxSrNo,
     ...req.body,
     created_by: authUserDetail?._id,
     updated_by: authUserDetail?._id,
   };
 
-  const saveProcessData = new processModel(processData);
-  await saveProcessData.save();
+  const saveWidthData = new widthModel(widthData);
+  await saveWidthData.save();
 
-  if (!saveProcessData) {
+  if (!saveWidthData) {
     return next(new ApiError('Failed to insert data', 400));
   }
 
   const response = new ApiResponse(
-    201,
-    'Process Added Successfully',
-    saveProcessData
+    200,
+    'Width Added Successfully',
+    saveWidthData
   );
 
-  return res.status(201).json(response);
+  return res.status(200).json(response);
 });
 
-export const updateProcess = catchAsync(async (req, res, next) => {
+export const updateWidth = catchAsync(async (req, res, next) => {
   const { id } = req.params;
   const { name, status } = req.body;
   const authUserDetail = req.userDetails;
@@ -57,35 +56,35 @@ export const updateProcess = catchAsync(async (req, res, next) => {
     return next(new ApiError('Invalid Params Id', 400));
   }
 
-  const processData = {
+  const widthData = {
     ...req.body,
     updated_by: authUserDetail?._id,
   };
 
-  const updateProcessData = await processModel.updateOne(
+  const updateWidthData = await widthModel.updateOne(
     { _id: id },
     {
-      $set: processData,
+      $set: widthData,
     }
   );
 
-  if (updateProcessData.matchedCount <= 0) {
+  if (updateWidthData.matchedCount <= 0) {
     return next(new ApiError('Document not found', 404));
   }
-  if (!updateProcessData.acknowledged || updateProcessData.modifiedCount <= 0) {
+  if (!updateWidthData.acknowledged || updateWidthData.modifiedCount <= 0) {
     return next(new ApiError('Failed to update document', 400));
   }
 
   const response = new ApiResponse(
     200,
-    'Process Update Successfully',
-    updateProcessData
+    'Width Update Successfully',
+    updateWidthData
   );
 
   return res.status(200).json(response);
 });
 
-export const fetchProcessList = catchAsync(async (req, res, next) => {
+export const fetchWidthList = catchAsync(async (req, res, next) => {
   const {
     page = 1,
     limit = 10,
@@ -133,15 +132,24 @@ export const fetchProcessList = catchAsync(async (req, res, next) => {
     ...search_query,
   };
 
-  // Aggregation stage
-  const aggCreatedByLookup = {
+  const userLookup = {
     $lookup: {
       from: 'users',
-      localField: 'created_by',
-      foreignField: '_id',
+      let: { createdId: '$created_by', updatedId: '$updated_by' },
       pipeline: [
         {
+          $match: {
+            $expr: {
+              $or: [
+                { $eq: ['$_id', '$$createdId'] },
+                { $eq: ['$_id', '$$updatedId'] },
+              ],
+            },
+          },
+        },
+        {
           $project: {
+            _id: 1,
             user_name: 1,
             user_type: 1,
             dept_name: 1,
@@ -152,97 +160,78 @@ export const fetchProcessList = catchAsync(async (req, res, next) => {
           },
         },
       ],
-      as: 'created_by',
+      as: 'user_data',
     },
   };
-  const aggUpdatedByLookup = {
-    $lookup: {
-      from: 'users',
-      localField: 'updated_by',
-      foreignField: '_id',
-      pipeline: [
-        {
-          $project: {
-            user_name: 1,
-            user_type: 1,
-            dept_name: 1,
-            first_name: 1,
-            last_name: 1,
-            email_id: 1,
-            mobile_no: 1,
-          },
+
+  const pipeline = [
+    userLookup,
+    {
+      $addFields: {
+        created_by: {
+          $arrayElemAt: [
+            {
+              $filter: {
+                input: '$user_data',
+                as: 'user',
+                cond: { $eq: ['$$user._id', '$created_by'] },
+              },
+            },
+            0,
+          ],
         },
-      ],
-      as: 'updated_by',
+        updated_by: {
+          $arrayElemAt: [
+            {
+              $filter: {
+                input: '$user_data',
+                as: 'user',
+                cond: { $eq: ['$$user._id', '$updated_by'] },
+              },
+            },
+            0,
+          ],
+        },
+      },
     },
-  };
-  const aggCreatedByUnwind = {
-    $unwind: {
-      path: '$created_by',
-      preserveNullAndEmptyArrays: true,
+    {
+      $project: {
+        user_data: 0,
+      },
     },
-  };
-  const aggUpdatedByUnwind = {
-    $unwind: {
-      path: '$updated_by',
-      preserveNullAndEmptyArrays: true,
+    {
+      $match: match_query,
     },
-  };
-  const aggMatch = {
-    $match: {
-      ...match_query,
+    {
+      $sort: {
+        [sortBy]: sort === 'desc' ? -1 : 1,
+      },
     },
-  };
-  const aggSort = {
-    $sort: {
-      [sortBy]: sort === 'desc' ? -1 : 1,
+    {
+      $facet: {
+        paginatedResults: [
+          { $skip: (parseInt(page) - 1) * parseInt(limit) },
+          { $limit: parseInt(limit) },
+        ],
+        totalCount: [{ $count: 'count' }],
+      },
     },
-  };
-  const aggSkip = {
-    $skip: (parseInt(page) - 1) * parseInt(limit),
-  };
-  const aggLimit = {
-    $limit: parseInt(limit),
-  };
+  ];
 
-  const listAggregate = [
-    aggCreatedByLookup,
-    aggCreatedByUnwind,
-    aggUpdatedByLookup,
-    aggUpdatedByUnwind,
-    aggMatch,
-    aggSort,
-    aggSkip,
-    aggLimit,
-  ]; // aggregation pipiline
+  const result = await widthModel.aggregate(pipeline);
 
-  const processData = await processModel.aggregate(listAggregate);
+  const widthData = result[0]?.paginatedResults || [];
+  const totalCount = result[0]?.totalCount?.[0]?.count || 0;
+  const totalPages = Math.ceil(totalCount / limit);
 
-  const aggCount = {
-    $count: 'totalCount',
-  }; // count aggregation stage
-
-  const totalAggregate = [
-    aggCreatedByLookup,
-    aggCreatedByUnwind,
-    aggUpdatedByLookup,
-    aggUpdatedByUnwind,
-    aggMatch,
-    aggCount,
-  ]; // total aggregation pipiline
-
-  const totalDocument = await processModel.aggregate(totalAggregate);
-
-  const totalPages = Math.ceil((totalDocument?.[0]?.totalCount || 0) / limit);
-
-  const response = new ApiResponse(200, 'Process Data Fetched Successfully', {
-    data: processData,
+  const response = new ApiResponse(200, 'Width Data Fetched Successfully', {
+    data: widthData,
     totalPages: totalPages,
   });
   return res.status(200).json(response);
 });
 
-export const fetchSingleProcess = catchAsync(async (req, res, next) => {
+export const fetchSingleWidth = catchAsync(async (req, res, next) => {
   const { id } = req.params;
 
   if (!id || !mongoose.isValidObjectId(id)) {
@@ -311,28 +300,24 @@ export const fetchSingleProcess = catchAsync(async (req, res, next) => {
     },
   ];
 
-  const processData = await processModel.aggregate(aggregate);
+  const widthData = await widthModel.aggregate(aggregate);
 
-  if (processData && processData?.length <= 0) {
+  if (widthData && widthData?.length <= 0) {
     return next(new ApiError('Document Not found', 404));
   }
 
   const response = new ApiResponse(
     200,
-    'Process Data Fetched Successfully',
-    processData?.[0]
+    'Width Data Fetched Successfully',
+    widthData?.[0]
   );
   return res.status(200).json(response);
 });
 
-export const dropdownProcess = catchAsync(async (req, res, next) => {
-  const { process_type } = req.query;
+export const dropdownWidth = catchAsync(async (req, res, next) => {
   var match_query = { status: true };
 
-  if (process_type) {
-    match_query.process_type = process_type;
-  }
-  const processList = await processModel.aggregate([
+  const widthList = await widthModel.aggregate([
     {
       $match: {
         ...match_query,
@@ -341,8 +326,8 @@ export const dropdownProcess = catchAsync(async (req, res, next) => {
     {
       $project: {
         _id: 1,
-        name: 1,
-        process_type: 1,
+        sr_no: 1,
+        width: 1,
       },
     },
     {
@@ -354,8 +339,8 @@ export const dropdownProcess = catchAsync(async (req, res, next) => {
 
   const response = new ApiResponse(
     200,
-    'Process Dropdown Fetched Successfully',
-    processList
+    'Width Dropdown Fetched Successfully',
+    widthList
   );
   return res.status(200).json(response);
 });
