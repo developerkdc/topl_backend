@@ -26,6 +26,10 @@ const issue_for_order_schema = new mongoose.Schema(
       type: {},
       required: [true, 'Item Details are required'],
     },
+    is_packing_done: {
+      type: Boolean,
+      default: false,
+    },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Created By is required'],
