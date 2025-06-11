@@ -6,7 +6,183 @@ import dispatchModel from "../../database/schema/dispatch/dispatch.schema.js";
 import ApiError from "../../utils/errors/apiError.js";
 import dispatchItemsModel from "../../database/schema/dispatch/dispatch_items.schema.js";
 import { dispatch_status } from "../../database/Utils/constants/constants.js";
-import { packing_done_other_details_model } from "../../database/schema/packing/packing_done/packing_done.schema.js";
+import { packing_done_items_model, packing_done_other_details_model } from "../../database/schema/packing/packing_done/packing_done.schema.js";
+
+export const load_packing_details = catchAsync(async (req, res, next) => {
+        const userDetails = req.userDetails;
+        let { packing_done_ids } = req.body;
+        if (!packing_done_ids || !Array.isArray(packing_done_ids)) {
+            throw new ApiError('Packing done IDs must be an array', StatusCodes.BAD_REQUEST);
+        };
+        if (packing_done_ids?.length === 0) {
+            throw new ApiError('Packing done IDs are required', StatusCodes.BAD_REQUEST);
+        };
+
+        packing_done_ids = packing_done_ids.map((item) => mongoose.Types.ObjectId.createFromHexString(item?.packing_done_other_details_id));
+        // Fetch packing done other details
+        const aggMatchPackingDetails = {
+            $match: {
+                packing_done_other_details_id: {
+                    $in: packing_done_ids
+                },
+            },
+        };
+        const aggLookupPackingDetails = {
+            $lookup: {
+                from: 'packing_done_other_details',
+                localField: 'packing_done_other_details_id',
+                foreignField: '_id',
+                as: 'packing_done_other_details',
+            },
+        };
+        const aggUnwindPackingDetails = {
+            $unwind: {
+                path: "$packing_done_other_details",
+                preserveNullAndEmptyArrays: true,
+            },
+        };
+        const aggOrderRelatedData = [
+            {
+                $lookup: {
+                    from: 'orders',
+                    localField: 'order_id',
+                    pipeline: [
+                        {
+                            $project: {
+                                order_no: 1,
+                                owner_name: 1,
+                                orderDate: 1,
+                                order_category: 1,
+                                series_product: 1,
+                            },
+                        },
+                    ],
+                    foreignField: '_id',
+                    as: 'order_details',
+                },
+            },
+            {
+                $unwind: {
+                    path: '$order_details',
+                    preserveNullAndEmptyArrays: true,
+                },
+            },
+            {
+                $lookup: {
+                    from: 'raw_order_item_details',
+                    localField: 'order_item_id',
+                    foreignField: '_id',
+                    pipeline: [
+                        {
+                            $project: {
+                                item_no: 1,
+                                order_id: 1,
+                                item_name: 1,
+                                item_sub_category_name: 1,
+                                product_category: 1,
+                                rate: 1,
+                                sales_item_name: 1
+                            },
+                        },
+                    ],
+                    as: 'raw_order_item_details',
+                },
+            },
+            {
+                $unwind: {
+                    path: '$raw_order_item_details',
+                    preserveNullAndEmptyArrays: true,
+                },
+            },
+            {
+                $lookup: {
+                    from: 'series_product_order_item_details',
+                    localField: 'order_item_id',
+                    foreignField: '_id',
+                    pipeline: [
+                        {
+                            $project: {
+                                item_no: 1,
+                                order_id: 1,
+                                item_name: 1,
+                                item_sub_category_name: 1,
+                                product_category: 1,
+                                rate: 1,
+                                sales_item_name: 1
+                            },
+                        },
+                    ],
+                    as: 'series_product_order_item_details',
+                },
+            },
+            {
+                $unwind: {
+                    path: '$series_product_order_item_details',
+                    preserveNullAndEmptyArrays: true,
+                },
+            },
+            {
+                $lookup: {
+                    from: 'decorative_order_item_details',
+                    localField: 'order_item_id',
+                    pipeline: [
+                        {
+                            $project: {
+                                item_no: 1,
+                                order_id: 1,
+                                item_name: 1,
+                                item_sub_category_name: 1,
+                                product_category: 1,
+                                rate: 1,
+                                sales_item_name: 1
+                            },
+                        },
+                    ],
+                    foreignField: '_id',
+                    as: 'decorative_order_item_details',
+                },
+            },
+            {
+                $unwind: {
+                    path: '$decorative_order_item_details',
+                    preserveNullAndEmptyArrays: true,
+                },
+            },
+            {
+                $addFields: {
+                    order_item_details: {
+                        $switch: {
+                            branches: [
+                                {
+                                    case: { $ne: [{ $type: "$decorative_order_item_details" }, "missing"] },
+                                    then: "$decorative_order_item_details"
+                                },
+                                {
+                                    case: { $ne: [{ $type: "$series_product_order_item_details" }, "missing"] },
+                                    then: "$series_product_order_item_details"
+                                },
+                                {
+                                    case: { $ne: [{ $type: "$raw_order_item_details" }, "missing"] },
+                                    then: "$raw_order_item_details"
+                                }
+                            ],
+                            default: null
+                        }
+                    }
+                }
+            }
+        ];
+
+        const fetch_packing_items_details = await packing_done_items_model.aggregate([
+            aggMatchPackingDetails,
+            aggLookupPackingDetails,
+            aggUnwindPackingDetails,
+            ...aggOrderRelatedData
+        ]);
+
+        const response = new ApiResponse(StatusCodes.OK, ' Successfully', fetch_packing_items_details);
+        return res.status(StatusCodes.OK).json(response);
+});
 
 export const add_dispatch_details = catchAsync(async (req, res, next) => {
     const session = await mongoose.startSession();
@@ -293,6 +469,76 @@ export const revert_dispatch_details = catchAsync(async (req, res, next) => {
     }
 });
 
+export const cancel_dispatch_details = catchAsync(async (req, res, next) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+        const userDetails = req.userDetails;
+        const { dispatch_id } = req.params;
+        if (!dispatch_id || !mongoose.isValidObjectId(dispatch_id)) {
+            throw new ApiError('Invalid Dispatch ID', StatusCodes.BAD_REQUEST);
+        }
+
+        const fetch_dipsatch_details = await dispatchModel.findOne({ _id: dispatch_id }).session(session);
+        if (!fetch_dipsatch_details) {
+            throw new ApiError('Dispatch details not found', StatusCodes.NOT_FOUND);
+        };
+
+        if (fetch_dipsatch_details?.dispatch_status === dispatch_status.cancelled) {
+            throw new ApiError('Dispatch already cancelled', StatusCodes.BAD_REQUEST);
+        };
+        if (fetch_dipsatch_details?.irn_number) {
+            throw new ApiError('Dispatch cannot be cancelled if IRN number is generated', StatusCodes.BAD_REQUEST);
+        };
+
+        const update_dispatch_details_data = await dispatchModel.findOneAndUpdate({
+            _id: dispatch_id
+        }, {
+            $set: {
+                dispatch_status: dispatch_status.cancelled,
+                updated_by: userDetails?._id,
+            },
+        }, { session, new: true, runValidators: true });
+
+        if (!update_dispatch_details_data) {
+            throw new ApiError('Failed to update dispatch details', StatusCodes.INTERNAL_SERVER_ERROR);
+        };
+
+        // Update packing done other details
+        const packing_done_ids = update_dispatch_details_data?.packing_done_ids;
+        if (packing_done_ids?.length <= 0) {
+            throw new ApiError('Packing done IDs are not allowed for dispatch', StatusCodes.BAD_REQUEST);
+        }
+        const packing_done_ids_data = packing_done_ids.map((item) => item?.packing_done_other_details_id);
+        const update_packing_done_details = await packing_done_other_details_model.updateMany(
+            { _id: { $in: packing_done_ids_data } },
+            {
+                $set: {
+                    is_dispatch_done: true,
+                    isEditable: true,
+                    updated_by: userDetails?._id,
+                }
+            },
+            { session }
+        );
+        if (update_packing_done_details?.matchedCount === 0) {
+            throw new ApiError('Packing done details not found', StatusCodes.NOT_FOUND);
+        }
+        if (!update_packing_done_details?.acknowledged || update_packing_done_details?.modifiedCount === 0) {
+            throw new ApiError('Failed to update packing done details', StatusCodes.INTERNAL_SERVER_ERROR);
+        }
+
+        await session.commitTransaction();
+        const response = new ApiResponse(StatusCodes.OK, 'Dispatched Cancelled Successfully', update_dispatch_details_data);
+        return res.status(StatusCodes.OK).json(response);
+    } catch (error) {
+        await session.abortTransaction();
+        throw error;
+    } finally {
+        await session.endSession();
+    }
+});
+
 export const fetch_all_details_by_dispatch_id = catchAsync(
     async (req, res, next) => {
         const { id } = req.params;
@@ -323,11 +569,54 @@ export const fetch_all_details_by_dispatch_id = catchAsync(
             },
         ];
         const result = await dispatchModel.aggregate(pipeline);
+        const dispatchDetails = result?.[0];
 
         const response = new ApiResponse(
             StatusCodes.OK,
-            'Details Fetched successfully',
-            result?.[0]
+            'Dispatch Details Fetched Successfully',
+            dispatchDetails
+        );
+
+        return res.status(StatusCodes.OK).json(response);
+    }
+);
+
+export const fetch_single_dispatch_items = catchAsync(
+    async (req, res, next) => {
+        const { id } = req.params;
+
+        if (!id && !mongoose.isValidObjectId(id)) {
+            throw new ApiError('Invalid ID', StatusCodes.NOT_FOUND);
+        }
+
+        const pipeline = [
+            {
+                $match: {
+                    _id: mongoose.Types.ObjectId.createFromHexString(id),
+                },
+            },
+            {
+                $lookup: {
+                    from: 'dispatchs',
+                    localField: 'dispatch_id',
+                    foreignField: '_id',
+                    as: 'dispatch_details',
+                },
+            },
+            {
+                $unwind: {
+                    path: '$dispatch_details',
+                    preserveNullAndEmptyArrays: true,
+                },
+            },
+        ];
+        const result = await dispatchItemsModel.aggregate(pipeline);
+        const dispatchItem = result?.[0];
+
+        const response = new ApiResponse(
+            StatusCodes.OK,
+            'Dispatch Item Details Fetched Successfully',
+            dispatchItem
         );
 
         return res.status(StatusCodes.OK).json(response);

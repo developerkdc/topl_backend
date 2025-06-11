@@ -83,7 +83,7 @@ const packing_done_items_schema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         required: [true, 'Order Item ID is required.']
     },
-    order_number: {
+    order_no: {
         type: Number,
         required: [true, 'Order Number is required.'],
     },

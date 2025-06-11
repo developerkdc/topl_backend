@@ -53,6 +53,7 @@ export const add_decorative_order = catchAsync(async (req, res) => {
 
     const updated_item_details = item_details?.map((item) => {
       item.order_id = order_details_data?._id;
+      item.product_category = order_details_data?.base_type;
       item.created_by = userDetails?._id;
       item.updated_by = userDetails?._id;
       return item;
@@ -145,6 +146,7 @@ export const update_decorative_order = catchAsync(async (req, res) => {
 
     const updated_item_details = item_details?.map((item) => {
       item.order_id = order_details_result?._id;
+      item.product_category = order_details_result?.base_type;
       item.created_by = item.created_by ? item?.created_by : userDetails?._id;
       item.updated_by = userDetails?._id;
       item.createdAt = item.createdAt ? item?.createdAt : new Date();

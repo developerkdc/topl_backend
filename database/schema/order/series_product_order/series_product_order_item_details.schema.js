@@ -12,6 +12,18 @@ const series_product_order_item_details_schema = new mongoose.Schema(
       ref: 'orders',
       required: [true, 'Order Id is required'],
     },
+    product_category: {
+      type: String,
+      required: [true, 'product category is required'],
+      uppercase: true,
+      trim: true,
+    },
+    sales_item_name: {
+      type: String,
+      default:null,
+      uppercase: true,
+      trim: true,
+    },
     item_name: {
       type: String,
       trim: true,
@@ -146,6 +158,12 @@ const series_product_order_item_details_schema = new mongoose.Schema(
     rate_per_sq_feet: {
       type: Number,
       required: [true, 'Rate per SQF is required'],
+    },
+    rate: {
+      type: Number,
+      default: function () {
+        return this.rate_per_sq_feet;
+      },
     },
     amount: {
       type: Number,

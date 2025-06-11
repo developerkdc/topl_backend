@@ -63,6 +63,7 @@ export const add_raw_order = catchAsync(async (req, res, next) => {
     // adding item details
     const formattedItemsDetails = item_details.map((item) => ({
       ...item,
+      product_category: newOrderDetails?.raw_materials,
       order_id: newOrderDetails._id,
       created_by: userDetails._id,
       updated_by: userDetails._id,
@@ -154,6 +155,7 @@ export const update_raw_order = catchAsync(async (req, res) => {
 
     const modify_item_details = item_details?.map((item) => {
       item.order_id = updated_order_details?._id;
+      item.product_category = updated_order_details?.raw_materials;
       item.created_by = item.created_by ? item?.created_by : userDetails?._id;
       item.updated_by = userDetails?._id;
       item.createdAt = item.createdAt ? item?.createdAt : new Date();
