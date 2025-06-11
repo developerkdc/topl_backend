@@ -16,11 +16,9 @@ const packing_done_other_details_schema = new mongoose.Schema({
         required: [true, "Packing date is required."],
         default: Date.now
     },
-    customer_name: {
-        type: String,
+    customer_details: {
+        type: mongoose.Schema.Types.Mixed,
         required: [true, "Customer name is required."],
-        trim: true,
-        uppercase: true
     },
     customer_id: {
         type: mongoose.Schema.Types.ObjectId,
