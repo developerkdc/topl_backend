@@ -1,9 +1,6 @@
 import mongoose from "mongoose";
 import { order_category } from "../../../Utils/constants/constants.js";
 
-const validate_order_category = () => {
-    return this.order_category !== order_category?.raw ? true : false;
-}
 const packing_done_other_details_schema = new mongoose.Schema({
     packing_id: {
         type: String,

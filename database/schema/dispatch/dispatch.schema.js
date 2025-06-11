@@ -111,9 +111,9 @@ const dispatchSchema = new mongoose.Schema({
   packing_done_ids: {
     type: [
       {
-        packing_done_mongodb_id: {
+        packing_done_other_details_id: {
           type: mongoose.Schema.Types.ObjectId,
-          required: [true, "Packing Done Mongodb ID is required."],
+          required: [true, "Packing Done Other Details ID is required."],
         },
         packing_done_id: {
           type: String,

@@ -2,13 +2,17 @@ import mongoose from "mongoose";
 import { order_category } from "../../Utils/constants/constants.js";
 
 const dispatch_items_schema = new mongoose.Schema({
-    packing_done_mongodb_id: {
+    packing_done_other_details_id: {
         type: mongoose.Schema.Types.ObjectId,
         required: [true, "Packing Done Mongodb ID is required."],
     },
     packing_done_id: {
         type: String,
         required: [true, "Packing Done ID is required."],
+    },
+    packing_done_item_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: [true, "Packing Done Mongodb ID is required."],
     },
     dispatch_id: {
         type: mongoose.Schema.Types.ObjectId,
@@ -66,25 +70,96 @@ const dispatch_items_schema = new mongoose.Schema({
         trim: true,
         uppercase: true,
     },
+    group_no: {
+        type: String,
+        // required: [true, 'Group Number is required.'],
+        default: null,
+        trim: true,
+        uppercase: true
+    },
+    group_no_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        // required: [true, 'Group Number ID is required.'],
+        default: null,
+    },
+    log_no: {
+        type: String,
+        // required: [true, 'Log Number is required.'],
+        default: null,
+        trim: true,
+        uppercase: true
+    },
+    item_name: {
+        type: String,
+        default: null,
+        trim: true,
+        uppercase: true
+    },
+    item_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        default: null,
+    },
+    item_sub_category_name: {
+        type: String,
+        default: null,
+        trim: true,
+        uppercase: true
+    },
+    item_sub_category_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        default: null,
+    },
     length: {
         type: Number,
-        default: 0,
-        required: [true, 'Length is required'],
+        default: null
     },
     width: {
         type: Number,
-        default: 0,
-        required: [true, 'Width is required'],
+        default: null
+    },
+    diameter: {
+        type: Number,
+        default: null
+    },
+    thickness: {
+        type: Number,
+        default: null
     },
     no_of_sheets: {
         type: Number,
-        default: 0,
-        required: [true, 'No of leaves is required'],
+        default: null
+    },
+    no_of_leaves: {
+        type: Number,
+        default: null
+    },
+    girth: {
+        type: Number,
+        default: null
+    },
+    cmt: {
+        type: Number,
+        default: null
+    },
+    quantity: {
+        type: Number,
+        default: null
+    },
+    number_of_rolls: {
+        type: Number,
+        default: null
     },
     sqm: {
         type: Number,
-        default: 0,
-        required: [true, 'SQM is required'],
+        default: null,
+    },
+    cbm: {
+        type: Number,
+        default: null,
+    },
+    new_sqm: {
+        type: Number,
+        default: null
     },
     rate: {
         type: Number,

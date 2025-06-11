@@ -6,6 +6,7 @@ import dispatchModel from "../../database/schema/dispatch/dispatch.schema.js";
 import ApiError from "../../utils/errors/apiError.js";
 import dispatchItemsModel from "../../database/schema/dispatch/dispatch_items.schema.js";
 import { dispatch_status } from "../../database/Utils/constants/constants.js";
+import { packing_done_other_details_model } from "../../database/schema/packing/packing_done/packing_done.schema.js";
 
 export const add_dispatch_details = catchAsync(async (req, res, next) => {
     const session = await mongoose.startSession();
@@ -23,18 +24,20 @@ export const add_dispatch_details = catchAsync(async (req, res, next) => {
             throw new ApiError('Dispatch items details are required', StatusCodes.BAD_REQUEST)
         }
 
+        // create dispatch details
         const dispatch_details_data = {
             ...dispatch_details,
             created_by: userDetails?._id,
             updated_by: userDetails?._id,
         };
 
-        const add_dispatch_details_data = await dispatchModel.create([dispatch_details_data], { session });
-        if (!add_dispatch_details_data || add_dispatch_details_data.length === 0) {
+        const [add_dispatch_details_data] = await dispatchModel.create([dispatch_details_data], { session });
+        if (!add_dispatch_details_data) {
             throw new ApiError('Failed to create dispatch details', StatusCodes.INTERNAL_SERVER_ERROR);
         };
 
-        const dispatch_id = add_dispatch_details_data?.[0]?._id;
+        // Create dispatch items details
+        const dispatch_id = add_dispatch_details_data?._id;
         const dispatch_items_data = dispatch_items_details.map((items) => {
             return {
                 ...items,
@@ -50,6 +53,30 @@ export const add_dispatch_details = catchAsync(async (req, res, next) => {
         const add_dispatch_items_data = await dispatchItemsModel.insertMany(dispatch_items_data, { session });
         if (!add_dispatch_items_data || add_dispatch_items_data?.length === 0) {
             throw new ApiError('Failed to create dispatch items', StatusCodes.INTERNAL_SERVER_ERROR);
+        };
+
+        // Update packing done other details
+        const packing_done_ids = add_dispatch_details_data?.packing_done_ids;
+        if (packing_done_ids?.length <= 0) {
+            throw new ApiError('Packing done IDs are not allowed for dispatch', StatusCodes.BAD_REQUEST);
+        }
+        const packing_done_ids_data = packing_done_ids.map((item) => item?.packing_done_other_details_id);
+        const update_packing_done_details = await packing_done_other_details_model.updateMany(
+            { _id: { $in: packing_done_ids_data } },
+            {
+                $set: {
+                    is_dispatch_done: true,
+                    isEditable: true,
+                    updated_by: userDetails?._id,
+                }
+            },
+            { session }
+        );
+        if (update_packing_done_details?.matchedCount === 0) {
+            throw new ApiError('Packing done details not found', StatusCodes.NOT_FOUND);
+        }
+        if (!update_packing_done_details?.acknowledged || update_packing_done_details?.modifiedCount === 0) {
+            throw new ApiError('Failed to update packing done details', StatusCodes.INTERNAL_SERVER_ERROR);
         }
 
         await session.commitTransaction();
@@ -86,6 +113,7 @@ export const edit_dispatch_details = catchAsync(async (req, res, next) => {
             throw new ApiError('Dispatch items details are required', StatusCodes.BAD_REQUEST)
         };
 
+        // Fetch existing dispatch details
         const fetch_dipsatch_details = await dispatchModel.findById(dispatch_id).session(session);
         if (!fetch_dipsatch_details) {
             throw new ApiError('Dispatch details not found', StatusCodes.NOT_FOUND);
@@ -111,11 +139,14 @@ export const edit_dispatch_details = catchAsync(async (req, res, next) => {
             throw new ApiError('Failed to update dispatch details', StatusCodes.INTERNAL_SERVER_ERROR);
         };
 
+
+        // delete existing dispatch items
         const delete_dispatch_items = await dispatchItemsModel.deleteMany({ dispatch_id: dispatch_id }, { session });
         if (!delete_dispatch_items?.acknowledged || delete_dispatch_items?.deletedCount === 0) {
             throw new ApiError('Failed to delete existing dispatch items', StatusCodes.INTERNAL_SERVER_ERROR);
         };
 
+        // Create new dispatch items details
         const dispatch_items_data = dispatch_items_details.map((items) => {
             items.dispatch_id = update_dispatch_details_data?.dispatch_id;
             items.created_by = items.created_by ? items.created_by : userDetails?._id;
@@ -131,6 +162,51 @@ export const edit_dispatch_details = catchAsync(async (req, res, next) => {
         const add_dispatch_items_data = await dispatchItemsModel.insertMany(dispatch_items_data, { session });
         if (!add_dispatch_items_data || add_dispatch_items_data?.length === 0) {
             throw new ApiError('Failed to create dispatch items', StatusCodes.INTERNAL_SERVER_ERROR);
+        };
+
+        // Update packing done other details
+        const prev_packing_done_ids = fetch_dipsatch_details?.packing_done_ids;
+        const prev_packing_done_ids_data = prev_packing_done_ids.map((item) => item?.packing_done_other_details_id);
+        const prev_update_packing_done_details = await packing_done_other_details_model.updateMany(
+            { _id: { $in: prev_packing_done_ids_data } },
+            {
+                $set: {
+                    is_dispatch_done: false,
+                    isEditable: false,
+                    updated_by: userDetails?._id,
+                }
+            },
+            { session }
+        );
+        if (prev_update_packing_done_details?.matchedCount === 0) {
+            throw new ApiError('Packing done details not found', StatusCodes.NOT_FOUND);
+        }
+        if (!prev_update_packing_done_details?.acknowledged || prev_update_packing_done_details?.modifiedCount === 0) {
+            throw new ApiError('Failed to update packing done details', StatusCodes.INTERNAL_SERVER_ERROR);
+        }
+
+        // Update packing done other details with new packing done IDs
+        const packing_done_ids = update_dispatch_details_data?.packing_done_ids;
+        if (packing_done_ids?.length <= 0) {
+            throw new ApiError('Packing done IDs are not allowed for dispatch', StatusCodes.BAD_REQUEST);
+        }
+        const packing_done_ids_data = packing_done_ids.map((item) => item?.packing_done_other_details_id);
+        const update_packing_done_details = await packing_done_other_details_model.updateMany(
+            { _id: { $in: packing_done_ids_data } },
+            {
+                $set: {
+                    is_dispatch_done: true,
+                    isEditable: true,
+                    updated_by: userDetails?._id,
+                }
+            },
+            { session }
+        );
+        if (update_packing_done_details?.matchedCount === 0) {
+            throw new ApiError('Packing done details not found', StatusCodes.NOT_FOUND);
+        }
+        if (!update_packing_done_details?.acknowledged || update_packing_done_details?.modifiedCount === 0) {
+            throw new ApiError('Failed to update packing done details', StatusCodes.INTERNAL_SERVER_ERROR);
         }
 
         await session.commitTransaction();
@@ -151,6 +227,7 @@ export const revert_dispatch_details = catchAsync(async (req, res, next) => {
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
+        const userDetails = req.userDetails;
         const { dispatch_id } = req.params;
         if (!dispatch_id || !mongoose.isValidObjectId(dispatch_id)) {
             throw new ApiError('Invalid Dispatch ID', StatusCodes.BAD_REQUEST);
@@ -175,6 +252,30 @@ export const revert_dispatch_details = catchAsync(async (req, res, next) => {
         const delete_dispatch_items = await dispatchItemsModel.deleteMany({ dispatch_id: dispatch_id }, { session });
         if (!delete_dispatch_items?.acknowledged || delete_dispatch_items?.deletedCount === 0) {
             throw new ApiError('Failed to delete dispatch items', StatusCodes.INTERNAL_SERVER_ERROR);
+        }
+
+        // Update packing done other details
+        const packing_done_ids = fetch_dipsatch_details?.packing_done_ids;
+        if (packing_done_ids?.length <= 0) {
+            throw new ApiError('Packing done IDs are not allowed for dispatch', StatusCodes.BAD_REQUEST);
+        }
+        const packing_done_ids_data = packing_done_ids.map((item) => item?.packing_done_other_details_id);
+        const update_packing_done_details = await packing_done_other_details_model.updateMany(
+            { _id: { $in: packing_done_ids_data } },
+            {
+                $set: {
+                    is_dispatch_done: true,
+                    isEditable: true,
+                    updated_by: userDetails?._id,
+                }
+            },
+            { session }
+        );
+        if (update_packing_done_details?.matchedCount === 0) {
+            throw new ApiError('Packing done details not found', StatusCodes.NOT_FOUND);
+        }
+        if (!update_packing_done_details?.acknowledged || update_packing_done_details?.modifiedCount === 0) {
+            throw new ApiError('Failed to update packing done details', StatusCodes.INTERNAL_SERVER_ERROR);
         }
 
 
