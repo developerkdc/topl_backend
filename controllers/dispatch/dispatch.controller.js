@@ -5,6 +5,7 @@ import { StatusCodes } from "../../utils/constants.js";
 import dispatchModel from "../../database/schema/dispatch/dispatch.schema.js";
 import ApiError from "../../utils/errors/apiError.js";
 import dispatchItemsModel from "../../database/schema/dispatch/dispatch_items.schema.js";
+import { dispatch_status } from "../../database/Utils/constants/constants.js";
 
 export const add_dispatch_details = catchAsync(async (req, res, next) => {
     const session = await mongoose.startSession();
@@ -116,7 +117,7 @@ export const edit_dispatch_details = catchAsync(async (req, res, next) => {
         };
 
         const dispatch_items_data = dispatch_items_details.map((items) => {
-            items.dispatch_id = update_dispatch_details_data?.dispatch_id,
+            items.dispatch_id = update_dispatch_details_data?.dispatch_id;
             items.created_by = items.created_by ? items.created_by : userDetails?._id;
             items.updated_by = userDetails?._id;
             items.createdAt = items.createdAt ? items.createdAt : new Date();
@@ -136,6 +137,51 @@ export const edit_dispatch_details = catchAsync(async (req, res, next) => {
         const response = new ApiResponse(StatusCodes.OK, 'Dispatched Updated Successfully', {
             dispatch_details: update_dispatch_details_data,
             dispatch_items_details: add_dispatch_items_data,
+        });
+        return res.status(StatusCodes.OK).json(response);
+    } catch (error) {
+        await session.abortTransaction();
+        throw error;
+    } finally {
+        await session.endSession();
+    }
+});
+
+export const revert_dispatch_details = catchAsync(async (req, res, next) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+        const { dispatch_id } = req.params;
+        if (!dispatch_id || !mongoose.isValidObjectId(dispatch_id)) {
+            throw new ApiError('Invalid Dispatch ID', StatusCodes.BAD_REQUEST);
+        }
+
+        const fetch_dipsatch_details = await dispatchModel.findOne({ _id: dispatch_id }).session(session);
+        if (!fetch_dipsatch_details) {
+            throw new ApiError('Dispatch details not found', StatusCodes.NOT_FOUND);
+        };
+
+        if (fetch_dipsatch_details?.dispatch_status === dispatch_status.cancelled) {
+            throw new ApiError('Dispatch already cancelled', StatusCodes.BAD_REQUEST);
+        };
+
+        // delete dispatch details
+        const delete_dispatch_details = await dispatchModel.deleteOne({ _id: dispatch_id }, { session });
+        if (!delete_dispatch_details?.acknowledged || delete_dispatch_details?.deletedCount === 0) {
+            throw new ApiError('Failed to delete dispatch details', StatusCodes.INTERNAL_SERVER_ERROR);
+        }
+
+        // delete dispatch items details
+        const delete_dispatch_items = await dispatchItemsModel.deleteMany({ dispatch_id: dispatch_id }, { session });
+        if (!delete_dispatch_items?.acknowledged || delete_dispatch_items?.deletedCount === 0) {
+            throw new ApiError('Failed to delete dispatch items', StatusCodes.INTERNAL_SERVER_ERROR);
+        }
+
+
+        await session.commitTransaction();
+        const response = new ApiResponse(StatusCodes.OK, 'Dispatched Revert Successfully', {
+            delete_dispatch_details: delete_dispatch_details,
+            delete_dispatch_items_details: delete_dispatch_items,
         });
         return res.status(StatusCodes.OK).json(response);
     } catch (error) {

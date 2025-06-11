@@ -188,15 +188,15 @@ const dispatchSchema = new mongoose.Schema({
     required: [true, 'Vehicle details are required']
   },
   irn_number: {
-    type: Number,
+    type: String,
     default: null,
   },
   acknowledgement_number: {
-    type: Number,
+    type: String,
     default: null,
   },
   eway_bill_no: {
-    type: Number,
+    type: String,
     default: null,
   },
   eway_bill_date: {
