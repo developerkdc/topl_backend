@@ -24,6 +24,7 @@ import color_history_model from '../../../../database/schema/factory/colour/colo
 import canvas_history_model from '../../../../database/schema/factory/canvas/canvas_history/canvas.history.schema.js';
 import polishing_history_model from '../../../../database/schema/factory/polishing/polishing_history/polishing.history.schema.js';
 import path from 'path';
+import issue_for_order_model from '../../../../database/schema/order/issue_for_order/issue_for_order.schema.js';
 
 const issued_from_map = {
     [item_issued_from?.pressing_factory]: pressing_done_details_model,
@@ -638,14 +639,21 @@ export const revert_finished_ready_for_packing = catchAsync(
 
 
 export const fetch_issue_for_packing_items_by_customer_and_order_category = catchAsync(async (req, res) => {
-    const { customer_name, order_category, product_type } = req.query;
+    const { customer_id, order_type, product_type } = req.query;
 
     const match_query = {
         is_packing_done: false,
-        'order_details.owner_name': customer_name,
-        order_category: order_category,
-        product_type: product_type,
+        'order_details.customer_id': mongoose.Types.ObjectId.createFromHexString(customer_id),
+
     };
+
+    if (order_type === order_category?.raw) {
+        match_query.issued_from = product_type;
+        match_query['order_details.order_category'] = order_type
+    } else {
+        match_query.product_type = product_type
+        match_query.order_category = order_type
+    }
 
     const pipeline = [
         {
@@ -654,15 +662,6 @@ export const fetch_issue_for_packing_items_by_customer_and_order_category = catc
                 localField: "order_id",
                 foreignField: "_id",
                 as: "order_details",
-                pipeline: [
-                    {
-                        $project: {
-                            _id: 1,
-                            order_no: 1,
-                            owner_name: 1,
-                        }
-                    }
-                ]
             }
         },
         {
@@ -672,6 +671,20 @@ export const fetch_issue_for_packing_items_by_customer_and_order_category = catc
             }
         },
         { $match: match_query },
-    ]
+        {
+            $project: {
+                'order_details': 0
+            }
+        }
+    ];
+
+    const issue_for_packing_items = await (order_type === order_category?.raw ? issue_for_order_model : finished_ready_for_packing_model).aggregate(pipeline);
+
+    const response = new ApiResponse(
+        StatusCodes.OK,
+        'Issue for packing items fetched successfully.',
+        issue_for_packing_items
+    );
+    return res.status(response.statusCode).json(response);
 
 })
