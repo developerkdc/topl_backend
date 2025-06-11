@@ -23,6 +23,7 @@ import bunito_history_model from '../../../../database/schema/factory/bunito/bun
 import color_history_model from '../../../../database/schema/factory/colour/colour_history/colour_history.schema.js';
 import canvas_history_model from '../../../../database/schema/factory/canvas/canvas_history/canvas.history.schema.js';
 import polishing_history_model from '../../../../database/schema/factory/polishing/polishing_history/polishing.history.schema.js';
+import path from 'path';
 
 const issued_from_map = {
     [item_issued_from?.pressing_factory]: pressing_done_details_model,
@@ -395,7 +396,7 @@ export const fetch_all_finished_ready_for_packing = catchAsync(
         const match_query = {
             ...filterData,
             ...search_query,
-            // is_challan_done: false,
+            is_packing_done: false,
         };
 
         const aggCreatedByLookup = {
@@ -634,3 +635,43 @@ export const revert_finished_ready_for_packing = catchAsync(
         }
     }
 );
+
+
+export const fetch_issue_for_packing_items_by_customer_and_order_category = catchAsync(async (req, res) => {
+    const { customer_name, order_category, product_type } = req.query;
+
+    const match_query = {
+        is_packing_done: false,
+        'order_details.owner_name': customer_name,
+        order_category: order_category,
+        product_type: product_type,
+    };
+
+    const pipeline = [
+        {
+            $lookup: {
+                from: "orders",
+                localField: "order_id",
+                foreignField: "_id",
+                as: "order_details",
+                pipeline: [
+                    {
+                        $project: {
+                            _id: 1,
+                            order_no: 1,
+                            owner_name: 1,
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            $unwind: {
+                path: "$order_details",
+                preserveNullAndEmptyArrays: true
+            }
+        },
+        { $match: match_query },
+    ]
+
+})

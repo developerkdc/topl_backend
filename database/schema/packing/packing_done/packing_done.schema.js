@@ -44,6 +44,14 @@ const packing_done_other_details_schema = new mongoose.Schema({
         required: [true, 'Product Type is required'],
         trim: true,
     },
+    isEditable: {
+        type: Boolean,
+        default: true,
+    },
+    is_dispatch_done: {
+        type: Boolean,
+        default: false,
+    },
     created_by: {
         type: mongoose.Schema.Types.ObjectId,
         required: [true, "Created by is required."],
@@ -67,7 +75,8 @@ const packing_done_items_schema = new mongoose.Schema({
     },
     pressing_id: {
         type: String,
-        required: [validate_order_category, "Pressing ID is required."],
+        // required: [validate_order_category, "Pressing ID is required."],
+        default: null,
         trim: true,
         uppercase: true
     },
@@ -89,11 +98,15 @@ const packing_done_items_schema = new mongoose.Schema({
     },
     group_no: {
         type: String,
-        required: [true, 'Group Number is required.'],
+        // required: [true, 'Group Number is required.'],
+        default: null,
+        trim: true,
+        uppercase: true
     },
     group_no_id: {
         type: mongoose.Schema.Types.ObjectId,
-        required: [true, 'Group Number ID is required.'],
+        // required: [true, 'Group Number ID is required.'],
+        default: null,
     },
     log_no: {
         type: String,
@@ -104,27 +117,27 @@ const packing_done_items_schema = new mongoose.Schema({
     },
     item_name: {
         type: String,
-        required: [true, 'Item Name is required.'],
+        default: null,
         trim: true,
         uppercase: true
     },
     item_id: {
         type: mongoose.Schema.Types.ObjectId,
-        required: [true, 'Item ID is required.'],
+        default: null,
     },
     item_sub_category_name: {
         type: String,
-        required: [true, 'Item Subcategory Name is required.'],
+        default: null,
         trim: true,
         uppercase: true
     },
     item_sub_category_id: {
         type: mongoose.Schema.Types.ObjectId,
-        required: [true, 'Item Subcategory ID is required.'],
+        default: null,
     },
     length: {
         type: Number,
-        required: [true, 'Length is required.'],
+        default: null
     },
     new_length: {
         type: Number,
@@ -132,7 +145,11 @@ const packing_done_items_schema = new mongoose.Schema({
     },
     width: {
         type: Number,
-        required: [true, 'Width is required.'],
+        default: null
+    },
+    diameter: {
+        type: Number,
+        default: null
     },
     new_width: {
         type: Number,
@@ -140,7 +157,8 @@ const packing_done_items_schema = new mongoose.Schema({
     },
     thickness: {
         type: Number,
-        required: [true, 'Thickness is required.'],
+        // required: [true, 'Thickness is required.'],
+        default: null
     },
     no_of_sheets: {
         type: Number,
@@ -161,7 +179,8 @@ const packing_done_items_schema = new mongoose.Schema({
     },
     quantity: {
         type: Number,
-        required: [true, 'Issued Quantity is required.'],
+        // required: [true, 'Issued Quantity is required.'],
+        default: null
     },
     number_of_rolls: {
         type: Number,
@@ -169,7 +188,11 @@ const packing_done_items_schema = new mongoose.Schema({
     },
     sqm: {
         type: Number,
-        required: [true, 'Issued SQM is required.'],
+        default: null,
+    },
+    cbm: {
+        type: Number,
+        default: null,
     },
     new_sqm: {
         type: Number,
@@ -184,11 +207,6 @@ const packing_done_items_schema = new mongoose.Schema({
         required: [true, 'Product Type is required'],
         trim: true,
     },
-    //add issued for values based on dispatch or something else
-    issued_for: {
-        type: String,
-        default: null
-    },
     created_by: {
         type: mongoose.Schema.Types.ObjectId,
         required: [true, "Created by is required."],
@@ -200,4 +218,13 @@ const packing_done_items_schema = new mongoose.Schema({
 
 }, {
     timestamps: true,
-})
+});
+
+export const packing_done_other_details_model = mongoose.model(
+    'packing_done_other_details',
+    packing_done_other_details_schema, 'packing_done_other_details'
+);
+export const packing_done_items_model = mongoose.model(
+    'packing_done_items',
+    packing_done_items_schema, 'packing_done_items'
+);
