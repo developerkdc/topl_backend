@@ -41,7 +41,7 @@ LengthSchema.index({ sr_no: -1 }, { unique: true });
 LengthSchema.index({ created_by: 1 });
 LengthSchema.index({ updated_by: 1 });
 
-export const lengthModel = mongoose.model('length', LengthSchema,"length");
+export const lengthModel = mongoose.model('length', LengthSchema, 'length');
 
 // width schema
 const WidthSchema = new mongoose.Schema(
@@ -84,7 +84,7 @@ WidthSchema.index({ sr_no: -1 }, { unique: true });
 WidthSchema.index({ created_by: 1 });
 WidthSchema.index({ updated_by: 1 });
 
-export const widthModel = mongoose.model('width', WidthSchema,"width");
+export const widthModel = mongoose.model('width', WidthSchema, 'width');
 
 // thickness schema
 const ThicknessSchema = new mongoose.Schema(
@@ -102,12 +102,15 @@ const ThicknessSchema = new mongoose.Schema(
     category: {
       type: [String],
       required: [true, 'Category is required'],
-      enum: [
-        item_issued_from.veneer,
-        item_issued_from.plywood,
-        item_issued_from.mdf,
-        item_issued_from.fleece_paper,
-      ],
+      enum: {
+        values: [
+          item_issued_from.veneer,
+          item_issued_from.plywood,
+          item_issued_from.mdf,
+          item_issued_from.fleece_paper,
+        ],
+        message: `{VALUE} is not a valid category`,
+      },
       uppercase: true,
     },
     remark: {
@@ -139,4 +142,8 @@ ThicknessSchema.index({ category: 1 });
 ThicknessSchema.index({ created_by: 1 });
 ThicknessSchema.index({ updated_by: 1 });
 
-export const thicknessModel = mongoose.model('thickness', ThicknessSchema,"thickness");
+export const thicknessModel = mongoose.model(
+  'thickness',
+  ThicknessSchema,
+  'thickness'
+);

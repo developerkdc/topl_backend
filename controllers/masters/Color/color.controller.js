@@ -24,8 +24,8 @@ export const addColor = catchAsync(async (req, res, next) => {
 
   const maxSrNo = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1;
   const colorData = {
-    name: name,
     sr_no: maxSrNo,
+    ...req.body,
     created_by: authUserDetail?._id,
     updated_by: authUserDetail?._id,
   };
@@ -56,8 +56,7 @@ export const updateColor = catchAsync(async (req, res, next) => {
   }
 
   const colorData = {
-    name: name,
-    status: status,
+    ...req.body,
     updated_by: authUserDetail?._id,
   };
 
