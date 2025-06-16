@@ -108,6 +108,8 @@ const ThicknessSchema = new mongoose.Schema(
           item_issued_from.plywood,
           item_issued_from.mdf,
           item_issued_from.fleece_paper,
+          item_issued_from.face,
+          item_issued_from.core,
         ],
         message: `{VALUE} is not a valid category`,
       },
