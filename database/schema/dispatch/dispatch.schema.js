@@ -138,8 +138,8 @@ const dispatchSchema = new mongoose.Schema({
         dispatch_status?.cancelled
       ]?.join(', ')}`,
     },
-    required: [true, 'Order category is required'],
     trim: true,
+    default: null,
   },
   supp_type: {
     type: String,

@@ -7,6 +7,8 @@ import ApiError from "../../utils/errors/apiError.js";
 import dispatchItemsModel from "../../database/schema/dispatch/dispatch_items.schema.js";
 import { dispatch_status } from "../../database/Utils/constants/constants.js";
 import { packing_done_items_model, packing_done_other_details_model } from "../../database/schema/packing/packing_done/packing_done.schema.js";
+import { DynamicSearch } from "../../utils/dynamicSearch/dynamic.js";
+import { dynamic_filter } from "../../utils/dymanicFilter.js";
 
 export const load_packing_details = catchAsync(async (req, res, next) => {
     const userDetails = req.userDetails;
@@ -218,6 +220,7 @@ export const add_dispatch_details = catchAsync(async (req, res, next) => {
             return {
                 ...items,
                 dispatch_id: dispatch_id,
+                invoice_no:add_dispatch_details_data?.invoice_no,
                 created_by: userDetails?._id,
                 updated_by: userDetails?._id,
             }
@@ -242,7 +245,7 @@ export const add_dispatch_details = catchAsync(async (req, res, next) => {
             {
                 $set: {
                     is_dispatch_done: true,
-                    isEditable: true,
+                    isEditable: false,
                     updated_by: userDetails?._id,
                 }
             },
@@ -348,7 +351,7 @@ export const edit_dispatch_details = catchAsync(async (req, res, next) => {
             {
                 $set: {
                     is_dispatch_done: false,
-                    isEditable: false,
+                    isEditable: true,
                     updated_by: userDetails?._id,
                 }
             },
@@ -372,7 +375,7 @@ export const edit_dispatch_details = catchAsync(async (req, res, next) => {
             {
                 $set: {
                     is_dispatch_done: true,
-                    isEditable: true,
+                    isEditable: false,
                     updated_by: userDetails?._id,
                 }
             },
@@ -440,7 +443,7 @@ export const revert_dispatch_details = catchAsync(async (req, res, next) => {
             { _id: { $in: packing_done_ids_data } },
             {
                 $set: {
-                    is_dispatch_done: true,
+                    is_dispatch_done: false,
                     isEditable: true,
                     updated_by: userDetails?._id,
                 }
@@ -514,7 +517,7 @@ export const cancel_dispatch_details = catchAsync(async (req, res, next) => {
             { _id: { $in: packing_done_ids_data } },
             {
                 $set: {
-                    is_dispatch_done: true,
+                    is_dispatch_done: false,
                     isEditable: true,
                     updated_by: userDetails?._id,
                 }
@@ -560,12 +563,6 @@ export const fetch_all_details_by_dispatch_id = catchAsync(async (req, res, next
                 as: 'dispatch_items_details',
             },
         },
-        {
-            $unwind: {
-                path: '$dispatch_items_details',
-                preserveNullAndEmptyArrays: true,
-            },
-        },
     ];
     const result = await dispatchModel.aggregate(pipeline);
     const dispatchDetails = result?.[0];
@@ -594,7 +591,7 @@ export const fetch_single_dispatch_items = catchAsync(async (req, res, next) => 
         },
         {
             $lookup: {
-                from: 'dispatchs',
+                from: 'dispatches',
                 localField: 'dispatch_id',
                 foreignField: '_id',
                 as: 'dispatch_details',
@@ -985,8 +982,8 @@ export const packing_done_dropdown = catchAsync(async (req, res, next) => {
     for (const field of required_fields) {
         if (!req.body[field]) {
             return next(new ApiError(
+                `${field.replace(/_/g, ' ')} is required.`,
                 StatusCodes.BAD_REQUEST,
-                `${field.replace(/_/g, ' ')} is required.`
             ));
         }
     }
