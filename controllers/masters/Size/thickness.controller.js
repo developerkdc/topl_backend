@@ -318,7 +318,12 @@ export const fetchSingleThickness = catchAsync(async (req, res, next) => {
 });
 
 export const dropdownThickness = catchAsync(async (req, res, next) => {
+  const { category } = req.query;
   var match_query = { status: true };
+
+  if (category) {
+    match_query.category = {$in: category.split(',')};
+  }
 
   const thicknessList = await thicknessModel.aggregate([
     {

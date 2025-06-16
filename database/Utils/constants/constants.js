@@ -170,6 +170,11 @@ export const process_type = {
   pre_pressing: 'PRE_PRESSING',
   post_pressing: 'POST_PRESSING',
 };
+export const color_type = {
+  timber: 'TIMBER',
+  pre_pressing: 'PRE_PRESSING',
+  post_pressing: 'POST_PRESSING',
+};
 
 export const dispatch_status = {
   cancelled: 'CANCELLED',
