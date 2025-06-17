@@ -20,7 +20,7 @@ export const load_packing_details = catchAsync(async (req, res, next) => {
         throw new ApiError('Packing done IDs are required', StatusCodes.BAD_REQUEST);
     };
 
-    packing_done_ids = packing_done_ids.map((item) => mongoose.Types.ObjectId.createFromHexString(item?.packing_done_other_details_id));
+    packing_done_ids = packing_done_ids.map((item) => mongoose.Types.ObjectId.createFromHexString(item));
     // Fetch packing done other details
     const aggMatchPackingDetails = {
         $match: {
@@ -220,7 +220,7 @@ export const add_dispatch_details = catchAsync(async (req, res, next) => {
             return {
                 ...items,
                 dispatch_id: dispatch_id,
-                invoice_no:add_dispatch_details_data?.invoice_no,
+                invoice_no: add_dispatch_details_data?.invoice_no,
                 created_by: userDetails?._id,
                 updated_by: userDetails?._id,
             }
@@ -260,7 +260,7 @@ export const add_dispatch_details = catchAsync(async (req, res, next) => {
 
         await session.commitTransaction();
         const response = new ApiResponse(StatusCodes.CREATED, 'Dispatched Successfully', {
-            dispatch_details: add_dispatch_details_data?.[0],
+            dispatch_details: add_dispatch_details_data,
             dispatch_items_details: add_dispatch_items_data,
         });
         return res.status(StatusCodes.CREATED).json(response);
@@ -297,6 +297,9 @@ export const edit_dispatch_details = catchAsync(async (req, res, next) => {
         if (!fetch_dipsatch_details) {
             throw new ApiError('Dispatch details not found', StatusCodes.NOT_FOUND);
         }
+        if (fetch_dipsatch_details?.dispatch_status === dispatch_status.cancelled) {
+            throw new ApiError('Dispatch already cancelled', StatusCodes.BAD_REQUEST);
+        }
         const fetch_dispatch_items_details = await dispatchItemsModel.find({ dispatch_id: dispatch_id }).session(session);
         if (!fetch_dispatch_items_details || fetch_dispatch_items_details?.length === 0) {
             throw new ApiError('Dispatch items details not found', StatusCodes.NOT_FOUND);
@@ -327,7 +330,8 @@ export const edit_dispatch_details = catchAsync(async (req, res, next) => {
 
         // Create new dispatch items details
         const dispatch_items_data = dispatch_items_details.map((items) => {
-            items.dispatch_id = update_dispatch_details_data?.dispatch_id;
+            items.dispatch_id = update_dispatch_details_data?._id;
+            items.invoice_no = update_dispatch_details_data?.invoice_no;
             items.created_by = items.created_by ? items.created_by : userDetails?._id;
             items.updated_by = userDetails?._id;
             items.createdAt = items.createdAt ? items.createdAt : new Date();
@@ -986,7 +990,7 @@ export const packing_done_dropdown = catchAsync(async (req, res, next) => {
                 StatusCodes.BAD_REQUEST,
             ));
         }
-    } 
+    }
 
 
     const pipeline = [
