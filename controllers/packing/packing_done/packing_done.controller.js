@@ -38,6 +38,7 @@ export const create_packing = catchAsync(async (req, res) => {
             updated_by: user._id,
         };
 
+
         const [create_packing_done_other_details_result] = await packing_done_other_details_model.create([updated_other_details_payload], { session });
 
         if (!create_packing_done_other_details_result) {
@@ -312,7 +313,7 @@ export const fetch_all_packing_done_items = catchAsync(
         const match_query = {
             ...filterData,
             ...search_query,
-            // is_challan_done: false,
+            is_dispatch_done: false,
         };
 
         const aggregatePackingDoneItems = {
