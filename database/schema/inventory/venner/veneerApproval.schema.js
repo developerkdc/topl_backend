@@ -156,6 +156,26 @@ const veneer_approval_item_details_schema = new mongoose.Schema(
       uppercase: true,
       default: '',
     },
+    process_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
+    process_name: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      default: '',
+    },
+    process_color_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
+    process_color_name: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      default: '',
+    },
     rate_in_currency: {
       type: Number,
       required: [true, 'Rate in currency is required'],

@@ -135,23 +135,43 @@ export const veneer_item_details_schema = new mongoose.Schema(
     },
     character_id: {
       type: mongoose.Schema.Types.ObjectId,
-      default:null
+      default: null,
     },
     character_name: {
       type: String,
       trim: true,
       uppercase: true,
-      default:""
+      default: '',
     },
     pattern_id: {
       type: mongoose.Schema.Types.ObjectId,
-      default:null
+      default: null,
     },
     pattern_name: {
       type: String,
       trim: true,
       uppercase: true,
-      default:""
+      default: '',
+    },
+    process_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
+    process_name: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      default: '',
+    },
+    process_color_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
+    process_color_name: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      default: '',
     },
     rate_in_currency: {
       type: Number,
