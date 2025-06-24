@@ -28,14 +28,17 @@ export const add_issue_for_resizing_from_plywood = catchAsync(
           throw new ApiError(`${field} is missing...`, StatusCodes.BAD_REQUEST);
         }
       }
+
       const { _id, createdAt, updatedAt, ...plywood_item_details } =
         await plywood_inventory_items_details
           .findOne({
             _id: plywood_item_id,
-            issue_status: null,
+            // issue_status: null,
             available_sheets: { $ne: 0 },
           })
           .lean();
+
+
       if (!plywood_item_details) {
         throw new ApiError('Plywood Items not found.', StatusCodes.BAD_REQUEST);
       }
@@ -192,11 +195,11 @@ export const revert_issue_for_resizing = catchAsync(async (req, res) => {
   if (!isValidObjectId(id)) {
     throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
   }
-  
+
   const userDetails = req?.userDetails;
   const session = await mongoose.startSession();
   try {
-     session.startTransaction();
+    session.startTransaction();
     const resizing_item_details = await issue_for_plywood_resizing_model
       .findById(id)
       .lean();

@@ -351,7 +351,7 @@ class IssueForChallan {
             available_amount: -issued_amount,
           },
           $set: {
-            issue_status: issues_for_status?.challan,
+            // issue_status: issues_for_status?.challan,
             updated_by: this.userDetails?._id,
           },
         },
