@@ -18,6 +18,7 @@ import { dynamic_filter } from '../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import ApiError from '../../../utils/errors/apiError.js';
 import catchAsync from '../../../utils/errors/catchAsync.js';
+import { veneer_inventory_items_model } from '../../../database/schema/inventory/venner/venner.schema.js';
 
 export const listing_log_inventory = catchAsync(async (req, res, next) => {
   const {
@@ -729,7 +730,7 @@ export const add_issue_for_flitching = catchAsync(async (req, res, next) => {
       item_name: data?.item_name,
       item_sub_category_id: data?.item_sub_category_id,
       item_sub_category_name: data?.item_sub_category_name,
-      log_no: data?.log_no,
+      log_no: `${data?.log_no}A`,
       log_formula: data?.log_formula,
       length: data?.physical_length,
       diameter: data?.physical_diameter,
@@ -858,10 +859,34 @@ export const listing_log_history_inventory = catchAsync(
 export const check_already_existing_log_no = catchAsync(
   async (req, res, next) => {
     const { log_no } = req.query;
-    const isExist = await log_inventory_items_model.findOne({ log_no });
-    if (isExist) {
-      throw new ApiError('Log No already exists', StatusCodes.BAD_REQUEST);
+    
+    const isExistInLog = await log_inventory_items_model.findOne({ log_no });
+    if (isExistInLog) {
+      throw new ApiError(
+        `Log No (${log_no}) already exists in Log Inventory.`,
+        StatusCodes.BAD_REQUEST
+      );
     }
+    const isExistInFlitch = await log_inventory_items_model.findOne({
+      log_no_code: log_no,
+    });
+    if (isExistInFlitch) {
+      throw new ApiError(
+        `Log No (${log_no}) already exists in Flitch Inventory.`,
+        StatusCodes.BAD_REQUEST
+      );
+    }
+    const isExistInVeneer = await veneer_inventory_items_model.findOne({
+      log_code: log_no,
+    });
+
+    if (isExistInVeneer) {
+      throw new ApiError(
+        `Log No (${log_no}) already exists in Veneer Inventory.`,
+        StatusCodes.BAD_REQUEST
+      );
+    }
+
     return res
       .status(200)
       .json(new ApiResponse(StatusCodes.OK, 'Log No. is unique'));
