@@ -324,10 +324,22 @@ export const fetchSingleColor = catchAsync(async (req, res, next) => {
 });
 
 export const dropdownColor = catchAsync(async (req, res, next) => {
+  const { type, process_name } = req.query;
+  var match_query = { status: true };
+
+  if (type) {
+    // match_query.type = { $in: type.split(',') };
+    match_query.type = type;
+  }
+  if (process_name) {
+    match_query.process_name = process_name;
+  }
+  console.log(match_query);
+
   const colorList = await colorModel.aggregate([
     {
       $match: {
-        status: true,
+        ...match_query,
       },
     },
     {

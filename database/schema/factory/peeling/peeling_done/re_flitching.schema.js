@@ -155,10 +155,10 @@ const re_flitching_items_schema = new mongoose.Schema(
       type: Number,
       required: [true, 'width3 is required'],
     },
-    // height: {
-    //   type: Number,
-    //   required: [true, 'height is required'],
-    // },
+    height: {
+      type: Number,
+      required: [true, 'height is required'],
+    },
     cmt: {
       type: Number,
       required: [true, 'Flitch Cmt is required'],

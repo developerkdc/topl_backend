@@ -1116,6 +1116,8 @@ export const fetch_dressing_done_history = catchAsync(
       aggLimit,
     ];
 
+    console.log(list_aggregate,"kjsdgfb");
+
     const result = await dressing_done_history_model.aggregate(list_aggregate);
 
     const aggCount = {
