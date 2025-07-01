@@ -5,6 +5,7 @@ import {
   update_order_item_status_by_item_id,
   fetch_all_decorative_order_items,
   fetch_all_decorative_order_items_by_order_id,
+  downloadPDF,
 } from '../../../controllers/order/decorative_order/decorative_order.controller.js';
 import AuthMiddleware from '../../../middlewares/verifyToken.js';
 
@@ -30,6 +31,11 @@ decorativeOrderRouter.get(
   '/fetch-decorative-orders-by-order-id/:id',
   AuthMiddleware,
   fetch_all_decorative_order_items_by_order_id
+);
+decorativeOrderRouter.get(
+  '/download/:id',
+  AuthMiddleware,
+  downloadPDF
 );
 
 export default decorativeOrderRouter;
