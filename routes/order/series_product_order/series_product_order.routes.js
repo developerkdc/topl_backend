@@ -2,6 +2,7 @@ import express from 'express';
 import AuthMiddleware from '../../../middlewares/verifyToken.js';
 import {
   add_series_order,
+  downloadPDF,
   fetch_all_series_order_items,
   fetch_all_series_order_items_by_order_id,
   update_series_order,
@@ -32,5 +33,10 @@ seriesOrderRouter.get(
   AuthMiddleware,
   fetch_all_series_order_items_by_order_id
 );
+seriesOrderRouter.get(
+  '/download/:id',
+  AuthMiddleware,
+  downloadPDF
+)
 
 export default seriesOrderRouter;
