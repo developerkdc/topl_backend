@@ -10,7 +10,7 @@ const __dirname = path.dirname(__filename);
 export default async function generatePDFBuffer({ templateName, data }) {
   const templatePath = path.join(__dirname, '..', '..', 'views', `${templateName}.hbs`);
   const templateContent = await fs.readFile(templatePath, 'utf8');
-  const logoPath = path.join(__dirname, '..', '..', 'public', 'upload', 'images', 'template_images', 'topl_logo.png');
+  const logoPath = path.join(__dirname, '..', '..', 'views', 'images', 'topl_logo.png');
   const logoBuffer = await fs.readFile(logoPath);
   const logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
   Handlebars.registerHelper('add', function (a, b) {
