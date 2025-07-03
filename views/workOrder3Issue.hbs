@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Work Order</title>
+  <style>
+    * {
+      font-family: Arial, sans-serif;
+    }
+
+    .header,
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .title {
+      text-align: center;
+      font-weight: bold;
+    }
+
+    .work-order-info {
+      text-align: center;
+      font-size: 20px;
+    }
+
+    .section {
+      margin-top: 20px;
+    }
+
+    .urgent-row {
+      font-weight: bold;
+    }
+
+    .urgent-row td {
+      text-align: left;
+      background: transparent;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    th,
+    td {
+      border: 1px solid #000;
+      padding: 5px;
+      text-align: center;
+    }
+
+    .no-border td {
+      border: none;
+    }
+
+    .urgent {
+      font-weight: bold;
+      margin-top: 20px;
+    }
+
+    .order-summary {
+      margin-top: 10px;
+      width: 50%;
+    }
+
+    .logo-with-name {
+      display: flex;
+      align-items: center;
+    }
+  </style>
+</head>
+
+<body>
+  <h2 style="text-decoration: underline; text-align:center"><strong>WORK ORDER</strong></h2>
+  <div class="header">
+    <div>
+      <div class="logo-with-name">
+        <img style="width: 150px; height: 150px;" src="{{logoUrl}}" alt="Logo" />
+        <h2><span><strong>Turakhia Overseas Private Limited</strong></span></h2>
+      </div>
+      <p style="font-size: 20px;">Client by <span style="bold">{{order.order_received_from}}</span></p>
+      <p style="font-size: 20px;">{{base_type}} Sub Type: <strong>{{order.order_category}}</strong></p>
+    </div>
+
+    <div class="work-order-info">
+      <p>Branding Type -: <strong>{{order.branding_type}}</strong></p>
+      <p>Work Order No : <strong style="font-size: 20px;">{{order.order_no}}</strong></p>
+      <p>Issue Date: <span style="font-weight: bold;">{{order.orderDateFormatted}}</span></p>
+    </div>
+  </div>
+
+  <div class="section">
+    <table>
+      <thead>
+        <tr>
+          <th>Series</th>
+          <th>SalesItemname</th>
+          <th>Photo Number</th>
+          <th>LogX</th>
+          <th>Character</th>
+          <th>Length</th>
+          <th>Width</th>
+          <th>Sheet</th>
+          <th>SqMtr</th>
+          <th>Remarks</th>
+          <th>Raw Issue</th>
+          <th>Clip</th>
+          <th>Splice</th>
+          <th>Taping</th>
+          <th>Pressing</th>
+          <th>Dispatch</th>
+        </tr>
+      </thead>
+      <tr class="urgent-row">
+        <td colspan="9">URGENT</td>
+      </tr>
+      <tbody>
+        {{#each items}}
+        <tr>
+          <td>{{series_name}}</td>
+          <td>{{item_name}}</td>
+          <td>{{photo_number}}</td>
+          <td>{{group_no}}</td>
+          <td>{{character}}</td>
+          <td>{{length}}</td>
+          <td>{{width}}</td>
+          <td>{{no_of_sheets}}</td>
+          <td>{{sqm}}</td>
+          <td>{{remark}}</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+        {{/each}}
+        <tr>
+          <td colspan="7"><strong>Total</strong></td>
+          <td><strong>{{totalSqMtr}}</strong></td>
+          <td><strong>{{totalSheets}}</strong></td>
+          <td colspan="7"></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section order-summary">
+    <strong>Order Summary</strong>
+    <table>
+      <thead>
+        <tr>
+          <th>Order Summary</th>
+          <th>Sheet</th>
+          <th>Sq.Mtr.</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {{#each items}}
+        <tr>
+          <td>{{item_name}}</td>
+          <td>{{no_of_sheets}}</td>
+          <td>{{sqm}}</td>
+        </tr>
+        {{/each}}
+        <tr>
+          <td><strong>Total</strong></td>
+          <td><strong>{{totalSheets}}</strong></td>
+          <td><strong>{{totalSqMtr}}</strong></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div style="margin-top: 200px; display: flex; justify-content: space-between;">
+    <div>APPROVED BY: __________________</div>
+    <div>RECEIVED BY: __________________</div>
+    <div>INSTRUCTION: __________________</div>
+  </div>
+</body>
+
+</html>
