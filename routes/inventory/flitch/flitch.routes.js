@@ -11,6 +11,7 @@ import {
   item_sr_no_dropdown,
   listing_flitch_inventory,
   listing_flitch_history_inventory,
+  flitchHistoryCsv,
 } from '../../../controllers/inventory/flitch/flitch.controller.js';
 import RolesPermissions from '../../../middlewares/permission.js';
 import AuthMiddleware from '../../../middlewares/verifyToken.js';
@@ -62,6 +63,12 @@ flitch_router.post(
   AuthMiddleware,
   RolesPermissions('flitch_inventory', 'view'),
   flitchLogsCsv
+);
+flitch_router.post(
+  '/download-excel-flitch-history',
+  AuthMiddleware,
+  RolesPermissions('flitch_inventory', 'view'),
+  flitchHistoryCsv
 );
 flitch_router.get(
   '/flitch-item-listing-by-invoice/:invoice_id',

@@ -10,12 +10,13 @@ import ApiResponse from '../../../utils/ApiResponse.js';
 import { StatusCodes } from '../../../utils/constants.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
-import { GenerateOtherGoodsLogs } from '../../../config/downloadExcel/Logs/Inventory/OtherGoods/otherGoods.js';
+import { GenerateOtherGoodsLogs, GenerateOtherGoodsLogsHistory,  } from '../../../config/downloadExcel/Logs/Inventory/OtherGoods/otherGoods.js';
 import {
   otherGoods_approval_inventory_invoice_model,
   otherGoods_approval_inventory_items_model,
 } from '../../../database/schema/inventory/otherGoods/otherGoodsApproval.schema.js';
 import other_goods_history_model from '../../../database/schema/inventory/otherGoods/otherGoods.history.schema.js';
+
 export const listing_otherGodds_inventory = catchAsync(
   async (req, res, next) => {
     const {
@@ -284,6 +285,7 @@ export const edit_otherGoods_invoice_inventory = catchAsync(
   }
 );
 
+//csv inventory
 export const otherGoodsLogsCsv = catchAsync(async (req, res) => {
   const { search = '' } = req.query;
   const {
@@ -294,8 +296,9 @@ export const otherGoodsLogsCsv = catchAsync(async (req, res) => {
   } = req?.body?.searchFields || {};
   const filter = req.body?.filter;
 
+  // 1. Search Query
   let search_query = {};
-  if (search != '' && req?.body?.searchFields) {
+  if (search !== '' && req?.body?.searchFields) {
     const search_data = DynamicSearch(
       search,
       boolean,
@@ -303,26 +306,62 @@ export const otherGoodsLogsCsv = catchAsync(async (req, res) => {
       string,
       arrayField
     );
-    if (search_data?.length == 0) {
+    if (!search_data || Object.keys(search_data).length === 0) {
       return res.status(404).json({
         statusCode: 404,
         status: false,
-        data: {
-          data: [],
-        },
+        data: { data: [] },
         message: 'Results Not Found',
       });
     }
     search_query = search_data;
   }
 
+  // 2. Get Filter Query
   const filterData = dynamic_filter(filter);
 
-  const match_query = {
+  // 3. Clean Invalid/Empty Filter Values
+  const cleanMatchQuery = (query) => {
+    const cleaned = {};
+    for (const key in query) {
+      const value = query[key];
+
+      if (value === undefined || value === '' || value === null) continue;
+
+      if (typeof value === 'object' && value !== null && ('$gte' in value || '$lte' in value)) {
+        const range = {};
+        if (value.$gte !== '' && value.$gte !== null && value.$gte !== undefined) {
+          range.$gte = value.$gte;
+        }
+        if (value.$lte !== '' && value.$lte !== null && value.$lte !== undefined) {
+          range.$lte = value.$lte;
+        }
+        if (Object.keys(range).length > 0) {
+          cleaned[key] = range;
+        }
+        continue;
+      }
+
+      cleaned[key] = value;
+    }
+    return cleaned;
+  };
+
+  // 4. Merge and clean
+  const fullQuery = {
     ...filterData,
     ...search_query,
   };
 
+  const cleanedQuery = cleanMatchQuery(fullQuery);
+
+  // 5. Final Query with mandatory condition
+  const match_query = {
+    available_quantity: { $ne: 0 },
+    ...cleanedQuery,
+  };
+
+  // Rest remains the same
   const allData = await othergoods_inventory_items_view_modal.find(match_query);
   if (allData.length === 0) {
     return res
@@ -803,4 +842,140 @@ export const fetch_other_goods_history = catchAsync(async (req, res, next) => {
   );
 
   return res.status(StatusCodes.OK).json(response);
+});
+
+export const otherGoodsLogsCsvHistory = catchAsync(async (req, res) => {
+  const {
+    page = 1,
+    sortBy = 'updatedAt',
+    sort = 'desc',
+    limit = 10,
+    search = '',
+  } = req.query;
+
+  const {
+    string,
+    boolean,
+    numbers,
+    arrayField = [],
+  } = req.body?.searchFields || {};
+  const filter = req.body?.filter;
+
+  // 1. Search Logic
+  let search_query = {};
+  if (search !== '' && req?.body?.searchFields) {
+    const search_data = DynamicSearch(search, boolean, numbers, string, arrayField);
+    console.log('🔍 Dynamic Search Result:', search_data);
+
+    if (!search_data || Object.keys(search_data).length === 0) {
+      console.log('❌ No results from DynamicSearch');
+      return res.status(StatusCodes.NOT_FOUND).json(
+        new ApiResponse(StatusCodes.NOT_FOUND, 'Results Not Found', { data: [] })
+      );
+    }
+    search_query = search_data;
+  }
+
+  // 2. Filter Logic
+  const filterData = dynamic_filter(filter);
+  console.log('🧪 Filter Data:', filterData);
+
+  // 3. Clean invalid values
+  const cleanMatchQuery = (query) => {
+    const cleaned = {};
+    for (const key in query) {
+      const value = query[key];
+      if (value === undefined || value === '' || value === null) continue;
+
+      if (typeof value === 'object' && ('$gte' in value || '$lte' in value)) {
+        const range = {};
+        if (value.$gte !== '' && value.$gte !== null) range.$gte = value.$gte;
+        if (value.$lte !== '' && value.$lte !== null) range.$lte = value.$lte;
+        if (Object.keys(range).length > 0) cleaned[key] = range;
+        continue;
+      }
+
+      cleaned[key] = value;
+    }
+    return cleaned;
+  };
+
+  const fullQuery = { ...search_query, ...filterData };
+  const cleanedQuery = cleanMatchQuery(fullQuery);
+
+  // 4. Final Match Query
+  const match_query = { ...cleanedQuery };
+  console.log('🧩 Final Match Query:', JSON.stringify(match_query, null, 2));
+
+  // 5. Aggregation Pipeline (to fetch all data without pagination for CSV)
+  const aggregationPipeline = [
+    {
+      $lookup: {
+        from: 'othergoods_inventory_items_views',
+        foreignField: '_id',
+        localField: 'other_goods_item_id',
+        as: 'other_goods_item_details',
+        pipeline: [{ $project: { created_user: 0 } }],
+      },
+    },
+    { $unwind: { path: '$other_goods_item_details', preserveNullAndEmptyArrays: true } },
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'created_by',
+        foreignField: '_id',
+        pipeline: [{
+          $project: {
+            first_name: 1,
+            last_name: 1,
+            user_name: 1,
+            user_type: 1,
+            email_id: 1,
+          },
+        }],
+        as: 'created_user_details',
+      },
+    },
+    { $unwind: { path: '$created_user_details', preserveNullAndEmptyArrays: true } },
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'updated_by',
+        foreignField: '_id',
+        pipeline: [{
+          $project: {
+            first_name: 1,
+            last_name: 1,
+            user_name: 1,
+            user_type: 1,
+          },
+        }],
+        as: 'updated_user_details',
+      },
+    },
+    { $unwind: { path: '$updated_user_details', preserveNullAndEmptyArrays: true } },
+    { $match: match_query },
+    { $sort: { [sortBy]: sort === 'desc' ? -1 : 1 } },
+  ];
+
+  const result = await other_goods_history_model.aggregate(aggregationPipeline);
+  console.log(`📦 Aggregation Result Count: ${result.length}`);
+  if (result.length > 0) {
+    console.log('✅ First Result Sample:', JSON.stringify(result[0], null, 2));
+  }
+
+  if (!result.length) {
+    console.log('⚠️ No matching records found in aggregation.');
+    return res
+      .status(StatusCodes.NOT_FOUND)
+      .json(new ApiResponse(StatusCodes.NOT_FOUND, 'No data found', { data: [] }));
+  }
+
+  // 6. Generate CSV
+  const excelLink = await GenerateOtherGoodsLogsHistory(result); // Replace this with correct function if renamed
+  console.log('📤 CSV Download Link:', excelLink);
+
+  return res.status(StatusCodes.OK).json(
+    new ApiResponse(StatusCodes.OK, 'CSV downloaded successfully...', excelLink)
+  );
 });

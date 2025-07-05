@@ -111,69 +111,63 @@ export const createMdfLogsExcel = async (newData) => {
         //   .join(", ");
 
         const rowData = {
-          //   inward_sr_no:  data.invoice_Details.,
-          supplier_item_name: data.supplier_item_name,
-          item_sr_no: data.item_sr_no,
-          item_name: data.item_name,
-          mdf_type: data.mdf_type,
-          mdf_sub_type: data.item_sub_category_name,
-          pallet_number: data.pallet_number,
-          length: data.length,
-          width: data.width,
-          thickness: data.thickness,
-          sheets: data.sheets,
-          total_sq_meter: data.total_sq_meter,
-          rate_in_currency: data.rate_in_currency,
-          exchange_rate: data.exchange_rate,
-          rate_in_inr: data.rate_in_inr,
-
-          amount: data.amount,
-          remark: data.remark,
-          //   invoice_id: data.invoice_id,
-          createdAt: data.createdAt,
-          updatedAt: data.updatedAt,
-          inward_sr_no: data.mdf_invoice_details.inward_sr_no,
-          inward_date: data.mdf_invoice_details.inward_date,
-          currency: data.mdf_invoice_details.currency,
-          no_of_workers: data.workers_details.no_of_workers,
-          shift: data.workers_details.shift,
-          working_hours: data.workers_details.working_hours,
-          supplier_name: data.supplier_details.company_details.supplier_name,
-          supplier_type: data.supplier_details.company_details.supplier_type,
-          branch_name: data.supplier_details.branch_detail.branch_name,
-
-          // contact_person_name: contactPersonNames,
-          // contact_person_email: contactPersonEmails,
-          // contact_person_mobile_number: contactPersonMobileNumbers,
-          // contact_person_designation: contactPersonDesignations,
+          inward_sr_no: data?.mdf_invoice_details?.inward_sr_no || '',
+          inward_date: data?.mdf_invoice_details?.inward_date || '',
+          item_sr_no: data?.item_sr_no || '',
+          item_name: data?.item_name || '',
+          supplier_item_name: data?.supplier_item_name || '',
+          mdf_type: data?.mdf_type || '',
+          mdf_sub_type: data?.item_sub_category_name || '',
+          pallet_number: data?.pallet_number || '',
+          length: data?.length || '',
+          width: data?.width || '',
+          thickness: data?.thickness || '',
+          sheets: data?.sheets || '',
+          total_sq_meter: data?.total_sq_meter || '',
+          rate_in_currency: data?.rate_in_currency || '',
+          rate_in_inr: data?.rate_in_inr || '',
+          exchange_rate: data?.exchange_rate || '',
+          gst_val: data?.mdf_invoice_details?.invoice_Details?.gst_value || '',
+          amount: data?.amount || '',
+          remark: data?.remark || '',
+          createdAt: data?.createdAt || '',
+          updatedAt: data?.updatedAt || '',
+          currency: data?.mdf_invoice_details?.currency || '',
+          no_of_workers: data?.workers_details?.no_of_workers || '',
+          shift: data?.workers_details?.shift || '',
+          working_hours: data?.workers_details?.working_hours || '',
+          supplier_name:
+            data?.supplier_details?.company_details?.supplier_name || '',
+          supplier_type:
+            data?.supplier_details?.company_details?.supplier_type || '',
+          branch_name: data?.supplier_details?.branch_detail?.branch_name || '',
           contact_person_name:
-            data.mdf_invoice_details.supplier_details.branch_detail
-              .contact_person[0].name,
+            data?.mdf_invoice_details?.supplier_details?.branch_detail
+              ?.contact_person?.[0]?.name || '',
           contact_person_email:
-            data.mdf_invoice_details.supplier_details.branch_detail
-              .contact_person[0].email,
-          contact_person_designation:
-            data.mdf_invoice_details.supplier_details.branch_detail
-              .contact_person[0].designation,
+            data?.mdf_invoice_details?.supplier_details?.branch_detail
+              ?.contact_person?.[0]?.email || '',
           contact_person_mobile_no:
-            data.mdf_invoice_details.supplier_details.branch_detail
-              .contact_person[0].mobile_number,
-
-          address: data.supplier_details.branch_detail.address,
-          city: data.supplier_details.branch_detail.city,
-          state: data.supplier_details.branch_detail.state,
-          country: data.supplier_details.branch_detail.country,
-          pincode: data.supplier_details.branch_detail.pincode,
-          gst_number: data.supplier_details.branch_detail.gst_number,
-          web_url: data.supplier_details.branch_detail.web_url,
-          invoice_date: data.invoice_Details.invoice_date,
-          invoice_no: data.invoice_Details.invoice_no,
-          total_item_amount: data.invoice_Details.total_item_amount,
-          transporter_details: data.invoice_Details.transporter_details,
-          gst_percentage: data.invoice_Details.gst_percentage,
-          gst_val: data?.mdf_invoice_details?.invoice_Details?.gst_value,
-          invoice_value_with_gst: data.invoice_Details.invoice_value_with_gst,
-          invoice_remark: data.invoice_Details.remark,
+            data?.mdf_invoice_details?.supplier_details?.branch_detail
+              ?.contact_person?.[0]?.mobile_number || '',
+          contact_person_designation:
+            data?.mdf_invoice_details?.supplier_details?.branch_detail
+              ?.contact_person?.[0]?.designation || '',
+          address: data?.supplier_details?.branch_detail?.address || '',
+          city: data?.supplier_details?.branch_detail?.city || '',
+          state: data?.supplier_details?.branch_detail?.state || '',
+          country: data?.supplier_details?.branch_detail?.country || '',
+          pincode: data?.supplier_details?.branch_detail?.pincode || '',
+          gst_number: data?.supplier_details?.branch_detail?.gst_number || '',
+          web_url: data?.supplier_details?.branch_detail?.web_url || '',
+          invoice_date: data?.invoice_Details?.invoice_date || '',
+          invoice_no: data?.invoice_Details?.invoice_no || '',
+          total_item_amount: data?.invoice_Details?.total_item_amount || '',
+          transporter_details: data?.invoice_Details?.transporter_details || '',
+          gst_percentage: data?.invoice_Details?.gst_percentage || '',
+          invoice_value_with_gst:
+            data?.invoice_Details?.invoice_value_with_gst || '',
+          invoice_remark: data?.invoice_Details?.remark || '',
         };
 
         worksheet.addRow(rowData);
@@ -194,6 +188,92 @@ export const createMdfLogsExcel = async (newData) => {
 
     const link = `${process.env.APP_URL}${destinationPath}`;
     console.log('link => ', link);
+    return link;
+  } catch (error) {
+    throw new ApiError(500, error.message, error);
+  }
+};
+
+export const createMdfHistoryExcel = async (newData) => {
+  try {
+    const folderPath = 'public/upload/reports/inventory/mdf';
+
+    try {
+      await fs.access(folderPath);
+    } catch (error) {
+      await fs.mkdir(folderPath, { recursive: true });
+    }
+
+    const workbook = new exceljs.Workbook();
+    const worksheet = workbook.addWorksheet('MDF-Logs-History');
+
+    const columns = [
+      { header: 'Inward Sr No', key: 'inward_sr_no', width: 15 },
+      { header: 'Inward Date', key: 'inward_date', width: 20 },
+      { header: 'Item Sr No', key: 'item_sr_no', width: 15 },
+      { header: 'Item Name', key: 'item_name', width: 20 },
+      { header: 'MDF Type', key: 'mdf_type', width: 15 },
+      { header: 'MDF Sub Type', key: 'mdf_sub_type', width: 20 },
+      { header: 'Pallet Number', key: 'pallet_number', width: 15 },
+      { header: 'Issued Sheets', key: 'issued_sheets', width: 15 },
+      { header: 'Issued SQM', key: 'issued_sqm', width: 15 },
+      { header: 'Issued Amount', key: 'issued_amount', width: 15 },
+      { header: 'Total Sq Meter', key: 'total_sq_meter', width: 18 },
+      { header: 'Rate in INR', key: 'rate_in_inr', width: 15 },
+      { header: 'Amount', key: 'amount', width: 15 },
+      { header: 'Remark', key: 'remark', width: 25 },
+      { header: 'Created By', key: 'created_by', width: 20 },
+      { header: 'Updated By', key: 'updated_by', width: 20 },
+      { header: 'Created At', key: 'createdAt', width: 20 },
+      { header: 'Updated At', key: 'updatedAt', width: 20 },
+    ];
+
+    worksheet.columns = columns;
+
+    worksheet.getRow(1).eachCell((cell) => {
+      cell.font = { bold: true };
+    });
+
+    newData?.forEach((data) => {
+      try {
+        const item = data?.mdf_item_details || {};
+        const invoice = item?.mdf_invoice_details || {};
+
+        const rowData = {
+          inward_sr_no: invoice?.inward_sr_no || '',
+          inward_date: invoice?.inward_date ? new Date(invoice.inward_date).toLocaleDateString() : '',
+          item_sr_no: item?.item_sr_no || '',
+          item_name: item?.item_name || '',
+          mdf_type: item?.mdf_type || '',
+          mdf_sub_type: item?.item_sub_category_name || '',
+          pallet_number: item?.pallet_number || '',
+          issued_sheets: data?.issued_sheets || '',
+          issued_sqm: data?.issued_sqm || '',
+          issued_amount: data?.issued_amount || '',
+          total_sq_meter: item?.total_sq_meter || '',
+          rate_in_inr: item?.rate_in_inr || '',
+          amount: item?.amount || '',
+          remark: item?.remark || '',
+          created_by: data?.created_user_details?.first_name + ' ' + data?.created_user_details?.last_name || '',
+          updated_by: data?.updated_user_details?.first_name + ' ' + data?.updated_user_details?.last_name || '',
+          createdAt: data?.createdAt ? new Date(data.createdAt).toLocaleString() : '',
+          updatedAt: data?.updatedAt ? new Date(data.updatedAt).toLocaleString() : '',
+        };
+
+        worksheet.addRow(rowData);
+      } catch (error) {
+        console.log('Error writing row to MDF history Excel =>', error.message);
+      }
+    });
+
+    const timeStamp = new Date().getTime();
+    const fileName = `mdf_logs_history_${timeStamp}.xlsx`;
+    const filePath = `public/upload/reports/inventory/mdf/${fileName}`;
+
+    await workbook.xlsx.writeFile(filePath);
+
+    const link = `${process.env.APP_URL}${filePath}`;
+    console.log('History Excel Link =>', link);
     return link;
   } catch (error) {
     throw new ApiError(500, error.message, error);

@@ -11,6 +11,8 @@ import {
   inward_sr_no_dropdown,
   item_sr_no_dropdown,
   fetch_other_goods_history,
+  otherGoodsLogsCsvHistory,
+  // otherGoodsLogsCsvHistory,
 } from '../../../controllers/inventory/otherGoods/otherGoods.js';
 import AuthMiddleware from '../../../middlewares/verifyToken.js';
 import RolesPermissions from '../../../middlewares/permission.js';
@@ -70,6 +72,13 @@ router.post(
   AuthMiddleware,
   RolesPermissions('other_goods_inventory', 'view'),
   otherGoodsLogsCsv
+);
+
+router.post(
+  '/download-excel-othergoods-history',
+  AuthMiddleware,
+  RolesPermissions('other_goods_inventory', 'view'),
+  otherGoodsLogsCsvHistory
 );
 
 router.get('/item-srno-dropdown', AuthMiddleware, item_sr_no_dropdown);
