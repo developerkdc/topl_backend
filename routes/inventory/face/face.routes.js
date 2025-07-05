@@ -11,6 +11,7 @@ import {
   item_sr_no_dropdown,
   listing_face_inventory,
   fetch_face_history,
+  faceHistoryLogsCsv,
 } from '../../../controllers/inventory/face/face.controller.js';
 import {
   fetch_all_face_inward_sr_no_by_order_item_name,
@@ -73,6 +74,12 @@ router.post(
   AuthMiddleware,
   RolesPermissions('face_inventory', 'view'),
   faceLogsCsv
+);
+router.post(
+  '/download-excel-face-history',
+  AuthMiddleware,
+  RolesPermissions('face_inventory', 'view'),
+  faceHistoryLogsCsv
 );
 //face history
 router.post(

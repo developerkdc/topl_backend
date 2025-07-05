@@ -10,7 +10,7 @@ import ApiResponse from '../../../utils/ApiResponse.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
 import { StatusCodes } from '../../../utils/constants.js';
-import { createPlywoodLogsExcel } from '../../../config/downloadExcel/Logs/Inventory/plywood/plywood.js';
+import { createPlywoodHistoryExcel, createPlywoodLogsExcel } from '../../../config/downloadExcel/Logs/Inventory/plywood/plywood.js';
 import {
   plywood_approval_inventory_invoice_model,
   plywood_approval_inventory_items_model,
@@ -275,17 +275,24 @@ export const edit_plywood_invoice_inventory = catchAsync(
 );
 
 export const plywoodLogsCsv = catchAsync(async (req, res) => {
-  const { search = '' } = req.query;
+  const {
+    search = '',
+    sortBy = 'updatedAt',
+    sort = 'desc'
+  } = req.query;
+
   const {
     string,
     boolean,
     numbers,
     arrayField = [],
   } = req?.body?.searchFields || {};
+
   const filter = req.body?.filter;
 
+  // Build search query
   let search_query = {};
-  if (search != '' && req?.body?.searchFields) {
+  if (search !== '' && req?.body?.searchFields) {
     const search_data = DynamicSearch(
       search,
       boolean,
@@ -293,33 +300,42 @@ export const plywoodLogsCsv = catchAsync(async (req, res) => {
       string,
       arrayField
     );
-    if (search_data?.length == 0) {
+    if (search_data?.length === 0) {
       return res.status(404).json({
         statusCode: 404,
         status: false,
-        data: {
-          data: [],
-        },
+        data: { data: [] },
         message: 'Results Not Found',
       });
     }
     search_query = search_data;
   }
 
+  // Build filter query
   const filterData = dynamic_filter(filter);
 
+  // Final MongoDB match query
   const match_query = {
     ...filterData,
     ...search_query,
+    available_sheets: { $ne: 0 },
   };
 
-  const allData = await plywood_inventory_items_view_modal.find(match_query);
+  // Build sort options
+  const sortOrder = sort === 'desc' ? -1 : 1;
+  const sortOptions = { [sortBy]: sortOrder };
+
+  // Final Mongo query with sort
+  const allData = await plywood_inventory_items_view_modal
+    .find(match_query)
+    .sort(sortOptions);
 
   if (allData.length === 0) {
     return res
       .status(StatusCodes.NOT_FOUND)
       .json(new ApiResponse(StatusCodes.NOT_FOUND, 'NO Data found...'));
   }
+
   const excelLink = await createPlywoodLogsExcel(allData);
   console.log('link => ', excelLink);
 
@@ -327,6 +343,190 @@ export const plywoodLogsCsv = catchAsync(async (req, res) => {
     new ApiResponse(StatusCodes.OK, 'Csv downloaded successfully...', excelLink)
   );
 });
+
+export const plywoodHistoryLogsCsv = catchAsync(async (req, res) => {
+  const {
+    search = '',
+    sortBy = 'updatedAt',
+    sort = 'desc',
+  } = req.query;
+
+  const {
+    string,
+    boolean,
+    numbers,
+    arrayField = [],
+  } = req?.body?.searchFields || {};
+
+  const filter = req.body?.filter;
+
+  // Step 1: Build search query
+  let search_query = {};
+  if (search !== '' && req?.body?.searchFields) {
+    const search_data = DynamicSearch(search, boolean, numbers, string, arrayField);
+    if (search_data?.length === 0) {
+      return res.status(404).json({
+        statusCode: 404,
+        status: false,
+        message: 'Results Not Found',
+      });
+    }
+    search_query = search_data;
+  }
+
+  // Step 2: Build filter query
+  const filterData = dynamic_filter(filter);
+  const match_query = { ...filterData, ...search_query };
+
+  // Step 3: Aggregation pipeline
+  const pipeline = [
+    {
+      $lookup: {
+        from: 'plywood_inventory_items_views',
+        foreignField: '_id',
+        localField: 'plywood_item_id',
+        as: 'plywood_item_details',
+        pipeline: [
+          {
+            $lookup: {
+              from: 'plywood_inventory_invoice_details',
+              localField: 'invoice_id',
+              foreignField: '_id',
+              as: 'plywood_invoice_details',
+            },
+          },
+          {
+            $unwind: {
+              path: '$plywood_invoice_details',
+              preserveNullAndEmptyArrays: true,
+            },
+          },
+          {
+            $addFields: {
+              invoice_Details: '$plywood_invoice_details.invoice_Details',
+              no_of_workers: '$plywood_invoice_details.workers_details.no_of_workers',
+              shift: '$plywood_invoice_details.workers_details.shift',
+              working_hours: '$plywood_invoice_details.workers_details.working_hours',
+
+              supplier_name: '$plywood_invoice_details.supplier_details.company_details.supplier_name',
+              supplier_type: '$plywood_invoice_details.supplier_details.company_details.supplier_type',
+
+              branch_name: '$plywood_invoice_details.supplier_details.branch_detail.branch_name',
+              branch_address: '$plywood_invoice_details.supplier_details.branch_detail.address',
+              city: '$plywood_invoice_details.supplier_details.branch_detail.city',
+              state: '$plywood_invoice_details.supplier_details.branch_detail.state',
+              country: '$plywood_invoice_details.supplier_details.branch_detail.country',
+              pincode: '$plywood_invoice_details.supplier_details.branch_detail.pincode',
+              gst_number: '$plywood_invoice_details.supplier_details.branch_detail.gst_number',
+              web_url: '$plywood_invoice_details.supplier_details.branch_detail.web_url',
+
+              contact_person_name: {
+                $arrayElemAt: ['$plywood_invoice_details.supplier_details.branch_detail.contact_person.name', 0],
+              },
+              contact_person_email: {
+                $arrayElemAt: ['$plywood_invoice_details.supplier_details.branch_detail.contact_person.email', 0],
+              },
+              contact_person_mobile: {
+                $arrayElemAt: ['$plywood_invoice_details.supplier_details.branch_detail.contact_person.mobile_number', 0],
+              },
+              contact_person_designation: {
+                $arrayElemAt: ['$plywood_invoice_details.supplier_details.branch_detail.contact_person.designation', 0],
+              },
+            },
+          },
+          {
+            $lookup: {
+              from: 'workers',
+              localField: 'worker_id',
+              foreignField: '_id',
+              as: 'workers_details',
+            },
+          },
+          {
+            $unwind: {
+              path: '$workers_details',
+              preserveNullAndEmptyArrays: true,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $unwind: {
+        path: '$plywood_item_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'created_by',
+        foreignField: '_id',
+        pipeline: [
+          {
+            $project: {
+              first_name: 1,
+              last_name: 1,
+              user_name: 1,
+              user_type: 1,
+              email_id: 1,
+            },
+          },
+        ],
+        as: 'created_user_details',
+      },
+    },
+    {
+      $unwind: {
+        path: '$created_user_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'updated_by',
+        foreignField: '_id',
+        pipeline: [
+          {
+            $project: {
+              first_name: 1,
+              last_name: 1,
+              user_name: 1,
+              user_type: 1,
+            },
+          },
+        ],
+        as: 'updated_user_details',
+      },
+    },
+    {
+      $unwind: {
+        path: '$updated_user_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    { $match: match_query },
+    { $sort: { [sortBy]: sort === 'desc' ? -1 : 1 } },
+  ];
+
+  // Step 4: Fetch data
+  const allData = await plywood_history_model.aggregate(pipeline);
+
+  if (!allData.length) {
+    return res
+      .status(StatusCodes.NOT_FOUND)
+      .json(new ApiResponse(StatusCodes.NOT_FOUND, 'No data found for export'));
+  }
+
+  // Step 5: Create Excel with deep fields
+  const excelLink = await createPlywoodHistoryExcel(allData);
+
+  return res.json(
+    new ApiResponse(StatusCodes.OK, 'History CSV downloaded successfully', excelLink)
+  );
+});
+
 
 export const edit_plywood_item_invoice_inventory = catchAsync(
   async (req, res, next) => {
@@ -797,3 +997,4 @@ export const fetch_plywood_history = catchAsync(async (req, res, next) => {
 
   return res.status(StatusCodes.OK).json(response);
 });
+
