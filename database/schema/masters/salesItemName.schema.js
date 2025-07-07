@@ -1,6 +1,6 @@
 import mongoose, { Schema } from 'mongoose';
 
-const photoSchema = new mongoose.Schema(
+const salesItemNameSchema = new mongoose.Schema(
   {
     sr_no: {
       type: Number,
@@ -230,10 +230,14 @@ const photoSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-photoSchema.index({ photo_number: 1 }, { unique: true });
-photoSchema.index({ sr_no: 1 }, { unique: true });
-photoSchema.index({ created_by: 1 });
-photoSchema.index({ updated_by: 1 });
+salesItemNameSchema.index({ photo_number: 1 }, { unique: true });
+salesItemNameSchema.index({ sr_no: 1 }, { unique: true });
+salesItemNameSchema.index({ created_by: 1 });
+salesItemNameSchema.index({ updated_by: 1 });
 
-const photoModel = mongoose.model('photos', photoSchema, 'photos');
-export default photoModel;
+const salesItemNameModel = mongoose.model(
+  'sales_item_name',
+  salesItemNameSchema,
+  'sales_item_name'
+);
+export default salesItemNameModel;
