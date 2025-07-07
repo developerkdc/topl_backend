@@ -275,6 +275,7 @@ export const edit_flitch_invoice_inventory = catchAsync(
   }
 );
 
+//csv inventory
 export const flitchLogsCsv = catchAsync(async (req, res) => {
   const { search = '' } = req.query;
   const {
@@ -283,48 +284,112 @@ export const flitchLogsCsv = catchAsync(async (req, res) => {
     numbers,
     arrayField = [],
   } = req?.body?.searchFields || {};
+
   const filter = req.body?.filter;
 
+  // 1. Build search query
   let search_query = {};
-  if (search != '' && req?.body?.searchFields) {
-    const search_data = DynamicSearch(
-      search,
-      boolean,
-      numbers,
-      string,
-      arrayField
-    );
-    if (search_data?.length == 0) {
+  if (search && req?.body?.searchFields) {
+    string?.forEach((field) => {
+      search_query[field] = { $regex: search, $options: 'i' };
+    });
+
+    boolean?.forEach((field) => {
+      if (search.toLowerCase() === 'true' || search.toLowerCase() === 'false') {
+        search_query[field] = search.toLowerCase() === 'true';
+      }
+    });
+
+    if (!isNaN(search)) {
+      numbers?.forEach((field) => {
+        search_query[field] = Number(search);
+      });
+    }
+
+    arrayField?.forEach((field) => {
+      search_query[field] = { $in: [search] };
+    });
+
+    if (Object.keys(search_query).length === 0) {
       return res.status(404).json({
         statusCode: 404,
         status: false,
-        data: {
-          data: [],
-        },
+        data: [],
         message: 'Results Not Found',
       });
     }
-    search_query = search_data;
   }
 
+  // 2. Get filter query
   const filterData = dynamic_filter(filter);
 
-  const match_query = {
+  // 3. Clean invalid/empty values
+  const cleanMatchQuery = (query) => {
+    const cleaned = {};
+    for (const key in query) {
+      const value = query[key];
+
+      if (value === undefined || value === '' || value === null) continue;
+
+      if (typeof value === 'object' && ('$gte' in value || '$lte' in value)) {
+        const range = {};
+        if (value.$gte !== '' && value.$gte !== null && value.$gte !== undefined) {
+          range.$gte = value.$gte;
+        }
+        if (value.$lte !== '' && value.$lte !== null && value.$lte !== undefined) {
+          range.$lte = value.$lte;
+        }
+        if (Object.keys(range).length > 0) {
+          cleaned[key] = range;
+        }
+        continue;
+      }
+
+      cleaned[key] = value;
+    }
+    return cleaned;
+  };
+
+  // 4. Merge, clean, and finalize query
+  const fullQuery = {
     ...filterData,
     ...search_query,
   };
 
-  const allData = await flitch_inventory_items_view_model.find(match_query);
+  const cleanedQuery = cleanMatchQuery(fullQuery);
+
+  const match_query = {
+    issue_status: null, // Match listing API exactly
+    ...cleanedQuery,
+  };
+
+  // 5. Build aggregation
+  const aggregate_stage = [
+    {
+      $match: match_query,
+    },
+    {
+      $sort: {
+        updatedAt: -1,
+      },
+    },
+  ];
+
+  // 6. Fetch Data
+  const allData = await flitch_inventory_items_view_model.aggregate(aggregate_stage);
+
   if (allData.length === 0) {
     return res
       .status(StatusCodes.NOT_FOUND)
       .json(new ApiResponse(StatusCodes.NOT_FOUND, 'NO Data found...'));
   }
+
+  // 7. Generate Excel
   const excelLink = await createFlitchLogsExcel(allData);
   console.log('link => ', excelLink);
 
   return res.json(
-    new ApiResponse(StatusCodes.OK, 'Csv downloaded successfully...', excelLink)
+    new ApiResponse(StatusCodes.OK, 'CSV downloaded successfully...', excelLink)
   );
 });
 
@@ -625,3 +690,109 @@ export const listing_flitch_history_inventory = catchAsync(
     });
   }
 );
+
+export const flitchHistoryCsv = catchAsync(async (req, res) => {
+  const { search = '' } = req.query;
+  const {
+    string,
+    boolean,
+    numbers,
+    arrayField = [],
+  } = req?.body?.searchFields || {};
+
+  const filter = req.body?.filter;
+
+  // 1. Build search query using DynamicSearch
+  let search_query = {};
+  if (search !== '' && req?.body?.searchFields) {
+    const search_data = DynamicSearch(search, boolean, numbers, string, arrayField);
+    if (!search_data || Object.keys(search_data).length === 0) {
+      return res.status(404).json({
+        statusCode: 404,
+        status: false,
+        data: [],
+        message: 'Results Not Found',
+      });
+    }
+    search_query = search_data;
+  }
+
+  // 2. Get filter query
+  const filterData = dynamic_filter(filter);
+
+  // ✅ 3. Clean empty/null/invalid filter values
+  const cleanMatchQuery = (query) => {
+    const cleaned = {};
+    for (const key in query) {
+      const value = query[key];
+
+      if (value === undefined || value === '' || value === null) continue;
+
+      if (
+        typeof value === 'object' &&
+        value !== null &&
+        ('$gte' in value || '$lte' in value)
+      ) {
+        const range = {};
+        if (value.$gte !== '' && value.$gte !== null && value.$gte !== undefined) {
+          range.$gte = value.$gte;
+        }
+        if (value.$lte !== '' && value.$lte !== null && value.$lte !== undefined) {
+          range.$lte = value.$lte;
+        }
+        if (Object.keys(range).length > 0) {
+          cleaned[key] = range;
+        }
+        continue;
+      }
+
+      cleaned[key] = value;
+    }
+    return cleaned;
+  };
+
+  // 4. Merge & clean the final match query
+  const mergedQuery = {
+    ...filterData,
+    ...search_query,
+  };
+
+  const cleanedQuery = cleanMatchQuery(mergedQuery);
+
+  const match_query = {
+    issue_status: { $ne: null },
+    ...cleanedQuery,
+  };
+
+  console.log('Final MATCH_QUERY =>', JSON.stringify(match_query, null, 2));
+
+  // 5. Aggregation pipeline
+  const aggregate_stage = [
+    {
+      $match: match_query,
+    },
+    {
+      $sort: {
+        updatedAt: -1,
+      },
+    },
+  ];
+
+  // 6. Fetch data
+  const allData = await flitch_inventory_items_view_model.aggregate(aggregate_stage);
+
+  if (!allData || allData.length === 0) {
+    return res
+      .status(StatusCodes.NOT_FOUND)
+      .json(new ApiResponse(StatusCodes.NOT_FOUND, 'NO Data found...'));
+  }
+
+  // 7. Generate Excel
+  const excelLink = await createFlitchLogsExcel(allData);
+  console.log('link => ', excelLink);
+
+  // 8. Respond
+  return res.json(
+    new ApiResponse(StatusCodes.OK, 'CSV downloaded successfully...', excelLink)
+  );
+});
