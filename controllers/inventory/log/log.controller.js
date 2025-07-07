@@ -858,9 +858,15 @@ export const listing_log_history_inventory = catchAsync(
 
 export const check_already_existing_log_no = catchAsync(
   async (req, res, next) => {
-    const { log_no } = req.query;
-    
-    const isExistInLog = await log_inventory_items_model.findOne({ log_no });
+    const { log_no, item_id } = req.query;
+
+    const isExistInLog = await log_inventory_items_model.findOne({
+      log_no,
+      ...(item_id &&
+        item_id !== 'undefined' && {
+          _id: { $ne: new mongoose.Types.ObjectId(item_id) },
+        }),
+    });
     if (isExistInLog) {
       throw new ApiError(
         `Log No (${log_no}) already exists in Log Inventory.`,
@@ -869,6 +875,10 @@ export const check_already_existing_log_no = catchAsync(
     }
     const isExistInFlitch = await log_inventory_items_model.findOne({
       log_no_code: log_no,
+      ...(item_id &&
+        item_id !== 'undefined' && {
+          _id: { $ne: new mongoose.Types.ObjectId(item_id) },
+        }),
     });
     if (isExistInFlitch) {
       throw new ApiError(
@@ -878,6 +888,10 @@ export const check_already_existing_log_no = catchAsync(
     }
     const isExistInVeneer = await veneer_inventory_items_model.findOne({
       log_code: log_no,
+      ...(item_id &&
+        item_id !== 'undefined' && {
+          _id: { $ne: new mongoose.Types.ObjectId(item_id) },
+        }),
     });
 
     if (isExistInVeneer) {
