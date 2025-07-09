@@ -8,6 +8,7 @@ import {
   edit_log_invoice_inventory,
   edit_log_item_inventory,
   edit_log_item_invoice_inventory,
+  historyLogsCsv,
   inward_sr_no_dropdown,
   item_sr_no_dropdown,
   listing_log_history_inventory,
@@ -75,6 +76,13 @@ router.post(
   AuthMiddleware,
   RolesPermissions('log_inventory', 'view'),
   logLogsCsv
+);
+
+router.post(
+  '/download-excel-log-history',
+  AuthMiddleware,
+  RolesPermissions('log_inventory', 'view'),
+  historyLogsCsv
 );
 
 router.post(
