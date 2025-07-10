@@ -2,6 +2,7 @@ import { Router } from 'express';
 import AuthMiddleware from '../../../../middlewares/verifyToken.js';
 import {
   create_cnc,
+  download_excel_factory_cnc_done,
   fetch_single_cnc_done_item_with_issue_for_cnc_data,
   listing_cnc_done,
   listing_cnc_history,
@@ -23,4 +24,7 @@ cnc_done_router.get(
 );
 cnc_done_router.post('/history-list', AuthMiddleware, listing_cnc_history);
 // cnc_done_router.post("/add-to-damage", AuthMiddleware, add_cnc_damage)
+
+// Download excel api
+cnc_done_router.post('/download-factory-cnc-done-excel', AuthMiddleware, download_excel_factory_cnc_done);
 export default cnc_done_router;

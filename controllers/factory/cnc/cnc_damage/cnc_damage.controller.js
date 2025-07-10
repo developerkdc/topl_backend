@@ -7,6 +7,7 @@ import catchAsync from '../../../../utils/errors/catchAsync.js';
 import ApiError from '../../../../utils/errors/apiError.js';
 import cnc_damage_model from '../../../../database/schema/factory/cnc/cnc_damage/cnc_damage.schema.js';
 import { cnc_done_details_model } from '../../../../database/schema/factory/cnc/cnc_done/cnc_done.schema.js';
+import { createFactoryCNCDamageExcel } from '../../../../config/downloadExcel/Logs/Factory/CNC/CNCDamage/index.js';
 
 export const listing_cnc_damage = catchAsync(async (req, res) => {
   const {
@@ -192,6 +193,8 @@ export const listing_cnc_damage = catchAsync(async (req, res) => {
   return res.status(StatusCodes.OK).json(response);
 });
 
+
+
 export const add_cnc_damage = catchAsync(async (req, res) => {
   const userDetails = req.userDetails;
   const { id, damage_sheets } = req.query;
@@ -209,12 +212,12 @@ export const add_cnc_damage = catchAsync(async (req, res) => {
     if (!damage_sheets) {
       throw new ApiError('Damage Sheets are missing');
     }
-
+    
     const cnc_done_details = await cnc_done_details_model
-      .findById(id)
-      .lean()
-      .session();
-
+    .findById(id)
+    .lean()
+    .session();
+    
     if (!cnc_done_details) {
       throw new ApiError('CNC done details not found.', StatusCodes.NOT_FOUND);
     }
@@ -229,7 +232,7 @@ export const add_cnc_damage = catchAsync(async (req, res) => {
         cnc_done_details?.available_details?.sqm
       )?.toFixed(3)
     );
-
+    
     const [maxSrNo] = await cnc_damage_model.aggregate([
       {
         $group: {
@@ -254,7 +257,7 @@ export const add_cnc_damage = catchAsync(async (req, res) => {
       ],
       { session }
     );
-
+    
     if (!create_damage_result) {
       throw new ApiError(
         'Failed to add damage details',
@@ -283,7 +286,7 @@ export const add_cnc_damage = catchAsync(async (req, res) => {
         StatusCodes.BAD_REQUEST
       );
     }
-
+    
     if (
       !update_cnc_done_result.acknowledged ||
       update_cnc_done_result.modifiedCount === 0
@@ -293,7 +296,7 @@ export const add_cnc_damage = catchAsync(async (req, res) => {
         StatusCodes.BAD_REQUEST
       );
     }
-
+    
     const response = new ApiResponse(
       StatusCodes.OK,
       'CNC Item added to damage successfully.',
@@ -311,7 +314,7 @@ export const add_cnc_damage = catchAsync(async (req, res) => {
 
 export const revert_damage_to_cnc_done = catchAsync(async (req, res) => {
   const userDetails = req.userDetails;
-
+  
   const { id } = req.params;
   const session = await mongoose.startSession();
   try {
@@ -321,22 +324,22 @@ export const revert_damage_to_cnc_done = catchAsync(async (req, res) => {
     if (!isValidObjectId(id)) {
       throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
     }
-
+    
     session.startTransaction();
-
+    
     const cnc_damage_details = await cnc_damage_model
-      .findById(id)
-      .lean()
-      .session(session);
+    .findById(id)
+    .lean()
+    .session(session);
     if (!cnc_damage_details) {
       throw new ApiError('CNC Damage details not found', StatusCodes.NOT_FOUND);
     }
-
+    
     const delete_damage_data_result = await cnc_damage_model.deleteOne(
       { _id: id },
       { session }
     );
-
+    
     if (
       !delete_damage_data_result.acknowledged ||
       delete_damage_data_result.deletedCount === 0
@@ -367,12 +370,12 @@ export const revert_damage_to_cnc_done = catchAsync(async (req, res) => {
     }
 
     const is_item_editable = await cnc_done_details_model
-      .findById(cnc_damage_details?.cnc_done_id)
+    .findById(cnc_damage_details?.cnc_done_id)
       .lean()
       .session(session);
 
-    if (
-      is_item_editable?.no_of_sheets ===
+      if (
+        is_item_editable?.no_of_sheets ===
       is_item_editable?.available_details?.no_of_sheets
     ) {
       const update_cnc_result = await cnc_done_details_model.updateOne(
@@ -409,3 +412,170 @@ export const revert_damage_to_cnc_done = catchAsync(async (req, res) => {
     await session.endSession();
   }
 });
+
+  export const download_excel_factory_cnc_damage = catchAsync(async (req, res) => {
+    const {
+      page = 1,
+      limit = 1,
+      sortBy = 'updatedAt',
+      sort = 'desc',
+      search = '',
+    } = req.query;
+    const {
+      string,
+      boolean,
+      numbers,
+      arrayField = [],
+    } = req?.body?.searchFields || {};
+    const filter = req.body?.filter;
+  
+    let search_query = {};
+    if (search != '' && req?.body?.searchFields) {
+      const search_data = DynamicSearch(
+        search,
+        boolean,
+        numbers,
+        string,
+        arrayField
+      );
+      if (search_data?.length == 0) {
+        return res.status(404).json({
+          statusCode: 404,
+          status: false,
+          data: {
+            data: [],
+          },
+          message: 'Results Not Found',
+        });
+      }
+      search_query = search_data;
+    }
+  
+    const filterData = dynamic_filter(filter);
+  
+    const match_query = {
+      ...filterData,
+      ...search_query,
+    };
+  
+    const aggLookupCncDoneDetails = {
+      $lookup: {
+        from: 'cnc_done_details',
+        localField: 'cnc_done_id',
+        foreignField: '_id',
+        as: 'cnc_done_details',
+      },
+    };
+    const aggLookUpIssueForCncDetails = {
+      $lookup: {
+        from: 'issue_for_cnc_details_view',
+        localField: 'cnc_done_details.issue_for_cnc_id',
+        foreignField: '_id',
+        as: 'issue_for_cnc_details',
+      },
+    };
+  
+    const aggCreatedByLookup = {
+      $lookup: {
+        from: 'users',
+        localField: 'created_by',
+        foreignField: '_id',
+        pipeline: [
+          {
+            $project: {
+              user_name: 1,
+              user_type: 1,
+              dept_name: 1,
+              first_name: 1,
+              last_name: 1,
+              email_id: 1,
+              mobile_no: 1,
+            },
+          },
+        ],
+        as: 'created_by',
+      },
+    };
+    const aggUpdatedByLookup = {
+      $lookup: {
+        from: 'users',
+        localField: 'updated_by',
+        foreignField: '_id',
+        pipeline: [
+          {
+            $project: {
+              user_name: 1,
+              user_type: 1,
+              dept_name: 1,
+              first_name: 1,
+              last_name: 1,
+              email_id: 1,
+              mobile_no: 1,
+            },
+          },
+        ],
+        as: 'updated_by',
+      },
+    };
+    const aggCreatedByUnwind = {
+      $unwind: {
+        path: '$created_by',
+        preserveNullAndEmptyArrays: true,
+      },
+    };
+    const aggUpdatedByUnwind = {
+      $unwind: {
+        path: '$updated_by',
+        preserveNullAndEmptyArrays: true,
+      },
+    };
+  
+    const aggUnwindCncDoneDetails = {
+      $unwind: {
+        path: '$cnc_done_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    };
+    const aggUnwindIssueForCncDetails = {
+      $unwind: {
+        path: '$issue_for_cnc_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    };
+    const aggMatch = {
+      $match: {
+        ...match_query,
+      },
+    };
+    const aggSort = {
+      $sort: {
+        [sortBy]: sort === 'desc' ? -1 : 1,
+      },
+    };
+    const aggSkip = {
+      $skip: (parseInt(page) - 1) * parseInt(limit),
+    };
+    const aggLimit = {
+      $limit: parseInt(limit),
+    };
+  
+    const listAggregate = [
+      aggLookupCncDoneDetails,
+      aggUnwindCncDoneDetails,
+      aggLookUpIssueForCncDetails,
+      aggUnwindIssueForCncDetails,
+      aggCreatedByLookup,
+      aggCreatedByUnwind,
+      aggUpdatedByLookup,
+      aggUpdatedByUnwind,
+      aggMatch,
+      // aggSort,
+      // aggSkip,
+      // aggLimit,
+    ]; // aggregation pipiline
+  
+    const data = await cnc_damage_model.aggregate(listAggregate);
+  
+    await createFactoryCNCDamageExcel(data,req, res);
+  
+  });
