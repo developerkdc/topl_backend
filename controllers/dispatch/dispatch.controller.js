@@ -234,12 +234,28 @@ export const add_dispatch_details = catchAsync(async (req, res, next) => {
             throw new ApiError('Failed to create dispatch items', StatusCodes.INTERNAL_SERVER_ERROR);
         };
 
-        // Update packing done other details
         const packing_done_ids = add_dispatch_details_data?.packing_done_ids;
         if (packing_done_ids?.length <= 0) {
             throw new ApiError('Packing done IDs are not allowed for dispatch', StatusCodes.BAD_REQUEST);
         }
         const packing_done_ids_data = packing_done_ids.map((item) => item?.packing_done_other_details_id);
+        
+        // Fetch packing done other details
+        const packing_done_other_details = await packing_done_other_details_model.find({
+            _id: { $in: packing_done_ids_data },
+            isEditable:true,
+            is_dispatch_done:false
+        }).session(session);
+
+        if (!packing_done_other_details || packing_done_other_details?.length === 0) {
+            throw new ApiError('Packing done details not found or already dispatch for some packing id', StatusCodes.NOT_FOUND);
+        }
+        // Check if all packing done IDs are found
+        if (packing_done_other_details?.length !== packing_done_ids_data?.length) {
+            throw new ApiError('Already dispatch for some packing id', StatusCodes.NOT_FOUND);
+        }
+        
+        // Update packing done other details
         const update_packing_done_details = await packing_done_other_details_model.updateMany(
             { _id: { $in: packing_done_ids_data } },
             {
@@ -755,7 +771,7 @@ export const fetch_all_dispatch_details = catchAsync(async (req, res, next) => {
     const list_aggregate = [
         // match_common_query,
         aggLookupDispatchItemsDetails,
-        aggUnwindDispatchItemsDetails,
+        // aggUnwindDispatchItemsDetails,
         aggCreatedUserDetails,
         aggUpdatedUserDetails,
         aggUnwindCreatedUser,
@@ -775,7 +791,7 @@ export const fetch_all_dispatch_details = catchAsync(async (req, res, next) => {
     const count_total_docs = [
         // match_common_query,
         aggLookupDispatchItemsDetails,
-        aggUnwindDispatchItemsDetails,
+        // aggUnwindDispatchItemsDetails,
         aggCreatedUserDetails,
         aggUpdatedUserDetails,
         aggUnwindCreatedUser,
@@ -848,7 +864,7 @@ export const fetch_all_dispatch_items_details = catchAsync(async (req, res, next
 
     const aggLookupDispatchDetails = {
         $lookup: {
-            from: 'dispatchs',
+            from: 'dispatches',
             localField: 'dispatch_id',
             foreignField: '_id',
             as: 'dispatch_details',
@@ -941,7 +957,7 @@ export const fetch_all_dispatch_items_details = catchAsync(async (req, res, next
         aggLimit,
     ];
 
-    const result = await dispatchModel.aggregate(list_aggregate);
+    const result = await dispatchItemsModel.aggregate(list_aggregate);
 
     const aggCount = {
         $count: 'totalCount',
