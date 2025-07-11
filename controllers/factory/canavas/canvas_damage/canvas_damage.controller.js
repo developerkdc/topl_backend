@@ -7,6 +7,7 @@ import catchAsync from '../../../../utils/errors/catchAsync.js';
 import ApiError from '../../../../utils/errors/apiError.js';
 import canvas_damage_model from '../../../../database/schema/factory/canvas/canvas_damage/canvas_damage.schema.js';
 import { canvas_done_details_model } from '../../../../database/schema/factory/canvas/canvas_done/canvas_done.schema.js';
+import { createFactoryCanvasDamageExcel } from '../../../../config/downloadExcel/Logs/Factory/Canvas/CanvasDamage/index.js';
 
 export const listing_canvas_damage = catchAsync(async (req, res) => {
   const {
@@ -210,10 +211,10 @@ export const add_canvas_damage = catchAsync(async (req, res) => {
     }
 
     const canvas_done_details = await canvas_done_details_model
-      .findById(id)
-      .lean()
-      .session();
-
+    .findById(id)
+    .lean()
+    .session();
+    
     if (!canvas_done_details) {
       throw new ApiError(
         'canvas done details not found.',
@@ -312,7 +313,7 @@ export const add_canvas_damage = catchAsync(async (req, res) => {
 
 export const revert_damage_to_canvas_done = catchAsync(async (req, res) => {
   const userDetails = req.userDetails;
-
+  
   const { id } = req.params;
   const session = await mongoose.startSession();
   try {
@@ -322,13 +323,13 @@ export const revert_damage_to_canvas_done = catchAsync(async (req, res) => {
     if (!isValidObjectId(id)) {
       throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
     }
-
+    
     await session.startTransaction();
-
+    
     const canvas_damage_details = await canvas_damage_model
-      .findById(id)
-      .lean()
-      .session(session);
+    .findById(id)
+    .lean()
+    .session(session);
     if (!canvas_damage_details) {
       throw new ApiError(
         'canvas Damage details not found',
@@ -370,12 +371,12 @@ export const revert_damage_to_canvas_done = catchAsync(async (req, res) => {
         StatusCodes.BAD_REQUEST
       );
     }
-
+    
     const is_item_editable = await canvas_done_details_model
-      .findById(canvas_damage_details?.canvas_done_id)
-      .lean()
-      .session(session);
-
+    .findById(canvas_damage_details?.canvas_done_id)
+    .lean()
+    .session(session);
+    
     if (
       is_item_editable?.no_of_sheets ===
       is_item_editable?.available_details?.no_of_sheets
@@ -404,4 +405,174 @@ export const revert_damage_to_canvas_done = catchAsync(async (req, res) => {
   } finally {
     await session.endSession();
   }
+});
+
+
+
+// Download excel damage
+
+export const download_excel_canvas_damage = catchAsync(async (req, res) => {
+  const {
+    page = 1,
+    limit = 10,
+    sortBy = 'updatedAt',
+    sort = 'desc',
+    search = '',
+  } = req.query;
+  const {
+    string,
+    boolean,
+    numbers,
+    arrayField = [],
+  } = req?.body?.searchFields || {};
+  const filter = req.body?.filter;
+
+  let search_query = {};
+  if (search != '' && req?.body?.searchFields) {
+    const search_data = DynamicSearch(
+      search,
+      boolean,
+      numbers,
+      string,
+      arrayField
+    );
+    if (search_data?.length == 0) {
+      return res.status(404).json({
+        statusCode: 404,
+        status: false,
+        data: {
+          data: [],
+        },
+        message: 'Results Not Found',
+      });
+    }
+    search_query = search_data;
+  }
+
+  const filterData = dynamic_filter(filter);
+
+  const match_query = {
+    ...filterData,
+    ...search_query,
+  };
+
+  const aggLookupCanvasDoneDetails = {
+    $lookup: {
+      from: 'canvas_done_details',
+      localField: 'canvas_done_id',
+      foreignField: '_id',
+      as: 'canvas_done_details',
+    },
+  };
+  const aggLookUpIssueForCanvasDetails = {
+    $lookup: {
+      from: 'issue_for_canvas_details_view',
+      localField: 'canvas_done_details.issue_for_canvas_id',
+      foreignField: '_id',
+      as: 'issue_for_canvas_details',
+    },
+  };
+
+  const aggCreatedByLookup = {
+    $lookup: {
+      from: 'users',
+      localField: 'created_by',
+      foreignField: '_id',
+      pipeline: [
+        {
+          $project: {
+            user_name: 1,
+            user_type: 1,
+            dept_name: 1,
+            first_name: 1,
+            last_name: 1,
+            email_id: 1,
+            mobile_no: 1,
+          },
+        },
+      ],
+      as: 'created_by',
+    },
+  };
+  const aggUpdatedByLookup = {
+    $lookup: {
+      from: 'users',
+      localField: 'updated_by',
+      foreignField: '_id',
+      pipeline: [
+        {
+          $project: {
+            user_name: 1,
+            user_type: 1,
+            dept_name: 1,
+            first_name: 1,
+            last_name: 1,
+            email_id: 1,
+            mobile_no: 1,
+          },
+        },
+      ],
+      as: 'updated_by',
+    },
+  };
+  const aggCreatedByUnwind = {
+    $unwind: {
+      path: '$created_by',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
+  const aggUpdatedByUnwind = {
+    $unwind: {
+      path: '$updated_by',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
+
+  const aggUnwindCanvasDoneDetails = {
+    $unwind: {
+      path: '$canvas_done_details',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
+  const aggUnwindIssueForCanvasDetails = {
+    $unwind: {
+      path: '$issue_for_canvas_details',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
+  const aggMatch = {
+    $match: {
+      ...match_query,
+    },
+  };
+  const aggSort = {
+    $sort: {
+      [sortBy]: sort === 'desc' ? -1 : 1,
+    },
+  };
+  const aggSkip = {
+    $skip: (parseInt(page) - 1) * parseInt(limit),
+  };
+  const aggLimit = {
+    $limit: parseInt(limit),
+  };
+
+  const listAggregate = [
+    aggLookupCanvasDoneDetails,
+    aggUnwindCanvasDoneDetails,
+    aggLookUpIssueForCanvasDetails,
+    aggUnwindIssueForCanvasDetails,
+    aggCreatedByLookup,
+    aggCreatedByUnwind,
+    aggUpdatedByLookup,
+    aggUpdatedByUnwind,
+    aggMatch,
+    // aggSort,
+    // aggSkip,
+    // aggLimit,
+  ]; // aggregation pipiline
+
+  const data = await canvas_damage_model.aggregate(listAggregate);
+
+  await createFactoryCanvasDamageExcel(data,req,res);
 });
