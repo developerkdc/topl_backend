@@ -10,7 +10,7 @@ import ApiResponse from '../../../utils/ApiResponse.js';
 import { StatusCodes } from '../../../utils/constants.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
-import { createCoreLogsExcel } from '../../../config/downloadExcel/Logs/Inventory/core/core.js';
+import { createCoreHistoryExcel, createCoreLogsExcel } from '../../../config/downloadExcel/Logs/Inventory/core/core.js';
 import {
   core_approval_inventory_invoice_model,
   core_approval_inventory_items_model,
@@ -502,18 +502,26 @@ export const inward_sr_no_dropdown = catchAsync(async (req, res, next) => {
   });
 });
 
+
 export const coreLogsCsv = catchAsync(async (req, res) => {
-  const { search = '' } = req.query;
+  const {
+    search = '',
+    sortBy = 'updatedAt',
+    sort = 'desc'
+  } = req.query;
+
   const {
     string,
     boolean,
     numbers,
     arrayField = [],
   } = req?.body?.searchFields || {};
+
   const filter = req.body?.filter;
 
+  // Build search query
   let search_query = {};
-  if (search != '' && req?.body?.searchFields) {
+  if (search !== '' && req?.body?.searchFields) {
     const search_data = DynamicSearch(
       search,
       boolean,
@@ -521,27 +529,41 @@ export const coreLogsCsv = catchAsync(async (req, res) => {
       string,
       arrayField
     );
-    if (search_data?.length == 0) {
+    if (search_data?.length === 0) {
       return res.status(404).json({
         statusCode: 404,
         status: false,
-        data: {
-          data: [],
-        },
+        data: { data: [] },
         message: 'Results Not Found',
       });
     }
     search_query = search_data;
   }
 
+  // Build filter query
   const filterData = dynamic_filter(filter);
 
+  // Final MongoDB match query
   const match_query = {
     ...filterData,
     ...search_query,
+    available_sheets: { $ne: 0 },
   };
 
-  const allData = await core_inventory_items_view_modal.find(match_query);
+  // Build sort options
+  const sortOrder = sort === 'desc' ? -1 : 1;
+  const sortOptions = { [sortBy]: sortOrder };
+
+  // Final Mongo query with sort
+  const allData = await core_inventory_items_view_modal
+    .find(match_query)
+    .sort(sortOptions);
+
+  if (allData.length === 0) {
+    return res
+      .status(StatusCodes.NOT_FOUND)
+      .json(new ApiResponse(StatusCodes.NOT_FOUND, 'NO Data found...'));
+  }
 
   const excelLink = await createCoreLogsExcel(allData);
   console.log('link => ', excelLink);
@@ -550,6 +572,191 @@ export const coreLogsCsv = catchAsync(async (req, res) => {
     new ApiResponse(StatusCodes.OK, 'Csv downloaded successfully...', excelLink)
   );
 });
+
+export const coreHistoryLogsCsv = catchAsync(async (req, res) => {
+  const {
+    search = '',
+    sortBy = 'updatedAt',
+    sort = 'desc',
+  } = req.query;
+
+  const {
+    string,
+    boolean,
+    numbers,
+    arrayField = [],
+  } = req?.body?.searchFields || {};
+
+  const filter = req.body?.filter;
+
+  // Step 1: Build search query
+  let search_query = {};
+  if (search !== '' && req?.body?.searchFields) {
+    const search_data = DynamicSearch(search, boolean, numbers, string, arrayField);
+    if (search_data?.length === 0) {
+      return res.status(404).json({
+        statusCode: 404,
+        status: false,
+        message: 'Results Not Found',
+      });
+    }
+    search_query = search_data;
+  }
+
+  // Step 2: Build filter query
+  const filterData = dynamic_filter(filter);
+  const match_query = { ...filterData, ...search_query, issue_status: { $ne: null } };
+
+  // Step 3: Aggregation pipeline
+  const pipeline = [
+    {
+      $lookup: {
+        from: 'core_inventory_items_views',
+        foreignField: '_id',
+        localField: 'core_item_id',
+        as: 'core_item_details',
+        pipeline: [
+          {
+            $lookup: {
+              from: 'core_inventory_invoice_details',
+              localField: 'invoice_id',
+              foreignField: '_id',
+              as: 'core_invoice_details',
+            },
+          },
+          {
+            $unwind: {
+              path: '$core_invoice_details',
+              preserveNullAndEmptyArrays: true,
+            },
+          },
+          {
+            $addFields: {
+              invoice_Details: '$core_invoice_details.invoice_Details',
+              no_of_workers: '$core_invoice_details.workers_details.no_of_workers',
+              shift: '$core_invoice_details.workers_details.shift',
+              working_hours: '$core_invoice_details.workers_details.working_hours',
+
+              supplier_name: '$core_invoice_details.supplier_details.company_details.supplier_name',
+              supplier_type: '$core_invoice_details.supplier_details.company_details.supplier_type',
+
+              branch_name: '$core_invoice_details.supplier_details.branch_detail.branch_name',
+              branch_address: '$core_invoice_details.supplier_details.branch_detail.address',
+              city: '$core_invoice_details.supplier_details.branch_detail.city',
+              state: '$core_invoice_details.supplier_details.branch_detail.state',
+              country: '$core_invoice_details.supplier_details.branch_detail.country',
+              pincode: '$core_invoice_details.supplier_details.branch_detail.pincode',
+              gst_number: '$core_invoice_details.supplier_details.branch_detail.gst_number',
+              web_url: '$core_invoice_details.supplier_details.branch_detail.web_url',
+
+              contact_person_name: {
+                $arrayElemAt: ['$core_invoice_details.supplier_details.branch_detail.contact_person.name', 0],
+              },
+              contact_person_email: {
+                $arrayElemAt: ['$core_invoice_details.supplier_details.branch_detail.contact_person.email', 0],
+              },
+              contact_person_mobile: {
+                $arrayElemAt: ['$core_invoice_details.supplier_details.branch_detail.contact_person.mobile_number', 0],
+              },
+              contact_person_designation: {
+                $arrayElemAt: ['$core_invoice_details.supplier_details.branch_detail.contact_person.designation', 0],
+              },
+            },
+          },
+          {
+            $lookup: {
+              from: 'workers',
+              localField: 'worker_id',
+              foreignField: '_id',
+              as: 'workers_details',
+            },
+          },
+          {
+            $unwind: {
+              path: '$workers_details',
+              preserveNullAndEmptyArrays: true,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $unwind: {
+        path: '$core_item_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'created_by',
+        foreignField: '_id',
+        pipeline: [
+          {
+            $project: {
+              first_name: 1,
+              last_name: 1,
+              user_name: 1,
+              user_type: 1,
+              email_id: 1,
+            },
+          },
+        ],
+        as: 'created_user_details',
+      },
+    },
+    {
+      $unwind: {
+        path: '$created_user_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'updated_by',
+        foreignField: '_id',
+        pipeline: [
+          {
+            $project: {
+              first_name: 1,
+              last_name: 1,
+              user_name: 1,
+              user_type: 1,
+            },
+          },
+        ],
+        as: 'updated_user_details',
+      },
+    },
+    {
+      $unwind: {
+        path: '$updated_user_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    { $match: match_query },
+    { $sort: { [sortBy]: sort === 'desc' ? -1 : 1 } },
+  ];
+
+  // Step 4: Fetch data
+  const allData = await core_history_model.aggregate(pipeline);
+
+  if (!allData.length) {
+    return res
+      .status(StatusCodes.NOT_FOUND)
+      .json(new ApiResponse(StatusCodes.NOT_FOUND, 'No data found for export'));
+  }
+
+  // Step 5: Create Excel with deep fields
+  const excelLink = await createCoreHistoryExcel(allData);
+
+  return res.json(
+    new ApiResponse(StatusCodes.OK, 'Core History CSV downloaded successfully', excelLink)
+  );
+});
+
+
 
 //fetch core history
 export const fetch_core_history = catchAsync(async (req, res, next) => {

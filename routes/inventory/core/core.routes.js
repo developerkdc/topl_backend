@@ -3,6 +3,7 @@ import {
   add_core_inventory,
   add_single_core_item_inventory,
   core_item_listing_by_invoice,
+  coreHistoryLogsCsv,
   coreLogsCsv,
   edit_core_invoice_inventory,
   edit_core_item_inventory,
@@ -74,6 +75,12 @@ router.post(
   AuthMiddleware,
   RolesPermissions('core_inventory', 'view'),
   coreLogsCsv
+);
+router.post(
+  '/download-history-excel-core',
+  AuthMiddleware,
+  RolesPermissions('core_inventory', 'view'),
+  coreHistoryLogsCsv
 );
 
 //dropdown

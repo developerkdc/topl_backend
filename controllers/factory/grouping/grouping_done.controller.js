@@ -17,7 +17,9 @@ import grouping_done_history_model from '../../../database/schema/factory/groupi
 import issue_for_tapping_model from '../../../database/schema/factory/tapping/issue_for_tapping/issue_for_tapping.schema.js';
 import { tapping_done_items_details_model } from '../../../database/schema/factory/tapping/tapping_done/tapping_done.schema.js';
 import { issues_for_pressing_model } from '../../../database/schema/factory/pressing/issues_for_pressing/issues_for_pressing.schema.js';
-
+import { createFactoryGroupingDoneExcel } from '../../../config/downloadExcel/Logs/Factory/Grouping/groupingDone.js';
+import { createFactoryGroupingDamageExcel } from '../../../config/downloadExcel/Logs/Factory/Grouping/groupingDamage.js';
+import { createFactoryGroupingHistoryExcel } from '../../../config/downloadExcel/Logs/Factory/Grouping/groupingHistory.js';
 export const add_grouping_done = catchAsync(async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -536,56 +538,60 @@ export const fetch_all_details_by_grouping_done_item_id = catchAsync(
     const group_no = result?.[0]?.group_no;
     const issue_for_tapping = await issue_for_tapping_model.aggregate([
       {
-        $match:{
-          group_no:group_no,
-          is_tapping_done:false
-        }
+        $match: {
+          group_no: group_no,
+          is_tapping_done: false,
+        },
       },
       {
         $group: {
-          _id: "$group_no",
+          _id: '$group_no',
           total_no_of_sheets: {
-            $sum: "$no_of_leaves"
-          }
-        }
+            $sum: '$no_of_leaves',
+          },
+        },
       },
     ]);
     const tapping_done = await tapping_done_items_details_model.aggregate([
       {
-        $match:{
-          group_no:group_no
-        }
+        $match: {
+          group_no: group_no,
+        },
       },
       {
         $group: {
-          _id: "$group_no",
+          _id: '$group_no',
           total_no_of_sheets: {
-            $sum: "$available_details.no_of_sheets"
-          }
-        }
+            $sum: '$available_details.no_of_sheets',
+          },
+        },
       },
     ]);
     const issue_for_pressing = await issues_for_pressing_model.aggregate([
       {
-        $match:{
-          group_no:group_no
-        }
+        $match: {
+          group_no: group_no,
+        },
       },
       {
         $group: {
-          _id: "$group_no",
+          _id: '$group_no',
           total_no_of_sheets: {
-            $sum: "$available_details.no_of_sheets"
-          }
-        }
+            $sum: '$available_details.no_of_sheets',
+          },
+        },
       },
     ]);
 
     const data_result = result?.[0];
-    data_result.grouping_available_no_of_sheets = data_result?.available_details?.no_of_leaves || 0;
-    data_result.tapping_available_no_of_sheets = (issue_for_tapping?.[0]?.total_no_of_sheets || 0) + (tapping_done?.[0]?.total_no_of_sheets || 0);
-    data_result.pressing_available_no_of_sheets = issue_for_pressing?.[0]?.total_no_of_sheets || 0;
-    
+    data_result.grouping_available_no_of_sheets =
+      data_result?.available_details?.no_of_leaves || 0;
+    data_result.tapping_available_no_of_sheets =
+      (issue_for_tapping?.[0]?.total_no_of_sheets || 0) +
+      (tapping_done?.[0]?.total_no_of_sheets || 0);
+    data_result.pressing_available_no_of_sheets =
+      issue_for_pressing?.[0]?.total_no_of_sheets || 0;
+
     const response = new ApiResponse(
       StatusCodes.OK,
       'Details Fetched successfully',
@@ -845,8 +851,8 @@ export const fetch_all_grouping_history_details = catchAsync(
     const aggOrderRelatedData = [
       {
         $lookup: {
-          from: "orders",
-          localField: "order_id",
+          from: 'orders',
+          localField: 'order_id',
           pipeline: [
             {
               $project: {
@@ -854,25 +860,25 @@ export const fetch_all_grouping_history_details = catchAsync(
                 owner_name: 1,
                 orderDate: 1,
                 order_category: 1,
-                series_product: 1
-              }
-            }
+                series_product: 1,
+              },
+            },
           ],
-          foreignField: "_id",
-          as: "order_details"
-        }
+          foreignField: '_id',
+          as: 'order_details',
+        },
       },
       {
         $unwind: {
-          path: "$order_details",
-          preserveNullAndEmptyArrays: true
-        }
+          path: '$order_details',
+          preserveNullAndEmptyArrays: true,
+        },
       },
       {
         $lookup: {
-          from: "series_product_order_item_details",
-          localField: "order_item_id",
-          foreignField: "_id",
+          from: 'series_product_order_item_details',
+          localField: 'order_item_id',
+          foreignField: '_id',
           pipeline: [
             {
               $project: {
@@ -880,24 +886,24 @@ export const fetch_all_grouping_history_details = catchAsync(
                 order_id: 1,
                 item_name: 1,
                 item_sub_category_name: 1,
-                group_no:1,
-                photo_number: 1
-              }
-            }
+                group_no: 1,
+                photo_number: 1,
+              },
+            },
           ],
-          as: "series_product_order_item_details"
-        }
+          as: 'series_product_order_item_details',
+        },
       },
       {
         $unwind: {
-          path: "$series_product_order_item_details",
-          preserveNullAndEmptyArrays: true
-        }
+          path: '$series_product_order_item_details',
+          preserveNullAndEmptyArrays: true,
+        },
       },
       {
         $lookup: {
-          from: "decorative_order_item_details",
-          localField: "order_item_id",
+          from: 'decorative_order_item_details',
+          localField: 'order_item_id',
           pipeline: [
             {
               $project: {
@@ -905,33 +911,35 @@ export const fetch_all_grouping_history_details = catchAsync(
                 order_id: 1,
                 item_name: 1,
                 item_sub_category_name: 1,
-                group_no:1,
-                photo_number: 1
-              }
-            }
+                group_no: 1,
+                photo_number: 1,
+              },
+            },
           ],
-          foreignField: "_id",
-          as: "decorative_order_item_details"
-        }
+          foreignField: '_id',
+          as: 'decorative_order_item_details',
+        },
       },
       {
         $unwind: {
-          path: "$decorative_order_item_details",
-          preserveNullAndEmptyArrays: true
-        }
+          path: '$decorative_order_item_details',
+          preserveNullAndEmptyArrays: true,
+        },
       },
       {
         $addFields: {
           order_item_details: {
             $cond: {
-              if: { $ne: [{ $type: "$decorative_order_item_details" }, "missing"] },
-              then: "$decorative_order_item_details",
-              else: "$series_product_order_item_details"
-            }
-          }
-        }
-      }
-    ]
+              if: {
+                $ne: [{ $type: '$decorative_order_item_details' }, 'missing'],
+              },
+              then: '$decorative_order_item_details',
+              else: '$series_product_order_item_details',
+            },
+          },
+        },
+      },
+    ];
     const aggMatch = {
       $match: {
         ...match_query,
@@ -1493,5 +1501,654 @@ export const group_no_dropdown_for_photo_master = catchAsync(
     );
 
     return res.status(StatusCodes.OK).json(response);
+  }
+);
+
+export const download_excel_factory_grouping_done = catchAsync(
+  async (req, res, next) => {
+    const {
+      page = 1,
+      sortBy = 'updatedAt',
+      sort = 'desc',
+      limit = 10,
+      search = '',
+    } = req.query;
+    const {
+      string,
+      boolean,
+      numbers,
+      arrayField = [],
+    } = req.body?.searchFields || {};
+
+    const filter = req.body?.filter;
+
+    let search_query = {};
+    if (search != '' && req?.body?.searchFields) {
+      const search_data = DynamicSearch(
+        search,
+        boolean,
+        numbers,
+        string,
+        arrayField
+      );
+      if (search_data?.length == 0) {
+        return res.status(404).json({
+          statusCode: 404,
+          status: false,
+          data: {
+            data: [],
+          },
+          message: 'Results Not Found',
+        });
+      }
+      search_query = search_data;
+    }
+
+    const filterData = dynamic_filter(filter);
+
+    const match_common_query = {
+      $match: {
+        is_damaged: false,
+        'available_details.no_of_leaves': { $gt: 0 },
+      },
+    };
+
+    const match_query = {
+      ...search_query,
+      ...filterData,
+    };
+
+    const aggLookupOtherDetails = {
+      $lookup: {
+        from: 'grouping_done_details',
+        localField: 'grouping_done_other_details_id',
+        foreignField: '_id',
+        as: 'grouping_done_other_details',
+      },
+    };
+    const aggCreatedUserDetails = {
+      $lookup: {
+        from: 'users',
+        localField: 'created_by',
+        foreignField: '_id',
+        pipeline: [
+          {
+            $project: {
+              first_name: 1,
+              last_name: 1,
+              user_name: 1,
+              user_type: 1,
+              email_id: 1,
+            },
+          },
+        ],
+        as: 'created_user_details',
+      },
+    };
+
+    const aggUpdatedUserDetails = {
+      $lookup: {
+        from: 'users',
+        localField: 'updated_by',
+        foreignField: '_id',
+        pipeline: [
+          {
+            $project: {
+              first_name: 1,
+              last_name: 1,
+              user_name: 1,
+              user_type: 1,
+              email_id: 1,
+            },
+          },
+        ],
+        as: 'updated_user_details',
+      },
+    };
+    const aggMatch = {
+      $match: {
+        ...match_query,
+      },
+    };
+    const aggUnwindOtherDetails = {
+      $unwind: {
+        path: '$grouping_done_other_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    };
+
+    const aggUnwindCreatedUser = {
+      $unwind: {
+        path: '$created_user_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    };
+    const aggUnwindUpdatedUser = {
+      $unwind: {
+        path: '$updated_user_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    };
+    const aggSort = {
+      $sort: {
+        [sortBy]: sort === 'desc' ? -1 : 1,
+      },
+    };
+
+    // const aggSkip = {
+    //   $skip: (parseInt(page) - 1) * parseInt(limit),
+    // };
+
+    // const aggLimit = {
+    //   $limit: parseInt(limit),
+    // };
+
+    const list_aggregate = [
+      match_common_query,
+      aggLookupOtherDetails,
+      aggUnwindOtherDetails,
+      aggCreatedUserDetails,
+      aggUpdatedUserDetails,
+      aggUnwindCreatedUser,
+      aggUnwindUpdatedUser,
+      aggMatch,
+      // aggSort,
+      // aggSkip,
+      // aggLimit,
+    ];
+
+    const result =
+      await grouping_done_items_details_model.aggregate(list_aggregate);
+    await createFactoryGroupingDoneExcel(result, req, res);
+
+    // const aggCount = {
+    //   $count: 'totalCount',
+    // };
+
+    // const count_total_docs = [
+    //   match_common_query,
+    //   aggLookupOtherDetails,
+    //   aggUnwindOtherDetails,
+    //   aggCreatedUserDetails,
+    //   aggUpdatedUserDetails,
+    //   aggUnwindCreatedUser,
+    //   aggUnwindUpdatedUser,
+    //   aggMatch,
+    //   aggCount,
+    // ];
+
+    // const total_docs =
+    //   await grouping_done_items_details_model.aggregate(count_total_docs);
+
+    // const totalPages = Math.ceil((total_docs[0]?.totalCount || 0) / limit);
+
+    // const response = new ApiResponse(200, 'Data Fetched Successfully', {
+    //   data: result,
+    //   totalPages: totalPages,
+    // });
+    // return res.status(200).json(response);
+  }
+);
+
+export const download_excel_factory_grouping_damage = catchAsync(
+  async (req, res, next) => {
+    const {
+      page = 1,
+      sortBy = 'updatedAt',
+      sort = 'desc',
+      limit = 10,
+      search = '',
+    } = req.query;
+    const {
+      string,
+      boolean,
+      numbers,
+      arrayField = [],
+    } = req.body?.searchFields || {};
+
+    const filter = req.body?.filter;
+
+    let search_query = {};
+    if (search != '' && req?.body?.searchFields) {
+      const search_data = DynamicSearch(
+        search,
+        boolean,
+        numbers,
+        string,
+        arrayField
+      );
+      if (search_data?.length == 0) {
+        return res.status(404).json({
+          statusCode: 404,
+          status: false,
+          data: {
+            data: [],
+          },
+          message: 'Results Not Found',
+        });
+      }
+      search_query = search_data;
+    }
+
+    const filterData = dynamic_filter(filter);
+
+    const match_common_query = {
+      $match: {
+        is_damaged: true,
+      },
+    };
+    const match_query = {
+      ...search_query,
+      ...filterData,
+    };
+    const aggLookupOtherDetails = {
+      $lookup: {
+        from: 'grouping_done_details',
+        localField: 'grouping_done_other_details_id',
+        foreignField: '_id',
+        as: 'grouping_done_other_details',
+      },
+    };
+    const aggCreatedUserDetails = {
+      $lookup: {
+        from: 'users',
+        localField: 'created_by',
+        foreignField: '_id',
+        pipeline: [
+          {
+            $project: {
+              first_name: 1,
+              last_name: 1,
+              user_name: 1,
+              user_type: 1,
+              email_id: 1,
+            },
+          },
+        ],
+        as: 'created_user_details',
+      },
+    };
+    const aggUpdatedUserDetails = {
+      $lookup: {
+        from: 'users',
+        localField: 'updated_by',
+        foreignField: '_id',
+        pipeline: [
+          {
+            $project: {
+              first_name: 1,
+              last_name: 1,
+              user_name: 1,
+              user_type: 1,
+              email_id: 1,
+            },
+          },
+        ],
+        as: 'updated_user_details',
+      },
+    };
+    const aggMatch = {
+      $match: {
+        ...match_query,
+      },
+    };
+    const aggUnwindOtherDetails = {
+      $unwind: {
+        path: '$grouping_done_other_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    };
+    const aggUnwindCreatedUser = {
+      $unwind: {
+        path: '$created_user_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    };
+    const aggUnwindUpdatedUser = {
+      $unwind: {
+        path: '$updated_user_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    };
+    const aggSort = {
+      $sort: {
+        [sortBy]: sort === 'desc' ? -1 : 1,
+      },
+    };
+    // const aggSkip = {
+    //   $skip: (parseInt(page) - 1) * parseInt(limit),
+    // };
+    // const aggLimit = {
+    //   $limit: parseInt(limit),
+    // };
+
+    const list_aggregate = [
+      match_common_query,
+      aggLookupOtherDetails,
+      aggUnwindOtherDetails,
+      aggCreatedUserDetails,
+      aggUpdatedUserDetails,
+      aggUnwindCreatedUser,
+      aggUnwindUpdatedUser,
+      aggMatch,
+      // aggSort,
+      // aggSkip,
+      // aggLimit,
+    ];
+
+    const result =
+      await grouping_done_items_details_model.aggregate(list_aggregate);
+
+    await createFactoryGroupingDamageExcel(result, req, res);
+
+    // const aggCount = {
+    //   $count: 'totalCount',
+    // };
+
+    // const count_total_docs = [
+    //   match_common_query,
+    //   aggLookupOtherDetails,
+    //   aggUnwindOtherDetails,
+    //   aggCreatedUserDetails,
+    //   aggUpdatedUserDetails,
+    //   aggUnwindCreatedUser,
+    //   aggUnwindUpdatedUser,
+    //   aggMatch,
+    //   aggCount,
+    // ];
+
+    // const total_docs =
+    //   await grouping_done_items_details_model.aggregate(count_total_docs);
+
+    // const totalPages = Math.ceil((total_docs[0]?.totalCount || 0) / limit);
+
+    // const response = new ApiResponse(200, 'Data Fetched Successfully', {
+    //   data: result,
+    //   totalPages: totalPages,
+    // });
+    // return res.status(200).json(response);
+  }
+);
+
+export const download_excel_factory_grouping_history = catchAsync(
+  async (req, res, next) => {
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = 'updatedAt',
+      sort = 'desc',
+      search = '',
+    } = req.query;
+    const {
+      string,
+      boolean,
+      numbers,
+      arrayField = [],
+    } = req?.body?.searchFields || {};
+    const filter = req.body?.filter;
+
+    let search_query = {};
+    if (search != '' && req?.body?.searchFields) {
+      const search_data = DynamicSearch(
+        search,
+        boolean,
+        numbers,
+        string,
+        arrayField
+      );
+      if (search_data?.length == 0) {
+        return res.status(404).json({
+          statusCode: 404,
+          status: false,
+          data: {
+            data: [],
+          },
+          message: 'Results Not Found',
+        });
+      }
+      search_query = search_data;
+    }
+
+    const filterData = dynamic_filter(filter);
+
+    const match_query = {
+      ...filterData,
+      ...search_query,
+    };
+
+    const aggGroupNoLookup = {
+      $lookup: {
+        from: 'grouping_done_items_details',
+        localField: 'group_no',
+        foreignField: 'group_no',
+        pipeline: [
+          {
+            $project: {
+              group_no: 1,
+              photo_no: 1,
+              photo_id: 1,
+            },
+          },
+        ],
+        as: 'grouping_done_items_details',
+      },
+    };
+    const aggGroupNoUnwind = {
+      $unwind: {
+        path: '$grouping_done_items_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    };
+    // Aggregation stage
+
+    const aggCreatedByLookup = {
+      $lookup: {
+        from: 'users',
+        localField: 'created_by',
+        foreignField: '_id',
+        pipeline: [
+          {
+            $project: {
+              user_name: 1,
+              user_type: 1,
+              dept_name: 1,
+              first_name: 1,
+              last_name: 1,
+              email_id: 1,
+              mobile_no: 1,
+            },
+          },
+        ],
+        as: 'created_by',
+      },
+    };
+    const aggUpdatedByLookup = {
+      $lookup: {
+        from: 'users',
+        localField: 'updated_by',
+        foreignField: '_id',
+        pipeline: [
+          {
+            $project: {
+              user_name: 1,
+              user_type: 1,
+              dept_name: 1,
+              first_name: 1,
+              last_name: 1,
+              email_id: 1,
+              mobile_no: 1,
+            },
+          },
+        ],
+        as: 'updated_by',
+      },
+    };
+    const aggCreatedByUnwind = {
+      $unwind: {
+        path: '$created_by',
+        preserveNullAndEmptyArrays: true,
+      },
+    };
+    const aggUpdatedByUnwind = {
+      $unwind: {
+        path: '$updated_by',
+        preserveNullAndEmptyArrays: true,
+      },
+    };
+    const aggOrderRelatedData = [
+      {
+        $lookup: {
+          from: 'orders',
+          localField: 'order_id',
+          pipeline: [
+            {
+              $project: {
+                order_no: 1,
+                owner_name: 1,
+                orderDate: 1,
+                order_category: 1,
+                series_product: 1,
+              },
+            },
+          ],
+          foreignField: '_id',
+          as: 'order_details',
+        },
+      },
+      {
+        $unwind: {
+          path: '$order_details',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $lookup: {
+          from: 'series_product_order_item_details',
+          localField: 'order_item_id',
+          foreignField: '_id',
+          pipeline: [
+            {
+              $project: {
+                item_no: 1,
+                order_id: 1,
+                item_name: 1,
+                item_sub_category_name: 1,
+                group_no: 1,
+                photo_number: 1,
+              },
+            },
+          ],
+          as: 'series_product_order_item_details',
+        },
+      },
+      {
+        $unwind: {
+          path: '$series_product_order_item_details',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $lookup: {
+          from: 'decorative_order_item_details',
+          localField: 'order_item_id',
+          pipeline: [
+            {
+              $project: {
+                item_no: 1,
+                order_id: 1,
+                item_name: 1,
+                item_sub_category_name: 1,
+                group_no: 1,
+                photo_number: 1,
+              },
+            },
+          ],
+          foreignField: '_id',
+          as: 'decorative_order_item_details',
+        },
+      },
+      {
+        $unwind: {
+          path: '$decorative_order_item_details',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $addFields: {
+          order_item_details: {
+            $cond: {
+              if: {
+                $ne: [{ $type: '$decorative_order_item_details' }, 'missing'],
+              },
+              then: '$decorative_order_item_details',
+              else: '$series_product_order_item_details',
+            },
+          },
+        },
+      },
+    ];
+    const aggMatch = {
+      $match: {
+        ...match_query,
+      },
+    };
+    const aggSort = {
+      $sort: {
+        [sortBy]: sort === 'desc' ? -1 : 1,
+      },
+    };
+    // const aggSkip = {
+    //   $skip: (parseInt(page) - 1) * parseInt(limit),
+    // };
+    // const aggLimit = {
+    //   $limit: parseInt(limit),
+    // };
+
+    const listAggregate = [
+      aggGroupNoLookup,
+      aggGroupNoUnwind,
+      aggCreatedByLookup,
+      aggCreatedByUnwind,
+      aggUpdatedByLookup,
+      aggUpdatedByUnwind,
+      ...aggOrderRelatedData,
+      aggMatch,
+      // aggSort,
+      // aggSkip,
+      // aggLimit,
+    ]; // aggregation pipiline
+
+    const grouping_history =
+      await grouping_done_history_model.aggregate(listAggregate);
+    await createFactoryGroupingHistoryExcel(grouping_history, req, res);
+
+    // const aggCount = {
+    //   $count: 'totalCount',
+    // }; // count aggregation stage
+
+    // const totalAggregate = [
+    //   aggCreatedByLookup,
+    //   aggCreatedByUnwind,
+    //   aggUpdatedByLookup,
+    //   aggUpdatedByUnwind,
+    //   ...aggOrderRelatedData,
+    //   aggMatch,
+    //   aggCount,
+    // ]; // total aggregation pipiline
+
+    // const totalDocument =
+    //   await grouping_done_history_model.aggregate(totalAggregate);
+
+    // const totalPages = Math.ceil((totalDocument?.[0]?.totalCount || 0) / limit);
+
+    // const response = new ApiResponse(
+    //   200,
+    //   'Grouping History Data Fetched Successfully',
+    //   {
+    //     data: grouping_history,
+    //     totalPages: totalPages,
+    //   }
+    // );
+    // return res.status(200).json(response);
   }
 );

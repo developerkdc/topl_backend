@@ -169,6 +169,18 @@ const series_product_order_item_details_schema = new mongoose.Schema(
       type: Number,
       required: [true, 'Amount is required'],
     },
+    polish_type: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      default: null,
+    },
+    sales_item_name: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      default: null,
+    },
     remark: {
       type: String,
       trim: true,

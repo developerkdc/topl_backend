@@ -18,6 +18,7 @@ import { dynamic_filter } from '../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import ApiError from '../../../utils/errors/apiError.js';
 import catchAsync from '../../../utils/errors/catchAsync.js';
+import { veneer_inventory_items_model } from '../../../database/schema/inventory/venner/venner.schema.js';
 
 export const listing_log_inventory = catchAsync(async (req, res, next) => {
   const {
@@ -430,6 +431,7 @@ export const edit_log_invoice_inventory = catchAsync(async (req, res, next) => {
     );
 });
 
+//csv inventory
 export const logLogsCsv = catchAsync(async (req, res) => {
   const { search = '' } = req.query;
   const {
@@ -438,44 +440,106 @@ export const logLogsCsv = catchAsync(async (req, res) => {
     numbers,
     arrayField = [],
   } = req?.body?.searchFields || {};
+
   const filter = req.body?.filter;
 
+  // 1. Build search query
   let search_query = {};
-  if (search != '' && req?.body?.searchFields) {
-    const search_data = DynamicSearch(
-      search,
-      boolean,
-      numbers,
-      string,
-      arrayField
-    );
-    if (search_data?.length == 0) {
+  if (search && req?.body?.searchFields) {
+    string?.forEach((field) => {
+      search_query[field] = { $regex: search, $options: 'i' };
+    });
+
+    boolean?.forEach((field) => {
+      if (search.toLowerCase() === 'true' || search.toLowerCase() === 'false') {
+        search_query[field] = search.toLowerCase() === 'true';
+      }
+    });
+
+    if (!isNaN(search)) {
+      numbers?.forEach((field) => {
+        search_query[field] = Number(search);
+      });
+    }
+
+    arrayField?.forEach((field) => {
+      search_query[field] = { $in: [search] };
+    });
+
+    if (Object.keys(search_query).length === 0) {
       return res.status(404).json({
         statusCode: 404,
         status: false,
-        data: {
-          data: [],
-        },
+        data: { data: [] },
         message: 'Results Not Found',
       });
     }
-    search_query = search_data;
   }
 
+  // 2. Get filter query
   const filterData = dynamic_filter(filter);
 
-  const match_query = {
+  // 3. Clean invalid/empty values (improved)
+  const cleanMatchQuery = (query) => {
+    const cleaned = {};
+    for (const key in query) {
+      const value = query[key];
+
+      if (value === undefined || value === '' || value === null) continue;
+
+      if (typeof value === 'object' && value !== null && ('$gte' in value || '$lte' in value)) {
+        const range = {};
+        if (value.$gte !== '' && value.$gte !== null && value.$gte !== undefined) {
+          range.$gte = value.$gte;
+        }
+        if (value.$lte !== '' && value.$lte !== null && value.$lte !== undefined) {
+          range.$lte = value.$lte;
+        }
+        if (Object.keys(range).length > 0) {
+          cleaned[key] = range;
+        }
+        continue;
+      }
+
+      cleaned[key] = value;
+    }
+    return cleaned;
+  };
+
+  // 4. Merge and clean
+  const fullQuery = {
     ...filterData,
     ...search_query,
   };
 
+  const cleanedQuery = cleanMatchQuery(fullQuery);
+
+  // 5. Build final query
+  const match_query = {
+    issue_status: null,
+    ...cleanedQuery,
+  };
+
+  // 6. Nested approval status conditions
+  if (cleanedQuery['log_invoice_details.inward_sr_no']) {
+    match_query['log_invoice_details.approval_status.sendForApproval.status'] = { $in: [null, false] };
+    match_query['log_invoice_details.approval_status.approved.status'] = { $in: [null, false] };
+    match_query['log_invoice_details.approval_status.rejected.status'] = { $in: [null, false] };
+  }
+
+  console.log('Final match_query =>', JSON.stringify(match_query, null, 2));
+
+  // 7. Fetch data
   const allData = await log_inventory_items_view_model.find(match_query);
+  console.log('Matching records count =>', allData.length);
 
+  // 8. Generate Excel
   const excelLink = await createLogLogsExcel(allData);
-  console.log('link => ', excelLink);
+  console.log('link =>', excelLink);
 
+  // 9. Return
   return res.json(
-    new ApiResponse(StatusCodes.OK, 'Csv downloaded successfully...', excelLink)
+    new ApiResponse(StatusCodes.OK, 'CSV downloaded successfully...', excelLink)
   );
 });
 
@@ -729,7 +793,7 @@ export const add_issue_for_flitching = catchAsync(async (req, res, next) => {
       item_name: data?.item_name,
       item_sub_category_id: data?.item_sub_category_id,
       item_sub_category_name: data?.item_sub_category_name,
-      log_no: data?.log_no,
+      log_no: `${data?.log_no}A`,
       log_formula: data?.log_formula,
       length: data?.physical_length,
       diameter: data?.physical_diameter,
@@ -857,13 +921,161 @@ export const listing_log_history_inventory = catchAsync(
 
 export const check_already_existing_log_no = catchAsync(
   async (req, res, next) => {
-    const { log_no } = req.query;
-    const isExist = await log_inventory_items_model.findOne({ log_no });
-    if (isExist) {
-      throw new ApiError('Log No already exists', StatusCodes.BAD_REQUEST);
+    const { log_no, item_id } = req.query;
+
+    const isExistInLog = await log_inventory_items_model.findOne({
+      log_no,
+      ...(item_id &&
+        item_id !== 'undefined' && {
+          _id: { $ne: new mongoose.Types.ObjectId(item_id) },
+        }),
+    });
+    if (isExistInLog) {
+      throw new ApiError(
+        `Log No (${log_no}) already exists in Log Inventory.`,
+        StatusCodes.BAD_REQUEST
+      );
     }
+    const isExistInFlitch = await log_inventory_items_model.findOne({
+      log_no_code: log_no,
+      ...(item_id &&
+        item_id !== 'undefined' && {
+          _id: { $ne: new mongoose.Types.ObjectId(item_id) },
+        }),
+    });
+    if (isExistInFlitch) {
+      throw new ApiError(
+        `Log No (${log_no}) already exists in Flitch Inventory.`,
+        StatusCodes.BAD_REQUEST
+      );
+    }
+    const isExistInVeneer = await veneer_inventory_items_model.findOne({
+      log_code: log_no,
+      ...(item_id &&
+        item_id !== 'undefined' && {
+          _id: { $ne: new mongoose.Types.ObjectId(item_id) },
+        }),
+    });
+
+    if (isExistInVeneer) {
+      throw new ApiError(
+        `Log No (${log_no}) already exists in Veneer Inventory.`,
+        StatusCodes.BAD_REQUEST
+      );
+    }
+
     return res
       .status(200)
       .json(new ApiResponse(StatusCodes.OK, 'Log No. is unique'));
   }
 );
+
+export const historyLogsCsv = catchAsync(async (req, res) => {
+  const { search = '', sortBy = 'updatedAt', sort = 'desc' } = req.query;
+
+  const {
+    string,
+    boolean,
+    numbers,
+    arrayField = [],
+  } = req?.body?.searchFields || {};
+
+  const filter = req.body?.filter;
+
+  // 1. Build search query
+  let search_query = {};
+  if (search && req?.body?.searchFields) {
+    string?.forEach((field) => {
+      search_query[field] = { $regex: search, $options: 'i' };
+    });
+
+    boolean?.forEach((field) => {
+      if (search.toLowerCase() === 'true' || search.toLowerCase() === 'false') {
+        search_query[field] = search.toLowerCase() === 'true';
+      }
+    });
+
+    if (!isNaN(search)) {
+      numbers?.forEach((field) => {
+        search_query[field] = Number(search);
+      });
+    }
+
+    arrayField?.forEach((field) => {
+      search_query[field] = { $in: [search] };
+    });
+
+    if (Object.keys(search_query).length === 0) {
+      return res.status(404).json({
+        statusCode: 404,
+        status: false,
+        data: { data: [] },
+        message: 'Results Not Found',
+      });
+    }
+  }
+
+  // 2. Get filter query
+  const filterData = dynamic_filter(filter);
+
+  // 3. Clean invalid/empty values
+  const cleanMatchQuery = (query) => {
+    const cleaned = {};
+    for (const key in query) {
+      const value = query[key];
+
+      if (value === undefined || value === '' || value === null) continue;
+
+      if (typeof value === 'object' && value !== null && ('$gte' in value || '$lte' in value)) {
+        const range = {};
+        if (value.$gte !== '' && value.$gte !== null && value.$gte !== undefined) {
+          range.$gte = value.$gte;
+        }
+        if (value.$lte !== '' && value.$lte !== null && value.$lte !== undefined) {
+          range.$lte = value.$lte;
+        }
+        if (Object.keys(range).length > 0) {
+          cleaned[key] = range;
+        }
+        continue;
+      }
+
+      cleaned[key] = value;
+    }
+    return cleaned;
+  };
+
+  // 4. Merge filter and search query
+  const fullQuery = {
+    ...filterData,
+    ...search_query,
+  };
+
+  const cleanedQuery = cleanMatchQuery(fullQuery);
+
+  // 5. Final match query (including required condition)
+  const match_query = {
+    issue_status: { $ne: null },
+    ...cleanedQuery,
+  };
+
+  // 6. Nested approval filter logic (if inward_sr_no is part of search)
+  if (cleanedQuery['log_invoice_details.inward_sr_no']) {
+    match_query['log_invoice_details.approval_status.sendForApproval.status'] = { $in: [null, false] };
+    match_query['log_invoice_details.approval_status.approved.status'] = { $in: [null, false] };
+    match_query['log_invoice_details.approval_status.rejected.status'] = { $in: [null, false] };
+  }
+
+  // 7. Query DB
+  const allData = await log_inventory_items_view_model
+    .find(match_query)
+    .sort({ [sortBy]: sort === 'desc' ? -1 : 1 });
+
+  // 8. Generate CSV
+  const excelLink = await createLogLogsExcel(allData);
+
+  // 9. Return
+  return res.json(
+    new ApiResponse(StatusCodes.OK, 'CSV downloaded successfully...', excelLink)
+  );
+});

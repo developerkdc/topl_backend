@@ -13,6 +13,9 @@ import {
   recreate_grouping_done_items,
   revert_all_grouping_done,
   revert_grouping_done_damaged,
+  download_excel_factory_grouping_done,
+  download_excel_factory_grouping_damage,
+  download_excel_factory_grouping_history
 } from '../../../controllers/factory/grouping/grouping_done.controller.js';
 import AuthMiddleware from '../../../middlewares/verifyToken.js';
 import {
@@ -108,6 +111,25 @@ groupingDoneRouter.get(
   '/group-no-dropdown-for-photo-master',
   AuthMiddleware,
   group_no_dropdown_for_photo_master
+);
+
+groupingDoneRouter.post(
+  '/download-factory-grouping-done-excel',
+  AuthMiddleware,
+  download_excel_factory_grouping_done
+);
+
+groupingDoneRouter.post(
+  '/download-factory-grouping-damage-excel',
+  AuthMiddleware,
+  download_excel_factory_grouping_damage
+);
+
+
+groupingDoneRouter.post(
+  '/download-factory-grouping-history-excel',
+  AuthMiddleware,
+  download_excel_factory_grouping_history
 );
 
 export default groupingDoneRouter;
