@@ -1,10 +1,10 @@
 import exceljs from 'exceljs';
 import ApiError from '../../../../../../utils/errors/ApiError.js';
 
-export const createFactoryCNCHistoryExcel = async (data, req, res) => {
+export const createFactoryColorHistoryExcel = async (data, req, res) => {
   try {
     const workbook = new exceljs.Workbook();
-    const worksheet = workbook.addWorksheet('Factory CNC Damage Details');
+    const worksheet = workbook.addWorksheet('Factory Color Damage Details');
 
     // Define all possible fields
     worksheet.columns = [
@@ -16,8 +16,8 @@ export const createFactoryCNCHistoryExcel = async (data, req, res) => {
       { header: 'Issued SQM', key: 'issued_sqm', width: 15 },
       { header: 'Available Sheets', key: 'available_sheets', width: 18 },
       { header: 'Available SQM', key: 'available_sqm', width: 18 },
-      { header: 'CNC Sheets', key: 'cnc_sheets', width: 15 },
-      { header: 'CNC SQM', key: 'cnc_sqm', width: 15 },
+      { header: 'Color Sheets', key: 'color_sheets', width: 15 },
+      { header: 'Color SQM', key: 'color_sqm', width: 15 },
       { header: 'Order No', key: 'order_no', width: 15 },
       { header: 'Customer', key: 'customer', width: 25 },
       { header: 'Order Type', key: 'order_type', width: 20 },
@@ -39,8 +39,8 @@ export const createFactoryCNCHistoryExcel = async (data, req, res) => {
     const rows = [];
 
     for (const item of Object.values(data)) {
-      const cnc = item;
-      const issue = cnc.issue_for_cnc_details || {};
+      const color = item;
+      const issue = color.issue_for_color_details || {};
       const pressing = issue.pressing_details || {};
       const order = issue.order_details || {};
       const pressingItems = issue.pressing_done_consumed_items_details || [];
@@ -56,16 +56,16 @@ export const createFactoryCNCHistoryExcel = async (data, req, res) => {
       );
 
       rows.push({
-        sr_no: cnc.sr_no ?? '',
-        issued_for: cnc.issued_for ?? '',
-        issue_status: cnc.issue_status ?? '',
+        sr_no: color.sr_no ?? '',
+        issued_for: color.issued_for ?? '',
+        issue_status: color.issue_status ?? '',
         issued_from: issue.issued_from ?? '',
         issued_sheets: issue.issued_sheets ?? '',
         issued_sqm: issue.issued_sqm ?? '',
         available_sheets: issue.available_details?.no_of_sheets ?? '',
         available_sqm: issue.available_details?.sqm ?? '',
-        cnc_sheets: cnc.no_of_sheets ?? '',
-        cnc_sqm: cnc.sqm ?? '',
+        color_sheets: color.no_of_sheets ?? '',
+        color_sqm: color.sqm ?? '',
         order_no: order.order_no ?? '',
         customer: order.owner_name ?? '',
         order_type: order.order_type ?? '',
@@ -82,8 +82,8 @@ export const createFactoryCNCHistoryExcel = async (data, req, res) => {
         pressing_remark: pressing.remark ?? '',
         base_items: baseItems.join('; '),
         group_items: groupItems.join('; '),
-        factory_remark: cnc.factory_remark ?? '',
-        damage_remark: cnc.damage_remark ?? '',
+        factory_remark: color.factory_remark ?? '',
+        damage_remark: color.damage_remark ?? '',
       });
     }
 
@@ -92,7 +92,7 @@ export const createFactoryCNCHistoryExcel = async (data, req, res) => {
 
     // Response headers
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', 'attachment; filename=Factory_CNC_Damage_Full_Report.xlsx');
+    res.setHeader('Content-Disposition', 'attachment; filename=Factory_Color_Damage_Full_Report.xlsx');
 
     await workbook.xlsx.write(res);
     res.status(200).end();

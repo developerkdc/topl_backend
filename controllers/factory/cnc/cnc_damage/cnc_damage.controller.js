@@ -575,7 +575,7 @@ export const revert_damage_to_cnc_done = catchAsync(async (req, res) => {
     ]; // aggregation pipiline
   
     const data = await cnc_damage_model.aggregate(listAggregate);
-  
+    console.log(data);
     await createFactoryCNCDamageExcel(data,req, res);
-  
+   
   });

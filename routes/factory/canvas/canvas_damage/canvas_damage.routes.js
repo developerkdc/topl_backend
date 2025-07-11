@@ -16,4 +16,6 @@ canvas_damage_router.post(
   revert_damage_to_canvas_done
 );
 
+// Export Api 
+canvas_damage_router.post('/download-factory-canvas-damage-excel', AuthMiddleware, listing_canvas_damage);
 export default canvas_damage_router;
