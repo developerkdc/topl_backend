@@ -2,6 +2,7 @@ import { Router } from 'express';
 import AuthMiddleware from '../../../../middlewares/verifyToken.js';
 import {
   add_issue_for_cnc_from_pressing,
+  download_excel_issued_for_cnc,
   fetch_single_issue_for_cnc_item,
   listing_issued_for_cnc,
   revert_issue_for_cnc,
@@ -22,6 +23,8 @@ issue_for_cnc_router.get(
   AuthMiddleware,
   fetch_single_issue_for_cnc_item
 );
+
 // issue_for_cnc_router.post("/list-damage", AuthMiddleware, listing_cnc_damage);
+issue_for_cnc_router.post('/download-factory-issue-for-cnc-excel', AuthMiddleware, download_excel_issued_for_cnc);
 
 export default issue_for_cnc_router;
