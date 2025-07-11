@@ -11,6 +11,7 @@ import {
   veneer_item_listing_by_invoice,
   veneerLogsCsv,
   listing_veneer_history_inventory,
+  veneerHistoryLogsCsv,
 } from '../../../controllers/inventory/venner/venner.controller.js';
 import AuthMiddleware from '../../../middlewares/verifyToken.js';
 import RolesPermissions from '../../../middlewares/permission.js';
@@ -78,6 +79,12 @@ veneer_router.post(
   AuthMiddleware,
   RolesPermissions('veneer_inventory', 'view'),
   veneerLogsCsv
+);
+veneer_router.post(
+  '/download-excel-veneer-history',
+  AuthMiddleware,
+  RolesPermissions('veneer_inventory', 'view'),
+  veneerHistoryLogsCsv  
 );
 
 veneer_router.post(

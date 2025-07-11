@@ -9,6 +9,7 @@ import {
   fetch_fleece_history,
   fleece_item_listing_by_invoice,
   fleeceCsv,
+  fleeceHistoryLogsCsv,
   fleeceLogsCsv,
   inward_sr_no_dropdown,
   item_sr_no_dropdown,
@@ -74,6 +75,12 @@ fleece_router.post(
   AuthMiddleware,
   RolesPermissions('fleece_paper_inventory', 'view'),
   fleeceLogsCsv
+);
+fleece_router.post(
+  '/download-history-excel-fleece',
+  AuthMiddleware,
+  RolesPermissions('fleece_paper_inventory', 'view'),
+  fleeceHistoryLogsCsv
 );
 
 //dropdown
