@@ -44,6 +44,7 @@ export const add_raw_order = catchAsync(async (req, res, next) => {
         {
           ...order_details,
           order_no: newOrderNumber,
+          product_category: order_details?.raw_materials,
           created_by: userDetails._id,
           updated_by: userDetails._id,
         },
@@ -126,6 +127,7 @@ export const update_raw_order = catchAsync(async (req, res) => {
       {
         $set: {
           ...order_details,
+          product_category: order_details?.raw_materials,
           updated_by: userDetails?._id,
         },
       },

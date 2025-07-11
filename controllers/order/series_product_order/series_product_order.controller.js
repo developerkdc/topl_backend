@@ -38,6 +38,7 @@ export const add_series_order = catchAsync(async (req, res) => {
         {
           ...order_details,
           order_no: new_order_no,
+          product_category: order_details?.series_product,
           created_by: userDetails?._id,
           updated_by: userDetails?._id,
         },
@@ -117,6 +118,7 @@ export const update_series_order = catchAsync(async (req, res) => {
       {
         $set: {
           ...order_details,
+          product_category: order_details?.series_product,
           updated_by: userDetails?._id,
         },
       },
@@ -600,7 +602,7 @@ export const downloadPDF = catchAsync(async (req, res) => {
     },
     {
       $lookup: {
-        from: 'photos',  
+        from: 'photos',
         localField: 'photo_number_id',
         foreignField: '_id',
         as: 'photo_data'
