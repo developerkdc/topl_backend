@@ -250,8 +250,11 @@ const photoSchema = new mongoose.Schema(
 
 photoSchema.index({ photo_number: 1 }, { unique: true });
 photoSchema.index({ sr_no: 1 }, { unique: true });
+photoSchema.index({ item_name: 1 });
 photoSchema.index({ created_by: 1 });
 photoSchema.index({ updated_by: 1 });
+photoSchema.index({ createdAt: -1 });
+photoSchema.index({ updatedAt: -1 });
 
 const photoModel = mongoose.model('photos', photoSchema, 'photos');
 export default photoModel;

@@ -113,7 +113,7 @@
 
 
 import exceljs from 'exceljs';
-import ApiError from '../../../../../../utils/errors/ApiError.js';
+import ApiError from '../../../../../../utils/errors/apiError.js';
 
 export const createFactoryIssueForCNCExcel = async (newData, req, res) => {
   try {
