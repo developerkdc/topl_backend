@@ -24,7 +24,8 @@ import {
   veneer_inventory_invoice_model,
   veneer_inventory_items_model,
 } from '../../../database/schema/inventory/venner/venner.schema.js';
-
+// import { createFactoryIssueForGroupingExcel } from '../../../../config/downloadExcel/Logs/Factory/Grouping/issuedForGrouping.js';
+import { createFactoryIssueForGroupingExcel } from '../../../config/downloadExcel/Logs/Factory/Grouping/issuedForGrouping.js';
 export const issue_for_grouping_from_veneer_inventory = catchAsync(
   async (req, res, next) => {
     const session = await mongoose.startSession();
@@ -1061,5 +1062,87 @@ export const fetch_all_issue_for_grouping_details = catchAsync(
       totalPages: totalPages,
     });
     return res.status(200).json(response);
+  }
+);
+
+export const download_excel_factory_grouping_details = catchAsync(
+  async (req, res, next) => {
+    const {
+      page = 1,
+      sortBy = '_id.unique_identifier',
+      sort = 'desc',
+      limit = 10,
+      search = '',
+    } = req.query;
+    const {
+      string,
+      boolean,
+      numbers,
+      arrayField = [],
+    } = req.body?.searchFields || {};
+
+    const filter = req.body?.filter;
+
+    let search_query = {};
+    if (search != '' && req?.body?.searchFields) {
+      const search_data = DynamicSearch(
+        search,
+        boolean,
+        numbers,
+        string,
+        arrayField
+      );
+      search_query = search_data;
+    }
+
+    const filterData = dynamic_filter(filter);
+
+    const match_query = {
+      ...search_query,
+      ...filterData,
+      is_grouping_done: false,
+    };
+
+    const agg_match = {
+      $match: {
+        ...match_query,
+      },
+    };
+    const agg_sort = {
+      $sort: {
+        [sortBy]: sort === 'desc' ? -1 : 1,
+      },
+    };
+    console.log(agg_sort);
+    const agg_skip = {
+      $skip: (parseInt(page) - 1) * parseInt(limit),
+    };
+    const agg_limit = {
+      $limit: parseInt(limit),
+    };
+
+    const aggregation_pipeline = [agg_match, agg_sort];
+
+    const result =
+      await issues_for_grouping_view_model.aggregate(aggregation_pipeline);
+    await createFactoryIssueForGroupingExcel(result, req, res);
+
+    // const agg_count = {
+    //   $count: 'totalCount',
+    // };
+
+    // const total_count_aggregation_pipeline = [agg_match, agg_count];
+
+    // const total_docs = await issues_for_grouping_view_model.aggregate(
+    //   total_count_aggregation_pipeline
+    // );
+
+    // const totalPages = Math.ceil((total_docs?.[0]?.totalCount || 0) / limit);
+
+    // const response = new ApiResponse(200, 'Data Fetched Successfully', {
+    //   data: result,
+    //   // totalPages: totalPages,
+    // });
+    // return res.status(200).json(response);
   }
 );
