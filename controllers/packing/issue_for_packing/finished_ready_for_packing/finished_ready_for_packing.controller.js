@@ -1,30 +1,34 @@
 import mongoose, { isValidObjectId } from 'mongoose';
+import {
+    item_issued_for,
+    item_issued_from,
+    order_category,
+} from '../../../../database/Utils/constants/constants.js';
+import { bunito_done_details_model } from '../../../../database/schema/factory/bunito/bunito_done/bunito_done.schema.js';
+import bunito_history_model from '../../../../database/schema/factory/bunito/bunito_history/bunito.history.schema.js';
+import { issue_for_bunito_view_model } from '../../../../database/schema/factory/bunito/issue_for_bunito/issue_for_bunito.schema.js';
+import { canvas_done_details_model } from '../../../../database/schema/factory/canvas/canvas_done/canvas_done.schema.js';
+import canvas_history_model from '../../../../database/schema/factory/canvas/canvas_history/canvas.history.schema.js';
+import { issue_for_canvas_view_model } from '../../../../database/schema/factory/canvas/issue_for_canvas/issue_for_canvas.schema.js';
+import { cnc_done_details_model } from '../../../../database/schema/factory/cnc/cnc_done/cnc_done.schema.js';
+import cnc_history_model from '../../../../database/schema/factory/cnc/cnc_history/cnc.history.schema.js';
+import { issue_for_cnc_view_model } from '../../../../database/schema/factory/cnc/issue_for_cnc/issue_for_cnc.schema.js';
+import { color_done_details_model } from '../../../../database/schema/factory/colour/colour_done/colour_done.schema.js';
+import color_history_model from '../../../../database/schema/factory/colour/colour_history/colour_history.schema.js';
+import { issue_for_colour_view_model } from '../../../../database/schema/factory/colour/issue_for_colour/issue_for_colour.schema.js';
+import { issue_for_polishing_view_model } from '../../../../database/schema/factory/polishing/issue_for_polishing/issue_for_polishing.schema.js';
+import { polishing_done_details_model } from '../../../../database/schema/factory/polishing/polishing_done/polishing_done.schema.js';
+import polishing_history_model from '../../../../database/schema/factory/polishing/polishing_history/polishing.history.schema.js';
+import { pressing_done_details_model } from '../../../../database/schema/factory/pressing/pressing_done/pressing_done.schema.js';
+import { pressing_done_history_model } from '../../../../database/schema/factory/pressing/pressing_history/pressing_done_history.schema.js';
+import issue_for_order_model from '../../../../database/schema/order/issue_for_order/issue_for_order.schema.js';
+import finished_ready_for_packing_model from '../../../../database/schema/packing/issue_for_packing/finished_ready_for_packing/finished_ready_for_packing.schema.js';
 import ApiResponse from '../../../../utils/ApiResponse.js';
 import { StatusCodes } from '../../../../utils/constants.js';
 import { dynamic_filter } from '../../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../../utils/dynamicSearch/dynamic.js';
 import ApiError from '../../../../utils/errors/apiError.js';
 import catchAsync from '../../../../utils/errors/catchAsync.js';
-import {
-    item_issued_for,
-    item_issued_from,
-    order_category,
-} from '../../../../database/Utils/constants/constants.js';
-import { pressing_done_details_model } from '../../../../database/schema/factory/pressing/pressing_done/pressing_done.schema.js';
-import { cnc_done_details_model } from '../../../../database/schema/factory/cnc/cnc_done/cnc_done.schema.js';
-import { bunito_done_details_model } from '../../../../database/schema/factory/bunito/bunito_done/bunito_done.schema.js';
-import { color_done_details_model } from '../../../../database/schema/factory/colour/colour_done/colour_done.schema.js';
-import { canvas_done_details_model } from '../../../../database/schema/factory/canvas/canvas_done/canvas_done.schema.js';
-import { polishing_done_details_model } from '../../../../database/schema/factory/polishing/polishing_done/polishing_done.schema.js';
-import finished_ready_for_packing_model from '../../../../database/schema/packing/issue_for_packing/finished_ready_for_packing/finished_ready_for_packing.schema.js';
-import cnc_history_model from '../../../../database/schema/factory/cnc/cnc_history/cnc.history.schema.js';
-import { pressing_done_history_model } from '../../../../database/schema/factory/pressing/pressing_history/pressing_done_history.schema.js';
-import bunito_history_model from '../../../../database/schema/factory/bunito/bunito_history/bunito.history.schema.js';
-import color_history_model from '../../../../database/schema/factory/colour/colour_history/colour_history.schema.js';
-import canvas_history_model from '../../../../database/schema/factory/canvas/canvas_history/canvas.history.schema.js';
-import polishing_history_model from '../../../../database/schema/factory/polishing/polishing_history/polishing.history.schema.js';
-import path from 'path';
-import issue_for_order_model from '../../../../database/schema/order/issue_for_order/issue_for_order.schema.js';
 
 const issued_from_map = {
     [item_issued_from?.pressing_factory]: pressing_done_details_model,
@@ -42,6 +46,15 @@ const issued_from_history_map = {
     [item_issued_from?.canvas_factory]: canvas_history_model,
     [item_issued_from?.polishing_factory]: polishing_history_model,
 };
+
+const issued_from_issue_for_map = {
+    [item_issued_from?.pressing_factory]: pressing_done_details_model,
+    [item_issued_from?.cnc_factory]: issue_for_cnc_view_model,
+    [item_issued_from?.bunito_factory]: issue_for_bunito_view_model,
+    [item_issued_from?.color_factory]: issue_for_colour_view_model,
+    [item_issued_from?.canvas_factory]: issue_for_canvas_view_model,
+    [item_issued_from?.polishing_factory]: issue_for_polishing_view_model,
+}
 
 export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
     const {
@@ -84,31 +97,30 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
             );
         }
 
-        const pressing_done_id =
-            issued_from_details?.pressing_details_id || issued_from_details?._id;
+        let issued_item_issue_id = null;
+        let issue_for_field_key = null;
+
+        if (issued_from !== item_issued_from?.pressing_factory) {
+            const factory_key = issued_from?.toLowerCase();
+            issue_for_field_key = `issue_for_${factory_key}_id`;
+
+            issued_item_issue_id = issued_from_details?.[issue_for_field_key];
+            if (!issued_item_issue_id) {
+                throw new ApiError(
+                    `${issue_for_field_key} not found in issued_from_details.`,
+                    StatusCodes.BAD_REQUEST
+                );
+            }
+        }
+        const issue_for_id =
+            issued_from === item_issued_from?.pressing_factory ? issued_from_details?._id : issued_item_issue_id;
 
 
-        const [pressing_done_details] = await pressing_done_details_model.aggregate(
+        const [pressing_done_details] = await issued_from_issue_for_map[issued_from].aggregate(
             [
                 {
                     $match: {
-                        _id: pressing_done_id,
-                    },
-                },
-                {
-                    $lookup: {
-                        from: 'orders',
-                        localField: 'order_id',
-                        foreignField: '_id',
-                        as: "order_details",
-                        pipeline: [
-                            {
-                                $project: {
-                                    _id: 1,
-                                    order_no: 1,
-                                },
-                            },
-                        ],
+                        _id: issue_for_id,
                     },
                 },
                 {
@@ -121,6 +133,7 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
                                 $project: {
                                     _id: 1,
                                     order_no: 1,
+                                    order_category: 1,
                                 },
                             },
                         ],
@@ -188,37 +201,39 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
         if (!pressing_done_details) {
             throw new ApiError(
                 StatusCodes.NOT_FOUND,
-                'Pressing done details not found.'
+                'Order details not found.'
             );
         };
+
 
         const payload = {
             issued_from_id: issued_from_id,
             issued_from: issued_from,
             issued_for: item_issued_for?.order,
-            pressing_id: pressing_done_details?.pressing_id,
-            pressing_details_id: pressing_done_details?._id,
-            order_id: pressing_done_details?.order_id,
-            order_item_id: pressing_done_details?.order_item_id,
+            pressing_id: pressing_done_details?.pressing_id || pressing_done_details?.pressing_details?.pressing_id,
+            pressing_details_id: pressing_done_details?._id || pressing_done_details?.pressing_details?._id,
+            order_id: pressing_done_details?.order_id || pressing_done_details?.pressing_details?.order_id,
+            order_item_id: pressing_done_details?.order_item_id || pressing_done_details?.pressing_details?.order_item_id,
             order_number: pressing_done_details?.order_details?.order_no,
             order_item_no:
                 pressing_done_details?.series_items?.[0]?.item_no ||
                 pressing_done_details?.decorative_items?.[0]?.item_no,
-            group_no: pressing_done_details?.group_no,
-            group_no_id: pressing_done_details?.group_no_id,
-            length: pressing_done_details?.length,
-            width: pressing_done_details?.width,
-            thickness: pressing_done_details?.thickness,
-            order_category: pressing_done_details?.order_category,
-            product_type: pressing_done_details?.product_type,
+            group_no: pressing_done_details?.group_no || pressing_done_details?.pressing_details?.group_no,
+            group_no_id: pressing_done_details?.group_no_id || pressing_done_details?.pressing_details?.group_no_id,
+            length: pressing_done_details?.length || pressing_done_details?.pressing_details?.length,
+            width: pressing_done_details?.width || pressing_done_details?.pressing_details?.width,
+            thickness: pressing_done_details?.thickness || pressing_done_details?.pressing_details?.thickness,
+            order_category: pressing_done_details?.order_category || pressing_done_details?.order_details?.order_category,
+            product_type: pressing_done_details?.product_type || pressing_done_details?.pressing_details?.product_type,
             no_of_sheets: issued_sheeets,
             sqm: issued_sqm,
             amount: issued_amount,
-            product_type: pressing_done_details?.product_type,
-            remark: pressing_done_details?.remark || null,
+            // product_type: pressing_done_details?.product_type,
+            remark: pressing_done_details?.remark || pressing_done_details?.pressing_details?.remark || null,
             created_by: user?._id,
             updated_by: user?._id,
         };
+
 
         const [add_finished_ready_for_packing_result] =
             await finished_ready_for_packing_model.create([payload], { session });
@@ -265,21 +280,7 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
                 'Failed to update issued item details.'
             );
         }
-        let issued_item_issue_id = null;
-        let issue_for_field_key = null;
 
-        if (issued_from !== item_issued_from?.pressing_factory) {
-            const factory_key = issued_from?.toLowerCase();
-            issue_for_field_key = `issue_for_${factory_key}_id`;
-
-            issued_item_issue_id = issued_from_details?.[issue_for_field_key];
-            if (!issued_item_issue_id) {
-                throw new ApiError(
-                    `${issue_for_field_key} not found in issued_from_details.`,
-                    StatusCodes.BAD_REQUEST
-                );
-            }
-        };
 
         const [max_histroy_sr_no] = await issued_from_history_map[
             issued_from
@@ -298,29 +299,30 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
             issued_item_id: issued_from_details?._id,
             pressing_id: pressing_done_details?.pressing_id,
             pressing_details_id: pressing_done_details?._id,
-            order_id: pressing_done_details?.order_id,
-            order_item_id: pressing_done_details?.order_item_id,
+            order_id: pressing_done_details?.order_id || pressing_done_details?.order_details?._id,
+            order_item_id: pressing_done_details?.order_item_id || pressing_done_details?.order_item_details?._id,
             order_number: pressing_done_details?.order_details?.order_no,
             order_item_no:
                 pressing_done_details?.series_items?.[0]?.item_no ||
                 pressing_done_details?.decorative_items?.[0]?.item_no,
-            group_no: pressing_done_details?.group_no,
-            group_no_id: pressing_done_details?.group_no_id,
-            length: pressing_done_details?.length,
-            width: pressing_done_details?.width,
-            thickness: pressing_done_details?.thickness,
+            group_no: pressing_done_details?.group_no || pressing_done_details?.pressing_details?.group_no,
+            group_no_id: pressing_done_details?.group_no_id || pressing_done_details?.pressing_details?.group_no_id,
+            length: pressing_done_details?.length || pressing_done_details?.pressing_details?.length,
+            width: pressing_done_details?.width || pressing_done_details?.pressing_details?.width,
+            thickness: pressing_done_details?.thickness || pressing_done_details?.pressing_details?.thickness,
             no_of_sheets: issued_sheeets,
             sqm: issued_sqm,
             amount: issued_amount,
-            product_type: pressing_done_details?.product_type,
-            order_category: pressing_done_details?.order_category,
+            product_type: pressing_done_details?.product_type || pressing_done_details?.pressing_details?.product_type,
+            order_category: pressing_done_details?.order_category || pressing_done_details?.pressing_details?.order_category,
             issued_from: item_issued_from,
             issued_for: item_issued_for?.order,
             issued_for_id: add_finished_ready_for_packing_result?._id,
-            remark: pressing_done_details?.remark || null,
+            remark: pressing_done_details?.remark || pressing_done_details?.pressing_details?.remark || null,
             issue_status: item_issued_from?.packing,
             created_by: user?._id,
             updated_by: user?._id,
+
         };
 
         if (issue_for_field_key && issued_item_issue_id) {
@@ -636,7 +638,6 @@ export const revert_finished_ready_for_packing = catchAsync(
         }
     }
 );
-
 
 export const fetch_issue_for_packing_items_by_customer_and_order_category = catchAsync(async (req, res) => {
     const { customer_id, order_type, product_type } = req.query;

@@ -15,6 +15,7 @@ import catchAsync from '../../../utils/errors/catchAsync.js';
 
 export const create_packing = catchAsync(async (req, res) => {
     const { other_details, packing_done_item_details } = req.body;
+
     const issue_for_packing_set = new Set();
     const user = req.userDetails
     for (let field of [
@@ -37,6 +38,7 @@ export const create_packing = catchAsync(async (req, res) => {
             created_by: user._id,
             updated_by: user._id,
         };
+
 
         const [create_packing_done_other_details_result] = await packing_done_other_details_model.create([updated_other_details_payload], { session });
 
@@ -312,7 +314,7 @@ export const fetch_all_packing_done_items = catchAsync(
         const match_query = {
             ...filterData,
             ...search_query,
-            // is_challan_done: false,
+            is_dispatch_done: false,
         };
 
         const aggregatePackingDoneItems = {
