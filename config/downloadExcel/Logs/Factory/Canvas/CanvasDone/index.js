@@ -1,5 +1,5 @@
 import exceljs from 'exceljs';
-import ApiError from '../../../../../../utils/errors/ApiError.js';
+import ApiError from '../../../../../../utils/errors/apiError.js';
 
 export const createFactoryCanvasDoneExcel = async (newData, req, res) => {
   try {
