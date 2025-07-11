@@ -757,7 +757,7 @@ export const edit_dressing_done_items = catchAsync(async (req, res) => {
     };
 
     const add_slicing_done_item = async () => {
-   
+
       const delete_existing_item_result =
         await dressing_done_items_model.deleteMany(
           {
@@ -847,7 +847,7 @@ export const edit_dressing_done_items = catchAsync(async (req, res) => {
     if (other_details_data?.slicing_done_other_details_id) {
       await add_slicing_done_item();
     }
-    
+
     await session.commitTransaction();
     const response = new ApiResponse(
       StatusCodes.OK,
@@ -960,7 +960,7 @@ export const fetch_dressing_done_history = catchAsync(
       limit = 10,
       search = '',
     } = req.query;
-   
+
 
     const {
       string,
@@ -1459,7 +1459,7 @@ export const create_dressing_items_from_dressing_report = catchAsync(
         log_no_code_volume_map
       )?.reduce((acc, item) => acc + item, 0);
 
-      
+
       const log_no_code_factor_map = {};
       //calculating factor for each log_no_code  based on volume
       Object.entries(log_no_code_volume_map)?.forEach(
@@ -1471,7 +1471,7 @@ export const create_dressing_items_from_dressing_report = catchAsync(
         }
       );
 
-      
+
       //map for storing each log_no_code amount
       const log_no_code_amount_map = {};
       //calculating amount of each log_no_code
@@ -1485,7 +1485,7 @@ export const create_dressing_items_from_dressing_report = catchAsync(
         // );
         log_no_code_amount_map[item?.log_no_code] = Number(totalAmount.toFixed(2));
       }
-     
+
       const slicing_done_other_details_id_set = new Set();
       const peeling_done_other_details_id_set = new Set();
       for (let item of issue_for_dressing_details) {
@@ -1653,7 +1653,7 @@ export const create_dressing_items_from_dressing_report = catchAsync(
               );
             }
           }
-        
+
           await dressing_done_other_details_model
             ?.findByIdAndDelete(other_details?._id)
             .session(session);
@@ -1738,7 +1738,7 @@ export const create_dressing_items_from_dressing_report = catchAsync(
       }
 
       async function add_peeling_done_items(other_details) {
-      
+
         const peeling_done_map = issue_for_dressing_details?.reduce(
           (acc, item) => {
             acc[item?.log_no_code] = item;
@@ -1755,7 +1755,7 @@ export const create_dressing_items_from_dressing_report = catchAsync(
         const peeling_done_items_log_no_code_set = new Set(
           peeling_done_items?.map((item) => item?.log_no_code)
         );
-     
+
         const valid_dressing_items = [];
         const valid_dressing_items_id = [];
         const dressing_missmatch_updates = [];

@@ -15,6 +15,7 @@ import catchAsync from '../../../utils/errors/catchAsync.js';
 
 export const create_packing = catchAsync(async (req, res) => {
     const { other_details, packing_done_item_details } = req.body;
+
     const issue_for_packing_set = new Set();
     const user = req.userDetails
     for (let field of [
