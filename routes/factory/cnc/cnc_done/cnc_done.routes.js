@@ -3,6 +3,7 @@ import AuthMiddleware from '../../../../middlewares/verifyToken.js';
 import {
   create_cnc,
   download_excel_factory_cnc_done,
+  download_excel_factory_cnc_history,
   fetch_single_cnc_done_item_with_issue_for_cnc_data,
   listing_cnc_done,
   listing_cnc_history,
@@ -27,4 +28,6 @@ cnc_done_router.post('/history-list', AuthMiddleware, listing_cnc_history);
 
 // Download excel api
 cnc_done_router.post('/download-factory-cnc-done-excel', AuthMiddleware, download_excel_factory_cnc_done);
+// Download cnc history api
+cnc_done_router.post('/download-factory-cnc-history-excel', AuthMiddleware, download_excel_factory_cnc_history);
 export default cnc_done_router;

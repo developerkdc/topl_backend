@@ -9,6 +9,8 @@ import { plywood_resizing_done_details_model } from '../../../../database/schema
 import { issue_for_canvas_model } from '../../../../database/schema/factory/canvas/issue_for_canvas/issue_for_canvas.schema.js';
 import { canvas_done_details_model } from '../../../../database/schema/factory/canvas/canvas_done/canvas_done.schema.js';
 import canvas_history_model from '../../../../database/schema/factory/canvas/canvas_history/canvas.history.schema.js';
+import { createFactoryCanvasDoneExcel } from '../../../../config/downloadExcel/Logs/Factory/Canvas/CanvasDone/index.js';
+import { createFactoryCanvasHistoryExcel } from '../../../../config/downloadExcel/Logs/Factory/Canvas/CanvasHistory/index.js';
 
 export const create_canvas = catchAsync(async (req, res) => {
   const userDetails = req.userDetails;
@@ -392,7 +394,7 @@ export const fetch_single_canvas_done_item_with_issue_for_canvas_data =
           result
         )
       );
-});
+  });
 
 export const revert_canvas_done_items = catchAsync(async (req, res) => {
   const { id } = req.params;
@@ -652,4 +654,327 @@ export const listing_canvas_history = catchAsync(async (req, res) => {
     }
   );
   return res.status(200).json(response);
+});
+
+
+
+
+// Canvas Done Export Api
+
+export const download_excel_canvas_done = catchAsync(async (req, res) => {
+  const {
+    page = 1,
+    limit = 10,
+    sortBy = 'updatedAt',
+    sort = 'desc',
+    search = '',
+  } = req.query;
+  const {
+    string,
+    boolean,
+    numbers,
+    arrayField = [],
+  } = req?.body?.searchFields || {};
+  const filter = req.body?.filter;
+
+  let search_query = {};
+  if (search != '' && req?.body?.searchFields) {
+    const search_data = DynamicSearch(
+      search,
+      boolean,
+      numbers,
+      string,
+      arrayField
+    );
+    if (search_data?.length == 0) {
+      return res.status(404).json({
+        statusCode: 404,
+        status: false,
+        data: {
+          data: [],
+        },
+        message: 'Results Not Found',
+      });
+    }
+    search_query = search_data;
+  }
+
+  const filterData = dynamic_filter(filter);
+
+  const match_query = {
+    ...filterData,
+    ...search_query,
+  };
+
+  // Aggregation stage
+  const aggCommonMatch = {
+    $match: {
+      'available_details.no_of_sheets': { $gt: 0 },
+    },
+  };
+
+  const aggLookUpIssuedDetails = {
+    $lookup: {
+      from: 'issue_for_canvas_details_view',
+      localField: 'issue_for_canvas_id',
+      foreignField: '_id',
+      as: 'issue_for_canvas_details',
+    },
+  };
+  const aggCreatedByLookup = {
+    $lookup: {
+      from: 'users',
+      localField: 'created_by',
+      foreignField: '_id',
+      pipeline: [
+        {
+          $project: {
+            user_name: 1,
+            user_type: 1,
+            dept_name: 1,
+            first_name: 1,
+            last_name: 1,
+            email_id: 1,
+            mobile_no: 1,
+          },
+        },
+      ],
+      as: 'created_by',
+    },
+  };
+  const aggUpdatedByLookup = {
+    $lookup: {
+      from: 'users',
+      localField: 'updated_by',
+      foreignField: '_id',
+      pipeline: [
+        {
+          $project: {
+            user_name: 1,
+            user_type: 1,
+            dept_name: 1,
+            first_name: 1,
+            last_name: 1,
+            email_id: 1,
+            mobile_no: 1,
+          },
+        },
+      ],
+      as: 'updated_by',
+    },
+  };
+  const aggCreatedByUnwind = {
+    $unwind: {
+      path: '$created_by',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
+  const aggUpdatedByUnwind = {
+    $unwind: {
+      path: '$updated_by',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
+  const aggIssuedCncDetailsUnwind = {
+    $unwind: {
+      path: '$issue_for_canvas_details',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
+  const aggMatch = {
+    $match: {
+      ...match_query,
+    },
+  };
+  const aggSort = {
+    $sort: {
+      [sortBy]: sort === 'desc' ? -1 : 1,
+    },
+  };
+  const aggSkip = {
+    $skip: (parseInt(page) - 1) * parseInt(limit),
+  };
+  const aggLimit = {
+    $limit: parseInt(limit),
+  };
+
+  const listAggregate = [
+    aggCommonMatch,
+    aggLookUpIssuedDetails,
+    aggIssuedCncDetailsUnwind,
+    aggCreatedByLookup,
+    aggCreatedByUnwind,
+    aggUpdatedByLookup,
+    aggUpdatedByUnwind,
+    aggMatch,
+    // aggSort,
+    // aggSkip,
+    // aggLimit,
+  ]; // aggregation pipiline
+
+  const data =
+    await canvas_done_details_model.aggregate(listAggregate);
+
+  await createFactoryCanvasDoneExcel(data, req, res);
+});
+
+
+
+
+
+export const download_excel_canvas_history = catchAsync(async (req, res) => {
+  const {
+    page = 1,
+    limit = 10,
+    sortBy = 'updatedAt',
+    sort = 'desc',
+    search = '',
+  } = req.query;
+  const {
+    string,
+    boolean,
+    numbers,
+    arrayField = [],
+  } = req?.body?.searchFields || {};
+  const filter = req.body?.filter;
+
+  let search_query = {};
+  if (search != '' && req?.body?.searchFields) {
+    const search_data = DynamicSearch(
+      search,
+      boolean,
+      numbers,
+      string,
+      arrayField
+    );
+    if (search_data?.length == 0) {
+      return res.status(404).json({
+        statusCode: 404,
+        status: false,
+        data: {
+          data: [],
+        },
+        message: 'Results Not Found',
+      });
+    }
+    search_query = search_data;
+  }
+
+  const filterData = dynamic_filter(filter);
+
+  const match_query = {
+    ...filterData,
+    ...search_query,
+  };
+
+  // Aggregation stage
+  // const aggCommonMatch = {
+  //   $match: {
+  //     'available_details.no_of_sheets': { $gt: 0 },
+  //   },
+  // };
+
+  const aggLookUpIssuedDetails = {
+    $lookup: {
+      from: "issue_for_canvas_details_view",
+      localField: "issue_for_canvas_id",
+      foreignField: "_id",
+      as: "issue_for_canvas_details"
+    }
+  }
+
+  const aggCreatedByLookup = {
+    $lookup: {
+      from: 'users',
+      localField: 'created_by',
+      foreignField: '_id',
+      pipeline: [
+        {
+          $project: {
+            user_name: 1,
+            user_type: 1,
+            dept_name: 1,
+            first_name: 1,
+            last_name: 1,
+            email_id: 1,
+            mobile_no: 1,
+          },
+        },
+      ],
+      as: 'created_by',
+    },
+  };
+  const aggUpdatedByLookup = {
+    $lookup: {
+      from: 'users',
+      localField: 'updated_by',
+      foreignField: '_id',
+      pipeline: [
+        {
+          $project: {
+            user_name: 1,
+            user_type: 1,
+            dept_name: 1,
+            first_name: 1,
+            last_name: 1,
+            email_id: 1,
+            mobile_no: 1,
+          },
+        },
+      ],
+      as: 'updated_by',
+    },
+  };
+  const aggCreatedByUnwind = {
+    $unwind: {
+      path: '$created_by',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
+  const aggUpdatedByUnwind = {
+    $unwind: {
+      path: '$updated_by',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
+  const aggIssuedCncDetailsUnwind = {
+    $unwind: {
+      path: '$issue_for_canvas_details',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
+  const aggMatch = {
+    $match: {
+      ...match_query,
+    },
+  };
+  const aggSort = {
+    $sort: {
+      [sortBy]: sort === 'desc' ? -1 : 1,
+    },
+  };
+  const aggSkip = {
+    $skip: (parseInt(page) - 1) * parseInt(limit),
+  };
+  const aggLimit = {
+    $limit: parseInt(limit),
+  };
+
+  const listAggregate = [
+    // aggCommonMatch,
+    aggLookUpIssuedDetails,
+    aggIssuedCncDetailsUnwind,
+    aggCreatedByLookup,
+    aggCreatedByUnwind,
+    aggUpdatedByLookup,
+    aggUpdatedByUnwind,
+    aggMatch,
+    aggSort,
+    aggSkip,
+    aggLimit,
+  ]; // aggregation pipiline
+
+  const data = await canvas_history_model.aggregate(listAggregate);
+  await createFactoryCanvasHistoryExcel(data,req,res);
+  
 });
