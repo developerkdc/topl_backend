@@ -20,6 +20,7 @@ import { issues_for_pressing_model } from '../../../database/schema/factory/pres
 import { createFactoryGroupingDoneExcel } from '../../../config/downloadExcel/Logs/Factory/Grouping/groupingDone.js';
 import { createFactoryGroupingDamageExcel } from '../../../config/downloadExcel/Logs/Factory/Grouping/groupingDamage.js';
 import { createFactoryGroupingHistoryExcel } from '../../../config/downloadExcel/Logs/Factory/Grouping/groupingHistory.js';
+
 export const add_grouping_done = catchAsync(async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -201,7 +202,7 @@ export const edit_grouping_done = catchAsync(async (req, res, next) => {
 
     const items_details_data = items_details?.map((item, index) => {
       const available_details = {
-        no_of_leaves: item?.no_of_leaves,
+        no_of_sheets: item?.no_of_sheets,
         sqm: item?.sqm,
         amount: item?.amount,
       };
@@ -301,7 +302,7 @@ export const fetch_all_grouping_done_items = catchAsync(
     const match_common_query = {
       $match: {
         is_damaged: false,
-        'available_details.no_of_leaves': { $gt: 0 },
+        'available_details.no_of_sheets': { $gt: 0 },
       },
     };
 
@@ -547,7 +548,7 @@ export const fetch_all_details_by_grouping_done_item_id = catchAsync(
         $group: {
           _id: '$group_no',
           total_no_of_sheets: {
-            $sum: '$no_of_leaves',
+            $sum: '$no_of_sheets',
           },
         },
       },
@@ -585,7 +586,7 @@ export const fetch_all_details_by_grouping_done_item_id = catchAsync(
 
     const data_result = result?.[0];
     data_result.grouping_available_no_of_sheets =
-      data_result?.available_details?.no_of_leaves || 0;
+      data_result?.available_details?.no_of_sheets || 0;
     data_result.tapping_available_no_of_sheets =
       (issue_for_tapping?.[0]?.total_no_of_sheets || 0) +
       (tapping_done?.[0]?.total_no_of_sheets || 0);
@@ -1202,11 +1203,11 @@ export const add_grouping_done_damaged = catchAsync(async (req, res, next) => {
       throw new ApiError('Not data found', 400);
     }
     if (
-      grouping_done_item_details?.no_of_leaves !==
-      grouping_done_item_details?.available_details?.no_of_leaves
+      grouping_done_item_details?.no_of_sheets !==
+      grouping_done_item_details?.available_details?.no_of_sheets
     ) {
       throw new ApiError(
-        `Cannot add to damage because some of item leaves already issued`,
+        `Cannot add to damage because some of item sheets already issued`,
         400
       );
     }
@@ -1328,7 +1329,7 @@ export const revert_grouping_done_damaged = catchAsync(
             _id: { $ne: grouping_done_item_id },
             grouping_done_other_details_id: grouping_done_other_details_id,
             $expr: {
-              $ne: ['$no_of_leaves', '$available_details.no_of_leaves'],
+              $ne: ['$no_of_sheets', '$available_details.no_of_sheets'],
             },
           })
           .lean();
@@ -1411,11 +1412,11 @@ export const recreate_grouping_done_items = catchAsync(
         throw new ApiError('Not data found', 400);
       }
       if (
-        grouping_done_other_details?.no_of_leaves !==
-        grouping_done_other_details?.available_details?.no_of_leaves
+        grouping_done_other_details?.no_of_sheets !==
+        grouping_done_other_details?.available_details?.no_of_sheets
       ) {
         throw new ApiError(
-          `Cannot recreate because some of item leaves already issued`,
+          `Cannot recreate because some of item sheets already issued`,
           400
         );
       }
@@ -1549,7 +1550,7 @@ export const download_excel_factory_grouping_done = catchAsync(
     const match_common_query = {
       $match: {
         is_damaged: false,
-        'available_details.no_of_leaves': { $gt: 0 },
+        'available_details.no_of_sheets': { $gt: 0 },
       },
     };
 

@@ -20,7 +20,7 @@ export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(
     try {
       const userDetails = req.userDetails;
       const { grouping_done_item_id } = req.params;
-      const { issued_for, issue_no_of_leaves } = req.body;
+      const { issued_for, issue_no_of_sheets } = req.body;
       if (
         !grouping_done_item_id ||
         !mongoose.isValidObjectId(grouping_done_item_id)
@@ -30,9 +30,9 @@ export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(
           StatusCodes.BAD_REQUEST
         );
       }
-      if (!issued_for || !issue_no_of_leaves) {
+      if (!issued_for || !issue_no_of_sheets) {
         throw new ApiError(
-          'Required issue status or issue no of leaves',
+          'Required issue status or issue no of sheets',
           StatusCodes.BAD_REQUEST
         );
       }
@@ -57,18 +57,18 @@ export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(
       const data = fetch_grouping_done_item_details;
       const available_details = data?.available_details;
 
-      const no_of_leaves_available =
-        available_details?.no_of_leaves - issue_no_of_leaves;
-      if (no_of_leaves_available < 0) {
+      const no_of_sheets_available =
+        available_details?.no_of_sheets - issue_no_of_sheets;
+      if (no_of_sheets_available < 0) {
         throw new ApiError(
-          'Not enough leaves available',
+          'Not enough sheets available',
           StatusCodes.BAD_REQUEST
         );
       }
 
       const grouping_item_sqm = available_details?.sqm;
       const tapping_sqm = Number(
-        (data?.length * data?.width * issue_no_of_leaves)?.toFixed(3)
+        (data?.length * data?.width * issue_no_of_sheets)?.toFixed(3)
       );
       const tapping_amount = Number(
         (
@@ -114,7 +114,7 @@ export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(
         order_category: null,
         issued_for: issued_for,
         issued_from: issues_for_status.grouping,
-        no_of_leaves: issue_no_of_leaves,
+        no_of_sheets: issue_no_of_sheets,
         sqm: tapping_sqm,
         amount: tapping_amount,
         created_by: userDetails?._id,
@@ -172,8 +172,8 @@ export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(
               updated_by: userDetails?._id,
             },
             $inc: {
-              'available_details.no_of_leaves':
-                -issue_for_tapping_data?.no_of_leaves,
+              'available_details.no_of_sheets':
+                -issue_for_tapping_data?.no_of_sheets,
               'available_details.sqm': -issue_for_tapping_data?.sqm,
               'available_details.amount': -issue_for_tapping_data?.amount,
             },
@@ -309,7 +309,7 @@ export const revert_issue_for_tapping_item = catchAsync(
 
       // update available details in grouping done items
       const available_details = {
-        no_of_leaves: delete_issue_for_tapping_item?.no_of_leaves,
+        no_of_sheets: delete_issue_for_tapping_item?.no_of_sheets,
         sqm: delete_issue_for_tapping_item?.sqm,
         amount: delete_issue_for_tapping_item?.amount,
       };
@@ -321,7 +321,7 @@ export const revert_issue_for_tapping_item = catchAsync(
               updated_by: userDetails?._id,
             },
             $inc: {
-              'available_details.no_of_leaves': available_details.no_of_leaves,
+              'available_details.no_of_sheets': available_details.no_of_sheets,
               'available_details.sqm': available_details.sqm,
               'available_details.amount': available_details.amount,
             },
@@ -347,7 +347,7 @@ export const revert_issue_for_tapping_item = catchAsync(
           .find({
             grouping_done_other_details_id: grouping_done_other_details_id,
             $expr: {
-              $ne: ['$no_of_leaves', '$available_details.no_of_leaves'],
+              $ne: ['$no_of_sheets', '$available_details.no_of_sheets'],
             },
           })
           .session(session)
