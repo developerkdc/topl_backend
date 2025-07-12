@@ -201,7 +201,6 @@ export const add_cnc_damage = catchAsync(async (req, res) => {
   const session = await mongoose.startSession();
   try {
     session.startTransaction();
-    console.log('damage_sheets : ', damage_sheets);
     if (!id) {
       throw new ApiError('ID is missing', StatusCodes.NOT_FOUND);
     }
@@ -243,7 +242,6 @@ export const add_cnc_damage = catchAsync(async (req, res) => {
         },
       },
     ]);
-    console.log(maxSrNo.max_sr_no);
     const [create_damage_result] = await cnc_damage_model.create(
       [
         {
@@ -575,7 +573,6 @@ export const revert_damage_to_cnc_done = catchAsync(async (req, res) => {
     ]; // aggregation pipiline
   
     const data = await cnc_damage_model.aggregate(listAggregate);
-    console.log(data);
     await createFactoryCNCDamageExcel(data,req, res);
    
   });

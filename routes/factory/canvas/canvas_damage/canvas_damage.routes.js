@@ -2,6 +2,7 @@ import { Router } from 'express';
 import AuthMiddleware from '../../../../middlewares/verifyToken.js';
 import {
   add_canvas_damage,
+  download_excel_canvas_damage,
   listing_canvas_damage,
   revert_damage_to_canvas_done,
 } from '../../../../controllers/factory/canavas/canvas_damage/canvas_damage.controller.js';
@@ -17,5 +18,5 @@ canvas_damage_router.post(
 );
 
 // Export Api 
-canvas_damage_router.post('/download-factory-canvas-damage-excel', AuthMiddleware, listing_canvas_damage);
+canvas_damage_router.post('/download-factory-canvas-damage-excel', AuthMiddleware, download_excel_canvas_damage);
 export default canvas_damage_router;
