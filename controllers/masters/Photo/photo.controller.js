@@ -1,5 +1,6 @@
 import fs from 'fs';
 import mongoose from 'mongoose';
+import archiver from 'archiver';
 import { grouping_done_items_details_model } from '../../../database/schema/factory/grouping/grouping_done.schema.js';
 import photoModel from '../../../database/schema/masters/photo.schema.js';
 import ApiResponse from '../../../utils/ApiResponse.js';
@@ -8,6 +9,7 @@ import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import ApiError from '../../../utils/errors/apiError.js';
 import catchAsync from '../../../utils/errors/catchAsync.js';
 import { StatusCodes } from '../../../utils/constants.js';
+import path from 'path';
 
 export const addPhoto = catchAsync(async (req, res, next) => {
   let { photo_number } = req.body;
@@ -580,4 +582,172 @@ export const dropdownPhoto = catchAsync(async (req, res, next) => {
     photoList
   );
   return res.status(200).json(response);
+});
+
+export const fetchPhotoAlbumList = catchAsync(async (req, res, next) => {
+  const { sortBy = 'updatedAt', sort = 'desc', search = '' } = req.query;
+
+  const {
+    string,
+    boolean,
+    numbers,
+    arrayField = [],
+  } = req?.body?.searchFields || {};
+
+  const filter = req.body?.filter;
+
+  const page = Math.max(1, parseInt(req.query.page) || 1);
+  const limit = Math.max(1, parseInt(req.query.limit) || 10);
+
+  let search_query = {};
+
+  if (search !== '' && req?.body?.searchFields) {
+    const search_data = DynamicSearch(
+      search,
+      boolean,
+      numbers,
+      string,
+      arrayField
+    );
+    if (search_data?.length === 0) {
+      return res.status(404).json({
+        statusCode: 404,
+        status: false,
+        data: { data: [] },
+        message: 'Results Not Found',
+      });
+    }
+    search_query = search_data;
+  }
+
+  const filterData = dynamic_filter(filter);
+  const match_query = { ...filterData, ...search_query };
+
+  const aggMatch = { $match: match_query };
+  const aggCreatedByLookup = {
+    $lookup: {
+      from: 'users',
+      localField: 'created_by',
+      foreignField: '_id',
+      pipeline: [
+        {
+          $project: {
+            user_name: 1,
+            user_type: 1,
+            dept_name: 1,
+            first_name: 1,
+            last_name: 1,
+            email_id: 1,
+            mobile_no: 1,
+          },
+        },
+      ],
+      as: 'created_by',
+    },
+  };
+  const aggUpdatedByLookup = {
+    $lookup: {
+      from: 'users',
+      localField: 'updated_by',
+      foreignField: '_id',
+      pipeline: [
+        {
+          $project: {
+            user_name: 1,
+            user_type: 1,
+            dept_name: 1,
+            first_name: 1,
+            last_name: 1,
+            email_id: 1,
+            mobile_no: 1,
+          },
+        },
+      ],
+      as: 'updated_by',
+    },
+  };
+
+  const aggSort = { $sort: { [sortBy]: sort === 'desc' ? -1 : 1 } };
+  // const aggSkip = { $skip: (page - 1) * limit };
+  // const aggLimit = { $limit: limit };
+
+  const pipeline = [
+    aggMatch,
+    aggCreatedByLookup,
+    aggUpdatedByLookup,
+    {
+      $facet: {
+        data: [aggSort],
+        totalCount: [{ $count: 'count' }],
+      },
+    },
+  ];
+
+  const result = await photoModel.aggregate(pipeline);
+  const photoData = result[0].data;
+  const totalCount = result[0].totalCount?.[0]?.count || 0;
+  const totalPages = Math.ceil(totalCount / limit);
+
+  return res.status(200).json(
+    new ApiResponse(200, 'Photo Data Fetched Successfully', {
+      data: photoData,
+      totalPages,
+    })
+  );
+});
+
+export const downloadPhotoAlbumZip = catchAsync(async (req, res, next) => {
+  const { selectedPhotos = [] } = req.body;
+
+  if (!Array.isArray(selectedPhotos) || selectedPhotos.length === 0) {
+    return res.status(400).json({
+      status: false,
+      message: 'No photos selected',
+    });
+  }
+
+  const photos = await photoModel.find({ _id: { $in: selectedPhotos } });
+
+  if (!photos || photos.length === 0) {
+    return res.status(404).json({
+      status: false,
+      message: 'No valid photos found',
+    });
+  }
+
+  // Set ZIP response headers
+  res.setHeader('Content-Type', 'application/zip');
+  res.setHeader('Content-Disposition', 'attachment; filename=photos.zip');
+
+  const archive = archiver('zip', { zlib: { level: 9 } });
+  archive.on('error', (err) => next(err));
+  archive.pipe(res);
+
+  for (let photo of photos) {
+    console.log(photo.photo_number);
+    const bannerImage = photo?.banner_image;
+
+    if (!bannerImage || !bannerImage.path || !bannerImage.filename) continue;
+
+    // Normalize the file path
+    const fullPath = path.join(
+      process.cwd(),
+      bannerImage?.path.replace(/\\/g, '/')
+    );
+
+    if (fs.existsSync(fullPath)) {
+      const ext = path.extname(
+        bannerImage.originalname || bannerImage.filename
+      );
+      const downloadFileName = `${photo?.photo_number}${ext}`;
+
+      archive.file(fullPath, {
+        name: downloadFileName,
+      });
+    } else {
+      console.warn(`File not found: ${fullPath}`);
+    }
+  }
+
+  await archive.finalize();
 });

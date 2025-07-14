@@ -2,7 +2,9 @@ import express from 'express';
 import AuthMiddleware from '../../../middlewares/verifyToken.js';
 import {
   addPhoto,
+  downloadPhotoAlbumZip,
   dropdownPhoto,
+  fetchPhotoAlbumList,
   fetchPhotoList,
   fetchSinglePhoto,
   updatePhoto,
@@ -34,13 +36,13 @@ photoRouter.patch(
 photoRouter.patch(
   '/update-status-photo/:id',
   AuthMiddleware,
-  MulterFunction(`public/upload/images/photo_no`).fields([
-    { name: 'images' },
-  ]),
+  MulterFunction(`public/upload/images/photo_no`).fields([{ name: 'images' }]),
   updatePhotoStatus
 );
 photoRouter.get('/single-photo/:id', AuthMiddleware, fetchSinglePhoto);
 photoRouter.post('/list-photo', AuthMiddleware, fetchPhotoList);
+photoRouter.post('/list-photo-album', AuthMiddleware, fetchPhotoAlbumList);
+photoRouter.post('/download-photo-album-zip', AuthMiddleware, downloadPhotoAlbumZip);
 
 photoRouter.get('/dropdown-photo', AuthMiddleware, dropdownPhoto);
 
