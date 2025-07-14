@@ -1,4 +1,5 @@
 import mongoose, { Schema } from 'mongoose';
+import { sub_category } from '../../Utils/constants/constants.js';
 
 const photoSchema = new mongoose.Schema(
   {
@@ -31,6 +32,10 @@ const photoSchema = new mongoose.Schema(
       trim: true,
       default: null,
     },
+    group_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
     group_no: {
       type: String,
       uppercase: true,
@@ -47,6 +52,20 @@ const photoSchema = new mongoose.Schema(
       uppercase: true,
       trim: true,
       default: null,
+    },
+    sub_category_type: {
+      type: String,
+      enum: {
+        values: [sub_category.natural, sub_category.hybrid],
+        message: `Sub-category type {{VALUE}}, must be one of ${[sub_category.natural, sub_category.hybrid].join(",")}`
+      },
+      required: [true, 'Subcategory type is required'],
+      trim: true,
+      uppercase: true,
+    },
+    hybrid_group_no: {
+      type: Array,
+      default: null
     },
     length: {
       type: Number,

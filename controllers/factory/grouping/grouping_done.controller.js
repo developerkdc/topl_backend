@@ -20,6 +20,7 @@ import { issues_for_pressing_model } from '../../../database/schema/factory/pres
 import { createFactoryGroupingDoneExcel } from '../../../config/downloadExcel/Logs/Factory/Grouping/groupingDone.js';
 import { createFactoryGroupingDamageExcel } from '../../../config/downloadExcel/Logs/Factory/Grouping/groupingDamage.js';
 import { createFactoryGroupingHistoryExcel } from '../../../config/downloadExcel/Logs/Factory/Grouping/groupingHistory.js';
+import { sub_category } from '../../../database/Utils/constants/constants.js';
 
 export const add_grouping_done = catchAsync(async (req, res, next) => {
   const session = await mongoose.startSession();
@@ -517,6 +518,28 @@ export const fetch_all_details_by_grouping_done_item_id = catchAsync(
       {
         $match: {
           _id: mongoose.Types.ObjectId.createFromHexString(id),
+        },
+      },
+      {
+        $lookup: {
+          from: "item_subcategories",
+          localField: "item_sub_category_id",
+          foreignField: "_id",
+          pipeline: [
+            {
+              $project: {
+                name: 1,
+                type: 1
+              }
+            }
+          ],
+          as: "item_subcategories_details"
+        }
+      },
+      {
+        $unwind: {
+          path: '$item_subcategories_details',
+          preserveNullAndEmptyArrays: true,
         },
       },
       {
@@ -1495,6 +1518,71 @@ export const group_no_dropdown_for_photo_master = catchAsync(
         photo_no_id: 1,
       }
     );
+    const response = new ApiResponse(
+      StatusCodes.OK,
+      'Details Fetched successfully',
+      fetch_group_no
+    );
+
+    return res.status(StatusCodes.OK).json(response);
+  }
+);
+
+export const group_no_dropdown_for_hybrid_photo_master = catchAsync(
+  async (req, res, next) => {
+    const { photo_no_id, hybrid_group } = req.body;
+
+    const matchQuery = {
+      is_damaged: false,
+      
+    };
+
+    const match_hybrid = {
+      "item_subcategories_details.type": sub_category.hybrid
+    }
+    if (Array.isArray(hybrid_group)) {
+      match_hybrid["group_no"] = { $in: hybrid_group };
+    }
+    if(photo_no_id){
+      match_hybrid["photo_no_id"] = photo_no_id
+    }
+
+    const fetch_group_no = await grouping_done_items_details_model.aggregate([
+      {
+        $match: {
+          ...matchQuery,
+        }
+      },
+      {
+        $lookup: {
+          from: "item_subcategories",
+          localField: "item_sub_category_id",
+          foreignField: "_id",
+          pipeline: [
+            {
+              $project: {
+                name: 1,
+                type: 1
+              }
+            }
+          ],
+          as: "item_subcategories_details"
+        }
+      },
+      {
+        $match: {
+          ...match_hybrid
+        }
+      },
+      {
+        $project: {
+          group_no: 1,
+          photo_no: 1,
+          photo_no_id: 1,
+          item_subcategories_details: 1
+        }
+      }
+    ]);
     const response = new ApiResponse(
       StatusCodes.OK,
       'Details Fetched successfully',
