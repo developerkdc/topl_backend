@@ -573,6 +573,5 @@ export const download_excel_canvas_damage = catchAsync(async (req, res) => {
   ]; // aggregation pipiline
 
   const data = await canvas_damage_model.aggregate(listAggregate);
-
   await createFactoryCanvasDamageExcel(data,req,res);
 });
