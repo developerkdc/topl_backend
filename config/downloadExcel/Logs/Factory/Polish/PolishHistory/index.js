@@ -105,7 +105,7 @@
 
 
 import exceljs from 'exceljs';
-import ApiError from '../../../../../../utils/errors/ApiError.js';
+import ApiError from '../../../../../../utils/errors/apiError.js';
 
 export const createFactoryPolishHistoryExcel = async (data, req, res) => {
   try {
