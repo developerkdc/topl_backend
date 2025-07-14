@@ -933,8 +933,8 @@ class RevertOrderItem {
         { _id: this.issued_order_data?.item_details?._id },
         {
           $inc: {
-            'available_details.no_of_leaves':
-              this.issued_order_data?.item_details?.issued_leaves,
+            'available_details.no_of_sheets':
+              this.issued_order_data?.item_details?.issued_sheets,
             'available_details.amount':
               this.issued_order_data?.item_details?.issued_amount,
             'available_details.sqm':
@@ -956,7 +956,7 @@ class RevertOrderItem {
       ?.find({
         // _id: { $ne: update_grouping_item?._id },
         // issue_status: { $ne: null },
-        $expr: { $ne: ['$available_details.no_of_leaves', '$no_of_leaves'] },
+        $expr: { $ne: ['$available_details.no_of_sheets', '$no_of_sheets'] },
       })
       .session(this.session);
 

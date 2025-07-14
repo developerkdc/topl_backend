@@ -25,6 +25,7 @@ import { insert_raw_machine_data_into_machine_mismatch_model } from './utils/wor
 import mongoose from 'mongoose';
 import all_challan_router from './routes/challan/all_challan.routes.js';
 import allPackingRoutes from './routes/packing/all_packing.routes.js';
+import dispatchRouter from './routes/dispatch/dispatch.routes.js';
 // import { start_worker_thread } from './utils/constants.js';
 
 const Configs = getConfigs();
@@ -90,6 +91,8 @@ app.use(`/api/${Configs.server.version}/order`, allOrderRouter);
 app.use(`/api/${Configs.server.version}/challan`, all_challan_router);
 // Packing routes
 app.use(`/api/${Configs.server.version}/packing`, allPackingRoutes);
+//Dispatch
+app.use(`/api/${Configs.server.version}/dispatch`, dispatchRouter);
 
 app.use(globalErrorHandler);
 

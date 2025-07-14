@@ -28,6 +28,11 @@ export const issues_for_status = {
   color_factory: 'color',
 };
 
+export const sub_category = {
+  natural:"NATURAL",
+  hybrid:"HYBRID"
+}
+
 export const inward_type = {
   inventory: 'inventory',
   job_work: 'job_work',
@@ -174,4 +179,8 @@ export const color_type = {
   timber: 'TIMBER',
   pre_pressing: 'PRE_PRESSING',
   post_pressing: 'POST_PRESSING',
+};
+
+export const dispatch_status = {
+  cancelled: 'CANCELLED',
 };

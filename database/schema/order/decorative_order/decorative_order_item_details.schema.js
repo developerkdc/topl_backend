@@ -15,7 +15,18 @@ const decorative_order_item_details_schema = new mongoose.Schema(
       ref: 'orders',
       required: [true, 'Order Id is required'],
     },
-
+    product_category: {
+      type: String,
+      required: [true, 'product category is required'],
+      uppercase: true,
+      trim: true,
+    },
+    sales_item_name: {
+      type: String,
+      default:null,
+      uppercase: true,
+      trim: true,
+    },
     item_name: {
       type: String,
       required: [true, 'Item Name is required'],
@@ -139,6 +150,12 @@ const decorative_order_item_details_schema = new mongoose.Schema(
     rate_per_sqm: {
       type: Number,
       default: 0,
+    },
+    rate: {
+      type: Number,
+      default: function () {
+        return this.rate_per_sqm;
+      },
     },
     amount: {
       type: Number,

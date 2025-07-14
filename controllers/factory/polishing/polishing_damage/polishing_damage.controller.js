@@ -7,6 +7,7 @@ import catchAsync from '../../../../utils/errors/catchAsync.js';
 import ApiError from '../../../../utils/errors/apiError.js';
 import polishing_damage_model from '../../../../database/schema/factory/polishing/polishing_damage/polishing_damage.schema.js';
 import { polishing_done_details_model } from '../../../../database/schema/factory/polishing/polishing_done/polishing_done.schema.js';
+import { createFactoryPolishDamageExcel } from '../../../../config/downloadExcel/Logs/Factory/Polish/PolishDamage/index.js';
 
 export const listing_polishing_damage = catchAsync(async (req, res) => {
   const {
@@ -408,4 +409,173 @@ export const revert_damage_to_polishing_done = catchAsync(async (req, res) => {
   } finally {
     await session.endSession();
   }
+});
+
+
+export const download_excel_polishing_damage = catchAsync(async (req, res) => {
+  const {
+    page = 1,
+    limit = 10,
+    sortBy = 'updatedAt',
+    sort = 'desc',
+    search = '',
+  } = req.query;
+  const {
+    string,
+    boolean,
+    numbers,
+    arrayField = [],
+  } = req?.body?.searchFields || {};
+  const filter = req.body?.filter;
+
+  let search_query = {};
+  if (search != '' && req?.body?.searchFields) {
+    const search_data = DynamicSearch(
+      search,
+      boolean,
+      numbers,
+      string,
+      arrayField
+    );
+    if (search_data?.length == 0) {
+      return res.status(404).json({
+        statusCode: 404,
+        status: false,
+        data: {
+          data: [],
+        },
+        message: 'Results Not Found',
+      });
+    }
+    search_query = search_data;
+  }
+
+  const filterData = dynamic_filter(filter);
+
+  const match_query = {
+    ...filterData,
+    ...search_query,
+  };
+
+  const aggLookuppolishingDoneDetails = {
+    $lookup: {
+      from: 'polishing_done_details',
+      localField: 'polishing_done_id',
+      foreignField: '_id',
+      as: 'polishing_done_details',
+    },
+  };
+  const aggLookUpIssueForpolishingDetails = {
+    $lookup: {
+      from: 'issue_for_polishing_details_view',
+      localField: 'polishing_done_details.issue_for_polishing_id',
+      foreignField: '_id',
+      as: 'issue_for_polishing_details',
+    },
+  };
+
+  const aggCreatedByLookup = {
+    $lookup: {
+      from: 'users',
+      localField: 'created_by',
+      foreignField: '_id',
+      pipeline: [
+        {
+          $project: {
+            user_name: 1,
+            user_type: 1,
+            dept_name: 1,
+            first_name: 1,
+            last_name: 1,
+            email_id: 1,
+            mobile_no: 1,
+          },
+        },
+      ],
+      as: 'created_by',
+    },
+  };
+  const aggUpdatedByLookup = {
+    $lookup: {
+      from: 'users',
+      localField: 'updated_by',
+      foreignField: '_id',
+      pipeline: [
+        {
+          $project: {
+            user_name: 1,
+            user_type: 1,
+            dept_name: 1,
+            first_name: 1,
+            last_name: 1,
+            email_id: 1,
+            mobile_no: 1,
+          },
+        },
+      ],
+      as: 'updated_by',
+    },
+  };
+  const aggCreatedByUnwind = {
+    $unwind: {
+      path: '$created_by',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
+  const aggUpdatedByUnwind = {
+    $unwind: {
+      path: '$updated_by',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
+
+  const aggUnwindpolishingDoneDetails = {
+    $unwind: {
+      path: '$polishing_done_details',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
+  const aggUnwindIssueForpolishingDetails = {
+    $unwind: {
+      path: '$issue_for_polishing_details',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
+  const aggMatch = {
+    $match: {
+      ...match_query,
+    },
+  };
+  const aggSort = {
+    $sort: {
+      [sortBy]: sort === 'desc' ? -1 : 1,
+    },
+  };
+  const aggSkip = {
+    $skip: (parseInt(page) - 1) * parseInt(limit),
+  };
+  const aggLimit = {
+    $limit: parseInt(limit),
+  };
+
+  const listAggregate = [
+    aggLookuppolishingDoneDetails,
+    aggUnwindpolishingDoneDetails,
+    aggLookUpIssueForpolishingDetails,
+    aggUnwindIssueForpolishingDetails,
+    aggCreatedByLookup,
+    aggCreatedByUnwind,
+    aggUpdatedByLookup,
+    aggUpdatedByUnwind,
+    aggMatch,
+    // aggSort,
+    // aggSkip,
+    // aggLimit,
+  ]; // aggregation pipiline
+
+  const polishing_damage_list =
+    await polishing_damage_model.aggregate(listAggregate);
+     
+    await createFactoryPolishDamageExcel(polishing_damage_list,req,res);
+
 });

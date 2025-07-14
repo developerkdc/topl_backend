@@ -52,7 +52,7 @@ export const fetch_all_group_no_by_item_name = catchAsync(async (req, res) => {
 
   const match_query = {
     ...search_query,
-    'available_details.no_of_leaves': {
+    'available_details.no_of_sheets': {
       $gt: 0,
     },
   };
@@ -97,7 +97,7 @@ export const issue_for_tapping_from_grouping_for_order = catchAsync(async (req, 
   try {
     const userDetails = req.userDetails;
     const { grouping_done_item_id } = req.params;
-    const { order_id, order_item_id, order_category_status, issue_no_of_leaves } = req.body;
+    const { order_id, order_item_id, order_category_status, issue_no_of_sheets } = req.body;
     if (
       !grouping_done_item_id ||
       !mongoose.isValidObjectId(grouping_done_item_id)
@@ -107,9 +107,9 @@ export const issue_for_tapping_from_grouping_for_order = catchAsync(async (req, 
         StatusCodes.BAD_REQUEST
       );
     }
-    if (!order_id || !order_item_id || !issue_no_of_leaves || !order_category_status) {
+    if (!order_id || !order_item_id || !issue_no_of_sheets || !order_category_status) {
       throw new ApiError(
-        'Required order id or order item id or issue no of leaves or order category status',
+        'Required order id or order item id or issue no of sheets or order category status',
         StatusCodes.BAD_REQUEST
       );
     };
@@ -174,18 +174,18 @@ export const issue_for_tapping_from_grouping_for_order = catchAsync(async (req, 
     const data = fetch_grouping_done_item_details;
     const available_details = data?.available_details;
 
-    const no_of_leaves_available =
-      available_details?.no_of_leaves - issue_no_of_leaves;
-    if (no_of_leaves_available < 0) {
+    const no_of_sheets_available =
+      available_details?.no_of_sheets - issue_no_of_sheets;
+    if (no_of_sheets_available < 0) {
       throw new ApiError(
-        'Not enough leaves available',
+        'Not enough sheets available',
         StatusCodes.BAD_REQUEST
       );
     }
 
     const grouping_item_sqm = available_details?.sqm;
     const tapping_sqm = Number(
-      (data?.length * data?.width * issue_no_of_leaves)?.toFixed(3)
+      (data?.length * data?.width * issue_no_of_sheets)?.toFixed(3)
     );
     const tapping_amount = Number(
       (
@@ -231,7 +231,7 @@ export const issue_for_tapping_from_grouping_for_order = catchAsync(async (req, 
       order_category: order_item_details?.order_details?.order_category,
       issued_for: item_issued_for.order,
       issued_from: issues_for_status.grouping,
-      no_of_leaves: issue_no_of_leaves,
+      no_of_sheets: issue_no_of_sheets,
       sqm: tapping_sqm,
       amount: tapping_amount,
       created_by: userDetails?._id,
@@ -288,8 +288,8 @@ export const issue_for_tapping_from_grouping_for_order = catchAsync(async (req, 
             updated_by: userDetails?._id,
           },
           $inc: {
-            'available_details.no_of_leaves':
-              -issue_for_tapping_data?.no_of_leaves,
+            'available_details.no_of_sheets':
+              -issue_for_tapping_data?.no_of_sheets,
             'available_details.sqm': -issue_for_tapping_data?.sqm,
             'available_details.amount': -issue_for_tapping_data?.amount,
           },

@@ -180,7 +180,7 @@ export const issue_for_cnc_view_model = mongoose.model(
       },
       {
         $lookup: {
-          from: 'series_order_item_details',
+          from: 'series_product_order_item_details',
           localField: 'order_item_id',
           foreignField: '_id',
           as: 'series_items',
