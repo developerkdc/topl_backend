@@ -5,7 +5,7 @@ import ApiResponse from '../../../utils/ApiResponse.js';
 import { StatusCodes } from '../../../utils/constants.js';
 import { OrderModel } from '../../../database/schema/order/orders.schema.js';
 import { decorative_order_item_details_model } from '../../../database/schema/order/decorative_order/decorative_order_item_details.schema.js';
-import { order_item_status } from '../../../database/Utils/constants/constants.js';
+import { order_category, order_item_status } from '../../../database/Utils/constants/constants.js';
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import generatePDFBuffer from '../../../utils/generatePDF/generatePDFBuffer.js';
@@ -39,6 +39,7 @@ export const add_decorative_order = catchAsync(async (req, res) => {
         {
           ...order_details,
           order_no: new_order_no,
+          product_category: order_category.decorative,
           created_by: userDetails?._id,
           updated_by: userDetails?._id,
         },
@@ -55,6 +56,7 @@ export const add_decorative_order = catchAsync(async (req, res) => {
 
     const updated_item_details = item_details?.map((item) => {
       item.order_id = order_details_data?._id;
+      item.product_category = order_details_data?.base_type;
       item.created_by = userDetails?._id;
       item.updated_by = userDetails?._id;
       return item;
@@ -117,6 +119,7 @@ export const update_decorative_order = catchAsync(async (req, res) => {
       {
         $set: {
           ...order_details,
+          product_category: order_category.decorative,
           updated_by: userDetails?._id,
         },
       },
@@ -147,6 +150,7 @@ export const update_decorative_order = catchAsync(async (req, res) => {
 
     const updated_item_details = item_details?.map((item) => {
       item.order_id = order_details_result?._id;
+      item.product_category = order_details_result?.base_type;
       item.created_by = item.created_by ? item?.created_by : userDetails?._id;
       item.updated_by = userDetails?._id;
       item.createdAt = item.createdAt ? item?.createdAt : new Date();

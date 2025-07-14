@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { sub_category } from '../../Utils/constants/constants.js';
 
 const itemSubCategorySchema = new mongoose.Schema(
   {
@@ -17,6 +18,17 @@ const itemSubCategorySchema = new mongoose.Schema(
       unique: [true, 'Subcategory Name already exist.'],
       trim: true,
       uppercase: true,
+    },
+    type: {
+      type: String,
+      enum: {
+        values: [sub_category.natural, sub_category.hybrid],
+        message: `Sub-category type {{VALUE}}, must be one of ${[sub_category.natural, sub_category.hybrid].join(",")}`
+      },
+      required: [true, 'Subcategory type is required'],
+      trim: true,
+      uppercase: true,
+      default: sub_category.natural
     },
     category: {
       type: [mongoose.Schema.Types.ObjectId],
