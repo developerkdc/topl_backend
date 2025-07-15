@@ -10,6 +10,7 @@ import ApiError from '../../../utils/errors/apiError.js';
 import catchAsync from '../../../utils/errors/catchAsync.js';
 import { StatusCodes } from '../../../utils/constants.js';
 import path from 'path';
+import { sub_category } from '../../../database/Utils/constants/constants.js';
 
 export const addPhoto = catchAsync(async (req, res, next) => {
   let { photo_number } = req.body;
@@ -78,21 +79,35 @@ export const addPhoto = catchAsync(async (req, res, next) => {
       return next(new ApiError('Failed to insert data', 400));
     }
 
-    const isGroupExist = await grouping_done_items_details_model.findOne({
-      group_no: other_details?.group_no,
-    });
+    let group_no_id = [savePhotoData?.group_id];
+    if (savePhotoData?.sub_category_type === sub_category?.hybrid) {
+      const hybrid_group_no = savePhotoData?.hybrid_group_no?.map((e) => e?._id);
+      group_no_id = [...group_no_id, ...hybrid_group_no]
+    }
+    const isGroupExist = await grouping_done_items_details_model.find({
+      _id: { $in: group_no_id },
+    }).session(session);
 
-    if (!isGroupExist) {
-      return next(new ApiError('Group not exist', 400));
+    if (!isGroupExist || isGroupExist?.length <= 0) {
+      return next(new ApiError('Group data not found', 400));
     }
 
-    const GroupDataUpdated = await grouping_done_items_details_model.updateOne(
-      { _id: isGroupExist?._id },
-      { photo_no: savedData?.photo_number, photo_no_id: savedData?._id },
+    const GroupDataUpdated = await grouping_done_items_details_model.updateMany(
+      { _id: { $in: group_no_id } },
+      {
+        $set: {
+          photo_no: savePhotoData?.photo_number,
+          photo_no_id: savePhotoData?._id,
+        },
+      },
       { session }
     );
 
-    if (!GroupDataUpdated) {
+    if (GroupDataUpdated.matchedCount <= 0) {
+      return next(new ApiError('Group not found', 400));
+    }
+
+    if (!GroupDataUpdated.acknowledged || GroupDataUpdated.modifiedCount <= 0) {
       return next(new ApiError('Failed to update group', 400));
     }
     await session.commitTransaction();
@@ -168,7 +183,7 @@ export const updatePhoto = catchAsync(async (req, res, next) => {
       updated_by: authUserDetail?._id,
     };
 
-    const fetchPhotoData = await photoModel.findOne({ _id: id });
+    const fetchPhotoData = await photoModel.findOne({ _id: id }).session(session);
     if (bannerImage) {
       photoData.banner_image = bannerImage;
       if (fs.existsSync(fetchPhotoData?.banner_image?.path)) {
@@ -176,7 +191,7 @@ export const updatePhoto = catchAsync(async (req, res, next) => {
       }
     }
 
-    const updatePhotoData = await photoModel.updateOne(
+    const updatePhotoData = await photoModel.findOneAndUpdate(
       { _id: id },
       {
         $set: photoData,
@@ -186,14 +201,13 @@ export const updatePhoto = catchAsync(async (req, res, next) => {
       },
       {
         session,
+        new: true,
+        runValidators: true,
       }
     );
 
-    if (updatePhotoData.matchedCount <= 0) {
-      return next(new ApiError('Document not found', 404));
-    }
-    if (!updatePhotoData.acknowledged || updatePhotoData.modifiedCount <= 0) {
-      return next(new ApiError('Failed to update document', 400));
+    if (!updatePhotoData) {
+      return next(new ApiError('Photo Details not found', 404));
     }
 
     //remove images logic
@@ -219,52 +233,61 @@ export const updatePhoto = catchAsync(async (req, res, next) => {
       });
     }
 
-    if (other_details?.group_no !== fetchPhotoData?.group_no) {
-      //setting current group no having field photo number as null
-      const isCurrentGroupExist =
-        await grouping_done_items_details_model.findOne({
-          group_no: fetchPhotoData?.group_no,
-        });
-      if (!isCurrentGroupExist) {
-        return next(new ApiError('Current Group not exist', 400));
-      }
-
-      const currentGroupDataUpdated =
-        await grouping_done_items_details_model.updateOne(
-          { _id: isCurrentGroupExist?._id },
-          { photo_no: null, photo_no_id: null },
-          { session }
-        );
-
-      if (
-        !currentGroupDataUpdated?.acknowledged ||
-        currentGroupDataUpdated?.modifiedCount <= 0
-      ) {
-        return next(new ApiError('Failed to update Current group', 400));
-      }
-
-      const isGroupExist = await grouping_done_items_details_model.findOne({
-        group_no: other_details?.group_no,
-      });
-
-      if (!isGroupExist) {
-        return next(new ApiError('Group not exist', 400));
-      }
-
-      const GroupDataUpdated =
-        await grouping_done_items_details_model.updateOne(
-          { _id: isGroupExist?._id },
-          {
-            photo_no: fetchPhotoData?.photo_number,
-            photo_no_id: fetchPhotoData?._id,
-          },
-          { session }
-        );
-
-      if (!GroupDataUpdated) {
-        return next(new ApiError('Failed to update group', 400));
-      }
+    let prev_group_no_id = [fetchPhotoData?.group_id];
+    if (fetchPhotoData?.sub_category_type === sub_category?.hybrid) {
+      const hybrid_group_no = fetchPhotoData?.hybrid_group_no?.map((e) => e?._id);
+      prev_group_no_id = [...prev_group_no_id, ...hybrid_group_no]
     }
+    const prevGroupDataUpdated = await grouping_done_items_details_model.updateMany(
+      { _id: { $in: prev_group_no_id } },
+      {
+        $set: {
+          photo_no: null,
+          photo_no_id: null,
+        },
+      },
+      { session }
+    );
+
+    if (prevGroupDataUpdated.matchedCount <= 0) {
+      return next(new ApiError('Previous Group not found', 400));
+    }
+    if (!prevGroupDataUpdated.acknowledged || prevGroupDataUpdated.modifiedCount <= 0) {
+      return next(new ApiError('Failed to update previous group', 400));
+    }
+
+    let group_no_id = [updatePhotoData?.group_id];
+    if (updatePhotoData?.sub_category_type === sub_category?.hybrid) {
+      const hybrid_group_no = updatePhotoData?.hybrid_group_no?.map((e) => e?._id);
+      group_no_id = [...group_no_id, ...hybrid_group_no]
+    }
+    const isGroupExist = await grouping_done_items_details_model.find({
+      _id: { $in: group_no_id },
+    }).session(session);
+
+    if (!isGroupExist || isGroupExist?.length <= 0) {
+      return next(new ApiError('Group data not found', 400));
+    }
+
+    const GroupDataUpdated = await grouping_done_items_details_model.updateMany(
+      { _id: { $in: group_no_id } },
+      {
+        $set: {
+          photo_no: updatePhotoData?.photo_number,
+          photo_no_id: updatePhotoData?._id,
+        },
+      },
+      { session }
+    );
+
+    if (GroupDataUpdated.matchedCount <= 0) {
+      return next(new ApiError('Group not found', 400));
+    }
+
+    if (!GroupDataUpdated.acknowledged || GroupDataUpdated.modifiedCount <= 0) {
+      return next(new ApiError('Failed to update group', 400));
+    }
+
     const response = new ApiResponse(
       200,
       'Photo Update Successfully',

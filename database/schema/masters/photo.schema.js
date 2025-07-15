@@ -64,8 +64,23 @@ const photoSchema = new mongoose.Schema(
       uppercase: true,
     },
     hybrid_group_no: {
-      type: Array,
-      default: null
+      type: [
+        {
+          type: {
+            _id: {
+              type: mongoose.Schema.Types.ObjectId,
+              default: null,
+            },
+            group_no: {
+              type: String,
+              uppercase: true,
+              trim: true,
+              required: [true, 'Group No is required'],
+            },
+          },
+        },
+      ],
+      default: []
     },
     length: {
       type: Number,

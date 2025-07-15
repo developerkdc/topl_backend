@@ -1534,17 +1534,20 @@ export const group_no_dropdown_for_hybrid_photo_master = catchAsync(
 
     const matchQuery = {
       is_damaged: false,
-      
+
     };
 
     const match_hybrid = {
-      "item_subcategories_details.type": sub_category.hybrid
+      "item_subcategories_details.type": sub_category.hybrid,
+      $or: [
+        { photo_no_id: null },
+      ]
     }
-    if (Array.isArray(hybrid_group)) {
-      match_hybrid["group_no"] = { $in: hybrid_group };
+    if (Array.isArray(hybrid_group) && hybrid_group.length > 0) {
+      match_hybrid.$or.push({ _id: { $in: hybrid_group?.map((e) => mongoose.Types.ObjectId.createFromHexString(e)) } });
     }
-    if(photo_no_id){
-      match_hybrid["photo_no_id"] = photo_no_id
+    if (photo_no_id) {
+      match_hybrid.$or.push({ photo_no_id: photo_no_id });
     }
 
     const fetch_group_no = await grouping_done_items_details_model.aggregate([
