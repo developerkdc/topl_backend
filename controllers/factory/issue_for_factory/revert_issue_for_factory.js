@@ -27,7 +27,6 @@ import {
 } from '../../../database/schema/factory/pressing/pressing_done/pressing_done.schema.js';
 import { pressing_done_history_model } from '../../../database/schema/factory/pressing/pressing_history/pressing_done_history.schema.js';
 
-
 //item issued from model map
 const issued_from_factory_model_map = {
   [item_issued_from?.pressing_factory]: pressing_done_details_model,
@@ -140,15 +139,13 @@ class Revert_Issued_Factory_Item {
 
     if (
       is_item_editable?.available_details?.no_of_sheets ===
-      is_item_editable?.no_of_sheets &&
+        is_item_editable?.no_of_sheets &&
       // is_item_editable?.issue_status === null
-      (
-        this.issued_item_details?.issued_from === item_issued_from?.pressing_factory ||
-        (
-          this.issued_item_details?.issued_from !== item_issued_from?.pressing_factory &&
-          is_item_editable?.issue_status === null
-        )
-      )
+      (this.issued_item_details?.issued_from ===
+        item_issued_from?.pressing_factory ||
+        (this.issued_item_details?.issued_from !==
+          item_issued_from?.pressing_factory &&
+          is_item_editable?.issue_status === null))
     ) {
       const update_editable_status_result = await issued_from_factory_model_map[
         this.issued_item_details?.issued_from

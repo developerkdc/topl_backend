@@ -38,7 +38,6 @@ export const add_issue_for_resizing_from_plywood = catchAsync(
           })
           .lean();
 
-
       if (!plywood_item_details) {
         throw new ApiError('Plywood Items not found.', StatusCodes.BAD_REQUEST);
       }

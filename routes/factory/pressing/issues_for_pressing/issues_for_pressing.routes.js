@@ -4,7 +4,7 @@ import {
   fetch_single_issue_for_pressing_details,
   issue_for_pressing_from_tapping,
   issue_for_pressing_from_tapping_for_order,
-  revert_issue_for_pressing_item
+  revert_issue_for_pressing_item,
 } from '../../../../controllers/factory/pressing/issues_for_pressing/issues_for_pressing.controller.js';
 import AuthMiddleware from '../../../../middlewares/verifyToken.js';
 

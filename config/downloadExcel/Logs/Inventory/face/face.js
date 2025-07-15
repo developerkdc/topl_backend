@@ -236,12 +236,28 @@ export const createFaceHistoryExcel = async (newData) => {
       { header: 'Total Item Amount', key: 'total_item_amount', width: 20 },
       { header: 'Transporter Details', key: 'transporter_details', width: 30 },
       { header: 'GST Percentage', key: 'gst_percentage', width: 20 },
-      { header: 'Invoice Value with GST', key: 'invoice_value_with_gst', width: 20 },
+      {
+        header: 'Invoice Value with GST',
+        key: 'invoice_value_with_gst',
+        width: 20,
+      },
 
       { header: 'Contact Person Name', key: 'contact_person_name', width: 25 },
-      { header: 'Contact Person Email', key: 'contact_person_email', width: 25 },
-      { header: 'Contact Person Mobile Number', key: 'contact_person_mobile_no', width: 25 },
-      { header: 'Contact Person Designation', key: 'contact_person_designation', width: 25 },
+      {
+        header: 'Contact Person Email',
+        key: 'contact_person_email',
+        width: 25,
+      },
+      {
+        header: 'Contact Person Mobile Number',
+        key: 'contact_person_mobile_no',
+        width: 25,
+      },
+      {
+        header: 'Contact Person Designation',
+        key: 'contact_person_designation',
+        width: 25,
+      },
 
       { header: 'Created Date', key: 'createdAt', width: 20 },
       { header: 'Updated Date', key: 'updatedAt', width: 20 },
@@ -256,8 +272,10 @@ export const createFaceHistoryExcel = async (newData) => {
     newData?.forEach((data) => {
       try {
         const rowData = {
-          inward_sr_no: data?.face_item_details?.face_invoice_details?.inward_sr_no,
-          inward_date: data?.face_item_details?.face_invoice_details?.inward_date,
+          inward_sr_no:
+            data?.face_item_details?.face_invoice_details?.inward_sr_no,
+          inward_date:
+            data?.face_item_details?.face_invoice_details?.inward_date,
           currency: data?.face_item_details?.face_invoice_details?.currency,
           no_of_workers: data?.face_item_details?.no_of_workers,
           shift: data?.face_item_details?.shift,
@@ -275,7 +293,9 @@ export const createFaceHistoryExcel = async (newData) => {
           rate_in_currency: data?.face_item_details?.rate_in_currency,
           rate_in_inr: data?.face_item_details?.rate_in_inr,
           exchange_rate: data?.face_item_details?.exchange_rate,
-          gst_val: data?.face_item_details?.face_invoice_details?.invoice_Details?.gst_value,
+          gst_val:
+            data?.face_item_details?.face_invoice_details?.invoice_Details
+              ?.gst_value,
           amount: data?.face_item_details?.amount,
           remark: data?.face_item_details?.remark,
           createdAt: data?.createdAt,
@@ -296,19 +316,28 @@ export const createFaceHistoryExcel = async (newData) => {
 
           contact_person_name: data?.face_item_details?.contact_person_name,
           contact_person_email: data?.face_item_details?.contact_person_email,
-          contact_person_mobile_no: data?.face_item_details?.contact_person_mobile,
-          contact_person_designation: data?.face_item_details?.contact_person_designation,
+          contact_person_mobile_no:
+            data?.face_item_details?.contact_person_mobile,
+          contact_person_designation:
+            data?.face_item_details?.contact_person_designation,
 
           invoice_no: data?.face_item_details?.invoice_Details?.invoice_no,
-          total_item_amount: data?.face_item_details?.invoice_Details?.total_item_amount,
-          transporter_details: data?.face_item_details?.invoice_Details?.transporter_details,
-          gst_percentage: data?.face_item_details?.invoice_Details?.gst_percentage,
-          invoice_value_with_gst: data?.face_item_details?.invoice_Details?.invoice_value_with_gst,
+          total_item_amount:
+            data?.face_item_details?.invoice_Details?.total_item_amount,
+          transporter_details:
+            data?.face_item_details?.invoice_Details?.transporter_details,
+          gst_percentage:
+            data?.face_item_details?.invoice_Details?.gst_percentage,
+          invoice_value_with_gst:
+            data?.face_item_details?.invoice_Details?.invoice_value_with_gst,
         };
 
         worksheet.addRow(rowData);
       } catch (error) {
-        console.error('Error writing row to face history Excel:', error.message);
+        console.error(
+          'Error writing row to face history Excel:',
+          error.message
+        );
       }
     });
 

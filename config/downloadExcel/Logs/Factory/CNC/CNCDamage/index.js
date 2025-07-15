@@ -2,7 +2,6 @@
 // import ApiError from '../../../../../../utils/errors/ApiError.js';
 // import ApiResponse from '../../../../../../utils/ApiResponse.js';
 
-
 // export const createFactoryCNCDamageExcel = async (newData, req, res,) => {
 //   try {
 
@@ -85,8 +84,6 @@
 //       });
 //     });
 
-
-
 //     const timestamp = Date.now();
 //     const fileName = `CNC_Done_Report_${timestamp}.xlsx`;
 
@@ -104,10 +101,6 @@
 //     throw new ApiError(500, error.message);
 //   }
 // };
-
-
-
-
 
 import exceljs from 'exceljs';
 import ApiError from '../../../../../../utils/errors/apiError.js';
@@ -135,7 +128,7 @@ export const createFactoryCNCDamageExcel = async (newData, req, res) => {
       { header: 'Order No', key: 'order_no', width: 12 },
       { header: 'Customer Name', key: 'customer_name', width: 25 },
       { header: 'Item', key: 'item', width: 25 },
-      { header: 'Item Remark', key: 'item_remark', width: 30 }
+      { header: 'Item Remark', key: 'item_remark', width: 30 },
     ];
 
     // Convert newData object with numeric keys to an array
@@ -143,14 +136,18 @@ export const createFactoryCNCDamageExcel = async (newData, req, res) => {
 
     // Populate worksheet rows
     for (const item of dataArray) {
-      const pressingDetails = item?.issue_for_cnc_details?.pressing_details || {};
+      const pressingDetails =
+        item?.issue_for_cnc_details?.pressing_details || {};
       const orderDetails = item?.issue_for_cnc_details?.order_details || {};
-      const orderItemDetails = item?.issue_for_cnc_details?.order_item_details || {};
+      const orderItemDetails =
+        item?.issue_for_cnc_details?.order_item_details || {};
       const cncDetails = item?.cnc_done_details || {};
       const customerName = orderDetails?.owner_name || '';
 
-      const baseItems = item.issue_for_cnc_details?.pressing_done_consumed_items_details
-        ?.flatMap(d => d.base_details?.map(b => b.item_name)) || [];
+      const baseItems =
+        item.issue_for_cnc_details?.pressing_done_consumed_items_details?.flatMap(
+          (d) => d.base_details?.map((b) => b.item_name)
+        ) || [];
 
       worksheet.addRow({
         sr_no: item.sr_no,
@@ -177,13 +174,18 @@ export const createFactoryCNCDamageExcel = async (newData, req, res) => {
     }
 
     // Set response headers
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', 'attachment; filename=Factory-CNC-Damage-Report.xlsx');
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename=Factory-CNC-Damage-Report.xlsx'
+    );
 
     // Write workbook to response
     await workbook.xlsx.write(res);
     res.status(200).end();
-
   } catch (error) {
     console.error(error);
     throw new ApiError(500, 'Failed to generate Excel report');

@@ -15,7 +15,7 @@ import {
   revert_grouping_done_damaged,
   download_excel_factory_grouping_done,
   download_excel_factory_grouping_damage,
-  download_excel_factory_grouping_history
+  download_excel_factory_grouping_history,
 } from '../../../controllers/factory/grouping/grouping_done.controller.js';
 import AuthMiddleware from '../../../middlewares/verifyToken.js';
 import {
@@ -124,7 +124,6 @@ groupingDoneRouter.post(
   AuthMiddleware,
   download_excel_factory_grouping_damage
 );
-
 
 groupingDoneRouter.post(
   '/download-factory-grouping-history-excel',

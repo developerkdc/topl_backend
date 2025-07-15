@@ -10,7 +10,10 @@ import ApiResponse from '../../../utils/ApiResponse.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
 import { StatusCodes } from '../../../utils/constants.js';
-import { createMdfHistoryExcel, createMdfLogsExcel } from '../../../config/downloadExcel/Logs/Inventory/mdf/mdf.js';
+import {
+  createMdfHistoryExcel,
+  createMdfLogsExcel,
+} from '../../../config/downloadExcel/Logs/Inventory/mdf/mdf.js';
 import {
   mdf_approval_inventory_invoice_model,
   mdf_approval_inventory_items_model,
@@ -1068,7 +1071,12 @@ export const fetch_mdf_history = catchAsync(async (req, res, next) => {
 
 export const mdfLogsCsvHistory = catchAsync(async (req, res) => {
   const { search = '', sortBy = 'updatedAt', sort = 'desc' } = req.query;
-  const { string, boolean, numbers, arrayField = [] } = req?.body?.searchFields || {};
+  const {
+    string,
+    boolean,
+    numbers,
+    arrayField = [],
+  } = req?.body?.searchFields || {};
   const filter = req.body?.filter;
 
   console.log('🔍 Search Term:', search);
@@ -1166,10 +1174,14 @@ export const mdfLogsCsvHistory = catchAsync(async (req, res) => {
         pipeline: [{ $project: { created_user: 0 } }],
       },
     },
-    { $unwind: { path: '$mdf_item_details', preserveNullAndEmptyArrays: true } },
+    {
+      $unwind: { path: '$mdf_item_details', preserveNullAndEmptyArrays: true },
+    },
 
     // Apply post-lookup filter
-    ...(Object.keys(postLookupMatch).length > 0 ? [{ $match: postLookupMatch }] : []),
+    ...(Object.keys(postLookupMatch).length > 0
+      ? [{ $match: postLookupMatch }]
+      : []),
 
     {
       $lookup: {
@@ -1208,8 +1220,18 @@ export const mdfLogsCsvHistory = catchAsync(async (req, res) => {
         ],
       },
     },
-    { $unwind: { path: '$created_user_details', preserveNullAndEmptyArrays: true } },
-    { $unwind: { path: '$updated_user_details', preserveNullAndEmptyArrays: true } },
+    {
+      $unwind: {
+        path: '$created_user_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $unwind: {
+        path: '$updated_user_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
     {
       $sort: {
         [sortBy]: sort === 'desc' ? -1 : 1,
@@ -1224,7 +1246,9 @@ export const mdfLogsCsvHistory = catchAsync(async (req, res) => {
 
   const csvLink = await createMdfHistoryExcel(data);
 
-  return res.status(StatusCodes.OK).json(
-    new ApiResponse(StatusCodes.OK, 'CSV downloaded successfully...', csvLink)
-  );
+  return res
+    .status(StatusCodes.OK)
+    .json(
+      new ApiResponse(StatusCodes.OK, 'CSV downloaded successfully...', csvLink)
+    );
 });

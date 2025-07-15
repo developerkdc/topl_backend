@@ -1,5 +1,8 @@
 import mongoose from 'mongoose';
-import { item_issued_for, order_category } from '../../../../Utils/constants/constants.js';
+import {
+  item_issued_for,
+  order_category,
+} from '../../../../Utils/constants/constants.js';
 
 const tapping_done_other_details_schema = new mongoose.Schema(
   {

@@ -409,7 +409,6 @@ export const revert_from_color_damage_to_color_done = catchAsync(
   }
 );
 
-
 export const download_excel_color_damage = catchAsync(async (req, res) => {
   const {
     page = 1,
@@ -572,5 +571,5 @@ export const download_excel_color_damage = catchAsync(async (req, res) => {
   ]; // aggregation pipiline
 
   const data = await color_damage_model.aggregate(listAggregate);
-  await createFactoryColorDamageExcel(data,req,res);
-}); 
+  await createFactoryColorDamageExcel(data, req, res);
+});

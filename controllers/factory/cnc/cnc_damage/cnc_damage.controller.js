@@ -193,8 +193,6 @@ export const listing_cnc_damage = catchAsync(async (req, res) => {
   return res.status(StatusCodes.OK).json(response);
 });
 
-
-
 export const add_cnc_damage = catchAsync(async (req, res) => {
   const userDetails = req.userDetails;
   const { id, damage_sheets } = req.query;
@@ -212,12 +210,12 @@ export const add_cnc_damage = catchAsync(async (req, res) => {
     if (!damage_sheets) {
       throw new ApiError('Damage Sheets are missing');
     }
-    
+
     const cnc_done_details = await cnc_done_details_model
-    .findById(id)
-    .lean()
-    .session();
-    
+      .findById(id)
+      .lean()
+      .session();
+
     if (!cnc_done_details) {
       throw new ApiError('CNC done details not found.', StatusCodes.NOT_FOUND);
     }
@@ -232,7 +230,7 @@ export const add_cnc_damage = catchAsync(async (req, res) => {
         cnc_done_details?.available_details?.sqm
       )?.toFixed(3)
     );
-    
+
     const [maxSrNo] = await cnc_damage_model.aggregate([
       {
         $group: {
@@ -257,7 +255,7 @@ export const add_cnc_damage = catchAsync(async (req, res) => {
       ],
       { session }
     );
-    
+
     if (!create_damage_result) {
       throw new ApiError(
         'Failed to add damage details',
@@ -286,7 +284,7 @@ export const add_cnc_damage = catchAsync(async (req, res) => {
         StatusCodes.BAD_REQUEST
       );
     }
-    
+
     if (
       !update_cnc_done_result.acknowledged ||
       update_cnc_done_result.modifiedCount === 0
@@ -296,7 +294,7 @@ export const add_cnc_damage = catchAsync(async (req, res) => {
         StatusCodes.BAD_REQUEST
       );
     }
-    
+
     const response = new ApiResponse(
       StatusCodes.OK,
       'CNC Item added to damage successfully.',
@@ -314,7 +312,7 @@ export const add_cnc_damage = catchAsync(async (req, res) => {
 
 export const revert_damage_to_cnc_done = catchAsync(async (req, res) => {
   const userDetails = req.userDetails;
-  
+
   const { id } = req.params;
   const session = await mongoose.startSession();
   try {
@@ -324,22 +322,22 @@ export const revert_damage_to_cnc_done = catchAsync(async (req, res) => {
     if (!isValidObjectId(id)) {
       throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
     }
-    
+
     session.startTransaction();
-    
+
     const cnc_damage_details = await cnc_damage_model
-    .findById(id)
-    .lean()
-    .session(session);
+      .findById(id)
+      .lean()
+      .session(session);
     if (!cnc_damage_details) {
       throw new ApiError('CNC Damage details not found', StatusCodes.NOT_FOUND);
     }
-    
+
     const delete_damage_data_result = await cnc_damage_model.deleteOne(
       { _id: id },
       { session }
     );
-    
+
     if (
       !delete_damage_data_result.acknowledged ||
       delete_damage_data_result.deletedCount === 0
@@ -370,12 +368,12 @@ export const revert_damage_to_cnc_done = catchAsync(async (req, res) => {
     }
 
     const is_item_editable = await cnc_done_details_model
-    .findById(cnc_damage_details?.cnc_done_id)
+      .findById(cnc_damage_details?.cnc_done_id)
       .lean()
       .session(session);
 
-      if (
-        is_item_editable?.no_of_sheets ===
+    if (
+      is_item_editable?.no_of_sheets ===
       is_item_editable?.available_details?.no_of_sheets
     ) {
       const update_cnc_result = await cnc_done_details_model.updateOne(
@@ -413,7 +411,8 @@ export const revert_damage_to_cnc_done = catchAsync(async (req, res) => {
   }
 });
 
-  export const download_excel_factory_cnc_damage = catchAsync(async (req, res) => {
+export const download_excel_factory_cnc_damage = catchAsync(
+  async (req, res) => {
     const {
       page = 1,
       limit = 1,
@@ -428,7 +427,7 @@ export const revert_damage_to_cnc_done = catchAsync(async (req, res) => {
       arrayField = [],
     } = req?.body?.searchFields || {};
     const filter = req.body?.filter;
-  
+
     let search_query = {};
     if (search != '' && req?.body?.searchFields) {
       const search_data = DynamicSearch(
@@ -450,14 +449,14 @@ export const revert_damage_to_cnc_done = catchAsync(async (req, res) => {
       }
       search_query = search_data;
     }
-  
+
     const filterData = dynamic_filter(filter);
-  
+
     const match_query = {
       ...filterData,
       ...search_query,
     };
-  
+
     const aggLookupCncDoneDetails = {
       $lookup: {
         from: 'cnc_done_details',
@@ -474,7 +473,7 @@ export const revert_damage_to_cnc_done = catchAsync(async (req, res) => {
         as: 'issue_for_cnc_details',
       },
     };
-  
+
     const aggCreatedByLookup = {
       $lookup: {
         from: 'users',
@@ -529,7 +528,7 @@ export const revert_damage_to_cnc_done = catchAsync(async (req, res) => {
         preserveNullAndEmptyArrays: true,
       },
     };
-  
+
     const aggUnwindCncDoneDetails = {
       $unwind: {
         path: '$cnc_done_details',
@@ -558,7 +557,7 @@ export const revert_damage_to_cnc_done = catchAsync(async (req, res) => {
     const aggLimit = {
       $limit: parseInt(limit),
     };
-  
+
     const listAggregate = [
       aggLookupCncDoneDetails,
       aggUnwindCncDoneDetails,
@@ -573,9 +572,9 @@ export const revert_damage_to_cnc_done = catchAsync(async (req, res) => {
       // aggSkip,
       // aggLimit,
     ]; // aggregation pipiline
-  
+
     const data = await cnc_damage_model.aggregate(listAggregate);
     console.log(data);
-    await createFactoryCNCDamageExcel(data,req, res);
-   
-  });
+    await createFactoryCNCDamageExcel(data, req, res);
+  }
+);

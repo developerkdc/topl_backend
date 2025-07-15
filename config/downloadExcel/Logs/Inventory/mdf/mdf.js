@@ -241,7 +241,9 @@ export const createMdfHistoryExcel = async (newData) => {
 
         const rowData = {
           inward_sr_no: invoice?.inward_sr_no || '',
-          inward_date: invoice?.inward_date ? new Date(invoice.inward_date).toLocaleDateString() : '',
+          inward_date: invoice?.inward_date
+            ? new Date(invoice.inward_date).toLocaleDateString()
+            : '',
           item_sr_no: item?.item_sr_no || '',
           item_name: item?.item_name || '',
           mdf_type: item?.mdf_type || '',
@@ -254,10 +256,20 @@ export const createMdfHistoryExcel = async (newData) => {
           rate_in_inr: item?.rate_in_inr || '',
           amount: item?.amount || '',
           remark: item?.remark || '',
-          created_by: data?.created_user_details?.first_name + ' ' + data?.created_user_details?.last_name || '',
-          updated_by: data?.updated_user_details?.first_name + ' ' + data?.updated_user_details?.last_name || '',
-          createdAt: data?.createdAt ? new Date(data.createdAt).toLocaleString() : '',
-          updatedAt: data?.updatedAt ? new Date(data.updatedAt).toLocaleString() : '',
+          created_by:
+            data?.created_user_details?.first_name +
+              ' ' +
+              data?.created_user_details?.last_name || '',
+          updated_by:
+            data?.updated_user_details?.first_name +
+              ' ' +
+              data?.updated_user_details?.last_name || '',
+          createdAt: data?.createdAt
+            ? new Date(data.createdAt).toLocaleString()
+            : '',
+          updatedAt: data?.updatedAt
+            ? new Date(data.updatedAt).toLocaleString()
+            : '',
         };
 
         worksheet.addRow(rowData);

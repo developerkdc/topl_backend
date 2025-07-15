@@ -54,7 +54,7 @@ const issued_from_issue_for_map = {
     [item_issued_from?.color_factory]: issue_for_colour_view_model,
     [item_issued_from?.canvas_factory]: issue_for_canvas_view_model,
     [item_issued_from?.polishing_factory]: issue_for_polishing_view_model,
-}
+};
 
 export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
     const {
@@ -67,7 +67,9 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
 
     const user = req.userDetails;
     for (let field of [
-        'issued_sheeets', 'issued_amount', 'issued_sqm',
+        'issued_sheeets',
+        'issued_amount',
+        'issued_sqm',
         'issued_from_id',
         'issued_from',
     ]) {
@@ -113,127 +115,148 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
             }
         }
         const issue_for_id =
-            issued_from === item_issued_from?.pressing_factory ? issued_from_details?._id : issued_item_issue_id;
+            issued_from === item_issued_from?.pressing_factory
+                ? issued_from_details?._id
+                : issued_item_issue_id;
 
-
-        const [pressing_done_details] = await issued_from_issue_for_map[issued_from].aggregate(
-            [
-                {
-                    $match: {
-                        _id: issue_for_id,
-                    },
+        const [pressing_done_details] = await issued_from_issue_for_map[
+            issued_from
+        ].aggregate([
+            {
+                $match: {
+                    _id: issue_for_id,
                 },
-                {
-                    $lookup: {
-                        from: 'orders',
-                        localField: 'order_id',
-                        foreignField: '_id',
-                        pipeline: [
-                            {
-                                $project: {
-                                    _id: 1,
-                                    order_no: 1,
-                                    order_category: 1,
-                                },
+            },
+            {
+                $lookup: {
+                    from: 'orders',
+                    localField: 'order_id',
+                    foreignField: '_id',
+                    pipeline: [
+                        {
+                            $project: {
+                                _id: 1,
+                                order_no: 1,
+                                order_category: 1,
                             },
-                        ],
-                        as: 'order_details',
-                    },
+                        },
+                    ],
+                    as: 'order_details',
                 },
-                {
-                    $unwind: {
-                        path: '$order_details',
-                        preserveNullAndEmptyArrays: true,
-                    },
+            },
+            {
+                $unwind: {
+                    path: '$order_details',
+                    preserveNullAndEmptyArrays: true,
                 },
-                {
-                    $lookup: {
-                        from: 'series_product_order_item_details',
-                        localField: 'order_item_id',
-                        foreignField: '_id',
-                        as: 'series_items',
-                        pipeline: [
-                            {
-                                $project: {
-                                    _id: 1,
-                                    item_no: 1,
-                                },
+            },
+            {
+                $lookup: {
+                    from: 'series_product_order_item_details',
+                    localField: 'order_item_id',
+                    foreignField: '_id',
+                    as: 'series_items',
+                    pipeline: [
+                        {
+                            $project: {
+                                _id: 1,
+                                item_no: 1,
                             },
-                        ],
-                    },
+                        },
+                    ],
                 },
-                {
-                    $lookup: {
-                        from: 'decorative_order_item_details',
-                        localField: 'order_item_id',
-                        foreignField: '_id',
-                        as: 'decorative_items',
-                        pipeline: [
-                            {
-                                $project: {
-                                    _id: 1,
-                                    item_no: 1,
-                                },
+            },
+            {
+                $lookup: {
+                    from: 'decorative_order_item_details',
+                    localField: 'order_item_id',
+                    foreignField: '_id',
+                    as: 'decorative_items',
+                    pipeline: [
+                        {
+                            $project: {
+                                _id: 1,
+                                item_no: 1,
                             },
-                        ],
-                    },
+                        },
+                    ],
                 },
-                {
-                    $addFields: {
-                        order_item_details: {
-                            $cond: {
-                                if: {
-                                    $gt: [{ $size: '$series_items' }, 0],
-                                },
-                                then: {
-                                    $arrayElemAt: ['$series_items', 0],
-                                },
-                                else: {
-                                    $arrayElemAt: ['$decorative_items', 0],
-                                },
+            },
+            {
+                $addFields: {
+                    order_item_details: {
+                        $cond: {
+                            if: {
+                                $gt: [{ $size: '$series_items' }, 0],
+                            },
+                            then: {
+                                $arrayElemAt: ['$series_items', 0],
+                            },
+                            else: {
+                                $arrayElemAt: ['$decorative_items', 0],
                             },
                         },
                     },
                 },
-            ]
-        );
+            },
+        ]);
 
         if (!pressing_done_details) {
-            throw new ApiError(
-                StatusCodes.NOT_FOUND,
-                'Order details not found.'
-            );
-        };
-
+            throw new ApiError(StatusCodes.NOT_FOUND, 'Order details not found.');
+        }
 
         const payload = {
             issued_from_id: issued_from_id,
             issued_from: issued_from,
             issued_for: item_issued_for?.order,
-            pressing_id: pressing_done_details?.pressing_id || pressing_done_details?.pressing_details?.pressing_id,
-            pressing_details_id: pressing_done_details?._id || pressing_done_details?.pressing_details?._id,
-            order_id: pressing_done_details?.order_id || pressing_done_details?.pressing_details?.order_id,
-            order_item_id: pressing_done_details?.order_item_id || pressing_done_details?.pressing_details?.order_item_id,
+            pressing_id:
+                pressing_done_details?.pressing_id ||
+                pressing_done_details?.pressing_details?.pressing_id,
+            pressing_details_id:
+                pressing_done_details?._id ||
+                pressing_done_details?.pressing_details?._id,
+            order_id:
+                pressing_done_details?.order_id ||
+                pressing_done_details?.pressing_details?.order_id,
+            order_item_id:
+                pressing_done_details?.order_item_id ||
+                pressing_done_details?.pressing_details?.order_item_id,
             order_number: pressing_done_details?.order_details?.order_no,
             order_item_no:
                 pressing_done_details?.series_items?.[0]?.item_no ||
                 pressing_done_details?.decorative_items?.[0]?.item_no,
-            group_no: pressing_done_details?.group_no || pressing_done_details?.pressing_details?.group_no,
-            group_no_id: pressing_done_details?.group_no_id || pressing_done_details?.pressing_details?.group_no_id,
-            length: pressing_done_details?.length || pressing_done_details?.pressing_details?.length,
-            width: pressing_done_details?.width || pressing_done_details?.pressing_details?.width,
-            thickness: pressing_done_details?.thickness || pressing_done_details?.pressing_details?.thickness,
-            order_category: pressing_done_details?.order_category || pressing_done_details?.order_details?.order_category,
-            product_type: pressing_done_details?.product_type || pressing_done_details?.pressing_details?.product_type,
+            group_no:
+                pressing_done_details?.group_no ||
+                pressing_done_details?.pressing_details?.group_no,
+            group_no_id:
+                pressing_done_details?.group_no_id ||
+                pressing_done_details?.pressing_details?.group_no_id,
+            length:
+                pressing_done_details?.length ||
+                pressing_done_details?.pressing_details?.length,
+            width:
+                pressing_done_details?.width ||
+                pressing_done_details?.pressing_details?.width,
+            thickness:
+                pressing_done_details?.thickness ||
+                pressing_done_details?.pressing_details?.thickness,
+            order_category:
+                pressing_done_details?.order_category ||
+                pressing_done_details?.order_details?.order_category,
+            product_type:
+                pressing_done_details?.product_type ||
+                pressing_done_details?.pressing_details?.product_type,
             no_of_sheets: issued_sheeets,
             sqm: issued_sqm,
             amount: issued_amount,
             // product_type: pressing_done_details?.product_type,
-            remark: pressing_done_details?.remark || pressing_done_details?.pressing_details?.remark || null,
+            remark:
+                pressing_done_details?.remark ||
+                pressing_done_details?.pressing_details?.remark ||
+                null,
             created_by: user?._id,
             updated_by: user?._id,
         };
-
 
         const [add_finished_ready_for_packing_result] =
             await finished_ready_for_packing_model.create([payload], { session });
@@ -281,48 +304,67 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
             );
         }
 
-
-        const [max_histroy_sr_no] = await issued_from_history_map[
-            issued_from
-        ].aggregate([
-            {
-                $group: {
-                    _id: null,
-                    max_sr_no: {
-                        $max: '$sr_no',
+        const [max_histroy_sr_no] = await issued_from_history_map[issued_from]
+            .aggregate([
+                {
+                    $group: {
+                        _id: null,
+                        max_sr_no: {
+                            $max: '$sr_no',
+                        },
                     },
                 },
-            },
-        ]).session(session);
+            ])
+            .session(session);
         const history_payload = {
             sr_no: max_histroy_sr_no?.max_sr_no + 1 || 1,
             issued_item_id: issued_from_details?._id,
             pressing_id: pressing_done_details?.pressing_id,
             pressing_details_id: pressing_done_details?._id,
-            order_id: pressing_done_details?.order_id || pressing_done_details?.order_details?._id,
-            order_item_id: pressing_done_details?.order_item_id || pressing_done_details?.order_item_details?._id,
+            order_id:
+                pressing_done_details?.order_id ||
+                pressing_done_details?.order_details?._id,
+            order_item_id:
+                pressing_done_details?.order_item_id ||
+                pressing_done_details?.order_item_details?._id,
             order_number: pressing_done_details?.order_details?.order_no,
             order_item_no:
                 pressing_done_details?.series_items?.[0]?.item_no ||
                 pressing_done_details?.decorative_items?.[0]?.item_no,
-            group_no: pressing_done_details?.group_no || pressing_done_details?.pressing_details?.group_no,
-            group_no_id: pressing_done_details?.group_no_id || pressing_done_details?.pressing_details?.group_no_id,
-            length: pressing_done_details?.length || pressing_done_details?.pressing_details?.length,
-            width: pressing_done_details?.width || pressing_done_details?.pressing_details?.width,
-            thickness: pressing_done_details?.thickness || pressing_done_details?.pressing_details?.thickness,
+            group_no:
+                pressing_done_details?.group_no ||
+                pressing_done_details?.pressing_details?.group_no,
+            group_no_id:
+                pressing_done_details?.group_no_id ||
+                pressing_done_details?.pressing_details?.group_no_id,
+            length:
+                pressing_done_details?.length ||
+                pressing_done_details?.pressing_details?.length,
+            width:
+                pressing_done_details?.width ||
+                pressing_done_details?.pressing_details?.width,
+            thickness:
+                pressing_done_details?.thickness ||
+                pressing_done_details?.pressing_details?.thickness,
             no_of_sheets: issued_sheeets,
             sqm: issued_sqm,
             amount: issued_amount,
-            product_type: pressing_done_details?.product_type || pressing_done_details?.pressing_details?.product_type,
-            order_category: pressing_done_details?.order_category || pressing_done_details?.pressing_details?.order_category,
+            product_type:
+                pressing_done_details?.product_type ||
+                pressing_done_details?.pressing_details?.product_type,
+            order_category:
+                pressing_done_details?.order_category ||
+                pressing_done_details?.pressing_details?.order_category,
             issued_from: item_issued_from,
             issued_for: item_issued_for?.order,
             issued_for_id: add_finished_ready_for_packing_result?._id,
-            remark: pressing_done_details?.remark || pressing_done_details?.pressing_details?.remark || null,
+            remark:
+                pressing_done_details?.remark ||
+                pressing_done_details?.pressing_details?.remark ||
+                null,
             issue_status: item_issued_from?.packing,
             created_by: user?._id,
             updated_by: user?._id,
-
         };
 
         if (issue_for_field_key && issued_item_issue_id) {
@@ -596,7 +638,8 @@ export const revert_finished_ready_for_packing = catchAsync(
             }
 
             const delete_finished_ready_for_packing_result =
-                await finished_ready_for_packing_model.deleteOne({ _id: id })
+                await finished_ready_for_packing_model
+                    .deleteOne({ _id: id })
                     .session(session);
             if (
                 !delete_finished_ready_for_packing_result?.acknowledged ||
@@ -610,9 +653,10 @@ export const revert_finished_ready_for_packing = catchAsync(
 
             const delete_history_result = await issued_from_history_map[
                 finished_ready_for_packing_details?.issued_from
-            ].deleteOne({
-                issued_for_id: id,
-            })
+            ]
+                .deleteOne({
+                    issued_for_id: id,
+                })
                 .session(session);
 
             if (
@@ -639,53 +683,57 @@ export const revert_finished_ready_for_packing = catchAsync(
     }
 );
 
-export const fetch_issue_for_packing_items_by_customer_and_order_category = catchAsync(async (req, res) => {
-    const { customer_id, order_type, product_type } = req.query;
+export const fetch_issue_for_packing_items_by_customer_and_order_category =
+    catchAsync(async (req, res) => {
+        const { customer_id, order_type, product_type } = req.query;
 
-    const match_query = {
-        is_packing_done: false,
-        'order_details.customer_id': mongoose.Types.ObjectId.createFromHexString(customer_id),
+        const match_query = {
+            is_packing_done: false,
+            'order_details.customer_id':
+                mongoose.Types.ObjectId.createFromHexString(customer_id),
+        };
 
-    };
-
-    if (order_type === order_category?.raw) {
-        match_query.issued_from = product_type;
-        match_query['order_details.order_category'] = order_type
-    } else {
-        match_query.product_type = product_type
-        match_query.order_category = order_type
-    }
-
-    const pipeline = [
-        {
-            $lookup: {
-                from: "orders",
-                localField: "order_id",
-                foreignField: "_id",
-                as: "order_details",
-            }
-        },
-        {
-            $unwind: {
-                path: "$order_details",
-                preserveNullAndEmptyArrays: true
-            }
-        },
-        { $match: match_query },
-        {
-            $project: {
-                'order_details': 0
-            }
+        if (order_type === order_category?.raw) {
+            match_query.issued_from = product_type;
+            match_query['order_details.order_category'] = order_type;
+        } else {
+            match_query.product_type = product_type;
+            match_query.order_category = order_type;
         }
-    ];
 
-    const issue_for_packing_items = await (order_type === order_category?.raw ? issue_for_order_model : finished_ready_for_packing_model).aggregate(pipeline);
+        const pipeline = [
+            {
+                $lookup: {
+                    from: 'orders',
+                    localField: 'order_id',
+                    foreignField: '_id',
+                    as: 'order_details',
+                },
+            },
+            {
+                $unwind: {
+                    path: '$order_details',
+                    preserveNullAndEmptyArrays: true,
+                },
+            },
+            { $match: match_query },
+            {
+                $project: {
+                    order_details: 0,
+                },
+            },
+        ];
 
-    const response = new ApiResponse(
-        StatusCodes.OK,
-        'Issue for packing items fetched successfully.',
-        issue_for_packing_items
-    );
-    return res.status(response.statusCode).json(response);
+        const issue_for_packing_items = await (
+            order_type === order_category?.raw
+                ? issue_for_order_model
+                : finished_ready_for_packing_model
+        ).aggregate(pipeline);
 
-})
+        const response = new ApiResponse(
+            StatusCodes.OK,
+            'Issue for packing items fetched successfully.',
+            issue_for_packing_items
+        );
+        return res.status(response.statusCode).json(response);
+    });

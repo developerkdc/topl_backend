@@ -29,11 +29,15 @@ export const createFactoryCanvasDoneExcel = async (newData, req, res) => {
       { header: 'Base Thickness', key: 'base_thickness', width: 15 },
       { header: 'Veneer Thickness', key: 'veneer_thickness', width: 15 },
       { header: 'Total Thickness', key: 'thickness', width: 15 },
-      { header: 'Pressing Instructions', key: 'pressing_instructions', width: 25 },
+      {
+        header: 'Pressing Instructions',
+        key: 'pressing_instructions',
+        width: 25,
+      },
       { header: 'Flow Process', key: 'flow_process', width: 25 },
       { header: 'Created By', key: 'created_by', width: 20 },
       { header: 'Created At', key: 'createdAt', width: 20 },
-      { header: 'Updated At', key: 'updatedAt', width: 20 }
+      { header: 'Updated At', key: 'updatedAt', width: 20 },
     ];
 
     worksheet.getRow(1).eachCell((cell) => {
@@ -45,12 +49,15 @@ export const createFactoryCanvasDoneExcel = async (newData, req, res) => {
     flattenedArray.forEach((item) => {
       const issueDetails = item.issue_for_colour_details || {};
       const pressing = issueDetails.pressing_details || {};
-      const baseDetails = issueDetails.pressing_done_consumed_items_details?.[0]?.base_details || [];
+      const baseDetails =
+        issueDetails.pressing_done_consumed_items_details?.[0]?.base_details ||
+        [];
 
       const baseItems = baseDetails.map((base) => base.item_name).join(', ');
 
       const createdUser = item.created_by || {};
-      const fullName = `${createdUser.first_name || ''} ${createdUser.last_name || ''}`.trim();
+      const fullName =
+        `${createdUser.first_name || ''} ${createdUser.last_name || ''}`.trim();
 
       worksheet.addRow({
         sr_no: item.sr_no,
@@ -65,7 +72,9 @@ export const createFactoryCanvasDoneExcel = async (newData, req, res) => {
         is_canvas_done: issueDetails.is_canvas_done ? 'Yes' : 'No',
         machine_name: pressing.machine_name || '',
         pressing_id: pressing.pressing_id || '',
-        pressing_date: pressing.pressing_date ? new Date(pressing.pressing_date).toLocaleDateString() : '',
+        pressing_date: pressing.pressing_date
+          ? new Date(pressing.pressing_date).toLocaleDateString()
+          : '',
         shift: pressing.shift || '',
         no_of_workers: pressing.no_of_workers || '',
         working_hours: pressing.no_of_working_hours || '',
@@ -76,17 +85,26 @@ export const createFactoryCanvasDoneExcel = async (newData, req, res) => {
         veneer_thickness: pressing.veneer_thickness || '',
         thickness: pressing.thickness || '',
         pressing_instructions: pressing.pressing_instructions || '',
-        flow_process: Array.isArray(pressing.flow_process) ? pressing.flow_process.join(', ') : '',
+        flow_process: Array.isArray(pressing.flow_process)
+          ? pressing.flow_process.join(', ')
+          : '',
         created_by: fullName,
-        createdAt: item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '',
-        updatedAt: item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : ''
+        createdAt: item.createdAt
+          ? new Date(item.createdAt).toLocaleDateString()
+          : '',
+        updatedAt: item.updatedAt
+          ? new Date(item.updatedAt).toLocaleDateString()
+          : '',
       });
     });
 
     const timestamp = Date.now();
     const fileName = `Canvas_Done_Report_${timestamp}.xlsx`;
 
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
 
     await workbook.xlsx.write(res);

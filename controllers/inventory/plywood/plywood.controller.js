@@ -10,7 +10,10 @@ import ApiResponse from '../../../utils/ApiResponse.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
 import { StatusCodes } from '../../../utils/constants.js';
-import { createPlywoodHistoryExcel, createPlywoodLogsExcel } from '../../../config/downloadExcel/Logs/Inventory/plywood/plywood.js';
+import {
+  createPlywoodHistoryExcel,
+  createPlywoodLogsExcel,
+} from '../../../config/downloadExcel/Logs/Inventory/plywood/plywood.js';
 import {
   plywood_approval_inventory_invoice_model,
   plywood_approval_inventory_items_model,
@@ -275,11 +278,7 @@ export const edit_plywood_invoice_inventory = catchAsync(
 );
 
 export const plywoodLogsCsv = catchAsync(async (req, res) => {
-  const {
-    search = '',
-    sortBy = 'updatedAt',
-    sort = 'desc'
-  } = req.query;
+  const { search = '', sortBy = 'updatedAt', sort = 'desc' } = req.query;
 
   const {
     string,
@@ -345,11 +344,7 @@ export const plywoodLogsCsv = catchAsync(async (req, res) => {
 });
 
 export const plywoodHistoryLogsCsv = catchAsync(async (req, res) => {
-  const {
-    search = '',
-    sortBy = 'updatedAt',
-    sort = 'desc',
-  } = req.query;
+  const { search = '', sortBy = 'updatedAt', sort = 'desc' } = req.query;
 
   const {
     string,
@@ -363,7 +358,13 @@ export const plywoodHistoryLogsCsv = catchAsync(async (req, res) => {
   // Step 1: Build search query
   let search_query = {};
   if (search !== '' && req?.body?.searchFields) {
-    const search_data = DynamicSearch(search, boolean, numbers, string, arrayField);
+    const search_data = DynamicSearch(
+      search,
+      boolean,
+      numbers,
+      string,
+      arrayField
+    );
     if (search_data?.length === 0) {
       return res.status(404).json({
         statusCode: 404,
@@ -404,33 +405,56 @@ export const plywoodHistoryLogsCsv = catchAsync(async (req, res) => {
           {
             $addFields: {
               invoice_Details: '$plywood_invoice_details.invoice_Details',
-              no_of_workers: '$plywood_invoice_details.workers_details.no_of_workers',
+              no_of_workers:
+                '$plywood_invoice_details.workers_details.no_of_workers',
               shift: '$plywood_invoice_details.workers_details.shift',
-              working_hours: '$plywood_invoice_details.workers_details.working_hours',
+              working_hours:
+                '$plywood_invoice_details.workers_details.working_hours',
 
-              supplier_name: '$plywood_invoice_details.supplier_details.company_details.supplier_name',
-              supplier_type: '$plywood_invoice_details.supplier_details.company_details.supplier_type',
+              supplier_name:
+                '$plywood_invoice_details.supplier_details.company_details.supplier_name',
+              supplier_type:
+                '$plywood_invoice_details.supplier_details.company_details.supplier_type',
 
-              branch_name: '$plywood_invoice_details.supplier_details.branch_detail.branch_name',
-              branch_address: '$plywood_invoice_details.supplier_details.branch_detail.address',
+              branch_name:
+                '$plywood_invoice_details.supplier_details.branch_detail.branch_name',
+              branch_address:
+                '$plywood_invoice_details.supplier_details.branch_detail.address',
               city: '$plywood_invoice_details.supplier_details.branch_detail.city',
-              state: '$plywood_invoice_details.supplier_details.branch_detail.state',
-              country: '$plywood_invoice_details.supplier_details.branch_detail.country',
-              pincode: '$plywood_invoice_details.supplier_details.branch_detail.pincode',
-              gst_number: '$plywood_invoice_details.supplier_details.branch_detail.gst_number',
-              web_url: '$plywood_invoice_details.supplier_details.branch_detail.web_url',
+              state:
+                '$plywood_invoice_details.supplier_details.branch_detail.state',
+              country:
+                '$plywood_invoice_details.supplier_details.branch_detail.country',
+              pincode:
+                '$plywood_invoice_details.supplier_details.branch_detail.pincode',
+              gst_number:
+                '$plywood_invoice_details.supplier_details.branch_detail.gst_number',
+              web_url:
+                '$plywood_invoice_details.supplier_details.branch_detail.web_url',
 
               contact_person_name: {
-                $arrayElemAt: ['$plywood_invoice_details.supplier_details.branch_detail.contact_person.name', 0],
+                $arrayElemAt: [
+                  '$plywood_invoice_details.supplier_details.branch_detail.contact_person.name',
+                  0,
+                ],
               },
               contact_person_email: {
-                $arrayElemAt: ['$plywood_invoice_details.supplier_details.branch_detail.contact_person.email', 0],
+                $arrayElemAt: [
+                  '$plywood_invoice_details.supplier_details.branch_detail.contact_person.email',
+                  0,
+                ],
               },
               contact_person_mobile: {
-                $arrayElemAt: ['$plywood_invoice_details.supplier_details.branch_detail.contact_person.mobile_number', 0],
+                $arrayElemAt: [
+                  '$plywood_invoice_details.supplier_details.branch_detail.contact_person.mobile_number',
+                  0,
+                ],
               },
               contact_person_designation: {
-                $arrayElemAt: ['$plywood_invoice_details.supplier_details.branch_detail.contact_person.designation', 0],
+                $arrayElemAt: [
+                  '$plywood_invoice_details.supplier_details.branch_detail.contact_person.designation',
+                  0,
+                ],
               },
             },
           },
@@ -523,10 +547,13 @@ export const plywoodHistoryLogsCsv = catchAsync(async (req, res) => {
   const excelLink = await createPlywoodHistoryExcel(allData);
 
   return res.json(
-    new ApiResponse(StatusCodes.OK, 'History CSV downloaded successfully', excelLink)
+    new ApiResponse(
+      StatusCodes.OK,
+      'History CSV downloaded successfully',
+      excelLink
+    )
   );
 });
-
 
 export const edit_plywood_item_invoice_inventory = catchAsync(
   async (req, res, next) => {
@@ -997,4 +1024,3 @@ export const fetch_plywood_history = catchAsync(async (req, res, next) => {
 
   return res.status(StatusCodes.OK).json(response);
 });
-

@@ -48,10 +48,7 @@ const pressing_damage_schema = new mongoose.Schema(
 );
 
 // indexing
-const indexingFields = [
-  [{ created_by: 1 }],
-  [{ updatedAt: 1 }],
-];
+const indexingFields = [[{ created_by: 1 }], [{ updatedAt: 1 }]];
 
 indexingFields.forEach((index) => pressing_damage_schema.index(...index));
 

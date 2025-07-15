@@ -85,7 +85,8 @@ export const add_tapping_details = catchAsync(async (req, res, next) => {
     // item details
     const items_details_data = items_details?.map((item, index) => {
       item.tapping_done_other_details_id = add_other_details_id;
-      item.order_category = fetch_issue_for_tapping_data?.order_category || null;
+      item.order_category =
+        fetch_issue_for_tapping_data?.order_category || null;
       item.created_by = userDetails?._id;
       item.updated_by = userDetails?._id;
       return item;
@@ -276,7 +277,8 @@ export const edit_tapping_details = catchAsync(async (req, res, next) => {
       };
       item.available_details = available_details;
       item.tapping_done_other_details_id = other_details_id;
-      item.order_category = fetch_issue_for_tapping_data?.order_category || null;
+      item.order_category =
+        fetch_issue_for_tapping_data?.order_category || null;
       item.created_by = item.created_by ? item.created_by : userDetails?._id;
       item.updated_by = userDetails?._id;
       item.createdAt = item.createdAt ? item.createdAt : new Date();
@@ -493,8 +495,8 @@ export const fetch_all_tapping_done_items = catchAsync(
     const aggOrderRelatedData = [
       {
         $lookup: {
-          from: "orders",
-          localField: "order_id",
+          from: 'orders',
+          localField: 'order_id',
           pipeline: [
             {
               $project: {
@@ -502,25 +504,25 @@ export const fetch_all_tapping_done_items = catchAsync(
                 owner_name: 1,
                 orderDate: 1,
                 order_category: 1,
-                series_product: 1
-              }
-            }
+                series_product: 1,
+              },
+            },
           ],
-          foreignField: "_id",
-          as: "order_details"
-        }
+          foreignField: '_id',
+          as: 'order_details',
+        },
       },
       {
         $unwind: {
-          path: "$order_details",
-          preserveNullAndEmptyArrays: true
-        }
+          path: '$order_details',
+          preserveNullAndEmptyArrays: true,
+        },
       },
       {
         $lookup: {
-          from: "series_product_order_item_details",
-          localField: "order_item_id",
-          foreignField: "_id",
+          from: 'series_product_order_item_details',
+          localField: 'order_item_id',
+          foreignField: '_id',
           pipeline: [
             {
               $project: {
@@ -529,23 +531,23 @@ export const fetch_all_tapping_done_items = catchAsync(
                 item_name: 1,
                 item_sub_category_name: 1,
                 group_no: 1,
-                photo_number: 1
-              }
-            }
+                photo_number: 1,
+              },
+            },
           ],
-          as: "series_product_order_item_details"
-        }
+          as: 'series_product_order_item_details',
+        },
       },
       {
         $unwind: {
-          path: "$series_product_order_item_details",
-          preserveNullAndEmptyArrays: true
-        }
+          path: '$series_product_order_item_details',
+          preserveNullAndEmptyArrays: true,
+        },
       },
       {
         $lookup: {
-          from: "decorative_order_item_details",
-          localField: "order_item_id",
+          from: 'decorative_order_item_details',
+          localField: 'order_item_id',
           pipeline: [
             {
               $project: {
@@ -554,32 +556,34 @@ export const fetch_all_tapping_done_items = catchAsync(
                 item_name: 1,
                 item_sub_category_name: 1,
                 group_no: 1,
-                photo_number: 1
-              }
-            }
+                photo_number: 1,
+              },
+            },
           ],
-          foreignField: "_id",
-          as: "decorative_order_item_details"
-        }
+          foreignField: '_id',
+          as: 'decorative_order_item_details',
+        },
       },
       {
         $unwind: {
-          path: "$decorative_order_item_details",
-          preserveNullAndEmptyArrays: true
-        }
+          path: '$decorative_order_item_details',
+          preserveNullAndEmptyArrays: true,
+        },
       },
       {
         $addFields: {
           order_item_details: {
             $cond: {
-              if: { $ne: [{ $type: "$decorative_order_item_details" }, "missing"] },
-              then: "$decorative_order_item_details",
-              else: "$series_product_order_item_details"
-            }
-          }
-        }
-      }
-    ]
+              if: {
+                $ne: [{ $type: '$decorative_order_item_details' }, 'missing'],
+              },
+              then: '$decorative_order_item_details',
+              else: '$series_product_order_item_details',
+            },
+          },
+        },
+      },
+    ];
     const aggMatch = {
       $match: {
         ...match_query,
@@ -685,8 +689,8 @@ export const fetch_all_details_by_tapping_id = catchAsync(
     const aggOrderRelatedData = [
       {
         $lookup: {
-          from: "orders",
-          localField: "order_id",
+          from: 'orders',
+          localField: 'order_id',
           pipeline: [
             {
               $project: {
@@ -694,25 +698,25 @@ export const fetch_all_details_by_tapping_id = catchAsync(
                 owner_name: 1,
                 orderDate: 1,
                 order_category: 1,
-                series_product: 1
-              }
-            }
+                series_product: 1,
+              },
+            },
           ],
-          foreignField: "_id",
-          as: "order_details"
-        }
+          foreignField: '_id',
+          as: 'order_details',
+        },
       },
       {
         $unwind: {
-          path: "$order_details",
-          preserveNullAndEmptyArrays: true
-        }
+          path: '$order_details',
+          preserveNullAndEmptyArrays: true,
+        },
       },
       {
         $lookup: {
-          from: "series_product_order_item_details",
-          localField: "order_item_id",
-          foreignField: "_id",
+          from: 'series_product_order_item_details',
+          localField: 'order_item_id',
+          foreignField: '_id',
           pipeline: [
             {
               $project: {
@@ -721,23 +725,23 @@ export const fetch_all_details_by_tapping_id = catchAsync(
                 item_name: 1,
                 item_sub_category_name: 1,
                 group_no: 1,
-                photo_number: 1
-              }
-            }
+                photo_number: 1,
+              },
+            },
           ],
-          as: "series_product_order_item_details"
-        }
+          as: 'series_product_order_item_details',
+        },
       },
       {
         $unwind: {
-          path: "$series_product_order_item_details",
-          preserveNullAndEmptyArrays: true
-        }
+          path: '$series_product_order_item_details',
+          preserveNullAndEmptyArrays: true,
+        },
       },
       {
         $lookup: {
-          from: "decorative_order_item_details",
-          localField: "order_item_id",
+          from: 'decorative_order_item_details',
+          localField: 'order_item_id',
           pipeline: [
             {
               $project: {
@@ -746,31 +750,33 @@ export const fetch_all_details_by_tapping_id = catchAsync(
                 item_name: 1,
                 item_sub_category_name: 1,
                 group_no: 1,
-                photo_number: 1
-              }
-            }
+                photo_number: 1,
+              },
+            },
           ],
-          foreignField: "_id",
-          as: "decorative_order_item_details"
-        }
+          foreignField: '_id',
+          as: 'decorative_order_item_details',
+        },
       },
       {
         $unwind: {
-          path: "$decorative_order_item_details",
-          preserveNullAndEmptyArrays: true
-        }
+          path: '$decorative_order_item_details',
+          preserveNullAndEmptyArrays: true,
+        },
       },
       {
         $addFields: {
           order_item_details: {
             $cond: {
-              if: { $ne: [{ $type: "$decorative_order_item_details" }, "missing"] },
-              then: "$decorative_order_item_details",
-              else: "$series_product_order_item_details"
-            }
-          }
-        }
-      }
+              if: {
+                $ne: [{ $type: '$decorative_order_item_details' }, 'missing'],
+              },
+              then: '$decorative_order_item_details',
+              else: '$series_product_order_item_details',
+            },
+          },
+        },
+      },
     ];
 
     const pipeline = [
@@ -784,9 +790,7 @@ export const fetch_all_details_by_tapping_id = catchAsync(
           from: 'issue_for_tappings',
           foreignField: '_id',
           localField: 'issue_for_tapping_item_id',
-          pipeline: [
-            ...aggOrderRelatedData
-          ],
+          pipeline: [...aggOrderRelatedData],
           as: 'issue_for_tapping_details',
         },
       },
@@ -1073,8 +1077,8 @@ export const fetch_all_tapping_done_items_history = catchAsync(
     const aggOrderRelatedData = [
       {
         $lookup: {
-          from: "orders",
-          localField: "order_id",
+          from: 'orders',
+          localField: 'order_id',
           pipeline: [
             {
               $project: {
@@ -1082,25 +1086,25 @@ export const fetch_all_tapping_done_items_history = catchAsync(
                 owner_name: 1,
                 orderDate: 1,
                 order_category: 1,
-                series_product: 1
-              }
-            }
+                series_product: 1,
+              },
+            },
           ],
-          foreignField: "_id",
-          as: "order_details"
-        }
+          foreignField: '_id',
+          as: 'order_details',
+        },
       },
       {
         $unwind: {
-          path: "$order_details",
-          preserveNullAndEmptyArrays: true
-        }
+          path: '$order_details',
+          preserveNullAndEmptyArrays: true,
+        },
       },
       {
         $lookup: {
-          from: "series_product_order_item_details",
-          localField: "order_item_id",
-          foreignField: "_id",
+          from: 'series_product_order_item_details',
+          localField: 'order_item_id',
+          foreignField: '_id',
           pipeline: [
             {
               $project: {
@@ -1109,23 +1113,23 @@ export const fetch_all_tapping_done_items_history = catchAsync(
                 item_name: 1,
                 item_sub_category_name: 1,
                 group_no: 1,
-                photo_number: 1
-              }
-            }
+                photo_number: 1,
+              },
+            },
           ],
-          as: "series_product_order_item_details"
-        }
+          as: 'series_product_order_item_details',
+        },
       },
       {
         $unwind: {
-          path: "$series_product_order_item_details",
-          preserveNullAndEmptyArrays: true
-        }
+          path: '$series_product_order_item_details',
+          preserveNullAndEmptyArrays: true,
+        },
       },
       {
         $lookup: {
-          from: "decorative_order_item_details",
-          localField: "order_item_id",
+          from: 'decorative_order_item_details',
+          localField: 'order_item_id',
           pipeline: [
             {
               $project: {
@@ -1134,32 +1138,34 @@ export const fetch_all_tapping_done_items_history = catchAsync(
                 item_name: 1,
                 item_sub_category_name: 1,
                 group_no: 1,
-                photo_number: 1
-              }
-            }
+                photo_number: 1,
+              },
+            },
           ],
-          foreignField: "_id",
-          as: "decorative_order_item_details"
-        }
+          foreignField: '_id',
+          as: 'decorative_order_item_details',
+        },
       },
       {
         $unwind: {
-          path: "$decorative_order_item_details",
-          preserveNullAndEmptyArrays: true
-        }
+          path: '$decorative_order_item_details',
+          preserveNullAndEmptyArrays: true,
+        },
       },
       {
         $addFields: {
           order_item_details: {
             $cond: {
-              if: { $ne: [{ $type: "$decorative_order_item_details" }, "missing"] },
-              then: "$decorative_order_item_details",
-              else: "$series_product_order_item_details"
-            }
-          }
-        }
-      }
-    ]
+              if: {
+                $ne: [{ $type: '$decorative_order_item_details' }, 'missing'],
+              },
+              then: '$decorative_order_item_details',
+              else: '$series_product_order_item_details',
+            },
+          },
+        },
+      },
+    ];
     const aggMatch = {
       $match: {
         ...match_query,

@@ -2,10 +2,8 @@ import exceljs from 'exceljs';
 import ApiError from '../../../../../../utils/errors/apiError.js';
 import ApiResponse from '../../../../../../utils/ApiResponse.js';
 
-
-export const createFactoryCNCDoneExcel = async (newData, req, res,) => {
+export const createFactoryCNCDoneExcel = async (newData, req, res) => {
   try {
-
     const workbook = new exceljs.Workbook();
     const worksheet = workbook.addWorksheet('Factory-CNC-Done-Report');
     worksheet.columns = [
@@ -32,67 +30,83 @@ export const createFactoryCNCDoneExcel = async (newData, req, res,) => {
       { header: 'Veneer Thickness', key: 'veneer_thickness', width: 15 },
       { header: 'Total Thickness', key: 'thickness', width: 15 },
       // { header: 'Product Type', key: 'product_type', width: 15 },
-      { header: 'Pressing Instructions', key: 'pressing_instructions', width: 25 },
+      {
+        header: 'Pressing Instructions',
+        key: 'pressing_instructions',
+        width: 25,
+      },
       { header: 'Flow Process', key: 'flow_process', width: 20 },
       // { header: 'Group No', key: 'group_no', width: 15 },
       // { header: 'Item Name', key: 'base_items', width: 25 },
       { header: 'Created By', key: 'created_by', width: 20 },
       { header: 'Created At', key: 'createdAt', width: 20 },
-      { header: 'Updated At', key: 'updatedAt', width: 20 }
+      { header: 'Updated At', key: 'updatedAt', width: 20 },
     ];
 
-    worksheet.getRow(1).eachCell(cell => {
+    worksheet.getRow(1).eachCell((cell) => {
       cell.font = { bold: true };
     });
 
     const flattenedArray = Object.values(newData);
 
-   flattenedArray.forEach(item => {
-  const issueDetails = item.issue_for_cnc_details || {};
-  const pressing = issueDetails.pressing_details || {};
-  const baseDetails = issueDetails.pressing_done_consumed_items_details?.[0]?.base_details || [];
-  const baseItems = baseDetails.map(b => b.item_name).join(', ');
+    flattenedArray.forEach((item) => {
+      const issueDetails = item.issue_for_cnc_details || {};
+      const pressing = issueDetails.pressing_details || {};
+      const baseDetails =
+        issueDetails.pressing_done_consumed_items_details?.[0]?.base_details ||
+        [];
+      const baseItems = baseDetails.map((b) => b.item_name).join(', ');
 
-  const createdUser = item.created_by || {};
-  const fullName = `${createdUser.first_name || ''} ${createdUser.last_name || ''}`.trim();
+      const createdUser = item.created_by || {};
+      const fullName =
+        `${createdUser.first_name || ''} ${createdUser.last_name || ''}`.trim();
 
-  worksheet.addRow({
-    sr_no: item.sr_no,
-    issued_from: issueDetails.issued_from || '',
-    issued_for: issueDetails.issued_for || '',
-    product_type: pressing.product_type || '',
-    group_no: pressing.group_no || '',
-    base_items: baseItems,
-    issued_sheets: issueDetails.issued_sheets || '',
-    issued_sqm: issueDetails.issued_sqm || '',
-    issued_amount: issueDetails.issued_amount || '',
-    is_cnc_done: issueDetails.is_cnc_done ? 'Yes' : 'No',
-    machine_name: pressing.machine_name || '',
-    pressing_id: item.pressing_details_id?.toString() || '',
-    pressing_date: item.cnc_date ? new Date(item.cnc_date).toLocaleDateString() : '',
-    shift: item.shift || '',
-    no_of_workers: item.no_of_workers || '',
-    no_of_working_hours: item.working_hours || '',
-    no_of_total_hours: item.total_hours || '',
-    length: pressing.length || '',
-    width: pressing.width || '',
-    base_thickness: pressing.base_thickness || '',
-    veneer_thickness: pressing.veneer_thickness || '',
-    thickness: pressing.thickness || '',
-    pressing_instructions: pressing.pressing_instructions || '',
-    flow_process: Array.isArray(pressing.flow_process) ? pressing.flow_process.join(', ') : '',
-    created_by: fullName,
-    createdAt: item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '',
-    updatedAt: item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : ''
-  });
-});
-
-
+      worksheet.addRow({
+        sr_no: item.sr_no,
+        issued_from: issueDetails.issued_from || '',
+        issued_for: issueDetails.issued_for || '',
+        product_type: pressing.product_type || '',
+        group_no: pressing.group_no || '',
+        base_items: baseItems,
+        issued_sheets: issueDetails.issued_sheets || '',
+        issued_sqm: issueDetails.issued_sqm || '',
+        issued_amount: issueDetails.issued_amount || '',
+        is_cnc_done: issueDetails.is_cnc_done ? 'Yes' : 'No',
+        machine_name: pressing.machine_name || '',
+        pressing_id: item.pressing_details_id?.toString() || '',
+        pressing_date: item.cnc_date
+          ? new Date(item.cnc_date).toLocaleDateString()
+          : '',
+        shift: item.shift || '',
+        no_of_workers: item.no_of_workers || '',
+        no_of_working_hours: item.working_hours || '',
+        no_of_total_hours: item.total_hours || '',
+        length: pressing.length || '',
+        width: pressing.width || '',
+        base_thickness: pressing.base_thickness || '',
+        veneer_thickness: pressing.veneer_thickness || '',
+        thickness: pressing.thickness || '',
+        pressing_instructions: pressing.pressing_instructions || '',
+        flow_process: Array.isArray(pressing.flow_process)
+          ? pressing.flow_process.join(', ')
+          : '',
+        created_by: fullName,
+        createdAt: item.createdAt
+          ? new Date(item.createdAt).toLocaleDateString()
+          : '',
+        updatedAt: item.updatedAt
+          ? new Date(item.updatedAt).toLocaleDateString()
+          : '',
+      });
+    });
 
     const timestamp = Date.now();
     const fileName = `CNC_Done_Report_${timestamp}.xlsx`;
 
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
 
     await workbook.xlsx.write(res);
@@ -100,11 +114,8 @@ export const createFactoryCNCDoneExcel = async (newData, req, res,) => {
     //   new ApiResponse(StatusCodes.OK, 'Csv downloaded successfully...')
     // );
     res.end();
-
   } catch (error) {
     console.error('Excel generation error:', error);
     throw new ApiError(500, error.message);
   }
 };
-
-

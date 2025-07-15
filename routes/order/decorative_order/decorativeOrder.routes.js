@@ -32,10 +32,6 @@ decorativeOrderRouter.get(
   AuthMiddleware,
   fetch_all_decorative_order_items_by_order_id
 );
-decorativeOrderRouter.get(
-  '/download/:id',
-  AuthMiddleware,
-  downloadPDF
-);
+decorativeOrderRouter.get('/download/:id', AuthMiddleware, downloadPDF);
 
 export default decorativeOrderRouter;

@@ -15,7 +15,11 @@ export const createFactoryCanvasDamageExcel = async (newData, req, res) => {
       { header: 'Product Type', key: 'product_type', width: 15 },
       { header: 'Group No', key: 'group_no', width: 15 },
       { header: 'Pressing ID', key: 'pressing_id', width: 15 },
-      { header: 'Pressing Instructions', key: 'pressing_instructions', width: 30 },
+      {
+        header: 'Pressing Instructions',
+        key: 'pressing_instructions',
+        width: 30,
+      },
       { header: 'Pressing Date', key: 'pressing_date', width: 18 },
       { header: 'Canvas Date', key: 'canvas_date', width: 18 },
       { header: 'Issued Sheets', key: 'issued_sheets', width: 15 },
@@ -40,25 +44,31 @@ export const createFactoryCanvasDamageExcel = async (newData, req, res) => {
     // Populate worksheet rows
     for (const item of dataArray) {
       const canvasDetails = item.canvas_done_details || {};
-      const pressingDetails = item?.issue_for_canvas_details?.pressing_details || {};
+      const pressingDetails =
+        item?.issue_for_canvas_details?.pressing_details || {};
       const orderDetails = item?.issue_for_canvas_details?.order_details || {};
 
-      const pressingConsumed = item?.issue_for_canvas_details?.pressing_done_consumed_items_details || [];
+      const pressingConsumed =
+        item?.issue_for_canvas_details?.pressing_done_consumed_items_details ||
+        [];
 
       // Base items
-      const baseItems = pressingConsumed.flatMap(d =>
-        d.base_details?.map(b => b.item_name)
-      ) || [];
+      const baseItems =
+        pressingConsumed.flatMap((d) =>
+          d.base_details?.map((b) => b.item_name)
+        ) || [];
 
       // Face items
-      const faceItems = pressingConsumed.flatMap(d =>
-        d.face_details?.map(f => f.item_name)
-      ) || [];
+      const faceItems =
+        pressingConsumed.flatMap((d) =>
+          d.face_details?.map((f) => f.item_name)
+        ) || [];
 
       // Group items
-      const groupItems = pressingConsumed.flatMap(d =>
-        d.group_details?.map(g => g.item_name)
-      ) || [];
+      const groupItems =
+        pressingConsumed.flatMap((d) =>
+          d.group_details?.map((g) => g.item_name)
+        ) || [];
 
       worksheet.addRow({
         sr_no: item?.sr_no,
@@ -93,13 +103,18 @@ export const createFactoryCanvasDamageExcel = async (newData, req, res) => {
     }
 
     // Set response headers
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', 'attachment; filename=Factory-Canvas-Damage-Report.xlsx');
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename=Factory-Canvas-Damage-Report.xlsx'
+    );
 
     // Write workbook to response
     await workbook.xlsx.write(res);
     res.status(200).end();
-
   } catch (error) {
     console.error(error);
     throw new ApiError(500, 'Failed to generate Excel report');

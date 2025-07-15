@@ -5,7 +5,10 @@ import ApiResponse from '../../../utils/ApiResponse.js';
 import { StatusCodes } from '../../../utils/constants.js';
 import { OrderModel } from '../../../database/schema/order/orders.schema.js';
 import { decorative_order_item_details_model } from '../../../database/schema/order/decorative_order/decorative_order_item_details.schema.js';
-import { order_category, order_item_status } from '../../../database/Utils/constants/constants.js';
+import {
+  order_category,
+  order_item_status,
+} from '../../../database/Utils/constants/constants.js';
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import generatePDFBuffer from '../../../utils/generatePDF/generatePDFBuffer.js';
@@ -555,31 +558,31 @@ export const downloadPDF = catchAsync(async (req, res) => {
   const action_map = {
     work_order_standard_4: {
       templateFileName: 'workOrder4',
-      filenamePrefix: 'WorkOrder_Standard_4'
+      filenamePrefix: 'WorkOrder_Standard_4',
     },
     work_order_balance: {
       templateFileName: 'workOrderBalanceOrder',
-      filenamePrefix: 'WorkOrder_Balance'
+      filenamePrefix: 'WorkOrder_Balance',
     },
     work_order_priority_issue_2: {
       templateFileName: 'workOrder2PriorityIssue',
-      filenamePrefix: 'WorkOrder_Priority_Issue_2'
+      filenamePrefix: 'WorkOrder_Priority_Issue_2',
     },
     work_order_priority_2: {
       templateFileName: 'workOrder2Priority',
-      filenamePrefix: 'WorkOrder_Priority_2'
+      filenamePrefix: 'WorkOrder_Priority_2',
     },
     work_order_1: {
       templateFileName: 'workOrder1',
-      filenamePrefix: 'WorkOrder_1'
+      filenamePrefix: 'WorkOrder_1',
     },
     work_order_issue_3: {
       templateFileName: 'workOrder3Issue',
-      filenamePrefix: 'WorkOrder_Issue_3'
+      filenamePrefix: 'WorkOrder_Issue_3',
     },
     work_order_priority_4: {
       templateFileName: 'workOrder4Priority',
-      filenamePrefix: 'WorkOrder_Priority_4'
+      filenamePrefix: 'WorkOrder_Priority_4',
     },
   };
 
@@ -599,30 +602,29 @@ export const downloadPDF = catchAsync(async (req, res) => {
     {
       $match: {
         order_id: new mongoose.Types.ObjectId(id),
-      }
+      },
     },
     {
       $lookup: {
         from: 'photos',
         localField: 'photo_number_id',
         foreignField: '_id',
-        as: 'photo_data'
-      }
+        as: 'photo_data',
+      },
     },
     {
       $unwind: {
         path: '$photo_data',
-        preserveNullAndEmptyArrays: true
-      }
+        preserveNullAndEmptyArrays: true,
+      },
     },
     {
       $addFields: {
         group_no: '$photo_data.group_no',
         character: '$photo_data.character_name',
-      }
-    }
+      },
+    },
   ]);
-
 
   if (!order || items.length === 0) {
     throw new ApiError('Order or order items not found', StatusCodes.NOT_FOUND);
@@ -650,12 +652,12 @@ export const downloadPDF = catchAsync(async (req, res) => {
       const itemsWithFlags = items.map((item, index) => ({
         ...item,
         showSeriesName: index === 0,
-        rowspan: totalRows
+        rowspan: totalRows,
       }));
 
       return {
         series_name,
-        items: itemsWithFlags
+        items: itemsWithFlags,
       };
     });
   };
@@ -670,7 +672,10 @@ export const downloadPDF = catchAsync(async (req, res) => {
       base_type,
       groupedSeries,
       base_sub_category,
-      totalSheets: items.reduce((sum, item) => sum + (item.no_of_sheets || 0), 0),
+      totalSheets: items.reduce(
+        (sum, item) => sum + (item.no_of_sheets || 0),
+        0
+      ),
       totalSqMtr: items.reduce((sum, item) => sum + (item.sqm || 0), 0),
       totalAmount: items.reduce((sum, item) => sum + (item.amount || 0), 0),
     },

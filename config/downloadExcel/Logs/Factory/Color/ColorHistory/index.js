@@ -25,7 +25,11 @@ export const createFactoryColorHistoryExcel = async (data, req, res) => {
       { header: 'Group No', key: 'group_no', width: 15 },
       { header: 'Series Code', key: 'series_code', width: 15 },
       { header: 'Pressing Date', key: 'pressing_date', width: 18 },
-      { header: 'Pressing Instructions', key: 'pressing_instructions', width: 25 },
+      {
+        header: 'Pressing Instructions',
+        key: 'pressing_instructions',
+        width: 25,
+      },
       { header: 'Flow Process', key: 'flow_process', width: 20 },
       { header: 'Pressing Sheets', key: 'pressing_sheets', width: 15 },
       { header: 'Pressing SQM', key: 'pressing_sqm', width: 15 },
@@ -46,13 +50,17 @@ export const createFactoryColorHistoryExcel = async (data, req, res) => {
       const pressingItems = issue.pressing_done_consumed_items_details || [];
 
       // Base items extraction
-      const baseItems = pressingItems.flatMap(p =>
-        (p.base_details || []).map(b => `${b.item_name} (${b.base_type}) x ${b.no_of_sheets}`)
+      const baseItems = pressingItems.flatMap((p) =>
+        (p.base_details || []).map(
+          (b) => `${b.item_name} (${b.base_type}) x ${b.no_of_sheets}`
+        )
       );
 
       // Group items extraction
-      const groupItems = pressingItems.flatMap(p =>
-        (p.group_details || []).map(g => `${g.item_name} (${g.group_no}) x ${g.no_of_sheets}`)
+      const groupItems = pressingItems.flatMap((p) =>
+        (p.group_details || []).map(
+          (g) => `${g.item_name} (${g.group_no}) x ${g.no_of_sheets}`
+        )
       );
 
       rows.push({
@@ -88,11 +96,17 @@ export const createFactoryColorHistoryExcel = async (data, req, res) => {
     }
 
     // Write all rows
-    rows.forEach(row => worksheet.addRow(row));
+    rows.forEach((row) => worksheet.addRow(row));
 
     // Response headers
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', 'attachment; filename=Factory_Color_Damage_Full_Report.xlsx');
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename=Factory_Color_Damage_Full_Report.xlsx'
+    );
 
     await workbook.xlsx.write(res);
     res.status(200).end();

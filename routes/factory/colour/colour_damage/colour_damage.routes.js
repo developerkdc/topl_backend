@@ -17,6 +17,10 @@ color_damage_router.post(
   revert_from_color_damage_to_color_done
 );
 
-// Color damage export csv api 
-color_damage_router.post('/download-factory-color-damage-excel', AuthMiddleware, download_excel_color_damage);
+// Color damage export csv api
+color_damage_router.post(
+  '/download-factory-color-damage-excel',
+  AuthMiddleware,
+  download_excel_color_damage
+);
 export default color_damage_router;
