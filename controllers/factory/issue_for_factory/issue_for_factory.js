@@ -90,7 +90,6 @@ class Issue_For_Factory {
     }
 
     this.issued_from_details = issued_from_data;
-    console.log(issued_from_data)
     return issued_from_data;
   }
 

@@ -404,36 +404,48 @@ export const fetch_all_packing_done_items = catchAsync(
 
         const listAggregate = [
             aggregatePackingDoneItems,
-            // aggPackingDoneItemsUnwind,
             aggCreatedByLookup,
             aggCreatedByUnwind,
             aggUpdatedByLookup,
             aggUpdatedByUnwind,
-            aggMatch,
+            // aggMatch,
             aggSort,
             aggSkip,
             aggLimit,
-        ]; // aggregation pipiline
+        ]; // aggregation pipeline
+
+        const list_aggregate = [
+            aggMatch,
+            {
+                $facet: {
+                    data: listAggregate,
+                    totalCount: [
+                        {
+                            $count: 'totalCount',
+                        },
+                    ],
+                }
+            }
+        ]
 
         const issue_for_raw_packing =
-            await packing_done_other_details_model.aggregate(listAggregate);
+            await packing_done_other_details_model.aggregate(list_aggregate);
+        // const aggCount = {
+        //     $count: 'totalCount',
+        // }; // count aggregation stage
 
-        const aggCount = {
-            $count: 'totalCount',
-        }; // count aggregation stage
+        // const totalAggregate = [...listAggregate?.slice(0, -2), aggCount]; // total aggregation pipiline
 
-        const totalAggregate = [...listAggregate?.slice(0, -2), aggCount]; // total aggregation pipiline
+        // const totalDocument =
+        //     await packing_done_other_details_model.aggregate(totalAggregate);
 
-        const totalDocument =
-            await packing_done_other_details_model.aggregate(totalAggregate);
-
-        const totalPages = Math.ceil((totalDocument?.[0]?.totalCount || 0) / limit);
+        const totalPages = Math.ceil((issue_for_raw_packing[0]?.totalCount?.[0]?.totalCount || 0) / limit);
 
         const response = new ApiResponse(
             StatusCodes.OK,
             'Packing Done Data Fetched Successfully',
             {
-                data: issue_for_raw_packing,
+                data: issue_for_raw_packing[0]?.data || [],
                 totalPages: totalPages,
             }
         );
