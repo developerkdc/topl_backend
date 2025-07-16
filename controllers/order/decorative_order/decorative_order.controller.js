@@ -160,7 +160,7 @@ export const update_decorative_order = catchAsync(async (req, res) => {
       { session }
     );
 
-    for (const item of item_details) {
+    for (const item of order_items_details) {
       const update_photo_sheets = await photoModel.updateOne({
         _id: item.photo_number_id,
         photo_number: item.photo_number,
