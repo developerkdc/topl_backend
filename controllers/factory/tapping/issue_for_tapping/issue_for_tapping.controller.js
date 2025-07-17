@@ -281,6 +281,158 @@ export const revert_issue_for_tapping_item = catchAsync(
           'Failed to delete issue for tapping item',
           StatusCodes.INTERNAL_SERVER_ERROR
         );
+      };
+
+      const revert_photo_no_of_sheets = async function () {
+        const aggGroupNoLookup = {
+          $lookup: {
+            from: 'grouping_done_items_details',
+            localField: 'group_no',
+            foreignField: 'group_no',
+            pipeline: [
+              {
+                $project: {
+                  group_no: 1,
+                  photo_no: 1,
+                  photo_no_id: 1,
+                },
+              },
+            ],
+            as: 'grouping_done_items_details',
+          },
+        };
+        const aggGroupNoUnwind = {
+          $unwind: {
+            path: '$grouping_done_items_details',
+            preserveNullAndEmptyArrays: true,
+          },
+        };
+        const aggOrderRelatedData = [
+          {
+            $lookup: {
+              from: "orders",
+              localField: "order_id",
+              pipeline: [
+                {
+                  $project: {
+                    order_no: 1,
+                    owner_name: 1,
+                    orderDate: 1,
+                    order_category: 1,
+                    series_product: 1
+                  }
+                }
+              ],
+              foreignField: "_id",
+              as: "order_details"
+            }
+          },
+          {
+            $unwind: {
+              path: "$order_details",
+              preserveNullAndEmptyArrays: true
+            }
+          },
+          {
+            $lookup: {
+              from: "series_product_order_item_details",
+              localField: "order_item_id",
+              foreignField: "_id",
+              pipeline: [
+                {
+                  $project: {
+                    item_no: 1,
+                    order_id: 1,
+                    item_name: 1,
+                    item_sub_category_name: 1,
+                    group_no: 1,
+                    photo_number_id: 1,
+                    photo_number: 1
+                  }
+                }
+              ],
+              as: "series_product_order_item_details"
+            }
+          },
+          {
+            $unwind: {
+              path: "$series_product_order_item_details",
+              preserveNullAndEmptyArrays: true
+            }
+          },
+          {
+            $lookup: {
+              from: "decorative_order_item_details",
+              localField: "order_item_id",
+              pipeline: [
+                {
+                  $project: {
+                    item_no: 1,
+                    order_id: 1,
+                    item_name: 1,
+                    item_sub_category_name: 1,
+                    group_no: 1,
+                    photo_number_id: 1,
+                    photo_number: 1
+                  }
+                }
+              ],
+              foreignField: "_id",
+              as: "decorative_order_item_details"
+            }
+          },
+          {
+            $unwind: {
+              path: "$decorative_order_item_details",
+              preserveNullAndEmptyArrays: true
+            }
+          },
+          {
+            $addFields: {
+              order_item_details: {
+                $cond: {
+                  if: { $ne: [{ $type: "$decorative_order_item_details" }, "missing"] },
+                  then: "$decorative_order_item_details",
+                  else: "$series_product_order_item_details"
+                }
+              }
+            }
+          }
+        ];
+
+        const fetch_issue_for_tapping_item_details = await issue_for_tapping_model.aggregate([
+          { $match: { _id: mongoose.Types.ObjectId(issue_for_tapping_id) } },
+          aggGroupNoLookup,
+          aggGroupNoUnwind,
+          aggOrderRelatedData,
+        ]);
+
+        const order_photo_number_id = fetch_issue_for_tapping_item_details?.order_item_details?.photo_number_id;
+        const order_photo_number = fetch_issue_for_tapping_item_details?.order_item_details?.photo_number;
+        const group_photo_number_id = fetch_issue_for_tapping_item_details?.data?.photo_no_id;
+        const group_photo_number = fetch_issue_for_tapping_item_details?.data?.photo_no;
+
+        if (order_photo_number_id && order_photo_number) {
+          if ((order_photo_number_id !== group_photo_number_id) || (order_photo_number !== group_photo_number)) {
+            // Validate photo availability - await properly in loop
+            const update_photo_sheets = await photoModel.updateOne({
+              _id: order_photo_number_id,
+              photo_number: order_photo_number,
+            }, {
+              $inc: { avaliable_no_of_sheets: fetch_issue_for_tapping_item_details?.no_of_sheets }
+            }, { session });
+
+            if (!update_photo_sheets?.acknowledged) {
+              throw new ApiError(
+                `Photo number ${order_photo_number} does not have enough sheets.`,
+                StatusCodes.BAD_REQUEST
+              );
+            }
+          }
+        }
+      };
+      if (fetch_issue_for_tapping_item_details?.order_id && fetch_issue_for_tapping_item_details?.order_item_id && fetch_issue_for_tapping_item_details?.issued_for === item_issued_for.order) {
+        await revert_photo_no_of_sheets();
       }
 
       const grouping_done_item_id =

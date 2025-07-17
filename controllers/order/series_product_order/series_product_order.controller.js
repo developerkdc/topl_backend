@@ -161,6 +161,28 @@ export const update_series_order = catchAsync(async (req, res) => {
       );
     }
 
+    const order_items_details = await series_product_order_item_details_model?.find(
+      { order_id: order_details_result?._id },
+      { _id: 1, photo_number_id: 1, photo_number: 1, no_of_sheets: 1 },
+      { session }
+    );
+
+    for (const item of order_items_details) {
+      const update_photo_sheets = await photoModel.updateOne({
+        _id: item.photo_number_id,
+        photo_number: item.photo_number,
+      }, {
+        $inc: { avaliable_no_of_sheets: item.no_of_sheets }
+      }, { session });
+
+      if (!update_photo_sheets?.acknowledged) {
+        throw new ApiError(
+          `Photo number ${item?.photo_number} does not have enough sheets.`,
+          StatusCodes.BAD_REQUEST
+        );
+      }
+    }
+
     const delete_order_items =
       await series_product_order_item_details_model?.deleteMany(
         { order_id: order_details_result?._id },
@@ -177,15 +199,47 @@ export const update_series_order = catchAsync(async (req, res) => {
       );
     }
 
-    const updated_item_details = item_details?.map((item) => {
-      item.order_id = order_details_result?._id;
-      item.product_category = order_details_result?.series_product;
-      item.created_by = item.created_by ? item.created_by : userDetails?._id;
-      item.updated_by = userDetails?._id;
-      item.createdAt = item.createdAt ? item.createdAt : new Date();
-      item.updatedAt = new Date();
-      return item;
-    });
+    const updated_item_details = [];
+    for (const item of item_details) {
+      // Validate photo availability - await properly in loop
+      const photoUpdate = await photoModel.findOneAndUpdate(
+        {
+          _id: item.photo_number_id,
+          photo_number: item.photo_number,
+          avaliable_no_of_sheets: { $gte: item.no_of_sheets }
+        },
+        { $inc: { avaliable_no_of_sheets: -item.no_of_sheets } },
+        { session, new: true }
+      );
+
+      if (!photoUpdate) {
+        throw new ApiError(
+          `Photo number ${item?.photo_number} does not have enough sheets.`,
+          StatusCodes.BAD_REQUEST
+        );
+      }
+
+      updated_item_details.push({
+        ...item,
+        order_id: order_details_result?._id,
+        product_category: order_details_result?.base_type,
+        created_by: item.created_by ? item?.created_by : userDetails?._id,
+        updated_by: userDetails?._id,
+        createdAt: item.createdAt ? item?.createdAt : new Date(),
+        updatedAt: new Date(),
+      });
+    }
+
+
+    // const updated_item_details = item_details?.map((item) => {
+    //   item.order_id = order_details_result?._id;
+    //   item.product_category = order_details_result?.series_product;
+    //   item.created_by = item.created_by ? item.created_by : userDetails?._id;
+    //   item.updated_by = userDetails?._id;
+    //   item.createdAt = item.createdAt ? item.createdAt : new Date();
+    //   item.updatedAt = new Date();
+    //   return item;
+    // });
 
     const create_order_result =
       await series_product_order_item_details_model?.insertMany(
