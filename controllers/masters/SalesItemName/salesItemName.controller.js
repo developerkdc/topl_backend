@@ -2,7 +2,6 @@ import fs from 'fs';
 import mongoose from 'mongoose';
 import archiver from 'archiver';
 import { grouping_done_items_details_model } from '../../../database/schema/factory/grouping/grouping_done.schema.js';
-import photoModel from '../../../database/schema/masters/photo.schema.js';
 import ApiResponse from '../../../utils/ApiResponse.js';
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
@@ -11,20 +10,21 @@ import catchAsync from '../../../utils/errors/catchAsync.js';
 import { StatusCodes } from '../../../utils/constants.js';
 import path from 'path';
 import { createPhotoAlbumExcel } from '../../../config/downloadExcel/Logs/Masters/photoAlbum.js';
+import salesItemNameModel from '../../../database/schema/masters/salesItemName.schema.js';
 
-export const addPhoto = catchAsync(async (req, res, next) => {
-  let { photo_number } = req.body;
+export const addSalesItemNameModel = catchAsync(async (req, res, next) => {
+  let { sales_item_name } = req.body;
   const session = await mongoose.startSession();
   try {
     session.startTransaction();
-    photo_number = photo_number?.toUpperCase();
     const authUserDetail = req.userDetails;
 
-    if (!photo_number) {
-      return next(new ApiError('Photo number is required', 400));
+    sales_item_name = sales_item_name?.toUpperCase();
+    if (!sales_item_name) {
+      return next(new ApiError('Sales Item Name is required', 400));
     }
 
-    const maxNumber = await photoModel.aggregate([
+    const maxNumber = await salesItemNameModel.aggregate([
       {
         $group: {
           _id: null,
@@ -35,72 +35,25 @@ export const addPhoto = catchAsync(async (req, res, next) => {
 
     const maxSrNo = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1;
 
-    const photoImagesFiles = req.files?.images;
-    let images = [];
-    if (photoImagesFiles && photoImagesFiles?.length > 0) {
-      images = photoImagesFiles?.map((e) => e);
-    }
-
-    const bannerImagesFile = req.files?.banner_image;
-    let bannerImage;
-    if (
-      bannerImagesFile &&
-      bannerImagesFile?.length > 0 &&
-      bannerImagesFile?.[0]
-    ) {
-      bannerImage = bannerImagesFile?.[0];
-    }
-
-    let other_details = {};
-    if (req.body?.other_details) {
-      try {
-        const other_details_data = JSON.parse(req.body?.other_details);
-        other_details = other_details_data;
-      } catch (error) {
-        console.log('Failed to parse other details', error);
-        throw error;
-      }
-    }
-
     const photoData = {
       ...other_details,
       sr_no: maxSrNo,
-      photo_number: photo_number,
-      images: images,
-      banner_image: bannerImage,
       created_by: authUserDetail?._id,
       updated_by: authUserDetail?._id,
     };
 
-    const savePhotoData = new photoModel(photoData);
-    const savedData = await savePhotoData.save({ session });
+    const savedSalesItemName = new salesItemNameModel(photoData);
+    const savedData = await savedSalesItemName.save({ session });
 
     if (!savedData) {
       return next(new ApiError('Failed to insert data', 400));
     }
 
-    const isGroupExist = await grouping_done_items_details_model.findOne({
-      group_no: other_details?.group_no,
-    });
-
-    if (!isGroupExist) {
-      return next(new ApiError('Group not exist', 400));
-    }
-
-    const GroupDataUpdated = await grouping_done_items_details_model.updateOne(
-      { _id: isGroupExist?._id },
-      { photo_no: savedData?.photo_number, photo_no_id: savedData?._id },
-      { session }
-    );
-
-    if (!GroupDataUpdated) {
-      return next(new ApiError('Failed to update group', 400));
-    }
     await session.commitTransaction();
     const response = new ApiResponse(
       201,
       'Photo Added Successfully',
-      savePhotoData
+      savedSalesItemName
     );
 
     return res.status(201).json(response);
@@ -169,7 +122,7 @@ export const updatePhoto = catchAsync(async (req, res, next) => {
       updated_by: authUserDetail?._id,
     };
 
-    const fetchPhotoData = await photoModel.findOne({ _id: id });
+    const fetchPhotoData = await salesItemNameModel.findOne({ _id: id });
     if (bannerImage) {
       photoData.banner_image = bannerImage;
       if (fs.existsSync(fetchPhotoData?.banner_image?.path)) {
@@ -177,7 +130,7 @@ export const updatePhoto = catchAsync(async (req, res, next) => {
       }
     }
 
-    const updatePhotoData = await photoModel.updateOne(
+    const updatePhotoData = await salesItemNameModel.updateOne(
       { _id: id },
       {
         $set: photoData,
@@ -199,7 +152,7 @@ export const updatePhoto = catchAsync(async (req, res, next) => {
 
     //remove images logic
     if (removeImages && removeImages.length > 0) {
-      const removePhoto = await photoModel.updateOne(
+      const removePhoto = await salesItemNameModel.updateOne(
         { _id: id },
         {
           $pull: {
@@ -210,7 +163,7 @@ export const updatePhoto = catchAsync(async (req, res, next) => {
       );
 
       if (!removePhoto.acknowledged || removePhoto.modifiedCount <= 0) {
-        return next(new ApiError('Failed to remove photo', 400));
+        return next(new ApiError('Failed to remove salesItemName', 400));
       }
 
       removeImages.forEach((file) => {
@@ -221,7 +174,7 @@ export const updatePhoto = catchAsync(async (req, res, next) => {
     }
 
     if (other_details?.group_no !== fetchPhotoData?.group_no) {
-      //setting current group no having field photo number as null
+      //setting current group no having field salesItemName number as null
       const isCurrentGroupExist =
         await grouping_done_items_details_model.findOne({
           group_no: fetchPhotoData?.group_no,
@@ -280,6 +233,7 @@ export const updatePhoto = catchAsync(async (req, res, next) => {
     session.endSession();
   }
 });
+
 export const updatePhotoStatus = catchAsync(async (req, res, next) => {
   let { status } = req.body;
   const { id } = req.params;
@@ -294,12 +248,12 @@ export const updatePhotoStatus = catchAsync(async (req, res, next) => {
     updated_by: authUserDetail?._id,
   };
 
-  const fetchPhotoData = await photoModel.findOne({ _id: id });
+  const fetchPhotoData = await salesItemNameModel.findOne({ _id: id });
   if (!fetchPhotoData) {
     return next(new ApiError('Photo Details not found', StatusCodes.NOT_FOUND));
   }
   console.log(photoData, ' photoData');
-  const updatePhotoData = await photoModel.updateOne(
+  const updatePhotoData = await salesItemNameModel.updateOne(
     { _id: id },
     {
       $set: photoData,
@@ -452,7 +406,7 @@ export const fetchPhotoList = catchAsync(async (req, res, next) => {
     aggLimit,
   ]; // aggregation pipiline
 
-  const photoData = await photoModel.aggregate(listAggregate);
+  const photoData = await salesItemNameModel.aggregate(listAggregate);
 
   const aggCount = {
     $count: 'totalCount',
@@ -467,7 +421,7 @@ export const fetchPhotoList = catchAsync(async (req, res, next) => {
     aggCount,
   ]; // total aggregation pipiline
 
-  const totalDocument = await photoModel.aggregate(totalAggregate);
+  const totalDocument = await salesItemNameModel.aggregate(totalAggregate);
 
   const totalPages = Math.ceil((totalDocument?.[0]?.totalCount || 0) / limit);
 
@@ -547,7 +501,7 @@ export const fetchSinglePhoto = catchAsync(async (req, res, next) => {
     },
   ];
 
-  const photoData = await photoModel.aggregate(aggregate);
+  const photoData = await salesItemNameModel.aggregate(aggregate);
 
   if (photoData && photoData?.length <= 0) {
     return next(new ApiError('Document Not found', 404));
@@ -562,7 +516,7 @@ export const fetchSinglePhoto = catchAsync(async (req, res, next) => {
 });
 
 export const dropdownPhoto = catchAsync(async (req, res, next) => {
-  const photoList = await photoModel.aggregate([
+  const photoList = await salesItemNameModel.aggregate([
     {
       $match: {
         status: true,
@@ -583,267 +537,4 @@ export const dropdownPhoto = catchAsync(async (req, res, next) => {
     photoList
   );
   return res.status(200).json(response);
-});
-
-export const fetchPhotoAlbumList = catchAsync(async (req, res, next) => {
-  const { sortBy = 'updatedAt', sort = 'desc', search = '' } = req.query;
-
-  const {
-    string,
-    boolean,
-    numbers,
-    arrayField = [],
-  } = req?.body?.searchFields || {};
-
-  const filter = req.body?.filter;
-
-  const page = Math.max(1, parseInt(req.query.page) || 1);
-  const limit = Math.max(1, parseInt(req.query.limit) || 10);
-
-  let search_query = {};
-
-  if (search !== '' && req?.body?.searchFields) {
-    const search_data = DynamicSearch(
-      search,
-      boolean,
-      numbers,
-      string,
-      arrayField
-    );
-    if (search_data?.length === 0) {
-      return res.status(404).json({
-        statusCode: 404,
-        status: false,
-        data: { data: [] },
-        message: 'Results Not Found',
-      });
-    }
-    search_query = search_data;
-  }
-
-  const filterData = dynamic_filter(filter);
-  const match_query = { ...filterData, ...search_query };
-
-  const aggMatch = { $match: match_query };
-  const aggCreatedByLookup = {
-    $lookup: {
-      from: 'users',
-      localField: 'created_by',
-      foreignField: '_id',
-      pipeline: [
-        {
-          $project: {
-            user_name: 1,
-            user_type: 1,
-            dept_name: 1,
-            first_name: 1,
-            last_name: 1,
-            email_id: 1,
-            mobile_no: 1,
-          },
-        },
-      ],
-      as: 'created_by',
-    },
-  };
-  const aggUpdatedByLookup = {
-    $lookup: {
-      from: 'users',
-      localField: 'updated_by',
-      foreignField: '_id',
-      pipeline: [
-        {
-          $project: {
-            user_name: 1,
-            user_type: 1,
-            dept_name: 1,
-            first_name: 1,
-            last_name: 1,
-            email_id: 1,
-            mobile_no: 1,
-          },
-        },
-      ],
-      as: 'updated_by',
-    },
-  };
-
-  const aggSort = { $sort: { [sortBy]: sort === 'desc' ? -1 : 1 } };
-  // const aggSkip = { $skip: (page - 1) * limit };
-  // const aggLimit = { $limit: limit };
-
-  const pipeline = [
-    aggMatch,
-    aggCreatedByLookup,
-    aggUpdatedByLookup,
-    {
-      $facet: {
-        data: [aggSort],
-        totalCount: [{ $count: 'count' }],
-      },
-    },
-  ];
-
-  const result = await photoModel.aggregate(pipeline);
-  const photoData = result[0].data;
-  const totalCount = result[0].totalCount?.[0]?.count || 0;
-  const totalPages = Math.ceil(totalCount / limit);
-
-  return res.status(200).json(
-    new ApiResponse(200, 'Photo Data Fetched Successfully', {
-      data: photoData,
-      totalPages,
-    })
-  );
-});
-
-export const downloadPhotoAlbumZip = catchAsync(async (req, res, next) => {
-  const { selectedPhotos = [] } = req.body;
-
-  if (!Array.isArray(selectedPhotos) || selectedPhotos.length === 0) {
-    return res.status(400).json({
-      status: false,
-      message: 'No photos selected',
-    });
-  }
-
-  const photos = await photoModel.find({ _id: { $in: selectedPhotos } });
-
-  if (!photos || photos.length === 0) {
-    return res.status(404).json({
-      status: false,
-      message: 'No valid photos found',
-    });
-  }
-
-  // Set ZIP response headers
-  res.setHeader('Content-Type', 'application/zip');
-  res.setHeader('Content-Disposition', 'attachment; filename=photos.zip');
-
-  const archive = archiver('zip', { zlib: { level: 9 } });
-  archive.on('error', (err) => next(err));
-  archive.pipe(res);
-
-  for (let photo of photos) {
-    console.log(photo.photo_number);
-    const bannerImage = photo?.banner_image;
-
-    if (!bannerImage || !bannerImage.path || !bannerImage.filename) continue;
-
-    // Normalize the file path
-    const fullPath = path.join(
-      process.cwd(),
-      bannerImage?.path.replace(/\\/g, '/')
-    );
-
-    if (fs.existsSync(fullPath)) {
-      const ext = path.extname(
-        bannerImage.originalname || bannerImage.filename
-      );
-      const downloadFileName = `${photo?.photo_number}${ext}`;
-
-      archive.file(fullPath, {
-        name: downloadFileName,
-      });
-    } else {
-      console.warn(`File not found: ${fullPath}`);
-    }
-  }
-
-  await archive.finalize();
-});
-
-export const download_excel_photo_album = catchAsync(async (req, res, next) => {
-  const { sortBy = 'updatedAt', sort = 'desc', search = '' } = req.query;
-
-  const {
-    string,
-    boolean,
-    numbers,
-    arrayField = [],
-  } = req?.body?.searchFields || {};
-
-  const filter = req.body?.filter;
-
-  let search_query = {};
-
-  if (search !== '' && req?.body?.searchFields) {
-    const search_data = DynamicSearch(
-      search,
-      boolean,
-      numbers,
-      string,
-      arrayField
-    );
-    if (search_data?.length === 0) {
-      return res.status(404).json({
-        statusCode: 404,
-        status: false,
-        data: { data: [] },
-        message: 'Results Not Found',
-      });
-    }
-    search_query = search_data;
-  }
-
-  const filterData = dynamic_filter(filter);
-  const match_query = { ...filterData, ...search_query };
-
-  const aggMatch = { $match: match_query };
-  const aggCreatedByLookup = {
-    $lookup: {
-      from: 'users',
-      localField: 'created_by',
-      foreignField: '_id',
-      pipeline: [
-        {
-          $project: {
-            user_name: 1,
-          },
-        },
-      ],
-      as: 'created_by',
-    },
-  };
-  const aggUpdatedByLookup = {
-    $lookup: {
-      from: 'users',
-      localField: 'updated_by',
-      foreignField: '_id',
-      pipeline: [
-        {
-          $project: {
-            user_name: 1,
-          },
-        },
-      ],
-      as: 'updated_by',
-    },
-  };
-
-  const aggSort = { $sort: { [sortBy]: sort === 'desc' ? -1 : 1 } };
-
-  const pipeline = [
-    aggMatch,
-    aggCreatedByLookup,
-    aggUpdatedByLookup,
-    {
-      $facet: {
-        data: [aggSort],
-        // totalCount: [{ $count: 'count' }],
-      },
-    },
-  ];
-
-  const result = await photoModel.aggregate(pipeline);
-  const photoData = result[0].data;
-  // const totalCount = result[0].totalCount?.[0]?.count || 0;
-  // const totalPages = Math.ceil(totalCount / limit);
-  await createPhotoAlbumExcel(photoData, req, res);
-  // return res.status(200).json(
-  //   new ApiResponse(200, 'Photo Data Fetched Successfully', {
-  //     data: photoData,
-  //     // totalPages,
-  //   })
-  // );
 });
