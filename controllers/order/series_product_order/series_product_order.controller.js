@@ -10,6 +10,7 @@ import { order_item_status } from '../../../database/Utils/constants/constants.j
 import ApiError from '../../../utils/errors/apiError.js';
 import generatePDFBuffer from '../../../utils/generatePDF/generatePDFBuffer.js';
 import moment from 'moment';
+import photoModel from '../../../database/schema/masters/photo.schema.js';
 
 export const add_series_order = catchAsync(async (req, res) => {
   const session = await mongoose.startSession();
@@ -53,13 +54,42 @@ export const add_series_order = catchAsync(async (req, res) => {
       );
     }
 
-    const updated_item_details = item_details?.map((item) => {
-      item.order_id = order_details_data?._id;
-      item.product_category = order_details_data?.series_product;
-      item.created_by = userDetails?._id;
-      item.updated_by = userDetails?._id;
-      return item;
-    });
+    // const updated_item_details = item_details?.map((item) => {
+    //   item.order_id = order_details_data?._id;
+    //   item.product_category = order_details_data?.series_product;
+    //   item.created_by = userDetails?._id;
+    //   item.updated_by = userDetails?._id;
+    //   return item;
+    // });
+
+    const updated_item_details = [];
+    for (const item of item_details) {
+      // Validate photo availability - await properly in loop
+      const photoUpdate = await photoModel.findOneAndUpdate(
+        {
+          photo_number: item.photo_number,
+          photo_no_id: item.photo_number_id,
+          no_of_sheets: { $gte: item.no_of_sheets }
+        },
+        { $inc: { no_of_sheets: -item.no_of_sheets } },
+        { session, new: true }
+      );
+
+      if (!photoUpdate) {
+        throw new ApiError(
+          `Photo number ${item?.photo_number} does not have enough sheets.`,
+          StatusCodes.BAD_REQUEST
+        );
+      }
+
+      updated_item_details.push({
+        ...item,
+        order_id: order_details_data?._id,
+        product_category: order_details_data?.series_product,
+        created_by: userDetails?._id,
+        updated_by: userDetails?._id
+      });
+    }
 
     const create_order_result =
       await series_product_order_item_details_model.insertMany(

@@ -18,18 +18,17 @@ const salesItemNameSchema = new mongoose.Schema(
       default: true,
     },
 
-    item: {
-      item_id: {
-        type: mongoose.Schema.Types.ObjectId,
-        default: null,
-      },
-      item_name: {
-        type: String,
-        uppercase: true,
-        trim: true,
-        default: null,
-      },
+    item_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
     },
+    item_name: {
+      type: String,
+      uppercase: true,
+      trim: true,
+      default: null,
+    },
+
     length: {
       type: Number,
       default: null,
