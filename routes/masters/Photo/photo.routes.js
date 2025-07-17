@@ -12,6 +12,7 @@ import {
   updatePhotoStatus,
 } from '../../../controllers/masters/Photo/photo.controller.js';
 import { MulterFunction } from '../../../config/multer/multer.js';
+import { group_no_dropdown_for_hybrid_photo_master } from '../../../controllers/factory/grouping/grouping_done.controller.js';
 
 const photoRouter = express.Router();
 
@@ -56,5 +57,10 @@ photoRouter.post(
 );
 
 photoRouter.get('/dropdown-photo', AuthMiddleware, dropdownPhoto);
+photoRouter.post(
+  '/group-no-dropdown-for-hybrid-photo-master',
+  AuthMiddleware,
+  group_no_dropdown_for_hybrid_photo_master
+);
 
 export default photoRouter;

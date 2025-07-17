@@ -10,6 +10,7 @@ import { dynamic_filter } from '../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import generatePDFBuffer from '../../../utils/generatePDF/generatePDFBuffer.js';
 import moment from 'moment';
+import photoModel from '../../../database/schema/masters/photo.schema.js';
 
 export const add_decorative_order = catchAsync(async (req, res) => {
   const { order_details, item_details } = req.body;
@@ -54,13 +55,34 @@ export const add_decorative_order = catchAsync(async (req, res) => {
       );
     }
 
-    const updated_item_details = item_details?.map((item) => {
-      item.order_id = order_details_data?._id;
-      item.product_category = order_details_data?.base_type;
-      item.created_by = userDetails?._id;
-      item.updated_by = userDetails?._id;
-      return item;
-    });
+    const updated_item_details = [];
+    for (const item of item_details) {
+      // Validate photo availability - await properly in loop
+      const photoUpdate = await photoModel.findOneAndUpdate(
+        {
+          _id: item.photo_number_id,
+          photo_number: item.photo_number,
+          no_sheet: { $gte: item.no_of_sheets }
+        },
+        { $inc: { no_sheet: -item.no_of_sheets } },
+        { session, new: true }
+      );
+
+      if (!photoUpdate) {
+        throw new ApiError(
+          `Photo number ${item?.photo_number} does not have enough sheets.`,
+          StatusCodes.BAD_REQUEST
+        );
+      }
+
+      updated_item_details.push({
+        ...item,
+        order_id: order_details_data._id,
+        product_category: item.base_type,
+        created_by: userDetails._id,
+        updated_by: userDetails._id
+      });
+    }
 
     const create_order_result =
       await decorative_order_item_details_model?.insertMany(
@@ -131,6 +153,30 @@ export const update_decorative_order = catchAsync(async (req, res) => {
         StatusCodes.BAD_REQUEST
       );
     }
+
+    const order_items_details = await decorative_order_item_details_model?.find(
+      { order_id: order_details_result?._id },
+      { _id: 1, photo_number_id: 1, photo_number: 1, no_of_sheets: 1 },
+      { session }
+    );
+
+    for (const item of order_items_details) {
+      const update_photo_sheets = await photoModel.updateOne({
+        _id: item.photo_number_id,
+        photo_number: item.photo_number,
+      }, {
+        $inc: { no_sheet: item.no_of_sheets }
+      },{session});
+
+      if (!update_photo_sheets?.acknowledged) {
+        throw new ApiError(
+          `Photo number ${item?.photo_number} does not have enough sheets.`,
+          StatusCodes.BAD_REQUEST
+        );
+      }
+    }
+
+    throw "pppppppppp"
 
     const delete_order_items =
       await decorative_order_item_details_model?.deleteMany(
