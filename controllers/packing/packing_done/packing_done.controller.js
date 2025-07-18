@@ -593,3 +593,30 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
   );
   return res.status(StatusCodes.OK).json(response);
 });
+
+export const fetch_single_packing_done_item = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  if (!id) {
+    throw new ApiError('Packing Done ID is required.', StatusCodes.BAD_REQUEST);
+  }
+  if (!isValidObjectId(id)) {
+    throw new ApiError('Invalid Packing ID.', StatusCodes.BAD_REQUEST);
+  };
+
+  const pipeline = [
+    { $match: { _id: mongoose.Types.ObjectId.createFromHexString(id) } },
+    {
+      $lookup: {
+        from: 'packing_done_items',
+        localField: '_id',
+        foreignField: 'packing_done_other_details_id',
+        as: 'packing_done_item_details',
+      }
+    }
+  ];
+
+  const result = await packing_done_other_details_model.aggregate(pipeline);
+  const response = new ApiResponse(StatusCodes?.OK, 'Packing Done Items Fetched Successfully', result);
+
+  return res.status(response.statusCode).json(response);
+})
