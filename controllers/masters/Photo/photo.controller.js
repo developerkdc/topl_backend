@@ -175,7 +175,6 @@ export const updatePhoto = catchAsync(async (req, res, next) => {
         throw error;
       }
     }
-    console.log('other_details : ', other_details);
     const photoData = {
       ...other_details,
       photo_number: photo_number,

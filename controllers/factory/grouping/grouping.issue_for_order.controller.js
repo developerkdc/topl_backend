@@ -185,9 +185,9 @@ export const issue_for_tapping_from_grouping_for_order = catchAsync(async (req, 
 
 
     // Deduct from available sheets from photo master
-    const order_photo_number_id = order_item_details?.photo_number_id;
+    const order_photo_number_id = order_item_details?.photo_number_id?.toString();
     const order_photo_number = order_item_details?.photo_number;
-    const group_photo_number_id = data?.photo_no_id;
+    const group_photo_number_id = data?.photo_no_id?.toString();
     const group_photo_number = data?.photo_no;
 
     if (order_photo_number_id && order_photo_number) {
@@ -195,8 +195,8 @@ export const issue_for_tapping_from_grouping_for_order = catchAsync(async (req, 
         // Validate photo availability - await properly in loop
         const photoUpdate = await photoModel.findOneAndUpdate(
           {
-            _id: order_photo_number_id,
-            photo_number: order_photo_number,
+            _id: group_photo_number_id,
+            photo_number: group_photo_number,
             avaliable_no_of_sheets: { $gte: issue_no_of_sheets }
           },
           { $inc: { avaliable_no_of_sheets: -issue_no_of_sheets } },
@@ -205,7 +205,7 @@ export const issue_for_tapping_from_grouping_for_order = catchAsync(async (req, 
 
         if (!photoUpdate) {
           throw new ApiError(
-            `Photo number ${order_photo_number} does not have enough sheets.`,
+            `Photo number ${group_photo_number} does not have enough sheets.`,
             StatusCodes.BAD_REQUEST
           );
         }

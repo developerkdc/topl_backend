@@ -12,6 +12,7 @@ import ApiResponse from '../../../../utils/ApiResponse.js';
 import grouping_done_history_model from '../../../../database/schema/factory/grouping/grouping_done_history.schema.js';
 import { DynamicSearch } from '../../../../utils/dynamicSearch/dynamic.js';
 import { dynamic_filter } from '../../../../utils/dymanicFilter.js';
+import photoModel from '../../../../database/schema/masters/photo.schema.js';
 
 export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(
   async (req, res, next) => {
@@ -400,24 +401,24 @@ export const revert_issue_for_tapping_item = catchAsync(
           }
         ];
 
-        const fetch_issue_for_tapping_item_details = await issue_for_tapping_model.aggregate([
-          { $match: { _id: mongoose.Types.ObjectId(issue_for_tapping_id) } },
+        const [fetch_issue_for_tapping_item_details] = await issue_for_tapping_model.aggregate([
+          { $match: { _id: new mongoose.Types.ObjectId(issue_for_tapping_id) } },
           aggGroupNoLookup,
           aggGroupNoUnwind,
-          aggOrderRelatedData,
+          ...aggOrderRelatedData,
         ]);
 
-        const order_photo_number_id = fetch_issue_for_tapping_item_details?.order_item_details?.photo_number_id;
+        const order_photo_number_id = fetch_issue_for_tapping_item_details?.order_item_details?.photo_number_id?.toString();
         const order_photo_number = fetch_issue_for_tapping_item_details?.order_item_details?.photo_number;
-        const group_photo_number_id = fetch_issue_for_tapping_item_details?.data?.photo_no_id;
-        const group_photo_number = fetch_issue_for_tapping_item_details?.data?.photo_no;
+        const group_photo_number_id = fetch_issue_for_tapping_item_details?.grouping_done_items_details?.photo_no_id?.toString();
+        const group_photo_number = fetch_issue_for_tapping_item_details?.grouping_done_items_details?.photo_no;
 
         if (order_photo_number_id && order_photo_number) {
           if ((order_photo_number_id !== group_photo_number_id) || (order_photo_number !== group_photo_number)) {
             // Validate photo availability - await properly in loop
             const update_photo_sheets = await photoModel.updateOne({
-              _id: order_photo_number_id,
-              photo_number: order_photo_number,
+              _id: group_photo_number_id,
+              photo_number: group_photo_number,
             }, {
               $inc: { avaliable_no_of_sheets: fetch_issue_for_tapping_item_details?.no_of_sheets }
             }, { session });
