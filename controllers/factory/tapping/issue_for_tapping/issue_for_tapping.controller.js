@@ -420,7 +420,7 @@ export const revert_issue_for_tapping_item = catchAsync(
               _id: group_photo_number_id,
               photo_number: group_photo_number,
             }, {
-              $inc: { avaliable_no_of_sheets: fetch_issue_for_tapping_item_details?.no_of_sheets }
+              $inc: { available_no_of_sheets: fetch_issue_for_tapping_item_details?.no_of_sheets }
             }, { session });
 
             if (!update_photo_sheets?.acknowledged) {

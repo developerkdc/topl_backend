@@ -197,9 +197,9 @@ export const issue_for_tapping_from_grouping_for_order = catchAsync(async (req, 
           {
             _id: group_photo_number_id,
             photo_number: group_photo_number,
-            avaliable_no_of_sheets: { $gte: issue_no_of_sheets }
+            available_no_of_sheets: { $gte: issue_no_of_sheets }
           },
-          { $inc: { avaliable_no_of_sheets: -issue_no_of_sheets } },
+          { $inc: { available_no_of_sheets: -issue_no_of_sheets } },
           { session, new: true }
         );
 

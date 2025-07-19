@@ -98,7 +98,7 @@ const photoSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-    avaliable_no_of_sheets: {
+    available_no_of_sheets: {
       type: Number,
       default: function(){
         return this.no_of_sheets;

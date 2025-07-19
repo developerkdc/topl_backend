@@ -172,7 +172,7 @@ export const update_series_order = catchAsync(async (req, res) => {
         _id: item.photo_number_id,
         photo_number: item.photo_number,
       }, {
-        $inc: { avaliable_no_of_sheets: item.no_of_sheets }
+        $inc: { available_no_of_sheets: item.no_of_sheets }
       }, { session });
 
       if (!update_photo_sheets?.acknowledged) {
@@ -206,9 +206,9 @@ export const update_series_order = catchAsync(async (req, res) => {
         {
           _id: item.photo_number_id,
           photo_number: item.photo_number,
-          avaliable_no_of_sheets: { $gte: item.no_of_sheets }
+          available_no_of_sheets: { $gte: item.no_of_sheets }
         },
-        { $inc: { avaliable_no_of_sheets: -item.no_of_sheets } },
+        { $inc: { available_no_of_sheets: -item.no_of_sheets } },
         { session, new: true }
       );
 
