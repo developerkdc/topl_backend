@@ -13,6 +13,7 @@ import { issues_for_status } from '../../../database/Utils/constants/constants.j
 import issue_for_tapping_model from '../../../database/schema/factory/tapping/issue_for_tapping/issue_for_tapping.schema.js';
 import { OrderModel } from '../../../database/schema/order/orders.schema.js';
 import grouping_done_history_model from '../../../database/schema/factory/grouping/grouping_done_history.schema.js';
+import photoModel from '../../../database/schema/masters/photo.schema.js';
 
 const order_items_collections = {
   [order_category.decorative]: "decorative_order_item_details",
@@ -160,7 +161,6 @@ export const issue_for_tapping_from_grouping_for_order = catchAsync(async (req, 
       );
     }
 
-
     const fetch_grouping_done_item_details =
       await grouping_done_items_details_model
         .findOne({ _id: grouping_done_item_id })
@@ -178,10 +178,40 @@ export const issue_for_tapping_from_grouping_for_order = catchAsync(async (req, 
       available_details?.no_of_sheets - issue_no_of_sheets;
     if (no_of_sheets_available < 0) {
       throw new ApiError(
-        'Not enough sheets available',
+        'Not enough sheets available in grouping',
         StatusCodes.BAD_REQUEST
       );
     }
+
+
+    // Deduct from available sheets from photo master
+    const order_photo_number_id = order_item_details?.photo_number_id?.toString();
+    const order_photo_number = order_item_details?.photo_number;
+    const group_photo_number_id = data?.photo_no_id?.toString();
+    const group_photo_number = data?.photo_no;
+
+    if (order_photo_number_id && order_photo_number) {
+      if ((order_photo_number_id !== group_photo_number_id) || (order_photo_number !== group_photo_number)) {
+        // Validate photo availability - await properly in loop
+        const photoUpdate = await photoModel.findOneAndUpdate(
+          {
+            _id: group_photo_number_id,
+            photo_number: group_photo_number,
+            available_no_of_sheets: { $gte: issue_no_of_sheets }
+          },
+          { $inc: { available_no_of_sheets: -issue_no_of_sheets } },
+          { session, new: true }
+        );
+
+        if (!photoUpdate) {
+          throw new ApiError(
+            `Photo number ${group_photo_number} does not have enough sheets.`,
+            StatusCodes.BAD_REQUEST
+          );
+        }
+      }
+    }
+
 
     const grouping_item_sqm = available_details?.sqm;
     const tapping_sqm = Number(

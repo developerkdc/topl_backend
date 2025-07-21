@@ -1582,7 +1582,9 @@ export const group_no_dropdown_for_hybrid_photo_master = catchAsync(
           group_no: 1,
           photo_no: 1,
           photo_no_id: 1,
-          item_subcategories_details: 1
+          available_details: 1,
+          no_of_sheets: 1,
+          // item_subcategories_details: 1
         }
       }
     ]);
