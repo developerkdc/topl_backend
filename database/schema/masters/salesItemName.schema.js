@@ -229,8 +229,9 @@ const salesItemNameSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-salesItemNameSchema.index({ photo_number: 1 }, { unique: true });
+salesItemNameSchema.index({ photo_number: 1 });
 salesItemNameSchema.index({ sr_no: 1 }, { unique: true });
+salesItemNameSchema.index({ sales_item_name: 1 }, { unique: true });
 salesItemNameSchema.index({ created_by: 1 });
 salesItemNameSchema.index({ updated_by: 1 });
 

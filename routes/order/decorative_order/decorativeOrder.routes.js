@@ -6,6 +6,7 @@ import {
   fetch_all_decorative_order_items,
   fetch_all_decorative_order_items_by_order_id,
   downloadPDF,
+  getPreviousRate,
 } from '../../../controllers/order/decorative_order/decorative_order.controller.js';
 import AuthMiddleware from '../../../middlewares/verifyToken.js';
 
@@ -36,6 +37,11 @@ decorativeOrderRouter.get(
   '/download/:id',
   AuthMiddleware,
   downloadPDF
+);
+decorativeOrderRouter.get(
+  '/get-previous-rate',
+  AuthMiddleware,
+  getPreviousRate
 );
 
 export default decorativeOrderRouter;
