@@ -195,6 +195,10 @@ const dispatchSchema = new mongoose.Schema({
     type: String,
     default: null,
   },
+  acknowledgement_date: {
+    type: Date,
+    default: null,
+  },
   eway_bill_no: {
     type: String,
     default: null,
