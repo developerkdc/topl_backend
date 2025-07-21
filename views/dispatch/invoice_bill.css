@@ -1,0 +1,25 @@
+*{
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.main-container{
+    border: 1px solid black;
+}
+
+.address-tax-invoice{
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+}
+
+.tax-invoice-header{
+    text-align: center;
+}
+
+.tax-details{
+    display: flex;
+    justify-content: space-between;
+    /* padding: 10px; */
+}
