@@ -12,7 +12,7 @@ import {
   updatePhotoStatus,
 } from '../../../controllers/masters/Photo/photo.controller.js';
 import { MulterFunction } from '../../../config/multer/multer.js';
-import { addSalesItemNameModel } from '../../../controllers/masters/SalesItemName/salesItemName.controller.js';
+import { addSalesItemNameModel, dropdownSalesItemName } from '../../../controllers/masters/SalesItemName/salesItemName.controller.js';
 
 const salesItemNameRouter = express.Router();
 
@@ -36,6 +36,7 @@ salesItemNameRouter.post('/add-salesItemName', AuthMiddleware, addSalesItemNameM
 // salesItemNameRouter.get('/single-photo/:id', AuthMiddleware, fetchSinglePhoto);
 // salesItemNameRouter.post('/list-photo', AuthMiddleware, fetchPhotoList);
 // salesItemNameRouter.post('/list-photo-album', AuthMiddleware, fetchPhotoAlbumList);
+
 // salesItemNameRouter.post(
 //   '/download-photo-album-zip',
 //   AuthMiddleware,
@@ -48,6 +49,6 @@ salesItemNameRouter.post('/add-salesItemName', AuthMiddleware, addSalesItemNameM
 //   download_excel_photo_album
 // );
 
-// salesItemNameRouter.get('/dropdown-photo', AuthMiddleware, dropdownPhoto);
+salesItemNameRouter.post('/dropdown-sales-item-name', AuthMiddleware, dropdownSalesItemName);
 
 export default salesItemNameRouter;

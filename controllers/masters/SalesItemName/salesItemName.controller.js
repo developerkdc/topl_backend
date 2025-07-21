@@ -24,6 +24,19 @@ export const addSalesItemNameModel = catchAsync(async (req, res, next) => {
       return next(new ApiError('Sales Item Name is required', 400));
     }
 
+    const salesItemNameExist = await salesItemNameModel.find({
+      sales_item_name: sales_item_name,
+    });
+
+    if (salesItemNameExist && salesItemNameExist?.length > 0) {
+      return next(
+        new ApiError(
+          'Sales Item Name already exist. Please select from dropdown.',
+          400
+        )
+      );
+    }
+
     const maxNumber = await salesItemNameModel.aggregate([
       {
         $group: {
@@ -36,7 +49,7 @@ export const addSalesItemNameModel = catchAsync(async (req, res, next) => {
     const maxSrNo = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1;
 
     const photoData = {
-      ...other_details,
+      ...req.body,
       sr_no: maxSrNo,
       created_by: authUserDetail?._id,
       updated_by: authUserDetail?._id,
@@ -51,12 +64,12 @@ export const addSalesItemNameModel = catchAsync(async (req, res, next) => {
 
     await session.commitTransaction();
     const response = new ApiResponse(
-      201,
-      'Photo Added Successfully',
+      200,
+      'Sales Item Name Added Successfully',
       savedSalesItemName
     );
 
-    return res.status(201).json(response);
+    return res.status(200).json(response);
   } catch (error) {
     await session.abortTransaction();
     throw error;
@@ -275,7 +288,7 @@ export const updatePhotoStatus = catchAsync(async (req, res, next) => {
   return res.status(201).json(response);
 });
 
-export const fetchPhotoList = catchAsync(async (req, res, next) => {
+export const fetchSalesItemNameList = catchAsync(async (req, res, next) => {
   const {
     page = 1,
     limit = 10,
@@ -515,26 +528,21 @@ export const fetchSinglePhoto = catchAsync(async (req, res, next) => {
   return res.status(200).json(response);
 });
 
-export const dropdownPhoto = catchAsync(async (req, res, next) => {
-  const photoList = await salesItemNameModel.aggregate([
+export const dropdownSalesItemName = catchAsync(async (req, res, next) => {
+  const matchQuery = {
+    status: true,
+  };
+
+  const SalesItemNameList = await salesItemNameModel.aggregate([
     {
-      $match: {
-        status: true,
-      },
-    },
-    {
-      $project: {
-        photo_number: 1,
-        'images.destination': 1,
-        'images.filename': 1,
-      },
+      $match: matchQuery,
     },
   ]);
 
   const response = new ApiResponse(
     200,
-    'Photo Dropdown Fetched Successfully',
-    photoList
+    'Sales Item Name Dropdown Fetched Successfully',
+    SalesItemNameList
   );
   return res.status(200).json(response);
 });
