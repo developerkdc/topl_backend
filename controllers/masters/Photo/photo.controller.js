@@ -10,6 +10,7 @@ import ApiError from '../../../utils/errors/apiError.js';
 import catchAsync from '../../../utils/errors/catchAsync.js';
 import { StatusCodes } from '../../../utils/constants.js';
 import path from 'path';
+import { createPhotoAlbumExcel } from '../../../config/downloadExcel/Logs/Masters/photoAlbum.js';
 import { sub_category } from '../../../database/Utils/constants/constants.js';
 
 export const addPhoto = catchAsync(async (req, res, next) => {
@@ -772,4 +773,99 @@ export const downloadPhotoAlbumZip = catchAsync(async (req, res, next) => {
   }
 
   await archive.finalize();
+});
+
+export const download_excel_photo_album = catchAsync(async (req, res, next) => {
+  const { sortBy = 'updatedAt', sort = 'desc', search = '' } = req.query;
+
+  const {
+    string,
+    boolean,
+    numbers,
+    arrayField = [],
+  } = req?.body?.searchFields || {};
+
+  const filter = req.body?.filter;
+
+  let search_query = {};
+
+  if (search !== '' && req?.body?.searchFields) {
+    const search_data = DynamicSearch(
+      search,
+      boolean,
+      numbers,
+      string,
+      arrayField
+    );
+    if (search_data?.length === 0) {
+      return res.status(404).json({
+        statusCode: 404,
+        status: false,
+        data: { data: [] },
+        message: 'Results Not Found',
+      });
+    }
+    search_query = search_data;
+  }
+
+  const filterData = dynamic_filter(filter);
+  const match_query = { ...filterData, ...search_query };
+
+  const aggMatch = { $match: match_query };
+  const aggCreatedByLookup = {
+    $lookup: {
+      from: 'users',
+      localField: 'created_by',
+      foreignField: '_id',
+      pipeline: [
+        {
+          $project: {
+            user_name: 1,
+          },
+        },
+      ],
+      as: 'created_by',
+    },
+  };
+  const aggUpdatedByLookup = {
+    $lookup: {
+      from: 'users',
+      localField: 'updated_by',
+      foreignField: '_id',
+      pipeline: [
+        {
+          $project: {
+            user_name: 1,
+          },
+        },
+      ],
+      as: 'updated_by',
+    },
+  };
+
+  const aggSort = { $sort: { [sortBy]: sort === 'desc' ? -1 : 1 } };
+
+  const pipeline = [
+    aggMatch,
+    aggCreatedByLookup,
+    aggUpdatedByLookup,
+    {
+      $facet: {
+        data: [aggSort],
+        // totalCount: [{ $count: 'count' }],
+      },
+    },
+  ];
+
+  const result = await photoModel.aggregate(pipeline);
+  const photoData = result[0].data;
+  // const totalCount = result[0].totalCount?.[0]?.count || 0;
+  // const totalPages = Math.ceil(totalCount / limit);
+  await createPhotoAlbumExcel(photoData, req, res);
+  // return res.status(200).json(
+  //   new ApiResponse(200, 'Photo Data Fetched Successfully', {
+  //     data: photoData,
+  //     // totalPages,
+  //   })
+  // );
 });

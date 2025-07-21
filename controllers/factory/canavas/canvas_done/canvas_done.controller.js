@@ -534,12 +534,12 @@ export const listing_canvas_history = catchAsync(async (req, res) => {
 
   const aggLookUpIssuedDetails = {
     $lookup: {
-      from: "issue_for_canvas_details_view",
-      localField: "issue_for_canvas_id",
-      foreignField: "_id",
-      as: "issue_for_canvas_details"
-    }
-  }
+      from: 'issue_for_canvas_details_view',
+      localField: 'issue_for_canvas_id',
+      foreignField: '_id',
+      as: 'issue_for_canvas_details',
+    },
+  };
 
   const aggCreatedByLookup = {
     $lookup: {
@@ -632,7 +632,8 @@ export const listing_canvas_history = catchAsync(async (req, res) => {
     aggLimit,
   ]; // aggregation pipiline
 
-  const canvas_history_list = await canvas_history_model.aggregate(listAggregate);
+  const canvas_history_list =
+    await canvas_history_model.aggregate(listAggregate);
 
   const aggCount = {
     $count: 'totalCount',
@@ -640,8 +641,7 @@ export const listing_canvas_history = catchAsync(async (req, res) => {
 
   const totalAggregate = [...listAggregate?.slice(0, -2), aggCount]; // total aggregation pipiline
 
-  const [totalDocument] =
-    await canvas_history_model.aggregate(totalAggregate);
+  const [totalDocument] = await canvas_history_model.aggregate(totalAggregate);
 
   const totalPages = Math.ceil((totalDocument?.totalCount || 0) / limit);
 
@@ -655,9 +655,6 @@ export const listing_canvas_history = catchAsync(async (req, res) => {
   );
   return res.status(200).json(response);
 });
-
-
-
 
 // Canvas Done Export Api
 
@@ -812,15 +809,10 @@ export const download_excel_canvas_done = catchAsync(async (req, res) => {
     // aggLimit,
   ]; // aggregation pipiline
 
-  const data =
-    await canvas_done_details_model.aggregate(listAggregate);
+  const data = await canvas_done_details_model.aggregate(listAggregate);
 
   await createFactoryCanvasDoneExcel(data, req, res);
 });
-
-
-
-
 
 export const download_excel_canvas_history = catchAsync(async (req, res) => {
   const {
@@ -876,12 +868,12 @@ export const download_excel_canvas_history = catchAsync(async (req, res) => {
 
   const aggLookUpIssuedDetails = {
     $lookup: {
-      from: "issue_for_canvas_details_view",
-      localField: "issue_for_canvas_id",
-      foreignField: "_id",
-      as: "issue_for_canvas_details"
-    }
-  }
+      from: 'issue_for_canvas_details_view',
+      localField: 'issue_for_canvas_id',
+      foreignField: '_id',
+      as: 'issue_for_canvas_details',
+    },
+  };
 
   const aggCreatedByLookup = {
     $lookup: {
@@ -975,6 +967,5 @@ export const download_excel_canvas_history = catchAsync(async (req, res) => {
   ]; // aggregation pipiline
 
   const data = await canvas_history_model.aggregate(listAggregate);
-  await createFactoryCanvasHistoryExcel(data,req,res);
-  
+  await createFactoryCanvasHistoryExcel(data, req, res);
 });
