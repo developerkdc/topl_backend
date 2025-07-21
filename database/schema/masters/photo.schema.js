@@ -94,9 +94,15 @@ const photoSchema = new mongoose.Schema(
       type: Number,
       default: null,
     },
-    no_sheet: {
+    no_of_sheets: {
       type: Number,
-      default: null,
+      default: 0,
+    },
+    available_no_of_sheets: {
+      type: Number,
+      default: function(){
+        return this.no_of_sheets;
+      },
     },
     timber_colour_id: {
       type: mongoose.Schema.Types.ObjectId,
