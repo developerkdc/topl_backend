@@ -779,7 +779,7 @@ export const edit_slicing_done = catchAsync(async (req, res, next) => {
     //add wastage
     if (
       issue_for_slicing_type?.type?.toLowerCase() ===
-        issue_for_slicing.wastage?.toLowerCase() &&
+      issue_for_slicing.wastage?.toLowerCase() &&
       wastage_details
     ) {
       const wastage_details_data = {
@@ -801,7 +801,7 @@ export const edit_slicing_done = catchAsync(async (req, res, next) => {
     // add available
     if (
       issue_for_slicing_type?.type?.toLowerCase() ===
-        issue_for_slicing.balance_flitch?.toLowerCase() &&
+      issue_for_slicing.balance_flitch?.toLowerCase() &&
       available_details
     ) {
       const re_slicing_details_data = {

@@ -139,7 +139,7 @@ class Revert_Issued_Factory_Item {
 
     if (
       is_item_editable?.available_details?.no_of_sheets ===
-        is_item_editable?.no_of_sheets &&
+      is_item_editable?.no_of_sheets &&
       // is_item_editable?.issue_status === null
       (this.issued_item_details?.issued_from ===
         item_issued_from?.pressing_factory ||
