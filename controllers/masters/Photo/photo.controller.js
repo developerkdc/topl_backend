@@ -1,5 +1,6 @@
 import fs from 'fs';
 import mongoose from 'mongoose';
+import archiver from 'archiver';
 import { grouping_done_items_details_model } from '../../../database/schema/factory/grouping/grouping_done.schema.js';
 import photoModel from '../../../database/schema/masters/photo.schema.js';
 import ApiResponse from '../../../utils/ApiResponse.js';
@@ -8,6 +9,9 @@ import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import ApiError from '../../../utils/errors/apiError.js';
 import catchAsync from '../../../utils/errors/catchAsync.js';
 import { StatusCodes } from '../../../utils/constants.js';
+import path from 'path';
+import { createPhotoAlbumExcel } from '../../../config/downloadExcel/Logs/Masters/photoAlbum.js';
+import { sub_category } from '../../../database/Utils/constants/constants.js';
 
 export const addPhoto = catchAsync(async (req, res, next) => {
   let { photo_number } = req.body;
@@ -76,21 +80,35 @@ export const addPhoto = catchAsync(async (req, res, next) => {
       return next(new ApiError('Failed to insert data', 400));
     }
 
-    const isGroupExist = await grouping_done_items_details_model.findOne({
-      group_no: other_details?.group_no,
-    });
+    let group_no_id = [savePhotoData?.group_id];
+    if (savePhotoData?.sub_category_type === sub_category?.hybrid) {
+      const hybrid_group_no = savePhotoData?.hybrid_group_no?.map((e) => e?._id);
+      group_no_id = [...group_no_id, ...hybrid_group_no]
+    }
+    const isGroupExist = await grouping_done_items_details_model.find({
+      _id: { $in: group_no_id },
+    }).session(session);
 
-    if (!isGroupExist) {
-      return next(new ApiError('Group not exist', 400));
+    if (!isGroupExist || isGroupExist?.length <= 0) {
+      return next(new ApiError('Group data not found', 400));
     }
 
-    const GroupDataUpdated = await grouping_done_items_details_model.updateOne(
-      { _id: isGroupExist?._id },
-      { photo_no: savedData?.photo_number, photo_no_id: savedData?._id },
+    const GroupDataUpdated = await grouping_done_items_details_model.updateMany(
+      { _id: { $in: group_no_id } },
+      {
+        $set: {
+          photo_no: savePhotoData?.photo_number,
+          photo_no_id: savePhotoData?._id,
+        },
+      },
       { session }
     );
 
-    if (!GroupDataUpdated) {
+    if (GroupDataUpdated.matchedCount <= 0) {
+      return next(new ApiError('Group not found', 400));
+    }
+
+    if (!GroupDataUpdated.acknowledged || GroupDataUpdated.modifiedCount <= 0) {
       return next(new ApiError('Failed to update group', 400));
     }
     await session.commitTransaction();
@@ -158,7 +176,6 @@ export const updatePhoto = catchAsync(async (req, res, next) => {
         throw error;
       }
     }
-    console.log('other_details : ', other_details);
     const photoData = {
       ...other_details,
       photo_number: photo_number,
@@ -166,7 +183,7 @@ export const updatePhoto = catchAsync(async (req, res, next) => {
       updated_by: authUserDetail?._id,
     };
 
-    const fetchPhotoData = await photoModel.findOne({ _id: id });
+    const fetchPhotoData = await photoModel.findOne({ _id: id }).session(session);
     if (bannerImage) {
       photoData.banner_image = bannerImage;
       if (fs.existsSync(fetchPhotoData?.banner_image?.path)) {
@@ -174,7 +191,7 @@ export const updatePhoto = catchAsync(async (req, res, next) => {
       }
     }
 
-    const updatePhotoData = await photoModel.updateOne(
+    const updatePhotoData = await photoModel.findOneAndUpdate(
       { _id: id },
       {
         $set: photoData,
@@ -184,14 +201,13 @@ export const updatePhoto = catchAsync(async (req, res, next) => {
       },
       {
         session,
+        new: true,
+        runValidators: true,
       }
     );
 
-    if (updatePhotoData.matchedCount <= 0) {
-      return next(new ApiError('Document not found', 404));
-    }
-    if (!updatePhotoData.acknowledged || updatePhotoData.modifiedCount <= 0) {
-      return next(new ApiError('Failed to update document', 400));
+    if (!updatePhotoData) {
+      return next(new ApiError('Photo Details not found', 404));
     }
 
     //remove images logic
@@ -217,52 +233,61 @@ export const updatePhoto = catchAsync(async (req, res, next) => {
       });
     }
 
-    if (other_details?.group_no !== fetchPhotoData?.group_no) {
-      //setting current group no having field photo number as null
-      const isCurrentGroupExist =
-        await grouping_done_items_details_model.findOne({
-          group_no: fetchPhotoData?.group_no,
-        });
-      if (!isCurrentGroupExist) {
-        return next(new ApiError('Current Group not exist', 400));
-      }
-
-      const currentGroupDataUpdated =
-        await grouping_done_items_details_model.updateOne(
-          { _id: isCurrentGroupExist?._id },
-          { photo_no: null, photo_no_id: null },
-          { session }
-        );
-
-      if (
-        !currentGroupDataUpdated?.acknowledged ||
-        currentGroupDataUpdated?.modifiedCount <= 0
-      ) {
-        return next(new ApiError('Failed to update Current group', 400));
-      }
-
-      const isGroupExist = await grouping_done_items_details_model.findOne({
-        group_no: other_details?.group_no,
-      });
-
-      if (!isGroupExist) {
-        return next(new ApiError('Group not exist', 400));
-      }
-
-      const GroupDataUpdated =
-        await grouping_done_items_details_model.updateOne(
-          { _id: isGroupExist?._id },
-          {
-            photo_no: fetchPhotoData?.photo_number,
-            photo_no_id: fetchPhotoData?._id,
-          },
-          { session }
-        );
-
-      if (!GroupDataUpdated) {
-        return next(new ApiError('Failed to update group', 400));
-      }
+    let prev_group_no_id = [fetchPhotoData?.group_id];
+    if (fetchPhotoData?.sub_category_type === sub_category?.hybrid) {
+      const hybrid_group_no = fetchPhotoData?.hybrid_group_no?.map((e) => e?._id);
+      prev_group_no_id = [...prev_group_no_id, ...hybrid_group_no]
     }
+    const prevGroupDataUpdated = await grouping_done_items_details_model.updateMany(
+      { _id: { $in: prev_group_no_id } },
+      {
+        $set: {
+          photo_no: null,
+          photo_no_id: null,
+        },
+      },
+      { session }
+    );
+
+    if (prevGroupDataUpdated.matchedCount <= 0) {
+      return next(new ApiError('Previous Group not found', 400));
+    }
+    if (!prevGroupDataUpdated.acknowledged || prevGroupDataUpdated.modifiedCount <= 0) {
+      return next(new ApiError('Failed to update previous group', 400));
+    }
+
+    let group_no_id = [updatePhotoData?.group_id];
+    if (updatePhotoData?.sub_category_type === sub_category?.hybrid) {
+      const hybrid_group_no = updatePhotoData?.hybrid_group_no?.map((e) => e?._id);
+      group_no_id = [...group_no_id, ...hybrid_group_no]
+    }
+    const isGroupExist = await grouping_done_items_details_model.find({
+      _id: { $in: group_no_id },
+    }).session(session);
+
+    if (!isGroupExist || isGroupExist?.length <= 0) {
+      return next(new ApiError('Group data not found', 400));
+    }
+
+    const GroupDataUpdated = await grouping_done_items_details_model.updateMany(
+      { _id: { $in: group_no_id } },
+      {
+        $set: {
+          photo_no: updatePhotoData?.photo_number,
+          photo_no_id: updatePhotoData?._id,
+        },
+      },
+      { session }
+    );
+
+    if (GroupDataUpdated.matchedCount <= 0) {
+      return next(new ApiError('Group not found', 400));
+    }
+
+    if (!GroupDataUpdated.acknowledged || GroupDataUpdated.modifiedCount <= 0) {
+      return next(new ApiError('Failed to update group', 400));
+    }
+
     const response = new ApiResponse(
       200,
       'Photo Update Successfully',
@@ -580,4 +605,267 @@ export const dropdownPhoto = catchAsync(async (req, res, next) => {
     photoList
   );
   return res.status(200).json(response);
+});
+
+export const fetchPhotoAlbumList = catchAsync(async (req, res, next) => {
+  const { sortBy = 'updatedAt', sort = 'desc', search = '' } = req.query;
+
+  const {
+    string,
+    boolean,
+    numbers,
+    arrayField = [],
+  } = req?.body?.searchFields || {};
+
+  const filter = req.body?.filter;
+
+  const page = Math.max(1, parseInt(req.query.page) || 1);
+  const limit = Math.max(1, parseInt(req.query.limit) || 10);
+
+  let search_query = {};
+
+  if (search !== '' && req?.body?.searchFields) {
+    const search_data = DynamicSearch(
+      search,
+      boolean,
+      numbers,
+      string,
+      arrayField
+    );
+    if (search_data?.length === 0) {
+      return res.status(404).json({
+        statusCode: 404,
+        status: false,
+        data: { data: [] },
+        message: 'Results Not Found',
+      });
+    }
+    search_query = search_data;
+  }
+
+  const filterData = dynamic_filter(filter);
+  const match_query = { ...filterData, ...search_query };
+
+  const aggMatch = { $match: match_query };
+  const aggCreatedByLookup = {
+    $lookup: {
+      from: 'users',
+      localField: 'created_by',
+      foreignField: '_id',
+      pipeline: [
+        {
+          $project: {
+            user_name: 1,
+            user_type: 1,
+            dept_name: 1,
+            first_name: 1,
+            last_name: 1,
+            email_id: 1,
+            mobile_no: 1,
+          },
+        },
+      ],
+      as: 'created_by',
+    },
+  };
+  const aggUpdatedByLookup = {
+    $lookup: {
+      from: 'users',
+      localField: 'updated_by',
+      foreignField: '_id',
+      pipeline: [
+        {
+          $project: {
+            user_name: 1,
+            user_type: 1,
+            dept_name: 1,
+            first_name: 1,
+            last_name: 1,
+            email_id: 1,
+            mobile_no: 1,
+          },
+        },
+      ],
+      as: 'updated_by',
+    },
+  };
+
+  const aggSort = { $sort: { [sortBy]: sort === 'desc' ? -1 : 1 } };
+  // const aggSkip = { $skip: (page - 1) * limit };
+  // const aggLimit = { $limit: limit };
+
+  const pipeline = [
+    aggMatch,
+    aggCreatedByLookup,
+    aggUpdatedByLookup,
+    {
+      $facet: {
+        data: [aggSort],
+        totalCount: [{ $count: 'count' }],
+      },
+    },
+  ];
+
+  const result = await photoModel.aggregate(pipeline);
+  const photoData = result[0].data;
+  const totalCount = result[0].totalCount?.[0]?.count || 0;
+  const totalPages = Math.ceil(totalCount / limit);
+
+  return res.status(200).json(
+    new ApiResponse(200, 'Photo Data Fetched Successfully', {
+      data: photoData,
+      totalPages,
+    })
+  );
+});
+
+export const downloadPhotoAlbumZip = catchAsync(async (req, res, next) => {
+  const { selectedPhotos = [] } = req.body;
+
+  if (!Array.isArray(selectedPhotos) || selectedPhotos.length === 0) {
+    return res.status(400).json({
+      status: false,
+      message: 'No photos selected',
+    });
+  }
+
+  const photos = await photoModel.find({ _id: { $in: selectedPhotos } });
+
+  if (!photos || photos.length === 0) {
+    return res.status(404).json({
+      status: false,
+      message: 'No valid photos found',
+    });
+  }
+
+  // Set ZIP response headers
+  res.setHeader('Content-Type', 'application/zip');
+  res.setHeader('Content-Disposition', 'attachment; filename=photos.zip');
+
+  const archive = archiver('zip', { zlib: { level: 9 } });
+  archive.on('error', (err) => next(err));
+  archive.pipe(res);
+
+  for (let photo of photos) {
+    console.log(photo.photo_number);
+    const bannerImage = photo?.banner_image;
+
+    if (!bannerImage || !bannerImage.path || !bannerImage.filename) continue;
+
+    // Normalize the file path
+    const fullPath = path.join(
+      process.cwd(),
+      bannerImage?.path.replace(/\\/g, '/')
+    );
+
+    if (fs.existsSync(fullPath)) {
+      const ext = path.extname(
+        bannerImage.originalname || bannerImage.filename
+      );
+      const downloadFileName = `${photo?.photo_number}${ext}`;
+
+      archive.file(fullPath, {
+        name: downloadFileName,
+      });
+    } else {
+      console.warn(`File not found: ${fullPath}`);
+    }
+  }
+
+  await archive.finalize();
+});
+
+export const download_excel_photo_album = catchAsync(async (req, res, next) => {
+  const { sortBy = 'updatedAt', sort = 'desc', search = '' } = req.query;
+
+  const {
+    string,
+    boolean,
+    numbers,
+    arrayField = [],
+  } = req?.body?.searchFields || {};
+
+  const filter = req.body?.filter;
+
+  let search_query = {};
+
+  if (search !== '' && req?.body?.searchFields) {
+    const search_data = DynamicSearch(
+      search,
+      boolean,
+      numbers,
+      string,
+      arrayField
+    );
+    if (search_data?.length === 0) {
+      return res.status(404).json({
+        statusCode: 404,
+        status: false,
+        data: { data: [] },
+        message: 'Results Not Found',
+      });
+    }
+    search_query = search_data;
+  }
+
+  const filterData = dynamic_filter(filter);
+  const match_query = { ...filterData, ...search_query };
+
+  const aggMatch = { $match: match_query };
+  const aggCreatedByLookup = {
+    $lookup: {
+      from: 'users',
+      localField: 'created_by',
+      foreignField: '_id',
+      pipeline: [
+        {
+          $project: {
+            user_name: 1,
+          },
+        },
+      ],
+      as: 'created_by',
+    },
+  };
+  const aggUpdatedByLookup = {
+    $lookup: {
+      from: 'users',
+      localField: 'updated_by',
+      foreignField: '_id',
+      pipeline: [
+        {
+          $project: {
+            user_name: 1,
+          },
+        },
+      ],
+      as: 'updated_by',
+    },
+  };
+
+  const aggSort = { $sort: { [sortBy]: sort === 'desc' ? -1 : 1 } };
+
+  const pipeline = [
+    aggMatch,
+    aggCreatedByLookup,
+    aggUpdatedByLookup,
+    {
+      $facet: {
+        data: [aggSort],
+        // totalCount: [{ $count: 'count' }],
+      },
+    },
+  ];
+
+  const result = await photoModel.aggregate(pipeline);
+  const photoData = result[0].data;
+  // const totalCount = result[0].totalCount?.[0]?.count || 0;
+  // const totalPages = Math.ceil(totalCount / limit);
+  await createPhotoAlbumExcel(photoData, req, res);
+  // return res.status(200).json(
+  //   new ApiResponse(200, 'Photo Data Fetched Successfully', {
+  //     data: photoData,
+  //     // totalPages,
+  //   })
+  // );
 });

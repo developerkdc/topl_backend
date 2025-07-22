@@ -13,6 +13,7 @@ import { dynamic_filter } from '../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import generatePDFBuffer from '../../../utils/generatePDF/generatePDFBuffer.js';
 import moment from 'moment';
+import photoModel from '../../../database/schema/masters/photo.schema.js';
 
 export const add_decorative_order = catchAsync(async (req, res) => {
   const { order_details, item_details } = req.body;
@@ -57,13 +58,34 @@ export const add_decorative_order = catchAsync(async (req, res) => {
       );
     }
 
-    const updated_item_details = item_details?.map((item) => {
-      item.order_id = order_details_data?._id;
-      item.product_category = order_details_data?.base_type;
-      item.created_by = userDetails?._id;
-      item.updated_by = userDetails?._id;
-      return item;
-    });
+    const updated_item_details = [];
+    for (const item of item_details) {
+      // Validate photo availability - await properly in loop
+      const photoUpdate = await photoModel.findOneAndUpdate(
+        {
+          _id: item.photo_number_id,
+          photo_number: item.photo_number,
+          available_no_of_sheets: { $gte: item.no_of_sheets }
+        },
+        { $inc: { available_no_of_sheets: -item.no_of_sheets } },
+        { session, new: true }
+      );
+
+      if (!photoUpdate) {
+        throw new ApiError(
+          `Photo number ${item?.photo_number} does not have enough sheets.`,
+          StatusCodes.BAD_REQUEST
+        );
+      }
+
+      updated_item_details.push({
+        ...item,
+        order_id: order_details_data._id,
+        product_category: item.base_type,
+        created_by: userDetails._id,
+        updated_by: userDetails._id,
+      });
+    }
 
     const create_order_result =
       await decorative_order_item_details_model?.insertMany(
@@ -135,6 +157,28 @@ export const update_decorative_order = catchAsync(async (req, res) => {
       );
     }
 
+    const order_items_details = await decorative_order_item_details_model?.find(
+      { order_id: order_details_result?._id },
+      { _id: 1, photo_number_id: 1, photo_number: 1, no_of_sheets: 1 },
+      { session }
+    );
+
+    for (const item of order_items_details) {
+      const update_photo_sheets = await photoModel.updateOne({
+        _id: item.photo_number_id,
+        photo_number: item.photo_number,
+      }, {
+        $inc: { available_no_of_sheets: item?.no_of_sheets }
+      },{session});
+
+      if (!update_photo_sheets?.acknowledged) {
+        throw new ApiError(
+          `Photo number ${item?.photo_number} does not have enough sheets.`,
+          StatusCodes.BAD_REQUEST
+        );
+      }
+    }
+
     const delete_order_items =
       await decorative_order_item_details_model?.deleteMany(
         { order_id: order_details_result?._id },
@@ -151,15 +195,46 @@ export const update_decorative_order = catchAsync(async (req, res) => {
       );
     }
 
-    const updated_item_details = item_details?.map((item) => {
-      item.order_id = order_details_result?._id;
-      item.product_category = order_details_result?.base_type;
-      item.created_by = item.created_by ? item?.created_by : userDetails?._id;
-      item.updated_by = userDetails?._id;
-      item.createdAt = item.createdAt ? item?.createdAt : new Date();
-      item.updatedAt = new Date();
-      return item;
-    });
+    const updated_item_details = [];
+    for (const item of item_details) {
+      // Validate photo availability - await properly in loop
+      const photoUpdate = await photoModel.findOneAndUpdate(
+        {
+          _id: item.photo_number_id,
+          photo_number: item.photo_number,
+          available_no_of_sheets: { $gte: item.no_of_sheets }
+        },
+        { $inc: { available_no_of_sheets: -item.no_of_sheets } },
+        { session, new: true }
+      );
+
+      if (!photoUpdate) {
+        throw new ApiError(
+          `Photo number ${item?.photo_number} does not have enough sheets.`,
+          StatusCodes.BAD_REQUEST
+        );
+      }
+
+      updated_item_details.push({
+        ...item,
+        order_id : order_details_result?._id,
+        product_category : item?.base_type,
+        created_by : item.created_by ? item?.created_by : userDetails?._id,
+        updated_by : userDetails?._id,
+        createdAt : item.createdAt ? item?.createdAt : new Date(),
+        updatedAt : new Date(),
+      });
+    }
+
+    // const updated_item_details = item_details?.map((item) => {
+    //   item.order_id = order_details_result?._id;
+    //   item.product_category = order_details_result?.base_type;
+    //   item.created_by = item.created_by ? item?.created_by : userDetails?._id;
+    //   item.updated_by = userDetails?._id;
+    //   item.createdAt = item.createdAt ? item?.createdAt : new Date();
+    //   item.updatedAt = new Date();
+    //   return item;
+    // });
 
     const create_order_result =
       await decorative_order_item_details_model?.insertMany(
@@ -688,4 +763,81 @@ export const downloadPDF = catchAsync(async (req, res) => {
   });
 
   return res.status(StatusCodes.OK).end(pdfBuffer);
+});
+
+export const getPreviousRate = catchAsync(async (req, res, next) => {
+  const { sale_item_name, customer } = req.query;
+
+  const match_query = {
+    sale_item_name,
+  };
+
+  // final all item on based of sales item name
+
+  const aggLookupOrderDetails = {
+    $lookup: {
+      from: 'orders',
+      localField: 'order_id',
+      foreignField: '_id',
+      as: 'order_details',
+    },
+  };
+
+  const aggMatch = {
+    $match: {
+      ...match_query,
+    },
+  };
+
+  const aggUnwindOtherDetails = {
+    $unwind: {
+      path: '$order_details',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
+
+  const aggSort = {
+    $sort: {
+      [sortBy]: sort === 'desc' ? -1 : 1,
+    },
+  };
+
+  const aggSkip = {
+    $skip: (parseInt(page) - 1) * parseInt(limit),
+  };
+
+  const aggLimit = {
+    $limit: parseInt(limit),
+  };
+
+  const list_aggregate = [
+    aggMatch,
+    aggSort,
+  ];
+
+  const result =
+    await decorative_order_item_details_model?.aggregate(list_aggregate);
+
+  const aggCount = {
+    $count: 'totalCount',
+  };
+
+  const count_total_docs = [
+    aggMatch,
+  ];
+
+  const total_docs =
+    await decorative_order_item_details_model.aggregate(count_total_docs);
+
+  const totalPages = Math.ceil((total_docs[0]?.totalCount || 0) / limit);
+
+  const response = new ApiResponse(
+    StatusCodes?.OK,
+    'Data Fetched Successfully',
+    {
+      data: result,
+      totalPages: totalPages,
+    }
+  );
+  return res.status(StatusCodes?.OK).json(response);
 });

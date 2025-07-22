@@ -1,4 +1,5 @@
 import mongoose, { Schema } from 'mongoose';
+import { sub_category } from '../../Utils/constants/constants.js';
 
 const photoSchema = new mongoose.Schema(
   {
@@ -31,6 +32,10 @@ const photoSchema = new mongoose.Schema(
       trim: true,
       default: null,
     },
+    group_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
     group_no: {
       type: String,
       uppercase: true,
@@ -48,6 +53,35 @@ const photoSchema = new mongoose.Schema(
       trim: true,
       default: null,
     },
+    sub_category_type: {
+      type: String,
+      enum: {
+        values: [sub_category.natural, sub_category.hybrid],
+        message: `Sub-category type {{VALUE}}, must be one of ${[sub_category.natural, sub_category.hybrid].join(",")}`
+      },
+      required: [true, 'Subcategory type is required'],
+      trim: true,
+      uppercase: true,
+    },
+    hybrid_group_no: {
+      type: [
+        {
+          type: {
+            _id: {
+              type: mongoose.Schema.Types.ObjectId,
+              default: null,
+            },
+            group_no: {
+              type: String,
+              uppercase: true,
+              trim: true,
+              required: [true, 'Group No is required'],
+            },
+          },
+        },
+      ],
+      default: []
+    },
     length: {
       type: Number,
       default: null,
@@ -60,9 +94,15 @@ const photoSchema = new mongoose.Schema(
       type: Number,
       default: null,
     },
-    no_sheet: {
+    no_of_sheets: {
       type: Number,
-      default: null,
+      default: 0,
+    },
+    available_no_of_sheets: {
+      type: Number,
+      default: function(){
+        return this.no_of_sheets;
+      },
     },
     timber_colour_id: {
       type: mongoose.Schema.Types.ObjectId,

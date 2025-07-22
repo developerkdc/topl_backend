@@ -955,9 +955,9 @@ export const download_excel_factory_cnc_history = catchAsync(
       aggUpdatedByLookup,
       aggUpdatedByUnwind,
       aggMatch,
-      aggSort,
-      aggSkip,
-      aggLimit,
+      // aggSort,
+      // aggSkip,
+      // aggLimit,
     ]; // aggregation pipiline
 
     const data = await cnc_history_model.aggregate(listAggregate);

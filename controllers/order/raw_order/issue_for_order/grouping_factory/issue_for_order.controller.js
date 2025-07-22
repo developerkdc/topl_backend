@@ -47,12 +47,12 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
       throw new ApiError('Grouping Item Data not found.');
     }
 
-    if (grouping_item_data?.no_of_leaves <= 0) {
-      throw new ApiError(`No Available leaves found. `);
+    if (grouping_item_data?.no_of_sheets <= 0) {
+      throw new ApiError(`No Available sheets found. `);
     }
 
     //fetch all issued sheets for the order
-    const [validate_leaves_for_order] = await issue_for_order_model.aggregate([
+    const [validate_sheets_for_order] = await issue_for_order_model.aggregate([
       {
         $match: {
           order_item_id: order_item_data?._id,
@@ -71,7 +71,7 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
     //validate issued sqm with order no.of sqm
     if (
       Number(
-        validate_leaves_for_order?.total_sqm +
+        validate_sheets_for_order?.total_sqm +
           Number(grouping_item_details?.issued_sqm)
       ) > order_item_data?.sqm
     ) {
@@ -96,8 +96,8 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
       { session }
     );
 
-    const issued_leaves_for_order =
-      create_order_result[0]?.item_details?.issued_leaves;
+    const issued_sheets_for_order =
+      create_order_result[0]?.item_details?.issued_sheets;
     const issued_sqm_for_order =
       create_order_result[0]?.item_details?.issued_sqm;
     const issued_amount_for_order =
@@ -109,10 +109,10 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
         StatusCodes?.BAD_REQUEST
       );
     }
-    //available leaves
-    const available_leaves =
-      grouping_item_data?.available_details?.no_of_leaves -
-      grouping_item_details?.issued_leaves;
+    //available sheets
+    const available_sheets =
+      grouping_item_data?.available_details?.no_of_sheets -
+      grouping_item_details?.issued_sheets;
     //available sqm
     const available_sqm =
       grouping_item_data?.available_details?.sqm -
@@ -128,7 +128,7 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
         { _id: grouping_item_data?._id },
         {
           $set: {
-            'available_details.no_of_leaves': available_leaves,
+            'available_details.no_of_sheets': available_sheets,
             'available_details.amount': available_amount,
             'available_details.sqm': available_sqm,
             updated_by: userDetails?._id,
@@ -193,7 +193,7 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
             grouping_done_item_id: grouping_item_data?._id,
             grouping_done_other_details_id:
               grouping_item_data?.grouping_done_other_details_id,
-            no_of_leaves: issued_leaves_for_order,
+            no_of_sheets: issued_sheets_for_order,
             sqm: issued_sqm_for_order,
             amount: issued_amount_for_order,
             created_by: userDetails?._id,

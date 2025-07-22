@@ -16,6 +16,7 @@ import {
   download_excel_factory_grouping_done,
   download_excel_factory_grouping_damage,
   download_excel_factory_grouping_history,
+  group_no_dropdown_for_hybrid_photo_master
 } from '../../../controllers/factory/grouping/grouping_done.controller.js';
 import AuthMiddleware from '../../../middlewares/verifyToken.js';
 import {

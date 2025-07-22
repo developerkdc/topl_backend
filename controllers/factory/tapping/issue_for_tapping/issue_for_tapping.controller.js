@@ -15,6 +15,7 @@ import ApiResponse from '../../../../utils/ApiResponse.js';
 import grouping_done_history_model from '../../../../database/schema/factory/grouping/grouping_done_history.schema.js';
 import { DynamicSearch } from '../../../../utils/dynamicSearch/dynamic.js';
 import { dynamic_filter } from '../../../../utils/dymanicFilter.js';
+import photoModel from '../../../../database/schema/masters/photo.schema.js';
 
 export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(
   async (req, res, next) => {
@@ -23,7 +24,7 @@ export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(
     try {
       const userDetails = req.userDetails;
       const { grouping_done_item_id } = req.params;
-      const { issued_for, issue_no_of_leaves } = req.body;
+      const { issued_for, issue_no_of_sheets } = req.body;
       if (
         !grouping_done_item_id ||
         !mongoose.isValidObjectId(grouping_done_item_id)
@@ -33,9 +34,9 @@ export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(
           StatusCodes.BAD_REQUEST
         );
       }
-      if (!issued_for || !issue_no_of_leaves) {
+      if (!issued_for || !issue_no_of_sheets) {
         throw new ApiError(
-          'Required issue status or issue no of leaves',
+          'Required issue status or issue no of sheets',
           StatusCodes.BAD_REQUEST
         );
       }
@@ -58,18 +59,18 @@ export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(
       const data = fetch_grouping_done_item_details;
       const available_details = data?.available_details;
 
-      const no_of_leaves_available =
-        available_details?.no_of_leaves - issue_no_of_leaves;
-      if (no_of_leaves_available < 0) {
+      const no_of_sheets_available =
+        available_details?.no_of_sheets - issue_no_of_sheets;
+      if (no_of_sheets_available < 0) {
         throw new ApiError(
-          'Not enough leaves available',
+          'Not enough sheets available',
           StatusCodes.BAD_REQUEST
         );
       }
 
       const grouping_item_sqm = available_details?.sqm;
       const tapping_sqm = Number(
-        (data?.length * data?.width * issue_no_of_leaves)?.toFixed(3)
+        (data?.length * data?.width * issue_no_of_sheets)?.toFixed(3)
       );
       const tapping_amount = Number(
         (
@@ -115,7 +116,7 @@ export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(
         order_category: null,
         issued_for: issued_for,
         issued_from: issues_for_status.grouping,
-        no_of_leaves: issue_no_of_leaves,
+        no_of_sheets: issue_no_of_sheets,
         sqm: tapping_sqm,
         amount: tapping_amount,
         created_by: userDetails?._id,
@@ -173,8 +174,8 @@ export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(
               updated_by: userDetails?._id,
             },
             $inc: {
-              'available_details.no_of_leaves':
-                -issue_for_tapping_data?.no_of_leaves,
+              'available_details.no_of_sheets':
+                -issue_for_tapping_data?.no_of_sheets,
               'available_details.sqm': -issue_for_tapping_data?.sqm,
               'available_details.amount': -issue_for_tapping_data?.amount,
             },
@@ -282,6 +283,158 @@ export const revert_issue_for_tapping_item = catchAsync(
           'Failed to delete issue for tapping item',
           StatusCodes.INTERNAL_SERVER_ERROR
         );
+      };
+
+      const revert_photo_no_of_sheets = async function () {
+        const aggGroupNoLookup = {
+          $lookup: {
+            from: 'grouping_done_items_details',
+            localField: 'group_no',
+            foreignField: 'group_no',
+            pipeline: [
+              {
+                $project: {
+                  group_no: 1,
+                  photo_no: 1,
+                  photo_no_id: 1,
+                },
+              },
+            ],
+            as: 'grouping_done_items_details',
+          },
+        };
+        const aggGroupNoUnwind = {
+          $unwind: {
+            path: '$grouping_done_items_details',
+            preserveNullAndEmptyArrays: true,
+          },
+        };
+        const aggOrderRelatedData = [
+          {
+            $lookup: {
+              from: "orders",
+              localField: "order_id",
+              pipeline: [
+                {
+                  $project: {
+                    order_no: 1,
+                    owner_name: 1,
+                    orderDate: 1,
+                    order_category: 1,
+                    series_product: 1
+                  }
+                }
+              ],
+              foreignField: "_id",
+              as: "order_details"
+            }
+          },
+          {
+            $unwind: {
+              path: "$order_details",
+              preserveNullAndEmptyArrays: true
+            }
+          },
+          {
+            $lookup: {
+              from: "series_product_order_item_details",
+              localField: "order_item_id",
+              foreignField: "_id",
+              pipeline: [
+                {
+                  $project: {
+                    item_no: 1,
+                    order_id: 1,
+                    item_name: 1,
+                    item_sub_category_name: 1,
+                    group_no: 1,
+                    photo_number_id: 1,
+                    photo_number: 1
+                  }
+                }
+              ],
+              as: "series_product_order_item_details"
+            }
+          },
+          {
+            $unwind: {
+              path: "$series_product_order_item_details",
+              preserveNullAndEmptyArrays: true
+            }
+          },
+          {
+            $lookup: {
+              from: "decorative_order_item_details",
+              localField: "order_item_id",
+              pipeline: [
+                {
+                  $project: {
+                    item_no: 1,
+                    order_id: 1,
+                    item_name: 1,
+                    item_sub_category_name: 1,
+                    group_no: 1,
+                    photo_number_id: 1,
+                    photo_number: 1
+                  }
+                }
+              ],
+              foreignField: "_id",
+              as: "decorative_order_item_details"
+            }
+          },
+          {
+            $unwind: {
+              path: "$decorative_order_item_details",
+              preserveNullAndEmptyArrays: true
+            }
+          },
+          {
+            $addFields: {
+              order_item_details: {
+                $cond: {
+                  if: { $ne: [{ $type: "$decorative_order_item_details" }, "missing"] },
+                  then: "$decorative_order_item_details",
+                  else: "$series_product_order_item_details"
+                }
+              }
+            }
+          }
+        ];
+
+        const [fetch_issue_for_tapping_item_details] = await issue_for_tapping_model.aggregate([
+          { $match: { _id: new mongoose.Types.ObjectId(issue_for_tapping_id) } },
+          aggGroupNoLookup,
+          aggGroupNoUnwind,
+          ...aggOrderRelatedData,
+        ]);
+
+        const order_photo_number_id = fetch_issue_for_tapping_item_details?.order_item_details?.photo_number_id?.toString();
+        const order_photo_number = fetch_issue_for_tapping_item_details?.order_item_details?.photo_number;
+        const group_photo_number_id = fetch_issue_for_tapping_item_details?.grouping_done_items_details?.photo_no_id?.toString();
+        const group_photo_number = fetch_issue_for_tapping_item_details?.grouping_done_items_details?.photo_no;
+
+        if (order_photo_number_id && order_photo_number) {
+          if ((order_photo_number_id !== group_photo_number_id) || (order_photo_number !== group_photo_number)) {
+            // Validate photo availability - await properly in loop
+            const update_photo_sheets = await photoModel.updateOne({
+              _id: group_photo_number_id,
+              photo_number: group_photo_number,
+            }, {
+              $inc: { available_no_of_sheets: fetch_issue_for_tapping_item_details?.no_of_sheets }
+            }, { session });
+
+            if (!update_photo_sheets?.acknowledged) {
+              throw new ApiError(
+                `Photo number ${order_photo_number} does not have enough sheets.`,
+                StatusCodes.BAD_REQUEST
+              );
+            }
+          }
+        }
+      };
+      if (fetch_issue_for_tapping_item_details?.order_id && fetch_issue_for_tapping_item_details?.order_item_id && fetch_issue_for_tapping_item_details?.issued_for === item_issued_for.order) {
+        await revert_photo_no_of_sheets();
       }
 
       const grouping_done_item_id =
@@ -310,7 +463,7 @@ export const revert_issue_for_tapping_item = catchAsync(
 
       // update available details in grouping done items
       const available_details = {
-        no_of_leaves: delete_issue_for_tapping_item?.no_of_leaves,
+        no_of_sheets: delete_issue_for_tapping_item?.no_of_sheets,
         sqm: delete_issue_for_tapping_item?.sqm,
         amount: delete_issue_for_tapping_item?.amount,
       };
@@ -322,7 +475,7 @@ export const revert_issue_for_tapping_item = catchAsync(
               updated_by: userDetails?._id,
             },
             $inc: {
-              'available_details.no_of_leaves': available_details.no_of_leaves,
+              'available_details.no_of_sheets': available_details.no_of_sheets,
               'available_details.sqm': available_details.sqm,
               'available_details.amount': available_details.amount,
             },
@@ -348,7 +501,7 @@ export const revert_issue_for_tapping_item = catchAsync(
           .find({
             grouping_done_other_details_id: grouping_done_other_details_id,
             $expr: {
-              $ne: ['$no_of_leaves', '$available_details.no_of_leaves'],
+              $ne: ['$no_of_sheets', '$available_details.no_of_sheets'],
             },
           })
           .session(session)

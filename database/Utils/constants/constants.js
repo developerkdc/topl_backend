@@ -28,6 +28,11 @@ export const issues_for_status = {
   color_factory: 'color',
 };
 
+export const sub_category = {
+  natural:"NATURAL",
+  hybrid:"HYBRID"
+}
+
 export const inward_type = {
   inventory: 'inventory',
   job_work: 'job_work',

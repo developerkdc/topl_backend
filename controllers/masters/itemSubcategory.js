@@ -6,7 +6,7 @@ import itemCategoryModel from '../../database/schema/masters/item.category.schem
 import itemSubCategoryModel from '../../database/schema/masters/item.subcategory.schema.js';
 import { DynamicSearch } from '../../utils/dynamicSearch/dynamic.js';
 export const addItems = catchAsync(async (req, res) => {
-  const { name, remark, category } = req.body;
+  const { name, remark, category, type } = req.body;
 
   if (!name) {
     return res.json(
@@ -46,6 +46,7 @@ export const addItems = catchAsync(async (req, res) => {
     sr_no: newMax,
     name,
     category,
+    type,
     remark,
     created_by,
   });
@@ -184,6 +185,7 @@ export const listItemSubCategories = catchAsync(async (req, res) => {
         sr_no: 1,
         name: 1,
         remark: 1,
+        type: 1,
         categoryDetails: 1,
         createdAt: 1,
         updatedAt: 1,

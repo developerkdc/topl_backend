@@ -21,10 +21,10 @@ const issue_for_tapping_wastage_schema = new mongoose.Schema(
       default: 0,
       required: [true, 'Thickness is required'],
     },
-    no_of_leaves: {
+    no_of_sheets: {
       type: Number,
       default: 0,
-      required: [true, 'No of leaves is required'],
+      required: [true, 'No of sheets is required'],
     },
     sqm: {
       type: Number,

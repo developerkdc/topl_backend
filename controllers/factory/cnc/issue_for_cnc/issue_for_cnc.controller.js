@@ -497,7 +497,7 @@ export const download_excel_issued_for_cnc = catchAsync(
 
     const match_query = {
       ...filterData,
-      // ...search_query,
+      ...search_query,
       is_cnc_done: false,
     };
 

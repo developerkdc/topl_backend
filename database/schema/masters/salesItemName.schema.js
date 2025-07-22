@@ -18,18 +18,17 @@ const salesItemNameSchema = new mongoose.Schema(
       default: true,
     },
 
-    item: {
-      item_id: {
-        type: mongoose.Schema.Types.ObjectId,
-        default: null,
-      },
-      item_name: {
-        type: String,
-        uppercase: true,
-        trim: true,
-        default: null,
-      },
+    item_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
     },
+    item_name: {
+      type: String,
+      uppercase: true,
+      trim: true,
+      default: null,
+    },
+
     length: {
       type: Number,
       default: null,
@@ -230,8 +229,9 @@ const salesItemNameSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-salesItemNameSchema.index({ photo_number: 1 }, { unique: true });
+salesItemNameSchema.index({ photo_number: 1 });
 salesItemNameSchema.index({ sr_no: 1 }, { unique: true });
+salesItemNameSchema.index({ sales_item_name: 1 }, { unique: true });
 salesItemNameSchema.index({ created_by: 1 });
 salesItemNameSchema.index({ updated_by: 1 });
 

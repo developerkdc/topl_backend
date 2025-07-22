@@ -2,6 +2,8 @@ import { Router } from 'express';
 import AuthMiddleware from '../../../../middlewares/verifyToken.js';
 import {
   create_polishing,
+  download_excel_polishing_done,
+  download_excel_polishing_history,
   fetch_single_polishing_done_item_with_issue_for_polishing_data,
   listing_polishing_done,
   listing_polishing_history,
@@ -36,4 +38,9 @@ polishing_done_router.post(
   listing_polishing_history
 );
 
+// Polishing Done Export api
+polishing_done_router.post('/download-factory-polishing-done-excel', AuthMiddleware, download_excel_polishing_done);
+
+// Polishing History Export api
+polishing_done_router.post('/download-factory-polishing-history-excel', AuthMiddleware, download_excel_polishing_history);
 export default polishing_done_router;
