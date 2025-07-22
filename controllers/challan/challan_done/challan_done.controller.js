@@ -445,44 +445,56 @@ export const edit_challan_details = catchAsync(async (req, res) => {
   }
 });
 
-export const update_inward_challan_status_by_challan_id = catchAsync(async (req, res) => {
-  const { id } = req.params;
-  const userDetails = req.userDetails;
-  if (!id) {
-    throw new ApiError("ID is missing.", StatusCodes.NOT_FOUND)
-  };
-
-  if (!isValidObjectId(id)) {
-    throw new ApiError("Invalid ID", StatusCodes.BAD_REQUEST)
-  };
-
-  const update_status_result = await challan_done_model.updateOne({ _id: id }, {
-    $set: {
-      inward_challan_status: challan_status?.received,
-      updated_by: userDetails?._id
+export const update_inward_challan_status_by_challan_id = catchAsync(
+  async (req, res) => {
+    const { id } = req.params;
+    const userDetails = req.userDetails;
+    if (!id) {
+      throw new ApiError('ID is missing.', StatusCodes.NOT_FOUND);
     }
-  });
 
-  if (update_status_result?.matchedCount === 0) {
-    throw new ApiError("Challan done item not found.", StatusCodes.NOT_FOUND)
-  };
-  if (!update_status_result?.acknowledged || update_status_result?.modifiedCount === 0) {
-    throw new ApiError("Failed to update challan status.", StatusCodes.BAD_REQUEST)
-  };
-  const response = new ApiResponse(StatusCodes.OK, "Inward Challan received successfully");
-  return res.status(StatusCodes.OK).json(response);
-});
+    if (!isValidObjectId(id)) {
+      throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
+    }
+
+    const update_status_result = await challan_done_model.updateOne(
+      { _id: id },
+      {
+        $set: {
+          inward_challan_status: challan_status?.received,
+          updated_by: userDetails?._id,
+        },
+      }
+    );
+
+    if (update_status_result?.matchedCount === 0) {
+      throw new ApiError('Challan done item not found.', StatusCodes.NOT_FOUND);
+    }
+    if (
+      !update_status_result?.acknowledged ||
+      update_status_result?.modifiedCount === 0
+    ) {
+      throw new ApiError(
+        'Failed to update challan status.',
+        StatusCodes.BAD_REQUEST
+      );
+    }
+    const response = new ApiResponse(
+      StatusCodes.OK,
+      'Inward Challan received successfully'
+    );
+    return res.status(StatusCodes.OK).json(response);
+  }
+);
 
 export const listing_single_challan = catchAsync(async (req, res, next) => {
-  const { id } = req.params
-
-
+  const { id } = req.params;
 
   const matchquery = {
     $match: {
-      _id: mongoose.Types.ObjectId.createFromHexString(id)
-    }
-  }
+      _id: mongoose.Types.ObjectId.createFromHexString(id),
+    },
+  };
   const aggIssuedChallanDetailsLookup = {
     $lookup: {
       from: 'issue_for_challan_details',

@@ -11,7 +11,10 @@ import { dynamic_filter } from '../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import ApiError from '../../../utils/errors/apiError.js';
 import catchAsync from '../../../utils/errors/catchAsync.js';
-import { createFleeceHistoryExcel, createFleeceLogsExcel } from '../../../config/downloadExcel/Logs/Inventory/fleece/fleece.js';
+import {
+  createFleeceHistoryExcel,
+  createFleeceLogsExcel,
+} from '../../../config/downloadExcel/Logs/Inventory/fleece/fleece.js';
 import {
   fleece_approval_inventory_invoice_model,
   fleece_approval_inventory_items_model,
@@ -613,11 +616,7 @@ export const fleece_item_listing_by_invoice = catchAsync(
 // });
 
 export const fleeceLogsCsv = catchAsync(async (req, res) => {
-  const {
-    search = '',
-    sortBy = 'updatedAt',
-    sort = 'desc'
-  } = req.query;
+  const { search = '', sortBy = 'updatedAt', sort = 'desc' } = req.query;
 
   const {
     string,
@@ -656,7 +655,6 @@ export const fleeceLogsCsv = catchAsync(async (req, res) => {
   const match_query = {
     ...filterData,
     ...search_query,
-
   };
 
   // Build sort options
@@ -674,8 +672,11 @@ export const fleeceLogsCsv = catchAsync(async (req, res) => {
       .json(new ApiResponse(StatusCodes.NOT_FOUND, 'NO Data found...'));
   }
 
-  console.log(allData.length)
-  console.log('FILTER USED IN CSV EXPORT:', JSON.stringify(filterData, null, 2));
+  console.log(allData.length);
+  console.log(
+    'FILTER USED IN CSV EXPORT:',
+    JSON.stringify(filterData, null, 2)
+  );
   console.log('SEARCH QUERY USED:', JSON.stringify(search_query, null, 2));
   console.log('FINAL MATCH QUERY:', JSON.stringify(match_query, null, 2));
   const excelLink = await createFleeceLogsExcel(allData);
@@ -691,8 +692,10 @@ function normalizeFilterKeys(filter = {}) {
   const flatRange = {};
 
   const remapKeys = {
-    'fleece_item_details.fleece_invoice_details.inward_sr_no': 'fleece_invoice_details.inward_sr_no',
-    'fleece_item_details.fleece_invoice_details.inward_date': 'fleece_invoice_details.inward_date',
+    'fleece_item_details.fleece_invoice_details.inward_sr_no':
+      'fleece_invoice_details.inward_sr_no',
+    'fleece_item_details.fleece_invoice_details.inward_date':
+      'fleece_invoice_details.inward_date',
     'fleece_item_details.fleece_invoice_details.supplier_details.company_details.supplier_name':
       'fleece_invoice_details.supplier_details.company_details.supplier_name',
   };
@@ -716,11 +719,7 @@ function normalizeFilterKeys(filter = {}) {
 }
 
 export const fleeceHistoryLogsCsv = catchAsync(async (req, res) => {
-  const {
-    search = '',
-    sortBy = 'updatedAt',
-    sort = 'desc',
-  } = req.query;
+  const { search = '', sortBy = 'updatedAt', sort = 'desc' } = req.query;
 
   const {
     string,
@@ -733,7 +732,13 @@ export const fleeceHistoryLogsCsv = catchAsync(async (req, res) => {
 
   let search_query = {};
   if (search !== '' && req?.body?.searchFields) {
-    const search_data = DynamicSearch(search, boolean, numbers, string, arrayField);
+    const search_data = DynamicSearch(
+      search,
+      boolean,
+      numbers,
+      string,
+      arrayField
+    );
     if (search_data?.length === 0) {
       return res.status(404).json({
         statusCode: 404,
@@ -746,7 +751,11 @@ export const fleeceHistoryLogsCsv = catchAsync(async (req, res) => {
 
   const normalizedFilter = normalizeFilterKeys(filter);
   const filterData = dynamic_filter(normalizedFilter);
-  const match_query = { ...filterData, ...search_query, issue_status: { $ne: null } };
+  const match_query = {
+    ...filterData,
+    ...search_query,
+    issue_status: { $ne: null },
+  };
 
   const pipeline = [
     {
@@ -778,7 +787,12 @@ export const fleeceHistoryLogsCsv = catchAsync(async (req, res) => {
         ],
       },
     },
-    { $unwind: { path: '$fleece_item_details', preserveNullAndEmptyArrays: false } },
+    {
+      $unwind: {
+        path: '$fleece_item_details',
+        preserveNullAndEmptyArrays: false,
+      },
+    },
 
     {
       $lookup: {
@@ -788,7 +802,12 @@ export const fleeceHistoryLogsCsv = catchAsync(async (req, res) => {
         as: 'fleece_invoice_details',
       },
     },
-    { $unwind: { path: '$fleece_invoice_details', preserveNullAndEmptyArrays: true } },
+    {
+      $unwind: {
+        path: '$fleece_invoice_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
 
     {
       $lookup: {
@@ -796,48 +815,114 @@ export const fleeceHistoryLogsCsv = catchAsync(async (req, res) => {
         localField: 'created_by',
         foreignField: '_id',
         pipeline: [
-          { $project: { first_name: 1, last_name: 1, user_name: 1, email_id: 1 } },
+          {
+            $project: {
+              first_name: 1,
+              last_name: 1,
+              user_name: 1,
+              email_id: 1,
+            },
+          },
         ],
         as: 'created_user_details',
       },
     },
-    { $unwind: { path: '$created_user_details', preserveNullAndEmptyArrays: true } },
+    {
+      $unwind: {
+        path: '$created_user_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
 
     {
       $lookup: {
         from: 'users',
         localField: 'updated_by',
         foreignField: '_id',
-        pipeline: [
-          { $project: { first_name: 1, last_name: 1, user_name: 1 } },
-        ],
+        pipeline: [{ $project: { first_name: 1, last_name: 1, user_name: 1 } }],
         as: 'updated_user_details',
       },
     },
-    { $unwind: { path: '$updated_user_details', preserveNullAndEmptyArrays: true } },
+    {
+      $unwind: {
+        path: '$updated_user_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
 
     { $match: match_query },
 
     {
       $project: {
-        invoice_no: { $ifNull: ['$fleece_invoice_details.invoice_Details.invoice_no', ''] },
-        total_item_amount: { $ifNull: ['$fleece_invoice_details.invoice_Details.total_item_amount', 0] },
-        transporter_details: { $ifNull: ['$fleece_invoice_details.invoice_Details.transporter_details', ''] },
-        gst_percentage: { $ifNull: ['$fleece_invoice_details.invoice_Details.gst_percentage', 0] },
-        invoice_value_with_gst: { $ifNull: ['$fleece_invoice_details.invoice_Details.invoice_value_with_gst', 0] },
+        invoice_no: {
+          $ifNull: ['$fleece_invoice_details.invoice_Details.invoice_no', ''],
+        },
+        total_item_amount: {
+          $ifNull: [
+            '$fleece_invoice_details.invoice_Details.total_item_amount',
+            0,
+          ],
+        },
+        transporter_details: {
+          $ifNull: [
+            '$fleece_invoice_details.invoice_Details.transporter_details',
+            '',
+          ],
+        },
+        gst_percentage: {
+          $ifNull: [
+            '$fleece_invoice_details.invoice_Details.gst_percentage',
+            0,
+          ],
+        },
+        invoice_value_with_gst: {
+          $ifNull: [
+            '$fleece_invoice_details.invoice_Details.invoice_value_with_gst',
+            0,
+          ],
+        },
 
-        number_of_sheets: { $ifNull: ['$fleece_item_details.number_of_sheets', 0] },
+        number_of_sheets: {
+          $ifNull: ['$fleece_item_details.number_of_sheets', 0],
+        },
         grade_name: { $ifNull: ['$fleece_item_details.grade_name', ''] },
         gst_val: { $ifNull: ['$fleece_item_details.gst_val', 0] },
         remark: { $ifNull: ['$fleece_item_details.remark', ''] },
 
-        no_of_workers: { $ifNull: ['$fleece_invoice_details.workers_details.no_of_workers', null] },
-        shift: { $ifNull: ['$fleece_invoice_details.workers_details.shift', null] },
-        working_hours: { $ifNull: ['$fleece_invoice_details.workers_details.working_hours', null] },
+        no_of_workers: {
+          $ifNull: [
+            '$fleece_invoice_details.workers_details.no_of_workers',
+            null,
+          ],
+        },
+        shift: {
+          $ifNull: ['$fleece_invoice_details.workers_details.shift', null],
+        },
+        working_hours: {
+          $ifNull: [
+            '$fleece_invoice_details.workers_details.working_hours',
+            null,
+          ],
+        },
 
-        company_details: { $ifNull: ['$fleece_invoice_details.supplier_details.company_details', {}] },
-        branch_detail: { $ifNull: ['$fleece_invoice_details.supplier_details.branch_detail', {}] },
-        contact_person: { $ifNull: ['$fleece_invoice_details.supplier_details.branch_detail.contact_person', []] },
+        company_details: {
+          $ifNull: [
+            '$fleece_invoice_details.supplier_details.company_details',
+            {},
+          ],
+        },
+        branch_detail: {
+          $ifNull: [
+            '$fleece_invoice_details.supplier_details.branch_detail',
+            {},
+          ],
+        },
+        contact_person: {
+          $ifNull: [
+            '$fleece_invoice_details.supplier_details.branch_detail.contact_person',
+            [],
+          ],
+        },
 
         fleece_item_details: 1,
         fleece_invoice_details: 1,
@@ -868,7 +953,11 @@ export const fleeceHistoryLogsCsv = catchAsync(async (req, res) => {
   const excelLink = await createFleeceHistoryExcel(allData);
 
   return res.json(
-    new ApiResponse(StatusCodes.OK, 'Fleece History CSV downloaded successfully', excelLink)
+    new ApiResponse(
+      StatusCodes.OK,
+      'Fleece History CSV downloaded successfully',
+      excelLink
+    )
   );
 });
 

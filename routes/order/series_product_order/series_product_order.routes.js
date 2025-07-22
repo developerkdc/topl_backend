@@ -33,10 +33,6 @@ seriesOrderRouter.get(
   AuthMiddleware,
   fetch_all_series_order_items_by_order_id
 );
-seriesOrderRouter.get(
-  '/download/:id',
-  AuthMiddleware,
-  downloadPDF
-)
+seriesOrderRouter.get('/download/:id', AuthMiddleware, downloadPDF);
 
 export default seriesOrderRouter;

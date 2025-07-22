@@ -32,7 +32,11 @@ polishing_done_router.get(
 );
 
 // polishing_done_router.post("/add-to-damage/:id", AuthMiddleware, add_polishing_damage)
-polishing_done_router.post('/history-list', AuthMiddleware, listing_polishing_history);
+polishing_done_router.post(
+  '/history-list',
+  AuthMiddleware,
+  listing_polishing_history
+);
 
 // Polishing Done Export api
 polishing_done_router.post('/download-factory-polishing-done-excel', AuthMiddleware, download_excel_polishing_done);

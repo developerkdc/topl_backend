@@ -115,7 +115,7 @@ export const createFactoryCanvasDoneExcel = async (newData, req, res) => {
     const worksheet = workbook.addWorksheet('Factory-Canvas-Done-Report');
 
     worksheet.columns = [
-    
+
       { header: 'Sr. No', key: 'sr_no', width: 8 },
       { header: 'Issued From', key: 'issued_from', width: 18 },
       { header: 'Issued For', key: 'issued_for', width: 15 },

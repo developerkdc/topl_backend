@@ -20,7 +20,7 @@ const series_product_order_item_details_schema = new mongoose.Schema(
     },
     sales_item_name: {
       type: String,
-      default:null,
+      default: null,
       uppercase: true,
       trim: true,
     },

@@ -10,7 +10,10 @@ import ApiResponse from '../../../utils/ApiResponse.js';
 import { StatusCodes } from '../../../utils/constants.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
-import { GenerateOtherGoodsLogs, GenerateOtherGoodsLogsHistory,  } from '../../../config/downloadExcel/Logs/Inventory/OtherGoods/otherGoods.js';
+import {
+  GenerateOtherGoodsLogs,
+  GenerateOtherGoodsLogsHistory,
+} from '../../../config/downloadExcel/Logs/Inventory/OtherGoods/otherGoods.js';
 import {
   otherGoods_approval_inventory_invoice_model,
   otherGoods_approval_inventory_items_model,
@@ -328,12 +331,24 @@ export const otherGoodsLogsCsv = catchAsync(async (req, res) => {
 
       if (value === undefined || value === '' || value === null) continue;
 
-      if (typeof value === 'object' && value !== null && ('$gte' in value || '$lte' in value)) {
+      if (
+        typeof value === 'object' &&
+        value !== null &&
+        ('$gte' in value || '$lte' in value)
+      ) {
         const range = {};
-        if (value.$gte !== '' && value.$gte !== null && value.$gte !== undefined) {
+        if (
+          value.$gte !== '' &&
+          value.$gte !== null &&
+          value.$gte !== undefined
+        ) {
           range.$gte = value.$gte;
         }
-        if (value.$lte !== '' && value.$lte !== null && value.$lte !== undefined) {
+        if (
+          value.$lte !== '' &&
+          value.$lte !== null &&
+          value.$lte !== undefined
+        ) {
           range.$lte = value.$lte;
         }
         if (Object.keys(range).length > 0) {
@@ -864,14 +879,24 @@ export const otherGoodsLogsCsvHistory = catchAsync(async (req, res) => {
   // 1. Search Logic
   let search_query = {};
   if (search !== '' && req?.body?.searchFields) {
-    const search_data = DynamicSearch(search, boolean, numbers, string, arrayField);
+    const search_data = DynamicSearch(
+      search,
+      boolean,
+      numbers,
+      string,
+      arrayField
+    );
     console.log('🔍 Dynamic Search Result:', search_data);
 
     if (!search_data || Object.keys(search_data).length === 0) {
       console.log('❌ No results from DynamicSearch');
-      return res.status(StatusCodes.NOT_FOUND).json(
-        new ApiResponse(StatusCodes.NOT_FOUND, 'Results Not Found', { data: [] })
-      );
+      return res
+        .status(StatusCodes.NOT_FOUND)
+        .json(
+          new ApiResponse(StatusCodes.NOT_FOUND, 'Results Not Found', {
+            data: [],
+          })
+        );
     }
     search_query = search_data;
   }
@@ -918,42 +943,61 @@ export const otherGoodsLogsCsvHistory = catchAsync(async (req, res) => {
         pipeline: [{ $project: { created_user: 0 } }],
       },
     },
-    { $unwind: { path: '$other_goods_item_details', preserveNullAndEmptyArrays: true } },
+    {
+      $unwind: {
+        path: '$other_goods_item_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
     {
       $lookup: {
         from: 'users',
         localField: 'created_by',
         foreignField: '_id',
-        pipeline: [{
-          $project: {
-            first_name: 1,
-            last_name: 1,
-            user_name: 1,
-            user_type: 1,
-            email_id: 1,
+        pipeline: [
+          {
+            $project: {
+              first_name: 1,
+              last_name: 1,
+              user_name: 1,
+              user_type: 1,
+              email_id: 1,
+            },
           },
-        }],
+        ],
         as: 'created_user_details',
       },
     },
-    { $unwind: { path: '$created_user_details', preserveNullAndEmptyArrays: true } },
+    {
+      $unwind: {
+        path: '$created_user_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
     {
       $lookup: {
         from: 'users',
         localField: 'updated_by',
         foreignField: '_id',
-        pipeline: [{
-          $project: {
-            first_name: 1,
-            last_name: 1,
-            user_name: 1,
-            user_type: 1,
+        pipeline: [
+          {
+            $project: {
+              first_name: 1,
+              last_name: 1,
+              user_name: 1,
+              user_type: 1,
+            },
           },
-        }],
+        ],
         as: 'updated_user_details',
       },
     },
-    { $unwind: { path: '$updated_user_details', preserveNullAndEmptyArrays: true } },
+    {
+      $unwind: {
+        path: '$updated_user_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
     { $match: match_query },
     { $sort: { [sortBy]: sort === 'desc' ? -1 : 1 } },
   ];
@@ -968,14 +1012,22 @@ export const otherGoodsLogsCsvHistory = catchAsync(async (req, res) => {
     console.log('⚠️ No matching records found in aggregation.');
     return res
       .status(StatusCodes.NOT_FOUND)
-      .json(new ApiResponse(StatusCodes.NOT_FOUND, 'No data found', { data: [] }));
+      .json(
+        new ApiResponse(StatusCodes.NOT_FOUND, 'No data found', { data: [] })
+      );
   }
 
   // 6. Generate CSV
   const excelLink = await GenerateOtherGoodsLogsHistory(result); // Replace this with correct function if renamed
   console.log('📤 CSV Download Link:', excelLink);
 
-  return res.status(StatusCodes.OK).json(
-    new ApiResponse(StatusCodes.OK, 'CSV downloaded successfully...', excelLink)
-  );
+  return res
+    .status(StatusCodes.OK)
+    .json(
+      new ApiResponse(
+        StatusCodes.OK,
+        'CSV downloaded successfully...',
+        excelLink
+      )
+    );
 });

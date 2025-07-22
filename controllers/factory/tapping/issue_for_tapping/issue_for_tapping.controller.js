@@ -6,7 +6,10 @@ import {
   grouping_done_details_model,
   grouping_done_items_details_model,
 } from '../../../../database/schema/factory/grouping/grouping_done.schema.js';
-import { issues_for_status, item_issued_for } from '../../../../database/Utils/constants/constants.js';
+import {
+  issues_for_status,
+  item_issued_for,
+} from '../../../../database/Utils/constants/constants.js';
 import issue_for_tapping_model from '../../../../database/schema/factory/tapping/issue_for_tapping/issue_for_tapping.schema.js';
 import ApiResponse from '../../../../utils/ApiResponse.js';
 import grouping_done_history_model from '../../../../database/schema/factory/grouping/grouping_done_history.schema.js';
@@ -38,9 +41,7 @@ export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(
         );
       }
       if (
-        ![item_issued_for.stock, item_issued_for.sample].includes(
-          issued_for
-        )
+        ![item_issued_for.stock, item_issued_for.sample].includes(issued_for)
       ) {
         throw new ApiError('Invalid issue status', StatusCodes.BAD_REQUEST);
       }
@@ -145,7 +146,7 @@ export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(
             {
               issue_for_tapping_id: issue_for_tapping_id,
               ...grouping_history_detials,
-              issue_status: issues_for_status.tapping
+              issue_status: issues_for_status.tapping,
             },
           ],
           {
@@ -570,8 +571,8 @@ export const fetch_single_issue_for_tapping_details = catchAsync(
     const aggOrderRelatedData = [
       {
         $lookup: {
-          from: "orders",
-          localField: "order_id",
+          from: 'orders',
+          localField: 'order_id',
           pipeline: [
             {
               $project: {
@@ -579,25 +580,25 @@ export const fetch_single_issue_for_tapping_details = catchAsync(
                 owner_name: 1,
                 orderDate: 1,
                 order_category: 1,
-                series_product: 1
-              }
-            }
+                series_product: 1,
+              },
+            },
           ],
-          foreignField: "_id",
-          as: "order_details"
-        }
+          foreignField: '_id',
+          as: 'order_details',
+        },
       },
       {
         $unwind: {
-          path: "$order_details",
-          preserveNullAndEmptyArrays: true
-        }
+          path: '$order_details',
+          preserveNullAndEmptyArrays: true,
+        },
       },
       {
         $lookup: {
-          from: "series_product_order_item_details",
-          localField: "order_item_id",
-          foreignField: "_id",
+          from: 'series_product_order_item_details',
+          localField: 'order_item_id',
+          foreignField: '_id',
           pipeline: [
             {
               $project: {
@@ -606,23 +607,23 @@ export const fetch_single_issue_for_tapping_details = catchAsync(
                 item_name: 1,
                 item_sub_category_name: 1,
                 group_no: 1,
-                photo_number: 1
-              }
-            }
+                photo_number: 1,
+              },
+            },
           ],
-          as: "series_product_order_item_details"
-        }
+          as: 'series_product_order_item_details',
+        },
       },
       {
         $unwind: {
-          path: "$series_product_order_item_details",
-          preserveNullAndEmptyArrays: true
-        }
+          path: '$series_product_order_item_details',
+          preserveNullAndEmptyArrays: true,
+        },
       },
       {
         $lookup: {
-          from: "decorative_order_item_details",
-          localField: "order_item_id",
+          from: 'decorative_order_item_details',
+          localField: 'order_item_id',
           pipeline: [
             {
               $project: {
@@ -631,31 +632,33 @@ export const fetch_single_issue_for_tapping_details = catchAsync(
                 item_name: 1,
                 item_sub_category_name: 1,
                 group_no: 1,
-                photo_number: 1
-              }
-            }
+                photo_number: 1,
+              },
+            },
           ],
-          foreignField: "_id",
-          as: "decorative_order_item_details"
-        }
+          foreignField: '_id',
+          as: 'decorative_order_item_details',
+        },
       },
       {
         $unwind: {
-          path: "$decorative_order_item_details",
-          preserveNullAndEmptyArrays: true
-        }
+          path: '$decorative_order_item_details',
+          preserveNullAndEmptyArrays: true,
+        },
       },
       {
         $addFields: {
           order_item_details: {
             $cond: {
-              if: { $ne: [{ $type: "$decorative_order_item_details" }, "missing"] },
-              then: "$decorative_order_item_details",
-              else: "$series_product_order_item_details"
-            }
-          }
-        }
-      }
+              if: {
+                $ne: [{ $type: '$decorative_order_item_details' }, 'missing'],
+              },
+              then: '$decorative_order_item_details',
+              else: '$series_product_order_item_details',
+            },
+          },
+        },
+      },
     ];
 
     const aggregation_pipeline = [agg_match, ...aggOrderRelatedData];
@@ -675,21 +678,25 @@ export const fetch_all_issue_for_tapping_details_for_orders = catchAsync(
   async (req, res, next) => {
     const { order_id, order_item_id } = req.params;
     if (!order_id || !order_item_id) {
-      throw new ApiError(`Please provide order id or order item id`, StatusCodes.BAD_REQUEST);
+      throw new ApiError(
+        `Please provide order id or order item id`,
+        StatusCodes.BAD_REQUEST
+      );
     }
 
     const agg_match = {
       $match: {
         order_id: mongoose.Types.ObjectId.createFromHexString(order_id),
-        order_item_id: mongoose.Types.ObjectId.createFromHexString(order_item_id)
+        order_item_id:
+          mongoose.Types.ObjectId.createFromHexString(order_item_id),
       },
     };
 
     const aggOrderRelatedData = [
       {
         $lookup: {
-          from: "orders",
-          localField: "order_id",
+          from: 'orders',
+          localField: 'order_id',
           pipeline: [
             {
               $project: {
@@ -697,25 +704,25 @@ export const fetch_all_issue_for_tapping_details_for_orders = catchAsync(
                 owner_name: 1,
                 orderDate: 1,
                 order_category: 1,
-                series_product: 1
-              }
-            }
+                series_product: 1,
+              },
+            },
           ],
-          foreignField: "_id",
-          as: "order_details"
-        }
+          foreignField: '_id',
+          as: 'order_details',
+        },
       },
       {
         $unwind: {
-          path: "$order_details",
-          preserveNullAndEmptyArrays: true
-        }
+          path: '$order_details',
+          preserveNullAndEmptyArrays: true,
+        },
       },
       {
         $lookup: {
-          from: "series_product_order_item_details",
-          localField: "order_item_id",
-          foreignField: "_id",
+          from: 'series_product_order_item_details',
+          localField: 'order_item_id',
+          foreignField: '_id',
           pipeline: [
             {
               $project: {
@@ -724,23 +731,23 @@ export const fetch_all_issue_for_tapping_details_for_orders = catchAsync(
                 item_name: 1,
                 item_sub_category_name: 1,
                 group_no: 1,
-                photo_number: 1
-              }
-            }
+                photo_number: 1,
+              },
+            },
           ],
-          as: "series_product_order_item_details"
-        }
+          as: 'series_product_order_item_details',
+        },
       },
       {
         $unwind: {
-          path: "$series_product_order_item_details",
-          preserveNullAndEmptyArrays: true
-        }
+          path: '$series_product_order_item_details',
+          preserveNullAndEmptyArrays: true,
+        },
       },
       {
         $lookup: {
-          from: "decorative_order_item_details",
-          localField: "order_item_id",
+          from: 'decorative_order_item_details',
+          localField: 'order_item_id',
           pipeline: [
             {
               $project: {
@@ -749,31 +756,33 @@ export const fetch_all_issue_for_tapping_details_for_orders = catchAsync(
                 item_name: 1,
                 item_sub_category_name: 1,
                 group_no: 1,
-                photo_number: 1
-              }
-            }
+                photo_number: 1,
+              },
+            },
           ],
-          foreignField: "_id",
-          as: "decorative_order_item_details"
-        }
+          foreignField: '_id',
+          as: 'decorative_order_item_details',
+        },
       },
       {
         $unwind: {
-          path: "$decorative_order_item_details",
-          preserveNullAndEmptyArrays: true
-        }
+          path: '$decorative_order_item_details',
+          preserveNullAndEmptyArrays: true,
+        },
       },
       {
         $addFields: {
           order_item_details: {
             $cond: {
-              if: { $ne: [{ $type: "$decorative_order_item_details" }, "missing"] },
-              then: "$decorative_order_item_details",
-              else: "$series_product_order_item_details"
-            }
-          }
-        }
-      }
+              if: {
+                $ne: [{ $type: '$decorative_order_item_details' }, 'missing'],
+              },
+              then: '$decorative_order_item_details',
+              else: '$series_product_order_item_details',
+            },
+          },
+        },
+      },
     ];
 
     const aggGroupNoLookup = {
@@ -800,8 +809,14 @@ export const fetch_all_issue_for_tapping_details_for_orders = catchAsync(
       },
     };
 
-    const aggregation_pipeline = [agg_match, ...aggOrderRelatedData, aggGroupNoLookup, aggGroupNoUnwind];
-    const issue_for_tapping_details = await issue_for_tapping_model.aggregate(aggregation_pipeline);
+    const aggregation_pipeline = [
+      agg_match,
+      ...aggOrderRelatedData,
+      aggGroupNoLookup,
+      aggGroupNoUnwind,
+    ];
+    const issue_for_tapping_details =
+      await issue_for_tapping_model.aggregate(aggregation_pipeline);
 
     const response = new ApiResponse(
       StatusCodes.OK,
@@ -891,8 +906,8 @@ export const fetch_all_issue_for_tapping_details = catchAsync(
     const aggOrderRelatedData = [
       {
         $lookup: {
-          from: "orders",
-          localField: "order_id",
+          from: 'orders',
+          localField: 'order_id',
           pipeline: [
             {
               $project: {
@@ -900,25 +915,25 @@ export const fetch_all_issue_for_tapping_details = catchAsync(
                 owner_name: 1,
                 orderDate: 1,
                 order_category: 1,
-                series_product: 1
-              }
-            }
+                series_product: 1,
+              },
+            },
           ],
-          foreignField: "_id",
-          as: "order_details"
-        }
+          foreignField: '_id',
+          as: 'order_details',
+        },
       },
       {
         $unwind: {
-          path: "$order_details",
-          preserveNullAndEmptyArrays: true
-        }
+          path: '$order_details',
+          preserveNullAndEmptyArrays: true,
+        },
       },
       {
         $lookup: {
-          from: "series_product_order_item_details",
-          localField: "order_item_id",
-          foreignField: "_id",
+          from: 'series_product_order_item_details',
+          localField: 'order_item_id',
+          foreignField: '_id',
           pipeline: [
             {
               $project: {
@@ -927,23 +942,23 @@ export const fetch_all_issue_for_tapping_details = catchAsync(
                 item_name: 1,
                 item_sub_category_name: 1,
                 group_no: 1,
-                photo_number: 1
-              }
-            }
+                photo_number: 1,
+              },
+            },
           ],
-          as: "series_product_order_item_details"
-        }
+          as: 'series_product_order_item_details',
+        },
       },
       {
         $unwind: {
-          path: "$series_product_order_item_details",
-          preserveNullAndEmptyArrays: true
-        }
+          path: '$series_product_order_item_details',
+          preserveNullAndEmptyArrays: true,
+        },
       },
       {
         $lookup: {
-          from: "decorative_order_item_details",
-          localField: "order_item_id",
+          from: 'decorative_order_item_details',
+          localField: 'order_item_id',
           pipeline: [
             {
               $project: {
@@ -952,31 +967,33 @@ export const fetch_all_issue_for_tapping_details = catchAsync(
                 item_name: 1,
                 item_sub_category_name: 1,
                 group_no: 1,
-                photo_number: 1
-              }
-            }
+                photo_number: 1,
+              },
+            },
           ],
-          foreignField: "_id",
-          as: "decorative_order_item_details"
-        }
+          foreignField: '_id',
+          as: 'decorative_order_item_details',
+        },
       },
       {
         $unwind: {
-          path: "$decorative_order_item_details",
-          preserveNullAndEmptyArrays: true
-        }
+          path: '$decorative_order_item_details',
+          preserveNullAndEmptyArrays: true,
+        },
       },
       {
         $addFields: {
           order_item_details: {
             $cond: {
-              if: { $ne: [{ $type: "$decorative_order_item_details" }, "missing"] },
-              then: "$decorative_order_item_details",
-              else: "$series_product_order_item_details"
-            }
-          }
-        }
-      }
+              if: {
+                $ne: [{ $type: '$decorative_order_item_details' }, 'missing'],
+              },
+              then: '$decorative_order_item_details',
+              else: '$series_product_order_item_details',
+            },
+          },
+        },
+      },
     ];
     const aggCreatedByLookup = {
       $lookup: {

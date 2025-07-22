@@ -211,10 +211,10 @@ export const add_canvas_damage = catchAsync(async (req, res) => {
     }
 
     const canvas_done_details = await canvas_done_details_model
-    .findById(id)
-    .lean()
-    .session();
-    
+      .findById(id)
+      .lean()
+      .session();
+
     if (!canvas_done_details) {
       throw new ApiError(
         'canvas done details not found.',
@@ -313,7 +313,7 @@ export const add_canvas_damage = catchAsync(async (req, res) => {
 
 export const revert_damage_to_canvas_done = catchAsync(async (req, res) => {
   const userDetails = req.userDetails;
-  
+
   const { id } = req.params;
   const session = await mongoose.startSession();
   try {
@@ -323,13 +323,13 @@ export const revert_damage_to_canvas_done = catchAsync(async (req, res) => {
     if (!isValidObjectId(id)) {
       throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
     }
-    
+
     await session.startTransaction();
-    
+
     const canvas_damage_details = await canvas_damage_model
-    .findById(id)
-    .lean()
-    .session(session);
+      .findById(id)
+      .lean()
+      .session(session);
     if (!canvas_damage_details) {
       throw new ApiError(
         'canvas Damage details not found',
@@ -371,12 +371,12 @@ export const revert_damage_to_canvas_done = catchAsync(async (req, res) => {
         StatusCodes.BAD_REQUEST
       );
     }
-    
+
     const is_item_editable = await canvas_done_details_model
-    .findById(canvas_damage_details?.canvas_done_id)
-    .lean()
-    .session(session);
-    
+      .findById(canvas_damage_details?.canvas_done_id)
+      .lean()
+      .session(session);
+
     if (
       is_item_editable?.no_of_sheets ===
       is_item_editable?.available_details?.no_of_sheets
@@ -406,8 +406,6 @@ export const revert_damage_to_canvas_done = catchAsync(async (req, res) => {
     await session.endSession();
   }
 });
-
-
 
 // Download excel damage
 
@@ -573,5 +571,5 @@ export const download_excel_canvas_damage = catchAsync(async (req, res) => {
   ]; // aggregation pipiline
 
   const data = await canvas_damage_model.aggregate(listAggregate);
-  await createFactoryCanvasDamageExcel(data,req,res);
+  await createFactoryCanvasDamageExcel(data, req, res);
 });

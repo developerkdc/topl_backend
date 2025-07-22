@@ -204,9 +204,9 @@ export const listItemSubCategories = catchAsync(async (req, res) => {
   // }
   const allDetails = await itemSubCategoryModel.aggregate(pipeline);
 
-  if (allDetails.length === 0) {
-    return res.json(new ApiResponse(StatusCodes.OK, 'NO Data found...'));
-  }
+  // if (allDetails.length === 0) {
+  //   return res.json(new ApiResponse(StatusCodes.OK, 'NO Data found...'));
+  // }
   // const totalPage = allDetails.length;
   const totalDocs = await itemSubCategoryModel.countDocuments({
     ...searchQuery,

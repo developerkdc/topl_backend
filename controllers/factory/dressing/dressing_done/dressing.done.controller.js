@@ -757,7 +757,6 @@ export const edit_dressing_done_items = catchAsync(async (req, res) => {
     };
 
     const add_slicing_done_item = async () => {
-
       const delete_existing_item_result =
         await dressing_done_items_model.deleteMany(
           {
@@ -839,7 +838,6 @@ export const edit_dressing_done_items = catchAsync(async (req, res) => {
       // if (!update_dressing_done_status.acknowledged || update_dressing_done_status.modifiedCount === 0) {
       //     throw new ApiError("Failed to updated dressing done status ", StatusCodes.BAD_REQUEST)
       // };
-
     };
     if (other_details_data?.peeling_done_other_details_id) {
       await add_peeling_done_item();
@@ -961,7 +959,6 @@ export const fetch_dressing_done_history = catchAsync(
       search = '',
     } = req.query;
 
-
     const {
       string,
       boolean,
@@ -1015,7 +1012,6 @@ export const fetch_dressing_done_history = catchAsync(
         issue_status: { $arrayElemAt: ['$bundle_details.issue_status', 0] },
         log_no_code: { $arrayElemAt: ['$bundle_details.log_no_code', 0] },
       },
-
     };
     const aggLookupDressingDoneOtherDetails = {
       $lookup: {
@@ -1116,7 +1112,7 @@ export const fetch_dressing_done_history = catchAsync(
       aggLimit,
     ];
 
-    console.log(list_aggregate,"kjsdgfb");
+    console.log(list_aggregate, 'kjsdgfb');
 
     const result = await dressing_done_history_model.aggregate(list_aggregate);
 
@@ -1455,12 +1451,10 @@ export const create_dressing_items_from_dressing_report = catchAsync(
         log_no_code_volume_map[item?.log_no_code] += volume;
       });
 
-
       //calculating all items volume
       const total_dressing_item_details_volume = Object.values(
         log_no_code_volume_map
       )?.reduce((acc, item) => acc + item, 0);
-
 
       const log_no_code_factor_map = {};
       //calculating factor for each log_no_code  based on volume
@@ -1473,7 +1467,6 @@ export const create_dressing_items_from_dressing_report = catchAsync(
         }
       );
 
-
       //map for storing each log_no_code amount
       const log_no_code_amount_map = {};
       //calculating amount of each log_no_code
@@ -1485,7 +1478,9 @@ export const create_dressing_items_from_dressing_report = catchAsync(
         // log_no_code_amount_map[item?.log_no_code] = Number(
         //   (log_no_code_factor_map[item?.log_no_code] * totalAmount)?.toFixed(2)
         // );
-        log_no_code_amount_map[item?.log_no_code] = Number(totalAmount.toFixed(2));
+        log_no_code_amount_map[item?.log_no_code] = Number(
+          totalAmount.toFixed(2)
+        );
       }
 
       const slicing_done_other_details_id_set = new Set();
@@ -1740,7 +1735,6 @@ export const create_dressing_items_from_dressing_report = catchAsync(
       }
 
       async function add_peeling_done_items(other_details) {
-
         const peeling_done_map = issue_for_dressing_details?.reduce(
           (acc, item) => {
             acc[item?.log_no_code] = item;

@@ -235,7 +235,6 @@ export const createVeneerLogsExcel = async (newData) => {
         };
 
         worksheet.addRow(rowData);
-
       } catch (error) {
         console.log('Error creating venner excel => ', error.message);
       }

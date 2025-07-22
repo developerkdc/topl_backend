@@ -1,5 +1,9 @@
 import mongoose from 'mongoose';
-import { issues_for_status, item_issued_for, order_category } from '../../../../Utils/constants/constants.js';
+import {
+  issues_for_status,
+  item_issued_for,
+  order_category,
+} from '../../../../Utils/constants/constants.js';
 
 const validateOrderField = function () {
   return this.issued_for === item_issued_for.order ? true : false;
@@ -188,10 +192,8 @@ const tapping_done_history_schema = new mongoose.Schema(
     issue_status: {
       type: String,
       enum: {
-        values: [
-          issues_for_status.pressing,
-        ],
-        message: `Invalid type {{VALUE}} it must be one of the ${(issues_for_status.pressing)}`,
+        values: [issues_for_status.pressing],
+        message: `Invalid type {{VALUE}} it must be one of the ${issues_for_status.pressing}`,
       },
       default: issues_for_status.pressing,
     },

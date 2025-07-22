@@ -126,7 +126,6 @@ groupingDoneRouter.post(
   download_excel_factory_grouping_damage
 );
 
-
 groupingDoneRouter.post(
   '/download-factory-grouping-history-excel',
   AuthMiddleware,

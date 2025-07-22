@@ -94,9 +94,8 @@ router.post(
   '/download-excel-plywood-history',
   AuthMiddleware,
   RolesPermissions('plywood_inventory', 'view'),
-  plywoodHistoryLogsCsv  
+  plywoodHistoryLogsCsv
 );
-
 
 router.get('/item-srno-dropdown', AuthMiddleware, item_sr_no_dropdown);
 router.get('/inward-srno-dropdown', AuthMiddleware, inward_sr_no_dropdown);

@@ -1,5 +1,9 @@
-import mongoose from "mongoose";
-import { dispatch_status, order_category, transaction_type } from "../../Utils/constants/constants.js";
+import mongoose from 'mongoose';
+import {
+  dispatch_status,
+  order_category,
+  transaction_type,
+} from '../../Utils/constants/constants.js';
 const transaction_type_values = Object.values(transaction_type);
 
 const address_schema = {
@@ -38,88 +42,89 @@ const address_schema = {
   },
 };
 
-const dispatchSchema = new mongoose.Schema({
-  invoice_no: {
-    type: String,
-    required: [true, 'Invoice number is required'],
-    trim: true,
-    uppercase: true,
-  },
-  invoice_date_time: {
-    type: Date,
-    required: [true, 'Invoice date and time is required'],
-  },
-  removal_of_good_date_time: {
-    type: Date,
-    required: [true, 'Removal of goods date and time is required'],
-  },
-  trans_doc_date: {
-    type: Date,
-    required: [true, 'Trans Doc date is required'],
-  },
-  trans_doc_no: {
-    type: String,
-    required: [true, 'Trans doc number is required'],
-    trim: true,
-    uppercase: true,
-  },
-  customer_id: {
-    type: mongoose.Types.ObjectId,
-    required: [true, 'Customer ID is required'],
-  },
-  customer_details: {
-    type: Object,
-    required: [true, 'Customer details are required']
-  },
-  is_tcs_applicable: {
-    type: Boolean,
-    default: function () {
-      return customer_details?.is_tcs_applicable || false;
+const dispatchSchema = new mongoose.Schema(
+  {
+    invoice_no: {
+      type: String,
+      required: [true, 'Invoice number is required'],
+      trim: true,
+      uppercase: true,
     },
-  },
-  is_tds_applicable: {
-    type: Boolean,
-    default: function () {
-      return customer_details?.is_tcs_applicable || false;
+    invoice_date_time: {
+      type: Date,
+      required: [true, 'Invoice date and time is required'],
     },
-  },
-  is_turnover_based_tcs_applicable: {
-    type: Boolean,
-    default: function () {
-      return customer_details?.is_tcs_applicable || false;
+    removal_of_good_date_time: {
+      type: Date,
+      required: [true, 'Removal of goods date and time is required'],
     },
-  },
-  order_category: {
-    type: String,
-    enum: {
-      values: [
-        order_category?.raw,
-        order_category?.decorative,
-        order_category?.series_product,
-      ],
-      message: `Invalid type {{VALUE}} it must be one of the ${order_category?.raw, order_category?.decorative, order_category?.series_product}`,
+    trans_doc_date: {
+      type: Date,
+      required: [true, 'Trans Doc date is required'],
     },
-    required: [true, 'Order category is required'],
-    trim: true,
-  },
-  product_category: {
-    type: String,
-    default: null,
-    trim: true,
-    uppercase: true,
-  },
-  packing_done_ids: {
-    type: [
-      {
-        packing_done_other_details_id: {
-          type: mongoose.Schema.Types.ObjectId,
-          required: [true, "Packing Done Other Details ID is required."],
-        },
-        packing_done_id: {
-          type: String,
-          required: [true, "Packing Done ID is required."],
-        },
-      }
+    trans_doc_no: {
+      type: String,
+      required: [true, 'Trans doc number is required'],
+      trim: true,
+      uppercase: true,
+    },
+    customer_id: {
+      type: mongoose.Types.ObjectId,
+      required: [true, 'Customer ID is required'],
+    },
+    customer_details: {
+      type: Object,
+      required: [true, 'Customer details are required'],
+    },
+    is_tcs_applicable: {
+      type: Boolean,
+      default: function () {
+        return customer_details?.is_tcs_applicable || false;
+      },
+    },
+    is_tds_applicable: {
+      type: Boolean,
+      default: function () {
+        return customer_details?.is_tcs_applicable || false;
+      },
+    },
+    is_turnover_based_tcs_applicable: {
+      type: Boolean,
+      default: function () {
+        return customer_details?.is_tcs_applicable || false;
+      },
+    },
+    order_category: {
+      type: String,
+      enum: {
+        values: [
+          order_category?.raw,
+          order_category?.decorative,
+          order_category?.series_product,
+        ],
+        message: `Invalid type {{VALUE}} it must be one of the ${(order_category?.raw, order_category?.decorative, order_category?.series_product)}`,
+      },
+      required: [true, 'Order category is required'],
+      trim: true,
+    },
+    product_category: {
+      type: String,
+      default: null,
+      trim: true,
+      uppercase: true,
+    },
+    packing_done_ids: {
+      type: [
+        {
+          packing_done_other_details_id: {
+            type: mongoose.Schema.Types.ObjectId,
+            required: [true, 'Packing Done Other Details ID is required.'],
+          },
+          packing_done_id: {
+            type: String,
+            required: [true, 'Packing Done ID is required.'],
+          },
+        }, 
     ],
     default: [],
     validate: {
@@ -320,5 +325,9 @@ const dispatchSchema = new mongoose.Schema({
   timestamps: true,
 });
 
-const dispatchModel = mongoose.model('dispatches', dispatchSchema, "dispatches");
+const dispatchModel = mongoose.model(
+  'dispatches',
+  dispatchSchema,
+  'dispatches'
+);
 export default dispatchModel;

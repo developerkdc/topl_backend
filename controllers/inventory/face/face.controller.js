@@ -11,7 +11,10 @@ import ApiResponse from '../../../utils/ApiResponse.js';
 import { StatusCodes } from '../../../utils/constants.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
-import { createFaceHistoryExcel, createFaceLogsExcel } from '../../../config/downloadExcel/Logs/Inventory/face/face.js';
+import {
+  createFaceHistoryExcel,
+  createFaceLogsExcel,
+} from '../../../config/downloadExcel/Logs/Inventory/face/face.js';
 import {
   face_approval_inventory_invoice_model,
   face_approval_inventory_items_model,
@@ -514,11 +517,7 @@ export const inward_sr_no_dropdown = catchAsync(async (req, res, next) => {
 });
 
 export const faceLogsCsv = catchAsync(async (req, res) => {
-  const {
-    search = '',
-    sortBy = 'updatedAt',
-    sort = 'desc'
-  } = req.query;
+  const { search = '', sortBy = 'updatedAt', sort = 'desc' } = req.query;
 
   const {
     string,
@@ -584,11 +583,7 @@ export const faceLogsCsv = catchAsync(async (req, res) => {
 });
 
 export const faceHistoryLogsCsv = catchAsync(async (req, res) => {
-  const {
-    search = '',
-    sortBy = 'updatedAt',
-    sort = 'desc',
-  } = req.query;
+  const { search = '', sortBy = 'updatedAt', sort = 'desc' } = req.query;
 
   const {
     string,
@@ -602,7 +597,13 @@ export const faceHistoryLogsCsv = catchAsync(async (req, res) => {
   // Step 1: Build search query
   let search_query = {};
   if (search !== '' && req?.body?.searchFields) {
-    const search_data = DynamicSearch(search, boolean, numbers, string, arrayField);
+    const search_data = DynamicSearch(
+      search,
+      boolean,
+      numbers,
+      string,
+      arrayField
+    );
     if (search_data?.length === 0) {
       return res.status(404).json({
         statusCode: 404,
@@ -643,33 +644,56 @@ export const faceHistoryLogsCsv = catchAsync(async (req, res) => {
           {
             $addFields: {
               invoice_Details: '$face_invoice_details.invoice_Details',
-              no_of_workers: '$face_invoice_details.workers_details.no_of_workers',
+              no_of_workers:
+                '$face_invoice_details.workers_details.no_of_workers',
               shift: '$face_invoice_details.workers_details.shift',
-              working_hours: '$face_invoice_details.workers_details.working_hours',
+              working_hours:
+                '$face_invoice_details.workers_details.working_hours',
 
-              supplier_name: '$face_invoice_details.supplier_details.company_details.supplier_name',
-              supplier_type: '$face_invoice_details.supplier_details.company_details.supplier_type',
+              supplier_name:
+                '$face_invoice_details.supplier_details.company_details.supplier_name',
+              supplier_type:
+                '$face_invoice_details.supplier_details.company_details.supplier_type',
 
-              branch_name: '$face_invoice_details.supplier_details.branch_detail.branch_name',
-              branch_address: '$face_invoice_details.supplier_details.branch_detail.address',
+              branch_name:
+                '$face_invoice_details.supplier_details.branch_detail.branch_name',
+              branch_address:
+                '$face_invoice_details.supplier_details.branch_detail.address',
               city: '$face_invoice_details.supplier_details.branch_detail.city',
-              state: '$face_invoice_details.supplier_details.branch_detail.state',
-              country: '$face_invoice_details.supplier_details.branch_detail.country',
-              pincode: '$face_invoice_details.supplier_details.branch_detail.pincode',
-              gst_number: '$face_invoice_details.supplier_details.branch_detail.gst_number',
-              web_url: '$face_invoice_details.supplier_details.branch_detail.web_url',
+              state:
+                '$face_invoice_details.supplier_details.branch_detail.state',
+              country:
+                '$face_invoice_details.supplier_details.branch_detail.country',
+              pincode:
+                '$face_invoice_details.supplier_details.branch_detail.pincode',
+              gst_number:
+                '$face_invoice_details.supplier_details.branch_detail.gst_number',
+              web_url:
+                '$face_invoice_details.supplier_details.branch_detail.web_url',
 
               contact_person_name: {
-                $arrayElemAt: ['$face_invoice_details.supplier_details.branch_detail.contact_person.name', 0],
+                $arrayElemAt: [
+                  '$face_invoice_details.supplier_details.branch_detail.contact_person.name',
+                  0,
+                ],
               },
               contact_person_email: {
-                $arrayElemAt: ['$face_invoice_details.supplier_details.branch_detail.contact_person.email', 0],
+                $arrayElemAt: [
+                  '$face_invoice_details.supplier_details.branch_detail.contact_person.email',
+                  0,
+                ],
               },
               contact_person_mobile: {
-                $arrayElemAt: ['$face_invoice_details.supplier_details.branch_detail.contact_person.mobile_number', 0],
+                $arrayElemAt: [
+                  '$face_invoice_details.supplier_details.branch_detail.contact_person.mobile_number',
+                  0,
+                ],
               },
               contact_person_designation: {
-                $arrayElemAt: ['$face_invoice_details.supplier_details.branch_detail.contact_person.designation', 0],
+                $arrayElemAt: [
+                  '$face_invoice_details.supplier_details.branch_detail.contact_person.designation',
+                  0,
+                ],
               },
             },
           },
@@ -762,10 +786,13 @@ export const faceHistoryLogsCsv = catchAsync(async (req, res) => {
   const excelLink = await createFaceHistoryExcel(allData);
 
   return res.json(
-    new ApiResponse(StatusCodes.OK, 'Face History CSV downloaded successfully', excelLink)
+    new ApiResponse(
+      StatusCodes.OK,
+      'Face History CSV downloaded successfully',
+      excelLink
+    )
   );
 });
-
 
 export const fetch_face_history = catchAsync(async (req, res, next) => {
   const {

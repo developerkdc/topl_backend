@@ -546,12 +546,12 @@ export const listing_polishing_history = catchAsync(async (req, res) => {
 
   const aggLookUpIssuedDetails = {
     $lookup: {
-      from: "issue_for_polishing_details_view",
-      localField: "issue_for_polishing_id",
-      foreignField: "_id",
-      as: "issue_for_polishing_details"
-    }
-  }
+      from: 'issue_for_polishing_details_view',
+      localField: 'issue_for_polishing_id',
+      foreignField: '_id',
+      as: 'issue_for_polishing_details',
+    },
+  };
 
   const aggCreatedByLookup = {
     $lookup: {
@@ -644,7 +644,8 @@ export const listing_polishing_history = catchAsync(async (req, res) => {
     aggLimit,
   ]; // aggregation pipiline
 
-  const polishing_history_list = await polishing_history_model.aggregate(listAggregate);
+  const polishing_history_list =
+    await polishing_history_model.aggregate(listAggregate);
 
   const aggCount = {
     $count: 'totalCount',

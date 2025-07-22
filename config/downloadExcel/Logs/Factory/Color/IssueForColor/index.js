@@ -120,17 +120,17 @@ import ApiError from '../../../../../../utils/errors/apiError.js';
 
 export const createFactoryIssueForColorExcel = async (newData, req, res) => {
   try {
-   
+
     const workbook = new exceljs.Workbook();
     const worksheet = workbook.addWorksheet('Color‑Issue‑Report');
-    
+
     worksheet.columns = [
       { header: 'Sr. No', key: 'sr_no', width: 8 },
       { header: 'Issued From', key: 'issued_from', width: 18 }, // not in grid, still handy
       { header: 'Issued For', key: 'issued_for', width: 15 },
       { header: 'Item Name', key: 'item_name', width: 24 },
       { header: 'Item Sub category', key: 'item_sub_category', width: 20 },
-      
+
       /* ---- order / customer --------------------------------------- */
       { header: 'Order Date', key: 'order_date', width: 15 },
       { header: 'Owner Name', key: 'owner_name', width: 20 },
@@ -170,7 +170,7 @@ export const createFactoryIssueForColorExcel = async (newData, req, res) => {
       { header: 'Pressing Instr.', key: 'pressing_instructions', width: 25 },
       { header: 'Flow Process', key: 'flow_process', width: 20 },
 
-     
+
       { header: 'Remark', key: 'remark', width: 25 },
       { header: 'Created By', key: 'created_by', width: 18 },
       { header: 'Updated By', key: 'updated_by', width: 18 },
@@ -180,7 +180,7 @@ export const createFactoryIssueForColorExcel = async (newData, req, res) => {
 
     worksheet.getRow(1).eachCell(cell => (cell.font = { bold: true }));
 
-  
+
     Object.values(newData).forEach(item => {
       const order = item.order_details || {};
       const orderItem = item.order_item_details || {};
@@ -238,7 +238,7 @@ export const createFactoryIssueForColorExcel = async (newData, req, res) => {
         pressing_instructions: press.pressing_instructions || '',
         flow_process: Array.isArray(press.flow_process) ? press.flow_process.join(', ') : '',
 
-      
+
         remark: item.remark || '',
         created_by: createdUser.user_name ||
           `${createdUser.first_name || ''} ${createdUser.last_name || ''}`.trim(),
@@ -249,7 +249,7 @@ export const createFactoryIssueForColorExcel = async (newData, req, res) => {
       });
     });
 
-   
+
     const fileName = `Color_Issue_Report_${Date.now()}.xlsx`;
 
     res.setHeader(

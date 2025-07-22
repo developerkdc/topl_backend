@@ -27,7 +27,15 @@ cnc_done_router.post('/history-list', AuthMiddleware, listing_cnc_history);
 // cnc_done_router.post("/add-to-damage", AuthMiddleware, add_cnc_damage)
 
 // Download excel api
-cnc_done_router.post('/download-factory-cnc-done-excel', AuthMiddleware, download_excel_factory_cnc_done);
+cnc_done_router.post(
+  '/download-factory-cnc-done-excel',
+  AuthMiddleware,
+  download_excel_factory_cnc_done
+);
 // Download cnc history api
-cnc_done_router.post('/download-factory-cnc-history-excel', AuthMiddleware, download_excel_factory_cnc_history);
+cnc_done_router.post(
+  '/download-factory-cnc-history-excel',
+  AuthMiddleware,
+  download_excel_factory_cnc_history
+);
 export default cnc_done_router;

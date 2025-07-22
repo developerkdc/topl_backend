@@ -242,9 +242,21 @@ export const createCoreHistoryExcel = async (newData) => {
       { header: 'Branch Name', key: 'branch_name', width: 25 },
       { header: 'Branch Address', key: 'address', width: 25 },
       { header: 'Contact Person Name', key: 'contact_person_name', width: 25 },
-      { header: 'Contact Person Email', key: 'contact_person_email', width: 25 },
-      { header: 'Contact Person Mobile Number', key: 'contact_person_mobile_no', width: 25 },
-      { header: 'Contact Person Designation', key: 'contact_person_designation', width: 25 },
+      {
+        header: 'Contact Person Email',
+        key: 'contact_person_email',
+        width: 25,
+      },
+      {
+        header: 'Contact Person Mobile Number',
+        key: 'contact_person_mobile_no',
+        width: 25,
+      },
+      {
+        header: 'Contact Person Designation',
+        key: 'contact_person_designation',
+        width: 25,
+      },
       { header: 'City', key: 'city', width: 20 },
       { header: 'State', key: 'state', width: 15 },
       { header: 'Country', key: 'country', width: 15 },
@@ -258,7 +270,11 @@ export const createCoreHistoryExcel = async (newData) => {
       { header: 'Transporter Details', key: 'transporter_details', width: 30 },
       { header: 'GST Percentage', key: 'gst_percentage', width: 20 },
       { header: 'GST Value', key: 'gst_val', width: 15 },
-      { header: 'Invoice Value with GST', key: 'invoice_value_with_gst', width: 20 },
+      {
+        header: 'Invoice Value with GST',
+        key: 'invoice_value_with_gst',
+        width: 20,
+      },
 
       { header: 'Created By', key: 'created_by_name', width: 25 },
       { header: 'Updated By', key: 'updated_by_name', width: 25 },
@@ -301,14 +317,18 @@ export const createCoreHistoryExcel = async (newData) => {
           issue_status: data?.issue_status || '',
 
           inward_sr_no: invoice?.inward_sr_no || '',
-          inward_date: invoice?.inward_date ? new Date(invoice?.inward_date).toLocaleDateString() : '',
+          inward_date: invoice?.inward_date
+            ? new Date(invoice?.inward_date).toLocaleDateString()
+            : '',
           currency: invoice?.currency || '',
           no_of_workers: invoice?.workers_details?.no_of_workers || '',
           shift: invoice?.workers_details?.shift || '',
           working_hours: invoice?.workers_details?.working_hours || '',
 
           supplier_name: company?.supplier_name || '',
-          supplier_type: Array.isArray(company?.supplier_type) ? company.supplier_type.join(', ') : '',
+          supplier_type: Array.isArray(company?.supplier_type)
+            ? company.supplier_type.join(', ')
+            : '',
           branch_name: branch?.branch_name || '',
           address: branch?.address || '',
           city: branch?.city || '',
@@ -323,7 +343,9 @@ export const createCoreHistoryExcel = async (newData) => {
           contact_person_mobile_no: contact?.mobile_number || '',
           contact_person_designation: contact?.designation || '',
 
-          invoice_date: invoiceDetails?.invoice_date ? new Date(invoiceDetails?.invoice_date).toLocaleDateString() : '',
+          invoice_date: invoiceDetails?.invoice_date
+            ? new Date(invoiceDetails?.invoice_date).toLocaleDateString()
+            : '',
           invoice_no: invoiceDetails?.invoice_no || '',
           total_item_amount: invoiceDetails?.total_item_amount || '',
           transporter_details: invoiceDetails?.transporter_details || '',
@@ -331,10 +353,16 @@ export const createCoreHistoryExcel = async (newData) => {
           gst_val: invoiceDetails?.gst_value || '',
           invoice_value_with_gst: invoiceDetails?.invoice_value_with_gst || '',
 
-          created_by_name: `${data?.created_user_details?.first_name || ''} ${data?.created_user_details?.last_name || ''}`.trim(),
-          updated_by_name: `${data?.updated_user_details?.first_name || ''} ${data?.updated_user_details?.last_name || ''}`.trim(),
-          createdAt: data?.createdAt ? new Date(data.createdAt).toLocaleDateString() : '',
-          updatedAt: data?.updatedAt ? new Date(data.updatedAt).toLocaleDateString() : '',
+          created_by_name:
+            `${data?.created_user_details?.first_name || ''} ${data?.created_user_details?.last_name || ''}`.trim(),
+          updated_by_name:
+            `${data?.updated_user_details?.first_name || ''} ${data?.updated_user_details?.last_name || ''}`.trim(),
+          createdAt: data?.createdAt
+            ? new Date(data.createdAt).toLocaleDateString()
+            : '',
+          updatedAt: data?.updatedAt
+            ? new Date(data.updatedAt).toLocaleDateString()
+            : '',
         };
 
         worksheet.addRow(rowData);
@@ -358,4 +386,3 @@ export const createCoreHistoryExcel = async (newData) => {
     throw new ApiError(500, error.message);
   }
 };
-

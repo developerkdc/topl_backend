@@ -4,8 +4,14 @@ import { StatusCodes } from '../../../utils/constants.js';
 import ApiError from '../../../utils/errors/apiError.js';
 import catchAsync from '../../../utils/errors/catchAsync.js';
 import { RawOrderItemDetailsModel } from '../../../database/schema/order/raw_order/raw_order_item_details.schema.js';
-import { grouping_done_details_model, grouping_done_items_details_model } from '../../../database/schema/factory/grouping/grouping_done.schema.js';
-import { item_issued_for, order_category } from '../../../database/Utils/constants/constants.js';
+import {
+  grouping_done_details_model,
+  grouping_done_items_details_model,
+} from '../../../database/schema/factory/grouping/grouping_done.schema.js';
+import {
+  item_issued_for,
+  order_category,
+} from '../../../database/Utils/constants/constants.js';
 import { decorative_order_item_details_model } from '../../../database/schema/order/decorative_order/decorative_order_item_details.schema.js';
 import series_product_order_item_details_model from '../../../database/schema/order/series_product_order/series_product_order_item_details.schema.js';
 import mongoose from 'mongoose';
@@ -16,14 +22,14 @@ import grouping_done_history_model from '../../../database/schema/factory/groupi
 import photoModel from '../../../database/schema/masters/photo.schema.js';
 
 const order_items_collections = {
-  [order_category.decorative]: "decorative_order_item_details",
-  [order_category.series_product]: "series_product_order_item_details"
-}
+  [order_category.decorative]: 'decorative_order_item_details',
+  [order_category.series_product]: 'series_product_order_item_details',
+};
 
 export const fetch_all_group_no_by_item_name = catchAsync(async (req, res) => {
   const { id } = req.params;
   const category = req?.query?.category;
-  console.log("category : ", category);
+  console.log('category : ', category);
   if (!isValidObjectId(id)) {
     throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
   }
@@ -45,7 +51,8 @@ export const fetch_all_group_no_by_item_name = catchAsync(async (req, res) => {
     // }
   }
   if (category === order_category?.series_product) {
-    order_item_data = await series_product_order_item_details_model.findById(id);
+    order_item_data =
+      await series_product_order_item_details_model.findById(id);
     // if (!order_item_data) {
     //   throw new ApiError('Order Item Data not found', StatusCodes.NOT_FOUND);
     // }
@@ -251,7 +258,7 @@ export const issue_for_tapping_from_grouping_for_order = catchAsync(async (req, 
       series_name: data?.series_name,
       grade_id: data?.grade_id,
       grade_name: data?.grade_name,
-      remark: data?.remark
+      remark: data?.remark,
     };
 
     const issue_for_tapping_data = {
@@ -379,4 +386,5 @@ export const issue_for_tapping_from_grouping_for_order = catchAsync(async (req, 
   } finally {
     await session.endSession();
   }
-});
+}
+);

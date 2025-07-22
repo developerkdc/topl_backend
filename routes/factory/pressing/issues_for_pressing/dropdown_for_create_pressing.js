@@ -32,8 +32,14 @@ dropdown_for_pressing_router.get(
 );
 
 // For Plywood
-dropdown_for_pressing_router.get('/plywood/pallet-dropdown', getPlywoodPalletDropdown);
-dropdown_for_pressing_router.get('/plywood/details/:id', getPlywoodDetailsByPalletNo);
+dropdown_for_pressing_router.get(
+  '/plywood/pallet-dropdown',
+  getPlywoodPalletDropdown
+);
+dropdown_for_pressing_router.get(
+  '/plywood/details/:id',
+  getPlywoodDetailsByPalletNo
+);
 
 // For MDF
 dropdown_for_pressing_router.get('/mdf/pallet-dropdown', getMdfPalletDropdown);
@@ -41,13 +47,24 @@ dropdown_for_pressing_router.get('/mdf/details/:id', getMdfDetailsByPalletNo);
 
 //create pressing Base type PLYWOOD
 // Consumed from from resizing
-dropdown_for_pressing_router.get('/plywood/resizing/item-name-dropdown', getPlywoodResizingItemNameDropdown);
-dropdown_for_pressing_router.get('/plywood/resizing/item/:id', getPlywoodResizingItemDetails);
+dropdown_for_pressing_router.get(
+  '/plywood/resizing/item-name-dropdown',
+  getPlywoodResizingItemNameDropdown
+);
+dropdown_for_pressing_router.get(
+  '/plywood/resizing/item/:id',
+  getPlywoodResizingItemDetails
+);
 
 // consume from production
-dropdown_for_pressing_router.get('/plywood/production/item-name-dropdown', getPlywoodProductionItemNameDropdown);
-dropdown_for_pressing_router.get('/plywood/production/item/:id', getPlywoodProductionItemDetails);
-
+dropdown_for_pressing_router.get(
+  '/plywood/production/item-name-dropdown',
+  getPlywoodProductionItemNameDropdown
+);
+dropdown_for_pressing_router.get(
+  '/plywood/production/item/:id',
+  getPlywoodProductionItemDetails
+);
 
 dropdown_for_pressing_router.get(
   '/fetch-all-fleece-paper-inward-sr-no',

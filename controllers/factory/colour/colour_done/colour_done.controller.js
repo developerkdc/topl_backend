@@ -391,7 +391,7 @@ export const fetch_single_color_done_item_with_issue_for_color_data =
           result
         )
       );
-});
+  });
 
 export const revert_color_done_items = catchAsync(async (req, res) => {
   const { id } = req.params;
@@ -478,7 +478,6 @@ export const revert_color_done_items = catchAsync(async (req, res) => {
   }
 });
 
-
 export const listing_color_history = catchAsync(async (req, res) => {
   const {
     page = 1,
@@ -533,12 +532,12 @@ export const listing_color_history = catchAsync(async (req, res) => {
 
   const aggLookUpIssuedDetails = {
     $lookup: {
-      from: "issue_for_colour_details_view",
-      localField: "issue_for_color_id",
-      foreignField: "_id",
-      as: "issue_for_colour_details"
-    }
-  }
+      from: 'issue_for_colour_details_view',
+      localField: 'issue_for_color_id',
+      foreignField: '_id',
+      as: 'issue_for_colour_details',
+    },
+  };
 
   const aggCreatedByLookup = {
     $lookup: {
@@ -639,8 +638,7 @@ export const listing_color_history = catchAsync(async (req, res) => {
 
   const totalAggregate = [...listAggregate?.slice(0, -2), aggCount]; // total aggregation pipiline
 
-  const [totalDocument] =
-    await color_history_model.aggregate(totalAggregate);
+  const [totalDocument] = await color_history_model.aggregate(totalAggregate);
 
   const totalPages = Math.ceil((totalDocument?.totalCount || 0) / limit);
 
@@ -654,8 +652,6 @@ export const listing_color_history = catchAsync(async (req, res) => {
   );
   return res.status(200).json(response);
 });
-
-
 
 export const download_excel_color_done = catchAsync(async (req, res) => {
   const {
@@ -809,13 +805,8 @@ export const download_excel_color_done = catchAsync(async (req, res) => {
   ]; // aggregation pipiline
 
   const data = await color_done_details_model.aggregate(listAggregate);
-  await createFactoryColorDoneExcel(data,req,res);
-
+  await createFactoryColorDoneExcel(data, req, res);
 });
-
-
-
-
 
 export const download_excel_color_history = catchAsync(async (req, res) => {
   const {
@@ -871,12 +862,12 @@ export const download_excel_color_history = catchAsync(async (req, res) => {
 
   const aggLookUpIssuedDetails = {
     $lookup: {
-      from: "issue_for_colour_details_view",
-      localField: "issue_for_color_id",
-      foreignField: "_id",
-      as: "issue_for_colour_details"
-    }
-  }
+      from: 'issue_for_colour_details_view',
+      localField: 'issue_for_color_id',
+      foreignField: '_id',
+      as: 'issue_for_colour_details',
+    },
+  };
 
   const aggCreatedByLookup = {
     $lookup: {
@@ -967,9 +958,8 @@ export const download_excel_color_history = catchAsync(async (req, res) => {
     // aggSort,
     // aggSkip,
     // aggLimit,
-  ]; 
+  ];
 
   const data = await color_history_model.aggregate(listAggregate);
-  await createFactoryColorHistoryExcel(data,req,res);
-
+  await createFactoryColorHistoryExcel(data, req, res);
 });
