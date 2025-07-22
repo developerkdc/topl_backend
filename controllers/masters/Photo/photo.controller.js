@@ -593,6 +593,7 @@ export const dropdownPhoto = catchAsync(async (req, res, next) => {
     {
       $project: {
         photo_number: 1,
+        sales_item_name: 1,
         'images.destination': 1,
         'images.filename': 1,
       },
