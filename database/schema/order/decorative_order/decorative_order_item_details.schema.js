@@ -169,11 +169,11 @@ const decorative_order_item_details_schema = new mongoose.Schema(
     },
     item_status: {
       type: String,
-      default: null,
       enum: {
-        values: [order_item_status?.cancel],
-        message: `Invalid Order Status -> {{VALUE}} it must be one of the ${order_item_status?.cancel}`,
+        values: [order_item_status?.cancelled],
+        message: `Invalid Order Status -> {{VALUE}} it must be one of the ${order_item_status?.cancelled}`,
       },
+      default: null,
     },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,
