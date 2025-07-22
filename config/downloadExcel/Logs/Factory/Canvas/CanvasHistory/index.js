@@ -122,7 +122,7 @@ export const createFactoryCanvasHistoryExcel = async (data, req, res) => {
     const wb = new exceljs.Workbook();
     const ws = wb.addWorksheet('Factory Canvas Damage Details');
 
-   
+
     ws.columns = [
       { header: 'Sr. No', key: 'sr_no', width: 8 },
       { header: 'Issued From', key: 'issued_from', width: 15 },
@@ -248,7 +248,7 @@ export const createFactoryCanvasHistoryExcel = async (data, req, res) => {
       });
     }
 
-   
+
     res.setHeader(
       'Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     );

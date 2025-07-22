@@ -487,12 +487,24 @@ export const logLogsCsv = catchAsync(async (req, res) => {
 
       if (value === undefined || value === '' || value === null) continue;
 
-      if (typeof value === 'object' && value !== null && ('$gte' in value || '$lte' in value)) {
+      if (
+        typeof value === 'object' &&
+        value !== null &&
+        ('$gte' in value || '$lte' in value)
+      ) {
         const range = {};
-        if (value.$gte !== '' && value.$gte !== null && value.$gte !== undefined) {
+        if (
+          value.$gte !== '' &&
+          value.$gte !== null &&
+          value.$gte !== undefined
+        ) {
           range.$gte = value.$gte;
         }
-        if (value.$lte !== '' && value.$lte !== null && value.$lte !== undefined) {
+        if (
+          value.$lte !== '' &&
+          value.$lte !== null &&
+          value.$lte !== undefined
+        ) {
           range.$lte = value.$lte;
         }
         if (Object.keys(range).length > 0) {
@@ -522,9 +534,14 @@ export const logLogsCsv = catchAsync(async (req, res) => {
 
   // 6. Nested approval status conditions
   if (cleanedQuery['log_invoice_details.inward_sr_no']) {
-    match_query['log_invoice_details.approval_status.sendForApproval.status'] = { $in: [null, false] };
-    match_query['log_invoice_details.approval_status.approved.status'] = { $in: [null, false] };
-    match_query['log_invoice_details.approval_status.rejected.status'] = { $in: [null, false] };
+    match_query['log_invoice_details.approval_status.sendForApproval.status'] =
+      { $in: [null, false] };
+    match_query['log_invoice_details.approval_status.approved.status'] = {
+      $in: [null, false],
+    };
+    match_query['log_invoice_details.approval_status.rejected.status'] = {
+      $in: [null, false],
+    };
   }
 
   console.log('Final match_query =>', JSON.stringify(match_query, null, 2));
@@ -1026,12 +1043,24 @@ export const historyLogsCsv = catchAsync(async (req, res) => {
 
       if (value === undefined || value === '' || value === null) continue;
 
-      if (typeof value === 'object' && value !== null && ('$gte' in value || '$lte' in value)) {
+      if (
+        typeof value === 'object' &&
+        value !== null &&
+        ('$gte' in value || '$lte' in value)
+      ) {
         const range = {};
-        if (value.$gte !== '' && value.$gte !== null && value.$gte !== undefined) {
+        if (
+          value.$gte !== '' &&
+          value.$gte !== null &&
+          value.$gte !== undefined
+        ) {
           range.$gte = value.$gte;
         }
-        if (value.$lte !== '' && value.$lte !== null && value.$lte !== undefined) {
+        if (
+          value.$lte !== '' &&
+          value.$lte !== null &&
+          value.$lte !== undefined
+        ) {
           range.$lte = value.$lte;
         }
         if (Object.keys(range).length > 0) {
@@ -1061,9 +1090,14 @@ export const historyLogsCsv = catchAsync(async (req, res) => {
 
   // 6. Nested approval filter logic (if inward_sr_no is part of search)
   if (cleanedQuery['log_invoice_details.inward_sr_no']) {
-    match_query['log_invoice_details.approval_status.sendForApproval.status'] = { $in: [null, false] };
-    match_query['log_invoice_details.approval_status.approved.status'] = { $in: [null, false] };
-    match_query['log_invoice_details.approval_status.rejected.status'] = { $in: [null, false] };
+    match_query['log_invoice_details.approval_status.sendForApproval.status'] =
+      { $in: [null, false] };
+    match_query['log_invoice_details.approval_status.approved.status'] = {
+      $in: [null, false],
+    };
+    match_query['log_invoice_details.approval_status.rejected.status'] = {
+      $in: [null, false],
+    };
   }
 
   // 7. Query DB

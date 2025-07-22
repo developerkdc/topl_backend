@@ -238,6 +238,7 @@ export const updatePhoto = catchAsync(async (req, res, next) => {
       const hybrid_group_no = fetchPhotoData?.hybrid_group_no?.map((e) => e?._id);
       prev_group_no_id = [...prev_group_no_id, ...hybrid_group_no]
     }
+    
     const prevGroupDataUpdated = await grouping_done_items_details_model.updateMany(
       { _id: { $in: prev_group_no_id } },
       {
@@ -593,6 +594,7 @@ export const dropdownPhoto = catchAsync(async (req, res, next) => {
     {
       $project: {
         photo_number: 1,
+        sales_item_name: 1,
         'images.destination': 1,
         'images.filename': 1,
       },

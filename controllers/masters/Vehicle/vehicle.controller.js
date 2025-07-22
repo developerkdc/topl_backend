@@ -366,9 +366,6 @@ export const fetchSingleVehicle = catchAsync(async (req, res, next) => {
       },
     },
 
-
-
-
     // {
     //   $lookup: {
     //     from: 'users',

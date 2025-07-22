@@ -25,6 +25,10 @@ issue_for_cnc_router.get(
 );
 
 // issue_for_cnc_router.post("/list-damage", AuthMiddleware, listing_cnc_damage);
-issue_for_cnc_router.post('/download-factory-issue-for-cnc-excel', AuthMiddleware, download_excel_issued_for_cnc);
+issue_for_cnc_router.post(
+  '/download-factory-issue-for-cnc-excel',
+  AuthMiddleware,
+  download_excel_issued_for_cnc
+);
 
 export default issue_for_cnc_router;

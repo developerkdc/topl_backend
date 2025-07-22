@@ -7,7 +7,7 @@ import {
   issue_for_grouping_from_smoking_dying_done,
   issue_for_grouping_from_veneer_inventory,
   revert_issue_for_grouping,
-  download_excel_factory_grouping_details
+  download_excel_factory_grouping_details,
 } from '../../../controllers/factory/grouping/issues_for_grouping.controller.js';
 const issueForGroupingRouter = express.Router();
 

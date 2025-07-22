@@ -526,12 +526,12 @@ export const listing_bunito_history = catchAsync(async (req, res) => {
 
   const aggLookUpIssuedDetails = {
     $lookup: {
-      from: "issue_for_bunito_details_view",
-      localField: "issue_for_bunito_id",
-      foreignField: "_id",
-      as: "issue_for_bunito_details"
-    }
-  }
+      from: 'issue_for_bunito_details_view',
+      localField: 'issue_for_bunito_id',
+      foreignField: '_id',
+      as: 'issue_for_bunito_details',
+    },
+  };
 
   const aggCreatedByLookup = {
     $lookup: {
@@ -624,7 +624,8 @@ export const listing_bunito_history = catchAsync(async (req, res) => {
     aggLimit,
   ]; // aggregation pipiline
 
-  const bunito_history_list = await bunito_history_model.aggregate(listAggregate);
+  const bunito_history_list =
+    await bunito_history_model.aggregate(listAggregate);
 
   const aggCount = {
     $count: 'totalCount',
@@ -632,8 +633,7 @@ export const listing_bunito_history = catchAsync(async (req, res) => {
 
   const totalAggregate = [...listAggregate?.slice(0, -2), aggCount]; // total aggregation pipiline
 
-  const [totalDocument] =
-    await bunito_history_model.aggregate(totalAggregate);
+  const [totalDocument] = await bunito_history_model.aggregate(totalAggregate);
 
   const totalPages = Math.ceil((totalDocument?.totalCount || 0) / limit);
 

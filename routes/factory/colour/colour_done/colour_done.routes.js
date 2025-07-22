@@ -27,11 +27,17 @@ color_done_router.get(
 color_done_router.post('/history-list', AuthMiddleware, listing_color_history);
 
 // Color done export api
-color_done_router.post('/download-factory-color-done-excel', AuthMiddleware, download_excel_color_done);
-
-
+color_done_router.post(
+  '/download-factory-color-done-excel',
+  AuthMiddleware,
+  download_excel_color_done
+);
 
 // Color History export api
-color_done_router.post('/download-factory-color-history-excel', AuthMiddleware, download_excel_color_history);
+color_done_router.post(
+  '/download-factory-color-history-excel',
+  AuthMiddleware,
+  download_excel_color_history
+);
 
 export default color_done_router;

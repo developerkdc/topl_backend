@@ -65,7 +65,7 @@ export const add_decorative_order = catchAsync(async (req, res) => {
         {
           _id: item.photo_number_id,
           photo_number: item.photo_number,
-          available_no_of_sheets: { $gte: item.no_of_sheets }
+          available_no_of_sheets: { $gte: item.no_of_sheets },
         },
         { $inc: { available_no_of_sheets: -item.no_of_sheets } },
         { session, new: true }
@@ -164,12 +164,16 @@ export const update_decorative_order = catchAsync(async (req, res) => {
     );
 
     for (const item of order_items_details) {
-      const update_photo_sheets = await photoModel.updateOne({
-        _id: item.photo_number_id,
-        photo_number: item.photo_number,
-      }, {
-        $inc: { available_no_of_sheets: item?.no_of_sheets }
-      },{session});
+      const update_photo_sheets = await photoModel.updateOne(
+        {
+          _id: item.photo_number_id,
+          photo_number: item.photo_number,
+        },
+        {
+          $inc: { available_no_of_sheets: item?.no_of_sheets },
+        },
+        { session }
+      );
 
       if (!update_photo_sheets?.acknowledged) {
         throw new ApiError(
@@ -202,7 +206,7 @@ export const update_decorative_order = catchAsync(async (req, res) => {
         {
           _id: item.photo_number_id,
           photo_number: item.photo_number,
-          available_no_of_sheets: { $gte: item.no_of_sheets }
+          available_no_of_sheets: { $gte: item.no_of_sheets },
         },
         { $inc: { available_no_of_sheets: -item.no_of_sheets } },
         { session, new: true }
@@ -217,12 +221,12 @@ export const update_decorative_order = catchAsync(async (req, res) => {
 
       updated_item_details.push({
         ...item,
-        order_id : order_details_result?._id,
-        product_category : item?.base_type,
-        created_by : item.created_by ? item?.created_by : userDetails?._id,
-        updated_by : userDetails?._id,
-        createdAt : item.createdAt ? item?.createdAt : new Date(),
-        updatedAt : new Date(),
+        order_id: order_details_result?._id,
+        product_category: item?.base_type,
+        created_by: item.created_by ? item?.created_by : userDetails?._id,
+        updated_by: userDetails?._id,
+        createdAt: item.createdAt ? item?.createdAt : new Date(),
+        updatedAt: new Date(),
       });
     }
 
@@ -766,78 +770,62 @@ export const downloadPDF = catchAsync(async (req, res) => {
 });
 
 export const getPreviousRate = catchAsync(async (req, res, next) => {
-  const { sale_item_name, customer } = req.query;
+  const { sales_item_name, customer_id } = req.query;
 
-  const match_query = {
-    sale_item_name,
-  };
+  if (!sales_item_name || !customer_id) {
+    return res.status(400).json({
+      status: false,
+      message: 'Missing required fields: Sales Item Name or Customer Name',
+    });
+  }
 
-  // final all item on based of sales item name
-
-  const aggLookupOrderDetails = {
-    $lookup: {
-      from: 'orders',
-      localField: 'order_id',
-      foreignField: '_id',
-      as: 'order_details',
+  const result = await decorative_order_item_details_model.aggregate([
+    {
+      $match: {
+        sales_item_name,
+      },
     },
-  };
-
-  const aggMatch = {
-    $match: {
-      ...match_query,
+    {
+      $lookup: {
+        from: 'orders',
+        localField: 'order_id',
+        foreignField: '_id',
+        as: 'order_details',
+      },
     },
-  };
-
-  const aggUnwindOtherDetails = {
-    $unwind: {
-      path: '$order_details',
-      preserveNullAndEmptyArrays: true,
+    {
+      $unwind: '$order_details',
     },
-  };
-
-  const aggSort = {
-    $sort: {
-      [sortBy]: sort === 'desc' ? -1 : 1,
+    {
+      $match: {
+        'order_details.customer_id': mongoose.Types.ObjectId.createFromHexString(customer_id),
+      },
     },
-  };
-
-  const aggSkip = {
-    $skip: (parseInt(page) - 1) * parseInt(limit),
-  };
-
-  const aggLimit = {
-    $limit: parseInt(limit),
-  };
-
-  const list_aggregate = [
-    aggMatch,
-    aggSort,
-  ];
-
-  const result =
-    await decorative_order_item_details_model?.aggregate(list_aggregate);
-
-  const aggCount = {
-    $count: 'totalCount',
-  };
-
-  const count_total_docs = [
-    aggMatch,
-  ];
-
-  const total_docs =
-    await decorative_order_item_details_model.aggregate(count_total_docs);
-
-  const totalPages = Math.ceil((total_docs[0]?.totalCount || 0) / limit);
+    {
+      $sort: {
+        'order_details.orderDate': -1, // latest order first
+      },
+    },
+    {
+      $limit: 1, // ✅ Only get the latest one
+    },
+    {
+      $project: {
+        _id: 0,
+        rate_per_sqm: 1,
+        orderDate: '$order_details.orderDate',
+        customer_id: '$order_details.customer_id',
+        order_id: 1,
+        sales_item_name: 1,
+      },
+    },
+  ]);
 
   const response = new ApiResponse(
-    StatusCodes?.OK,
-    'Data Fetched Successfully',
-    {
-      data: result,
-      totalPages: totalPages,
-    }
+    StatusCodes.OK,
+    'Previous rate fetched successfully',
+    result?.[0] || null // ✅ Return single object or null
   );
-  return res.status(StatusCodes?.OK).json(response);
+
+  return res.status(StatusCodes.OK).json(response);
 });

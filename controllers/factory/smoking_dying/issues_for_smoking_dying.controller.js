@@ -606,7 +606,6 @@ export const revert_issued_for_smoking_dying_item = catchAsync(
           },
         ]);
 
-       
       if (!issue_for_smoking_dying || !issue_for_smoking_dying?.[0]) {
         throw new ApiError('No Data Found', StatusCodes.BAD_GATEWAY);
       }
@@ -729,7 +728,7 @@ export const revert_issued_for_smoking_dying_item = catchAsync(
         const dressing_done_other_details_id = dressing_done_item_details.map(
           (ele) => ele.dressing_done_other_details_id
         );
-      
+
         const delete_dressing_done_history_doc =
           await dressing_done_history_model.deleteOne(
             {

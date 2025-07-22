@@ -455,86 +455,85 @@ export const fetch_single_issue_for_cnc_item = catchAsync(async (req, res) => {
   return res.status(StatusCodes.OK).json(response);
 });
 
-
-
-export const download_excel_issued_for_cnc = catchAsync(async (req, res, next) => {
-  const {
-    page = 1,
-    limit = 10,
-    sortBy = 'updatedAt',
-    sort = 'desc',
-    search = '',
-  } = req.query;
-  const {
-    string,
-    boolean,
-    numbers,
-    arrayField = [],
-  } = req?.body?.searchFields || {};
-  const filter = req.body?.filter;
-  let search_query = {};
-  if (search != '' && req?.body?.searchFields) {
-    const search_data = DynamicSearch(
-      search,
+export const download_excel_issued_for_cnc = catchAsync(
+  async (req, res, next) => {
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = 'updatedAt',
+      sort = 'desc',
+      search = '',
+    } = req.query;
+    const {
+      string,
       boolean,
       numbers,
-      string,
-      arrayField
-    );
-    if (search_data?.length == 0) {
-      return res.status(404).json({
-        statusCode: 404,
-        status: false,
-        data: {
-          data: [],
-        },
-        message: 'Results Not Found',
-      });
+      arrayField = [],
+    } = req?.body?.searchFields || {};
+    const filter = req.body?.filter;
+    let search_query = {};
+    if (search != '' && req?.body?.searchFields) {
+      const search_data = DynamicSearch(
+        search,
+        boolean,
+        numbers,
+        string,
+        arrayField
+      );
+      if (search_data?.length == 0) {
+        return res.status(404).json({
+          statusCode: 404,
+          status: false,
+          data: {
+            data: [],
+          },
+          message: 'Results Not Found',
+        });
+      }
+      search_query = search_data;
     }
-    search_query = search_data;
+
+    const filterData = dynamic_filter(filter);
+
+    const match_query = {
+      ...filterData,
+      ...search_query,
+      is_cnc_done: false,
+    };
+
+    const aggCommonMatch = {
+      $match: {
+        'available_details.no_of_sheets': { $gt: 0 },
+      },
+    };
+
+    const aggMatch = {
+      $match: {
+        ...match_query,
+      },
+    };
+    const aggSort = {
+      $sort: {
+        [sortBy]: sort === 'desc' ? -1 : 1,
+      },
+    };
+    const aggSkip = {
+      $skip: (parseInt(page) - 1) * parseInt(limit),
+    };
+    const aggLimit = {
+      $limit: parseInt(limit),
+    };
+
+    const listAggregate = [
+      aggCommonMatch,
+      aggMatch,
+      // aggSort,
+      // aggSkip,
+      // aggLimit,
+    ];
+
+    const data = await issue_for_cnc_view_model.aggregate(listAggregate);
+
+    await createFactoryIssueForCNCExcel(data, req, res);
   }
-
-  const filterData = dynamic_filter(filter);
-
-  const match_query = {
-    ...filterData,
-    ...search_query,
-    is_cnc_done: false,
-  };
-
-  const aggCommonMatch = {
-    $match: {
-      'available_details.no_of_sheets': { $gt: 0 },
-    },
-  };
-
-  const aggMatch = {
-    $match: {
-      ...match_query,
-    },
-  };
-  const aggSort = {
-    $sort: {
-      [sortBy]: sort === 'desc' ? -1 : 1,
-    },
-  };
-  const aggSkip = {
-    $skip: (parseInt(page) - 1) * parseInt(limit),
-  };
-  const aggLimit = {
-    $limit: parseInt(limit),
-  };
-
-  const listAggregate = [
-    aggCommonMatch,
-    aggMatch,
-    // aggSort,
-    // aggSkip,
-    // aggLimit,
-  ]; 
-
-  const data = await issue_for_cnc_view_model.aggregate(listAggregate);
-
-  await createFactoryIssueForCNCExcel(data,req, res);
-
-});
+);

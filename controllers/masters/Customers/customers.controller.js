@@ -476,6 +476,10 @@ export const dropdownCustomer = catchAsync(async (req, res, next) => {
         company_name: 1,
         gst_number: 1,
         pan_number: 1,
+        branding_type: 1,
+        credit_schedule: 1,
+        freight: 1,
+        local_freight: 1,
       },
     },
   ]);

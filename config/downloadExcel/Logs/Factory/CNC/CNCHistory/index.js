@@ -138,7 +138,7 @@ export const createFactoryCNCHistoryExcel = async (data, req, res) => {
       { header: 'CNC SQM', key: 'cnc_sqm', width: 13 },
       { header: 'Issued Amount', key: 'issued_amount', width: 15 },
       { header: 'Amount', key: 'amount', width: 13 },
-      
+
       { header: 'Issued From', key: 'issued_from', width: 18 },
       { header: 'Order Type', key: 'order_type', width: 15 },
       { header: 'Product Type', key: 'product_type', width: 15 },
@@ -153,7 +153,7 @@ export const createFactoryCNCHistoryExcel = async (data, req, res) => {
       { header: 'Group Items', key: 'group_items', width: 40 },
       { header: 'Factory Remark', key: 'factory_remark', width: 22 },
       { header: 'Damage Remark', key: 'damage_remark', width: 22 },
-      
+
       { header: 'Created By', key: 'created_by', width: 18 },
       { header: 'Updated By', key: 'updated_by', width: 18 },
       { header: 'Created At', key: 'createdAt', width: 15 },
@@ -171,7 +171,7 @@ export const createFactoryCNCHistoryExcel = async (data, req, res) => {
       const groupDet = pressItems?.[0]?.group_details?.[0] || {};
       const orderItemDet = issue.order_item_details || {};
 
-    
+
       const baseItems = pressItems.flatMap(p =>
         (p.base_details || []).map(b => `${b.item_name} (${b.base_type}) x ${b.no_of_sheets}`)
       );
@@ -204,7 +204,7 @@ export const createFactoryCNCHistoryExcel = async (data, req, res) => {
         cnc_sqm: cnc.sqm ?? '',
         issued_amount: issue.issued_amount ?? '',
         amount: cnc.amount ?? '',
-       
+
         issued_from: issue.issued_from ?? '',
         order_type: order.order_type ?? '',
         product_type: press.product_type ?? '',

@@ -84,7 +84,7 @@ veneer_router.post(
   '/download-excel-veneer-history',
   AuthMiddleware,
   RolesPermissions('veneer_inventory', 'view'),
-  veneerHistoryLogsCsv  
+  veneerHistoryLogsCsv
 );
 
 veneer_router.post(

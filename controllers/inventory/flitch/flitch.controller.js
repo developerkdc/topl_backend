@@ -333,10 +333,18 @@ export const flitchLogsCsv = catchAsync(async (req, res) => {
 
       if (typeof value === 'object' && ('$gte' in value || '$lte' in value)) {
         const range = {};
-        if (value.$gte !== '' && value.$gte !== null && value.$gte !== undefined) {
+        if (
+          value.$gte !== '' &&
+          value.$gte !== null &&
+          value.$gte !== undefined
+        ) {
           range.$gte = value.$gte;
         }
-        if (value.$lte !== '' && value.$lte !== null && value.$lte !== undefined) {
+        if (
+          value.$lte !== '' &&
+          value.$lte !== null &&
+          value.$lte !== undefined
+        ) {
           range.$lte = value.$lte;
         }
         if (Object.keys(range).length > 0) {
@@ -376,7 +384,8 @@ export const flitchLogsCsv = catchAsync(async (req, res) => {
   ];
 
   // 6. Fetch Data
-  const allData = await flitch_inventory_items_view_model.aggregate(aggregate_stage);
+  const allData =
+    await flitch_inventory_items_view_model.aggregate(aggregate_stage);
 
   if (allData.length === 0) {
     return res
@@ -705,7 +714,13 @@ export const flitchHistoryCsv = catchAsync(async (req, res) => {
   // 1. Build search query using DynamicSearch
   let search_query = {};
   if (search !== '' && req?.body?.searchFields) {
-    const search_data = DynamicSearch(search, boolean, numbers, string, arrayField);
+    const search_data = DynamicSearch(
+      search,
+      boolean,
+      numbers,
+      string,
+      arrayField
+    );
     if (!search_data || Object.keys(search_data).length === 0) {
       return res.status(404).json({
         statusCode: 404,
@@ -734,10 +749,18 @@ export const flitchHistoryCsv = catchAsync(async (req, res) => {
         ('$gte' in value || '$lte' in value)
       ) {
         const range = {};
-        if (value.$gte !== '' && value.$gte !== null && value.$gte !== undefined) {
+        if (
+          value.$gte !== '' &&
+          value.$gte !== null &&
+          value.$gte !== undefined
+        ) {
           range.$gte = value.$gte;
         }
-        if (value.$lte !== '' && value.$lte !== null && value.$lte !== undefined) {
+        if (
+          value.$lte !== '' &&
+          value.$lte !== null &&
+          value.$lte !== undefined
+        ) {
           range.$lte = value.$lte;
         }
         if (Object.keys(range).length > 0) {
@@ -779,7 +802,8 @@ export const flitchHistoryCsv = catchAsync(async (req, res) => {
   ];
 
   // 6. Fetch data
-  const allData = await flitch_inventory_items_view_model.aggregate(aggregate_stage);
+  const allData =
+    await flitch_inventory_items_view_model.aggregate(aggregate_stage);
 
   if (!allData || allData.length === 0) {
     return res
