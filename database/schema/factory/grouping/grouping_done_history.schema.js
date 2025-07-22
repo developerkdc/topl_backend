@@ -1,5 +1,9 @@
 import mongoose from 'mongoose';
-import { issues_for_status, item_issued_for, order_category } from '../../../Utils/constants/constants.js';
+import {
+  issues_for_status,
+  item_issued_for,
+  order_category,
+} from '../../../Utils/constants/constants.js';
 
 const validateOrderField = function () {
   return this.issue_status === item_issued_for.order ? true : false;
@@ -198,7 +202,7 @@ const grouping_done_history_schema = new mongoose.Schema(
           issues_for_status?.order,
           issues_for_status?.tapping,
         ],
-        message: `Invalid type {{VALUE}} it must be one of the ${issues_for_status?.order, issues_for_status?.challan, issues_for_status?.tapping}`,
+        message: `Invalid type {{VALUE}} it must be one of the ${(issues_for_status?.order, issues_for_status?.challan, issues_for_status?.tapping)}`,
       },
       default: null,
     },

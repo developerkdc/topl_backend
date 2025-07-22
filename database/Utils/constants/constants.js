@@ -29,8 +29,8 @@ export const issues_for_status = {
 };
 
 export const sub_category = {
-  natural:"NATURAL",
-  hybrid:"HYBRID"
+  natural: "NATURAL",
+  hybrid: "HYBRID"
 }
 
 export const inward_type = {
@@ -74,6 +74,7 @@ export const order_status = {
   pending: 'PENDING',
   partial_complete: 'PARTIAL COMPLETE',
   complete: 'COMPLETE',
+  cancelled: 'CANCELLED',
 };
 export const order_type = {
   regular: 'REGULAR',
@@ -90,7 +91,7 @@ export const branding_type = {
 };
 
 export const order_item_status = {
-  cancel: 'CANCEL',
+  cancelled: 'CANCELLED',
 };
 
 export const item_issued_from = {

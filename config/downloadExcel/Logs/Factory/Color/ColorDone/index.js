@@ -108,7 +108,7 @@ import ApiError from '../../../../../../utils/errors/apiError.js';
 
 export const createFactoryColorDoneExcel = async (newData, req, res) => {
   try {
-  
+
     const workbook = new exceljs.Workbook();
     const worksheet = workbook.addWorksheet('Color‑Done‑Report');
 
@@ -136,7 +136,7 @@ export const createFactoryColorDoneExcel = async (newData, req, res) => {
       { header: 'Amount', key: 'amount', width: 14 },
       { header: 'Available Amount', key: 'available_amount', width: 17 },
 
-     
+
       { header: 'Product Type', key: 'product_type', width: 15 },
       { header: 'Is Color Done', key: 'is_color_done', width: 12 },
       { header: 'Machine Name', key: 'machine_name', width: 20 },
@@ -152,7 +152,7 @@ export const createFactoryColorDoneExcel = async (newData, req, res) => {
       { header: 'Pressing Instr.', key: 'pressing_instructions', width: 25 },
       { header: 'Flow Process', key: 'flow_process', width: 20 },
 
-    
+
       { header: 'Remark', key: 'remark', width: 25 },
       { header: 'Created By', key: 'created_by', width: 18 },
       { header: 'Updated By', key: 'updated_by', width: 18 },

@@ -239,11 +239,27 @@ export const createFleeceHistoryExcel = async (data) => {
       { header: 'Total Item Amount', key: 'total_item_amount', width: 20 },
       { header: 'Transporter Details', key: 'transporter_details', width: 30 },
       { header: 'GST Percentage', key: 'gst_percentage', width: 20 },
-      { header: 'Invoice Value with GST', key: 'invoice_value_with_gst', width: 20 },
+      {
+        header: 'Invoice Value with GST',
+        key: 'invoice_value_with_gst',
+        width: 20,
+      },
       { header: 'Contact Person Name', key: 'contact_person_name', width: 25 },
-      { header: 'Contact Person Email', key: 'contact_person_email', width: 25 },
-      { header: 'Contact Person Mobile Number', key: 'contact_person_mobile_no', width: 25 },
-      { header: 'Contact Person Designation', key: 'contact_person_designation', width: 25 },
+      {
+        header: 'Contact Person Email',
+        key: 'contact_person_email',
+        width: 25,
+      },
+      {
+        header: 'Contact Person Mobile Number',
+        key: 'contact_person_mobile_no',
+        width: 25,
+      },
+      {
+        header: 'Contact Person Designation',
+        key: 'contact_person_designation',
+        width: 25,
+      },
     ];
 
     worksheet.columns = columns;
@@ -271,8 +287,14 @@ export const createFleeceHistoryExcel = async (data) => {
         issued_amount: item.issued_amount,
         issue_status: item.issue_status,
         remark: item.remark,
-        created_by: item.created_user_details?.user_name || item.created_user_details?.first_name || '',
-        updated_by: item.updated_user_details?.user_name || item.updated_user_details?.first_name || '',
+        created_by:
+          item.created_user_details?.user_name ||
+          item.created_user_details?.first_name ||
+          '',
+        updated_by:
+          item.updated_user_details?.user_name ||
+          item.updated_user_details?.first_name ||
+          '',
         createdAt: item.createdAt,
         updatedAt: item.updatedAt,
         currency: item.fleece_invoice_details?.currency,
@@ -303,7 +325,8 @@ export const createFleeceHistoryExcel = async (data) => {
       worksheet.addRow(row);
     });
 
-    const filepath = 'public/upload/reports/inventory/fleecePaper/fleece-history-report.xlsx';
+    const filepath =
+      'public/upload/reports/inventory/fleecePaper/fleece-history-report.xlsx';
     await workbook.xlsx.writeFile(filepath);
 
     const timeStamp = new Date().getTime();

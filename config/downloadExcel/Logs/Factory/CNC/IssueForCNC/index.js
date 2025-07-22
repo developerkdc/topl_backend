@@ -215,7 +215,9 @@ export const createFactoryIssueForCNCExcel = async (newData, req, res) => {
         is_cnc_done: item.is_cnc_done ? 'Yes' : 'No',
         machine_name: pressing.machine_name || '',
         pressing_id: pressing.pressing_id || '',
-        pressing_date: pressing.pressing_date ? new Date(pressing.pressing_date).toLocaleDateString() : '',
+        pressing_date: pressing.pressing_date
+          ? new Date(pressing.pressing_date).toLocaleDateString()
+          : '',
         shift: pressing.shift || '',
         no_of_workers: pressing.no_of_workers || '',
         no_of_working_hours: pressing.no_of_working_hours || '',

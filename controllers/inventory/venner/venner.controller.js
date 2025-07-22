@@ -503,11 +503,7 @@ export const veneer_item_listing_by_invoice = catchAsync(
 );
 
 export const veneerLogsCsv = catchAsync(async (req, res) => {
-  const {
-    search = '',
-    sortBy = 'updatedAt',
-    sort = 'desc'
-  } = req.query;
+  const { search = '', sortBy = 'updatedAt', sort = 'desc' } = req.query;
 
   const {
     string,
@@ -573,11 +569,7 @@ export const veneerLogsCsv = catchAsync(async (req, res) => {
 });
 
 export const veneerHistoryLogsCsv = catchAsync(async (req, res) => {
-  const {
-    search = '',
-    sortBy = 'updatedAt',
-    sort = 'desc'
-  } = req.query;
+  const { search = '', sortBy = 'updatedAt', sort = 'desc' } = req.query;
 
   const {
     string,
@@ -823,8 +815,6 @@ export const veneerHistoryLogsCsv = catchAsync(async (req, res) => {
 //     new ApiResponse(StatusCodes.OK, 'Veneer history CSV downloaded successfully', excelLink)
 //   );
 // });
-
-
 
 export const listing_veneer_history_inventory = catchAsync(
   async (req, res, next) => {

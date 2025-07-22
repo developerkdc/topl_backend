@@ -145,7 +145,10 @@ export const GenerateOtherGoodsLogs = async (newData) => {
 
 export const GenerateOtherGoodsLogsHistory = async (newData) => {
   try {
-    console.log('Received newData for generating other goods logs:', JSON.stringify(newData, null, 2));
+    console.log(
+      'Received newData for generating other goods logs:',
+      JSON.stringify(newData, null, 2)
+    );
 
     const folderPath = 'public/upload/reports/inventory/othergoods';
 
@@ -178,28 +181,50 @@ export const GenerateOtherGoodsLogsHistory = async (newData) => {
       { header: 'Supplier Name', key: 'supplier_name', width: 25 },
       { header: 'Supplier Type', key: 'supplier_type', width: 20 },
       { header: 'Contact Person Name', key: 'contact_person_name', width: 25 },
-      { header: 'Contact Person Email', key: 'contact_person_email', width: 25 },
-      { header: 'Contact Person Designation', key: 'contact_person_designation', width: 25 },
-      { header: 'Contact Person Mobile Number', key: 'contact_person_mobile_no', width: 25 },
+      {
+        header: 'Contact Person Email',
+        key: 'contact_person_email',
+        width: 25,
+      },
+      {
+        header: 'Contact Person Designation',
+        key: 'contact_person_designation',
+        width: 25,
+      },
+      {
+        header: 'Contact Person Mobile Number',
+        key: 'contact_person_mobile_no',
+        width: 25,
+      },
       { header: 'Invoice Date', key: 'invoice_date', width: 20 },
       { header: 'Invoice No', key: 'invoice_no', width: 20 },
       { header: 'Total Item Amount', key: 'total_item_amount', width: 20 },
       { header: 'Transporter Details', key: 'transporter_details', width: 30 },
       { header: 'GST Percentage', key: 'gst_percentage', width: 20 },
       { header: 'GST Value', key: 'gst_val', width: 15 },
-      { header: 'Invoice Value with GST', key: 'invoice_value_with_gst', width: 20 },
+      {
+        header: 'Invoice Value with GST',
+        key: 'invoice_value_with_gst',
+        width: 20,
+      },
       { header: 'Remark', key: 'remark', width: 20 },
     ];
 
     // Add data rows
     newData.forEach((data, index) => {
       const itemDetails = data?.other_goods_item_details || {};
-      const invoiceDetails = itemDetails?.othergoods_invoice_details?.invoice_Details || {};
-      const supplierDetails = itemDetails?.othergoods_invoice_details?.supplier_details?.company_details || {};
-      const contactPerson = itemDetails?.othergoods_invoice_details?.supplier_details?.branch_detail?.contact_person?.[0] || {};
+      const invoiceDetails =
+        itemDetails?.othergoods_invoice_details?.invoice_Details || {};
+      const supplierDetails =
+        itemDetails?.othergoods_invoice_details?.supplier_details
+          ?.company_details || {};
+      const contactPerson =
+        itemDetails?.othergoods_invoice_details?.supplier_details?.branch_detail
+          ?.contact_person?.[0] || {};
 
       const rowData = {
-        inward_sr_no: itemDetails?.othergoods_invoice_details?.inward_sr_no || '',
+        inward_sr_no:
+          itemDetails?.othergoods_invoice_details?.inward_sr_no || '',
         inward_date: itemDetails?.othergoods_invoice_details?.inward_date || '',
         item_sr_no: itemDetails?.item_sr_no || '',
         item_name: itemDetails?.item_name || '',

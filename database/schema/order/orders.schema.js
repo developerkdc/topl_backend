@@ -122,12 +122,13 @@ const OrderSchema = new mongoose.Schema(
     },
     product_category: {
       type: String,
-      default: function(){
+      default: function () {
         const product_category = {
           [order_category.raw]: this.order_category.raw_materials,
           [order_category.decorative]: 'DECORATIVE',
-          [order_category.series_product]: this.order_category.series_product_materials,
-        }
+          [order_category.series_product]:
+            this.order_category.series_product_materials,
+        };
         return product_category[this.order_category] || null;
       },
       uppercase: true,

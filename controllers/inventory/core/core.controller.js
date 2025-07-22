@@ -10,7 +10,10 @@ import ApiResponse from '../../../utils/ApiResponse.js';
 import { StatusCodes } from '../../../utils/constants.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
-import { createCoreHistoryExcel, createCoreLogsExcel } from '../../../config/downloadExcel/Logs/Inventory/core/core.js';
+import {
+  createCoreHistoryExcel,
+  createCoreLogsExcel,
+} from '../../../config/downloadExcel/Logs/Inventory/core/core.js';
 import {
   core_approval_inventory_invoice_model,
   core_approval_inventory_items_model,
@@ -502,13 +505,8 @@ export const inward_sr_no_dropdown = catchAsync(async (req, res, next) => {
   });
 });
 
-
 export const coreLogsCsv = catchAsync(async (req, res) => {
-  const {
-    search = '',
-    sortBy = 'updatedAt',
-    sort = 'desc'
-  } = req.query;
+  const { search = '', sortBy = 'updatedAt', sort = 'desc' } = req.query;
 
   const {
     string,
@@ -574,11 +572,7 @@ export const coreLogsCsv = catchAsync(async (req, res) => {
 });
 
 export const coreHistoryLogsCsv = catchAsync(async (req, res) => {
-  const {
-    search = '',
-    sortBy = 'updatedAt',
-    sort = 'desc',
-  } = req.query;
+  const { search = '', sortBy = 'updatedAt', sort = 'desc' } = req.query;
 
   const {
     string,
@@ -592,7 +586,13 @@ export const coreHistoryLogsCsv = catchAsync(async (req, res) => {
   // Step 1: Build search query
   let search_query = {};
   if (search !== '' && req?.body?.searchFields) {
-    const search_data = DynamicSearch(search, boolean, numbers, string, arrayField);
+    const search_data = DynamicSearch(
+      search,
+      boolean,
+      numbers,
+      string,
+      arrayField
+    );
     if (search_data?.length === 0) {
       return res.status(404).json({
         statusCode: 404,
@@ -605,7 +605,11 @@ export const coreHistoryLogsCsv = catchAsync(async (req, res) => {
 
   // Step 2: Build filter query
   const filterData = dynamic_filter(filter);
-  const match_query = { ...filterData, ...search_query, issue_status: { $ne: null } };
+  const match_query = {
+    ...filterData,
+    ...search_query,
+    issue_status: { $ne: null },
+  };
 
   // Step 3: Aggregation pipeline
   const pipeline = [
@@ -633,33 +637,56 @@ export const coreHistoryLogsCsv = catchAsync(async (req, res) => {
           {
             $addFields: {
               invoice_Details: '$core_invoice_details.invoice_Details',
-              no_of_workers: '$core_invoice_details.workers_details.no_of_workers',
+              no_of_workers:
+                '$core_invoice_details.workers_details.no_of_workers',
               shift: '$core_invoice_details.workers_details.shift',
-              working_hours: '$core_invoice_details.workers_details.working_hours',
+              working_hours:
+                '$core_invoice_details.workers_details.working_hours',
 
-              supplier_name: '$core_invoice_details.supplier_details.company_details.supplier_name',
-              supplier_type: '$core_invoice_details.supplier_details.company_details.supplier_type',
+              supplier_name:
+                '$core_invoice_details.supplier_details.company_details.supplier_name',
+              supplier_type:
+                '$core_invoice_details.supplier_details.company_details.supplier_type',
 
-              branch_name: '$core_invoice_details.supplier_details.branch_detail.branch_name',
-              branch_address: '$core_invoice_details.supplier_details.branch_detail.address',
+              branch_name:
+                '$core_invoice_details.supplier_details.branch_detail.branch_name',
+              branch_address:
+                '$core_invoice_details.supplier_details.branch_detail.address',
               city: '$core_invoice_details.supplier_details.branch_detail.city',
-              state: '$core_invoice_details.supplier_details.branch_detail.state',
-              country: '$core_invoice_details.supplier_details.branch_detail.country',
-              pincode: '$core_invoice_details.supplier_details.branch_detail.pincode',
-              gst_number: '$core_invoice_details.supplier_details.branch_detail.gst_number',
-              web_url: '$core_invoice_details.supplier_details.branch_detail.web_url',
+              state:
+                '$core_invoice_details.supplier_details.branch_detail.state',
+              country:
+                '$core_invoice_details.supplier_details.branch_detail.country',
+              pincode:
+                '$core_invoice_details.supplier_details.branch_detail.pincode',
+              gst_number:
+                '$core_invoice_details.supplier_details.branch_detail.gst_number',
+              web_url:
+                '$core_invoice_details.supplier_details.branch_detail.web_url',
 
               contact_person_name: {
-                $arrayElemAt: ['$core_invoice_details.supplier_details.branch_detail.contact_person.name', 0],
+                $arrayElemAt: [
+                  '$core_invoice_details.supplier_details.branch_detail.contact_person.name',
+                  0,
+                ],
               },
               contact_person_email: {
-                $arrayElemAt: ['$core_invoice_details.supplier_details.branch_detail.contact_person.email', 0],
+                $arrayElemAt: [
+                  '$core_invoice_details.supplier_details.branch_detail.contact_person.email',
+                  0,
+                ],
               },
               contact_person_mobile: {
-                $arrayElemAt: ['$core_invoice_details.supplier_details.branch_detail.contact_person.mobile_number', 0],
+                $arrayElemAt: [
+                  '$core_invoice_details.supplier_details.branch_detail.contact_person.mobile_number',
+                  0,
+                ],
               },
               contact_person_designation: {
-                $arrayElemAt: ['$core_invoice_details.supplier_details.branch_detail.contact_person.designation', 0],
+                $arrayElemAt: [
+                  '$core_invoice_details.supplier_details.branch_detail.contact_person.designation',
+                  0,
+                ],
               },
             },
           },
@@ -752,11 +779,13 @@ export const coreHistoryLogsCsv = catchAsync(async (req, res) => {
   const excelLink = await createCoreHistoryExcel(allData);
 
   return res.json(
-    new ApiResponse(StatusCodes.OK, 'Core History CSV downloaded successfully', excelLink)
+    new ApiResponse(
+      StatusCodes.OK,
+      'Core History CSV downloaded successfully',
+      excelLink
+    )
   );
 });
-
-
 
 //fetch core history
 export const fetch_core_history = catchAsync(async (req, res, next) => {

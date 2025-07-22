@@ -1,9 +1,14 @@
 import mongoose from 'mongoose';
-import { issues_for_status, item_issued_for, item_issued_from, order_category } from '../../../../Utils/constants/constants.js';
+import {
+  issues_for_status,
+  item_issued_for,
+  item_issued_from,
+  order_category,
+} from '../../../../Utils/constants/constants.js';
 const validateOrderField = function () {
   return this.issued_for === item_issued_for?.order ? true : false;
 };
-const issued_for_values = Object.values(item_issued_for)
+const issued_for_values = Object.values(item_issued_for);
 const bunito_history_schema = new mongoose.Schema(
   {
     sr_no: Number,
@@ -45,7 +50,7 @@ const bunito_history_schema = new mongoose.Schema(
       type: String,
       enum: {
         values: issued_for_values,
-        message: `Invalid type {{VALUE}} it must be one of the ${issued_for_values?.join(",")}`,
+        message: `Invalid type {{VALUE}} it must be one of the ${issued_for_values?.join(',')}`,
       },
       default: null,
     },
