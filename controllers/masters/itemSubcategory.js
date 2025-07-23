@@ -208,10 +208,34 @@ export const listItemSubCategories = catchAsync(async (req, res) => {
   //   return res.json(new ApiResponse(StatusCodes.OK, 'NO Data found...'));
   // }
   // const totalPage = allDetails.length;
-  const totalDocs = await itemSubCategoryModel.countDocuments({
-    ...searchQuery,
-  });
-  const totalPage = Math.ceil(totalDocs / limitInt);
+  // const totalDocs = await itemSubCategoryModel.countDocuments({
+  //   ...searchQuery,
+  // });
+  const totalDocs = await itemSubCategoryModel.aggregate([
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'created_by',
+        foreignField: '_id',
+        as: 'userDetails',
+      },
+    },
+    {
+      $lookup: {
+        from: 'item_categories',
+        localField: 'category',
+        foreignField: '_id',
+        as: 'categoryDetails',
+      },
+    },
+    { $unwind: { path: '$userDetails', preserveNullAndEmptyArrays: true } },
+    { $match: { ...searchQuery } },
+    {
+      $count: "totalCount"
+    }
+  ]);
+
+  const totalPage = Math.ceil(totalDocs?.[0]?.totalCount / limitInt);
   return res.json(
     new ApiResponse(StatusCodes.OK, 'All Details fetched successfully..', {
       allDetails,

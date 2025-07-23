@@ -5,6 +5,7 @@ import {
   order_items_dropdown,
   order_no_dropdown,
 } from '../../controllers/order/order.js';
+import DecorativeSeriesOrderCancelController from '../../controllers/order/order_cancelled/decorative_series_order_cancel.controller.js';
 
 const orderRouter = express.Router();
 
@@ -18,6 +19,16 @@ orderRouter.get(
   '/fetch-single-order-item/:order_id/:item_id',
   AuthMiddleware,
   fetch_single_order_items
+);
+orderRouter.post(
+  '/cancel-order',
+  AuthMiddleware,
+  DecorativeSeriesOrderCancelController.cancel_order
+);
+orderRouter.post(
+  '/cancel-order-item',
+  AuthMiddleware,
+  DecorativeSeriesOrderCancelController.cancel_order_item
 );
 
 export default orderRouter;

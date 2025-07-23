@@ -148,6 +148,16 @@ const issues_for_grouping_schema = new mongoose.Schema(
       trim: true,
       default: null,
     },
+    cut_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
+    cut_name: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      default: null,
+    },
     pattern_id: {
       type: mongoose.Schema.Types.ObjectId,
       default: null,
