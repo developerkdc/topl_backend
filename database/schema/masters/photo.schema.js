@@ -290,6 +290,7 @@ const photoSchema = new mongoose.Schema(
 
 photoSchema.index({ photo_number: 1 }, { unique: true });
 photoSchema.index({ sr_no: 1 }, { unique: true });
+photoSchema.index({ sales_item_name: 1 });
 photoSchema.index({ item_name: 1 });
 photoSchema.index({ created_by: 1 });
 photoSchema.index({ updated_by: 1 });
