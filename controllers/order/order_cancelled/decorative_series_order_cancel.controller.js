@@ -348,7 +348,7 @@ class DecorativeSeriesOrderCancelController {
 
             await session.commitTransaction();
             const response = new ApiResponse(
-                StatusCodes.CREATED,
+                StatusCodes.OK,
                 'Order Cancelled Successfully.',
                 {
                     order_details: order_details
@@ -388,14 +388,14 @@ class DecorativeSeriesOrderCancelController {
 
             await session.commitTransaction();
             const response = new ApiResponse(
-                StatusCodes.CREATED,
+                StatusCodes.OK,
                 'Order Item Cancelled Successfully.',
                 {
                     order_item_details: order_item_details
                 }
             );
 
-            return res.status(StatusCodes.CREATED).json(response);
+            return res.status(response.statusCode).json(response);
 
         } catch (error) {
             await session?.abortTransaction();
