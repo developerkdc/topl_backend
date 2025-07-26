@@ -99,6 +99,7 @@ const OrderSchema = new mongoose.Schema(
         order_status.complete,
         order_status.pending,
         order_status.partial_complete,
+        order_status.cancelled,
       ],
       uppercase: true,
       trim: true,

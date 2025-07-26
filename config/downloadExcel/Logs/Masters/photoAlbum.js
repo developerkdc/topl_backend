@@ -19,7 +19,8 @@ export const createPhotoAlbumExcel = async (newData, req, res) => {
       { header: 'Length', key: 'length', width: 10 },
       { header: 'Width', key: 'width', width: 10 },
       { header: 'Thickness', key: 'thickness', width: 12 },
-      { header: 'No. of Sheets', key: 'no_sheet', width: 15 },
+      { header: 'No. of Sheets', key: 'no_of_sheets', width: 15 },
+      { header: 'Available No. of Sheets', key: 'available_no_of_sheets', width: 15 },
 
       // Characteristics
       { header: 'Timber Colour', key: 'timber_colour_name', width: 15 },
@@ -125,7 +126,8 @@ export const createPhotoAlbumExcel = async (newData, req, res) => {
         length: item?.length || '',
         width: item?.width || '',
         thickness: item?.thickness || '',
-        no_sheet: item?.no_sheet || '',
+        no_of_sheets: item?.no_of_sheets || '',
+        available_no_of_sheets: item?.available_no_of_sheets || '',
 
         // Characteristics
         timber_colour_name: item?.timber_colour_name || '',
