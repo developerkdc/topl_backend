@@ -82,12 +82,16 @@ export const addPhoto = catchAsync(async (req, res, next) => {
 
     let group_no_id = [savePhotoData?.group_id];
     if (savePhotoData?.sub_category_type === sub_category?.hybrid) {
-      const hybrid_group_no = savePhotoData?.hybrid_group_no?.map((e) => e?._id);
-      group_no_id = [...group_no_id, ...hybrid_group_no]
+      const hybrid_group_no = savePhotoData?.hybrid_group_no?.map(
+        (e) => e?._id
+      );
+      group_no_id = [...group_no_id, ...hybrid_group_no];
     }
-    const isGroupExist = await grouping_done_items_details_model.find({
-      _id: { $in: group_no_id },
-    }).session(session);
+    const isGroupExist = await grouping_done_items_details_model
+      .find({
+        _id: { $in: group_no_id },
+      })
+      .session(session);
 
     if (!isGroupExist || isGroupExist?.length <= 0) {
       return next(new ApiError('Group data not found', 400));
@@ -183,7 +187,9 @@ export const updatePhoto = catchAsync(async (req, res, next) => {
       updated_by: authUserDetail?._id,
     };
 
-    const fetchPhotoData = await photoModel.findOne({ _id: id }).session(session);
+    const fetchPhotoData = await photoModel
+      .findOne({ _id: id })
+      .session(session);
     if (bannerImage) {
       photoData.banner_image = bannerImage;
       if (fs.existsSync(fetchPhotoData?.banner_image?.path)) {
@@ -235,36 +241,46 @@ export const updatePhoto = catchAsync(async (req, res, next) => {
 
     let prev_group_no_id = [fetchPhotoData?.group_id];
     if (fetchPhotoData?.sub_category_type === sub_category?.hybrid) {
-      const hybrid_group_no = fetchPhotoData?.hybrid_group_no?.map((e) => e?._id);
-      prev_group_no_id = [...prev_group_no_id, ...hybrid_group_no]
+      const hybrid_group_no = fetchPhotoData?.hybrid_group_no?.map(
+        (e) => e?._id
+      );
+      prev_group_no_id = [...prev_group_no_id, ...hybrid_group_no];
     }
-    
-    const prevGroupDataUpdated = await grouping_done_items_details_model.updateMany(
-      { _id: { $in: prev_group_no_id } },
-      {
-        $set: {
-          photo_no: null,
-          photo_no_id: null,
+
+    const prevGroupDataUpdated =
+      await grouping_done_items_details_model.updateMany(
+        { _id: { $in: prev_group_no_id } },
+        {
+          $set: {
+            photo_no: null,
+            photo_no_id: null,
+          },
         },
-      },
-      { session }
-    );
+        { session }
+      );
 
     if (prevGroupDataUpdated.matchedCount <= 0) {
       return next(new ApiError('Previous Group not found', 400));
     }
-    if (!prevGroupDataUpdated.acknowledged || prevGroupDataUpdated.modifiedCount <= 0) {
+    if (
+      !prevGroupDataUpdated.acknowledged ||
+      prevGroupDataUpdated.modifiedCount <= 0
+    ) {
       return next(new ApiError('Failed to update previous group', 400));
     }
 
     let group_no_id = [updatePhotoData?.group_id];
     if (updatePhotoData?.sub_category_type === sub_category?.hybrid) {
-      const hybrid_group_no = updatePhotoData?.hybrid_group_no?.map((e) => e?._id);
-      group_no_id = [...group_no_id, ...hybrid_group_no]
+      const hybrid_group_no = updatePhotoData?.hybrid_group_no?.map(
+        (e) => e?._id
+      );
+      group_no_id = [...group_no_id, ...hybrid_group_no];
     }
-    const isGroupExist = await grouping_done_items_details_model.find({
-      _id: { $in: group_no_id },
-    }).session(session);
+    const isGroupExist = await grouping_done_items_details_model
+      .find({
+        _id: { $in: group_no_id },
+      })
+      .session(session);
 
     if (!isGroupExist || isGroupExist?.length <= 0) {
       return next(new ApiError('Group data not found', 400));
@@ -593,10 +609,10 @@ export const dropdownPhoto = catchAsync(async (req, res, next) => {
     },
     {
       $project: {
-        photo_number: 1,
-        sales_item_name: 1,
-        'images.destination': 1,
-        'images.filename': 1,
+        images: 0,
+        grouping_done_items_details: 0,
+        banner_image: 0,
+
       },
     },
   ]);

@@ -177,8 +177,43 @@ export const ListItemNameMaster = catchAsync(async (req, res) => {
   if (allDetails.length === 0) {
     return res.json(new ApiResponse(StatusCodes.OK, 'NO Data found...'));
   }
-  const totalDocs = await ItemNameModel.countDocuments({ ...searchQuery });
-  const totalPage = Math.ceil(totalDocs / limitInt);
+  // const totalDocs = await ItemNameModel.countDocuments({ ...searchQuery });
+
+  const totalDocs = await ItemNameModel.aggregate([
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'created_by',
+        foreignField: '_id',
+        as: 'userDetails',
+      },
+    },
+    {
+      $lookup: {
+        from: 'item_categories',
+        localField: 'category',
+        foreignField: '_id',
+        as: 'categoryDetails',
+      },
+    },
+    {
+      $lookup: {
+        from: 'item_subcategories',
+        localField: 'item_subcategory',
+        foreignField: '_id',
+        as: 'subCategoryDetails',
+      },
+    },
+    { $unwind: { path: '$userDetails', preserveNullAndEmptyArrays: true } },
+    // { $unwind: { path: '$categoryDetails', preserveNullAndEmptyArrays: true } },
+    { $match: { ...searchQuery } },
+
+    {
+      $count: "totalCount"
+    }
+  ]);
+
+  const totalPage = Math.ceil(totalDocs?.[0]?.totalCount / limitInt);
   return res.json(
     new ApiResponse(StatusCodes.OK, 'All Details fetched succesfully..', {
       allDetails,
