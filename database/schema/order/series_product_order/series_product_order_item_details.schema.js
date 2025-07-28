@@ -147,6 +147,10 @@ const series_product_order_item_details_schema = new mongoose.Schema(
       type: Number,
       required: [true, 'Required sheet is required'],
     },
+    dispatch_no_of_sheets: {
+      type: Number,
+      default: 0,
+    },
     sqm: {
       type: Number,
       required: [true, 'SQM is required'],
@@ -190,8 +194,8 @@ const series_product_order_item_details_schema = new mongoose.Schema(
     item_status: {
       type: String,
       enum: {
-        values: [order_item_status?.cancelled],
-        message: `Invalid Order Status -> {{VALUE}} it must be one of the ${order_item_status?.cancelled}`,
+        values: [order_item_status?.cancelled, order_item_status?.closed],
+        message: `Invalid Order Status -> {{VALUE}} it must be one of the ${[order_item_status?.cancelled, order_item_status?.closed]?.join(",")}`,
       },
       default: null,
     },

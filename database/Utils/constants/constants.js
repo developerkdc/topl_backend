@@ -75,6 +75,7 @@ export const order_status = {
   partial_complete: 'PARTIAL COMPLETE',
   complete: 'COMPLETE',
   cancelled: 'CANCELLED',
+  closed: 'CLOSED',
 };
 export const order_type = {
   regular: 'REGULAR',
@@ -92,6 +93,7 @@ export const branding_type = {
 
 export const order_item_status = {
   cancelled: 'CANCELLED',
+  closed: 'CLOSED',
 };
 
 export const item_issued_from = {
