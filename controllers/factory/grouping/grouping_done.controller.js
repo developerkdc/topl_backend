@@ -21,6 +21,7 @@ import { createFactoryGroupingDoneExcel } from '../../../config/downloadExcel/Lo
 import { createFactoryGroupingDamageExcel } from '../../../config/downloadExcel/Logs/Factory/Grouping/groupingDamage.js';
 import { createFactoryGroupingHistoryExcel } from '../../../config/downloadExcel/Logs/Factory/Grouping/groupingHistory.js';
 import { sub_category } from '../../../database/Utils/constants/constants.js';
+import photoModel from '../../../database/schema/masters/photo.schema.js';
 
 export const add_grouping_done = catchAsync(async (req, res, next) => {
   const session = await mongoose.startSession();
@@ -93,12 +94,39 @@ export const add_grouping_done = catchAsync(async (req, res, next) => {
       item.updated_by = userDetails?._id;
       return item;
     });
+
     const add_items_details_data =
       await grouping_done_items_details_model.insertMany(items_details_data, {
         session,
       });
     if (add_items_details_data?.length <= 0) {
       throw new ApiError('Failed to add Items details', 400);
+    }
+
+
+    // update photo details
+    if (fetch_issue_for_grouping_data?.item_subcategories_details?.type === sub_category.hybrid) {
+      for (let item in add_items_details_data) {
+        const add_group_photo_hybrid = await photoModel.updateOne({
+          _id: item?.photo_no_id,
+          photo_number: item?.photo_no,
+        }, {
+          $push: {
+            hybrid_group_no: {
+              _id: item?._id,
+              group_no: item?.group_no,
+            }
+          },
+          $inc: {
+            total_no_of_sheets: item?.no_of_sheets,
+            available_no_of_sheets: item?.available_details?.no_of_sheets
+          }
+        }, { session });
+
+        if (!add_group_photo_hybrid.acknowledged) {
+          throw new ApiError("Failed to add group no to photo for hybrid", StatusCodes.BAD_REQUEST)
+        }
+      }
     }
 
     // update issue for grouping issue status
@@ -178,6 +206,26 @@ export const edit_grouping_done = catchAsync(async (req, res, next) => {
       throw new ApiError('Cannot edit grouping done', 400);
     }
 
+    // issue for grouping
+    const fetch_issue_for_grouping_details =
+      await issues_for_grouping_view_model.aggregate([
+        {
+          $match: {
+            _id: {
+              unique_identifier: mongoose.Types.ObjectId.createFromHexString(
+                fetch_other_details_data?.issue_for_grouping_unique_identifier?.toString()
+              ),
+              pallet_number: fetch_other_details_data?.issue_for_grouping_pallet_number,
+            },
+          },
+        },
+      ]);
+
+    const fetch_issue_for_grouping_data = fetch_issue_for_grouping_details?.[0];
+    if (!fetch_issue_for_grouping_data) {
+      throw new ApiError('Issue for grouping data not found', 400);
+    }
+
     // Other goods details
     const { createdAt, updatetAt, ...update_other_details } = other_details;
     const add_other_details_data =
@@ -199,8 +247,36 @@ export const edit_grouping_done = catchAsync(async (req, res, next) => {
     }
     const add_other_details_id = other_details_data?._id;
 
-    // item details
+    const grouping_done_item_details = await grouping_done_items_details_model.find({
+      grouping_done_other_details_id: add_other_details_id
+    }).session(session).lean();
 
+    // revert photo details
+    if (fetch_issue_for_grouping_data?.item_subcategories_details?.type === sub_category.hybrid) {
+      for (let item of grouping_done_item_details) {
+        const revert_photo_details = await photoModel.updateOne({
+          _id: item?.photo_no_id,
+          photo_number: item?.photo_no,
+        }, {
+          $pull: {
+            hybrid_group_no: {
+              _id: item?._id,
+              group_no: item?.group_no,
+            }
+          },
+          $inc: {
+            total_no_of_sheets: -item?.no_of_sheets,
+            available_no_of_sheets: -item?.available_details?.no_of_sheets
+          }
+        }, { session });
+
+        if (!revert_photo_details.acknowledged) {
+          throw new ApiError("Failed to revert group no to photo for hybrid", StatusCodes.BAD_REQUEST)
+        }
+      }
+    }
+
+    // item details
     const items_details_data = items_details?.map((item, index) => {
       const available_details = {
         no_of_sheets: item?.no_of_sheets,
@@ -237,6 +313,31 @@ export const edit_grouping_done = catchAsync(async (req, res, next) => {
       });
     if (add_items_details_data?.length <= 0) {
       throw new ApiError('Failed to add Items details', 400);
+    };
+
+    // update photo details
+    if (fetch_issue_for_grouping_data?.item_subcategories_details?.type === sub_category.hybrid) {
+      for (let item of add_items_details_data) {
+        const add_group_photo_hybrid = await photoModel.updateOne({
+          _id: item?.photo_no_id,
+          photo_number: item?.photo_no,
+        }, {
+          $push: {
+            hybrid_group_no: {
+              _id: item?._id,
+              group_no: item?.group_no,
+            }
+          },
+          $inc: {
+            total_no_of_sheets: item?.no_of_sheets,
+            available_no_of_sheets: item?.available_details?.no_of_sheets
+          }
+        }, { session });
+
+        if (!add_group_photo_hybrid.acknowledged) {
+          throw new ApiError("Failed to add group no to photo for hybrid", StatusCodes.BAD_REQUEST)
+        }
+      }
     }
 
     await session.commitTransaction();

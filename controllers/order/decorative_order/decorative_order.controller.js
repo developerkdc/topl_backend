@@ -61,21 +61,24 @@ export const add_decorative_order = catchAsync(async (req, res) => {
     const updated_item_details = [];
     for (const item of item_details) {
       // Validate photo availability - await properly in loop
-      const photoUpdate = await photoModel.findOneAndUpdate(
-        {
-          _id: item.photo_number_id,
-          photo_number: item.photo_number,
-          available_no_of_sheets: { $gte: item.no_of_sheets },
-        },
-        { $inc: { available_no_of_sheets: -item.no_of_sheets } },
-        { session, new: true }
-      );
 
-      if (!photoUpdate) {
-        throw new ApiError(
-          `Photo number ${item?.photo_number} does not have enough sheets.`,
-          StatusCodes.BAD_REQUEST
+      if (item.photo_number && item.photo_number_id) {
+        const photoUpdate = await photoModel.findOneAndUpdate(
+          {
+            _id: item.photo_number_id,
+            photo_number: item.photo_number,
+            available_no_of_sheets: { $gte: item.no_of_sheets },
+          },
+          { $inc: { available_no_of_sheets: -item.no_of_sheets } },
+          { session, new: true }
         );
+
+        if (!photoUpdate) {
+          throw new ApiError(
+            `Photo number ${item?.photo_number} does not have enough sheets.`,
+            StatusCodes.BAD_REQUEST
+          );
+        }
       }
 
       updated_item_details.push({
@@ -164,22 +167,24 @@ export const update_decorative_order = catchAsync(async (req, res) => {
     );
 
     for (const item of order_items_details) {
-      const update_photo_sheets = await photoModel.updateOne(
-        {
-          _id: item.photo_number_id,
-          photo_number: item.photo_number,
-        },
-        {
-          $inc: { available_no_of_sheets: item?.no_of_sheets },
-        },
-        { session }
-      );
-
-      if (!update_photo_sheets?.acknowledged) {
-        throw new ApiError(
-          `Photo number ${item?.photo_number} does not have enough sheets.`,
-          StatusCodes.BAD_REQUEST
+      if (item.photo_number && item.photo_number_id) {
+        const update_photo_sheets = await photoModel.updateOne(
+          {
+            _id: item.photo_number_id,
+            photo_number: item.photo_number,
+          },
+          {
+            $inc: { available_no_of_sheets: item?.no_of_sheets },
+          },
+          { session }
         );
+
+        if (!update_photo_sheets?.acknowledged) {
+          throw new ApiError(
+            `Photo number ${item?.photo_number} does not have enough sheets.`,
+            StatusCodes.BAD_REQUEST
+          );
+        }
       }
     }
 
@@ -202,21 +207,23 @@ export const update_decorative_order = catchAsync(async (req, res) => {
     const updated_item_details = [];
     for (const item of item_details) {
       // Validate photo availability - await properly in loop
-      const photoUpdate = await photoModel.findOneAndUpdate(
-        {
-          _id: item.photo_number_id,
-          photo_number: item.photo_number,
-          available_no_of_sheets: { $gte: item.no_of_sheets },
-        },
-        { $inc: { available_no_of_sheets: -item.no_of_sheets } },
-        { session, new: true }
-      );
-
-      if (!photoUpdate) {
-        throw new ApiError(
-          `Photo number ${item?.photo_number} does not have enough sheets.`,
-          StatusCodes.BAD_REQUEST
+      if (item.photo_number && item.photo_number_id) {
+        const photoUpdate = await photoModel.findOneAndUpdate(
+          {
+            _id: item.photo_number_id,
+            photo_number: item.photo_number,
+            available_no_of_sheets: { $gte: item.no_of_sheets },
+          },
+          { $inc: { available_no_of_sheets: -item.no_of_sheets } },
+          { session, new: true }
         );
+  
+        if (!photoUpdate) {
+          throw new ApiError(
+            `Photo number ${item?.photo_number} does not have enough sheets.`,
+            StatusCodes.BAD_REQUEST
+          );
+        }
       }
 
       updated_item_details.push({

@@ -3,7 +3,7 @@ import { decorative_order_item_details_model } from '../../database/schema/order
 import { OrderModel } from '../../database/schema/order/orders.schema.js';
 import { RawOrderItemDetailsModel } from '../../database/schema/order/raw_order/raw_order_item_details.schema.js';
 import series_product_order_item_details_model from '../../database/schema/order/series_product_order/series_product_order_item_details.schema.js';
-import { order_category } from '../../database/Utils/constants/constants.js';
+import { order_category, order_item_status, order_status } from '../../database/Utils/constants/constants.js';
 import ApiResponse from '../../utils/ApiResponse.js';
 import { StatusCodes } from '../../utils/constants.js';
 import ApiError from '../../utils/errors/apiError.js';
@@ -37,6 +37,7 @@ export const order_no_dropdown = catchAsync(async (req, res, next) => {
   const aggMatch = {
     $match: {
       ...matchQuery,
+      order_status: { $ne: order_status.cancelled }
     },
   };
 
@@ -80,7 +81,10 @@ export const order_items_dropdown = catchAsync(async (req, res, next) => {
   const orderId = fetch_order_details?._id;
   const category = fetch_order_details?.order_category;
   const order_items_data = await order_items_models?.[category]?.find(
-    { order_id: orderId },
+    {
+      order_id: orderId,
+      item_status: { $ne: order_item_status.cancelled }
+    },
     {
       order_id: 1,
       item_no: 1,
