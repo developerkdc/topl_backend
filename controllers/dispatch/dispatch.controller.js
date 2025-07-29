@@ -15,9 +15,11 @@ import { dynamic_filter } from '../../utils/dymanicFilter.js';
 import { decorative_order_item_details_model } from '../../database/schema/order/decorative_order/decorative_order_item_details.schema.js';
 import series_product_order_item_details_model from '../../database/schema/order/series_product_order/series_product_order_item_details.schema.js';
 import { OrderModel } from '../../database/schema/order/orders.schema.js';
+import { RawOrderItemDetailsModel } from '../../database/schema/order/raw_order/raw_order_item_details.schema.js';
 
 
 const order_items_models = {
+  [order_category.raw]: RawOrderItemDetailsModel,
   [order_category.decorative]: decorative_order_item_details_model,
   [order_category.series_product]: series_product_order_item_details_model,
 };
@@ -291,12 +293,14 @@ export const add_dispatch_details = catchAsync(async (req, res, next) => {
 
     // update order and order item as closed status
     for (let item of add_dispatch_items_data) {
+      const dispatch_no_of_sheets = (item?.no_of_sheets || 0) + (item?.no_of_leaves || 0) + (item?.number_of_rolls || 0);
+
       const order_items_details = await order_items_models[item?.order_category].findOneAndUpdate({
-        _id: item?._id,
+        _id: item?.order_item_id,
         order_id: item?.order_id,
       }, {
         $inc: {
-          dispatch_no_of_sheets: item?.no_of_sheets
+          dispatch_no_of_sheets: dispatch_no_of_sheets
         }
       }, { new: true, session: session });
 
@@ -479,12 +483,14 @@ export const edit_dispatch_details = catchAsync(async (req, res, next) => {
 
     // revert order status
     for (let item of fetch_dispatch_items_details) {
+      const dispatch_no_of_sheets = (item?.no_of_sheets || 0) + (item?.no_of_leaves || 0) + (item?.number_of_rolls || 0);
+
       const order_items_details = await order_items_models[item?.order_category].findOneAndUpdate({
-        _id: item?._id,
+        _id: item?.order_item_id,
         order_id: item?.order_id,
       }, {
         $inc: {
-          dispatch_no_of_sheets: -item?.no_of_sheets
+          dispatch_no_of_sheets: -dispatch_no_of_sheets
         }
       }, { new: true, session: session });
 
@@ -588,12 +594,14 @@ export const edit_dispatch_details = catchAsync(async (req, res, next) => {
 
     // update order and order item as closed status
     for (let item of add_dispatch_items_data) {
+      const dispatch_no_of_sheets = (item?.no_of_sheets || 0) + (item?.no_of_leaves || 0) + (item?.number_of_rolls || 0);
+
       const order_items_details = await order_items_models[item?.order_category].findOneAndUpdate({
-        _id: item?._id,
+        _id: item?.order_item_id,
         order_id: item?.order_id,
       }, {
         $inc: {
-          dispatch_no_of_sheets: item?.no_of_sheets
+          dispatch_no_of_sheets: dispatch_no_of_sheets
         }
       }, { new: true, session: session });
 
@@ -769,16 +777,17 @@ export const revert_dispatch_details = catchAsync(async (req, res, next) => {
     // revert order status 
     const dispatch_items_details = await dispatchItemsModel.find(
       { dispatch_id: dispatch_id },
-      { session }
-    );
+    ).session(session);
 
     for (let item of dispatch_items_details) {
+      const dispatch_no_of_sheets = (item?.no_of_sheets || 0) + (item?.no_of_leaves || 0) + (item?.number_of_rolls || 0);
+
       const order_items_details = await order_items_models[item?.order_category].findOneAndUpdate({
-        _id: item?._id,
+        _id: item?.order_item_id,
         order_id: item?.order_id,
       }, {
         $inc: {
-          dispatch_no_of_sheets: -item?.no_of_sheets
+          dispatch_no_of_sheets: -dispatch_no_of_sheets
         }
       }, { new: true, session: session });
 
@@ -789,7 +798,6 @@ export const revert_dispatch_details = catchAsync(async (req, res, next) => {
       const update_order_item = await order_items_models[item?.order_category].findOneAndUpdate({
         _id: order_items_details?._id,
         order_id: order_items_details?.order_id,
-        no_of_sheets: order_items_details?.dispatch_no_of_sheets
       }, {
         $set: {
           item_status: null
@@ -931,6 +939,53 @@ export const cancel_dispatch_details = catchAsync(async (req, res, next) => {
         'Failed to update dispatch details',
         StatusCodes.INTERNAL_SERVER_ERROR
       );
+    }
+
+    // revert order status 
+    const dispatch_items_details = await dispatchItemsModel.find(
+      { dispatch_id: dispatch_id },
+    ).session(session);
+
+    for (let item of dispatch_items_details) {
+      const dispatch_no_of_sheets = (item?.no_of_sheets || 0) + (item?.no_of_leaves || 0) + (item?.number_of_rolls || 0);
+
+      const order_items_details = await order_items_models[item?.order_category].findOneAndUpdate({
+        _id: item?.order_item_id,
+        order_id: item?.order_id,
+      }, {
+        $inc: {
+          dispatch_no_of_sheets: dispatch_no_of_sheets
+        }
+      }, { new: true, session: session });
+
+      if (!order_items_details) {
+        throw new ApiError(`Failed to update dispatch no of sheets in order for ${item?.order_category}`, StatusCodes.BAD_REQUEST);
+      }
+
+      const update_order_item = await order_items_models[item?.order_category].findOneAndUpdate({
+        _id: order_items_details?._id,
+        order_id: order_items_details?.order_id,
+      }, {
+        $set: {
+          item_status: null
+        }
+      }, { new: true, session: session });
+
+      if (!update_order_item) {
+        throw new ApiError(`Failed to update order item status as closed`, StatusCodes.BAD_REQUEST);
+      }
+
+      const update_order = await OrderModel.findOneAndUpdate({
+        _id: order_items_details?.order_id
+      }, {
+        $set: {
+          order_status: null
+        }
+      }, { new: true, session });
+
+      if (!update_order) {
+        throw new ApiError(`Failed to update order status as closed`, StatusCodes.BAD_REQUEST);
+      }
     }
 
     // Update packing done other details
