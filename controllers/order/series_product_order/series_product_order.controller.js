@@ -89,7 +89,7 @@ export const add_series_order = catchAsync(async (req, res) => {
         order_id: order_details_data?._id,
         product_category: order_details_data?.series_product,
         created_by: userDetails?._id,
-        updated_by: userDetails?._id
+        updated_by: userDetails?._id,
       });
     }
 
@@ -163,11 +163,12 @@ export const update_series_order = catchAsync(async (req, res) => {
       );
     }
 
-    const order_items_details = await series_product_order_item_details_model?.find(
-      { order_id: order_details_result?._id },
-      { _id: 1, photo_number_id: 1, photo_number: 1, no_of_sheets: 1 },
-      { session }
-    );
+    const order_items_details =
+      await series_product_order_item_details_model?.find(
+        { order_id: order_details_result?._id },
+        { _id: 1, photo_number_id: 1, photo_number: 1, no_of_sheets: 1 },
+        { session }
+      );
 
     for (const item of order_items_details) {
 
@@ -236,7 +237,6 @@ export const update_series_order = catchAsync(async (req, res) => {
         updatedAt: new Date(),
       });
     }
-
 
     // const updated_item_details = item_details?.map((item) => {
     //   item.order_id = order_details_result?._id;
@@ -775,4 +775,83 @@ export const downloadPDF = catchAsync(async (req, res) => {
   });
 
   return res.status(StatusCodes.OK).end(pdfBuffer);
+});
+
+export const getPreviousRate = catchAsync(async (req, res, next) => {
+  const { customer_id, series_product, product_code, length } = req.query;
+
+  const requiredFields = {
+    customer_id: 'Customer Name',
+    series_product: 'Product',
+    product_code: 'Code',
+    length: 'Length',
+  };
+
+  for (const [key, label] of Object.entries(requiredFields)) {
+    if (!req.query[key]) {
+      return res.status(400).json({
+        status: false,
+        message: `Missing required field: ${label}`,
+      });
+    }
+  }
+
+  var aggregationPipeline = [
+    {
+      $match: {
+        product_code,
+        length: Number(length),
+        product_category: series_product,
+      },
+    },
+    {
+      $lookup: {
+        from: 'orders',
+        localField: 'order_id',
+        foreignField: '_id',
+        as: 'order_details',
+      },
+    },
+    {
+      $unwind: '$order_details',
+    },
+    {
+      $match: {
+        'order_details.customer_id':
+          mongoose.Types.ObjectId.createFromHexString(customer_id),
+      },
+    },
+    {
+      $sort: {
+        'order_details.orderDate': -1, // latest order first
+      },
+    },
+    {
+      $limit: 1, // ✅ Only get the latest one
+    },
+    {
+      $project: {
+        _id: 0,
+        rate_per_sq_feet: 1,
+        orderDate: '$order_details.orderDate',
+        customer_id: '$order_details.customer_id',
+        order_id: 1,
+        sales_item_name: 1,
+      },
+    },
+  ];
+  console.log(aggregationPipeline, 'kiuudxhgiuhxdgiu');
+
+  const result =
+    await series_product_order_item_details_model.aggregate(
+      aggregationPipeline
+    );
+
+  const response = new ApiResponse(
+    StatusCodes.OK,
+    'Previous rate fetched successfully',
+    result?.[0] || null // ✅ Return single object or null
+  );
+
+  return res.status(StatusCodes.OK).json(response);
 });
