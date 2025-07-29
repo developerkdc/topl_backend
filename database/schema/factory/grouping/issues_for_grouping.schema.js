@@ -346,6 +346,28 @@ export const issues_for_grouping_view_model = mongoose.model(
           total_amount: { $sum: '$bundles_details.amount' },
         },
       },
+      {
+        $lookup: {
+          from: "item_subcategories",
+          localField: "item_sub_category_id",
+          foreignField: "_id",
+          pipeline: [
+            {
+              $project: {
+                name: 1,
+                type: 1
+              }
+            }
+          ],
+          as: "item_subcategories_details"
+        }
+      },
+      {
+        $unwind: {
+          path: '$item_subcategories_details',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
     ],
   });
 })();
