@@ -5,6 +5,7 @@ import {
   downloadPDF,
   fetch_all_series_order_items,
   fetch_all_series_order_items_by_order_id,
+  getPreviousRate,
   update_series_order,
   update_series_order_item_status_by_item_id,
 } from '../../../controllers/order/series_product_order/series_product_order.controller.js';
@@ -34,5 +35,6 @@ seriesOrderRouter.get(
   fetch_all_series_order_items_by_order_id
 );
 seriesOrderRouter.get('/download/:id', AuthMiddleware, downloadPDF);
+seriesOrderRouter.get('/get-previous-rate', AuthMiddleware, getPreviousRate);
 
 export default seriesOrderRouter;
