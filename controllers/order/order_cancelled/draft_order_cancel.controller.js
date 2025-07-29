@@ -49,32 +49,29 @@ class DecorativeSeriesOrderCancelController {
     //     collection_name:{
     //         fields: collection_fields_name,
     //         pipiline: mongodb aggregaration pipline,
+    //         related_collection: history 
     //     }
     // } // structure for issued for order items
 
 
     static issued_for_order_items = {
         // grouping
-        "grouping_done_history": {
-            ...this.common_fields,
-            pipeline: [
-                ...this.group_no_lookup("group_no"),
-            ]
-        },
         // tapping
         "issue_for_tappings": {
             ...this.common_fields,
             pipeline: [
                 ...this.group_no_lookup("group_no"),
             ],
+            related_collection: {
+                "grouping_done_history": {
+                    ...this.common_fields,
+                    pipeline: [
+                        ...this.group_no_lookup("group_no"),
+                    ]
+                },
+            }
         },
         "tapping_done_items_details": {
-            ...this.common_fields,
-            pipeline: [
-                ...this.group_no_lookup("group_no"),
-            ]
-        },
-        "tapping_done_history": {
             ...this.common_fields,
             pipeline: [
                 ...this.group_no_lookup("group_no"),
@@ -86,6 +83,14 @@ class DecorativeSeriesOrderCancelController {
             pipeline: [
                 ...this.group_no_lookup("group_no"),
             ],
+            related_collection: {
+                "tapping_done_history": {
+                    ...this.common_fields,
+                    pipeline: [
+                        ...this.group_no_lookup("group_no"),
+                    ]
+                },
+            }
         },
     }
 
@@ -224,7 +229,7 @@ class DecorativeSeriesOrderCancelController {
                 }, {
                     $inc: { available_no_of_sheets: cancel_order_item_status?.no_of_sheets }
                 }, { session });
-
+                
                 if (!update_photo_sheets?.acknowledged) {
                     throw new ApiError(
                         `Photo number ${order_item_photo_number} does not have enough sheets.`,
@@ -233,8 +238,56 @@ class DecorativeSeriesOrderCancelController {
                 }
             }
 
-            //function
-            const revert_photo_quantity_and_make_avaiable_for_stock = async function (model_name, data) {
+
+            const revert_photo_quantity_and_make_avaiable_for_stock = async function (model_name, data, related_collection = false) {
+                const fetch_issued_items = await mongoose.model(model_name).aggregate([
+                    {
+                        $match: {
+                            [data.order_id]: mongoose.Types.ObjectId.createFromHexString(order_id),
+                            [data.order_item_id]: mongoose.Types.ObjectId.createFromHexString(order_item_id),
+                            [data.issued_for]: item_issued_for.order,
+                        }
+                    },
+                    {
+                        $lookup: {
+                            from: "orders",
+                            localField: "order_id",
+                            foreignField: "_id",
+                            as: "order_details",
+                        },
+                    },
+                    {
+                        $unwind: {
+                            path: "$order_details",
+                            preserveNullAndEmptyArrays: true,
+                        },
+                    },
+                    ...data.pipeline || [],
+                ]);
+
+
+                if (!related_collection) {
+                    for (let item of fetch_issued_items) {
+                        const group_photo_number_id = item?.grouping_done_items_details?.photo_no_id?.toString();
+                        const group_photo_number = item?.grouping_done_items_details?.photo_no;
+
+                        if (order_item_photo_id?.toString() !== group_photo_number_id?.toString() || order_item_photo_number !== group_photo_number) {
+                            const update_photo_sheets = await photoModel.updateOne({
+                                _id: group_photo_number_id,
+                                photo_number: group_photo_number,
+                            }, {
+                                $inc: { available_no_of_sheets: item?.no_of_sheets }
+                            }, { session });
+
+                            if (!update_photo_sheets?.acknowledged) {
+                                throw new ApiError(
+                                    `Photo number ${group_photo_number} does not have enough sheets.`,
+                                    StatusCodes.BAD_REQUEST
+                                );
+                            }
+                        }
+                    }
+                }
 
                 const update_document = await mongoose.model(model_name).updateMany(
                     {
@@ -262,6 +315,13 @@ class DecorativeSeriesOrderCancelController {
             for (let ele in this.issued_for_order_items) {
                 const data = this.issued_for_order_items[ele];
                 await revert_photo_quantity_and_make_avaiable_for_stock(ele, data);
+
+                if (data?.related_collection && typeof data?.related_collection === "object") {
+                    for (let ele in data?.related_collection) {
+                        const related_data = data?.related_collection[ele];
+                        await revert_photo_quantity_and_make_avaiable_for_stock(ele, related_data, true);
+                    }
+                }
             }
         } catch (error) {
             throw error
@@ -335,6 +395,16 @@ class DecorativeSeriesOrderCancelController {
 
             const order_item_details = await this.fetch_order_item_details({ order_id, order_item_id, order_category });
 
+            console.log({
+                order_id: order_item_details?.order_id?.toString(),
+                order_item_id: order_item_details?._id?.toString(),
+                order_category: order_item_details?.order_details?.order_category,
+                other_details: {
+                    order_no: order_item_details?.order_details?.order_no,
+                    order_item_no: order_item_details?.item_no,
+                    userDetails: userDetails
+                }
+            })
             await this.available_for_stock_for_issued_order({
                 order_id: order_item_details?.order_id?.toString(),
                 order_item_id: order_item_details?._id?.toString(),
