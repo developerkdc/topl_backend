@@ -601,10 +601,21 @@ export const fetchSinglePhoto = catchAsync(async (req, res, next) => {
 });
 
 export const dropdownPhoto = catchAsync(async (req, res, next) => {
+
+  const { sub_category_type } = req.query;
+
+  const match_query = {
+    status: true,
+  };
+
+  if(sub_category.hybrid === sub_category_type){
+    match_query.sub_category_type = sub_category.hybrid
+  }
+
   const photoList = await photoModel.aggregate([
     {
       $match: {
-        status: true,
+        ...match_query
       },
     },
     {

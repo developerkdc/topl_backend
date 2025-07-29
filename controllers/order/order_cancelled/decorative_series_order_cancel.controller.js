@@ -205,6 +205,40 @@ class DecorativeSeriesOrderCancelController {
         try {
             this.validate_fields({ order_id, order_item_id, order_category }, "order_item");
 
+            const cancel_order_item_status = await mongoose.model(this.order_item_collections[order_category]).findOneAndUpdate({
+                order_id: order_id,
+                _id: order_item_id
+            }, {
+                $set: {
+                    item_status: order_item_status.cancelled,
+                    updated_by: other_details?.userDetails?._id
+                }
+            }, { session });
+
+            if (!cancel_order_item_status) {
+                throw new ApiError(`Failed to cancel order item (${other_details?.order_no})(${other_details?.order_item_no})`, StatusCodes.INTERNAL_SERVER_ERROR);
+            }
+
+            const order_item_photo_id = cancel_order_item_status?.photo_number_id;
+            const order_item_photo_number = cancel_order_item_status?.photo_number;
+
+            if (order_item_photo_number && order_item_photo_id) {
+                const update_photo_sheets = await photoModel.updateOne({
+                    _id: order_item_photo_id,
+                    photo_number: order_item_photo_number,
+                }, {
+                    $inc: { available_no_of_sheets: cancel_order_item_status?.no_of_sheets }
+                }, { session });
+                
+                if (!update_photo_sheets?.acknowledged) {
+                    throw new ApiError(
+                        `Photo number ${order_item_photo_number} does not have enough sheets.`,
+                        StatusCodes.BAD_REQUEST
+                    );
+                }
+            }
+
+
             const revert_photo_quantity_and_make_avaiable_for_stock = async function (model_name, data, related_collection = false) {
                 const fetch_issued_items = await mongoose.model(model_name).aggregate([
                     {
@@ -231,23 +265,26 @@ class DecorativeSeriesOrderCancelController {
                     ...data.pipeline || [],
                 ]);
 
+
                 if (!related_collection) {
                     for (let item of fetch_issued_items) {
                         const group_photo_number_id = item?.grouping_done_items_details?.photo_no_id?.toString();
                         const group_photo_number = item?.grouping_done_items_details?.photo_no;
 
-                        const update_photo_sheets = await photoModel.updateOne({
-                            _id: group_photo_number_id,
-                            photo_number: group_photo_number,
-                        }, {
-                            $inc: { available_no_of_sheets: item?.no_of_sheets }
-                        }, { session });
+                        if (order_item_photo_id?.toString() !== group_photo_number_id?.toString() || order_item_photo_number !== group_photo_number) {
+                            const update_photo_sheets = await photoModel.updateOne({
+                                _id: group_photo_number_id,
+                                photo_number: group_photo_number,
+                            }, {
+                                $inc: { available_no_of_sheets: item?.no_of_sheets }
+                            }, { session });
 
-                        if (!update_photo_sheets?.acknowledged) {
-                            throw new ApiError(
-                                `Photo number ${order_photo_number} does not have enough sheets.`,
-                                StatusCodes.BAD_REQUEST
-                            );
+                            if (!update_photo_sheets?.acknowledged) {
+                                throw new ApiError(
+                                    `Photo number ${group_photo_number} does not have enough sheets.`,
+                                    StatusCodes.BAD_REQUEST
+                                );
+                            }
                         }
                     }
                 }
@@ -285,23 +322,6 @@ class DecorativeSeriesOrderCancelController {
                         await revert_photo_quantity_and_make_avaiable_for_stock(ele, related_data, true);
                     }
                 }
-            }
-
-            const cancel_order_item_status = await mongoose.model(this.order_item_collections[order_category]).updateOne({
-                order_id: order_id,
-                _id: order_item_id
-            }, {
-                $set: {
-                    item_status: order_item_status.cancelled,
-                    updated_by: other_details?.userDetails?._id
-                }
-            }, { session });
-
-            if (cancel_order_item_status?.matchedCount <= 0) {
-                throw new ApiError(`No order item found for (${other_details?.order_no})(${other_details?.order_item_no})`, StatusCodes.NOT_FOUND);
-            }
-            if (!cancel_order_item_status?.acknowledged || cancel_order_item_status?.modifiedCount <= 0) {
-                throw new ApiError(`Failed to cancel order item (${other_details?.order_no})(${other_details?.order_item_no})`, StatusCodes.INTERNAL_SERVER_ERROR);
             }
         } catch (error) {
             throw error
@@ -375,7 +395,7 @@ class DecorativeSeriesOrderCancelController {
 
             const order_item_details = await this.fetch_order_item_details({ order_id, order_item_id, order_category });
 
-            await this.available_for_stock_for_issued_order({
+            console.log({
                 order_id: order_item_details?.order_id?.toString(),
                 order_item_id: order_item_details?._id?.toString(),
                 order_category: order_item_details?.order_details?.order_category,
@@ -383,6 +403,16 @@ class DecorativeSeriesOrderCancelController {
                     order_no: order_item_details?.order_details?.order_no,
                     order_item_no: order_item_details?.item_no,
                     userDetails: userDetails
+                }
+            })
+            await this.available_for_stock_for_issued_order({
+                order_id: order_item_details?.order_id?.toString(),
+                order_item_id: order_item_details?._id?.toString(),
+                order_category: order_item_details?.order_details?.order_category,
+                other_details: {
+                    order_no: order_item_details?.order_details?.order_no,
+                    order_item_no: order_item_details?.item_no,
+                    userDetails: userDetails?._id
                 }
             }, session);
 

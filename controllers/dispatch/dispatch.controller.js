@@ -5,13 +5,24 @@ import { StatusCodes } from '../../utils/constants.js';
 import dispatchModel from '../../database/schema/dispatch/dispatch.schema.js';
 import ApiError from '../../utils/errors/apiError.js';
 import dispatchItemsModel from '../../database/schema/dispatch/dispatch_items.schema.js';
-import { dispatch_status } from '../../database/Utils/constants/constants.js';
+import { dispatch_status, order_category, order_item_status, order_status } from '../../database/Utils/constants/constants.js';
 import {
   packing_done_items_model,
   packing_done_other_details_model,
 } from '../../database/schema/packing/packing_done/packing_done.schema.js';
 import { DynamicSearch } from '../../utils/dynamicSearch/dynamic.js';
 import { dynamic_filter } from '../../utils/dymanicFilter.js';
+import { decorative_order_item_details_model } from '../../database/schema/order/decorative_order/decorative_order_item_details.schema.js';
+import series_product_order_item_details_model from '../../database/schema/order/series_product_order/series_product_order_item_details.schema.js';
+import { OrderModel } from '../../database/schema/order/orders.schema.js';
+import { RawOrderItemDetailsModel } from '../../database/schema/order/raw_order/raw_order_item_details.schema.js';
+
+
+const order_items_models = {
+  [order_category.raw]: RawOrderItemDetailsModel,
+  [order_category.decorative]: decorative_order_item_details_model,
+  [order_category.series_product]: series_product_order_item_details_model,
+};
 
 export const load_packing_details = catchAsync(async (req, res, next) => {
   const userDetails = req.userDetails;
@@ -279,6 +290,64 @@ export const add_dispatch_details = catchAsync(async (req, res, next) => {
       );
     }
 
+
+    // update order and order item as closed status
+    for (let item of add_dispatch_items_data) {
+      const dispatch_no_of_sheets = (item?.no_of_sheets || 0) + (item?.no_of_leaves || 0) + (item?.number_of_rolls || 0);
+
+      const order_items_details = await order_items_models[item?.order_category].findOneAndUpdate({
+        _id: item?.order_item_id,
+        order_id: item?.order_id,
+      }, {
+        $inc: {
+          dispatch_no_of_sheets: dispatch_no_of_sheets
+        }
+      }, { new: true, session: session });
+
+      if (!order_items_details) {
+        throw new ApiError(`Failed to update dispatch no of sheets in order for ${item?.order_category}`, StatusCodes.BAD_REQUEST);
+      }
+
+      if (order_items_details?.no_of_sheets === order_items_details?.dispatch_no_of_sheets) {
+        const order_item_closed = await order_items_models[item?.order_category].findOneAndUpdate({
+          _id: order_items_details?._id,
+          order_id: order_items_details?.order_id,
+          no_of_sheets: order_items_details?.dispatch_no_of_sheets
+        }, {
+          $set: {
+            item_status: order_item_status.closed
+          }
+        }, { new: true, session: session });
+
+        if (!order_item_closed) {
+          throw new ApiError(`Failed to update order item status as closed`, StatusCodes.BAD_REQUEST);
+        }
+
+        const fetch_order_item_closed = await order_items_models[item?.order_category].find({
+          order_id: order_items_details?.order_id,
+          item_status: { $ne: null }
+        });
+
+        if (fetch_order_item_closed?.length <= 0) {
+          const order_closed = await OrderModel.findOneAndUpdate({
+            _id: order_items_details?.order_id
+          }, {
+            $set: {
+              order_status: order_status.closed
+            }
+          }, { new: true, session });
+
+          if (!order_closed) {
+            throw new ApiError(`Failed to update order status as closed`, StatusCodes.BAD_REQUEST);
+          }
+
+        }
+
+
+      }
+
+    }
+
     const packing_done_ids = add_dispatch_details_data?.packing_done_ids;
     if (packing_done_ids?.length <= 0) {
       throw new ApiError(
@@ -412,6 +481,50 @@ export const edit_dispatch_details = catchAsync(async (req, res, next) => {
       );
     }
 
+    // revert order status
+    for (let item of fetch_dispatch_items_details) {
+      const dispatch_no_of_sheets = (item?.no_of_sheets || 0) + (item?.no_of_leaves || 0) + (item?.number_of_rolls || 0);
+
+      const order_items_details = await order_items_models[item?.order_category].findOneAndUpdate({
+        _id: item?.order_item_id,
+        order_id: item?.order_id,
+      }, {
+        $inc: {
+          dispatch_no_of_sheets: -dispatch_no_of_sheets
+        }
+      }, { new: true, session: session });
+
+      if (!order_items_details) {
+        throw new ApiError(`Failed to update dispatch no of sheets in order for ${item?.order_category}`, StatusCodes.BAD_REQUEST);
+      }
+
+      const update_order_item = await order_items_models[item?.order_category].findOneAndUpdate({
+        _id: order_items_details?._id,
+        order_id: order_items_details?.order_id,
+        no_of_sheets: order_items_details?.dispatch_no_of_sheets
+      }, {
+        $set: {
+          item_status: null
+        }
+      }, { new: true, session: session });
+
+      if (!update_order_item) {
+        throw new ApiError(`Failed to update order item status as closed`, StatusCodes.BAD_REQUEST);
+      }
+
+      const update_order = await OrderModel.findOneAndUpdate({
+        _id: order_items_details?.order_id
+      }, {
+        $set: {
+          order_status: null
+        }
+      }, { new: true, session });
+
+      if (!update_order) {
+        throw new ApiError(`Failed to update order status as closed`, StatusCodes.BAD_REQUEST);
+      }
+    }
+
     const update_dispatch_details = {
       ...dispatch_details,
       created_by: userDetails?._id,
@@ -477,6 +590,62 @@ export const edit_dispatch_details = catchAsync(async (req, res, next) => {
         StatusCodes.INTERNAL_SERVER_ERROR
       );
     }
+
+
+    // update order and order item as closed status
+    for (let item of add_dispatch_items_data) {
+      const dispatch_no_of_sheets = (item?.no_of_sheets || 0) + (item?.no_of_leaves || 0) + (item?.number_of_rolls || 0);
+
+      const order_items_details = await order_items_models[item?.order_category].findOneAndUpdate({
+        _id: item?.order_item_id,
+        order_id: item?.order_id,
+      }, {
+        $inc: {
+          dispatch_no_of_sheets: dispatch_no_of_sheets
+        }
+      }, { new: true, session: session });
+
+      if (!order_items_details) {
+        throw new ApiError(`Failed to update dispatch no of sheets in order for ${item?.order_category}`, StatusCodes.BAD_REQUEST);
+      }
+
+      if (order_items_details?.no_of_sheets === order_items_details?.dispatch_no_of_sheets) {
+        const order_item_closed = await order_items_models[item?.order_category].findOneAndUpdate({
+          _id: order_items_details?._id,
+          order_id: order_items_details?.order_id,
+          no_of_sheets: order_items_details?.dispatch_no_of_sheets
+        }, {
+          $set: {
+            item_status: order_item_status.closed
+          }
+        }, { new: true, session: session });
+
+        if (!order_item_closed) {
+          throw new ApiError(`Failed to update order item status as closed`, StatusCodes.BAD_REQUEST);
+        }
+
+        const fetch_order_item_closed = await order_items_models[item?.order_category].find({
+          order_id: order_items_details?.order_id,
+          item_status: { $ne: null }
+        });
+
+        if (fetch_order_item_closed?.length <= 0) {
+          const order_closed = await OrderModel.findOneAndUpdate({
+            _id: order_items_details?.order_id
+          }, {
+            $set: {
+              order_status: order_status.closed
+            }
+          }, { new: true, session });
+
+          if (!order_closed) {
+            throw new ApiError(`Failed to update order status as closed`, StatusCodes.BAD_REQUEST);
+          }
+
+        }
+      }
+    }
+
 
     // Update packing done other details
     const prev_packing_done_ids = fetch_dipsatch_details?.packing_done_ids;
@@ -604,6 +773,54 @@ export const revert_dispatch_details = catchAsync(async (req, res, next) => {
       );
     }
 
+
+    // revert order status 
+    const dispatch_items_details = await dispatchItemsModel.find(
+      { dispatch_id: dispatch_id },
+    ).session(session);
+
+    for (let item of dispatch_items_details) {
+      const dispatch_no_of_sheets = (item?.no_of_sheets || 0) + (item?.no_of_leaves || 0) + (item?.number_of_rolls || 0);
+
+      const order_items_details = await order_items_models[item?.order_category].findOneAndUpdate({
+        _id: item?.order_item_id,
+        order_id: item?.order_id,
+      }, {
+        $inc: {
+          dispatch_no_of_sheets: -dispatch_no_of_sheets
+        }
+      }, { new: true, session: session });
+
+      if (!order_items_details) {
+        throw new ApiError(`Failed to update dispatch no of sheets in order for ${item?.order_category}`, StatusCodes.BAD_REQUEST);
+      }
+
+      const update_order_item = await order_items_models[item?.order_category].findOneAndUpdate({
+        _id: order_items_details?._id,
+        order_id: order_items_details?.order_id,
+      }, {
+        $set: {
+          item_status: null
+        }
+      }, { new: true, session: session });
+
+      if (!update_order_item) {
+        throw new ApiError(`Failed to update order item status as closed`, StatusCodes.BAD_REQUEST);
+      }
+
+      const update_order = await OrderModel.findOneAndUpdate({
+        _id: order_items_details?.order_id
+      }, {
+        $set: {
+          order_status: null
+        }
+      }, { new: true, session });
+
+      if (!update_order) {
+        throw new ApiError(`Failed to update order status as closed`, StatusCodes.BAD_REQUEST);
+      }
+    }
+
     // delete dispatch items details
     const delete_dispatch_items = await dispatchItemsModel.deleteMany(
       { dispatch_id: dispatch_id },
@@ -617,7 +834,8 @@ export const revert_dispatch_details = catchAsync(async (req, res, next) => {
         'Failed to delete dispatch items',
         StatusCodes.INTERNAL_SERVER_ERROR
       );
-    }
+    };
+
 
     // Update packing done other details
     const packing_done_ids = fetch_dipsatch_details?.packing_done_ids;
@@ -721,6 +939,53 @@ export const cancel_dispatch_details = catchAsync(async (req, res, next) => {
         'Failed to update dispatch details',
         StatusCodes.INTERNAL_SERVER_ERROR
       );
+    }
+
+    // revert order status 
+    const dispatch_items_details = await dispatchItemsModel.find(
+      { dispatch_id: dispatch_id },
+    ).session(session);
+
+    for (let item of dispatch_items_details) {
+      const dispatch_no_of_sheets = (item?.no_of_sheets || 0) + (item?.no_of_leaves || 0) + (item?.number_of_rolls || 0);
+
+      const order_items_details = await order_items_models[item?.order_category].findOneAndUpdate({
+        _id: item?.order_item_id,
+        order_id: item?.order_id,
+      }, {
+        $inc: {
+          dispatch_no_of_sheets: dispatch_no_of_sheets
+        }
+      }, { new: true, session: session });
+
+      if (!order_items_details) {
+        throw new ApiError(`Failed to update dispatch no of sheets in order for ${item?.order_category}`, StatusCodes.BAD_REQUEST);
+      }
+
+      const update_order_item = await order_items_models[item?.order_category].findOneAndUpdate({
+        _id: order_items_details?._id,
+        order_id: order_items_details?.order_id,
+      }, {
+        $set: {
+          item_status: null
+        }
+      }, { new: true, session: session });
+
+      if (!update_order_item) {
+        throw new ApiError(`Failed to update order item status as closed`, StatusCodes.BAD_REQUEST);
+      }
+
+      const update_order = await OrderModel.findOneAndUpdate({
+        _id: order_items_details?.order_id
+      }, {
+        $set: {
+          order_status: null
+        }
+      }, { new: true, session });
+
+      if (!update_order) {
+        throw new ApiError(`Failed to update order status as closed`, StatusCodes.BAD_REQUEST);
+      }
     }
 
     // Update packing done other details
