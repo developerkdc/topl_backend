@@ -68,11 +68,11 @@ export const add_series_order = catchAsync(async (req, res) => {
       if (item.photo_number && item.photo_number_id) {
         const photoUpdate = await photoModel.findOneAndUpdate(
           {
+            _id: item.photo_number_id,
             photo_number: item.photo_number,
-            photo_no_id: item.photo_number_id,
-            no_of_sheets: { $gte: item.no_of_sheets }
+            available_no_of_sheets: { $gte: item.no_of_sheets }
           },
-          { $inc: { no_of_sheets: -item.no_of_sheets } },
+          { $inc: { available_no_of_sheets: -item.no_of_sheets } },
           { session, new: true }
         );
 
