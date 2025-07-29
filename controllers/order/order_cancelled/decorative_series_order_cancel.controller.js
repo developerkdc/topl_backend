@@ -17,34 +17,6 @@ class DecorativeSeriesOrderCancelController {
         pipeline: []
     }
 
-    static group_no_lookup = function (localField) {
-        return [
-            {
-                $lookup: {
-                    from: 'grouping_done_items_details',
-                    localField: localField,
-                    foreignField: 'group_no',
-                    pipeline: [
-                        {
-                            $project: {
-                                group_no: 1,
-                                photo_no: 1,
-                                photo_no_id: 1,
-                            },
-                        },
-                    ],
-                    as: 'grouping_done_items_details',
-                },
-            },
-            {
-                $unwind: {
-                    path: "$grouping_done_items_details",
-                    preserveNullAndEmptyArrays: true,
-                },
-            }
-        ]
-    }
-
     // {
     //     collection_name:{
     //         fields: collection_fields_name,
@@ -57,36 +29,70 @@ class DecorativeSeriesOrderCancelController {
         // grouping
         "grouping_done_history": {
             ...this.common_fields,
-            pipeline: [
-                ...this.group_no_lookup("group_no"),
-            ]
         },
         // tapping
         "issue_for_tappings": {
             ...this.common_fields,
-            pipeline: [
-                ...this.group_no_lookup("group_no"),
-            ],
         },
         "tapping_done_items_details": {
             ...this.common_fields,
-            pipeline: [
-                ...this.group_no_lookup("group_no"),
-            ]
         },
         "tapping_done_history": {
             ...this.common_fields,
-            pipeline: [
-                ...this.group_no_lookup("group_no"),
-            ]
         },
         //pressing
         "issues_for_pressings": {
             ...this.common_fields,
-            pipeline: [
-                ...this.group_no_lookup("group_no"),
-            ],
         },
+        "pressing_done_details": {
+            ...this.common_fields,
+        },
+        "pressing_done_history": {
+            ...this.common_fields,
+        },
+        // CNC
+        "issued_for_cnc_details": {
+            ...this.common_fields,
+        },
+        "cnc_history_details": {
+            ...this.common_fields,
+        },
+        //color
+        "issued_for_color_details": {
+            ...this.common_fields,
+        },
+        "color_history_details": {
+            ...this.common_fields,
+        },
+        //bunito
+        "issued_for_bunito_details": {
+            ...this.common_fields,
+        },
+        "bunito_history_details": {
+            ...this.common_fields,
+        },
+        //polishing
+        "issued_for_polishing_details": {
+            ...this.common_fields,
+        },
+        "polishing_history_details": {
+            ...this.common_fields,
+        },
+        //canvas
+        "issued_for_canvas_details": {
+            ...this.common_fields,
+        },
+        "canvas_history_details": {
+            ...this.common_fields,
+        },
+        //canvas
+        "issued_for_canvas_details": {
+            ...this.common_fields,
+        },
+        "canvas_history_details": {
+            ...this.common_fields,
+        },
+
     }
 
     static order_item_collections = {
