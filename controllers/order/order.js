@@ -37,7 +37,7 @@ export const order_no_dropdown = catchAsync(async (req, res, next) => {
   const aggMatch = {
     $match: {
       ...matchQuery,
-      order_status: { $in: [order_status.cancelled, order_status.closed] }
+      order_status: { $nin: [order_status.cancelled, order_status.closed] }
     },
   };
 
@@ -83,7 +83,7 @@ export const order_items_dropdown = catchAsync(async (req, res, next) => {
   const order_items_data = await order_items_models?.[category]?.find(
     {
       order_id: orderId,
-      item_status: { $in: [order_item_status?.cancelled, order_item_status?.closed] }
+      item_status: { $nin: [order_item_status?.cancelled, order_item_status?.closed] }
     },
     {
       order_id: 1,
