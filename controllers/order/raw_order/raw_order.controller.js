@@ -7,7 +7,7 @@ import ApiResponse from '../../../utils/ApiResponse.js';
 import { StatusCodes } from '../../../utils/constants.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
-import { order_item_status } from '../../../database/Utils/constants/constants.js';
+import { order_item_status, order_status } from '../../../database/Utils/constants/constants.js';
 
 export const add_raw_order = catchAsync(async (req, res, next) => {
   const { order_details, item_details } = req.body;
@@ -58,8 +58,6 @@ export const add_raw_order = catchAsync(async (req, res, next) => {
         StatusCodes.BAD_REQUEST
       );
     }
-
-    console.log(newOrderDetails, 'newOrderDetails');
 
     // adding item details
     const formattedItemsDetails = item_details.map((item) => ({
@@ -138,6 +136,13 @@ export const update_raw_order = catchAsync(async (req, res) => {
         'Failed to Update order details data.',
         StatusCodes.BAD_REQUEST
       );
+    }
+
+    if (updated_order_details.order_status === order_status.cancelled) {
+      throw new ApiError("Order is already cancelled", StatusCodes.BAD_REQUEST);
+    }
+    if (updated_order_details.order_status === order_status.closed) {
+      throw new ApiError("Order is already closed", StatusCodes.BAD_REQUEST);
     }
 
     const delete_order_items = await RawOrderItemDetailsModel?.deleteMany(

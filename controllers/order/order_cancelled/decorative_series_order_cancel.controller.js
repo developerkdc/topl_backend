@@ -150,6 +150,9 @@ class DecorativeSeriesOrderCancelController {
             if (fetch_order_details.order_status === order_status.cancelled) {
                 throw new ApiError("Order is already cancelled", StatusCodes.BAD_REQUEST);
             }
+            if (fetch_order_details.order_status === order_status.closed) {
+                throw new ApiError("Order is already closed", StatusCodes.BAD_REQUEST);
+            }
 
             return fetch_order_details;
         } catch (error) {
@@ -194,6 +197,9 @@ class DecorativeSeriesOrderCancelController {
 
             if (fetch_order_item_details.item_status === order_item_status.cancelled) {
                 throw new ApiError("Order item is already cancelled", StatusCodes.BAD_REQUEST);
+            }
+            if (fetch_order_item_details.item_status === order_item_status.closed) {
+                throw new ApiError("Order item is already closed", StatusCodes.BAD_REQUEST);
             }
 
             return fetch_order_item_details;
