@@ -21,6 +21,10 @@ const decorative_order_item_details_schema = new mongoose.Schema(
       uppercase: true,
       trim: true,
     },
+    value_added_process: {
+      type: [],
+      default: [],
+    },
     sales_item_name: {
       type: String,
       default: null,
@@ -175,7 +179,7 @@ const decorative_order_item_details_schema = new mongoose.Schema(
       type: String,
       enum: {
         values: [order_item_status?.cancelled, order_item_status?.closed],
-        message: `Invalid Order Status -> {{VALUE}} it must be one of the ${[order_item_status?.cancelled, order_item_status?.closed]?.join(",")}`,
+        message: `Invalid Order Status -> {{VALUE}} it must be one of the ${[order_item_status?.cancelled, order_item_status?.closed]?.join(',')}`,
       },
       default: null,
     },
