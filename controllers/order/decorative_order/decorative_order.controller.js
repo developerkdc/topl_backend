@@ -8,6 +8,7 @@ import { decorative_order_item_details_model } from '../../../database/schema/or
 import {
   order_category,
   order_item_status,
+  order_status,
 } from '../../../database/Utils/constants/constants.js';
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
@@ -160,6 +161,14 @@ export const update_decorative_order = catchAsync(async (req, res) => {
       );
     }
 
+    if (order_details_result.order_status === order_status.cancelled) {
+      throw new ApiError("Order is already cancelled", StatusCodes.BAD_REQUEST);
+    }
+    if (order_details_result.order_status === order_status.closed) {
+      throw new ApiError("Order is already closed", StatusCodes.BAD_REQUEST);
+    }
+
+    // revert photo details
     const order_items_details = await decorative_order_item_details_model?.find(
       { order_id: order_details_result?._id },
       { _id: 1, photo_number_id: 1, photo_number: 1, no_of_sheets: 1 },
@@ -217,7 +226,7 @@ export const update_decorative_order = catchAsync(async (req, res) => {
           { $inc: { available_no_of_sheets: -item.no_of_sheets } },
           { session, new: true }
         );
-  
+
         if (!photoUpdate) {
           throw new ApiError(
             `Photo number ${item?.photo_number} does not have enough sheets.`,

@@ -6,7 +6,7 @@ import series_product_order_item_details_model from '../../../database/schema/or
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
 import catchAsync from '../../../utils/errors/catchAsync.js';
-import { order_item_status } from '../../../database/Utils/constants/constants.js';
+import { order_item_status, order_status } from '../../../database/Utils/constants/constants.js';
 import ApiError from '../../../utils/errors/apiError.js';
 import generatePDFBuffer from '../../../utils/generatePDF/generatePDFBuffer.js';
 import moment from 'moment';
@@ -163,6 +163,13 @@ export const update_series_order = catchAsync(async (req, res) => {
       );
     }
 
+    if (order_details_result.order_status === order_status.cancelled) {
+      throw new ApiError("Order is already cancelled", StatusCodes.BAD_REQUEST);
+    }
+    if (order_details_result.order_status === order_status.closed) {
+      throw new ApiError("Order is already closed", StatusCodes.BAD_REQUEST);
+    }
+
     const order_items_details =
       await series_product_order_item_details_model?.find(
         { order_id: order_details_result?._id },
@@ -170,8 +177,8 @@ export const update_series_order = catchAsync(async (req, res) => {
         { session }
       );
 
+    //revert photo sheets
     for (const item of order_items_details) {
-
       if (item.photo_number && item.photo_number_id) {
         const update_photo_sheets = await photoModel.updateOne({
           _id: item.photo_number_id,
@@ -179,7 +186,7 @@ export const update_series_order = catchAsync(async (req, res) => {
         }, {
           $inc: { available_no_of_sheets: item.no_of_sheets }
         }, { session });
-  
+
         if (!update_photo_sheets?.acknowledged) {
           throw new ApiError(
             `Photo number ${item?.photo_number} does not have enough sheets.`,
@@ -218,7 +225,7 @@ export const update_series_order = catchAsync(async (req, res) => {
           { $inc: { available_no_of_sheets: -item.no_of_sheets } },
           { session, new: true }
         );
-  
+
         if (!photoUpdate) {
           throw new ApiError(
             `Photo number ${item?.photo_number} does not have enough sheets.`,
