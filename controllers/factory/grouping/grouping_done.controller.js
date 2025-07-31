@@ -117,7 +117,7 @@ export const add_grouping_done = catchAsync(async (req, res, next) => {
             }
           },
           $inc: {
-            total_no_of_sheets: item?.no_of_sheets,
+            no_of_sheets: item?.no_of_sheets,
             available_no_of_sheets: item?.available_details?.no_of_sheets
           }
         }, { session });
@@ -264,7 +264,7 @@ export const edit_grouping_done = catchAsync(async (req, res, next) => {
             }
           },
           $inc: {
-            total_no_of_sheets: -item?.no_of_sheets,
+            no_of_sheets: -item?.no_of_sheets,
             available_no_of_sheets: -item?.available_details?.no_of_sheets
           }
         }, { session });
@@ -328,7 +328,7 @@ export const edit_grouping_done = catchAsync(async (req, res, next) => {
             }
           },
           $inc: {
-            total_no_of_sheets: item?.no_of_sheets,
+            no_of_sheets: item?.no_of_sheets,
             available_no_of_sheets: item?.available_details?.no_of_sheets
           }
         }, { session });
