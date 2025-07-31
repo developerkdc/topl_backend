@@ -102,11 +102,10 @@ export const add_grouping_done = catchAsync(async (req, res, next) => {
     if (add_items_details_data?.length <= 0) {
       throw new ApiError('Failed to add Items details', 400);
     }
-
-
+    
     // update photo details
     if (fetch_issue_for_grouping_data?.item_subcategories_details?.type === sub_category.hybrid) {
-      for (let item in add_items_details_data) {
+      for (let item of add_items_details_data) {
         const add_group_photo_hybrid = await photoModel.updateOne({
           _id: item?.photo_no_id,
           photo_number: item?.photo_no,
