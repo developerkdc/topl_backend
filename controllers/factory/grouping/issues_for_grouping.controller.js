@@ -1033,7 +1033,6 @@ export const fetch_all_issue_for_grouping_details = catchAsync(
         [sortBy]: sort === 'desc' ? -1 : 1,
       },
     };
-    console.log(agg_sort);
     const agg_skip = {
       $skip: (parseInt(page) - 1) * parseInt(limit),
     };
