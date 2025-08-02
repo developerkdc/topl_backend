@@ -7,6 +7,7 @@ import {
   update_raw_order_item_status_by_item_id,
 } from '../../../controllers/order/raw_order/raw_order.controller.js';
 import AuthMiddleware from '../../../middlewares/verifyToken.js';
+import RawOrderCancelController from '../../../controllers/order/order_cancelled/raw_order_cancel.controller.js';
 
 const rawOrderRouter = express.Router();
 
@@ -30,6 +31,17 @@ rawOrderRouter.get(
   '/fetch-raw-orders-by-order-id/:id',
   AuthMiddleware,
   fetch_all_raw_order_items_by_order_id
+);
+
+rawOrderRouter.post(
+  '/cancel-order',
+  AuthMiddleware,
+  RawOrderCancelController.cancel_order
+);
+rawOrderRouter.post(
+  '/cancel-order-item',
+  AuthMiddleware,
+  RawOrderCancelController.cancel_order_item
 );
 
 export default rawOrderRouter;
