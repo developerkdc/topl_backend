@@ -6,11 +6,15 @@ import series_product_order_item_details_model from '../../../database/schema/or
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
 import catchAsync from '../../../utils/errors/catchAsync.js';
-import { order_item_status, order_status } from '../../../database/Utils/constants/constants.js';
+import {
+  order_item_status,
+  order_status,
+} from '../../../database/Utils/constants/constants.js';
 import ApiError from '../../../utils/errors/apiError.js';
 import generatePDFBuffer from '../../../utils/generatePDF/generatePDFBuffer.js';
 import moment from 'moment';
 import photoModel from '../../../database/schema/masters/photo.schema.js';
+import salesItemNameModel from '../../../database/schema/masters/salesItemName.schema.js';
 
 export const add_series_order = catchAsync(async (req, res) => {
   const session = await mongoose.startSession();
@@ -54,23 +58,15 @@ export const add_series_order = catchAsync(async (req, res) => {
       );
     }
 
-    // const updated_item_details = item_details?.map((item) => {
-    //   item.order_id = order_details_data?._id;
-    //   item.product_category = order_details_data?.series_product;
-    //   item.created_by = userDetails?._id;
-    //   item.updated_by = userDetails?._id;
-    //   return item;
-    // });
-
     const updated_item_details = [];
     for (const item of item_details) {
-      // Validate photo availability - await properly in loop
+      // 1. Validate and update photo if applicable
       if (item.photo_number && item.photo_number_id) {
         const photoUpdate = await photoModel.findOneAndUpdate(
           {
             _id: item.photo_number_id,
             photo_number: item.photo_number,
-            available_no_of_sheets: { $gte: item.no_of_sheets }
+            available_no_of_sheets: { $gte: item.no_of_sheets },
           },
           { $inc: { available_no_of_sheets: -item.no_of_sheets } },
           { session, new: true }
@@ -84,8 +80,48 @@ export const add_series_order = catchAsync(async (req, res) => {
         }
       }
 
+      // 2. Auto-create sales_item_name if not found
+      if (item?.sales_item_name) {
+        const upperCaseName = item.sales_item_name.toUpperCase();
+
+        const existingItem = await salesItemNameModel.findOne(
+          { sales_item_name: upperCaseName },
+          null,
+          { session }
+        );
+
+        if (!existingItem) {
+          const maxNumber = await salesItemNameModel
+            .aggregate([
+              {
+                $group: {
+                  _id: null,
+                  max: { $max: '$sr_no' },
+                },
+              },
+            ])
+            .session(session);
+
+          const maxSrNo = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1;
+
+          await salesItemNameModel.create(
+            [
+              {
+                sales_item_name: upperCaseName,
+                sr_no: maxSrNo,
+                created_by: userDetails?._id,
+                updated_by: userDetails?._id,
+              },
+            ],
+            { session }
+          );
+        }
+      }
+
+      // 3. Prepare item for insertion
       updated_item_details.push({
         ...item,
+        sales_item_name: item?.sales_item_name?.toUpperCase(),
         order_id: order_details_data?._id,
         product_category: order_details_data?.series_product,
         created_by: userDetails?._id,
@@ -98,10 +134,11 @@ export const add_series_order = catchAsync(async (req, res) => {
         updated_item_details,
         { session }
       );
+
     if (create_order_result?.length === 0) {
       throw new ApiError(
         'Failed to add order item details',
-        StatusCodes?.BAD_REQUEST
+        StatusCodes.BAD_REQUEST
       );
     }
 
@@ -164,10 +201,10 @@ export const update_series_order = catchAsync(async (req, res) => {
     }
 
     if (order_details_result.order_status === order_status.cancelled) {
-      throw new ApiError("Order is already cancelled", StatusCodes.BAD_REQUEST);
+      throw new ApiError('Order is already cancelled', StatusCodes.BAD_REQUEST);
     }
     if (order_details_result.order_status === order_status.closed) {
-      throw new ApiError("Order is already closed", StatusCodes.BAD_REQUEST);
+      throw new ApiError('Order is already closed', StatusCodes.BAD_REQUEST);
     }
 
     const order_items_details =
@@ -180,17 +217,59 @@ export const update_series_order = catchAsync(async (req, res) => {
     //revert photo sheets
     for (const item of order_items_details) {
       if (item.photo_number && item.photo_number_id) {
-        const update_photo_sheets = await photoModel.updateOne({
-          _id: item.photo_number_id,
-          photo_number: item.photo_number,
-        }, {
-          $inc: { available_no_of_sheets: item.no_of_sheets }
-        }, { session });
+        const update_photo_sheets = await photoModel.updateOne(
+          {
+            _id: item.photo_number_id,
+            photo_number: item.photo_number,
+          },
+          {
+            $inc: { available_no_of_sheets: item.no_of_sheets },
+          },
+          { session }
+        );
 
         if (!update_photo_sheets?.acknowledged) {
           throw new ApiError(
             `Photo number ${item?.photo_number} does not have enough sheets.`,
             StatusCodes.BAD_REQUEST
+          );
+        }
+      }
+
+      // 2. Auto-create sales_item_name if not found
+      if (item?.sales_item_name) {
+        const upperCaseName = item.sales_item_name.toUpperCase();
+
+        const existingItem = await salesItemNameModel.findOne(
+          { sales_item_name: upperCaseName },
+          null,
+          { session }
+        );
+
+        if (!existingItem) {
+          const maxNumber = await salesItemNameModel
+            .aggregate([
+              {
+                $group: {
+                  _id: null,
+                  max: { $max: '$sr_no' },
+                },
+              },
+            ])
+            .session(session);
+
+          const maxSrNo = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1;
+
+          await salesItemNameModel.create(
+            [
+              {
+                sales_item_name: upperCaseName,
+                sr_no: maxSrNo,
+                created_by: userDetails?._id,
+                updated_by: userDetails?._id,
+              },
+            ],
+            { session }
           );
         }
       }
@@ -220,7 +299,7 @@ export const update_series_order = catchAsync(async (req, res) => {
           {
             _id: item.photo_number_id,
             photo_number: item.photo_number,
-            available_no_of_sheets: { $gte: item.no_of_sheets }
+            available_no_of_sheets: { $gte: item.no_of_sheets },
           },
           { $inc: { available_no_of_sheets: -item.no_of_sheets } },
           { session, new: true }
