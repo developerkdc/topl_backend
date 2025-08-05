@@ -102,7 +102,7 @@ export const add_grouping_done = catchAsync(async (req, res, next) => {
     if (add_items_details_data?.length <= 0) {
       throw new ApiError('Failed to add Items details', 400);
     }
-    
+
     // update photo details
     if (fetch_issue_for_grouping_data?.item_subcategories_details?.type === sub_category.hybrid) {
       for (let item of add_items_details_data) {
@@ -746,8 +746,56 @@ export const revert_all_grouping_done = catchAsync(async (req, res, next) => {
     if (!grouping_done_other_details?.isEditable) {
       throw new ApiError('Cannot revert grouping done', 400);
     }
-
     const grouping_done_other_details_id = grouping_done_other_details?._id;
+
+    // issue for grouping
+    const fetch_issue_for_grouping_details =
+      await issues_for_grouping_view_model.aggregate([
+        {
+          $match: {
+            _id: {
+              unique_identifier: mongoose.Types.ObjectId.createFromHexString(
+                grouping_done_other_details?.issue_for_grouping_unique_identifier?.toString()
+              ),
+              pallet_number: grouping_done_other_details?.issue_for_grouping_pallet_number,
+            },
+          },
+        },
+      ]);
+
+    const fetch_issue_for_grouping_data = fetch_issue_for_grouping_details?.[0];
+    if (!fetch_issue_for_grouping_data) {
+      throw new ApiError('Issue for grouping data not found', 400);
+    }
+
+    const grouping_done_item_details = await grouping_done_items_details_model.find({
+      grouping_done_other_details_id: grouping_done_other_details_id
+    }).session(session).lean();
+
+    // revert photo details
+    if (fetch_issue_for_grouping_data?.item_subcategories_details?.type === sub_category.hybrid) {
+      for (let item of grouping_done_item_details) {
+        const revert_photo_details = await photoModel.updateOne({
+          _id: item?.photo_no_id,
+          photo_number: item?.photo_no,
+        }, {
+          $pull: {
+            hybrid_group_no: {
+              _id: item?._id,
+              group_no: item?.group_no,
+            }
+          },
+          $inc: {
+            no_of_sheets: -item?.no_of_sheets,
+            available_no_of_sheets: -item?.available_details?.no_of_sheets
+          }
+        }, { session });
+
+        if (!revert_photo_details.acknowledged) {
+          throw new ApiError("Failed to revert group no to photo for hybrid", StatusCodes.BAD_REQUEST)
+        }
+      }
+    }
 
     const delete_grouping_done_other_details =
       await grouping_done_details_model.findOneAndDelete(

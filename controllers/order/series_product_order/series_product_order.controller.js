@@ -230,7 +230,7 @@ export const update_series_order = catchAsync(async (req, res) => {
 
         if (!update_photo_sheets?.acknowledged) {
           throw new ApiError(
-            `Photo number ${item?.photo_number} does not have enough sheets.`,
+            `Photo number ${item?.photo_number} falied to revert sheets.`,
             StatusCodes.BAD_REQUEST
           );
         }

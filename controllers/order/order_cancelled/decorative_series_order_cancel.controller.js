@@ -208,50 +208,69 @@ class DecorativeSeriesOrderCancelController {
         }
     });
 
-    static available_for_stock_for_issued_order = (async ({ order_id, order_item_id, order_category, other_details }, session = null) => {
+    static available_for_stock_for_issued_order = (async (order_data, session = null) => {
         try {
-            this.validate_fields({ order_id, order_item_id, order_category }, "order_item");
+            this.validate_fields({ order_id: order_data?.order_id, order_item_id: order_data?.order_item_id, order_category: order_data?.order_category }, "order_item");
 
-            const cancel_order_item_status = await mongoose.model(this.order_item_collections[order_category]).findOneAndUpdate({
-                order_id: order_id,
-                _id: order_item_id
+            const cancel_order_item_status = await mongoose.model(this.order_item_collections[order_data?.order_category]).findOneAndUpdate({
+                order_id: order_data?.order_id,
+                _id: order_data?.order_item_id
             }, {
                 $set: {
                     item_status: order_item_status.cancelled,
-                    updated_by: other_details?.userDetails?._id
+                    updated_by: order_data?.other_details?.userDetails?._id
                 }
             }, { session });
 
             if (!cancel_order_item_status) {
-                throw new ApiError(`Failed to cancel order item (${other_details?.order_no})(${other_details?.order_item_no})`, StatusCodes.INTERNAL_SERVER_ERROR);
+                throw new ApiError(`Failed to cancel order item (${order_data?.other_details?.order_no})(${order_data?.other_details?.order_item_no})`, StatusCodes.INTERNAL_SERVER_ERROR);
             }
 
             const order_item_photo_id = cancel_order_item_status?.photo_number_id;
             const order_item_photo_number = cancel_order_item_status?.photo_number;
+            const order_no_of_sheets = cancel_order_item_status?.no_of_sheets;
 
-            if (order_item_photo_number && order_item_photo_id) {
+            const update_photo_details = async function (photo_number_id, photo_number, no_of_sheets) {
                 const update_photo_sheets = await photoModel.updateOne({
-                    _id: order_item_photo_id,
-                    photo_number: order_item_photo_number,
+                    _id: photo_number_id,
+                    photo_number: photo_number,
                 }, {
-                    $inc: { available_no_of_sheets: cancel_order_item_status?.no_of_sheets }
+                    $inc: { available_no_of_sheets: no_of_sheets }
                 }, { session });
 
                 if (!update_photo_sheets?.acknowledged) {
                     throw new ApiError(
-                        `Photo number ${order_item_photo_number} does not have enough sheets.`,
+                        `Photo number ${photo_number} falied to revert sheets.`,
                         StatusCodes.BAD_REQUEST
                     );
                 }
             }
 
+            if (order_item_photo_number && order_item_photo_id) {
+                await update_photo_details(order_item_photo_id, order_item_photo_number, order_no_of_sheets)
+            }
+
+            // for different group (decorative)
+            if (order_data?.order_category === order_category?.decorative) {
+                const different_group_photo_number = cancel_order_item_status?.different_group_photo_number;
+                const different_group_photo_number_id = cancel_order_item_status?.different_group_photo_number_id;
+                if (
+                    different_group_photo_number &&
+                    different_group_photo_number_id &&
+                    order_item_photo_number !== different_group_photo_number &&
+                    order_item_photo_id !== different_group_photo_number_id
+                ) {
+                    await update_photo_details(different_group_photo_number_id, different_group_photo_number, order_no_of_sheets);
+                }
+            }
+
             //function
-            const revert_photo_quantity_and_make_avaiable_for_stock = async function (model_name, data) {
+            const make_avaiable_for_stock = async function (model_name, data) {
 
                 const update_document = await mongoose.model(model_name).updateMany(
                     {
-                        [data.order_id]: mongoose.Types.ObjectId.createFromHexString(order_id),
-                        [data.order_item_id]: mongoose.Types.ObjectId.createFromHexString(order_item_id),
+                        [data.order_id]: mongoose.Types.ObjectId.createFromHexString(order_data?.order_id),
+                        [data.order_item_id]: mongoose.Types.ObjectId.createFromHexString(order_data?.order_item_id),
                         [data.issued_for]: item_issued_for.order,
                     },
                     {
@@ -260,7 +279,7 @@ class DecorativeSeriesOrderCancelController {
                             [data.order_item_id]: null,
                             order_category: null,
                             [data.issued_for]: item_issued_for.stock,
-                            remark: `Order (${other_details?.order_no})(${other_details?.order_item_no}) cancelled`
+                            remark: `Order (${order_data?.other_details?.order_no})(${order_data?.other_details?.order_item_no}) cancelled`
                         }
                     },
                     { session: session }
@@ -273,7 +292,7 @@ class DecorativeSeriesOrderCancelController {
 
             for (let ele in this.issued_for_order_items) {
                 const data = this.issued_for_order_items[ele];
-                await revert_photo_quantity_and_make_avaiable_for_stock(ele, data);
+                await make_avaiable_for_stock(ele, data);
             }
         } catch (error) {
             throw error
