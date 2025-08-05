@@ -909,7 +909,7 @@ export const getPreviousRate = catchAsync(async (req, res, next) => {
     },
     {
       $sort: {
-        'order_details.orderDate': -1, // latest order first
+        'order_details.order_no': -1, // latest order first
       },
     },
     {
