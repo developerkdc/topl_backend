@@ -316,7 +316,7 @@ export const update_series_order = catchAsync(async (req, res) => {
       updated_item_details.push({
         ...item,
         order_id: order_details_result?._id,
-        product_category: order_details_result?.base_type,
+        product_category: order_details_result?.series_product,
         created_by: item.created_by ? item?.created_by : userDetails?._id,
         updated_by: userDetails?._id,
         createdAt: item.createdAt ? item?.createdAt : new Date(),
