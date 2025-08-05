@@ -20,6 +20,7 @@ const order_items_models = {
 export const order_no_dropdown = catchAsync(async (req, res, next) => {
   const category = req?.query?.category;
   const product_name = req?.query?.product_name;
+  const { fetch_all_order = 'false' } = req.query;
 
   const matchQuery = {};
   if (category) {
@@ -37,9 +38,12 @@ export const order_no_dropdown = catchAsync(async (req, res, next) => {
   const aggMatch = {
     $match: {
       ...matchQuery,
-      order_status: { $nin: [order_status.cancelled, order_status.closed] }
     },
   };
+
+  if (fetch_all_order !== 'true') {
+    aggMatch.$match.order_status = { $nin: [order_status.cancelled, order_status.closed] }
+  }
 
   const aggProject = {
     $project: {
@@ -66,6 +70,7 @@ export const order_no_dropdown = catchAsync(async (req, res, next) => {
 
 export const order_items_dropdown = catchAsync(async (req, res, next) => {
   const { order_id } = req.params;
+  const { fetch_all_order = 'false' } = req.query;
 
   const fetch_order_details = await OrderModel.findOne(
     { _id: order_id },
@@ -80,10 +85,19 @@ export const order_items_dropdown = catchAsync(async (req, res, next) => {
 
   const orderId = fetch_order_details?._id;
   const category = fetch_order_details?.order_category;
+
+  const match_query = {
+    order_id: orderId,
+  }
+
+  if (fetch_all_order !== 'true') {
+    match_query.item_status = { $nin: [order_item_status?.cancelled, order_item_status?.closed] }
+  }
+
+
   const order_items_data = await order_items_models?.[category]?.find(
     {
-      order_id: orderId,
-      item_status: { $nin: [order_item_status?.cancelled, order_item_status?.closed] }
+      ...match_query
     },
     {
       order_id: 1,
