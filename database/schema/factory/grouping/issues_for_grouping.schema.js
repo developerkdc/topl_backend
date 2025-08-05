@@ -333,6 +333,8 @@ export const issues_for_grouping_view_model = mongoose.model(
           item_name: { $first: '$bundles_details.item_name' },
           log_no_code: { $first: '$bundles_details.log_no_code' },
           pallet_number: { $first: '$bundles_details.pallet_number' },
+          cut_id: { $first: '$bundles_details.cut_id' },
+          cut_name: { $first: '$bundles_details.cut_name' },
           item_sub_category_name: {
             $first: '$bundles_details.item_sub_category_name',
           },
