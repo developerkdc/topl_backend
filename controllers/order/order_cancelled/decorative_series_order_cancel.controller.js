@@ -134,6 +134,13 @@ class DecorativeSeriesOrderCancelController {
                     from: this.order_item_collections[order_category],
                     localField: "_id",
                     foreignField: "order_id",
+                    pipeline: [
+                        {
+                            $match: {
+                                item_status: null
+                            }
+                        }
+                    ],
                     as: "order_items_details",
                 },
             }
