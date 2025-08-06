@@ -39,6 +39,13 @@ class RawOrderCancelController {
                     from: "raw_order_item_details",
                     localField: "_id",
                     foreignField: "order_id",
+                    pipeline: [
+                        {
+                            $match: {
+                                item_status: null
+                            }
+                        }
+                    ],
                     as: "order_items_details",
                 },
             }
@@ -73,6 +80,7 @@ class RawOrderCancelController {
                 $match: {
                     _id: mongoose.Types.ObjectId.createFromHexString(order_item_id),
                     order_id: mongoose.Types.ObjectId.createFromHexString(order_id),
+                    item_status: null
                 }
             }
             const lookup_order = {
@@ -240,6 +248,26 @@ class RawOrderCancelController {
                     userDetails: userDetails
                 }
             }, session)
+
+            const fetch_order_item_closed = await RawOrderItemDetailsModel.find({
+                order_id: order_item_details?.order_id,
+                item_status: { $ne: null }
+            });
+
+            if (fetch_order_item_closed?.length <= 0) {
+                const order_closed = await OrderModel.findOneAndUpdate({
+                    _id: order_item_details?.order_id
+                }, {
+                    $set: {
+                        order_status: order_status.cancelled
+                    }
+                }, { new: true, session });
+
+                if (!order_closed) {
+                    throw new ApiError(`Failed to update order status as closed`, StatusCodes.BAD_REQUEST);
+                }
+
+            }
 
             await session.commitTransaction();
             const response = new ApiResponse(

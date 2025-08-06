@@ -175,6 +175,7 @@ class DecorativeSeriesOrderCancelController {
                 $match: {
                     _id: mongoose.Types.ObjectId.createFromHexString(order_item_id),
                     order_id: mongoose.Types.ObjectId.createFromHexString(order_id),
+                    item_status: null
                 }
             }
             const lookup_order = {
