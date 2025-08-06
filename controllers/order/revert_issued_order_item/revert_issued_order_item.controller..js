@@ -926,6 +926,7 @@ class RevertOrderItem {
       );
     }
   }
+
   async GROUPING_FACTORY() {
     //update GROUPING item available sheets
     const update_grouping_item =
@@ -993,7 +994,10 @@ class RevertOrderItem {
     //delete the grouping history document
     const delete_grouping_history_document_result =
       await grouping_done_history_model.deleteOne(
-        { order_id: this.issued_order_data?._id },
+        {
+          order_id: this.issued_order_data?.order_id,
+          order_item_id: this.issued_order_data?.order_item_id
+        },
         { session: this.session }
       );
 

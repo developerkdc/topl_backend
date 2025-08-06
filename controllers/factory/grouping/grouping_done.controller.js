@@ -872,6 +872,7 @@ export const group_no_dropdown = catchAsync(async (req, res, next) => {
   const { photo_no_id } = req.query;
   const matchQuery = {
     is_damaged: false,
+    "available_details.no_of_sheets": { $gt: 0 }
   };
   if (photo_no_id) {
     matchQuery.photo_no_id = photo_no_id;

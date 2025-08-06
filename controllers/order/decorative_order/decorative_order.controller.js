@@ -98,7 +98,7 @@ export const add_decorative_order = catchAsync(async (req, res) => {
       updated_item_details.push({
         ...item,
         order_id: order_details_data._id,
-        product_category: item.base_type,
+        product_category: `${order_details_data?.product_category} ${item.base_type}`,
         created_by: userDetails._id,
         updated_by: userDetails._id,
       });
@@ -277,7 +277,7 @@ export const update_decorative_order = catchAsync(async (req, res) => {
       updated_item_details.push({
         ...item,
         order_id: order_details_result?._id,
-        product_category: item?.base_type,
+        product_category: `${order_details_result?.product_category} ${item.base_type}`,
         created_by: item.created_by ? item?.created_by : userDetails?._id,
         updated_by: userDetails?._id,
         createdAt: item.createdAt ? item?.createdAt : new Date(),
