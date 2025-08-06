@@ -12,6 +12,13 @@ import { dynamic_filter } from '../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import ApiError from '../../../utils/errors/apiError.js';
 import catchAsync from '../../../utils/errors/catchAsync.js';
+import { generatePDF } from '../../../utils/generatePDF/generatePDFBuffer.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { format } from 'date-fns';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export const create_packing = catchAsync(async (req, res) => {
   const { other_details, packing_done_item_details } = req.body;
@@ -620,3 +627,74 @@ export const fetch_single_packing_done_item = catchAsync(async (req, res) => {
 
   return res.status(response.statusCode).json(response);
 })
+
+export const generatePackingSlip = catchAsync(async (req, res) => {
+  const { id } = req.params;
+
+  const item = await packing_done_items_model.findById(id).lean();
+  if (!item) {
+    return res.status(404).json({ status: false, message: 'Packing item not found' });
+  }
+
+  const otherDetails = await packing_done_other_details_model
+    .findById(item.packing_done_other_details_id)
+    .lean();
+
+  if (!otherDetails) {
+    return res.status(404).json({ status: false, message: 'Packing details not found' });
+  }
+
+  const allItems = await packing_done_items_model
+    .find({ packing_done_other_details_id: item.packing_done_other_details_id })
+    .lean();
+
+  const formattedPackingDate = otherDetails.packing_date
+    ? format(new Date(otherDetails.packing_date), 'dd-MM-yyyy')
+    : '';
+
+  // Compute totals
+  const totalSheets = allItems.reduce((sum, i) => sum + (i.no_of_sheets || 0), 0);
+  const totalSqMtr = allItems.reduce((sum, i) => sum + (i.sqm || 0), 0);
+
+  // Compute item_summary (group by item + size)
+  const summaryMap = {};
+  for (const i of allItems) {
+    const key = `${i.item_name || ' '}_${i.length || 0}x${i.width || 0}`;
+    if (!summaryMap[key]) {
+      summaryMap[key] = {
+        item_name: i.item_name || ' ',
+        size: `${i.length || 0} x ${i.width || 0}`,
+        sheets: 0,
+        sqm: 0,
+      };
+    }
+    summaryMap[key].sheets += i.no_of_sheets || 0;
+    summaryMap[key].sqm += i.sqm || 0;
+  }
+
+  const item_summary = Object.values(summaryMap);
+
+  // Prepare final data for Handlebars
+  const combinedData = {
+    ...otherDetails,
+    packing_date: formattedPackingDate,
+    packing_done_item_details: allItems,
+    totalSheets,
+    totalSqMtr,
+    item_summary,
+  };
+
+  const pdfBuffer = await generatePDF({
+    templateName: 'packing_slip',
+    templatePath: path.join(__dirname, '..', '..', '..', 'views', 'packing_done', 'packing_slip.hbs'),
+    data: combinedData,
+  });
+
+  res.set({
+    'Content-Type': 'application/pdf',
+    'Content-Disposition': 'attachment; filename="packing-slip.pdf"',
+    'Content-Length': pdfBuffer.length,
+  });
+
+  return res.status(200).end(pdfBuffer);
+});

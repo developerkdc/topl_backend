@@ -29,6 +29,14 @@ import { dynamic_filter } from '../../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../../utils/dynamicSearch/dynamic.js';
 import ApiError from '../../../../utils/errors/apiError.js';
 import catchAsync from '../../../../utils/errors/catchAsync.js';
+import { generatePDF_packing } from '../../../../utils/generatePDF/generatePDFBuffer.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { format } from 'date-fns';
+import { packing_done_items_model, packing_done_other_details_model } from '../../../../database/schema/packing/packing_done/packing_done.schema.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const issued_from_map = {
     [item_issued_from?.pressing_factory]: pressing_done_details_model,
@@ -738,4 +746,138 @@ export const fetch_issue_for_packing_items_by_customer_and_order_category =
         return res.status(response.statusCode).json(response);
     });
 
+export const generatePackingInvoiceBillPDF = catchAsync(async (req, res) => {
+    const { id } = req.params;
 
+    const item = await packing_done_items_model.findById(id).lean();
+    if (!item) {
+        return res.status(404).json({ status: false, message: 'Packing item not found' });
+    }
+
+    const otherDetails = await packing_done_other_details_model
+        .findById(item.packing_done_other_details_id)
+        .lean();
+
+    if (!otherDetails) {
+        return res.status(404).json({ status: false, message: 'Packing details not found' });
+    }
+
+    const allItems = await packing_done_items_model
+        .find({ packing_done_other_details_id: item.packing_done_other_details_id })
+        .lean();
+
+    const formattedPackingDate = otherDetails.packing_date
+        ? format(new Date(otherDetails.packing_date), 'dd-MM-yyyy')
+        : '';
+ 
+    const totalSheets = allItems.reduce((sum, i) => sum + (i.no_of_sheets || 0), 0);
+    const totalSqMtr = allItems.reduce((sum, i) => sum + (i.sqm || 0), 0);
+ 
+    const summaryMap = {};
+    for (const i of allItems) {
+        const key = `${i.item_name || ' '}_${i.length || 0}x${i.width || 0}`;
+        if (!summaryMap[key]) {
+            summaryMap[key] = {
+                item_name: i.item_name || ' ',
+                size: `${i.length || 0} x ${i.width || 0}`,
+                sheets: 0,
+                sqm: 0,
+            };
+        }
+        summaryMap[key].sheets += i.no_of_sheets || 0;
+        summaryMap[key].sqm += i.sqm || 0;
+    }
+
+    const item_summary = Object.values(summaryMap);
+ 
+    const combinedData = {
+        ...otherDetails,
+        packing_date: formattedPackingDate,
+        packing_done_item_details: allItems,
+        totalSheets,
+        totalSqMtr,
+        item_summary,
+    };
+
+    const pdfBuffer = await generatePDF_packing({
+        templateName: 'invoice_bill',
+        templatePath: path.join(__dirname,'..', '..', '..', '..', 'views', 'dispatch', 'invoice_bill.hbs'),
+        data: combinedData,
+    });
+
+    res.set({
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': 'attachment; filename="invoice-bill.pdf"',
+        'Content-Length': pdfBuffer.length,
+    });
+
+    return res.status(200).end(pdfBuffer);
+});
+
+export const generatePackingEwayBillPDF = catchAsync(async (req, res) => {
+    const { id } = req.params;
+
+    const item = await packing_done_items_model.findById(id).lean();
+    if (!item) {
+        return res.status(404).json({ status: false, message: 'Packing item not found' });
+    }
+
+    const otherDetails = await packing_done_other_details_model
+        .findById(item.packing_done_other_details_id)
+        .lean();
+
+    if (!otherDetails) {
+        return res.status(404).json({ status: false, message: 'Packing details not found' });
+    }
+
+    const allItems = await packing_done_items_model
+        .find({ packing_done_other_details_id: item.packing_done_other_details_id })
+        .lean();
+
+    const formattedPackingDate = otherDetails.packing_date
+        ? format(new Date(otherDetails.packing_date), 'dd-MM-yyyy')
+        : '';
+ 
+    const totalSheets = allItems.reduce((sum, i) => sum + (i.no_of_sheets || 0), 0);
+    const totalSqMtr = allItems.reduce((sum, i) => sum + (i.sqm || 0), 0);
+ 
+    const summaryMap = {};
+    for (const i of allItems) {
+        const key = `${i.item_name || ' '}_${i.length || 0}x${i.width || 0}`;
+        if (!summaryMap[key]) {
+            summaryMap[key] = {
+                item_name: i.item_name || ' ',
+                size: `${i.length || 0} x ${i.width || 0}`,
+                sheets: 0,
+                sqm: 0,
+            };
+        }
+        summaryMap[key].sheets += i.no_of_sheets || 0;
+        summaryMap[key].sqm += i.sqm || 0;
+    }
+
+    const item_summary = Object.values(summaryMap);
+ 
+    const combinedData = {
+        ...otherDetails,
+        packing_date: formattedPackingDate,
+        packing_done_item_details: allItems,
+        totalSheets,
+        totalSqMtr,
+        item_summary,
+    };
+
+    const pdfBuffer = await generatePDF_packing({
+        templateName: 'ewaybill',
+        templatePath: path.join(__dirname, '..', '..', '..', '..', 'views', 'dispatch', 'eway.hbs'),
+        data: combinedData,
+    });
+
+    res.set({
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': 'attachment; filename="packing-slip.pdf"',
+        'Content-Length': pdfBuffer.length,
+    });
+
+    return res.status(200).end(pdfBuffer);
+});
