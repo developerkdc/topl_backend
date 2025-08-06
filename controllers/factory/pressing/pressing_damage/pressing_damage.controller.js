@@ -69,6 +69,29 @@ export const list_pressing_damage = catchAsync(async (req, res, next) => {
     ...search_query,
   };
 
+  const aggGroupNoLookup = {
+    $lookup: {
+      from: 'grouping_done_items_details',
+      localField: 'pressing_done_details.group_no',
+      foreignField: 'group_no',
+      pipeline: [
+        {
+          $project: {
+            group_no: 1,
+            photo_no: 1,
+            photo_id: 1,
+          },
+        },
+      ],
+      as: 'grouping_done_items_details',
+    },
+  };
+  const aggGroupNoUnwind = {
+    $unwind: {
+      path: '$grouping_done_items_details',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
   const aggPressingDoneLookup = {
     $lookup: {
       from: 'pressing_done_details',
@@ -216,19 +239,19 @@ export const list_pressing_damage = catchAsync(async (req, res, next) => {
         preserveNullAndEmptyArrays: true,
       },
     },
-    // {
-    //   $addFields: {
-    //     order_item_details: {
-    //       $cond: {
-    //         if: {
-    //           $ne: [{ $type: '$decorative_order_item_details' }, 'missing'],
-    //         },
-    //         then: '$decorative_order_item_details',
-    //         else: '$series_product_order_item_details',
-    //       },
-    //     },
-    //   },
-    // },
+    {
+      $addFields: {
+        order_item_details: {
+          $cond: {
+            if: {
+              $ne: [{ $type: '$decorative_order_item_details' }, 'missing'],
+            },
+            then: '$decorative_order_item_details',
+            else: '$series_product_order_item_details',
+          },
+        },
+      },
+    },
   ];
   const aggMatch = {
     $match: {
@@ -250,6 +273,8 @@ export const list_pressing_damage = catchAsync(async (req, res, next) => {
   const listAggregate = [
     aggPressingDoneLookup,
     aggPressingDoneUnwind,
+    aggGroupNoLookup,
+    aggGroupNoUnwind,
     ...aggOrderRelatedData,
     aggCreatedByLookup,
     aggCreatedByUnwind,

@@ -872,6 +872,7 @@ export const group_no_dropdown = catchAsync(async (req, res, next) => {
   const { photo_no_id } = req.query;
   const matchQuery = {
     is_damaged: false,
+    "available_details.no_of_sheets": { $gt: 0 }
   };
   if (photo_no_id) {
     matchQuery.photo_no_id = photo_no_id;
@@ -1099,14 +1100,56 @@ export const fetch_all_grouping_history_details = catchAsync(
         },
       },
       {
+        $lookup: {
+          from: 'raw_order_item_details',
+          localField: 'order_item_id',
+          pipeline: [
+            {
+              $project: {
+                item_no: 1,
+                order_id: 1,
+                item_name: 1,
+                item_sub_category_name: 1,
+                group_no: 1,
+                photo_number: 1,
+              },
+            },
+          ],
+          foreignField: '_id',
+          as: 'raw_order_item_details',
+        },
+      },
+      {
+        $unwind: {
+          path: '$raw_order_item_details',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
         $addFields: {
           order_item_details: {
-            $cond: {
-              if: {
-                $ne: [{ $type: '$decorative_order_item_details' }, 'missing'],
-              },
-              then: '$decorative_order_item_details',
-              else: '$series_product_order_item_details',
+            $switch: {
+              branches: [
+                {
+                  case: {
+                    $ne: [{ $type: '$decorative_order_item_details' }, 'missing'],
+                  },
+                  then: '$decorative_order_item_details',
+                },
+                {
+                  case: {
+                    $ne: [{ $type: '$series_product_order_item_details' }, 'missing'],
+                  },
+                  then: '$series_product_order_item_details',
+                },
+                {
+                  case: {
+                    $ne: [{ $type: '$raw_order_item_details' }, 'missing'],
+                  },
+                  then: '$raw_order_item_details',
+                },
+              ],
+              default: null,
             },
           },
         },
