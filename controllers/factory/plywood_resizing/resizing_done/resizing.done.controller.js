@@ -1071,13 +1071,13 @@ export const listing_resizing_history = catchAsync(async (req, res) => {
   const aggSortByCreatedAt = {
     $sort: {
       plywood_resizing_done_id: 1,
-      createdAt: -1, 
+      createdAt: -1,
     },
   };
   const aggGroupByResizingDoneId = {
     $group: {
       _id: '$plywood_resizing_done_id',
-      doc: { $first: '$$ROOT' }, 
+      doc: { $first: '$$ROOT' },
     },
   };
   const aggReplaceRoot = {
@@ -1088,19 +1088,19 @@ export const listing_resizing_history = catchAsync(async (req, res) => {
 
   const listAggregate = [
     aggCommonMatch,
-    aggMatch,                  
-    aggSortByCreatedAt,       
-    aggGroupByResizingDoneId,  
-    aggReplaceRoot,            
+    aggSortByCreatedAt,
+    aggGroupByResizingDoneId,
+    aggReplaceRoot,
     aggCreatedByLookup,
     aggPlywoodDoneLookup,
     aggPlywoodDoneUnwind,
     aggCreatedByUnwind,
     aggUpdatedByLookup,
     aggUpdatedByUnwind,
-    aggSort,                 
-    aggSkip,
     aggLimit,
+    aggMatch,
+    aggSort,
+    aggSkip,
   ]; // aggregation pipiline
 
   const resizing_done_list =
