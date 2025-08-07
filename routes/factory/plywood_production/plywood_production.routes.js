@@ -13,6 +13,7 @@ import {
   listing_plywood_production_damage,
   revert_plywood_production_damage,
 } from '../../../controllers/factory/plywood_production/plywood_production_damage/plywood_production_damage.js';
+import { listing_plywood_production_history } from '../../../controllers/factory/plywood_production/plywood_production_history/plywood_production_history.js';
 const plywoodProductionRouter = express.Router();
 
 plywoodProductionRouter.post(
@@ -40,10 +41,10 @@ plywoodProductionRouter.get(
 );
 
 plywoodProductionRouter.post(
-  '/list-plywood-production-done-history',
-  AuthMiddleware
+  '/list-plywood-production-history',
+  AuthMiddleware,
   //   RolesPermissions('crosscut_factory', 'view'),
-  //   listing_crosscutting_done_history
+  listing_plywood_production_history
 );
 
 //damage routes

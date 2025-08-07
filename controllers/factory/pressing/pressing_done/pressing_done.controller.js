@@ -1216,15 +1216,20 @@ export const fetch_pressing_done_consumed_item_details = catchAsync(
   async (req, res, next) => {
     const { id } = req.params;
 
-    if (!id && !mongoose.isValidObjectId(id)) {
-      throw new ApiError('Invalid ID', StatusCodes.NOT_FOUND);
+    console.log('Received ID:', id); // Debug log
+
+    // Check if ID is missing or invalid
+    if (!id || !mongoose.isValidObjectId(id)) {
+      console.error('Invalid or missing ID:', id);
+      throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
     }
+
+    console.log('Fetching data from pressing_done_consumed_items_details_model...');
 
     const result = await pressing_done_consumed_items_details_model.aggregate([
       {
         $match: {
-          pressing_done_details_id:
-            mongoose.Types.ObjectId.createFromHexString(id),
+          pressing_done_details_id: new mongoose.Types.ObjectId(id),
         },
       },
       {
@@ -1241,7 +1246,7 @@ export const fetch_pressing_done_consumed_item_details = catchAsync(
           preserveNullAndEmptyArrays: true,
         },
       },
-
+      // Uncomment if needed:
       // {
       //   $unwind: '$group_details',
       // },
@@ -1264,9 +1269,23 @@ export const fetch_pressing_done_consumed_item_details = catchAsync(
       // },
     ]);
 
+    console.log('Fetched Result:', JSON.stringify(result, null, 2));
+
+    // Check if result is empty
+    if (!result || result.length === 0) {
+      console.warn('No data found for ID:', id);
+      return res.status(StatusCodes.NOT_FOUND).json(
+        new ApiResponse(
+          StatusCodes.NOT_FOUND,
+          `No data found for ID: ${id}`,
+          []
+        )
+      );
+    }
+
     const response = new ApiResponse(
       StatusCodes.OK,
-      'Details Fetched successfully',
+      'Details fetched successfully',
       result
     );
 
