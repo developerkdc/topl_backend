@@ -6,7 +6,10 @@ import {
   mdf_inventory_invoice_details,
   mdf_inventory_items_details,
 } from '../../../../../database/schema/inventory/mdf/mdf.schema.js';
-import { issues_for_status, item_issued_from } from '../../../../../database/Utils/constants/constants.js';
+import {
+  issues_for_status,
+  item_issued_from,
+} from '../../../../../database/Utils/constants/constants.js';
 import issue_for_order_model from '../../../../../database/schema/order/issue_for_order/issue_for_order.schema.js';
 import mdf_history_model from '../../../../../database/schema/inventory/mdf/mdf.history.schema.js';
 import { RawOrderItemDetailsModel } from '../../../../../database/schema/order/raw_order/raw_order_item_details.schema.js';
@@ -107,7 +110,7 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
         StatusCodes?.BAD_REQUEST
       );
     }
-    
+
     //available sheets
     const available_sheets =
       mdf_item_data?.available_sheets - mdf_item_details?.issued_sheets;
@@ -172,10 +175,11 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
       );
     }
 
-
     // =================
     //add data to Mdf history model
-        const add_issued_data_to_mdf_history = await mdf_history_model.create([{
+    const add_issued_data_to_mdf_history = await mdf_history_model.create(
+      [
+        {
           issued_for_order_id: issue_for_order_id,
           issue_status: issues_for_status?.order,
           mdf_item_id: mdf_item_data?._id,
@@ -183,25 +187,30 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
           issued_sqm: issued_sqm_for_order,
           issued_amount: issued_amount_for_order,
           created_by: userDetails?._id,
-          updated_by: userDetails?._id
-        }], { session })
-    
-        if (add_issued_data_to_mdf_history?.length === 0) {
-          throw new ApiError("Failed to add data to MDF history", StatusCodes.BAD_REQUEST)
-        };
+          updated_by: userDetails?._id,
+        },
+      ],
+      { session }
+    );
 
-        const response = new ApiResponse(
-          StatusCodes.CREATED,
-          'Item Issued Successfully',
-          updated_body
-        );
+    if (add_issued_data_to_mdf_history?.length === 0) {
+      throw new ApiError(
+        'Failed to add data to MDF history',
+        StatusCodes.BAD_REQUEST
+      );
+    }
 
-        
-        await session.commitTransaction();
-        return res.status(StatusCodes.CREATED).json(response);
+    const response = new ApiResponse(
+      StatusCodes.CREATED,
+      'Item Issued Successfully',
+      updated_body
+    );
+
+    await session.commitTransaction();
+    return res.status(StatusCodes.CREATED).json(response);
   } catch (error) {
     await session.abortTransaction();
-    throw error
+    throw error;
   } finally {
     await session.endSession();
   }

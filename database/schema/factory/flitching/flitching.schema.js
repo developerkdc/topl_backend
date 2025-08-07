@@ -40,14 +40,26 @@ const flitchingSchema = new mongoose.Schema(
         default: null,
       },
     },
-    // item_id: {
-    //   type: mongoose.Schema.Types.ObjectId,
-    //   required: [true, "item id is required"],
-    // },
-    // item_name: {
-    //   type: String,
-    //   required: [true, "item name is required"],
-    // },
+    item_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, 'Items id is required'],
+    },
+    item_name: {
+      type: String,
+      required: [true, 'Item Name is required'],
+      trim: true,
+      uppercase: true,
+    },
+    item_sub_category_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, 'Items Sub-Category Id is required'],
+    },
+    item_sub_category_name: {
+      type: String,
+      required: [true, 'Item Sub-Category Name is required'],
+      trim: true,
+      uppercase: true,
+    },
     log_no: {
       type: String,
       required: [true, 'log number is required'],
@@ -159,7 +171,7 @@ const flitchingSchema = new mongoose.Schema(
           issues_for_status?.slicing,
           issues_for_status?.slicing_peeling,
           issues_for_status?.order,
-          issues_for_status?.chalan,
+          issues_for_status?.challan,
         ],
         message: `Invalid status {{VALUE}} Issue Status must either be one of ${issues_for_status?.slicing}, ${issues_for_status?.slicing_peeling}, ${issues_for_status?.order}}, ${issues_for_status?.chalan}`,
       },

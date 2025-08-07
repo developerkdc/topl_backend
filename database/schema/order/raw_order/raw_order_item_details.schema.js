@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { order_item_status } from '../../../Utils/constants/constants.js';
 
 const RawOrderItemDetailsSchema = new mongoose.Schema(
   {
@@ -11,14 +12,24 @@ const RawOrderItemDetailsSchema = new mongoose.Schema(
       ref: 'orders',
       required: [true, 'Order Id is required'],
     },
-
     raw_material: {
       type: String,
       required: [true, 'Raw Material is required'], //LOG,FLITCH,VENEER,PLYWOOD,MDF,CORE,FACE,FLEECE PAPER,STORE
       uppercase: true,
       trim: true,
     },
-
+    product_category: {
+      type: String,
+      required: [true, 'product category is required'], //LOG,FLITCH,VENEER,PLYWOOD,MDF,CORE,FACE,FLEECE PAPER,STORE
+      uppercase: true,
+      trim: true,
+    },
+    sales_item_name: {
+      type: String,
+      default: null,
+      uppercase: true,
+      trim: true,
+    },
     item_name: {
       type: String,
       required: [true, 'Item Name is required'],
@@ -94,14 +105,20 @@ const RawOrderItemDetailsSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-
+    item_status: {
+      type: String,
+      enum: {
+        values: [order_item_status?.cancelled, order_item_status?.closed],
+        message: `Invalid Order Status -> {{VALUE}} it must be one of the ${[order_item_status?.cancelled, order_item_status?.closed]?.join(",")}`,
+      },
+      default: null,
+    },
     item_remarks: {
       type: String,
       uppercase: true,
       trim: true,
       default: null,
     },
-
     created_by: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'users',
@@ -132,5 +149,6 @@ indexingFields.forEach((index) => RawOrderItemDetailsSchema.index(...index));
 
 export const RawOrderItemDetailsModel = mongoose.model(
   'raw_order_item_details',
-  RawOrderItemDetailsSchema
+  RawOrderItemDetailsSchema,
+  'raw_order_item_details'
 );

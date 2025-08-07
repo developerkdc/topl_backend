@@ -5,10 +5,17 @@ import {
   fetch_single_issue_for_grouping_details,
   issue_for_grouping_from_dressing_done,
   issue_for_grouping_from_smoking_dying_done,
+  issue_for_grouping_from_veneer_inventory,
   revert_issue_for_grouping,
+  download_excel_factory_grouping_details,
 } from '../../../controllers/factory/grouping/issues_for_grouping.controller.js';
 const issueForGroupingRouter = express.Router();
 
+issueForGroupingRouter.post(
+  '/add-issue-for-grouping-form-veneer-inventory',
+  AuthMiddleware,
+  issue_for_grouping_from_veneer_inventory
+);
 issueForGroupingRouter.post(
   '/add-issue-for-grouping-form-smoking-dying/:process_done_id',
   AuthMiddleware,
@@ -20,12 +27,12 @@ issueForGroupingRouter.post(
   issue_for_grouping_from_dressing_done
 );
 issueForGroupingRouter.post(
-  '/revert-issue-for-grouping/:id',
+  '/revert-issue-for-grouping/:unique_identifier/:pallet_number(*)',
   AuthMiddleware,
   revert_issue_for_grouping
 );
 issueForGroupingRouter.get(
-  '/fetch-single-issue-for-grouping/:id',
+  '/fetch-single-issue-for-grouping/:unique_identifier/:pallet_number(*)',
   AuthMiddleware,
   fetch_single_issue_for_grouping_details
 );
@@ -33,6 +40,11 @@ issueForGroupingRouter.post(
   '/listing-issue-for-grouping',
   AuthMiddleware,
   fetch_all_issue_for_grouping_details
+);
+issueForGroupingRouter.post(
+  '/download-factory-issue-for-grouping-excel',
+  AuthMiddleware,
+  download_excel_factory_grouping_details
 );
 
 export default issueForGroupingRouter;

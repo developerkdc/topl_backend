@@ -11,6 +11,7 @@ import {
   inward_sr_no_dropdown,
   item_sr_no_dropdown,
   fetch_plywood_history,
+  plywoodHistoryLogsCsv,
 } from '../../../controllers/inventory/plywood/plywood.controller.js';
 import AuthMiddleware from '../../../middlewares/verifyToken.js';
 import RolesPermissions from '../../../middlewares/permission.js';
@@ -89,6 +90,13 @@ router.post(
   RolesPermissions('plywood_inventory', 'view'),
   plywoodLogsCsv
 );
+router.post(
+  '/download-excel-plywood-history',
+  AuthMiddleware,
+  RolesPermissions('plywood_inventory', 'view'),
+  plywoodHistoryLogsCsv
+);
+
 router.get('/item-srno-dropdown', AuthMiddleware, item_sr_no_dropdown);
 router.get('/inward-srno-dropdown', AuthMiddleware, inward_sr_no_dropdown);
 

@@ -241,10 +241,15 @@ export const revert_issue_for_crosscutting = catchAsync(
 
 export const addCrossCutDone = catchAsync(async (req, res) => {
   const session = await mongoose.startSession();
+  const userDetails = req.userDetails;
   session.startTransaction();
   const { available_data, newData } = req.body;
 
   try {
+    const updated_items = newData?.map((item) => {
+      item.created_by = userDetails?._id;
+      return item;
+    });
     const result = await crosscutting_done_model.insertMany(newData, {
       session,
     });
@@ -1174,6 +1179,10 @@ export const add_crosscut_issue_for_flitching = catchAsync(
       remark: crosscut_done_details?.remarks,
       invoice_id: log_details?.invoice_id,
       created_by: created_by,
+      color: {
+        color_id: crosscut_done_details?.color?.color_id,
+        color_name: crosscut_done_details?.color?.color_name,
+      },
     };
 
     const issue_for_flitching_data =

@@ -5,9 +5,16 @@ import ApiResponse from '../../../utils/ApiResponse.js';
 import { StatusCodes } from '../../../utils/constants.js';
 import { OrderModel } from '../../../database/schema/order/orders.schema.js';
 import { decorative_order_item_details_model } from '../../../database/schema/order/decorative_order/decorative_order_item_details.schema.js';
-import { order_item_status } from '../../../database/Utils/constants/constants.js';
+import {
+  order_category,
+  order_item_status,
+  order_status,
+} from '../../../database/Utils/constants/constants.js';
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
+import generatePDFBuffer from '../../../utils/generatePDF/generatePDFBuffer.js';
+import moment from 'moment';
+import photoModel from '../../../database/schema/masters/photo.schema.js';
 
 export const add_decorative_order = catchAsync(async (req, res) => {
   const { order_details, item_details } = req.body;
@@ -37,6 +44,7 @@ export const add_decorative_order = catchAsync(async (req, res) => {
         {
           ...order_details,
           order_no: new_order_no,
+          product_category: order_category.decorative,
           created_by: userDetails?._id,
           updated_by: userDetails?._id,
         },
@@ -51,12 +59,50 @@ export const add_decorative_order = catchAsync(async (req, res) => {
       );
     }
 
-    const updated_item_details = item_details?.map((item) => {
-      item.order_id = order_details_data?._id;
-      item.created_by = userDetails?._id;
-      item.updated_by = userDetails?._id;
-      return item;
-    });
+    const update_photo_details = async function (photo_number_id, photo_number, no_of_sheets) {
+      const photoUpdate = await photoModel.findOneAndUpdate(
+        {
+          _id: photo_number_id,
+          photo_number: photo_number,
+          available_no_of_sheets: { $gte: no_of_sheets },
+        },
+        { $inc: { available_no_of_sheets: -no_of_sheets } },
+        { session, new: true }
+      );
+
+      if (!photoUpdate) {
+        throw new ApiError(
+          `Photo number ${photo_number} does not have enough sheets.`,
+          StatusCodes.BAD_REQUEST
+        );
+      }
+    }
+
+    const updated_item_details = [];
+    for (const item of item_details) {
+      // Validate photo availability - await properly in loop
+
+      if (item.photo_number && item.photo_number_id) {
+        await update_photo_details(item.photo_number_id, item.photo_number, item.no_of_sheets);
+      }
+
+      if (
+        item.different_group_photo_number &&
+        item.different_group_photo_number_id &&
+        item.photo_number !== item.different_group_photo_number &&
+        item.photo_number_id !== item.different_group_photo_number_id
+      ) {
+        await update_photo_details(item.different_group_photo_number_id, item.different_group_photo_number, item.no_of_sheets);
+      }
+
+      updated_item_details.push({
+        ...item,
+        order_id: order_details_data._id,
+        product_category: `${order_details_data?.product_category} ${item.base_type}`,
+        created_by: userDetails._id,
+        updated_by: userDetails._id,
+      });
+    }
 
     const create_order_result =
       await decorative_order_item_details_model?.insertMany(
@@ -115,6 +161,7 @@ export const update_decorative_order = catchAsync(async (req, res) => {
       {
         $set: {
           ...order_details,
+          product_category: order_category.decorative,
           updated_by: userDetails?._id,
         },
       },
@@ -125,6 +172,55 @@ export const update_decorative_order = catchAsync(async (req, res) => {
         'Failed to Update order details data.',
         StatusCodes.BAD_REQUEST
       );
+    }
+
+    if (order_details_result.order_status === order_status.cancelled) {
+      throw new ApiError("Order is already cancelled", StatusCodes.BAD_REQUEST);
+    }
+    if (order_details_result.order_status === order_status.closed) {
+      throw new ApiError("Order is already closed", StatusCodes.BAD_REQUEST);
+    }
+
+    // revert photo details
+    const order_items_details = await decorative_order_item_details_model?.find(
+      { order_id: order_details_result?._id },
+      { _id: 1, photo_number_id: 1, photo_number: 1, no_of_sheets: 1 },
+      { session }
+    );
+
+    const revert_photo_details = async function (photo_number_id, photo_number, no_of_sheets) {
+      const update_photo_sheets = await photoModel.updateOne(
+        {
+          _id: photo_number_id,
+          photo_number: photo_number,
+        },
+        {
+          $inc: { available_no_of_sheets: no_of_sheets },
+        },
+        { session }
+      );
+
+      if (!update_photo_sheets?.acknowledged) {
+        throw new ApiError(
+          `Photo number ${photo_number} failed to revert sheets.`,
+          StatusCodes.BAD_REQUEST
+        );
+      }
+    }
+
+    for (const item of order_items_details) {
+      if (item.photo_number && item.photo_number_id) {
+        await revert_photo_details(item.photo_number_id, item.photo_number, item.no_of_sheets)
+      };
+
+      if (
+        item.different_group_photo_number &&
+        item.different_group_photo_number_id &&
+        item.photo_number !== item.different_group_photo_number &&
+        item.photo_number_id !== item.different_group_photo_number_id
+      ) {
+        await revert_photo_details(item.different_group_photo_number_id, item.different_group_photo_number, item.no_of_sheets);
+      }
     }
 
     const delete_order_items =
@@ -143,14 +239,61 @@ export const update_decorative_order = catchAsync(async (req, res) => {
       );
     }
 
-    const updated_item_details = item_details?.map((item) => {
-      item.order_id = order_details_result?._id;
-      item.created_by = item.created_by ? item?.created_by : userDetails?._id;
-      item.updated_by = userDetails?._id;
-      item.createdAt = item.createdAt ? item?.createdAt : new Date();
-      item.updatedAt = new Date();
-      return item;
-    });
+    const update_photo_details = async function (photo_number_id, photo_number, no_of_sheets) {
+      const photoUpdate = await photoModel.findOneAndUpdate(
+        {
+          _id: photo_number_id,
+          photo_number: photo_number,
+          available_no_of_sheets: { $gte: no_of_sheets },
+        },
+        { $inc: { available_no_of_sheets: -no_of_sheets } },
+        { session, new: true }
+      );
+
+      if (!photoUpdate) {
+        throw new ApiError(
+          `Photo number ${photo_number} does not have enough sheets.`,
+          StatusCodes.BAD_REQUEST
+        );
+      }
+    }
+
+    const updated_item_details = [];
+    for (const item of item_details) {
+      // Validate photo availability - await properly in loop
+      if (item.photo_number && item.photo_number_id) {
+        await update_photo_details(item.photo_number_id, item.photo_number, item.no_of_sheets);
+      }
+
+      if (
+        item.different_group_photo_number &&
+        item.different_group_photo_number_id &&
+        item.photo_number !== item.different_group_photo_number &&
+        item.photo_number_id !== item.different_group_photo_number_id
+      ) {
+        await update_photo_details(item.different_group_photo_number_id, item.different_group_photo_number, item.no_of_sheets);
+      }
+
+      updated_item_details.push({
+        ...item,
+        order_id: order_details_result?._id,
+        product_category: `${order_details_result?.product_category} ${item.base_type}`,
+        created_by: item.created_by ? item?.created_by : userDetails?._id,
+        updated_by: userDetails?._id,
+        createdAt: item.createdAt ? item?.createdAt : new Date(),
+        updatedAt: new Date(),
+      });
+    }
+
+    // const updated_item_details = item_details?.map((item) => {
+    //   item.order_id = order_details_result?._id;
+    //   item.product_category = order_details_result?.base_type;
+    //   item.created_by = item.created_by ? item?.created_by : userDetails?._id;
+    //   item.updated_by = userDetails?._id;
+    //   item.createdAt = item.createdAt ? item?.createdAt : new Date();
+    //   item.updatedAt = new Date();
+    //   return item;
+    // });
 
     const create_order_result =
       await decorative_order_item_details_model?.insertMany(
@@ -537,3 +680,207 @@ export const fetch_all_decorative_order_items_by_order_id = catchAsync(
 // export const fetch_customer_previous_rate = catchAsync(async(req,res) => {
 
 // })
+
+export const downloadPDF = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  const { type } = req.query;
+
+  if (!id || !isValidObjectId(id)) {
+    throw new ApiError('Invalid or missing order ID', StatusCodes.BAD_REQUEST);
+  }
+
+  const action_map = {
+    work_order_standard_4: {
+      templateFileName: 'workOrder4',
+      filenamePrefix: 'WorkOrder_Standard_4',
+    },
+    work_order_balance: {
+      templateFileName: 'workOrderBalanceOrder',
+      filenamePrefix: 'WorkOrder_Balance',
+    },
+    work_order_priority_issue_2: {
+      templateFileName: 'workOrder2PriorityIssue',
+      filenamePrefix: 'WorkOrder_Priority_Issue_2',
+    },
+    work_order_priority_2: {
+      templateFileName: 'workOrder2Priority',
+      filenamePrefix: 'WorkOrder_Priority_2',
+    },
+    work_order_1: {
+      templateFileName: 'workOrder1',
+      filenamePrefix: 'WorkOrder_1',
+    },
+    work_order_issue_3: {
+      templateFileName: 'workOrder3Issue',
+      filenamePrefix: 'WorkOrder_Issue_3',
+    },
+    work_order_priority_4: {
+      templateFileName: 'workOrder4Priority',
+      filenamePrefix: 'WorkOrder_Priority_4',
+    },
+  };
+
+  const actionConfig = action_map[type];
+  if (!actionConfig) {
+    return res.status(400).json({
+      status: 'error',
+      message: 'Error generating PDF',
+    });
+  }
+
+  const { templateFileName, filenamePrefix } = actionConfig;
+
+  const order = await OrderModel.findById(id).lean();
+  // const items = await decorative_order_item_details_model.find({ order_id: id }).lean();
+  const items = await decorative_order_item_details_model.aggregate([
+    {
+      $match: {
+        order_id: new mongoose.Types.ObjectId(id),
+      },
+    },
+    {
+      $lookup: {
+        from: 'photos',
+        localField: 'photo_number_id',
+        foreignField: '_id',
+        as: 'photo_data',
+      },
+    },
+    {
+      $unwind: {
+        path: '$photo_data',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $addFields: {
+        group_no: '$photo_data.group_no',
+        character: '$photo_data.character_name',
+      },
+    },
+  ]);
+
+  if (!order || items.length === 0) {
+    throw new ApiError('Order or order items not found', StatusCodes.NOT_FOUND);
+  }
+
+  order.orderDateFormatted = moment(order.orderDate).format('DD/MM/YYYY');
+  const firstItem = items[0] || {};
+  const base_type = firstItem.base_type || 'N/A';
+  const base_sub_category = firstItem.base_sub_category_name || 'N/A';
+
+  const groupItemsBySeries = (items) => {
+    const groupedMap = {};
+
+    for (const item of items) {
+      const series = item.series_name || 'UNKNOWN';
+      if (!groupedMap[series]) {
+        groupedMap[series] = [];
+      }
+      groupedMap[series].push(item);
+    }
+
+    return Object.entries(groupedMap).map(([series_name, items]) => {
+      const totalRows = items.length;
+
+      const itemsWithFlags = items.map((item, index) => ({
+        ...item,
+        showSeriesName: index === 0,
+        rowspan: totalRows,
+      }));
+
+      return {
+        series_name,
+        items: itemsWithFlags,
+      };
+    });
+  };
+
+  const groupedSeries = groupItemsBySeries(items);
+
+  const pdfBuffer = await generatePDFBuffer({
+    templateName: templateFileName,
+    data: {
+      order,
+      items,
+      base_type,
+      groupedSeries,
+      base_sub_category,
+      totalSheets: items.reduce(
+        (sum, item) => sum + (item.no_of_sheets || 0),
+        0
+      ),
+      totalSqMtr: items.reduce((sum, item) => sum + (item.sqm || 0), 0),
+      totalAmount: items.reduce((sum, item) => sum + (item.amount || 0), 0),
+    },
+  });
+
+  res.set({
+    'Content-Type': 'application/pdf',
+    'Content-Disposition': `attachment; filename=${filenamePrefix}-${order.order_no}.pdf`,
+    'Content-Length': pdfBuffer.length,
+  });
+
+  return res.status(StatusCodes.OK).end(pdfBuffer);
+});
+
+export const getPreviousRate = catchAsync(async (req, res, next) => {
+  const { sales_item_name, customer_id } = req.query;
+
+  if (!sales_item_name || !customer_id) {
+    return res.status(400).json({
+      status: false,
+      message: 'Missing required fields: Sales Item Name or Customer Name',
+    });
+  }
+
+  const result = await decorative_order_item_details_model.aggregate([
+    {
+      $match: {
+        sales_item_name,
+      },
+    },
+    {
+      $lookup: {
+        from: 'orders',
+        localField: 'order_id',
+        foreignField: '_id',
+        as: 'order_details',
+      },
+    },
+    {
+      $unwind: '$order_details',
+    },
+    {
+      $match: {
+        'order_details.customer_id': mongoose.Types.ObjectId.createFromHexString(customer_id),
+      },
+    },
+    {
+      $sort: {
+        'order_details.order_no': -1, // latest order first
+      },
+    },
+    {
+      $limit: 1, // ✅ Only get the latest one
+    },
+    {
+      $project: {
+        _id: 0,
+        rate_per_sqm: 1,
+        orderDate: '$order_details.orderDate',
+        customer_id: '$order_details.customer_id',
+        order_id: 1,
+        sales_item_name: 1,
+      },
+    },
+  ]);
+
+  const response = new ApiResponse(
+    StatusCodes.OK,
+    'Previous rate fetched successfully',
+    result?.[0] || null // ✅ Return single object or null
+  );
+
+  return res.status(StatusCodes.OK).json(response);
+});

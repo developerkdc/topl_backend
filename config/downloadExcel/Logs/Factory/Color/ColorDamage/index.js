@@ -1,0 +1,242 @@
+// import exceljs from 'exceljs';
+// import ApiError from '../../../../../../utils/errors/apiError.js';
+
+// export const createFactoryColorDamageExcel = async (newData, req, res) => {
+//   try {
+//     const workbook = new exceljs.Workbook();
+//     const worksheet = workbook.addWorksheet('Factory-Color-Done-Report');
+
+//     // Define worksheet columns
+//     worksheet.columns = [
+//       { header: 'Sr. No', key: 'sr_no', width: 8 },
+//       { header: 'Issued From', key: 'issued_from', width: 15 },
+//       { header: 'Issued For', key: 'issued_for', width: 15 },
+//       { header: 'Issue Status', key: 'issue_status', width: 15 },
+//       { header: 'Product Type', key: 'product_type', width: 15 },
+//       { header: 'Group No', key: 'group_no', width: 15 },
+//       { header: 'Pressing ID', key: 'pressing_id', width: 15 },
+//       { header: 'Pressing Instructions', key: 'pressing_instructions', width: 30 },
+//       { header: 'Pressing Date', key: 'pressing_date', width: 18 },
+//       { header: 'Color Date', key: 'color_date', width: 18 },
+//       { header: 'Issued Sheets', key: 'issued_sheets', width: 15 },
+//       { header: 'Issued SQM', key: 'issued_sqm', width: 15 },
+//       { header: 'Color Sheets', key: 'color_sheets', width: 15 },
+//       { header: 'Color SQM', key: 'color_sqm', width: 15 },
+//       { header: 'Order No', key: 'order_no', width: 12 },
+//       { header: 'Order Category', key: 'order_category', width: 18 },
+//       { header: 'Customer Name', key: 'customer_name', width: 25 },
+//       { header: 'Series Code', key: 'series_product_code', width: 20 },
+//       { header: 'Flow Process', key: 'flow_process', width: 30 },
+//       { header: 'Base Items', key: 'base_items', width: 30 },
+//       { header: 'Face Items', key: 'face_items', width: 30 },
+//       { header: 'Group Item Names', key: 'group_items', width: 30 },
+//       { header: 'Created By', key: 'created_by', width: 20 },
+//       { header: 'Updated By', key: 'updated_by', width: 20 },
+//     ];
+
+//     // Convert newData object with numeric keys to array
+//     const dataArray = Object.values(newData);
+
+//     // Populate worksheet rows
+//     for (const item of dataArray) {
+//       const colorDetails = item.color_done_details || {};
+//       const pressingDetails = item?.issue_for_color_details?.pressing_details || {};
+//       const orderDetails = item?.issue_for_color_details?.order_details || {};
+
+//       const pressingConsumed = item?.issue_for_color_details?.pressing_done_consumed_items_details || [];
+
+//       // Base items
+//       const baseItems = pressingConsumed.flatMap(d =>
+//         d.base_details?.map(b => b.item_name)
+//       ) || [];
+
+//       // Face items
+//       const faceItems = pressingConsumed.flatMap(d =>
+//         d.face_details?.map(f => f.item_name)
+//       ) || [];
+
+//       // Group items
+//       const groupItems = pressingConsumed.flatMap(d =>
+//         d.group_details?.map(g => g.item_name)
+//       ) || [];
+
+//       worksheet.addRow({
+//         sr_no: item?.sr_no,
+//         issued_from: item?.issue_for_color_details?.issued_from || '',
+//         issued_for: item?.issue_for_color_details?.issued_for || '',
+//         issue_status: item?.issue_status || '',
+//         product_type: pressingDetails?.product_type || '',
+//         group_no: pressingDetails?.group_no || '',
+//         pressing_id: pressingDetails?.pressing_id || '',
+//         pressing_instructions: pressingDetails?.pressing_instructions || '',
+//         pressing_date: pressingDetails?.pressing_date
+//           ? new Date(pressingDetails.pressing_date).toLocaleDateString()
+//           : '',
+//         color_date: colorDetails?.color_date
+//           ? new Date(colorDetails.color_date).toLocaleDateString()
+//           : '',
+//         issued_sheets: item?.issue_for_color_details?.issued_sheets || '',
+//         issued_sqm: item?.issue_for_color_details?.issued_sqm || '',
+//         color_sheets: item?.no_of_sheets || '',
+//         color_sqm: item?.sqm || '',
+//         order_no: orderDetails?.order_no || '',
+//         order_category: orderDetails?.order_category || '',
+//         customer_name: orderDetails?.owner_name || '',
+//         series_product_code: pressingDetails?.series_product_code || '',
+//         flow_process: pressingDetails?.flow_process?.join(', ') || '',
+//         base_items: baseItems.join(', '),
+//         face_items: faceItems.join(', '),
+//         group_items: groupItems.join(', '),
+//         created_by: item?.created_by?.user_name || '',
+//         updated_by: item?.updated_by?.user_name || '',
+//       });
+//     }
+
+//     // Set response headers
+//     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+//     res.setHeader('Content-Disposition', 'attachment; filename=Factory-Color-Damage-Report.xlsx');
+
+//     // Write workbook to response
+//     await workbook.xlsx.write(res);
+//     res.status(200).end();
+
+//   } catch (error) {
+//     console.error(error);
+//     throw new ApiError(500, 'Failed to generate Excel report');
+//   }
+// };
+
+
+
+
+
+
+
+
+
+
+
+import exceljs from 'exceljs';
+import ApiError from '../../../../../../utils/errors/apiError.js';
+
+export const createFactoryColorDamageExcel = async (newData, req, res) => {
+  try {
+    const workbook = new exceljs.Workbook();
+    const worksheet = workbook.addWorksheet('Factory-Color-Done-Report');
+
+
+    worksheet.columns = [
+
+      { header: 'Sr. No', key: 'sr_no', width: 8 },
+      { header: 'Issued From', key: 'issued_from', width: 15 },
+      { header: 'Issued For', key: 'issued_for', width: 15 },
+      { header: 'Item Name', key: 'item_name', width: 24 },
+      { header: 'Item Sub-Category.', key: 'item_sub_category', width: 20 },
+      { header: 'Issue Status', key: 'issue_status', width: 15 },
+      { header: 'Product Type', key: 'product_type', width: 15 },
+      { header: 'Group No', key: 'group_no', width: 12 },
+      { header: 'Pressing ID', key: 'pressing_id', width: 15 },
+      { header: 'Pressing Instr.', key: 'pressing_instructions', width: 30 },
+      { header: 'Pressing Date', key: 'pressing_date', width: 18 },
+      { header: 'Color Date', key: 'color_date', width: 18 },
+      { header: 'Issued Sheets', key: 'issued_sheets', width: 13 },
+      { header: 'Issued SQM', key: 'issued_sqm', width: 12 },
+      { header: 'Color Sheets', key: 'color_sheets', width: 13 },
+      { header: 'Color SQM', key: 'color_sqm', width: 12 },
+      { header: 'Order No', key: 'order_no', width: 12 },
+      { header: 'Order Category', key: 'order_category', width: 18 },
+      { header: 'Customer Name', key: 'customer_name', width: 25 },
+      { header: 'Series Code', key: 'series_product_code', width: 18 },
+      { header: 'Flow Process', key: 'flow_process', width: 30 },
+      { header: 'Base Items', key: 'base_items', width: 30 },
+      { header: 'Face Items', key: 'face_items', width: 30 },
+      { header: 'Group Item Names', key: 'group_items', width: 35 },
+      { header: 'Created By', key: 'created_by', width: 18 },
+      { header: 'Updated By', key: 'updated_by', width: 18 },
+
+      /* 🆕  new columns to match <IssueForPeelingTableRow /> ------------ */
+      { header: 'Order Date', key: 'order_date', width: 18 },
+      { header: 'Item No', key: 'item_no', width: 12 },
+      { header: 'Series Product', key: 'series_product', width: 18 },
+      { header: 'Photo No', key: 'photo_no', width: 12 },
+      { header: 'Pressing Length', key: 'pressing_length', width: 15 },
+      { header: 'Pressing Width', key: 'pressing_width', width: 15 },
+      { header: 'Pressing Thick.', key: 'pressing_thickness', width: 15 },
+      { header: 'Created At', key: 'created_at', width: 18 },
+      { header: 'Updated At', key: 'updated_at', width: 18 },
+    ];
+
+    /* turn object‑of‑objects into array */
+    const rows = Object.values(newData ?? {});
+
+
+    for (const item of rows) {
+
+      const colorDetails = item.color_done_details ?? {};
+      const issueForColor = item.issue_for_color_details ?? {};
+      const pressingDetails = issueForColor.pressing_details ?? {};
+      const orderDetails = issueForColor.order_details ?? {};
+      const orderItemDetails = issueForColor.order_item_details ?? {};
+      const consumed = issueForColor.pressing_done_consumed_items_details ?? [];
+
+      const firstGroup = consumed?.[0]?.group_details?.[0] || {};
+
+
+      const toDate = d => (d ? new Date(d).toLocaleDateString() : '');
+
+      worksheet.addRow({
+        /* original fields ---------------------------------------------- */
+        sr_no: item.sr_no,
+        issued_from: issueForColor.issued_from ?? '',
+        issued_for: issueForColor.issued_for ?? '',
+        item_name: firstGroup?.item_name ?? '',
+        item_sub_category: firstGroup.item_sub_category_name ?? '',
+        issue_status: item.issue_status ?? '',
+        product_type: pressingDetails.product_type ?? '',
+        group_no: pressingDetails.group_no ?? '',
+        pressing_id: pressingDetails.pressing_id ?? '',
+        pressing_instructions: pressingDetails.pressing_instructions ?? '',
+        pressing_date: toDate(pressingDetails.pressing_date),
+        color_date: toDate(colorDetails.color_date),
+        issued_sheets: issueForColor.issued_sheets ?? '',
+        issued_sqm: issueForColor.issued_sqm ?? '',
+        color_sheets: item.no_of_sheets ?? '',
+        color_sqm: item.sqm ?? '',
+        order_no: orderDetails.order_no ?? '',
+        order_category: orderDetails.order_category ?? '',
+        customer_name: orderDetails.owner_name ?? '',
+        series_product_code: pressingDetails.series_product_code ?? '',
+        flow_process: (pressingDetails.flow_process ?? []).join(', '),
+        base_items: consumed.flatMap(c => c.base_details?.map(b => b.item_name) ?? []).join(', '),
+        face_items: consumed.flatMap(c => c.face_details?.map(f => f.item_name) ?? []).join(', '),
+        group_items: consumed.flatMap(c => c.group_details?.map(g => g.item_name) ?? []).join(', '),
+        created_by: item.created_by?.user_name ?? '',
+        updated_by: item.updated_by?.user_name ?? '',
+
+
+        order_date: toDate(orderDetails.orderDate),
+        item_no: orderItemDetails.item_no ?? '',
+        series_product: orderDetails.series_product ?? '',
+        photo_no: firstGroup.photo_no ?? '',
+        pressing_length: pressingDetails.length ?? '',
+        pressing_width: pressingDetails.width ?? '',
+        pressing_thickness: pressingDetails.thickness ?? '',
+        created_at: toDate(item.createdAt),
+        updated_at: toDate(item.updatedAt),
+      });
+    }
+
+
+    res.setHeader('Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition',
+      'attachment; filename=Factory-Color-Damage-Report.xlsx');
+
+    await workbook.xlsx.write(res);
+    res.status(200).end();
+
+  } catch (err) {
+    console.error(err);
+    throw new ApiError(500, 'Failed to generate Excel report');
+  }
+};

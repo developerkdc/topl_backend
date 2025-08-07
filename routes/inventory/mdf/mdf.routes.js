@@ -11,6 +11,7 @@ import {
   listing_mdf_inventory,
   mdf_item_listing_by_invoice,
   mdfLogsCsv,
+  mdfLogsCsvHistory,
 } from '../../../controllers/inventory/mdf/mdf.controller.js';
 import AuthMiddleware from '../../../middlewares/verifyToken.js';
 import RolesPermissions from '../../../middlewares/permission.js';
@@ -67,6 +68,13 @@ router.post(
   mdfLogsCsv
 );
 
+router.post(
+  '/download-excel-mdf-history',
+  AuthMiddleware,
+  RolesPermissions('mdf_inventory', 'view'),
+  mdfLogsCsvHistory
+);
+
 router.get(
   '/mdf-item-listing-by-invoice/:invoice_id',
   AuthMiddleware,
@@ -94,7 +102,6 @@ router.get(
 
 //list MDF details
 router.get('/list-mdf-details/:id', AuthMiddleware, fetch_mdf_details_by_id);
-
 
 //List MDF history
 router.post(

@@ -24,6 +24,8 @@ import dispatchAddressRouter from './DispatchAddress/dispatchAddress.routes.js';
 import photoRouter from './Photo/photo.routes.js';
 import customerRouter from './Customers/customers.routes.js';
 import customerClientRouter from './Customers/CustomerClients/customerClients.routes.js';
+import sizeRouter from './Size/size.routes.js';
+import salesItemNameRouter from './SalesItemName/salesItemName.routes.js';
 
 const allMasterRouter = express.Router();
 
@@ -50,7 +52,9 @@ allMasterRouter.use(`/vehicle-master`, vehicleRouter);
 allMasterRouter.use(`/transporter-master`, transporterRouter);
 allMasterRouter.use(`/dispatchAddress-master`, dispatchAddressRouter);
 allMasterRouter.use(`/photo-master`, photoRouter);
+allMasterRouter.use(`/salesItemName-master`, salesItemNameRouter);
 allMasterRouter.use(`/customer-master`, [customerRouter, customerClientRouter]);
 allMasterRouter.use(`/polish-master`, polishRouter);
+allMasterRouter.use(`/size-master`, sizeRouter);
 
 export default allMasterRouter;

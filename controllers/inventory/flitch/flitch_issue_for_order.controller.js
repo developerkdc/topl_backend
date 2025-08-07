@@ -33,11 +33,26 @@ export const fetch_all_flitch_by_item_name = catchAsync(async (req, res) => {
     ...search_query,
     flitch_cmt: {
       $lte: order_item_data?.cbm,
-      $gt: 0
+      $gt: 0,
     },
     issue_status: null,
+    'invoice_details.approval_status.sendForApproval.status': false,
   };
   const pipeline = [
+    {
+      $lookup: {
+        from: 'flitch_inventory_invoice_details',
+        localField: 'invoice_id',
+        foreignField: '_id',
+        as: 'invoice_details',
+      },
+    },
+    {
+      $unwind: {
+        path: '$invoice_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
     { $match: { ...match_query } },
     {
       $project: {

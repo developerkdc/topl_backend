@@ -203,7 +203,7 @@ export const createVeneerLogsExcel = async (newData) => {
           contact_person_designation:
             data.veneer_invoice_details.supplier_details.branch_detail
               .contact_person[0].designation,
-          contact_person_mobile_no:
+          contact_person_mobile_number:
             data.veneer_invoice_details.supplier_details.branch_detail
               .contact_person[0].mobile_number,
           invoice_date:
@@ -235,7 +235,6 @@ export const createVeneerLogsExcel = async (newData) => {
         };
 
         worksheet.addRow(rowData);
-        console.log('called');
       } catch (error) {
         console.log('Error creating venner excel => ', error.message);
       }

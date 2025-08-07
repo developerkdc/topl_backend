@@ -4,15 +4,13 @@ import ApiError from '../../../utils/errors/apiError.js';
 import catchAsync from '../../../utils/errors/catchAsync.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
-import transporterModel, {
-  transporter_type,
-} from '../../../database/schema/masters/transporter.schema.js';
+import transporterModel from '../../../database/schema/masters/transporter.schema.js';
 
 export const addTransporter = catchAsync(async (req, res, next) => {
-  const { name, branch, transport_id, type,area_of_operation } = req.body;
+  const { name, branch, transport_id, type, area_of_operation } = req.body;
   const authUserDetail = req.userDetails;
 
-  const requiredField = ['name', 'type',"area_of_operation"];
+  const requiredField = ['name', 'type', 'area_of_operation'];
 
   for (let field of requiredField) {
     if (!req.body[field]) {
@@ -36,7 +34,7 @@ export const addTransporter = catchAsync(async (req, res, next) => {
     name: name,
     branch: branch,
     transport_id: transport_id,
-    area_of_operation:area_of_operation,
+    area_of_operation: area_of_operation,
     type: type,
     created_by: authUserDetail?._id,
     updated_by: authUserDetail?._id,
@@ -60,7 +58,8 @@ export const addTransporter = catchAsync(async (req, res, next) => {
 
 export const updateTransporter = catchAsync(async (req, res, next) => {
   const { id } = req.params;
-  const { name, branch, transport_id, type,area_of_operation, status } = req.body;
+  const { name, branch, transport_id, type, area_of_operation, status } =
+    req.body;
   const authUserDetail = req.userDetails;
 
   if (!id || !mongoose.isValidObjectId(id)) {
@@ -71,7 +70,7 @@ export const updateTransporter = catchAsync(async (req, res, next) => {
     name: name,
     branch: branch,
     transport_id: transport_id,
-    area_of_operation:area_of_operation,
+    area_of_operation: area_of_operation,
     type: type,
     status: status,
     updated_by: authUserDetail?._id,
@@ -104,7 +103,6 @@ export const updateTransporter = catchAsync(async (req, res, next) => {
 });
 
 export const fetchTransporterList = catchAsync(async (req, res, next) => {
-
   const {
     page = 1,
     limit = 10,
@@ -349,18 +347,33 @@ export const fetchSingleTransporter = catchAsync(async (req, res, next) => {
 });
 
 export const dropdownTransporter = catchAsync(async (req, res, next) => {
+  const { type } = req.query;
+  let matchQuery = {
+    status: true,
+  };
+
+  if (type) {
+    matchQuery = {
+      ...matchQuery,
+      $or: [{ type: type }, { type: 'BOTH' }],
+    };
+  }
+
   const transporterList = await transporterModel.aggregate([
     {
       $match: {
-        status: true,
+        ...matchQuery,
       },
     },
     {
       $project: {
+        _id: 1,
+        sr_no: 1,
         name: 1,
         branch: 1,
         transport_id: 1,
-        transporter_type: 1,
+        area_of_operation: 1,
+        type: 1,
       },
     },
   ]);

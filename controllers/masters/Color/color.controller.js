@@ -24,8 +24,8 @@ export const addColor = catchAsync(async (req, res, next) => {
 
   const maxSrNo = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1;
   const colorData = {
-    name: name,
     sr_no: maxSrNo,
+    ...req.body,
     created_by: authUserDetail?._id,
     updated_by: authUserDetail?._id,
   };
@@ -56,8 +56,7 @@ export const updateColor = catchAsync(async (req, res, next) => {
   }
 
   const colorData = {
-    name: name,
-    status: status,
+    ...req.body,
     updated_by: authUserDetail?._id,
   };
 
@@ -325,10 +324,22 @@ export const fetchSingleColor = catchAsync(async (req, res, next) => {
 });
 
 export const dropdownColor = catchAsync(async (req, res, next) => {
+  const { type, process_name } = req.query;
+  var match_query = { status: true };
+
+  if (type) {
+    // match_query.type = { $in: type.split(',') };
+    match_query.type = type;
+  }
+  if (process_name) {
+    match_query.process_name = process_name;
+  }
+  console.log(match_query);
+
   const colorList = await colorModel.aggregate([
     {
       $match: {
-        status: true,
+        ...match_query,
       },
     },
     {

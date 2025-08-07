@@ -99,6 +99,8 @@ const OrderSchema = new mongoose.Schema(
         order_status.complete,
         order_status.pending,
         order_status.partial_complete,
+        order_status.cancelled,
+        order_status.closed,
       ],
       uppercase: true,
       trim: true,
@@ -119,6 +121,21 @@ const OrderSchema = new mongoose.Schema(
       uppercase: true,
       trim: true,
       default: null,
+    },
+    product_category: {
+      type: String,
+      default: function () {
+        const product_category = {
+          [order_category.raw]: this.order_category.raw_materials,
+          [order_category.decorative]: 'DECORATIVE',
+          [order_category.series_product]:
+            this.order_category.series_product_materials,
+        };
+        return product_category[this.order_category] || null;
+      },
+      uppercase: true,
+      trim: true,
+      required: [true, 'Product category is required'],
     },
 
     // is_close: {

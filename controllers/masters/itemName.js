@@ -34,11 +34,7 @@ export const AddItemNameMaster = catchAsync(async (req, res) => {
   const newMax = maxNumber.length > 0 ? maxNumber[0].max + 1 : 1;
   const itemNameData = {
     sr_no: newMax,
-    item_name,
-    color,
-    category,
-    item_subcategory,
-    item_name_code,
+    ...req.body,
     created_by,
   };
   const newItemNameList = new ItemNameModel(itemNameData);
@@ -78,7 +74,13 @@ export const UpdateItemNameMaster = catchAsync(async (req, res) => {
 });
 
 export const ListItemNameMaster = catchAsync(async (req, res) => {
-  const { query, sortField = "updatedAt", sortOrder = "desc", page = 1, limit = 10 } = req.query;
+  const {
+    query,
+    sortField = 'updatedAt',
+    sortOrder = 'desc',
+    page = 1,
+    limit = 10,
+  } = req.query;
   const {
     string,
     boolean,
@@ -146,8 +148,10 @@ export const ListItemNameMaster = catchAsync(async (req, res) => {
 
     {
       $project: {
+        _id: 1,
         sr_no: 1,
         item_name: 1,
+        alternate_item_name_details: 1,
         createdAt: 1,
         created_by: 1,
         'userDetails.first_name': 1,
@@ -173,8 +177,43 @@ export const ListItemNameMaster = catchAsync(async (req, res) => {
   if (allDetails.length === 0) {
     return res.json(new ApiResponse(StatusCodes.OK, 'NO Data found...'));
   }
-  const totalDocs = await ItemNameModel.countDocuments({ ...searchQuery });
-  const totalPage = Math.ceil(totalDocs / limitInt);
+  // const totalDocs = await ItemNameModel.countDocuments({ ...searchQuery });
+
+  const totalDocs = await ItemNameModel.aggregate([
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'created_by',
+        foreignField: '_id',
+        as: 'userDetails',
+      },
+    },
+    {
+      $lookup: {
+        from: 'item_categories',
+        localField: 'category',
+        foreignField: '_id',
+        as: 'categoryDetails',
+      },
+    },
+    {
+      $lookup: {
+        from: 'item_subcategories',
+        localField: 'item_subcategory',
+        foreignField: '_id',
+        as: 'subCategoryDetails',
+      },
+    },
+    { $unwind: { path: '$userDetails', preserveNullAndEmptyArrays: true } },
+    // { $unwind: { path: '$categoryDetails', preserveNullAndEmptyArrays: true } },
+    { $match: { ...searchQuery } },
+
+    {
+      $count: "totalCount"
+    }
+  ]);
+
+  const totalPage = Math.ceil(totalDocs?.[0]?.totalCount / limitInt);
   return res.json(
     new ApiResponse(StatusCodes.OK, 'All Details fetched succesfully..', {
       allDetails,
@@ -184,7 +223,7 @@ export const ListItemNameMaster = catchAsync(async (req, res) => {
 });
 
 export const DropdownItemNameMaster = catchAsync(async (req, res) => {
-  const { type, subcategory } = req.query;
+  const { type, subcategory, process } = req.query;
 
   const searchQuery = {};
 
@@ -237,11 +276,14 @@ export const DropdownItemNameMaster = catchAsync(async (req, res) => {
     },
     {
       $project: {
+        _id: 1,
+        sr_no: 1,
         item_name: 1,
         category: 1,
         item_subcategory: 1,
         color: 1,
         item_name_code: 1,
+        alternate_item_name_details: 1,
       },
     },
     {

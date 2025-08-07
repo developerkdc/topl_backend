@@ -6,12 +6,18 @@ import {
   fetchSingleVehicle,
   fetchVehicleList,
   updateVehicle,
+  updateVehicleStatus,
 } from '../../../controllers/masters/Vehicle/vehicle.controller.js';
 
 const vehicleRouter = express.Router();
 
 vehicleRouter.post('/add-vehicle', AuthMiddleware, addVehicle);
 vehicleRouter.patch('/update-vehicle/:id', AuthMiddleware, updateVehicle);
+vehicleRouter.patch(
+  '/update-vehicle-status/:id',
+  AuthMiddleware,
+  updateVehicleStatus
+);
 
 vehicleRouter.get('/single-vehicle/:id', AuthMiddleware, fetchSingleVehicle);
 vehicleRouter.post('/list-vehicle', AuthMiddleware, fetchVehicleList);

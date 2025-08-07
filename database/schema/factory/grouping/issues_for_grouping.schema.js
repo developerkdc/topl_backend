@@ -3,29 +3,225 @@ import { issues_for_status } from '../../../Utils/constants/constants.js';
 
 const issues_for_grouping_schema = new mongoose.Schema(
   {
+    unique_identifier: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, 'unique identifier is required'],
+    },
     process_done_id: {
       type: mongoose.Schema.Types.ObjectId,
       default: null,
+      required: [
+        function () {
+          return this.issued_from === issues_for_status.smoking_dying;
+        },
+        'process_done_id is required',
+      ],
+    },
+    process_done_item_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+      required: [
+        function () {
+          return this.issued_from === issues_for_status.smoking_dying;
+        },
+        'process_done_item_id is required',
+      ],
     },
     dressing_done_id: {
       type: mongoose.Schema.Types.ObjectId,
       default: null,
+      required: [
+        function () {
+          return this.issued_from === issues_for_status.dressing;
+        },
+        'dressing_done_id is required',
+      ],
     },
-    bundles: {
-      type: [mongoose.Schema.Types.ObjectId],
-      required: [true, 'Bundles Array is required'],
+    dressing_done_item_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+      required: [
+        function () {
+          return this.issued_from === issues_for_status.dressing;
+        },
+        'dressing_done_item_id is required',
+      ],
+    },
+    veneer_inventory_invoice_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+      required: [
+        function () {
+          return this.issued_from === issues_for_status.veneer;
+        },
+        'veneer_inventory_invoice_id is required',
+      ],
+    },
+    veneer_inventory_item_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+      required: [
+        function () {
+          return this.issued_from === issues_for_status.veneer;
+        },
+        'veneer_inventory_item_id is required',
+      ],
+    },
+    item_name: {
+      type: String,
+      uppercase: true,
+      trim: true,
+      required: [true, 'Item Name is required'],
+    },
+    item_name_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, 'Item Name ID is required'],
+    },
+    item_sub_category_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, 'Items Sub-Category Id is required'],
+    },
+    item_sub_category_name: {
+      type: String,
+      required: [true, 'Item Sub-Category Name is required'],
+      trim: true,
+      uppercase: true,
+    },
+    log_no_code: {
+      type: String,
+      uppercase: true,
+      trim: true,
+      required: [true, 'Log No Code is required'],
+    },
+    length: {
+      type: Number,
+      default: 0,
+      required: [true, 'Length is required'],
+    },
+    width: {
+      type: Number,
+      default: 0,
+      required: [true, 'Width is required'],
+    },
+    thickness: {
+      type: Number,
+      default: 0,
+      required: [true, 'Thickness is required'],
+    },
+    no_of_leaves: {
+      type: Number,
+      default: 0,
+      required: [true, 'No of leaves is required'],
+    },
+    sqm: {
+      type: Number,
+      default: 0,
+      required: [true, 'SQM is required'],
+    },
+    bundle_number: {
+      type: Number,
+      required: [true, 'bundle number is required'],
+    },
+    pallet_number: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      required: [true, 'pallet_number is required'],
+    },
+    color_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
+    color_name: {
+      type: String,
+      uppercase: true,
+      trim: true,
+      default: null,
+    },
+    character_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
+    character_name: {
+      type: String,
+      uppercase: true,
+      trim: true,
+      default: null,
+    },
+    cut_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
+    cut_name: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      default: null,
+    },
+    pattern_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
+    pattern_name: {
+      type: String,
+      uppercase: true,
+      trim: true,
+      default: null,
+    },
+    series_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, 'Series ID is required'],
+    },
+    series_name: {
+      type: String,
+      uppercase: true,
+      trim: true,
+      required: [true, 'Series Name is required'],
+    },
+    grade_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, 'Grade ID is required'],
+    },
+    grade_name: {
+      type: String,
+      uppercase: true,
+      trim: true,
+      required: [true, 'Grade Name is required'],
+    },
+    amount: {
+      type: Number,
+      default: 0,
+      required: [true, 'Item Amount is required'],
+    },
+    amount_factor: {
+      type: Number,
+      default: 1,
+    },
+    expense_amount: {
+      type: Number,
+      default: 0,
     },
     issued_from: {
       type: String,
       enum: {
-        values: [issues_for_status?.smoking_dying, issues_for_status?.dressing],
-        message: `Invalid issued from type {{VALUE}} it should be one of the ${issues_for_status?.smoking_dying}, ${issues_for_status?.dressing} `,
+        values: [
+          issues_for_status?.smoking_dying,
+          issues_for_status?.dressing,
+          issues_for_status?.veneer,
+        ],
+        message: `Invalid issued from type {{VALUE}} it should be one of the ${issues_for_status?.smoking_dying}, ${(issues_for_status?.dressing, issues_for_status?.veneer)} `,
       },
       required: [true, 'Issued from is required'],
     },
     is_grouping_done: {
       type: Boolean,
       default: false,
+    },
+    remark: {
+      type: String,
+      default: null,
+      trim: true,
+      uppercase: true,
     },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,
@@ -119,73 +315,26 @@ export const issues_for_grouping_view_model = mongoose.model(
         },
       },
       {
-        $lookup: {
-          from: 'process_done_details',
-          localField: 'process_done_id',
-          foreignField: '_id',
-          as: 'process_done_details',
-        },
-      },
-      {
-        $unwind: {
-          path: '$process_done_details',
-          preserveNullAndEmptyArrays: true,
-        },
-      },
-      {
-        $lookup: {
-          from: 'dressing_done_other_details',
-          localField: 'dressing_done_id',
-          foreignField: '_id',
-          as: 'dressing_done_details',
-        },
-      },
-      {
-        $unwind: {
-          path: '$dressing_done_details',
-          preserveNullAndEmptyArrays: true,
-        },
-      },
-      {
-        $lookup: {
-          from: 'process_done_items_details',
-          localField: 'bundles',
-          foreignField: '_id',
-          as: 'process_bundle_details',
-        },
-      },
-      {
-        $lookup: {
-          from: 'dressing_done_items',
-          localField: 'bundles',
-          foreignField: '_id',
-          as: 'dressing_bundle_details',
-        },
-      },
-      {
-        $set: {
-          other_details: {
-            $cond: {
-              if: '$dressing_done_details',
-              then: '$dressing_done_details',
-              else: '$process_done_details',
-            },
+        $group: {
+          _id: {
+            unique_identifier: '$unique_identifier',
+            pallet_number: '$pallet_number',
           },
           bundles_details: {
-            $cond: {
-              if: { $gt: [{ $size: '$process_bundle_details' }, 0] },
-              then: '$process_bundle_details',
-              else: '$dressing_bundle_details',
-            },
+            $push: '$$ROOT',
           },
         },
       },
       {
         $addFields: {
+          issued_from: { $first: '$bundles_details.issued_from' },
+          is_grouping_done: { $first: '$bundles_details.is_grouping_done' },
           item_name_id: { $first: '$bundles_details.item_name_id' },
           item_name: { $first: '$bundles_details.item_name' },
           log_no_code: { $first: '$bundles_details.log_no_code' },
           pallet_number: { $first: '$bundles_details.pallet_number' },
+          cut_id: { $first: '$bundles_details.cut_id' },
+          cut_name: { $first: '$bundles_details.cut_name' },
           item_sub_category_name: {
             $first: '$bundles_details.item_sub_category_name',
           },
@@ -200,12 +349,26 @@ export const issues_for_grouping_view_model = mongoose.model(
         },
       },
       {
-        $unset: [
-          'process_bundle_details',
-          'dressing_bundle_details',
-          'dressing_done_details',
-          'process_done_details',
-        ],
+        $lookup: {
+          from: "item_subcategories",
+          localField: "item_sub_category_id",
+          foreignField: "_id",
+          pipeline: [
+            {
+              $project: {
+                name: 1,
+                type: 1
+              }
+            }
+          ],
+          as: "item_subcategories_details"
+        }
+      },
+      {
+        $unwind: {
+          path: '$item_subcategories_details',
+          preserveNullAndEmptyArrays: true,
+        },
       },
     ],
   });

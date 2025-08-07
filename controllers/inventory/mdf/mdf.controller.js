@@ -10,7 +10,10 @@ import ApiResponse from '../../../utils/ApiResponse.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
 import { StatusCodes } from '../../../utils/constants.js';
-import { createMdfLogsExcel } from '../../../config/downloadExcel/Logs/Inventory/mdf/mdf.js';
+import {
+  createMdfHistoryExcel,
+  createMdfLogsExcel,
+} from '../../../config/downloadExcel/Logs/Inventory/mdf/mdf.js';
 import {
   mdf_approval_inventory_invoice_model,
   mdf_approval_inventory_items_model,
@@ -274,52 +277,125 @@ export const edit_mdf_invoice_inventory = catchAsync(async (req, res, next) => {
     );
 });
 
+//csv inventory
 export const mdfLogsCsv = catchAsync(async (req, res) => {
-  const { search = '' } = req.query;
+  const { search = '', sortBy = 'updatedAt', sort = 'desc' } = req.query;
+
   const {
     string,
     boolean,
     numbers,
     arrayField = [],
   } = req?.body?.searchFields || {};
+
   const filter = req.body?.filter;
 
+  // 1. Build search query (match logLogsCsv logic)
   let search_query = {};
-  if (search != '' && req?.body?.searchFields) {
-    const search_data = DynamicSearch(
-      search,
-      boolean,
-      numbers,
-      string,
-      arrayField
-    );
-    if (search_data?.length == 0) {
+  if (search && req?.body?.searchFields) {
+    string?.forEach((field) => {
+      search_query[field] = { $regex: search, $options: 'i' };
+    });
+
+    boolean?.forEach((field) => {
+      if (search.toLowerCase() === 'true' || search.toLowerCase() === 'false') {
+        search_query[field] = search.toLowerCase() === 'true';
+      }
+    });
+
+    if (!isNaN(search)) {
+      numbers?.forEach((field) => {
+        search_query[field] = Number(search);
+      });
+    }
+
+    arrayField?.forEach((field) => {
+      search_query[field] = { $in: [search] };
+    });
+
+    if (Object.keys(search_query).length === 0) {
       return res.status(404).json({
         statusCode: 404,
         status: false,
-        data: {
-          data: [],
-        },
+        data: { data: [] },
         message: 'Results Not Found',
       });
     }
-    search_query = search_data;
   }
 
+  // 2. Get filter query
   const filterData = dynamic_filter(filter);
 
-  const match_query = {
+  // 3. Clean query (copied from logLogsCsv)
+  const cleanMatchQuery = (query) => {
+    const cleaned = {};
+    for (const key in query) {
+      const value = query[key];
+
+      if (value === undefined || value === '' || value === null) continue;
+
+      if (
+        typeof value === 'object' &&
+        value !== null &&
+        ('$gte' in value || '$lte' in value)
+      ) {
+        const range = {};
+        if (
+          value.$gte !== '' &&
+          value.$gte !== null &&
+          value.$gte !== undefined
+        ) {
+          range.$gte = value.$gte;
+        }
+        if (
+          value.$lte !== '' &&
+          value.$lte !== null &&
+          value.$lte !== undefined
+        ) {
+          range.$lte = value.$lte;
+        }
+        if (Object.keys(range).length > 0) {
+          cleaned[key] = range;
+        }
+        continue;
+      }
+
+      cleaned[key] = value;
+    }
+    return cleaned;
+  };
+
+  // 4. Merge and clean
+  const fullQuery = {
     ...filterData,
     ...search_query,
   };
 
-  const allData = await mdf_inventory_items_view_modal.find(match_query);
+  const cleanedQuery = cleanMatchQuery(fullQuery);
 
-  const excelLink = await createMdfLogsExcel(allData);
+  // 5. Build final query
+  const match_query = {
+    ...cleanedQuery,
+    available_sheets: { $ne: 0 }, // preserved from original
+  };
+
+  console.log('Final match_query =>', JSON.stringify(match_query, null, 2));
+
+  // 6. Fetch data
+  const sortedData = await mdf_inventory_items_view_modal
+    .find(match_query)
+    .sort({
+      [sortBy]: sort === 'desc' ? -1 : 1,
+      _id: sort === 'desc' ? -1 : 1,
+    });
+
+  // 7. Generate Excel
+  const excelLink = await createMdfLogsExcel(sortedData);
   console.log('link => ', excelLink);
 
+  // 8. Return
   return res.json(
-    new ApiResponse(StatusCodes.OK, 'Csv downloaded successfully...', excelLink)
+    new ApiResponse(StatusCodes.OK, 'CSV downloaded successfully...', excelLink)
   );
 });
 
@@ -407,9 +483,15 @@ export const edit_mdf_item_invoice_inventory = catchAsync(
             latest_pallet_no += 1;
           }
         }
+        const updated_items = items_details?.map((ele) => {
+          ele.available_sheets = ele?.sheets;
+          ele.available_sqm = ele?.total_sq_meter;
+          ele.available_amount = ele?.amount;
+          return ele;
+        });
 
         const update_item_details =
-          await mdf_inventory_items_details.insertMany([...items_details], {
+          await mdf_inventory_items_details.insertMany(updated_items, {
             session,
           });
 
@@ -491,6 +573,9 @@ export const edit_mdf_item_invoice_inventory = catchAsync(
             ...itemData,
             mdf_item_id: _id ? _id : new mongoose.Types.ObjectId(),
             approval_invoice_id: add_invoice_details[0]?._id,
+            available_sheets: ele?.sheets,
+            available_sqm: ele?.total_sq_meter,
+            available_amount: ele?.amount,
           };
         });
 
@@ -582,7 +667,6 @@ export const inward_sr_no_dropdown = catchAsync(async (req, res, next) => {
   });
 });
 
-
 //fetch MDF history
 export const fetch_mdf_history = catchAsync(async (req, res, next) => {
   const {
@@ -644,10 +728,10 @@ export const fetch_mdf_history = catchAsync(async (req, res, next) => {
       pipeline: [
         {
           $project: {
-            created_user: 0
-          }
-        }
-      ]
+            created_user: 0,
+          },
+        },
+      ],
     },
   };
   const aggCreatedUserDetails = {
@@ -761,4 +845,410 @@ export const fetch_mdf_history = catchAsync(async (req, res, next) => {
   );
 
   return res.status(StatusCodes.OK).json(response);
+});
+
+// export const mdfLogsCsvHistory = catchAsync(async (req, res, next) => {
+//   const { sortBy = 'updatedAt', sort = 'desc', search = '' } = req.query;
+//   const {
+//     string,
+//     boolean,
+//     numbers,
+//     arrayField = [],
+//   } = req?.body?.searchFields || {};
+//   const filter = req.body?.filter;
+
+//   // Handle search query building
+//   let search_query = {};
+//   if (search && req?.body?.searchFields) {
+//     string?.forEach(field => {
+//       search_query[field] = { $regex: search, $options: 'i' };
+//     });
+
+//     boolean?.forEach(field => {
+//       if (['true', 'false'].includes(search.toLowerCase())) {
+//         search_query[field] = search.toLowerCase() === 'true';
+//       }
+//     });
+
+//     if (!isNaN(search)) {
+//       numbers?.forEach(field => {
+//         search_query[field] = Number(search);
+//       });
+//     }
+
+//     arrayField?.forEach(field => {
+//       search_query[field] = { $in: [search] };
+//     });
+
+//     if (Object.keys(search_query).length === 0) {
+//       return res.status(StatusCodes.NOT_FOUND).json({
+//         statusCode: StatusCodes.NOT_FOUND,
+//         status: false,
+//         data: [],
+//         message: 'No matching data found for CSV export',
+//       });
+//     }
+//   }
+
+//   // Clean query from undefined/null/empty values
+//   const cleanMatchQuery = query => {
+//     const cleaned = {};
+//     for (const key in query) {
+//       const value = query[key];
+//       if (value === undefined || value === '' || value === null) continue;
+
+//       if (typeof value === 'object' && ('$gte' in value || '$lte' in value)) {
+//         const range = {};
+//         if (value.$gte !== '' && value.$gte != null) range.$gte = value.$gte;
+//         if (value.$lte !== '' && value.$lte != null) range.$lte = value.$lte;
+//         if (Object.keys(range).length > 0) cleaned[key] = range;
+//         continue;
+//       }
+
+//       cleaned[key] = value;
+//     }
+//     return cleaned;
+//   };
+
+//   const filterData = dynamic_filter(filter); // assume dynamic_filter is already defined
+//   const fullQuery = { ...filterData, ...search_query };
+//   const cleanedQuery = cleanMatchQuery(fullQuery);
+
+//   const aggregationPipeline = [
+//     {
+//       $lookup: {
+//         from: 'mdf_inventory_items_views',
+//         localField: 'mdf_item_id',
+//         foreignField: '_id',
+//         as: 'mdf_item_details',
+//         pipeline: [
+//           {
+//             $lookup: {
+//               from: 'mdf_invoice_details',
+//               localField: 'mdf_invoice_details_id',
+//               foreignField: '_id',
+//               as: 'mdf_invoice_details',
+//               pipeline: [
+//                 {
+//                   $lookup: {
+//                     from: 'invoice_details',
+//                     localField: 'invoice_id',
+//                     foreignField: '_id',
+//                     as: 'invoice_Details',
+//                   },
+//                 },
+//                 { $unwind: { path: '$invoice_Details', preserveNullAndEmptyArrays: true } },
+//                 {
+//                   $lookup: {
+//                     from: 'suppliers',
+//                     localField: 'supplier_id',
+//                     foreignField: '_id',
+//                     as: 'supplier_details',
+//                     pipeline: [
+//                       {
+//                         $lookup: {
+//                           from: 'company_details',
+//                           localField: 'company_id',
+//                           foreignField: '_id',
+//                           as: 'company_details',
+//                         },
+//                       },
+//                       { $unwind: { path: '$company_details', preserveNullAndEmptyArrays: true } },
+//                       {
+//                         $lookup: {
+//                           from: 'branch_details',
+//                           localField: 'branch_id',
+//                           foreignField: '_id',
+//                           as: 'branch_detail',
+//                           pipeline: [
+//                             {
+//                               $lookup: {
+//                                 from: 'contacts',
+//                                 localField: 'contact_ids',
+//                                 foreignField: '_id',
+//                                 as: 'contact_person',
+//                               },
+//                             },
+//                           ],
+//                         },
+//                       },
+//                       { $unwind: { path: '$branch_detail', preserveNullAndEmptyArrays: true } },
+//                     ],
+//                   },
+//                 },
+//                 { $unwind: { path: '$supplier_details', preserveNullAndEmptyArrays: true } },
+//               ],
+//             },
+//           },
+//           { $unwind: { path: '$mdf_invoice_details', preserveNullAndEmptyArrays: true } },
+//         ],
+//       },
+//     },
+//     { $unwind: { path: '$mdf_item_details', preserveNullAndEmptyArrays: true } },
+//     {
+//       $lookup: {
+//         from: 'users',
+//         localField: 'created_by',
+//         foreignField: '_id',
+//         as: 'created_user_details',
+//       },
+//     },
+//     { $unwind: { path: '$created_user_details', preserveNullAndEmptyArrays: true } },
+//     {
+//       $lookup: {
+//         from: 'users',
+//         localField: 'updated_by',
+//         foreignField: '_id',
+//         as: 'updated_user_details',
+//       },
+//     },
+//     { $unwind: { path: '$updated_user_details', preserveNullAndEmptyArrays: true } },
+//     { $match: cleanedQuery },
+//     { $sort: { [sortBy]: sort === 'desc' ? -1 : 1 } },
+//   ];
+
+//   const result = await mdf_history_model.aggregate(aggregationPipeline);
+
+//   if (!result || result.length === 0) {
+//     return res.status(StatusCodes.NOT_FOUND).json({
+//       statusCode: StatusCodes.NOT_FOUND,
+//       status: false,
+//       data: [],
+//       message: 'No data found for CSV export',
+//     });
+//   }
+
+//   const flattenedData = result.map(item => {
+//     const mdfDetails = item?.mdf_item_details || {};
+//     const invoiceDetails = mdfDetails?.mdf_invoice_details || {};
+//     const invoiceMeta = invoiceDetails?.invoice_Details || {};
+//     const supplier = invoiceDetails?.supplier_details || {};
+//     const company = supplier?.company_details || {};
+//     const branch = supplier?.branch_detail || {};
+//     const contact = branch?.contact_person?.[0] || {};
+
+//     return {
+//       issue_status: item.issue_status || '',
+//       issued_sheets: item.issued_sheets || '',
+//       issued_sqm: item.issued_sqm || '',
+//       issued_amount: item.issued_amount || '',
+//       createdAt: item.createdAt || '',
+//       updatedAt: item.updatedAt || '',
+
+//       // MDF Item
+//       item_name: mdfDetails.item_name || '',
+//       supplier_item_name: mdfDetails.supplier_item_name || '',
+//       item_sub_category_name: mdfDetails.item_sub_category_name || '',
+//       mdf_type: mdfDetails.mdf_type || '',
+//       pallet_number: mdfDetails.pallet_number || '',
+
+//       // Invoice
+//       invoice_no: invoiceMeta.invoice_no || '',
+//       invoice_date: invoiceMeta.invoice_date || '',
+//       inward_sr_no: invoiceDetails.inward_sr_no || '',
+//       currency: invoiceDetails.currency || '',
+//       port_of_loading: invoiceMeta.port_of_loading || '',
+
+//       // Supplier
+//       supplier_name: company.supplier_name || '',
+//       branch_name: branch.branch_name || '',
+//       contact_person: contact.name || '',
+
+//       // User Info
+//       created_by: item?.created_user_details?.user_name || '',
+//       created_email: item?.created_user_details?.email_id || '',
+//       updated_by: item?.updated_user_details?.user_name || '',
+//     };
+//   });
+
+//   const excelLink = await createMdfLogsExcel(flattenedData);
+//   console.log('CSV link =>', excelLink);
+
+//   return res.json(
+//     new ApiResponse(StatusCodes.OK, 'CSV exported successfully...', excelLink)
+//   );
+// });
+
+export const mdfLogsCsvHistory = catchAsync(async (req, res) => {
+  const { search = '', sortBy = 'updatedAt', sort = 'desc' } = req.query;
+  const {
+    string,
+    boolean,
+    numbers,
+    arrayField = [],
+  } = req?.body?.searchFields || {};
+  const filter = req.body?.filter;
+
+  console.log('🔍 Search Term:', search);
+  console.log('📦 searchFields:', req.body?.searchFields);
+  console.log('📁 filter:', filter);
+
+  // 1. Build search_query
+  let search_query = {};
+  if (search && req?.body?.searchFields) {
+    string?.forEach((field) => {
+      search_query[field] = { $regex: search, $options: 'i' };
+    });
+
+    boolean?.forEach((field) => {
+      if (search.toLowerCase() === 'true' || search.toLowerCase() === 'false') {
+        search_query[field] = search.toLowerCase() === 'true';
+      }
+    });
+
+    if (!isNaN(search)) {
+      numbers?.forEach((field) => {
+        search_query[field] = Number(search);
+      });
+    }
+
+    arrayField?.forEach((field) => {
+      search_query[field] = { $in: [search] };
+    });
+
+    console.log('🔎 search_query:', search_query);
+
+    if (Object.keys(search_query).length === 0) {
+      return res.status(404).json({
+        statusCode: 404,
+        status: false,
+        data: { data: [] },
+        message: 'Results Not Found',
+      });
+    }
+  }
+
+  // 2. Dynamic Filter Cleaning
+  const filterData = dynamic_filter(filter);
+  console.log('🧾 filterData after dynamic_filter:', filterData);
+
+  const fullQuery = { ...filterData, ...search_query };
+
+  const cleanMatchQuery = (query) => {
+    const cleaned = {};
+    for (const key in query) {
+      const value = query[key];
+      if (value === undefined || value === '' || value === null) continue;
+
+      if (typeof value === 'object' && ('$gte' in value || '$lte' in value)) {
+        const range = {};
+        if (value.$gte !== '') range.$gte = value.$gte;
+        if (value.$lte !== '') range.$lte = value.$lte;
+        if (Object.keys(range).length > 0) {
+          cleaned[key] = range;
+        }
+        continue;
+      }
+
+      cleaned[key] = value;
+    }
+    return cleaned;
+  };
+
+  const cleanedQuery = cleanMatchQuery(fullQuery);
+  console.log('🧹 Cleaned match query:', cleanedQuery);
+
+  // 3. Separate filters: before and after lookup
+  const preLookupMatch = {};
+  const postLookupMatch = {};
+
+  for (const key in cleanedQuery) {
+    if (key.startsWith('mdf_item_details.')) {
+      postLookupMatch[key] = cleanedQuery[key];
+    } else {
+      preLookupMatch[key] = cleanedQuery[key];
+    }
+  }
+
+  console.log('🟩 preLookupMatch:', preLookupMatch);
+  console.log('🟦 postLookupMatch:', postLookupMatch);
+
+  const aggregationPipeline = [
+    { $match: preLookupMatch },
+    {
+      $lookup: {
+        from: 'mdf_inventory_items_views',
+        localField: 'mdf_item_id',
+        foreignField: '_id',
+        as: 'mdf_item_details',
+        pipeline: [{ $project: { created_user: 0 } }],
+      },
+    },
+    {
+      $unwind: { path: '$mdf_item_details', preserveNullAndEmptyArrays: true },
+    },
+
+    // Apply post-lookup filter
+    ...(Object.keys(postLookupMatch).length > 0
+      ? [{ $match: postLookupMatch }]
+      : []),
+
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'created_by',
+        foreignField: '_id',
+        as: 'created_user_details',
+        pipeline: [
+          {
+            $project: {
+              first_name: 1,
+              last_name: 1,
+              user_name: 1,
+              user_type: 1,
+              email_id: 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'updated_by',
+        foreignField: '_id',
+        as: 'updated_user_details',
+        pipeline: [
+          {
+            $project: {
+              first_name: 1,
+              last_name: 1,
+              user_name: 1,
+              user_type: 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $unwind: {
+        path: '$created_user_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $unwind: {
+        path: '$updated_user_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $sort: {
+        [sortBy]: sort === 'desc' ? -1 : 1,
+        _id: sort === 'desc' ? -1 : 1,
+      },
+    },
+  ];
+
+  const data = await mdf_history_model.aggregate(aggregationPipeline);
+
+  console.log('📊 Aggregation result count:', data.length);
+
+  const csvLink = await createMdfHistoryExcel(data);
+
+  return res
+    .status(StatusCodes.OK)
+    .json(
+      new ApiResponse(StatusCodes.OK, 'CSV downloaded successfully...', csvLink)
+    );
 });

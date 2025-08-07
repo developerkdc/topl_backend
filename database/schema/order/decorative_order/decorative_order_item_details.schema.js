@@ -15,7 +15,22 @@ const decorative_order_item_details_schema = new mongoose.Schema(
       ref: 'orders',
       required: [true, 'Order Id is required'],
     },
-
+    product_category: {
+      type: String,
+      required: [true, 'product category is required'],
+      uppercase: true,
+      trim: true,
+    },
+    value_added_process: {
+      type: [],
+      default: [],
+    },
+    sales_item_name: {
+      type: String,
+      default: null,
+      uppercase: true,
+      trim: true,
+    },
     item_name: {
       type: String,
       required: [true, 'Item Name is required'],
@@ -108,7 +123,7 @@ const decorative_order_item_details_schema = new mongoose.Schema(
       uppercase: true,
       default: null,
     },
-    base_required_thickness: {
+    base_min_thickness: {
       type: Number,
       default: 0,
     },
@@ -128,6 +143,10 @@ const decorative_order_item_details_schema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    dispatch_no_of_sheets: {
+      type: Number,
+      default: 0,
+    },
     sqm: {
       type: Number,
       default: 0,
@@ -139,6 +158,12 @@ const decorative_order_item_details_schema = new mongoose.Schema(
     rate_per_sqm: {
       type: Number,
       default: 0,
+    },
+    rate: {
+      type: Number,
+      default: function () {
+        return this.rate_per_sqm;
+      },
     },
     amount: {
       type: Number,
@@ -152,11 +177,11 @@ const decorative_order_item_details_schema = new mongoose.Schema(
     },
     item_status: {
       type: String,
-      default: null,
       enum: {
-        values: [order_item_status?.cancel],
-        message: `Invalid Order Status -> {{VALUE}} it must be one of the ${order_item_status?.cancel}`,
+        values: [order_item_status?.cancelled, order_item_status?.closed],
+        message: `Invalid Order Status -> {{VALUE}} it must be one of the ${[order_item_status?.cancelled, order_item_status?.closed]?.join(',')}`,
       },
+      default: null,
     },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,

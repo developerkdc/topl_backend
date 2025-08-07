@@ -11,7 +11,10 @@ import { dynamic_filter } from '../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import ApiError from '../../../utils/errors/apiError.js';
 import catchAsync from '../../../utils/errors/catchAsync.js';
-import { createFleeceLogsExcel } from '../../../config/downloadExcel/Logs/Inventory/fleece/fleece.js';
+import {
+  createFleeceHistoryExcel,
+  createFleeceLogsExcel,
+} from '../../../config/downloadExcel/Logs/Inventory/fleece/fleece.js';
 import {
   fleece_approval_inventory_invoice_model,
   fleece_approval_inventory_items_model,
@@ -61,6 +64,7 @@ export const listing_fleece_inventory = catchAsync(async (req, res, next) => {
   const match_query = {
     ...filterData,
     ...search_query,
+    available_sqm: { $ne: 0 },
   };
 
   const aggregate_stage = [
@@ -264,8 +268,14 @@ export const edit_fleece_item_invoice_inventory = catchAsync(
         )
           return next(new ApiError('Failed to update invoice items', 400));
 
+        const updated_items = items_details?.map((item) => {
+          item.available_number_of_roll = item?.number_of_roll;
+          (item.available_sqm = item?.total_sq_meter),
+            (item.available_amount = item?.amount);
+          return item;
+        });
         const update_item_details =
-          await fleece_inventory_items_modal.insertMany([...items_details], {
+          await fleece_inventory_items_modal.insertMany([...updated_items], {
             session,
           });
 
@@ -350,9 +360,15 @@ export const edit_fleece_item_invoice_inventory = catchAsync(
           };
         });
 
+        const updated_items = itemDetailsData?.map((item) => {
+          item.available_number_of_roll = item?.number_of_roll;
+          (item.available_sqm = item?.total_sq_meter),
+            (item.available_amount = item?.amount);
+          return item;
+        });
         const add_approval_item_details =
           await fleece_approval_inventory_items_model.insertMany(
-            itemDetailsData,
+            updated_items,
             { session }
           );
 
@@ -550,19 +566,70 @@ export const fleece_item_listing_by_invoice = catchAsync(
   }
 );
 
+// export const fleeceLogsCsv = catchAsync(async (req, res) => {
+//   console.log('called');
+//   const { search = '' } = req.query;
+//   const {
+//     string,
+//     boolean,
+//     numbers,
+//     arrayField = [],
+//   } = req?.body?.searchFields || {};
+//   const filter = req.body?.filter;
+
+//   let search_query = {};
+//   if (search != '' && req?.body?.searchFields) {
+//     const search_data = DynamicSearch(
+//       search,
+//       boolean,
+//       numbers,
+//       string,
+//       arrayField
+//     );
+//     if (search_data?.length == 0) {
+//       return res.status(404).json({
+//         statusCode: 404,
+//         status: false,
+//         data: {
+//           data: [],
+//         },
+//         message: 'Results Not Found',
+//       });
+//     }
+//     search_query = search_data;
+//   }
+
+//   const filterData = dynamic_filter(filter);
+
+//   const match_query = {
+//     ...filterData,
+//     ...search_query,
+//   };
+
+//   const allData = await fleece_inventory_items_view_modal.find(match_query);
+
+//   const excelLink = await createFleeceLogsExcel(allData);
+
+//   return res.json(
+//     new ApiResponse(StatusCodes.OK, 'Csv downloaded successfully...', excelLink)
+//   );
+// });
+
 export const fleeceLogsCsv = catchAsync(async (req, res) => {
-  console.log('called');
-  const { search = '' } = req.query;
+  const { search = '', sortBy = 'updatedAt', sort = 'desc' } = req.query;
+
   const {
     string,
     boolean,
     numbers,
     arrayField = [],
   } = req?.body?.searchFields || {};
+
   const filter = req.body?.filter;
 
+  // Build search query
   let search_query = {};
-  if (search != '' && req?.body?.searchFields) {
+  if (search !== '' && req?.body?.searchFields) {
     const search_data = DynamicSearch(
       search,
       boolean,
@@ -570,33 +637,327 @@ export const fleeceLogsCsv = catchAsync(async (req, res) => {
       string,
       arrayField
     );
-    if (search_data?.length == 0) {
+    if (search_data?.length === 0) {
       return res.status(404).json({
         statusCode: 404,
         status: false,
-        data: {
-          data: [],
-        },
+        data: { data: [] },
         message: 'Results Not Found',
       });
     }
     search_query = search_data;
   }
 
+  // Build filter query
   const filterData = dynamic_filter(filter);
 
+  // Final MongoDB match query
   const match_query = {
     ...filterData,
     ...search_query,
   };
 
-  const allData = await fleece_inventory_items_view_modal.find(match_query);
+  // Build sort options
+  const sortOrder = sort === 'desc' ? -1 : 1;
+  const sortOptions = { [sortBy]: sortOrder };
 
+  // Final Mongo query with sort
+  const allData = await fleece_inventory_items_view_modal
+    .find(match_query)
+    .sort(sortOptions);
+
+  if (allData.length === 0) {
+    return res
+      .status(StatusCodes.NOT_FOUND)
+      .json(new ApiResponse(StatusCodes.NOT_FOUND, 'NO Data found...'));
+  }
+
+  console.log(allData.length);
+  console.log(
+    'FILTER USED IN CSV EXPORT:',
+    JSON.stringify(filterData, null, 2)
+  );
+  console.log('SEARCH QUERY USED:', JSON.stringify(search_query, null, 2));
+  console.log('FINAL MATCH QUERY:', JSON.stringify(match_query, null, 2));
   const excelLink = await createFleeceLogsExcel(allData);
   console.log('link => ', excelLink);
 
   return res.json(
     new ApiResponse(StatusCodes.OK, 'Csv downloaded successfully...', excelLink)
+  );
+});
+
+function normalizeFilterKeys(filter = {}) {
+  const flatFilter = {};
+  const flatRange = {};
+
+  const remapKeys = {
+    'fleece_item_details.fleece_invoice_details.inward_sr_no':
+      'fleece_invoice_details.inward_sr_no',
+    'fleece_item_details.fleece_invoice_details.inward_date':
+      'fleece_invoice_details.inward_date',
+    'fleece_item_details.fleece_invoice_details.supplier_details.company_details.supplier_name':
+      'fleece_invoice_details.supplier_details.company_details.supplier_name',
+  };
+
+  for (const key in filter) {
+    if (key === 'range' && filter.range?.date) {
+      for (const dateKey in filter.range.date) {
+        const mappedKey = remapKeys[dateKey] || dateKey;
+        const { from, to } = filter.range.date[dateKey];
+        flatRange[mappedKey] = {};
+        if (from) flatRange[mappedKey]['$gte'] = new Date(from);
+        if (to) flatRange[mappedKey]['$lte'] = new Date(to);
+      }
+    } else {
+      const mappedKey = remapKeys[key] || key;
+      flatFilter[mappedKey] = filter[key];
+    }
+  }
+
+  return { ...flatFilter, ...flatRange };
+}
+
+export const fleeceHistoryLogsCsv = catchAsync(async (req, res) => {
+  const { search = '', sortBy = 'updatedAt', sort = 'desc' } = req.query;
+
+  const {
+    string,
+    boolean,
+    numbers,
+    arrayField = [],
+  } = req?.body?.searchFields || {};
+
+  const filter = req.body?.filter;
+
+  let search_query = {};
+  if (search !== '' && req?.body?.searchFields) {
+    const search_data = DynamicSearch(
+      search,
+      boolean,
+      numbers,
+      string,
+      arrayField
+    );
+    if (search_data?.length === 0) {
+      return res.status(404).json({
+        statusCode: 404,
+        status: false,
+        message: 'Results Not Found',
+      });
+    }
+    search_query = search_data;
+  }
+
+  const normalizedFilter = normalizeFilterKeys(filter);
+  const filterData = dynamic_filter(normalizedFilter);
+  const match_query = {
+    ...filterData,
+    ...search_query,
+    issue_status: { $ne: null },
+  };
+
+  const pipeline = [
+    {
+      $lookup: {
+        from: 'fleece_inventory_items_views',
+        foreignField: '_id',
+        localField: 'fleece_item_id',
+        as: 'fleece_item_details',
+        pipeline: [
+          {
+            $project: {
+              item_sr_no: 1,
+              item_name: 1,
+              supplier_item_name: 1,
+              length: 1,
+              width: 1,
+              thickness: 1,
+              number_of_sheets: 1,
+              total_sq_meter: 1,
+              grade_name: 1,
+              rate_in_currency: 1,
+              rate_in_inr: 1,
+              exchange_rate: 1,
+              gst_val: 1,
+              invoice_id: 1,
+              remark: 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $unwind: {
+        path: '$fleece_item_details',
+        preserveNullAndEmptyArrays: false,
+      },
+    },
+
+    {
+      $lookup: {
+        from: 'fleece_inventory_invoice_details',
+        localField: 'fleece_item_details.invoice_id',
+        foreignField: '_id',
+        as: 'fleece_invoice_details',
+      },
+    },
+    {
+      $unwind: {
+        path: '$fleece_invoice_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'created_by',
+        foreignField: '_id',
+        pipeline: [
+          {
+            $project: {
+              first_name: 1,
+              last_name: 1,
+              user_name: 1,
+              email_id: 1,
+            },
+          },
+        ],
+        as: 'created_user_details',
+      },
+    },
+    {
+      $unwind: {
+        path: '$created_user_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'updated_by',
+        foreignField: '_id',
+        pipeline: [{ $project: { first_name: 1, last_name: 1, user_name: 1 } }],
+        as: 'updated_user_details',
+      },
+    },
+    {
+      $unwind: {
+        path: '$updated_user_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+
+    { $match: match_query },
+
+    {
+      $project: {
+        invoice_no: {
+          $ifNull: ['$fleece_invoice_details.invoice_Details.invoice_no', ''],
+        },
+        total_item_amount: {
+          $ifNull: [
+            '$fleece_invoice_details.invoice_Details.total_item_amount',
+            0,
+          ],
+        },
+        transporter_details: {
+          $ifNull: [
+            '$fleece_invoice_details.invoice_Details.transporter_details',
+            '',
+          ],
+        },
+        gst_percentage: {
+          $ifNull: [
+            '$fleece_invoice_details.invoice_Details.gst_percentage',
+            0,
+          ],
+        },
+        invoice_value_with_gst: {
+          $ifNull: [
+            '$fleece_invoice_details.invoice_Details.invoice_value_with_gst',
+            0,
+          ],
+        },
+
+        number_of_sheets: {
+          $ifNull: ['$fleece_item_details.number_of_sheets', 0],
+        },
+        grade_name: { $ifNull: ['$fleece_item_details.grade_name', ''] },
+        gst_val: { $ifNull: ['$fleece_item_details.gst_val', 0] },
+        remark: { $ifNull: ['$fleece_item_details.remark', ''] },
+
+        no_of_workers: {
+          $ifNull: [
+            '$fleece_invoice_details.workers_details.no_of_workers',
+            null,
+          ],
+        },
+        shift: {
+          $ifNull: ['$fleece_invoice_details.workers_details.shift', null],
+        },
+        working_hours: {
+          $ifNull: [
+            '$fleece_invoice_details.workers_details.working_hours',
+            null,
+          ],
+        },
+
+        company_details: {
+          $ifNull: [
+            '$fleece_invoice_details.supplier_details.company_details',
+            {},
+          ],
+        },
+        branch_detail: {
+          $ifNull: [
+            '$fleece_invoice_details.supplier_details.branch_detail',
+            {},
+          ],
+        },
+        contact_person: {
+          $ifNull: [
+            '$fleece_invoice_details.supplier_details.branch_detail.contact_person',
+            [],
+          ],
+        },
+
+        fleece_item_details: 1,
+        fleece_invoice_details: 1,
+        created_user_details: 1,
+        updated_user_details: 1,
+        created_by: 1,
+        updated_by: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        issued_number_of_roll: 1,
+        issued_sqm: 1,
+        issued_amount: 1,
+        issue_status: 1,
+      },
+    },
+
+    { $sort: { [sortBy]: sort === 'desc' ? -1 : 1 } },
+  ];
+
+  const allData = await fleece_history_model.aggregate(pipeline);
+
+  if (!allData.length) {
+    return res
+      .status(StatusCodes.NOT_FOUND)
+      .json(new ApiResponse(StatusCodes.NOT_FOUND, 'No data found for export'));
+  }
+
+  const excelLink = await createFleeceHistoryExcel(allData);
+
+  return res.json(
+    new ApiResponse(
+      StatusCodes.OK,
+      'Fleece History CSV downloaded successfully',
+      excelLink
+    )
   );
 });
 
@@ -660,10 +1021,10 @@ export const fetch_fleece_history = catchAsync(async (req, res, next) => {
       pipeline: [
         {
           $project: {
-            created_user: 0
-          }
-        }
-      ]
+            created_user: 0,
+          },
+        },
+      ],
     },
   };
   // const aggLookupPlywoodInvoiceDetails = {
@@ -725,7 +1086,7 @@ export const fetch_fleece_history = catchAsync(async (req, res, next) => {
   };
   const aggUnwindPlywoodItemDetails = {
     $unwind: {
-      path: '$plywood_item_details',
+      path: '$fleece_item_details',
       preserveNullAndEmptyArrays: true,
     },
   };

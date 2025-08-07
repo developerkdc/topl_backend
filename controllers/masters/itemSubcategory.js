@@ -6,7 +6,7 @@ import itemCategoryModel from '../../database/schema/masters/item.category.schem
 import itemSubCategoryModel from '../../database/schema/masters/item.subcategory.schema.js';
 import { DynamicSearch } from '../../utils/dynamicSearch/dynamic.js';
 export const addItems = catchAsync(async (req, res) => {
-  const { name, remark, category } = req.body;
+  const { name, remark, category, type } = req.body;
 
   if (!name) {
     return res.json(
@@ -46,6 +46,7 @@ export const addItems = catchAsync(async (req, res) => {
     sr_no: newMax,
     name,
     category,
+    type,
     remark,
     created_by,
   });
@@ -102,7 +103,13 @@ export const editItemSubCategory = catchAsync(async (req, res) => {
 });
 
 export const listItemSubCategories = catchAsync(async (req, res) => {
-  const { query, sortField = "updatedAt", sortOrder = "desc", page = 1, limit = 10 } = req.query;
+  const {
+    query,
+    sortField = 'updatedAt',
+    sortOrder = 'desc',
+    page = 1,
+    limit = 10,
+  } = req.query;
   const {
     string,
     boolean,
@@ -178,8 +185,10 @@ export const listItemSubCategories = catchAsync(async (req, res) => {
         sr_no: 1,
         name: 1,
         remark: 1,
+        type: 1,
         categoryDetails: 1,
         createdAt: 1,
+        updatedAt: 1,
         created_by: 1,
         'userDetails.first_name': 1,
         'userDetails.user_name': 1,
@@ -195,14 +204,38 @@ export const listItemSubCategories = catchAsync(async (req, res) => {
   // }
   const allDetails = await itemSubCategoryModel.aggregate(pipeline);
 
-  if (allDetails.length === 0) {
-    return res.json(new ApiResponse(StatusCodes.OK, 'NO Data found...'));
-  }
+  // if (allDetails.length === 0) {
+  //   return res.json(new ApiResponse(StatusCodes.OK, 'NO Data found...'));
+  // }
   // const totalPage = allDetails.length;
-  const totalDocs = await itemSubCategoryModel.countDocuments({
-    ...searchQuery,
-  });
-  const totalPage = Math.ceil(totalDocs / limitInt);
+  // const totalDocs = await itemSubCategoryModel.countDocuments({
+  //   ...searchQuery,
+  // });
+  const totalDocs = await itemSubCategoryModel.aggregate([
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'created_by',
+        foreignField: '_id',
+        as: 'userDetails',
+      },
+    },
+    {
+      $lookup: {
+        from: 'item_categories',
+        localField: 'category',
+        foreignField: '_id',
+        as: 'categoryDetails',
+      },
+    },
+    { $unwind: { path: '$userDetails', preserveNullAndEmptyArrays: true } },
+    { $match: { ...searchQuery } },
+    {
+      $count: "totalCount"
+    }
+  ]);
+
+  const totalPage = Math.ceil(totalDocs?.[0]?.totalCount / limitInt);
   return res.json(
     new ApiResponse(StatusCodes.OK, 'All Details fetched successfully..', {
       allDetails,

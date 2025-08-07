@@ -7,7 +7,7 @@ import ApiResponse from '../../../utils/ApiResponse.js';
 import { StatusCodes } from '../../../utils/constants.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
-import { order_item_status } from '../../../database/Utils/constants/constants.js';
+import { order_item_status, order_status } from '../../../database/Utils/constants/constants.js';
 
 export const add_raw_order = catchAsync(async (req, res, next) => {
   const { order_details, item_details } = req.body;
@@ -44,6 +44,7 @@ export const add_raw_order = catchAsync(async (req, res, next) => {
         {
           ...order_details,
           order_no: newOrderNumber,
+          product_category: order_details?.raw_materials,
           created_by: userDetails._id,
           updated_by: userDetails._id,
         },
@@ -58,11 +59,10 @@ export const add_raw_order = catchAsync(async (req, res, next) => {
       );
     }
 
-    console.log(newOrderDetails, 'newOrderDetails');
-
     // adding item details
     const formattedItemsDetails = item_details.map((item) => ({
       ...item,
+      product_category: newOrderDetails?.raw_materials,
       order_id: newOrderDetails._id,
       created_by: userDetails._id,
       updated_by: userDetails._id,
@@ -125,6 +125,7 @@ export const update_raw_order = catchAsync(async (req, res) => {
       {
         $set: {
           ...order_details,
+          product_category: order_details?.raw_materials,
           updated_by: userDetails?._id,
         },
       },
@@ -135,6 +136,13 @@ export const update_raw_order = catchAsync(async (req, res) => {
         'Failed to Update order details data.',
         StatusCodes.BAD_REQUEST
       );
+    }
+
+    if (updated_order_details.order_status === order_status.cancelled) {
+      throw new ApiError("Order is already cancelled", StatusCodes.BAD_REQUEST);
+    }
+    if (updated_order_details.order_status === order_status.closed) {
+      throw new ApiError("Order is already closed", StatusCodes.BAD_REQUEST);
     }
 
     const delete_order_items = await RawOrderItemDetailsModel?.deleteMany(
@@ -154,6 +162,7 @@ export const update_raw_order = catchAsync(async (req, res) => {
 
     const modify_item_details = item_details?.map((item) => {
       item.order_id = updated_order_details?._id;
+      item.product_category = updated_order_details?.raw_materials;
       item.created_by = item.created_by ? item?.created_by : userDetails?._id;
       item.updated_by = userDetails?._id;
       item.createdAt = item.createdAt ? item?.createdAt : new Date();

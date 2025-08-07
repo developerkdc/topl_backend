@@ -9,12 +9,19 @@ import {
   othergoods_item_listing_by_invoice,
   otherGoodsLogsCsv,
   inward_sr_no_dropdown,
-  item_sr_no_dropdown, fetch_other_goods_history
+  item_sr_no_dropdown,
+  fetch_other_goods_history,
+  otherGoodsLogsCsvHistory,
+  // otherGoodsLogsCsvHistory,
 } from '../../../controllers/inventory/otherGoods/otherGoods.js';
 import AuthMiddleware from '../../../middlewares/verifyToken.js';
 import RolesPermissions from '../../../middlewares/permission.js';
 import { verifyApproval } from '../../../middlewares/approval.middleware.js';
-import { fetch_all_other_goods_inward_sr_no_by_order_item_name, fetch_all_other_goods_sr_no_by_inward_sr_no, fetch_other_goods_details_by_id } from '../../../controllers/inventory/otherGoods/other_goods.issue_for_order.controller.js';
+import {
+  fetch_all_other_goods_inward_sr_no_by_order_item_name,
+  fetch_all_other_goods_sr_no_by_inward_sr_no,
+  fetch_other_goods_details_by_id,
+} from '../../../controllers/inventory/otherGoods/other_goods.issue_for_order.controller.js';
 const router = express.Router();
 
 router.post(
@@ -67,13 +74,32 @@ router.post(
   otherGoodsLogsCsv
 );
 
+router.post(
+  '/download-excel-othergoods-history',
+  AuthMiddleware,
+  RolesPermissions('other_goods_inventory', 'view'),
+  otherGoodsLogsCsvHistory
+);
+
 router.get('/item-srno-dropdown', AuthMiddleware, item_sr_no_dropdown);
 router.get('/inward-srno-dropdown', AuthMiddleware, inward_sr_no_dropdown);
 
 //order dropdowns
-router.get('/inward-sr-no-dropdown', AuthMiddleware, fetch_all_other_goods_inward_sr_no_by_order_item_name)
-router.get('/item-sr-no-dropdown/:id/:order_id', AuthMiddleware, fetch_all_other_goods_sr_no_by_inward_sr_no)
-router.get('/list-details/:id', AuthMiddleware, fetch_other_goods_details_by_id)
+router.get(
+  '/inward-sr-no-dropdown/:id',
+  AuthMiddleware,
+  fetch_all_other_goods_inward_sr_no_by_order_item_name
+);
+router.get(
+  '/item-sr-no-dropdown/:id/:order_id',
+  AuthMiddleware,
+  fetch_all_other_goods_sr_no_by_inward_sr_no
+);
+router.get(
+  '/list-details/:id',
+  AuthMiddleware,
+  fetch_other_goods_details_by_id
+);
 
 //history
 

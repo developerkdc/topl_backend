@@ -16,10 +16,22 @@ export const issues_for_status = {
   grouping: 'grouping',
   order: 'order',
   tapping: 'tapping',
+  pressing: 'pressing',
   sample: 'sample',
   stock: 'stock',
   challan: 'challan',
+  plywood_resizing: 'plywood_resizing',
+  face: 'face',
+  core: 'core',
+  plywood_production: 'plywood_production',
+  cnc_factory: 'cnc',
+  color_factory: 'color',
 };
+
+export const sub_category = {
+  natural: "NATURAL",
+  hybrid: "HYBRID"
+}
 
 export const inward_type = {
   inventory: 'inventory',
@@ -62,6 +74,8 @@ export const order_status = {
   pending: 'PENDING',
   partial_complete: 'PARTIAL COMPLETE',
   complete: 'COMPLETE',
+  cancelled: 'CANCELLED',
+  closed: 'CLOSED',
 };
 export const order_type = {
   regular: 'REGULAR',
@@ -78,7 +92,8 @@ export const branding_type = {
 };
 
 export const order_item_status = {
-  cancel: 'CANCEL',
+  cancelled: 'CANCELLED',
+  closed: 'CLOSED',
 };
 
 export const item_issued_from = {
@@ -91,4 +106,84 @@ export const item_issued_from = {
   face: 'FACE',
   mdf: 'MDF',
   store: 'OTHER_GOODS',
+  other_goods: 'OTHER_GOODS',
+  crosscutting: 'CROSSCUTTING',
+  flitching_factory: 'FLITCHING_FACTORY',
+  dressing_factory: 'DRESSING_FACTORY',
+  grouping_factory: 'GROUPING_FACTORY',
+  pressing_factory: 'PRESSING_FACTORY',
+  cnc_factory: 'CNC',
+  canvas_factory: 'CANVAS',
+  color_factory: 'COLOR',
+  polishing_factory: 'POLISHING',
+  bunito_factory: 'BUNITO',
+  packing: 'PACKING',
+};
+
+export const item_issued_for = {
+  order: 'ORDER',
+  stock: 'STOCK',
+  sample: 'SAMPLE',
+};
+
+export const base_type_constants = {
+  plywood: 'PLYWOOD',
+  fleece_paper: 'FLEECE_PAPER',
+  mdf: 'MDF',
+};
+export const consumed_from_constants = {
+  inventory: 'INVENTORY',
+  production: 'PRODUCTION',
+  resizing: 'RESIZING',
+  factory: 'FACTORY',
+};
+
+export const challan_status = {
+  received: 'RECEIVED',
+  not_received: 'NOT RECEIVED',
+};
+
+export const transaction_type = {
+  regular: 'REGULAR',
+  bill_to_ship_to: 'BILL TO SHIP TO',
+  bill_from_dispatch_from: 'BILL FORM DISPATCH FROM',
+  bill_to_ship_to_and_bill_from_dispatch_from:
+    'BILL TO SHIP TO AND BILL FROM DISPATCH FROM',
+};
+export const customer_supplier_type = {
+  b2b: 'B2B',
+  b2c: 'B2C',
+  sezwp: 'SEZWP',
+  sezwop: 'SEZWOP',
+  expwp: 'EXPWP',
+  expwop: 'EXPWOP',
+  dexp: 'DEXP',
+  merchant_export: 'MERCHANT EXPORT',
+};
+export const credit_schedule_type = {
+  advance: 'ADVANCE',
+  against_dispatch: 'AGAINST DISPATCH',
+  '15_days': '15 DAYS',
+  '30_days': '30 DAYS',
+  '45_days': '45 DAYS',
+  '60_days': '60 DAYS',
+};
+
+export const transporter_type = {
+  part_load: 'PART_LOAD',
+  full_load: 'FULL_LOAD',
+  both: 'BOTH',
+};
+export const process_type = {
+  pre_pressing: 'PRE_PRESSING',
+  post_pressing: 'POST_PRESSING',
+};
+export const color_type = {
+  timber: 'TIMBER',
+  pre_pressing: 'PRE_PRESSING',
+  post_pressing: 'POST_PRESSING',
+};
+
+export const dispatch_status = {
+  cancelled: 'CANCELLED',
 };

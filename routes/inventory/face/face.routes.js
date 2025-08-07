@@ -9,14 +9,22 @@ import {
   faceLogsCsv,
   inward_sr_no_dropdown,
   item_sr_no_dropdown,
-  listing_face_inventory, fetch_face_history
+  listing_face_inventory,
+  fetch_face_history,
+  faceHistoryLogsCsv,
 } from '../../../controllers/inventory/face/face.controller.js';
 import {
-  fetch_all_face_inward_sr_no_by_order_item_name, fetch_all_face_sr_no_by_inward_sr_no, fetch_face_details_by_id
+  fetch_all_face_inward_sr_no_by_order_item_name,
+  fetch_all_face_sr_no_by_inward_sr_no,
+  fetch_face_details_by_id,
 } from '../../../controllers/inventory/face/face.issue_for_order.controller.js';
 import AuthMiddleware from '../../../middlewares/verifyToken.js';
 import RolesPermissions from '../../../middlewares/permission.js';
 import { verifyApproval } from '../../../middlewares/approval.middleware.js';
+import {
+  fetch_all_face_inward_sr_no_for_plywood_production,
+  fetch_all_face_sr_no_by_inward_sr_no_for_plywood_production,
+} from '../../../controllers/inventory/face/face_plywood_production.controller.js';
 const router = express.Router();
 router.post(
   '/list-inventory',
@@ -67,6 +75,12 @@ router.post(
   RolesPermissions('face_inventory', 'view'),
   faceLogsCsv
 );
+router.post(
+  '/download-excel-face-history',
+  AuthMiddleware,
+  RolesPermissions('face_inventory', 'view'),
+  faceHistoryLogsCsv
+);
 //face history
 router.post(
   '/list-face-history',
@@ -78,12 +92,29 @@ router.post(
 router.get('/item-srno-dropdown', AuthMiddleware, item_sr_no_dropdown);
 router.get('/inward-srno-dropdown', AuthMiddleware, inward_sr_no_dropdown);
 
-
-
 //order dropdowns
-router.get('/inward-sr-no-dropdown', AuthMiddleware, fetch_all_face_inward_sr_no_by_order_item_name)
-router.get('/item-sr-no-dropdown/:id/:order_id', AuthMiddleware, fetch_all_face_sr_no_by_inward_sr_no)
-router.get('/list-face-details/:id', AuthMiddleware, fetch_face_details_by_id)
+router.get(
+  '/inward-sr-no-dropdown/:id',
+  AuthMiddleware,
+  fetch_all_face_inward_sr_no_by_order_item_name
+);
+router.get(
+  '/item-sr-no-dropdown/:id/:order_id',
+  AuthMiddleware,
+  fetch_all_face_sr_no_by_inward_sr_no
+);
+router.get('/list-face-details/:id', AuthMiddleware, fetch_face_details_by_id);
 
+//plywood production
+router.get(
+  '/inward-sr-no-dropdown',
+  AuthMiddleware,
+  fetch_all_face_inward_sr_no_for_plywood_production
+);
+router.get(
+  '/item-sr-no-dropdown/:id',
+  AuthMiddleware,
+  fetch_all_face_sr_no_by_inward_sr_no_for_plywood_production
+);
 
 export default router;

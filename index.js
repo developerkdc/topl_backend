@@ -19,9 +19,13 @@ import allSeriesProductMasterRouter from './routes/seriesProductMaster/allSeries
 import usersRouter from './routes/users.routes.js';
 import allOrderRouter from './routes/order/allOrder.routes.js';
 import { globalErrorHandler } from './utils/errors/GlobalErrorHandler.js';
-import { checkServerHealth } from './controllers/auth.js';
+import { checkServerHealth, fetchDBConnections } from './controllers/auth.js';
 // import { start_worker_thread } from './utils/constants.js';
 import { insert_raw_machine_data_into_machine_mismatch_model } from './utils/workers/workers.js';
+import mongoose from 'mongoose';
+import all_challan_router from './routes/challan/all_challan.routes.js';
+import allPackingRoutes from './routes/packing/all_packing.routes.js';
+import dispatchRouter from './routes/dispatch/dispatch.routes.js';
 // import { start_worker_thread } from './utils/constants.js';
 
 const Configs = getConfigs();
@@ -70,6 +74,7 @@ app.use(`/api/${Configs.server.version}/role`, rolesRouter);
 app.use(`/api/${Configs.server.version}/profile`, profileRouter);
 app.use(`/api/${Configs.server.version}/approval-config`, approvalConfigRouter);
 app.use('/server-health', checkServerHealth);
+app.use('/check-db-connections', fetchDBConnections);
 //master
 app.use(`/api/${Configs.server.version}`, allMasterRouter);
 //Series Product Master
@@ -82,6 +87,12 @@ app.use(`/api/${Configs.server.version}`, factoryRouter);
 app.use(`/api/${Configs.server.version}`, approvalRouters);
 // orders
 app.use(`/api/${Configs.server.version}/order`, allOrderRouter);
+//challan routes
+app.use(`/api/${Configs.server.version}/challan`, all_challan_router);
+// Packing routes
+app.use(`/api/${Configs.server.version}/packing`, allPackingRoutes);
+//Dispatch
+app.use(`/api/${Configs.server.version}/dispatch`, dispatchRouter);
 
 app.use(globalErrorHandler);
 

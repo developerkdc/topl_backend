@@ -4,9 +4,11 @@ import {
   add_issue_for_flitching,
   add_log_inventory,
   add_single_log_item_inventory,
+  check_already_existing_log_no,
   edit_log_invoice_inventory,
   edit_log_item_inventory,
   edit_log_item_invoice_inventory,
+  historyLogsCsv,
   inward_sr_no_dropdown,
   item_sr_no_dropdown,
   listing_log_history_inventory,
@@ -77,6 +79,13 @@ router.post(
 );
 
 router.post(
+  '/download-excel-log-history',
+  AuthMiddleware,
+  RolesPermissions('log_inventory', 'view'),
+  historyLogsCsv
+);
+
+router.post(
   '/log-invoice-listing',
   AuthMiddleware,
   RolesPermissions('log_inventory', 'edit'),
@@ -114,6 +123,13 @@ router.post(
   AuthMiddleware,
   RolesPermissions('log_inventory', 'view'),
   add_issue_for_flitching
+);
+
+// validate log no already exist api
+router.get(
+  '/check_log_no_already_exist',
+  AuthMiddleware,
+  check_already_existing_log_no
 );
 
 export default router;

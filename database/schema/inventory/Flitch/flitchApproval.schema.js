@@ -77,9 +77,10 @@ const flitch_approval_item_details_schema = new mongoose.Schema(
     },
     flitch_code: {
       type: String,
-      required: [true, 'Flitch Code is required'],
+      // required: [true, 'Flitch Code is required'],
       trim: true,
       uppercase: true,
+      default: null,
     },
     flitch_formula: {
       type: String,

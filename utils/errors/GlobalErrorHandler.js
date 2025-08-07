@@ -71,12 +71,12 @@ const extractDuplicateKeyFromErrorMessage = (errorMessage) => {
   }
   let messageString = '';
 
-  for(let i in dupKey){
+  for (let i in dupKey) {
     if (dupKey[i]) {
-      let message =  matches ? `${i} - ${dupKey[i]}` : 'unknown key';
+      let message = matches ? `${i} - ${dupKey[i]}` : 'unknown key';
       messageString += message + ', ';
     } else {
-      let message =  matches ? `${i}` : 'unknown key';
+      let message = matches ? `${i}` : 'unknown key';
       messageString += message + ', ';
     }
   }

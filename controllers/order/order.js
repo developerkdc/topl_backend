@@ -3,7 +3,7 @@ import { decorative_order_item_details_model } from '../../database/schema/order
 import { OrderModel } from '../../database/schema/order/orders.schema.js';
 import { RawOrderItemDetailsModel } from '../../database/schema/order/raw_order/raw_order_item_details.schema.js';
 import series_product_order_item_details_model from '../../database/schema/order/series_product_order/series_product_order_item_details.schema.js';
-import { order_category } from '../../database/Utils/constants/constants.js';
+import { order_category, order_item_status, order_status } from '../../database/Utils/constants/constants.js';
 import ApiResponse from '../../utils/ApiResponse.js';
 import { StatusCodes } from '../../utils/constants.js';
 import ApiError from '../../utils/errors/apiError.js';
@@ -20,6 +20,7 @@ const order_items_models = {
 export const order_no_dropdown = catchAsync(async (req, res, next) => {
   const category = req?.query?.category;
   const product_name = req?.query?.product_name;
+  const { fetch_all_order = 'false' } = req.query;
 
   const matchQuery = {};
   if (category) {
@@ -39,6 +40,10 @@ export const order_no_dropdown = catchAsync(async (req, res, next) => {
       ...matchQuery,
     },
   };
+
+  if (fetch_all_order !== 'true') {
+    aggMatch.$match.order_status = { $nin: [order_status.cancelled, order_status.closed] }
+  }
 
   const aggProject = {
     $project: {
@@ -65,6 +70,7 @@ export const order_no_dropdown = catchAsync(async (req, res, next) => {
 
 export const order_items_dropdown = catchAsync(async (req, res, next) => {
   const { order_id } = req.params;
+  const { fetch_all_order = 'false' } = req.query;
 
   const fetch_order_details = await OrderModel.findOne(
     { _id: order_id },
@@ -79,8 +85,20 @@ export const order_items_dropdown = catchAsync(async (req, res, next) => {
 
   const orderId = fetch_order_details?._id;
   const category = fetch_order_details?.order_category;
+
+  const match_query = {
+    order_id: orderId,
+  }
+
+  if (fetch_all_order !== 'true') {
+    match_query.item_status = { $nin: [order_item_status?.cancelled, order_item_status?.closed] }
+  }
+
+
   const order_items_data = await order_items_models?.[category]?.find(
-    { order_id: orderId },
+    {
+      ...match_query
+    },
     {
       order_id: 1,
       item_no: 1,
@@ -181,8 +199,8 @@ export const revert_order_by_order_id = catchAsync(async (req, res) => {
     await session.startTransaction();
 
     const revert_order_handler = new RevertOrderItem(id, userDetails, session);
-    const result = await revert_order_handler?.update_inventory_item_status();
-    const delete_order_item_doc_result = await issue_for_order_model?.deleteOne(
+    await revert_order_handler.update_inventory_item_status();
+    const delete_order_item_doc_result = await issue_for_order_model.deleteOne(
       { _id: id },
       { session: session }
     );

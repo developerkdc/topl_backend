@@ -1,10 +1,5 @@
 import mongoose from 'mongoose';
-
-export const transporter_type = {
-  part_load: 'PART_LOAD',
-  full_load: 'FULL_LOAD',
-  both: 'BOTH',
-};
+import { transporter_type } from '../../Utils/constants/constants.js';
 
 const transporterSchema = new mongoose.Schema(
   {

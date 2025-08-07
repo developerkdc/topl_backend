@@ -24,6 +24,26 @@ const crosscutting_done_schema = new mongoose.Schema(
       trim: true,
       uppercase: true,
     },
+    item_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, 'Items id is required'],
+    },
+    item_name: {
+      type: String,
+      required: [true, 'Item Name is required'],
+      trim: true,
+      uppercase: true,
+    },
+    item_sub_category_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, 'Items Sub-Category Id is required'],
+    },
+    item_sub_category_name: {
+      type: String,
+      required: [true, 'Item Sub-Category Name is required'],
+      trim: true,
+      uppercase: true,
+    },
     color: {
       color_id: {
         type: mongoose.Schema.Types.ObjectId,
@@ -220,6 +240,31 @@ export const crossCuttingsDone_view_modal = mongoose.model(
       //     preserveNullAndEmptyArrays: true,
       //   },
       // },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'created_by',
+          foreignField: '_id',
+          pipeline: [
+            {
+              $project: {
+                first_name: 1,
+                last_name: 1,
+                user_name: 1,
+                user_type: 1,
+                email_id: 1,
+              },
+            },
+          ],
+          as: 'created_user_details',
+        },
+      },
+      {
+        $unwind: {
+          path: '$created_user_details',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
     ],
   });
 })();

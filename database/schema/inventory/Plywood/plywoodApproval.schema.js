@@ -57,9 +57,10 @@ const plywood_approval_item_details_schema = new mongoose.Schema(
     },
     plywood_type: {
       type: String,
-      required: [true, 'Plywood type is required'],
+      // required: [true, 'Plywood type is required'],
       trim: true,
       uppercase: true,
+      default: null,
     },
     // plywood_sub_type: {
     //   type: String,
@@ -85,9 +86,21 @@ const plywood_approval_item_details_schema = new mongoose.Schema(
       type: Number,
       required: [true, 'sheets  is required'],
     },
+    available_sheets: {
+      type: Number,
+      default: function () {
+        return this.sheets;
+      },
+    },
     total_sq_meter: {
       type: Number,
       required: [true, 'total square meter is required'],
+    },
+    available_sqm: {
+      type: Number,
+      default: function () {
+        return this.total_sq_meter;
+      },
     },
     rate_in_currency: {
       type: Number,
@@ -104,6 +117,12 @@ const plywood_approval_item_details_schema = new mongoose.Schema(
     amount: {
       type: Number,
       required: [true, 'Amount is required'],
+    },
+    available_amount: {
+      type: Number,
+      default: function () {
+        return this.amount;
+      },
     },
     amount_factor: {
       type: Number,
