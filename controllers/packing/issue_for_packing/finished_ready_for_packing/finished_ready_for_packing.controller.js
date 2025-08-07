@@ -32,8 +32,8 @@ import catchAsync from '../../../../utils/errors/catchAsync.js';
 import { generatePDF_packing } from '../../../../utils/generatePDF/generatePDFBuffer.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { format } from 'date-fns';
 import { packing_done_items_model, packing_done_other_details_model } from '../../../../database/schema/packing/packing_done/packing_done.schema.js';
+import moment from 'moment';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -767,7 +767,7 @@ export const generatePackingInvoiceBillPDF = catchAsync(async (req, res) => {
         .lean();
 
     const formattedPackingDate = otherDetails.packing_date
-        ? format(new Date(otherDetails.packing_date), 'dd-MM-yyyy')
+        ? moment(otherDetails.packing_date).format("DD-MM-YYYY")
         : '';
  
     const totalSheets = allItems.reduce((sum, i) => sum + (i.no_of_sheets || 0), 0);
@@ -835,7 +835,7 @@ export const generatePackingEwayBillPDF = catchAsync(async (req, res) => {
         .lean();
 
     const formattedPackingDate = otherDetails.packing_date
-        ? format(new Date(otherDetails.packing_date), 'dd-MM-yyyy')
+        ? moment(otherDetails.packing_date).format("DD-MM-YYYY")
         : '';
  
     const totalSheets = allItems.reduce((sum, i) => sum + (i.no_of_sheets || 0), 0);

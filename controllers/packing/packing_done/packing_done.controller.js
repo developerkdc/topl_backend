@@ -15,7 +15,7 @@ import catchAsync from '../../../utils/errors/catchAsync.js';
 import { generatePDF } from '../../../utils/generatePDF/generatePDFBuffer.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { format } from 'date-fns';
+import moment from 'moment';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -649,7 +649,7 @@ export const generatePackingSlip = catchAsync(async (req, res) => {
     .lean();
 
   const formattedPackingDate = otherDetails.packing_date
-    ? format(new Date(otherDetails.packing_date), 'dd-MM-yyyy')
+    ? moment(otherDetails.packing_date).format('DD-MM-YYYY')
     : '';
 
   // Compute totals
