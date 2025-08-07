@@ -5,6 +5,7 @@ import {
   fetch_single_resizing_done_item_with_issue_for_resizing_data,
   listing_resizing_done,
   revert_resizing_done_items,
+  listing_resizing_history,
 } from '../../../../controllers/factory/plywood_resizing/resizing_done/resizing.done.controller.js';
 import AuthMiddleware from '../../../../middlewares/verifyToken.js';
 
@@ -23,5 +24,11 @@ resizing_done_router.get(
   AuthMiddleware,
   fetch_single_resizing_done_item_with_issue_for_resizing_data
 );
+resizing_done_router.post(
+  '/list-history',
+  AuthMiddleware,
+  listing_resizing_history
+);
+
 
 export default resizing_done_router;
