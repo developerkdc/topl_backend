@@ -1116,19 +1116,19 @@ export const fetch_all_pressing_done_items = catchAsync(
           preserveNullAndEmptyArrays: true,
         },
       },
-      {
-        $addFields: {
-          order_item_details: {
-            $cond: {
-              if: {
-                $ne: [{ $type: '$decorative_order_item_details' }, 'missing'],
-              },
-              then: '$decorative_order_item_details',
-              else: '$series_product_order_item_details',
-            },
-          },
-        },
-      },
+      // {
+      //   $addFields: {
+      //     order_item_details: {
+      //       $cond: {
+      //         if: {
+      //           $ne: [{ $type: '$decorative_order_item_details' }, 'missing'],
+      //         },
+      //         then: '$decorative_order_item_details',
+      //         else: '$series_product_order_item_details',
+      //       },
+      //     },
+      //   },
+      // },
     ];
     const aggMatch = {
       $match: {
@@ -1246,7 +1246,6 @@ export const fetch_pressing_done_consumed_item_details = catchAsync(
           preserveNullAndEmptyArrays: true,
         },
       },
-<<<<<<< HEAD
       // Uncomment if needed:
       // {
       //   $unwind: '$group_details',
@@ -1268,48 +1267,6 @@ export const fetch_pressing_done_consumed_item_details = catchAsync(
       //     as: 'grouping_done_items_details',
       //   },
       // },
-=======
-      {
-        $unwind: {
-          path: '$group_details',
-          preserveNullAndEmptyArrays: true,
-        },
-      },
-      {
-        $lookup: {
-          from: 'grouping_done_items_details', // 🔁 Collection with photo_no
-          localField: 'group_details.group_no',
-          foreignField: 'group_no',
-          as: 'group_details_lookup',
-        },
-      },
-      {
-        $unwind: {
-          path: '$group_details_lookup',
-          preserveNullAndEmptyArrays: true,
-        },
-      },
-      {
-        $addFields: {
-          'group_details.photo_no': '$group_details_lookup.photo_no',
-        },
-      },
-      {
-        $group: {
-          _id: '$_id',
-          pressing_done_details_id: { $first: '$pressing_done_details_id' },
-          base_details: { $first: '$base_details' },
-          face_details: { $first: '$face_details' },
-          created_by: { $first: '$created_by' },
-          updated_by: { $first: '$updated_by' },
-          createdAt: { $first: '$createdAt' },
-          updatedAt: { $first: '$updatedAt' },
-          __v: { $first: '$__v' },
-          pressing_done_details: { $first: '$pressing_done_details' },
-          group_details: { $push: '$group_details' },
-        },
-      },
->>>>>>> ffc5b462f0f511c1e0074baa919174290747147c
     ]);
 
     console.log('Fetched Result:', JSON.stringify(result, null, 2));
