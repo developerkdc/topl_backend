@@ -933,7 +933,7 @@ export const listing_resizing_history = catchAsync(async (req, res) => {
   const {
     page = 1,
     limit = 10,
-    sortBy = 'sr_no',
+    sortBy = '_id',
     sort = 'desc',
     search = '',
   } = req.query;
@@ -1068,17 +1068,37 @@ export const listing_resizing_history = catchAsync(async (req, res) => {
   const aggLimit = {
     $limit: parseInt(limit),
   };
+  const aggSortByCreatedAt = {
+    $sort: {
+      plywood_resizing_done_id: 1,
+      createdAt: -1, 
+    },
+  };
+  const aggGroupByResizingDoneId = {
+    $group: {
+      _id: '$plywood_resizing_done_id',
+      doc: { $first: '$$ROOT' }, 
+    },
+  };
+  const aggReplaceRoot = {
+    $replaceRoot: {
+      newRoot: '$doc',
+    },
+  };
 
   const listAggregate = [
     aggCommonMatch,
+    aggMatch,                  
+    aggSortByCreatedAt,       
+    aggGroupByResizingDoneId,  
+    aggReplaceRoot,            
     aggCreatedByLookup,
     aggPlywoodDoneLookup,
     aggPlywoodDoneUnwind,
     aggCreatedByUnwind,
     aggUpdatedByLookup,
     aggUpdatedByUnwind,
-    aggMatch,
-    aggSort,
+    aggSort,                 
     aggSkip,
     aggLimit,
   ]; // aggregation pipiline
