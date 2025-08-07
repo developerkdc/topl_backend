@@ -47,8 +47,38 @@ export const create_challan = catchAsync(async (req, res) => {
         StatusCodes.NOT_FOUND
       );
     }
+
+    const getFinancialYear = () => {
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = today.getMonth(); // 0 = Jan, 11 = Dec
+      const fyStartYear = month >= 3 ? year : year - 1;
+      const fyEndYear = fyStartYear + 1;
+      return `${fyStartYear.toString().slice(-2)}-${fyEndYear.toString().slice(-2)}`;
+    };
+
+    const latestChallan = await challan_done_model.findOne({}, { challan_no: 1 }).sort({ createdAt: -1 });
+
+    let latest_challan_no;
+    const currentFY = getFinancialYear();
+
+    if (latestChallan?.challan_no) {
+      const [fullPart, fyPart] = latestChallan.challan_no.split('/'); // e.g., "CH1", "25-26"
+      const prevFY = fyPart;
+      const challanNumber = parseInt(fullPart.replace('CH', ''));
+
+      if (prevFY === currentFY) {
+        latest_challan_no = `CH${challanNumber + 1}/${currentFY}`;
+      } else {
+        latest_challan_no = `CH1/${currentFY}`;
+      }
+    } else {
+      latest_challan_no = `CH1/${currentFY}`; // First challan ever
+    }
+
     const updated_details = {
       ...challan_details,
+      challan_no: latest_challan_no,
       created_by: userDetails?._id,
       updated_by: userDetails?._id,
     };
