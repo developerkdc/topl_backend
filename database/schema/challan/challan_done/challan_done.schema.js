@@ -188,6 +188,10 @@ const cnc_done_schema = new mongoose.Schema(
       type: Number,
       required: [true, 'Base amount is required.'],
     },
+    gst_percentage: {
+      type: Number,
+      default: 0,
+    },
     igst: {
       type: Number,
       // required: [true, 'IGST is required.'],
