@@ -230,7 +230,7 @@ export const update_series_order = catchAsync(async (req, res) => {
 
         if (!update_photo_sheets?.acknowledged) {
           throw new ApiError(
-            `Photo number ${item?.photo_number} does not have enough sheets.`,
+            `Photo number ${item?.photo_number} falied to revert sheets.`,
             StatusCodes.BAD_REQUEST
           );
         }
@@ -316,7 +316,7 @@ export const update_series_order = catchAsync(async (req, res) => {
       updated_item_details.push({
         ...item,
         order_id: order_details_result?._id,
-        product_category: order_details_result?.base_type,
+        product_category: order_details_result?.series_product,
         created_by: item.created_by ? item?.created_by : userDetails?._id,
         updated_by: userDetails?._id,
         createdAt: item.createdAt ? item?.createdAt : new Date(),
@@ -909,7 +909,7 @@ export const getPreviousRate = catchAsync(async (req, res, next) => {
     },
     {
       $sort: {
-        'order_details.orderDate': -1, // latest order first
+        'order_details.order_no': -1, // latest order first
       },
     },
     {

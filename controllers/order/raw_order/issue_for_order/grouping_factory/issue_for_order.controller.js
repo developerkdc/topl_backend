@@ -5,6 +5,7 @@ import ApiResponse from '../../../../../utils/ApiResponse.js';
 import { StatusCodes } from '../../../../../utils/constants.js';
 import {
   issues_for_status,
+  item_issued_for,
   item_issued_from,
 } from '../../../../../database/Utils/constants/constants.js';
 import { RawOrderItemDetailsModel } from '../../../../../database/schema/order/raw_order/raw_order_item_details.schema.js';
@@ -72,7 +73,7 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
     if (
       Number(
         validate_sheets_for_order?.total_sqm +
-          Number(grouping_item_details?.issued_sqm)
+        Number(grouping_item_details?.issued_sqm)
       ) > order_item_data?.sqm
     ) {
       throw new ApiError(
@@ -187,13 +188,14 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
         [
           {
             ...grouping_data,
-            order_id: issue_for_order_id,
+            order_id: order_item_data?.order_id,
             order_item_id: order_item_data?._id,
             issue_status: issues_for_status?.order,
             grouping_done_item_id: grouping_item_data?._id,
             grouping_done_other_details_id:
               grouping_item_data?.grouping_done_other_details_id,
             no_of_sheets: issued_sheets_for_order,
+            issued_for: item_issued_for?.order,
             sqm: issued_sqm_for_order,
             amount: issued_amount_for_order,
             created_by: userDetails?._id,

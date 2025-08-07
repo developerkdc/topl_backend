@@ -59,33 +59,46 @@ export const add_decorative_order = catchAsync(async (req, res) => {
       );
     }
 
+    const update_photo_details = async function (photo_number_id, photo_number, no_of_sheets) {
+      const photoUpdate = await photoModel.findOneAndUpdate(
+        {
+          _id: photo_number_id,
+          photo_number: photo_number,
+          available_no_of_sheets: { $gte: no_of_sheets },
+        },
+        { $inc: { available_no_of_sheets: -no_of_sheets } },
+        { session, new: true }
+      );
+
+      if (!photoUpdate) {
+        throw new ApiError(
+          `Photo number ${photo_number} does not have enough sheets.`,
+          StatusCodes.BAD_REQUEST
+        );
+      }
+    }
+
     const updated_item_details = [];
     for (const item of item_details) {
       // Validate photo availability - await properly in loop
 
       if (item.photo_number && item.photo_number_id) {
-        const photoUpdate = await photoModel.findOneAndUpdate(
-          {
-            _id: item.photo_number_id,
-            photo_number: item.photo_number,
-            available_no_of_sheets: { $gte: item.no_of_sheets },
-          },
-          { $inc: { available_no_of_sheets: -item.no_of_sheets } },
-          { session, new: true }
-        );
+        await update_photo_details(item.photo_number_id, item.photo_number, item.no_of_sheets);
+      }
 
-        if (!photoUpdate) {
-          throw new ApiError(
-            `Photo number ${item?.photo_number} does not have enough sheets.`,
-            StatusCodes.BAD_REQUEST
-          );
-        }
+      if (
+        item.different_group_photo_number &&
+        item.different_group_photo_number_id &&
+        item.photo_number !== item.different_group_photo_number &&
+        item.photo_number_id !== item.different_group_photo_number_id
+      ) {
+        await update_photo_details(item.different_group_photo_number_id, item.different_group_photo_number, item.no_of_sheets);
       }
 
       updated_item_details.push({
         ...item,
         order_id: order_details_data._id,
-        product_category: item.base_type,
+        product_category: `${order_details_data?.product_category} ${item.base_type}`,
         created_by: userDetails._id,
         updated_by: userDetails._id,
       });
@@ -175,25 +188,38 @@ export const update_decorative_order = catchAsync(async (req, res) => {
       { session }
     );
 
+    const revert_photo_details = async function (photo_number_id, photo_number, no_of_sheets) {
+      const update_photo_sheets = await photoModel.updateOne(
+        {
+          _id: photo_number_id,
+          photo_number: photo_number,
+        },
+        {
+          $inc: { available_no_of_sheets: no_of_sheets },
+        },
+        { session }
+      );
+
+      if (!update_photo_sheets?.acknowledged) {
+        throw new ApiError(
+          `Photo number ${photo_number} failed to revert sheets.`,
+          StatusCodes.BAD_REQUEST
+        );
+      }
+    }
+
     for (const item of order_items_details) {
       if (item.photo_number && item.photo_number_id) {
-        const update_photo_sheets = await photoModel.updateOne(
-          {
-            _id: item.photo_number_id,
-            photo_number: item.photo_number,
-          },
-          {
-            $inc: { available_no_of_sheets: item?.no_of_sheets },
-          },
-          { session }
-        );
+        await revert_photo_details(item.photo_number_id, item.photo_number, item.no_of_sheets)
+      };
 
-        if (!update_photo_sheets?.acknowledged) {
-          throw new ApiError(
-            `Photo number ${item?.photo_number} does not have enough sheets.`,
-            StatusCodes.BAD_REQUEST
-          );
-        }
+      if (
+        item.different_group_photo_number &&
+        item.different_group_photo_number_id &&
+        item.photo_number !== item.different_group_photo_number &&
+        item.photo_number_id !== item.different_group_photo_number_id
+      ) {
+        await revert_photo_details(item.different_group_photo_number_id, item.different_group_photo_number, item.no_of_sheets);
       }
     }
 
@@ -213,32 +239,45 @@ export const update_decorative_order = catchAsync(async (req, res) => {
       );
     }
 
+    const update_photo_details = async function (photo_number_id, photo_number, no_of_sheets) {
+      const photoUpdate = await photoModel.findOneAndUpdate(
+        {
+          _id: photo_number_id,
+          photo_number: photo_number,
+          available_no_of_sheets: { $gte: no_of_sheets },
+        },
+        { $inc: { available_no_of_sheets: -no_of_sheets } },
+        { session, new: true }
+      );
+
+      if (!photoUpdate) {
+        throw new ApiError(
+          `Photo number ${photo_number} does not have enough sheets.`,
+          StatusCodes.BAD_REQUEST
+        );
+      }
+    }
+
     const updated_item_details = [];
     for (const item of item_details) {
       // Validate photo availability - await properly in loop
       if (item.photo_number && item.photo_number_id) {
-        const photoUpdate = await photoModel.findOneAndUpdate(
-          {
-            _id: item.photo_number_id,
-            photo_number: item.photo_number,
-            available_no_of_sheets: { $gte: item.no_of_sheets },
-          },
-          { $inc: { available_no_of_sheets: -item.no_of_sheets } },
-          { session, new: true }
-        );
+        await update_photo_details(item.photo_number_id, item.photo_number, item.no_of_sheets);
+      }
 
-        if (!photoUpdate) {
-          throw new ApiError(
-            `Photo number ${item?.photo_number} does not have enough sheets.`,
-            StatusCodes.BAD_REQUEST
-          );
-        }
+      if (
+        item.different_group_photo_number &&
+        item.different_group_photo_number_id &&
+        item.photo_number !== item.different_group_photo_number &&
+        item.photo_number_id !== item.different_group_photo_number_id
+      ) {
+        await update_photo_details(item.different_group_photo_number_id, item.different_group_photo_number, item.no_of_sheets);
       }
 
       updated_item_details.push({
         ...item,
         order_id: order_details_result?._id,
-        product_category: item?.base_type,
+        product_category: `${order_details_result?.product_category} ${item.base_type}`,
         created_by: item.created_by ? item?.created_by : userDetails?._id,
         updated_by: userDetails?._id,
         createdAt: item.createdAt ? item?.createdAt : new Date(),
@@ -819,7 +858,7 @@ export const getPreviousRate = catchAsync(async (req, res, next) => {
     },
     {
       $sort: {
-        'order_details.orderDate': -1, // latest order first
+        'order_details.order_no': -1, // latest order first
       },
     },
     {
