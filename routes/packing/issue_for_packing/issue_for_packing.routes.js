@@ -5,6 +5,8 @@ import {
   add_finished_ready_for_packing,
   fetch_all_finished_ready_for_packing,
   fetch_issue_for_packing_items_by_customer_and_order_category,
+  generatePackingEwayBillPDF,
+  generatePackingInvoiceBillPDF,
   revert_finished_ready_for_packing,
 } from '../../../controllers/packing/issue_for_packing/finished_ready_for_packing/finished_ready_for_packing.controller.js';
 const issue_for_packing_router = Router();
@@ -40,5 +42,10 @@ issue_for_packing_router.get(
   AuthMiddleware,
   fetch_issue_for_packing_items_by_customer_and_order_category
 );
+
+issue_for_packing_router.get('/packingInvoicePDF/:id', /*AuthMiddleware,*/ generatePackingInvoiceBillPDF);
+
+issue_for_packing_router.get('/packingEwayBillPDF/:id', /*AuthMiddleware,*/ generatePackingEwayBillPDF);
+
 
 export default issue_for_packing_router;
