@@ -1,11 +1,264 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Work Order</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      font-family: Arial, sans-serif;
+      font-size: 12px;
+    }
+
+    body {
+      padding: 20px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      page-break-inside: avoid;
+    }
+
+    th, td {
+      border: 1px solid #000;
+      padding: 5px;
+      text-align: left;
+      page-break-inside: avoid;
+    }
+
+    .top-header {
+      text-align: center;
+      font-size: 16px;
+      margin: 10px 0;
+    }
+
+    .info-section {
+      display: flex;
+      margin: 10px 0;
+      border: 1px solid #000;
+    }
+
+    .tax-invoice-box {
+      width: 40%;
+    }
+
+    .info-box {
+      display: flex;
+      gap: 20px;
+      padding: 10px;
+      width: 60%;
+    }
+
+    .address-block {
+      flex: 1;
+    }
+
+    .invoice-footer {
+      display: flex;
+      font-size: 14px;
+      margin-top: 10px;
+      border: 1px solid #000;
+    }
+
+    .remarks-qr {
+      flex: 2;
+      border-right: 1px solid #000;
+      padding: 18px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .qr {
+      text-align: center;
+    }
+
+    .info {
+      flex: 1;
+      border-right: 1px solid #000;
+      padding: 8px;
+      font-size: 12px;
+    }
+
+    .info div {
+      margin-bottom: 4px;
+    }
+
+    .totals {
+      flex: 1.5;
+    }
+
+    .totals td {
+      padding: 8px;
+    }
+
+    .totals tr:last-child td {
+      font-weight: bold;
+    }
+
+    .footer {
+      font-size: 11px;
+      margin-top: 10px;
+    }
+
+    .signature {
+      text-align: right;
+    }
+
+    @media print {
+      html, body {
+        height: 100%;
+      }
+
+      body {
+        margin: 0;
+        padding: 10mm;
+      }
+
+      .no-break {
+        page-break-inside: avoid !important;
+      }
+
+      table, tr, td, th, div {
+        page-break-inside: avoid !important;
+      }
+    }
+  </style>
 </head>
 <body>
-    
+  <!-- HEADER -->
+  <img src="{{headerUrl}}" alt="Header Banner" style="width: 100%;"/>
+  <div class="top-header">GSTIN: {{gstin}} STATE: {{state}} CIN: {{cin}} PAN: {{pan}}</div>
+
+  <!-- INFO SECTION -->
+  <div class="info-section no-break">
+    <div class="info-box">
+      <div class="address-block">
+        <p style="font-size: 14px;"><strong>Bill To M/S.</strong></p>
+        <p>{{bill_to.name}}</p>
+        <p>{{bill_to.address}}</p>
+        <p>{{bill_to.state}}</p>
+      </div>
+      <div class="address-block">
+        <p style="font-size: 14px;"><strong>Ship To M/S.</strong></p>
+        <p>{{ship_to.name}}</p>
+        <p>{{ship_to.address}}</p>
+        <p>{{ship_to.state}}</p>
+      </div>
+    </div>
+    <div class="tax-invoice-box">
+      <table>
+        <tr><th colspan="2" style="text-align: center;">TAX INVOICE</th></tr>
+        <tr><td>Goods Removal Date</td><td>{{goods_removal_date}}</td></tr>
+        <tr><td>Goods Removal Time</td><td>{{goods_removal_time}}</td></tr>
+        <tr><td>Vehicle Number</td><td>{{vehicle_number}}</td></tr>
+        <tr><td>Invoice No.</td><td>{{invoice_no}}</td></tr>
+        <tr><td>Date</td><td>{{invoice_date}}</td></tr>
+        <tr><td>Reverse Charges</td><td>{{reverse_charges}}</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- EXTRA INFO -->
+  <div style="display: flex; border: 1px solid #000;" class="no-break">
+    <div style="flex: 1; border-right: 1px solid #000; padding: 10px;">GST NO: {{gst_no}}</div>
+    <div style="flex: 1; border-right: 1px solid #000; padding: 10px;">CUSTOMER PAN NO: {{customer_pan}}</div>
+    <div style="flex: 1; padding: 10px;">Page: {{page_no}}</div>
+  </div>
+
+  <!-- PRODUCT TABLE -->
+  <table class="no-break" style="margin-top: 10px;">
+    <thead>
+      <tr>
+        <th rowspan="2">Product Description</th>
+        <th rowspan="2">Ply Size</th>
+        <th rowspan="2">Nos.</th>
+        <th rowspan="2">Qty Sq.Mtr.</th>
+        <th>Rate - Sq Mtr</th>
+        <th>Taxable Value</th>
+      </tr>
+      <tr>
+        <th>Rs.</th>
+        <th>Rs.</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>a</td><td>a</td><td>a</td><td>a</td><td>a</td><td>a</td></tr>
+      <tr><td>a</td><td>a</td><td>a</td><td>a</td><td>a</td><td>a</td></tr>
+      <tr><td>a</td><td>a</td><td>a</td><td>a</td><td>a</td><td>a</td></tr>
+    </tbody>
+  </table>
+
+  <!-- FOOTER -->
+  <div class="invoice-footer no-break">
+    <div class="remarks-qr">
+      <div class="remarks">
+        <strong>Remarks:</strong><br/>
+        IRN {{irn}}<br/>
+        {{additional_remarks}}<br/>
+        MSME UAM No. {{msme_number}} ({{msme_type}})
+      </div>
+      <div class="qr">
+        <img src="{{footerUrl}}" alt="QR Code" width="120" height="120"/>
+      </div>
+    </div>
+    <div class="info">
+      <div><strong>Ack No</strong>: {{ack_no}}</div>
+      <div><strong>Ack Date</strong>: {{ack_date}}</div>
+      <div><strong>EWay Bill</strong>: {{eway_bill}}</div>
+      <div><strong>EWay Date</strong>: {{eway_date}}</div>
+    </div>
+    <div class="totals">
+      <table>
+        <tr><td>Basic Amount</td><td style="text-align: right;">{{basic_amount}}</td></tr>
+        <tr><td>Insurance @.125</td><td style="text-align: right;">{{insurance}}</td></tr>
+        <tr><td>Freight</td><td style="text-align: right;">{{freight}}</td></tr>
+        <tr><td>Total</td><td style="text-align: right;">{{total}}</td></tr>
+        <tr><td>18% IGST</td><td style="text-align: right;">{{igst}}</td></tr>
+        <tr><td><strong>Grand Total</strong></td><td style="text-align: right;"><strong>{{grand_total}}</strong></td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="footer no-break">
+    <table style="width: 100%; border: 1px solid #000; margin-top: 10px;">
+      <tr>
+        <td style="padding: 10px;">
+          <strong>Bank Details:</strong> {{bank_details}}
+        </td>
+      </tr>
+      <tr>
+        <td style="padding: 10px;">
+          CERTIFIED THAT THE PARTICULARS GIVEN ABOVE ARE TRUE AND CORRECT AND THE AMOUNT INDICATED REPRESENTS THE PRICE ACTUALLY CHARGED AND THAT THERE IS NO ADDITIONAL CONSIDERATION DIRECTLY OR INDIRECTLY FROM THE BUYER.
+        </td>
+      </tr>
+    </table>
+
+    <table style="width: 100%; border: 1px solid #000; margin-top: 10px;">
+      <tr>
+        <td style="width: 3%; text-align: center; font-size: 22px;">
+          N.B.<br/>
+          <img src="topl_logo.png" alt="logo" style="width: 130px; height: 130px;">
+        </td>
+        <td style="padding: 10px; font-size: 14px;">
+          (1) Subject to Ahmedabad Jurisdiction. (2) This bill certifies that you have visited our plant or confirmed the order through App. (3) Goods once sold will not be taken back... (6) Our responsibility ceases as soon as goods leave our premises.
+        </td>
+        <td style="padding: 10px; text-align: right; font-size: 12px;">
+          For, <strong>TURAKHIA OVERSEAS PVT. LTD.</strong><br/><br/><br/>
+          AUTHORISED SIGNATORY
+        </td>
+      </tr>
+    </table>
+
+    <img src="{{footerUrl}}" alt="Footer Banner" style="width: 100%; margin-top: 10px;" />
+  </div>
 </body>
 </html>
