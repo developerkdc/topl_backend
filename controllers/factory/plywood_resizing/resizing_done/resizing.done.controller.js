@@ -975,11 +975,11 @@ export const listing_resizing_history = catchAsync(async (req, res) => {
   };
 
   //Aggregation stage
-  const aggCommonMatch = {
-    $match: {
-      'available_details.no_of_sheets': { $ne: 0 },
-    },
-  };
+  // const aggCommonMatch = {
+  //   $match: {
+  //     'available_details.no_of_sheets': { $ne: 0 },
+  //   },
+  // };
 
   const aggCreatedByLookup = {
     $lookup: {
@@ -1087,7 +1087,7 @@ export const listing_resizing_history = catchAsync(async (req, res) => {
   };
 
   const listAggregate = [
-    aggCommonMatch,
+    // aggCommonMatch,
     aggSortByCreatedAt,
     aggGroupByResizingDoneId,
     aggReplaceRoot,
