@@ -24,8 +24,8 @@ const grouping_done_history_schema = new mongoose.Schema(
     order_category: {
       type: String,
       enum: {
-        values: [order_category.decorative, order_category.series_product],
-        message: `Invalid type {{VALUE}} it must be one of the ${order_category.decorative},${order_category.series_product}`,
+        values: [order_category.decorative, order_category.series_product, order_category.raw],
+        message: `Invalid type {{VALUE}} it must be one of the ${order_category.decorative},${order_category.series_product},${order_category.raw}`,
       },
       uppercase: true,
       trim: true,

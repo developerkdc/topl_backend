@@ -88,7 +88,7 @@ export const create_plywood_production = catchAsync(
           StatusCodes.BAD_REQUEST
         );
       }
-
+      
       const is_face_available_greater_than_consumed = await Promise.all(
         face_details_array.map(async (item) => {
           const res = await face_inventory_items_details

@@ -488,6 +488,7 @@ export const add_pressing_details = catchAsync(async (req, res, next) => {
             issued_sheets: no_of_sheets,
             issued_sqm: sqm,
             issued_amount: amount,
+            remark: plywoodProductionItem?.remarks,
             created_by: userDetails?._id,
             updated_by: userDetails?._id,
           };
@@ -1514,7 +1515,7 @@ export const revert_pressing_done_details = catchAsync(
               if (
                 plywoodResizingItem?.available_details?.no_of_sheets ===
                 plywoodResizingItem?.available_details?.no_of_sheets +
-                  no_of_sheets
+                no_of_sheets
               ) {
                 const plywoodResizingInvoiceDetails =
                   await plywood_resizing_done_details_model.updateOne(
@@ -1783,7 +1784,7 @@ export const revert_pressing_done_details = catchAsync(
             if (
               fleecePaperInventoryItem?.available_number_of_roll ===
               fleecePaperInventoryItem?.available_number_of_roll +
-                number_of_roll
+              number_of_roll
             ) {
               const fleecePaperInventoryInvoiceDetails =
                 await fleece_inventory_invoice_modal.updateOne(

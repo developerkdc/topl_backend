@@ -7,6 +7,7 @@ import {
   issues_for_status,
   item_issued_for,
   item_issued_from,
+  order_category,
 } from '../../../../../database/Utils/constants/constants.js';
 import { RawOrderItemDetailsModel } from '../../../../../database/schema/order/raw_order/raw_order_item_details.schema.js';
 import issue_for_order_model from '../../../../../database/schema/order/issue_for_order/issue_for_order.schema.js';
@@ -181,7 +182,7 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
         StatusCodes.BAD_REQUEST
       );
     }
-    const { _id, ...grouping_data } = grouping_item_data;
+    const { _id, createdAt, updatedAt, ...grouping_data } = grouping_item_data;
     //add data to grouping history model
     const add_issued_data_to_grouping_history =
       await grouping_done_history_model.create(
@@ -190,6 +191,7 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
             ...grouping_data,
             order_id: order_item_data?.order_id,
             order_item_id: order_item_data?._id,
+            order_category: order_category.series_product,
             issue_status: issues_for_status?.order,
             grouping_done_item_id: grouping_item_data?._id,
             grouping_done_other_details_id:

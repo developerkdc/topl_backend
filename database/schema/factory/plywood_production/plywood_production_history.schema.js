@@ -38,6 +38,12 @@ const plywood_production_history_schema = new mongoose.Schema(
       type: Number,
       required: [true, 'Issued Amount is required.'],
     },
+    remark: {
+      type: String,
+      default: null,
+      trim: true,
+      uppercase: true,
+    },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Created By is required.'],
