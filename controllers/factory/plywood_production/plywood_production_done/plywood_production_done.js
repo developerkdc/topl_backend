@@ -731,6 +731,7 @@ export const add_to_damage_from_plywood_production_done = catchAsync(
             plywood_production_id: plywood_production_data?._id,
             damage_sheets: damage_sheets,
             damage_sqm: damage_sqm,
+            remark: plywood_production_data?.remarks,
             created_by: userDetails?._id,
             updated_by: userDetails?._id,
           },
