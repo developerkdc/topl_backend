@@ -55,6 +55,12 @@ const plywood_production_damage_schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       require: [true, 'Plywood production Id is required'],
     },
+    remark: {
+      type: String,
+      default: null,
+      trim: true,
+      uppercase: true,
+    },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,
     },

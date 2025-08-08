@@ -76,12 +76,12 @@ const plywood_production_schema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    // remarks: {
-    //   type: String,
-    //   default: null,
-    //   trim: true,
-    //   uppercase: true,
-    // },
+    remark: {
+      type: String,
+      default: null,
+      trim: true,
+      uppercase: true,
+    },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,
     },
