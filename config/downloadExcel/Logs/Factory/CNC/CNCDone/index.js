@@ -201,7 +201,7 @@ export const createFactoryCNCDoneExcel = async (newData, req, res) => {
         product_type: press.product_type || '',
         is_cnc_done: issue.is_cnc_done ? 'Yes' : 'No',
         machine_name: press.machine_name || '',
-        pressing_id: item.pressing_details_id?.toString() || '',
+        pressing_id: issue.pressing_details?.pressing_id?.toString() || '',
         shift: item.shift || '',
         no_of_workers: item.no_of_workers || '',
         working_hours: item.working_hours || '',
