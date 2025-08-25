@@ -456,87 +456,103 @@ export const fetch_all_finished_ready_for_packing = catchAsync(
       is_packing_done: false,
     };
 
-    const aggCreatedByLookup = {
-      $lookup: {
-        from: 'users',
-        localField: 'created_by',
-        foreignField: '_id',
-        pipeline: [
-          {
-            $project: {
-              user_name: 1,
-              user_type: 1,
-              dept_name: 1,
-              first_name: 1,
-              last_name: 1,
-              email_id: 1,
-              mobile_no: 1,
+        const aggGroupingDetails = {
+            $lookup: {
+                from: 'grouping_done_items_details',
+                localField: 'group_no',
+                foreignField: 'group_no',
+                as: 'grouping_details',
             },
-          },
-        ],
-        as: 'created_by',
-      },
-    };
-    const aggUpdatedByLookup = {
-      $lookup: {
-        from: 'users',
-        localField: 'updated_by',
-        foreignField: '_id',
-        pipeline: [
-          {
-            $project: {
-              user_name: 1,
-              user_type: 1,
-              dept_name: 1,
-              first_name: 1,
-              last_name: 1,
-              email_id: 1,
-              mobile_no: 1,
+        };
+        const aggCreatedByLookup = {
+            $lookup: {
+                from: 'users',
+                localField: 'created_by',
+                foreignField: '_id',
+                pipeline: [
+                    {
+                        $project: {
+                            user_name: 1,
+                            user_type: 1,
+                            dept_name: 1,
+                            first_name: 1,
+                            last_name: 1,
+                            email_id: 1,
+                            mobile_no: 1,
+                        },
+                    },
+                ],
+                as: 'created_by',
             },
-          },
-        ],
-        as: 'updated_by',
-      },
-    };
-    const aggCreatedByUnwind = {
-      $unwind: {
-        path: '$created_by',
-        preserveNullAndEmptyArrays: true,
-      },
-    };
-    const aggUpdatedByUnwind = {
-      $unwind: {
-        path: '$updated_by',
-        preserveNullAndEmptyArrays: true,
-      },
-    };
-    const aggMatch = {
-      $match: {
-        ...match_query,
-      },
-    };
-    const aggSort = {
-      $sort: {
-        [sortBy]: sort === 'desc' ? -1 : 1,
-      },
-    };
-    const aggSkip = {
-      $skip: (parseInt(page) - 1) * parseInt(limit),
-    };
-    const aggLimit = {
-      $limit: parseInt(limit),
-    };
+        };
+        const aggUpdatedByLookup = {
+            $lookup: {
+                from: 'users',
+                localField: 'updated_by',
+                foreignField: '_id',
+                pipeline: [
+                    {
+                        $project: {
+                            user_name: 1,
+                            user_type: 1,
+                            dept_name: 1,
+                            first_name: 1,
+                            last_name: 1,
+                            email_id: 1,
+                            mobile_no: 1,
+                        },
+                    },
+                ],
+                as: 'updated_by',
+            },
+        };
+        const aggCreatedByUnwind = {
+            $unwind: {
+                path: '$created_by',
+                preserveNullAndEmptyArrays: true,
+            },
+        };
+        const aggUpdatedByUnwind = {
+            $unwind: {
+                path: '$updated_by',
+                preserveNullAndEmptyArrays: true,
+            },
+        };
+        const aggUnwindGroupingDetails = {
+            $unwind: {
+                path: '$grouping_details',
+                preserveNullAndEmptyArrays: true,
+            },
+        };
+        const aggMatch = {
+            $match: {
+                ...match_query,
+            },
+        };
+        const aggSort = {
+            $sort: {
+                [sortBy]: sort === 'desc' ? -1 : 1,
+            },
+        };
+        const aggSkip = {
+            $skip: (parseInt(page) - 1) * parseInt(limit),
+        };
+        const aggLimit = {
+            $limit: parseInt(limit),
+        };
 
-    const listAggregate = [
-      aggCreatedByLookup,
-      aggCreatedByUnwind,
-      aggUpdatedByLookup,
-      aggUpdatedByUnwind,
-      aggMatch,
-      aggSort,
-      aggSkip,
-      aggLimit,
-    ]; // aggregation pipiline
+        const listAggregate = [
+            aggGroupingDetails,
+            aggUnwindGroupingDetails,
+            aggCreatedByLookup,
+            aggCreatedByUnwind,
+            aggUpdatedByLookup,
+            aggUpdatedByUnwind,
+            aggMatch,
+            aggSort,
+            aggSkip,
+            aggLimit,
+        ]; // aggregation pipiline
 
     const issue_for_raw_packing =
       await finished_ready_for_packing_model.aggregate(listAggregate);

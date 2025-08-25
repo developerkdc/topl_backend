@@ -74,9 +74,10 @@ const issue_for_bunito_schema = new mongoose.Schema(
           item_issued_from?.color_factory,
           item_issued_from?.bunito_factory,
           item_issued_from?.polishing_factory,
+          item_issued_from?.canvas_factory,
           item_issued_from?.cnc_factory,
         ],
-        message: `Invalid Type -> {{VALUE}} , it must be one of the ${(item_issued_from?.pressing_factory, item_issued_from?.cnc_factory, item_issued_from?.color_factory, item_issued_from?.bunito_factory, item_issued_from?.polishing_factory)}`,
+        message: `Invalid Type -> {{VALUE}} , it must be one of the ${(item_issued_from?.pressing_factory, item_issued_from?.cnc_factory, item_issued_from?.color_factory, item_issued_from?.bunito_factory, item_issued_from?.polishing_factory, item_issued_from?.canvas_factory)}`,
       },
       required: [true, 'Issued from is required.'],
     },
@@ -157,19 +158,19 @@ export const issue_for_bunito_view_model = mongoose.model(
         },
       },
       {
-    $lookup: {
-      from: "grouping_done_items_details",
-      localField: "pressing_details.group_no",
-      foreignField: "group_no",
-      as: "grouping_details"
-    }
-  },
-   {
-    $unwind: {
-      path: "$grouping_details",
-      preserveNullAndEmptyArrays: true
-    }
-  },
+        $lookup: {
+          from: "grouping_done_items_details",
+          localField: "pressing_details.group_no",
+          foreignField: "group_no",
+          as: "grouping_details"
+        }
+      },
+      {
+        $unwind: {
+          path: "$grouping_details",
+          preserveNullAndEmptyArrays: true
+        }
+      },
       {
         $lookup: {
           from: 'pressing_done_consumed_items_details',
