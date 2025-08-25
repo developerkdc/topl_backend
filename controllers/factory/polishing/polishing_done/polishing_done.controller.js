@@ -553,6 +553,15 @@ export const listing_polishing_history = catchAsync(async (req, res) => {
     },
   };
 
+  const aggLookUpDoneDetails = {
+    $lookup: {
+      from: 'polishing_done_details',
+      localField: 'issued_item_id',
+      foreignField: '_id',
+      as: 'polishing_done_details',
+    },
+  };
+
   const aggCreatedByLookup = {
     $lookup: {
       from: 'users',
@@ -613,6 +622,12 @@ export const listing_polishing_history = catchAsync(async (req, res) => {
       preserveNullAndEmptyArrays: true,
     },
   };
+  const aggDoneDetailsUnwind = {
+    $unwind: {
+      path: '$polishing_done_details',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
   const aggMatch = {
     $match: {
       ...match_query,
@@ -632,6 +647,8 @@ export const listing_polishing_history = catchAsync(async (req, res) => {
 
   const listAggregate = [
     // aggCommonMatch,
+    aggLookUpDoneDetails,
+    aggDoneDetailsUnwind,
     aggLookUpIssuedDetails,
     aggIssuedCncDetailsUnwind,
     aggCreatedByLookup,
@@ -826,7 +843,7 @@ export const download_excel_polishing_done = catchAsync(async (req, res) => {
   const polishing_done_list =
     await polishing_done_details_model.aggregate(listAggregate);
 
-    await createFactoryPolishDoneExcel(polishing_done_list,req,res);
+  await createFactoryPolishDoneExcel(polishing_done_list, req, res);
 
 });
 
@@ -986,5 +1003,5 @@ export const download_excel_polishing_history = catchAsync(async (req, res) => {
   ]; // aggregation pipiline
 
   const data = await polishing_history_model.aggregate(listAggregate);
-  await createFactoryPolishHistoryExcel(data,req,res);
+  await createFactoryPolishHistoryExcel(data, req, res);
 });

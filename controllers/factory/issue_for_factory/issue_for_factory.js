@@ -235,7 +235,7 @@ class Issue_For_Factory {
         order_item_id: this.issue_details?.order_item_id,
         // order_category,
       };
-      console.log(history_payload);
+
 
       if (issue_for_field_key && issued_item_issue_id) {
         history_payload[issue_for_field_key] = issued_item_issue_id;

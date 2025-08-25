@@ -538,7 +538,14 @@ export const listing_color_history = catchAsync(async (req, res) => {
       as: 'issue_for_colour_details',
     },
   };
-
+  const aggLookUpDoneDetails = {
+    $lookup: {
+      from: 'color_done_details',
+      localField: 'issued_item_id',
+      foreignField: '_id',
+      as: 'color_done_details',
+    },
+  };
   const aggCreatedByLookup = {
     $lookup: {
       from: 'users',
@@ -599,6 +606,12 @@ export const listing_color_history = catchAsync(async (req, res) => {
       preserveNullAndEmptyArrays: true,
     },
   };
+  const aggDoneDetailsUnwind = {
+    $unwind: {
+      path: '$color_done_details',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
   const aggMatch = {
     $match: {
       ...match_query,
@@ -618,6 +631,8 @@ export const listing_color_history = catchAsync(async (req, res) => {
 
   const listAggregate = [
     // aggCommonMatch,
+    aggLookUpDoneDetails,
+    aggDoneDetailsUnwind,
     aggLookUpIssuedDetails,
     aggIssuedCncDetailsUnwind,
     aggCreatedByLookup,

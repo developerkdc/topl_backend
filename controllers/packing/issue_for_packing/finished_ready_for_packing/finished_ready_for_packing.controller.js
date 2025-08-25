@@ -452,6 +452,14 @@ export const fetch_all_finished_ready_for_packing = catchAsync(
             is_packing_done: false,
         };
 
+        const aggGroupingDetails = {
+            $lookup: {
+                from: 'grouping_done_items_details',
+                localField: 'group_no',
+                foreignField: 'group_no',
+                as: 'grouping_details',
+            },
+        };
         const aggCreatedByLookup = {
             $lookup: {
                 from: 'users',
@@ -506,6 +514,12 @@ export const fetch_all_finished_ready_for_packing = catchAsync(
                 preserveNullAndEmptyArrays: true,
             },
         };
+        const aggUnwindGroupingDetails = {
+            $unwind: {
+                path: '$grouping_details',
+                preserveNullAndEmptyArrays: true,
+            },
+        };
         const aggMatch = {
             $match: {
                 ...match_query,
@@ -524,6 +538,8 @@ export const fetch_all_finished_ready_for_packing = catchAsync(
         };
 
         const listAggregate = [
+            aggGroupingDetails,
+            aggUnwindGroupingDetails,
             aggCreatedByLookup,
             aggCreatedByUnwind,
             aggUpdatedByLookup,
@@ -769,10 +785,10 @@ export const generatePackingInvoiceBillPDF = catchAsync(async (req, res) => {
     const formattedPackingDate = otherDetails.packing_date
         ? moment(otherDetails.packing_date).format("DD-MM-YYYY")
         : '';
- 
+
     const totalSheets = allItems.reduce((sum, i) => sum + (i.no_of_sheets || 0), 0);
     const totalSqMtr = allItems.reduce((sum, i) => sum + (i.sqm || 0), 0);
- 
+
     const summaryMap = {};
     for (const i of allItems) {
         const key = `${i.item_name || ' '}_${i.length || 0}x${i.width || 0}`;
@@ -789,7 +805,7 @@ export const generatePackingInvoiceBillPDF = catchAsync(async (req, res) => {
     }
 
     const item_summary = Object.values(summaryMap);
- 
+
     const combinedData = {
         ...otherDetails,
         packing_date: formattedPackingDate,
@@ -801,7 +817,7 @@ export const generatePackingInvoiceBillPDF = catchAsync(async (req, res) => {
 
     const pdfBuffer = await generatePDF_packing({
         templateName: 'invoice_bill',
-        templatePath: path.join(__dirname,'..', '..', '..', '..', 'views', 'dispatch', 'invoice_bill.hbs'),
+        templatePath: path.join(__dirname, '..', '..', '..', '..', 'views', 'dispatch', 'invoice_bill.hbs'),
         data: combinedData,
     });
 
@@ -837,10 +853,10 @@ export const generatePackingEwayBillPDF = catchAsync(async (req, res) => {
     const formattedPackingDate = otherDetails.packing_date
         ? moment(otherDetails.packing_date).format("DD-MM-YYYY")
         : '';
- 
+
     const totalSheets = allItems.reduce((sum, i) => sum + (i.no_of_sheets || 0), 0);
     const totalSqMtr = allItems.reduce((sum, i) => sum + (i.sqm || 0), 0);
- 
+
     const summaryMap = {};
     for (const i of allItems) {
         const key = `${i.item_name || ' '}_${i.length || 0}x${i.width || 0}`;
@@ -857,7 +873,7 @@ export const generatePackingEwayBillPDF = catchAsync(async (req, res) => {
     }
 
     const item_summary = Object.values(summaryMap);
- 
+
     const combinedData = {
         ...otherDetails,
         packing_date: formattedPackingDate,

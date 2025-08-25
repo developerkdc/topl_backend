@@ -31,7 +31,7 @@ const GstSchema = new mongoose.Schema({
   deleted_at: { type: Date, default: null },
 });
 
-GstSchema.index({ gst_name: 1 }, { unique: true });
+// GstSchema.index({ gst_name: 1 }, { unique: true });
 const GstModel = mongoose.model('gst', GstSchema);
 LogSchemaFunction('gst', GstModel, []);
 export default GstModel;
