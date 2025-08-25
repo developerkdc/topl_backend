@@ -305,6 +305,12 @@ export const listing_issued_for_canvas = catchAsync(async (req, res, next) => {
     is_canvas_done: false,
   };
 
+  const aggCommonMatch = {
+    $match: {
+      'available_details.no_of_sheets': { $ne: 0 },
+    },
+  };
+
   const aggCreatedByLookup = {
     $lookup: {
       from: 'users',
@@ -377,6 +383,7 @@ export const listing_issued_for_canvas = catchAsync(async (req, res, next) => {
   };
 
   const listAggregate = [
+    aggCommonMatch,
     aggCreatedByLookup,
     aggCreatedByUnwind,
     aggUpdatedByLookup,
