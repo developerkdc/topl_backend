@@ -14,6 +14,7 @@ const getConfigs = () => {
         'https://topl.kdcstaging.in',
         'https://kdctopl.kdcstaging.in',
         'https://topl.dev.metaphi.in',
+        'https://topl.uat.metaphi.in',
       ],
       credentials: true,
     },
