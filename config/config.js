@@ -13,6 +13,7 @@ const getConfigs = () => {
         'http://localhost:3000',
         'https://topl.kdcstaging.in',
         'https://kdctopl.kdcstaging.in',
+        'https://topl.dev.metaphi.in',
       ],
       credentials: true,
     },
