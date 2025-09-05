@@ -456,103 +456,103 @@ export const fetch_all_finished_ready_for_packing = catchAsync(
       is_packing_done: false,
     };
 
-        const aggGroupingDetails = {
-            $lookup: {
-                from: 'grouping_done_items_details',
-                localField: 'group_no',
-                foreignField: 'group_no',
-                as: 'grouping_details',
+    const aggGroupingDetails = {
+      $lookup: {
+        from: 'grouping_done_items_details',
+        localField: 'group_no',
+        foreignField: 'group_no',
+        as: 'grouping_details',
+      },
+    };
+    const aggCreatedByLookup = {
+      $lookup: {
+        from: 'users',
+        localField: 'created_by',
+        foreignField: '_id',
+        pipeline: [
+          {
+            $project: {
+              user_name: 1,
+              user_type: 1,
+              dept_name: 1,
+              first_name: 1,
+              last_name: 1,
+              email_id: 1,
+              mobile_no: 1,
             },
-        };
-        const aggCreatedByLookup = {
-            $lookup: {
-                from: 'users',
-                localField: 'created_by',
-                foreignField: '_id',
-                pipeline: [
-                    {
-                        $project: {
-                            user_name: 1,
-                            user_type: 1,
-                            dept_name: 1,
-                            first_name: 1,
-                            last_name: 1,
-                            email_id: 1,
-                            mobile_no: 1,
-                        },
-                    },
-                ],
-                as: 'created_by',
+          },
+        ],
+        as: 'created_by',
+      },
+    };
+    const aggUpdatedByLookup = {
+      $lookup: {
+        from: 'users',
+        localField: 'updated_by',
+        foreignField: '_id',
+        pipeline: [
+          {
+            $project: {
+              user_name: 1,
+              user_type: 1,
+              dept_name: 1,
+              first_name: 1,
+              last_name: 1,
+              email_id: 1,
+              mobile_no: 1,
             },
-        };
-        const aggUpdatedByLookup = {
-            $lookup: {
-                from: 'users',
-                localField: 'updated_by',
-                foreignField: '_id',
-                pipeline: [
-                    {
-                        $project: {
-                            user_name: 1,
-                            user_type: 1,
-                            dept_name: 1,
-                            first_name: 1,
-                            last_name: 1,
-                            email_id: 1,
-                            mobile_no: 1,
-                        },
-                    },
-                ],
-                as: 'updated_by',
-            },
-        };
-        const aggCreatedByUnwind = {
-            $unwind: {
-                path: '$created_by',
-                preserveNullAndEmptyArrays: true,
-            },
-        };
-        const aggUpdatedByUnwind = {
-            $unwind: {
-                path: '$updated_by',
-                preserveNullAndEmptyArrays: true,
-            },
-        };
-        const aggUnwindGroupingDetails = {
-            $unwind: {
-                path: '$grouping_details',
-                preserveNullAndEmptyArrays: true,
-            },
-        };
-        const aggMatch = {
-            $match: {
-                ...match_query,
-            },
-        };
-        const aggSort = {
-            $sort: {
-                [sortBy]: sort === 'desc' ? -1 : 1,
-            },
-        };
-        const aggSkip = {
-            $skip: (parseInt(page) - 1) * parseInt(limit),
-        };
-        const aggLimit = {
-            $limit: parseInt(limit),
-        };
+          },
+        ],
+        as: 'updated_by',
+      },
+    };
+    const aggCreatedByUnwind = {
+      $unwind: {
+        path: '$created_by',
+        preserveNullAndEmptyArrays: true,
+      },
+    };
+    const aggUpdatedByUnwind = {
+      $unwind: {
+        path: '$updated_by',
+        preserveNullAndEmptyArrays: true,
+      },
+    };
+    const aggUnwindGroupingDetails = {
+      $unwind: {
+        path: '$grouping_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    };
+    const aggMatch = {
+      $match: {
+        ...match_query,
+      },
+    };
+    const aggSort = {
+      $sort: {
+        [sortBy]: sort === 'desc' ? -1 : 1,
+      },
+    };
+    const aggSkip = {
+      $skip: (parseInt(page) - 1) * parseInt(limit),
+    };
+    const aggLimit = {
+      $limit: parseInt(limit),
+    };
 
-        const listAggregate = [
-            aggGroupingDetails,
-            aggUnwindGroupingDetails,
-            aggCreatedByLookup,
-            aggCreatedByUnwind,
-            aggUpdatedByLookup,
-            aggUpdatedByUnwind,
-            aggMatch,
-            aggSort,
-            aggSkip,
-            aggLimit,
-        ]; // aggregation pipiline
+    const listAggregate = [
+      aggGroupingDetails,
+      aggUnwindGroupingDetails,
+      aggCreatedByLookup,
+      aggCreatedByUnwind,
+      aggUpdatedByLookup,
+      aggUpdatedByUnwind,
+      aggMatch,
+      aggSort,
+      aggSkip,
+      aggLimit,
+    ]; // aggregation pipiline
 
     const issue_for_raw_packing =
       await finished_ready_for_packing_model.aggregate(listAggregate);
@@ -714,7 +714,7 @@ export const revert_finished_ready_for_packing = catchAsync(
 export const fetch_issue_for_packing_items_by_customer_and_order_category =
   catchAsync(async (req, res) => {
     const { customer_id, order_type, product_type } = req.query;
-
+    // console.log(customer_id, order_type, product_type, 'ohfkekuhkhg');
     const match_query = {
       is_packing_done: false,
       'order_details.customer_id':
@@ -769,115 +769,135 @@ export const fetch_issue_for_packing_items_by_customer_and_order_category =
 export const generatePackingInvoiceBillPDF = catchAsync(async (req, res) => {
   const { id } = req.params;
 
-    const dispatch = await dispatchModel.findById(id).lean();
-    if (!dispatch) {
-        return res.status(404).json({ status: false, message: 'Packing item not found' });
+  const dispatch = await dispatchModel.findById(id).lean();
+  if (!dispatch) {
+    return res
+      .status(404)
+      .json({ status: false, message: 'Packing item not found' });
+  }
+
+  const other_dispatch_details = await dispatchItemsModel
+    .find({ dispatch_id: id })
+    .lean();
+  if (!other_dispatch_details) {
+    return res
+      .status(404)
+      .json({ status: false, message: 'other item details not found' });
+  }
+
+  const formattedDispatch = {
+    ...dispatch,
+    invoice_date_time: dispatch.invoice_date_time
+      ? moment(dispatch.invoice_date_time).format('DD-MM-YYYY')
+      : '',
+    removal_of_good_date_time: dispatch.removal_of_good_date_time
+      ? moment(dispatch.removal_of_good_date_time).format('DD-MM-YYYY')
+      : '',
+    trans_doc_date: dispatch.trans_doc_date
+      ? moment(dispatch.trans_doc_date).format('DD-MM-YYYY')
+      : '',
+    eway_bill_date: dispatch.eway_bill_date
+      ? moment(dispatch.eway_bill_date).format('DD-MM-YYYY')
+      : '',
+    acknowledgement_date: dispatch.acknowledgement_date
+      ? moment(dispatch.acknowledgement_date).format('DD-MM-YYYY')
+      : '',
+    createdAt: dispatch.createdAt
+      ? moment(dispatch.createdAt).format('DD-MM-YYYY')
+      : '',
+    updatedAt: dispatch.updatedAt
+      ? moment(dispatch.updatedAt).format('DD-MM-YYYY')
+      : '',
+  };
+
+  const packingEntry = dispatch.packing_done_ids?.[0];
+  if (!packingEntry) {
+    return res
+      .status(404)
+      .json({ status: false, message: 'No packing details found in dispatch' });
+  }
+
+  const otherDetails = {
+    ...packingEntry,
+    packing_date: packingEntry.packing_date
+      ? moment(packingEntry.packing_date).format('DD-MM-YYYY')
+      : '',
+  };
+
+  // const allItems = dispatch.packing_done_item_details?.filter(
+  //     i => String(i.packing_done_other_details_id) === String(packingEntry.packing_done_other_details_id)
+  // ) || [];
+
+  const allItems = other_dispatch_details.filter(
+    (i) =>
+      String(i.packing_done_other_details_id) ===
+      String(packingEntry.packing_done_other_details_id)
+  );
+
+  const totalSheets = allItems.reduce(
+    (sum, i) => sum + (i.no_of_sheets || 0),
+    0
+  );
+  const totalSqMtr = allItems.reduce((sum, i) => sum + (i.sqm || 0), 0);
+
+  const summaryMap = {};
+  for (const i of allItems) {
+    const key = `${i.item_name || ' '}_${i.length || 0}x${i.width || 0}`;
+    if (!summaryMap[key]) {
+      summaryMap[key] = {
+        item_name: i.item_name || ' ',
+        size: `${i.length || 0} x ${i.width || 0}`,
+        sheets: 0,
+        sqm: 0,
+        rate: i.rate || 0,
+        taxable_value: 0,
+      };
     }
+    summaryMap[key].sheets += i.no_of_sheets || 0;
+    summaryMap[key].sqm += i.sqm || 0;
+    summaryMap[key].taxable_value += (i.sqm || 0) * (i.rate || 0);
+  }
+  const item_summary = Object.values(summaryMap);
 
-    const other_dispatch_details = await dispatchItemsModel.find({ dispatch_id: id }).lean();
-    if (!other_dispatch_details) {
-        return res.status(404).json({ status: false, message: 'other item details not found' });
-    }
+  const basic_amount = item_summary.reduce(
+    (sum, i) => sum + i.taxable_value,
+    0
+  );
+  const insurance = basic_amount * 0.00125; // 0.125%
+  const freight = 500; // static for now or pull from dispatch
+  const total = basic_amount + insurance + freight;
+  const igst = total * 0.18;
+  const grand_total = total + igst;
 
-    const formattedDispatch = {
-        ...dispatch,
-        invoice_date_time: dispatch.invoice_date_time
-            ? moment(dispatch.invoice_date_time).format("DD-MM-YYYY")
-            : "",
-        removal_of_good_date_time: dispatch.removal_of_good_date_time
-            ? moment(dispatch.removal_of_good_date_time).format("DD-MM-YYYY")
-            : "",
-        trans_doc_date: dispatch.trans_doc_date
-            ? moment(dispatch.trans_doc_date).format("DD-MM-YYYY")
-            : "",
-        eway_bill_date: dispatch.eway_bill_date
-            ? moment(dispatch.eway_bill_date).format("DD-MM-YYYY")
-            : "",
-        acknowledgement_date: dispatch.acknowledgement_date
-            ? moment(dispatch.acknowledgement_date).format("DD-MM-YYYY")
-            : "",
-        createdAt: dispatch.createdAt
-            ? moment(dispatch.createdAt).format("DD-MM-YYYY")
-            : "",
-        updatedAt: dispatch.updatedAt
-            ? moment(dispatch.updatedAt).format("DD-MM-YYYY")
-            : "",
-    };
+  const combinedData = {
+    ...formattedDispatch,
+    ...otherDetails,
+    packing_done_item_details: allItems,
+    totalSheets,
+    totalSqMtr,
+    item_summary,
+    basic_amount: basic_amount.toFixed(2),
+    insurance: insurance.toFixed(2),
+    freight: freight.toFixed(2),
+    total: total.toFixed(2),
+    igst: igst.toFixed(2),
+    grand_total: grand_total.toFixed(2),
+  };
 
-    const packingEntry = dispatch.packing_done_ids?.[0];
-    if (!packingEntry) {
-        return res.status(404).json({ status: false, message: 'No packing details found in dispatch' });
-    }
-
-    const otherDetails = {
-        ...packingEntry,
-        packing_date: packingEntry.packing_date
-            ? moment(packingEntry.packing_date).format("DD-MM-YYYY")
-            : ""
-    };
-
-    // const allItems = dispatch.packing_done_item_details?.filter(
-    //     i => String(i.packing_done_other_details_id) === String(packingEntry.packing_done_other_details_id)
-    // ) || [];
-
-    const allItems = other_dispatch_details.filter(
-        i => String(i.packing_done_other_details_id) === String(packingEntry.packing_done_other_details_id)
-    );
-
-
-    const totalSheets = allItems.reduce((sum, i) => sum + (i.no_of_sheets || 0), 0);
-    const totalSqMtr = allItems.reduce((sum, i) => sum + (i.sqm || 0), 0);
-
-    const summaryMap = {};
-    for (const i of allItems) {
-        const key = `${i.item_name || ' '}_${i.length || 0}x${i.width || 0}`;
-        if (!summaryMap[key]) {
-            summaryMap[key] = {
-                item_name: i.item_name || ' ',
-                size: `${i.length || 0} x ${i.width || 0}`,
-                sheets: 0,
-                sqm: 0,
-                rate: i.rate || 0,
-                taxable_value: 0,
-            };
-        }
-        summaryMap[key].sheets += i.no_of_sheets || 0;
-        summaryMap[key].sqm += i.sqm || 0;
-        summaryMap[key].taxable_value += (i.sqm || 0) * (i.rate || 0);
-    }
-    const item_summary = Object.values(summaryMap);
-
-    const basic_amount = item_summary.reduce((sum, i) => sum + i.taxable_value, 0);
-    const insurance = basic_amount * 0.00125; // 0.125%
-    const freight = 500; // static for now or pull from dispatch
-    const total = basic_amount + insurance + freight;
-    const igst = total * 0.18;
-    const grand_total = total + igst;
-
-    const combinedData = {
-        ...formattedDispatch,
-        ...otherDetails,
-        packing_done_item_details: allItems,
-        totalSheets,
-        totalSqMtr,
-        item_summary,
-        basic_amount: basic_amount.toFixed(2),
-        insurance: insurance.toFixed(2),
-        freight: freight.toFixed(2),
-        total: total.toFixed(2),
-        igst: igst.toFixed(2),
-        grand_total: grand_total.toFixed(2),
-    };
-
-    const pdfBuffer = await generatePDF_packing({
-        templateName: 'invoice_bill',
-        templatePath: path.join(
-            __dirname,
-            '..', '..', '..', '..',
-            'views', 'dispatch', 'invoice_bill.hbs'
-        ),
-        data: combinedData,
-    });
+  const pdfBuffer = await generatePDF_packing({
+    templateName: 'invoice_bill',
+    templatePath: path.join(
+      __dirname,
+      '..',
+      '..',
+      '..',
+      '..',
+      'views',
+      'dispatch',
+      'invoice_bill.hbs'
+    ),
+    data: combinedData,
+  });
 
   res.set({
     'Content-Type': 'application/pdf',
@@ -888,85 +908,103 @@ export const generatePackingInvoiceBillPDF = catchAsync(async (req, res) => {
   return res.status(200).end(pdfBuffer);
 });
 
-
 export const generatePackingEwayBillPDF = catchAsync(async (req, res) => {
   const { id } = req.params;
 
-    // Fetch the dispatch record
-    const dispatch = await dispatchModel.findById(id).lean();
-    if (!dispatch) {
-        return res.status(404).json({ status: false, message: 'Dispatch not found' });
+  // Fetch the dispatch record
+  const dispatch = await dispatchModel.findById(id).lean();
+  if (!dispatch) {
+    return res
+      .status(404)
+      .json({ status: false, message: 'Dispatch not found' });
+  }
+
+  // Fetch the packing other details linked to this dispatch
+  const packingDetails = await packing_done_other_details_model
+    .findById(dispatch.packing_done_ids?.[0]?.packing_done_other_details_id)
+    .lean();
+
+  if (!packingDetails) {
+    return res
+      .status(404)
+      .json({ status: false, message: 'Packing details not found' });
+  }
+
+  // Fetch all packing items linked to this packing other details
+  const allItems = await packing_done_items_model
+    .find({
+      packing_done_other_details_id:
+        dispatch.packing_done_ids?.[0]?.packing_done_other_details_id,
+    })
+    .lean();
+
+  // Format dates
+  const formattedPackingDate = packingDetails.packing_date
+    ? moment(packingDetails.packing_date).format('DD-MM-YYYY')
+    : '';
+  const formattedEwayBillDate = dispatch.eway_bill_date
+    ? moment(dispatch.eway_bill_date).format('DD-MM-YYYY')
+    : '';
+
+  // Calculate totals
+  const totalSheets = allItems.reduce(
+    (sum, i) => sum + (i.no_of_sheets || 0),
+    0
+  );
+  const totalSqMtr = allItems.reduce((sum, i) => sum + (i.sqm || 0), 0);
+
+  // Prepare item summary grouped by name and size
+  const summaryMap = {};
+  for (const i of allItems) {
+    const key = `${i.item_name || ' '}_${i.length || 0}x${i.width || 0}`;
+    if (!summaryMap[key]) {
+      summaryMap[key] = {
+        item_name: i.item_name || ' ',
+        size: `${i.length || 0} x ${i.width || 0}`,
+        sheets: 0,
+        sqm: 0,
+      };
     }
+    summaryMap[key].sheets += i.no_of_sheets || 0;
+    summaryMap[key].sqm += i.sqm || 0;
+  }
+  const item_summary = Object.values(summaryMap);
 
-    // Fetch the packing other details linked to this dispatch
-    const packingDetails = await packing_done_other_details_model
-        .findById(dispatch.packing_done_ids?.[0]?.packing_done_other_details_id)
-        .lean();
+  // Combine all data for HBS template
+  const combinedData = {
+    dispatch_id: dispatch._id,
+    packing_id: packingDetails.packing_id,
+    packing_date: formattedPackingDate,
+    eway_bill_no: dispatch.eway_bill_no || '',
+    eway_bill_date: formattedEwayBillDate,
+    customer_details: dispatch.customer_details || {},
+    packing_done_item_details: allItems,
+    totalSheets,
+    totalSqMtr,
+    item_summary,
+  };
 
-    if (!packingDetails) {
-        return res.status(404).json({ status: false, message: 'Packing details not found' });
-    }
+  // Generate PDF
+  const pdfBuffer = await generatePDF_packing({
+    templateName: 'dispatch_ewaybill',
+    templatePath: path.join(
+      __dirname,
+      '..',
+      '..',
+      '..',
+      '..',
+      'views',
+      'dispatch',
+      'eway.hbs'
+    ),
+    data: combinedData,
+  });
 
-    // Fetch all packing items linked to this packing other details
-    const allItems = await packing_done_items_model
-        .find({ packing_done_other_details_id: dispatch.packing_done_ids?.[0]?.packing_done_other_details_id })
-        .lean();
-
-    // Format dates
-    const formattedPackingDate = packingDetails.packing_date
-        ? moment(packingDetails.packing_date).format("DD-MM-YYYY")
-        : '';
-    const formattedEwayBillDate = dispatch.eway_bill_date
-        ? moment(dispatch.eway_bill_date).format("DD-MM-YYYY")
-        : '';
-
-    // Calculate totals
-    const totalSheets = allItems.reduce((sum, i) => sum + (i.no_of_sheets || 0), 0);
-    const totalSqMtr = allItems.reduce((sum, i) => sum + (i.sqm || 0), 0);
-
-    // Prepare item summary grouped by name and size
-    const summaryMap = {};
-    for (const i of allItems) {
-        const key = `${i.item_name || ' '}_${i.length || 0}x${i.width || 0}`;
-        if (!summaryMap[key]) {
-            summaryMap[key] = {
-                item_name: i.item_name || ' ',
-                size: `${i.length || 0} x ${i.width || 0}`,
-                sheets: 0,
-                sqm: 0,
-            };
-        }
-        summaryMap[key].sheets += i.no_of_sheets || 0;
-        summaryMap[key].sqm += i.sqm || 0;
-    }
-    const item_summary = Object.values(summaryMap);
-
-    // Combine all data for HBS template
-    const combinedData = {
-        dispatch_id: dispatch._id,
-        packing_id: packingDetails.packing_id,
-        packing_date: formattedPackingDate,
-        eway_bill_no: dispatch.eway_bill_no || '',
-        eway_bill_date: formattedEwayBillDate,
-        customer_details: dispatch.customer_details || {},
-        packing_done_item_details: allItems,
-        totalSheets,
-        totalSqMtr,
-        item_summary,
-    };
-
-    // Generate PDF
-    const pdfBuffer = await generatePDF_packing({
-        templateName: 'dispatch_ewaybill',
-        templatePath: path.join(__dirname, '..', '..', '..', '..', 'views', 'dispatch', 'eway.hbs'),
-        data: combinedData,
-    });
-
-    res.set({
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': 'attachment; filename="dispatch-eway-bill.pdf"',
-        'Content-Length': pdfBuffer.length,
-    });
+  res.set({
+    'Content-Type': 'application/pdf',
+    'Content-Disposition': 'attachment; filename="dispatch-eway-bill.pdf"',
+    'Content-Length': pdfBuffer.length,
+  });
 
   return res.status(200).end(pdfBuffer);
 });
