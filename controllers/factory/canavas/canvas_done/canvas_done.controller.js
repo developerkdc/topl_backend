@@ -540,6 +540,14 @@ export const listing_canvas_history = catchAsync(async (req, res) => {
       as: 'issue_for_canvas_details',
     },
   };
+  const aggLookUpDoneDetails = {
+    $lookup: {
+      from: 'canvas_done_details',
+      localField: 'issued_item_id',
+      foreignField: '_id',
+      as: 'canvas_done_details',
+    },
+  };
 
   const aggCreatedByLookup = {
     $lookup: {
@@ -583,6 +591,12 @@ export const listing_canvas_history = catchAsync(async (req, res) => {
       as: 'updated_by',
     },
   };
+  const aggDoneDetailsUnwind = {
+    $unwind: {
+      path: '$canvas_done_details',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
   const aggCreatedByUnwind = {
     $unwind: {
       path: '$created_by',
@@ -620,6 +634,8 @@ export const listing_canvas_history = catchAsync(async (req, res) => {
 
   const listAggregate = [
     // aggCommonMatch,
+    aggLookUpDoneDetails,
+    aggDoneDetailsUnwind,
     aggLookUpIssuedDetails,
     aggIssuedCncDetailsUnwind,
     aggCreatedByLookup,
