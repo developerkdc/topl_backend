@@ -1491,6 +1491,7 @@ export const packing_done_dropdown = catchAsync(async (req, res, next) => {
         customer_id: mongoose.Types.ObjectId.createFromHexString(customer_id),
         order_category: order_category,
         product_type: product_type,
+        is_dispatch_done: false, //filters out dispatches that have already been done
       },
     },
     {
@@ -1502,6 +1503,7 @@ export const packing_done_dropdown = catchAsync(async (req, res, next) => {
       $project: {
         packing_id: 1,
         packing_date: 1,
+        is_dispatch_done: 1,
       },
     },
   ];
@@ -1514,4 +1516,42 @@ export const packing_done_dropdown = catchAsync(async (req, res, next) => {
   );
 
   return res.status(StatusCodes.OK).json(response);
+});
+
+export const generate_invoice_no = catchAsync(async (req, res, next) => {
+  const getFinancialYear = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = today.getMonth(); // 0 = Jan, 11 = Dec
+    const fyStartYear = month >= 3 ? year : year - 1; // FY starts in April
+    const fyEndYear = fyStartYear + 1;
+    return `${fyStartYear.toString().slice(-2)}-${fyEndYear.toString().slice(-2)}`;
+  };
+
+  const latestDispatch = await dispatchModel
+    .findOne({}, { invoice_no: 1 })
+    .sort({ createdAt: -1 });
+
+  let latest_invoice_no;
+  const currentFY = getFinancialYear();
+
+  if (latestDispatch?.invoice_no) {
+    const [seqPart, fyPart] = latestDispatch.invoice_no.split('/'); // e.g., "1", "24-25"
+    const prevFY = fyPart;
+    const dispatchNumber = parseInt(seqPart);
+
+    if (prevFY === currentFY) {
+      latest_invoice_no = `${dispatchNumber + 1}/${currentFY}`;
+    } else {
+      latest_invoice_no = `1/${currentFY}`; // reset for new FY
+    }
+  } else {
+    latest_invoice_no = `1/${currentFY}`; // first ever dispatch
+  }
+
+  return res.status(200).json({
+    success: true,
+    message: "Invoice number generated",
+    invoice_no: latest_invoice_no,
+  });
 });
