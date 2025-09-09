@@ -437,7 +437,7 @@ export const fetchSingleVehicle = catchAsync(async (req, res, next) => {
 });
 
 export const dropdownVehicle = catchAsync(async (req, res, next) => {
-  const { invoice_date, type, transporter_id } = req.query;
+  const { invoice_date, type, transporter_id, isPartB } = req.query;
   var matchQuery = {
     status: true,
   };
@@ -461,6 +461,10 @@ export const dropdownVehicle = catchAsync(async (req, res, next) => {
     matchQuery.transporter_id =
       mongoose.Types.ObjectId.createFromHexString(transporter_id);
   }
+
+  const isPartBBool = isPartB === "true" || isPartB === true; 
+  matchQuery.type = isPartBBool ? "FULL_LOAD" : "PART_LOAD";
+
 
   const vehicleList = await vehicleModel.aggregate([
     {
