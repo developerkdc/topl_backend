@@ -501,7 +501,8 @@ export const edit_dispatch_details = catchAsync(async (req, res, next) => {
       const update_order_item = await order_items_models[item?.order_category].findOneAndUpdate({
         _id: order_items_details?._id,
         order_id: order_items_details?.order_id,
-        no_of_sheets: order_items_details?.dispatch_no_of_sheets
+        // no_of_sheets: order_items_details?.dispatch_no_of_sheets
+        no_of_sheets: order_items_details?.no_of_sheets
       }, {
         $set: {
           item_status: null
@@ -1491,7 +1492,6 @@ export const packing_done_dropdown = catchAsync(async (req, res, next) => {
         customer_id: mongoose.Types.ObjectId.createFromHexString(customer_id),
         order_category: order_category,
         product_type: product_type,
-        is_dispatch_done: false, //filters out dispatches that have already been done
       },
     },
     {
@@ -1503,7 +1503,6 @@ export const packing_done_dropdown = catchAsync(async (req, res, next) => {
       $project: {
         packing_id: 1,
         packing_date: 1,
-        is_dispatch_done: 1,
       },
     },
   ];
