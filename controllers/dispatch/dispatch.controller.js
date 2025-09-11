@@ -1503,6 +1503,7 @@ export const packing_done_dropdown = catchAsync(async (req, res, next) => {
       $project: {
         packing_id: 1,
         packing_date: 1,
+        is_dispatch_done: 1,
       },
     },
   ];
