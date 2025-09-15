@@ -70,7 +70,7 @@ const issued_from_issue_for_map = {
 
 export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
   const {
-    issued_sheeets,
+    issued_sheets,
     issued_amount,
     issued_sqm,
     issued_from_id,
@@ -79,18 +79,18 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
 
   const user = req.userDetails;
   for (let field of [
-    'issued_sheeets',
+    'issued_sheets',
     'issued_amount',
     'issued_sqm',
     'issued_from_id',
     'issued_from',
   ]) {
     if (!req.body[field]) {
-      throw new ApiError(StatusCodes.BAD_REQUEST, `${field} is required.`);
+      throw new ApiError(`${field?.split("_")?.join(" ")} is required.`,StatusCodes.BAD_REQUEST );
     }
   }
   if (!isValidObjectId(issued_from_id)) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid Issued From ID.');
+    throw new ApiError('Invalid Issued From ID.',StatusCodes.BAD_REQUEST);
   }
 
   const issued_from_model = issued_from_map[issued_from];
@@ -106,8 +106,8 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
       .session(session);
     if (!issued_from_details) {
       throw new ApiError(
-        StatusCodes.NOT_FOUND,
-        'Issued from details not found.'
+      
+        'Issued from details not found.',  StatusCodes.NOT_FOUND,
       );
     }
 
@@ -214,7 +214,7 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
     ]);
 
     if (!pressing_done_details) {
-      throw new ApiError(StatusCodes.NOT_FOUND, 'Order details not found.');
+      throw new ApiError( 'Order details not found.',StatusCodes.NOT_FOUND);
     }
 
     const payload = {
@@ -258,7 +258,7 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
       product_type:
         pressing_done_details?.product_type ||
         pressing_done_details?.pressing_details?.product_type,
-      no_of_sheets: issued_sheeets,
+      no_of_sheets: issued_sheets,
       sqm: issued_sqm,
       amount: issued_amount,
       // product_type: pressing_done_details?.product_type,
@@ -274,8 +274,8 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
       await finished_ready_for_packing_model.create([payload], { session });
     if (!add_finished_ready_for_packing_result) {
       throw new ApiError(
-        StatusCodes.INTERNAL_SERVER_ERROR,
-        'Failed to add finished ready for packing details.'
+    
+        'Failed to add finished ready for packing details.',  StatusCodes.INTERNAL_SERVER_ERROR
       );
     }
 
@@ -284,7 +284,7 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
       {
         $inc: {
           'available_details.no_of_sheets': Number(
-            Number(-issued_sheeets)?.toFixed(2)
+            Number(-issued_sheets)?.toFixed(2)
           ),
           'available_details.sqm': Number(Number(-issued_sqm)?.toFixed(3)),
           'available_details.amount': Number(
@@ -301,8 +301,8 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
 
     if (update_issued_item_details?.matchedCount === 0) {
       throw new ApiError(
-        StatusCodes.NOT_FOUND,
-        'Issued item details not found for update.'
+     
+        'Issued item details not found for update.',   StatusCodes.NOT_FOUND
       );
     }
 
@@ -311,8 +311,8 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
       update_issued_item_details?.modifiedCount === 0
     ) {
       throw new ApiError(
-        StatusCodes.INTERNAL_SERVER_ERROR,
-        'Failed to update issued item details.'
+        
+        'Failed to update issued item details.',StatusCodes.INTERNAL_SERVER_ERROR,
       );
     }
 
@@ -358,7 +358,7 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
       thickness:
         pressing_done_details?.thickness ||
         pressing_done_details?.pressing_details?.thickness,
-      no_of_sheets: issued_sheeets,
+      no_of_sheets: issued_sheets,
       sqm: issued_sqm,
       amount: issued_amount,
       product_type:
@@ -388,8 +388,8 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
 
     if (!create_history_result) {
       throw new ApiError(
-        StatusCodes.INTERNAL_SERVER_ERROR,
-        'Failed to create history for issued item.'
+        
+        'Failed to create history for issued item.',StatusCodes.INTERNAL_SERVER_ERROR,
       );
     }
 
