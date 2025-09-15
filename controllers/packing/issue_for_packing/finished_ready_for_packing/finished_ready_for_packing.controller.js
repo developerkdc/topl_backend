@@ -736,6 +736,13 @@ export const fetch_issue_for_packing_items_by_customer_and_order_category =
           localField: 'order_id',
           foreignField: '_id',
           as: 'order_details',
+          // pipeline:[
+          //   {
+          //     $project : {
+          //       order_no : 1
+          //     }
+          //   }
+          // ]
         },
       },
       {
@@ -744,12 +751,35 @@ export const fetch_issue_for_packing_items_by_customer_and_order_category =
           preserveNullAndEmptyArrays: true,
         },
       },
-      { $match: match_query },
       {
-        $project: {
-          order_details: 0,
+        $lookup: {
+          from: 'raw_order_item_details',
+          localField: 'order_item_id',
+          foreignField: '_id',
+          as: 'order_item_details',
+          //  pipeline:[
+          //   {
+          //     $project : {
+          //       item_no : 1,
+          //       order_id  :1,
+          //       raw_material : 1
+          //     }
+          //   }
+          // ]
         },
       },
+        {
+        $unwind: {
+          path: '$order_item_details',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      { $match: match_query },
+      // {
+      //   $project: {
+      //     order_details: 0,
+      //   },
+      // },
     ];
 
     const issue_for_packing_items = await (
