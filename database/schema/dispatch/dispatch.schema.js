@@ -192,6 +192,10 @@ const dispatchSchema = new mongoose.Schema(
     type: Object,
     required: [true, 'Vehicle details are required']
   },
+  invoice_amount: {
+    type: String,
+    default: null,
+  },
   irn_number: {
     type: String,
     default: null,

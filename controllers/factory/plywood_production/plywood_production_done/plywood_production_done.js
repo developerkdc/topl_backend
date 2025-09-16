@@ -64,6 +64,7 @@ export const listing_plywood_production_done = catchAsync(
       available_no_of_sheets: { $gt: 0 },
     };
 
+    // existing lookups
     const aggCreatedByLookup = {
       $lookup: {
         from: 'users',
@@ -118,6 +119,17 @@ export const listing_plywood_production_done = catchAsync(
         preserveNullAndEmptyArrays: true,
       },
     };
+
+    //lookup for consumed items
+    const aggConsumedItemsLookup = {
+      $lookup: {
+        from: 'plywood_production_consumed_items',
+        localField: '_id',
+        foreignField: 'plywood_production_id',
+        as: 'consumed_items',
+      },
+    };
+
     const aggMatch = {
       $match: {
         ...match_query,
@@ -140,11 +152,12 @@ export const listing_plywood_production_done = catchAsync(
       aggCreatedByUnwind,
       aggUpdatedByLookup,
       aggUpdatedByUnwind,
+      aggConsumedItemsLookup, // 👈 included here
       aggMatch,
       aggSort,
       aggSkip,
       aggLimit,
-    ]; // aggregation pipiline
+    ]; // aggregation pipeline
 
     const plywood_production_list =
       await plywood_production_model.aggregate(listAggregate);
@@ -153,7 +166,7 @@ export const listing_plywood_production_done = catchAsync(
       $count: 'totalCount',
     }; // count aggregation stage
 
-    const totalAggregate = [...listAggregate?.slice(0, -2), aggCount]; // total aggregation pipiline
+    const totalAggregate = [...listAggregate?.slice(0, -2), aggCount]; // total aggregation pipeline
 
     const totalDocument =
       await plywood_production_model.aggregate(totalAggregate);
@@ -171,6 +184,7 @@ export const listing_plywood_production_done = catchAsync(
     return res.status(200).json(response);
   }
 );
+
 
 export const single_plywood_production_done_for_update = catchAsync(
   async (req, res) => {
