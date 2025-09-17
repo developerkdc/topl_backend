@@ -86,14 +86,18 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
     'issued_from',
   ]) {
     if (!req.body[field]) {
-      throw new ApiError(`${field?.split("_")?.join(" ")} is required.`,StatusCodes.BAD_REQUEST );
+      throw new ApiError(
+        `${field?.split('_')?.join(' ')} is required.`,
+        StatusCodes.BAD_REQUEST
+      );
     }
   }
   if (!isValidObjectId(issued_from_id)) {
-    throw new ApiError('Invalid Issued From ID.',StatusCodes.BAD_REQUEST);
+    throw new ApiError('Invalid Issued From ID.', StatusCodes.BAD_REQUEST);
   }
 
   const issued_from_model = issued_from_map[issued_from];
+  console.log("issued_from_model => ",issued_from_model,issued_from)
 
   if (!issued_from_model) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid issued from type.');
@@ -106,8 +110,8 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
       .session(session);
     if (!issued_from_details) {
       throw new ApiError(
-      
-        'Issued from details not found.',  StatusCodes.NOT_FOUND,
+        'Issued from details not found.',
+        StatusCodes.NOT_FOUND
       );
     }
 
@@ -214,7 +218,7 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
     ]);
 
     if (!pressing_done_details) {
-      throw new ApiError( 'Order details not found.',StatusCodes.NOT_FOUND);
+      throw new ApiError('Order details not found.', StatusCodes.NOT_FOUND);
     }
 
     const payload = {
@@ -274,8 +278,8 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
       await finished_ready_for_packing_model.create([payload], { session });
     if (!add_finished_ready_for_packing_result) {
       throw new ApiError(
-    
-        'Failed to add finished ready for packing details.',  StatusCodes.INTERNAL_SERVER_ERROR
+        'Failed to add finished ready for packing details.',
+        StatusCodes.INTERNAL_SERVER_ERROR
       );
     }
 
@@ -301,8 +305,8 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
 
     if (update_issued_item_details?.matchedCount === 0) {
       throw new ApiError(
-     
-        'Issued item details not found for update.',   StatusCodes.NOT_FOUND
+        'Issued item details not found for update.',
+        StatusCodes.NOT_FOUND
       );
     }
 
@@ -311,8 +315,8 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
       update_issued_item_details?.modifiedCount === 0
     ) {
       throw new ApiError(
-        
-        'Failed to update issued item details.',StatusCodes.INTERNAL_SERVER_ERROR,
+        'Failed to update issued item details.',
+        StatusCodes.INTERNAL_SERVER_ERROR
       );
     }
 
@@ -388,8 +392,8 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
 
     if (!create_history_result) {
       throw new ApiError(
-        
-        'Failed to create history for issued item.',StatusCodes.INTERNAL_SERVER_ERROR,
+        'Failed to create history for issued item.',
+        StatusCodes.INTERNAL_SERVER_ERROR
       );
     }
 
@@ -713,8 +717,14 @@ export const revert_finished_ready_for_packing = catchAsync(
 
 export const fetch_issue_for_packing_items_by_customer_and_order_category =
   catchAsync(async (req, res) => {
-    const { customer_id, order_type, product_type } = req.query;
-    // console.log(customer_id, order_type, product_type, 'ohfkekuhkhg');
+    const { customer_id, order_type, product_type,is_edit } = req.query;
+    console.log('params', req.query);
+
+    const models_map = {
+      raw: 'raw_order_item_details',
+      decorative: 'decorative_order_item_details',
+      'series product': 'series_product_order_item_details',
+    };
     const match_query = {
       is_packing_done: false,
       'order_details.customer_id':
@@ -753,7 +763,7 @@ export const fetch_issue_for_packing_items_by_customer_and_order_category =
       },
       {
         $lookup: {
-          from: 'raw_order_item_details',
+          from: models_map[order_type?.toLowerCase()],
           localField: 'order_item_id',
           foreignField: '_id',
           as: 'order_item_details',
@@ -768,7 +778,7 @@ export const fetch_issue_for_packing_items_by_customer_and_order_category =
           // ]
         },
       },
-        {
+      {
         $unwind: {
           path: '$order_item_details',
           preserveNullAndEmptyArrays: true,
@@ -781,6 +791,8 @@ export const fetch_issue_for_packing_items_by_customer_and_order_category =
       //   },
       // },
     ];
+
+    // console.log("pipeline => ",pipeline)
 
     const issue_for_packing_items = await (
       order_type === order_category?.raw
