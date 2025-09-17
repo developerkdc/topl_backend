@@ -10,6 +10,7 @@ import {
   list_issue_for_dressing_raw_machine_data,
 } from '../../../../controllers/factory/dressing/issue_for_dressing/issue_for_dressing.controller.js';
 import multerFunction from '../../../../config/bulkUpload/bulk.js';
+import { update_machine_raw_and_mismatch_data } from '../../../../controllers/factory/dressing/issue_for_dressing/issue_for_dressing.controller.js';
 
 const issue_for_dressing_router = Router();
 
@@ -46,5 +47,8 @@ issue_for_dressing_router?.post(
   multerFunction('raw_machine_dressing_report').single('file'),
   bulk_upload_machine_raw_data_new
 );
+
+
+issue_for_dressing_router.post("/update-machine-raw-and-mismatch-data/:id", AuthMiddleware, update_machine_raw_and_mismatch_data);
 
 export default issue_for_dressing_router;

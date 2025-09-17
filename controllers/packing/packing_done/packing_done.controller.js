@@ -610,17 +610,91 @@ export const fetch_single_packing_done_item = catchAsync(async (req, res) => {
     throw new ApiError('Invalid Packing ID.', StatusCodes.BAD_REQUEST);
   };
 
+  // const pipeline = [
+  //   { $match: { _id: mongoose.Types.ObjectId.createFromHexString(id) } },
+  //   // {
+  //   //   $lookup: {
+  //   //     from: 'packing_done_items',
+  //   //     localField: '_id',
+  //   //     foreignField: 'packing_done_other_details_id',
+  //   //     as: 'packing_done_item_details',
+  //   //   }
+  //   // },
+
+  //    {
+  //     $lookup: {
+  //       from: 'packing_done_items',
+  //       localField: '_id',
+  //       foreignField: 'packing_done_other_details_id',
+  //       as: 'packing_done_item_details',
+  //     }
+  //   },
+
+  //   // Unwind done items to lookup issue_for_packing per item
+  //   // { $unwind: { path: '$packing_done_item_details', preserveNullAndEmptyArrays: true } },
+
+  //   // Lookup issue_for_packing for each packing_done_item
+  //   {
+  //     $lookup: {
+  //       from: 'finished_ready_for_packing_details',
+  //       localField: 'packing_done_item_details.issue_for_packing_id',
+  //       foreignField: '_id',
+  //       as: 'packing_done_item_details.issue_for_packing_data'
+  //     }
+  //   },
+
+    
+  // ];
   const pipeline = [
-    { $match: { _id: mongoose.Types.ObjectId.createFromHexString(id) } },
-    {
-      $lookup: {
-        from: 'packing_done_items',
-        localField: '_id',
-        foreignField: 'packing_done_other_details_id',
-        as: 'packing_done_item_details',
-      }
+  // Match the specific "packing_done_other_details" by ID
+  { $match: { _id: mongoose.Types.ObjectId.createFromHexString(id) } },
+
+  // Lookup all related packing_done_items
+  {
+    $lookup: {
+      from: 'packing_done_items',
+      localField: '_id',
+      foreignField: 'packing_done_other_details_id',
+      as: 'packing_done_items',
     }
-  ];
+  },
+
+  // Lookup the issue_for_packing data based on the issue_for_packing_id from the first packing_done_item
+  {
+    $lookup: {
+      from: 'finished_ready_for_packing_details',
+      let: { first_issue_id: { $arrayElemAt: ['$packing_done_items.issue_for_packing_id', 0] } },
+      pipeline: [
+        { $match: { $expr: { $eq: ['$_id', '$$first_issue_id'] } } }
+      ],
+      as: 'issue_for_packing_data'
+    }
+  },
+
+  // Now reshape the data into desired format
+  {
+    $addFields: {
+
+          issue_packing_data: {
+            $mergeObjects: [
+              { $arrayElemAt: ['$issue_for_packing_data', 0] },
+              { packing_done_items: '$packing_done_items' }
+            ]
+          }
+        
+      
+    }
+  },
+
+  // Optionally remove intermediate fields
+  {
+    $project: {
+      issue_for_packing_data: 0,
+      packing_done_items: 0
+    }
+  }
+];
+
 
   const result = await packing_done_other_details_model.aggregate(pipeline);
   const response = new ApiResponse(StatusCodes?.OK, 'Packing Done Items Fetched Successfully', result);
@@ -698,5 +772,3 @@ export const generatePackingSlip = catchAsync(async (req, res) => {
 
   return res.status(200).end(pdfBuffer);
 });
-
-
