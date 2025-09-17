@@ -609,20 +609,92 @@ export const fetch_single_packing_done_item = catchAsync(async (req, res) => {
   if (!isValidObjectId(id)) {
     throw new ApiError('Invalid Packing ID.', StatusCodes.BAD_REQUEST);
   };
+  const { customer_id, order_type, product_type } = req.query;
+  const match_query = {
+    is_packing_done: false,
+    product_type: product_type,
+    order_category: order_type,
+    'order_details.customer_id':
+      mongoose.Types.ObjectId.createFromHexString(customer_id),
+  };
+
 
   const pipeline = [
-    { $match: { _id: mongoose.Types.ObjectId.createFromHexString(id) } },
+    {
+      $match: { _id: mongoose.Types.ObjectId.createFromHexString(id) }
+    },
     {
       $lookup: {
-        from: 'packing_done_items',
-        localField: '_id',
-        foreignField: 'packing_done_other_details_id',
-        as: 'packing_done_item_details',
+        from: "packing_done_items",
+        localField: "_id",
+        foreignField: "packing_done_other_details_id",
+        as: "packing_items",
+        pipeline: [
+          {
+            $lookup: {
+              from: "finished_ready_for_packing_details",
+              localField: "issue_for_packing_id",
+              foreignField: "_id",
+              as: "issue_for_packing_details"
+            }
+          },
+          {
+            $group: {
+              _id: "$issue_for_packing_id",
+              issue_for_packing_details: { $first: "$issue_for_packing_details" },
+              items: { $push: "$$ROOT" }
+            }
+          },
+          {
+            $unset: "items.issue_for_packing_details"
+          },
+          {
+            $project: {
+              _id: 0,
+              issue_for_packing_details: {
+                $mergeObjects: [
+                  { $arrayElemAt: ["$issue_for_packing_details", 0] },
+                  { items: "$items" }
+                ]
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      $unionWith: {
+        coll: "finished_ready_for_packing_details",
+        pipeline: [
+          {
+            $lookup: {
+              from: 'orders',
+              localField: 'order_id',
+              foreignField: '_id',
+              as: 'order_details',
+            },
+          },
+          {
+            $unwind: {
+              path: '$order_details',
+              preserveNullAndEmptyArrays: true,
+            },
+          },
+          { $match: match_query },
+          {
+            $project: {
+              order_details: 0,
+            },
+          },
+        ]
       }
     }
-  ];
+  ]
+
+
 
   const result = await packing_done_other_details_model.aggregate(pipeline);
+  // const result = await finished_ready_for_packing_model.aggregate(pipeline);
   const response = new ApiResponse(StatusCodes?.OK, 'Packing Done Items Fetched Successfully', result);
 
   return res.status(response.statusCode).json(response);
