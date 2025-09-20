@@ -4,6 +4,7 @@ import {
   addCustomer,
   dropdownCustomer,
   editCustomer,
+  fetch_single_customer_by_id,
   fetchCustomerList,
   fetchSingleCustomer,
 } from '../../../controllers/masters/Customers/customers.controller.js';
@@ -16,5 +17,8 @@ customerRouter.get('/single-customer/:id', AuthMiddleware, fetchSingleCustomer);
 customerRouter.post('/list-customer', AuthMiddleware, fetchCustomerList);
 
 customerRouter.get('/dropdown-customer', AuthMiddleware, dropdownCustomer);
+
+//mobile API's
+customerRouter.post('/single-customer-by-id', fetch_single_customer_by_id);
 
 export default customerRouter;

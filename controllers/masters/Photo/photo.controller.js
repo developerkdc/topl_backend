@@ -607,7 +607,7 @@ export const dropdownPhoto = catchAsync(async (req, res, next) => {
     status: true,
   };
 
-  if(sub_category.hybrid === sub_category_type){
+  if (sub_category.hybrid === sub_category_type) {
     match_query.sub_category_type = sub_category.hybrid
   }
 
@@ -897,3 +897,8 @@ export const download_excel_photo_album = catchAsync(async (req, res, next) => {
   //   })
   // );
 });
+
+
+export const fetch_available_photo_quantity = catchAsync(async (req, res) => {
+
+})

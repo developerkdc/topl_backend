@@ -8,6 +8,7 @@ import ApiError from '../../../utils/errors/apiError.js';
 import ApiResponse from '../../../utils/ApiResponse.js';
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
+import { StatusCodes } from '../../../utils/constants.js';
 
 export const addCustomer = catchAsync(async (req, res, next) => {
   const session = await mongoose.startSession();
@@ -490,4 +491,124 @@ export const dropdownCustomer = catchAsync(async (req, res, next) => {
     customerList
   );
   return res.status(200).json(response);
+});
+
+//mobile API's
+export const fetch_single_customer_by_id = catchAsync(async (req, res, next) => {
+  const { customerId } = req.body;
+
+  if (!customerId) {
+    throw new ApiError("Customer Id is required", StatusCodes.NOT_FOUND);
+  }
+
+  if (!mongoose.isValidObjectId(customerId)) {
+    return next(new ApiError('Invalid Customer Id', 400));
+  }
+
+  const aggregate = [
+    {
+      $match: {
+        _id: mongoose.Types.ObjectId.createFromHexString(customerId),
+      },
+    },
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'created_by',
+        foreignField: '_id',
+        pipeline: [
+          {
+            $project: {
+              user_name: 1,
+              user_type: 1,
+              dept_name: 1,
+              first_name: 1,
+              last_name: 1,
+              email_id: 1,
+              mobile_no: 1,
+            },
+          },
+        ],
+        as: 'created_by',
+      },
+    },
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'updated_by',
+        foreignField: '_id',
+        pipeline: [
+          {
+            $project: {
+              user_name: 1,
+              user_type: 1,
+              dept_name: 1,
+              first_name: 1,
+              last_name: 1,
+              email_id: 1,
+              mobile_no: 1,
+            },
+          },
+        ],
+        as: 'updated_by',
+      },
+    },
+    {
+      $lookup: {
+        from: 'transporters',
+        localField: 'preferable_transport_for_part_load',
+        foreignField: '_id',
+        pipeline: [
+          {
+            $project: {
+              name: 1,
+              branch: 1,
+              transport_id: 1,
+              type: 1,
+            },
+          },
+        ],
+        as: 'preferable_transport_for_part_load',
+      },
+    },
+    {
+      $unwind: {
+        path: '$preferable_transport_for_part_load',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $unwind: {
+        path: '$created_by',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $unwind: {
+        path: '$updated_by',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $lookup: {
+        from: 'customer_clients',
+        localField: '_id',
+        foreignField: 'customer_id',
+        as: 'customer_clients',
+      },
+    },
+  ];
+
+  const customerData = await customer_model.aggregate(aggregate);
+
+  if (customerData && customerData?.length <= 0) {
+    return next(new ApiError('Document Not found', 404));
+  }
+
+  const response = new ApiResponse(
+    200,
+    'Customer Data Fetched Successfully',
+    customerData?.[0]
+  );
+  return res.status(response.statusCode).json(response);
 });

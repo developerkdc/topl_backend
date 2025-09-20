@@ -690,9 +690,6 @@ export const fetch_single_packing_done_item = catchAsync(async (req, res) => {
       }
     }
   ]
-
-
-
   const result = await packing_done_other_details_model.aggregate(pipeline);
   // const result = await finished_ready_for_packing_model.aggregate(pipeline);
   const response = new ApiResponse(StatusCodes?.OK, 'Packing Done Items Fetched Successfully', result);
