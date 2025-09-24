@@ -175,7 +175,7 @@ const dispatch_items_schema = new mongoose.Schema(
     discount_percentage: {
       type: Number,
       default: 0,
-      required: [true, 'Item Amount is required'],
+      // required: [true, 'Item Amount is required'],
     },
     discount_value: {
       type: Number,
