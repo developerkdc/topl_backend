@@ -468,6 +468,20 @@ export const fetch_all_finished_ready_for_packing = catchAsync(
         as: 'grouping_details',
       },
     };
+
+    const aggOrderDetails = {
+      $lookup: {
+        from: 'orders',
+        localField: 'order_id',
+        foreignField: '_id',
+        as: 'order_details',
+        pipeline: [
+          {$project: {
+            owner_name: 1
+          }}
+        ]
+      },
+    };
     const aggCreatedByLookup = {
       $lookup: {
         from: 'users',
@@ -528,6 +542,13 @@ export const fetch_all_finished_ready_for_packing = catchAsync(
         preserveNullAndEmptyArrays: true,
       },
     };
+    const aggUnwindOrderDetails = {
+      $unwind: {
+        path: '$order_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    };
+    
     const aggMatch = {
       $match: {
         ...match_query,
@@ -548,6 +569,8 @@ export const fetch_all_finished_ready_for_packing = catchAsync(
     const listAggregate = [
       aggGroupingDetails,
       aggUnwindGroupingDetails,
+      aggOrderDetails,
+      aggUnwindOrderDetails,
       aggCreatedByLookup,
       aggCreatedByUnwind,
       aggUpdatedByLookup,

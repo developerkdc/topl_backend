@@ -18,6 +18,6 @@ packing_done_router.post(
   AuthMiddleware,
   revert_packing_done_items
 );
-packing_done_router.get('/fetch-single-packing-done-details/:id', AuthMiddleware, fetch_single_packing_done_item)
+packing_done_router.get('/fetch-single-packing-done-details/:request_id', AuthMiddleware, fetch_single_packing_done_item)
 
 export default packing_done_router;
