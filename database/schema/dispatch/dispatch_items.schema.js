@@ -83,6 +83,12 @@ const dispatch_items_schema = new mongoose.Schema(
       // required: [true, 'Group Number ID is required.'],
       default: null,
     },
+    photo_no: {
+      type: String,
+      default: null,
+      trim: true,
+      uppercase: true,
+    },
     log_no: {
       type: String,
       // required: [true, 'Log Number is required.'],
