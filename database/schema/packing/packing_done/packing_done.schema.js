@@ -23,6 +23,9 @@ const packing_done_other_details_schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Customer ID is required.'],
     },
+    photo_no: {
+      type: String,
+    },
     order_category: {
       type: String,
       enum: {
