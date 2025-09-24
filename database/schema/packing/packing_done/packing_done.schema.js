@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { order_category } from '../../../Utils/constants/constants.js';
+import { type } from 'os';
 
 const packing_done_other_details_schema = new mongoose.Schema(
   {
@@ -56,6 +57,10 @@ const packing_done_other_details_schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Updated by is required.'],
     },
+    remark: {
+      type: String,
+      default: null
+    }
   },
   {
     timestamps: true,
@@ -220,6 +225,13 @@ const packing_done_items_schema = new mongoose.Schema(
   }
 );
 
+const indexed_fields = [
+  [{ packing_done_other_details_id: 1 }]
+]
+
+indexed_fields.forEach((field) => {
+  packing_done_items_schema.index(...field)
+})
 export const packing_done_other_details_model = mongoose.model(
   'packing_done_other_details',
   packing_done_other_details_schema,
