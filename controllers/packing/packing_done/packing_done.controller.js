@@ -269,6 +269,7 @@ export const update_packing_details = catchAsync(async (req, res) => {
         packing_done_item_details?.map((item) => item?.issue_for_packing_id)
       ),
     ];
+    console.log(issue_for_packing_set)
     const update_issue_for_order_result = await (
       other_details?.order_category === order_category?.raw
         ? issue_for_order_model
@@ -602,112 +603,148 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
 });
 
 export const fetch_single_packing_done_item = catchAsync(async (req, res) => {
-  const { id } = req.params;
+  const {request_id} = req.params;
+  const id = request_id?.trim()
+  let issue_for_packing_model;
   if (!id) {
     throw new ApiError('Packing Done ID is required.', StatusCodes.BAD_REQUEST);
   }
   if (!isValidObjectId(id)) {
     throw new ApiError('Invalid Packing ID.', StatusCodes.BAD_REQUEST);
+  }
+  const { customer_id, order_type, product_type } = req.query;
+  const match_query = {
+    is_packing_done: false,
+    // product_type: product_type,
+    // order_category: order_type,
+    'order_details.customer_id':
+      mongoose.Types.ObjectId.createFromHexString(customer_id),
+  };
+  const models_map = {
+    raw: 'raw_order_item_details',
+    decorative: 'decorative_order_item_details',
+    'series product': 'series_product_order_item_details',
   };
 
-  // const pipeline = [
-  //   { $match: { _id: mongoose.Types.ObjectId.createFromHexString(id) } },
-  //   // {
-  //   //   $lookup: {
-  //   //     from: 'packing_done_items',
-  //   //     localField: '_id',
-  //   //     foreignField: 'packing_done_other_details_id',
-  //   //     as: 'packing_done_item_details',
-  //   //   }
-  //   // },
-
-  //    {
-  //     $lookup: {
-  //       from: 'packing_done_items',
-  //       localField: '_id',
-  //       foreignField: 'packing_done_other_details_id',
-  //       as: 'packing_done_item_details',
-  //     }
-  //   },
-
-  //   // Unwind done items to lookup issue_for_packing per item
-  //   // { $unwind: { path: '$packing_done_item_details', preserveNullAndEmptyArrays: true } },
-
-  //   // Lookup issue_for_packing for each packing_done_item
-  //   {
-  //     $lookup: {
-  //       from: 'finished_ready_for_packing_details',
-  //       localField: 'packing_done_item_details.issue_for_packing_id',
-  //       foreignField: '_id',
-  //       as: 'packing_done_item_details.issue_for_packing_data'
-  //     }
-  //   },
-
-    
-  // ];
-  const pipeline = [
-  // Match the specific "packing_done_other_details" by ID
-  { $match: { _id: mongoose.Types.ObjectId.createFromHexString(id) } },
-
-  // Lookup all related packing_done_items
-  {
-    $lookup: {
-      from: 'packing_done_items',
-      localField: '_id',
-      foreignField: 'packing_done_other_details_id',
-      as: 'packing_done_items',
-    }
-  },
-
-  // Lookup the issue_for_packing data based on the issue_for_packing_id from the first packing_done_item
-  {
-    $lookup: {
-      from: 'finished_ready_for_packing_details',
-      let: { first_issue_id: { $arrayElemAt: ['$packing_done_items.issue_for_packing_id', 0] } },
-      pipeline: [
-        { $match: { $expr: { $eq: ['$_id', '$$first_issue_id'] } } }
-      ],
-      as: 'issue_for_packing_data'
-    }
-  },
-
-  // Now reshape the data into desired format
-  {
-    $addFields: {
-
-          issue_packing_data: {
-            $mergeObjects: [
-              { $arrayElemAt: ['$issue_for_packing_data', 0] },
-              { packing_done_items: '$packing_done_items' }
-            ]
-          }
-        
-      
-    }
-  },
-
-  // Optionally remove intermediate fields
-  {
-    $project: {
-      issue_for_packing_data: 0,
-      packing_done_items: 0
-    }
+  if (order_type === order_category?.raw) {
+    match_query.issued_from = product_type;
+    match_query['order_details.order_category'] = order_type;
+  } else {
+    match_query.product_type = product_type;
+    match_query.order_category = order_type;
   }
-];
 
+  if (order_type === order_category?.raw) {
+    issue_for_packing_model = 'issued_for_order_items';
+  } else {
+    issue_for_packing_model = 'finished_ready_for_packing_details';
+  }
+  const pipeline = [
+    {
+      $match: { _id: mongoose.Types.ObjectId.createFromHexString(id) },
+    },
+    {
+      $lookup: {
+        from: 'packing_done_items',
+        localField: '_id',
+        foreignField: 'packing_done_other_details_id',
+        as: 'packing_items',
+        pipeline: [
+          {
+            $lookup: {
+              from: 'finished_ready_for_packing_details',
+              localField: 'issue_for_packing_id',
+              foreignField: '_id',
+              as: 'issue_for_packing_details',
+            },
+          },
+          {
+            $group: {
+              _id: '$issue_for_packing_id',
+              issue_for_packing_details: {
+                $first: '$issue_for_packing_details',
+              },
+              items: { $push: '$$ROOT' },
+            },
+          },
+          {
+            $unset: 'items.issue_for_packing_details',
+          },
+          {
+            $project: {
+              _id: 0,
+              issue_for_packing_details: {
+                $mergeObjects: [
+                  { $arrayElemAt: ['$issue_for_packing_details', 0] },
+                  { items: '$items' },
+                ],
+              },
+            },
+          },
+        ],
+      },
+    },
+    {
+      $unionWith: {
+        coll: issue_for_packing_model,
+        pipeline: [
+          {
+            $lookup: {
+              from: 'orders',
+              localField: 'order_id',
+              foreignField: '_id',
+              as: 'order_details',
+            },
+          },
+          {
+            $unwind: {
+              path: '$order_details',
+              preserveNullAndEmptyArrays: true,
+            },
+          },
+          {
+            $lookup: {
+              from: models_map[order_type?.toLowerCase()],
+              localField: 'order_item_id',
+              foreignField: '_id',
+              as: 'order_item_details',
+            },
+          },
+          {
+            $unwind: {
+              path: '$order_item_details',
+              preserveNullAndEmptyArrays: true,
+            },
+          },
+          { $match: match_query },
+          {
+            $project: {
+              order_details: 0,
+            },
+          },
+        ],
+      },
+    },
+  ];
 
   const result = await packing_done_other_details_model.aggregate(pipeline);
-  const response = new ApiResponse(StatusCodes?.OK, 'Packing Done Items Fetched Successfully', result);
+  const response = new ApiResponse(
+    StatusCodes?.OK,
+    'Packing Done Items Fetched Successfully',
+    result
+  );
 
   return res.status(response.statusCode).json(response);
-})
+});
 
 export const generatePackingSlip = catchAsync(async (req, res) => {
   const { id } = req.params;
 
   const item = await packing_done_items_model.findById(id).lean();
   if (!item) {
-    return res.status(404).json({ status: false, message: 'Packing item not found' });
+    return res
+      .status(404)
+      .json({ status: false, message: 'Packing item not found' });
   }
 
   const otherDetails = await packing_done_other_details_model
@@ -715,7 +752,9 @@ export const generatePackingSlip = catchAsync(async (req, res) => {
     .lean();
 
   if (!otherDetails) {
-    return res.status(404).json({ status: false, message: 'Packing details not found' });
+    return res
+      .status(404)
+      .json({ status: false, message: 'Packing details not found' });
   }
 
   const allItems = await packing_done_items_model
@@ -727,7 +766,10 @@ export const generatePackingSlip = catchAsync(async (req, res) => {
     : '';
 
   // Compute totals
-  const totalSheets = allItems.reduce((sum, i) => sum + (i.no_of_sheets || 0), 0);
+  const totalSheets = allItems.reduce(
+    (sum, i) => sum + (i.no_of_sheets || 0),
+    0
+  );
   const totalSqMtr = allItems.reduce((sum, i) => sum + (i.sqm || 0), 0);
 
   // Compute item_summary (group by item + size)
@@ -760,7 +802,15 @@ export const generatePackingSlip = catchAsync(async (req, res) => {
 
   const pdfBuffer = await generatePDF({
     templateName: 'packing_slip',
-    templatePath: path.join(__dirname, '..', '..', '..', 'views', 'packing_done', 'packing_slip.hbs'),
+    templatePath: path.join(
+      __dirname,
+      '..',
+      '..',
+      '..',
+      'views',
+      'packing_done',
+      'packing_slip.hbs'
+    ),
     data: combinedData,
   });
 

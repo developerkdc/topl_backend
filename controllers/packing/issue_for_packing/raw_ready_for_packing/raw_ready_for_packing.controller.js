@@ -48,6 +48,7 @@ export const fetch_all_raw_ready_for_packing = catchAsync(async (req, res) => {
   const match_query = {
     ...filterData,
     ...search_query,
+    is_packing_done: false
     // is_challan_done: false,
   };
 
