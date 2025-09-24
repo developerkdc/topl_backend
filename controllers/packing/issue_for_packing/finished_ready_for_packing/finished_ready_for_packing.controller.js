@@ -627,8 +627,8 @@ export const revert_finished_ready_for_packing = catchAsync(
           .lean();
       if (!finished_ready_for_packing_details) {
         throw new ApiError(
-          StatusCodes.NOT_FOUND,
-          'Finished ready for packing details not found.'
+          'Finished ready for packing details not found.',
+          StatusCodes.NOT_FOUND
         );
       }
 
