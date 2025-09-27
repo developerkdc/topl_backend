@@ -7,6 +7,7 @@ import formidable from 'formidable';
 import path from 'path';
 import fs from 'fs';
 import exceljs from 'exceljs';
+import moment from 'moment';
 
 const master_config_model = {
     polish_master: {
@@ -50,11 +51,13 @@ const master_config_model = {
     },
     dispatch_address_master: {
         model: 'dispatchAddress',
-        fields: ['address	', 'country', 'state', 'city', 'pincode	', 'gst_number'],
+        fields: ['address', 'country', 'state', 'city', 'pincode', 'gst_number'],
+        filepath: '/bulk_uploads/masters/dispatch_address_master/',
     },
     transport_master: {
         model: 'transporters',
-        fields: ['name	', 'branch', 'area_of_operation', 'type', 'transport_id'],
+        fields: ['name', 'branch', 'area_of_operation', 'type', 'transport_id'],
+        filepath: '/bulk_uploads/masters/transport_master/',
     },
     color_master: {
         model: 'colors',
@@ -63,42 +66,52 @@ const master_config_model = {
     process_master: {
         model: 'process',
         fields: ['name', 'process_type'],
+        filepath: '/bulk_uploads/masters/process_master/',
     },
     pattern_master: {
         model: 'patterns',
         fields: ['name'],
+        filepath: '/bulk_uploads/masters/pattern_master/',
     },
     character_master: {
-        model: 'characters',
+        model: 'character',
         fields: ['name'],
+        filepath: '/bulk_uploads/masters/character_master/',
     },
     department_master: {
-        model: 'departments',
+        model: 'department',
         fields: ['dept_name', 'remark'],
+        filepath: '/bulk_uploads/masters/department_master/',
     },
     gst_master: {
-        model: 'gsts',
+        model: 'gst',
         fields: ['gst_percentage', 'gst_remarks'],
+        filepath: '/bulk_uploads/masters/gst_master/',
     },
     expense_type_master: {
-        model: 'expenseTypes',
+        model: 'expense_type',
         fields: ['expense_type_name', 'expense_type_remarks'],
+        filepath: '/bulk_uploads/masters/expense_type_master/',
     },
     series_master: {
-        model: 'series_masters',
+        model: 'series_master',
         fields: ['series_name', 'remark'],
+        filepath: '/bulk_uploads/masters/series_master/',
     },
     cut_master: {
-        model: 'cuts',
+        model: 'cut',
         fields: ['cut_name', 'cut_remarks'],
+        filepath: '/bulk_uploads/masters/cut_master/',
     },
     currency_master: {
-        model: 'currencies',
+        model: 'currency',
         fields: ['currency_name', 'currency_remarks'],
+        filepath: '/bulk_uploads/masters/currency_master/',
     },
     grade_master: {
-        model: 'grades',
+        model: 'grade',
         fields: ['grade_name', 'grade_remarks'],
+        filepath: '/bulk_uploads/masters/grade_master/',
     },
     unit_master: {
         model: 'unit',
@@ -108,14 +121,17 @@ const master_config_model = {
     thickness_master: {
         model: 'thickness',
         fields: ['thickness', 'category', 'remark'],
+        filepath: '/bulk_uploads/masters/thickness_master/',
     },
     width_master: {
         model: 'width',
         fields: ['width', 'remark'],
+        filepath: '/bulk_uploads/masters/width_master/',
     },
     length_master: {
         model: 'length',
         fields: ['length', 'remark'],
+        filepath: '/bulk_uploads/masters/length_master/',
     },
     supplier_master: {
         model: 'supplier',
@@ -169,10 +185,27 @@ const master_config_model = {
         ],
         filepath: '/bulk_uploads/masters/category_master/',
     },
+    color_master: {
+        model: 'colors',
+        fields: [
+            'process_name', 'type', 'name'
+        ],
+        filepath: '/bulk_uploads/masters/color_master/',
+    },
+    customer_master: {
+        model: 'customers',
+        fields: ['company_name', 'customer_type', 'owner_name', 'supplier_type', 'dob', 'email_id', 'web_url', 'gst_number', 'pan_number', 'legal_name', 'preferable_transport_for_part_load', 'is_tcs_applicable', 'is_insurance_applicable', 'branding_type', 'credit_schedule', 'freight', 'local_freight', "remark"],
+        filepath: '/bulk_uploads/masters/customer_master/',
+    },
     machine_master: {
         model: 'machine',
         fields: ['machine_name', 'department'],
         filepath: '/bulk_uploads/masters/machine_master/',
+    },
+    transporter_master: {
+        model: 'transporters',
+        fields: ['name', 'branch', 'area_of_operation', 'type', 'transport_id'],
+        filepath: '/bulk_uploads/masters/transporter_master/',
     },
 };
 
@@ -185,7 +218,16 @@ const parse_form = (req, form) => {
     });
 };
 
-// Custom functions for masters with lookups/dependencies
+const build_address = (prefix, doc) => {
+    return {
+        address: doc[`${prefix}_address`] || null,
+        country: doc[`${prefix}_country`] || null,
+        state: doc[`${prefix}_state`] || null,
+        city: doc[`${prefix}_city`] || null,
+        pincode: doc[`${prefix}_pincode`] || null,
+    }
+}
+
 async function subcategory_master(doc, session) {
     // Lookup category by name and get category_id
     if (doc.category) {
@@ -311,9 +353,6 @@ async function supplier_branches_master(doc, session) {
 
     return doc;
 }
-
-
-
 async function machine_master(doc, session) {
     // Lookup department by name
     if (doc.department) {
@@ -334,6 +373,179 @@ async function machine_master(doc, session) {
     }
 
     return doc;
+}
+async function color_master(doc, session) {
+    if (doc?.process_name) {
+        const proccess_doc = await model('process')
+            .findOne({ name: doc?.process_name })
+            .lean()
+            .session(session);
+
+        if (!proccess_doc) {
+            throw new ApiError(
+                `Invalid Process "${doc.process_name}" - not found in Processes`,
+                StatusCodes.BAD_REQUEST
+            );
+        }
+
+        // Replace department name with department_id
+        doc.process_id = proccess_doc._id;
+        doc.process_name = proccess_doc.name;
+    }
+
+    return doc;
+}
+async function customer_master(doc, session) {
+
+    if (doc?.preferable_transport_for_part_load) {
+        const transporter_doc = await model('transporters')
+            .findOne({ name: doc.preferable_transport_for_part_load })
+            .lean()
+            .session(session);
+
+        if (!transporter_doc) {
+            throw new ApiError(
+                `Invalid Transporter "${doc.preferable_transport_for_part_load}" - not found in transporters`,
+                StatusCodes.BAD_REQUEST
+            );
+        }
+        doc.preferable_transport_for_part_load = transporter_doc._id;
+        doc.dob = moment(doc?.dob).format('DD/MM/YYYY');
+    }
+    doc.photo_type = {
+        photo_type_a: doc?.photo_type_a ?? null,
+        photo_type_b: doc?.photo_type_b ?? null,
+        photo_type_c: doc?.photo_type_c ?? null,
+    };
+
+    doc.adress = {
+        billing_address: build_address('billing', doc),
+        delivery_address: build_address('delivery', doc),
+        alternate_delivery_address: build_address('alternate_delivery', doc),
+        communication_address: build_address('communication', doc),
+    }
+
+    return doc;
+}
+
+async function photo_master(doc, session) {
+    let value_added_processes, additonal_charcters = [];
+
+    switch (doc) {
+        case doc?.group_no:
+            const group_doc = await model('grouping_done_items_details').findOne({ grouping_done_items_details: doc?.group_no }).session(session);
+
+            if (!group_doc) {
+                throw new ApiError(`${doc?.group_no} not found.`, StatusCodes.NOT_FOUND)
+            };
+
+            doc.group_id = group_doc?._id
+            break;
+        case doc?.item_name:
+            const item = await model('item_name').findOne({ item_name: doc?.item_name }).session(session);
+            if (!item) {
+                throw new ApiError(`${doc?.item_name} not found.`, StatusCodes.NOT_FOUND)
+            };
+
+            doc.item_name_id = item?._id
+            doc.item_name = item?.item_name;
+            break;
+
+        case doc?.timber_colour_name:
+            const color = await model('colors').findOne({ name: doc?.timber_colour_name }).session(session);
+
+            if (!color) {
+                throw new ApiError(`${doc?.timber_colour_name} not found.`, StatusCodes.NOT_FOUND)
+            };
+            doc.timber_colour_id = color?._id;
+            doc.timber_colour_name = color.name
+            break;
+
+        case doc?.process_name:
+            const process = await model('process').findOne({ name: doc?.process_name }).session(session);
+
+            if (!process) {
+                throw new ApiError(`${doc?.process_name} not found.`, StatusCodes.NOT_FOUND)
+            };
+            doc.process_id = process?._id;
+            doc.process_name = process.name
+            break;
+        case doc?.grade_name:
+            const grade = await model('grade').findOne({ grade_name: doc?.grade_name }).session(session);
+
+            if (!grade) {
+                throw new ApiError(`${doc?.grade_name} not found.`, StatusCodes.NOT_FOUND)
+            };
+            doc.grade_id = grade?._id;
+            doc.grade_name = grade.grade_name
+            break;
+        case doc?.series_name:
+            const series = await model('series_master').findOne({ series_name: doc?.series_name }).session(session);
+
+            if (!series) {
+                throw new ApiError(`${doc?.series_name} not found.`, StatusCodes.NOT_FOUND)
+            };
+            doc.series_id = series?._id;
+            doc.series_name = series.series_name
+            break;
+        case doc?.pattern_name:
+            const pattern = await model('patterns').findOne({ name: doc?.pattern_name }).session(session);
+
+            if (!pattern) {
+                throw new ApiError(`${doc?.pattern_name} not found.`, StatusCodes.NOT_FOUND)
+            };
+            doc.pattern_id = pattern?._id;
+            doc.pattern_name = pattern.name
+            break;
+        case doc?.character_name:
+            const character = await model('characters').findOne({ name: doc?.character_name }).session(session);
+
+            if (!character) {
+                throw new ApiError(`${doc?.character_name} not found.`, StatusCodes.NOT_FOUND)
+            };
+            doc.character_id = character?._id;
+            doc.character_name = character.name
+            break;
+        case doc?.cut_name:
+            const cut = await model('cuts').findOne({ cut_name: doc?.cut_name }).session(session);
+
+            if (!cut) {
+                throw new ApiError(`${doc?.cut_name} not found.`, StatusCodes.NOT_FOUND)
+            };
+            doc.cut_id = cut?._id;
+            doc.cut_name = cut.name
+            break;
+
+        case doc?.value_added_process:
+            const value_added_process = await model('process').findOne({ name: doc?.value_added_process }).session(session);
+
+            if (!value_added_process) {
+                throw new ApiError(`${doc?.value_added_process} not found.`, StatusCodes.NOT_FOUND)
+            };
+            value_added_processes.push({
+                process_id: value_added_process?._id,
+                process_name: value_added_process.name
+            });
+            doc.value_added_process = value_added_processes;
+
+            break;
+        case doc?.additional_character:
+            const additional_character_doc = await model('characters').findOne({ name: doc?.additional_character }).session(session);
+
+            if (!additional_character_doc) {
+                throw new ApiError(`${doc?.additional_character} not found.`, StatusCodes.NOT_FOUND)
+            };
+            additonal_charcters.push({
+                type: additional_character_doc?._id,
+                character_name: additional_character_doc?.name
+            })
+            doc.additional_character = additonal_charcters
+            break;
+
+        default:
+            break;
+    }
+
 }
 export const bulk_upload_masters = catchAsync(async (req, res) => {
     const { master_name } = req.query;
@@ -408,6 +620,9 @@ export const bulk_upload_masters = catchAsync(async (req, res) => {
 
                     // Apply custom logic for masters with lookups
                     switch (master_name) {
+                        // case 'category_master':
+                        //     doc = await category_master(doc, session);
+                        //     break;
                         case 'sub_category_master':
                             doc = await subcategory_master(doc, session);
                             break;
@@ -420,11 +635,20 @@ export const bulk_upload_masters = catchAsync(async (req, res) => {
                         case 'machine_master':
                             doc = await machine_master(doc, session);
                             break;
+                        case 'customer_master':
+                            doc = await customer_master(doc, session);
+                            break;
+                        case 'color_master':
+                            doc = await color_master(doc, session);
+                            break;
+                        case 'photo_master':
+                            doc = await photo_master(doc, session);
+                            break;
                         default:
                             break;
                     }
 
-                    if (["unit_master"]?.includes(master_name)) {
+                    if (["unit_master", "grade_master", "currency_master", "cut_master", "expense_type_master", "gst_master", "department_master"]?.includes(master_name)) {
                         doc.created_employee_id = user?._id;
                     } else {
                         doc.created_by = user?._id
@@ -462,3 +686,6 @@ export const bulk_upload_masters = catchAsync(async (req, res) => {
         await session.endSession();
     }
 });
+
+
+
