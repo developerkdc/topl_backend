@@ -97,7 +97,7 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
   }
 
   const issued_from_model = issued_from_map[issued_from];
-  console.log("issued_from_model => ",issued_from_model,issued_from)
+  console.log('issued_from_model => ', issued_from_model, issued_from);
 
   if (!issued_from_model) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid issued from type.');
@@ -476,10 +476,12 @@ export const fetch_all_finished_ready_for_packing = catchAsync(
         foreignField: '_id',
         as: 'order_details',
         pipeline: [
-          {$project: {
-            owner_name: 1
-          }}
-        ]
+          {
+            $project: {
+              owner_name: 1,
+            },
+          },
+        ],
       },
     };
     const aggCreatedByLookup = {
@@ -548,7 +550,7 @@ export const fetch_all_finished_ready_for_packing = catchAsync(
         preserveNullAndEmptyArrays: true,
       },
     };
-    
+
     const aggMatch = {
       $match: {
         ...match_query,
@@ -740,7 +742,7 @@ export const revert_finished_ready_for_packing = catchAsync(
 
 export const fetch_issue_for_packing_items_by_customer_and_order_category =
   catchAsync(async (req, res) => {
-    const { customer_id, order_type, product_type,is_edit } = req.query;
+    const { customer_id, order_type, product_type, is_edit } = req.query;
     console.log('params', req.query);
 
     const models_map = {
@@ -769,13 +771,6 @@ export const fetch_issue_for_packing_items_by_customer_and_order_category =
           localField: 'order_id',
           foreignField: '_id',
           as: 'order_details',
-          // pipeline:[
-          //   {
-          //     $project : {
-          //       order_no : 1
-          //     }
-          //   }
-          // ]
         },
       },
       {
@@ -790,15 +785,6 @@ export const fetch_issue_for_packing_items_by_customer_and_order_category =
           localField: 'order_item_id',
           foreignField: '_id',
           as: 'order_item_details',
-          //  pipeline:[
-          //   {
-          //     $project : {
-          //       item_no : 1,
-          //       order_id  :1,
-          //       raw_material : 1
-          //     }
-          //   }
-          // ]
         },
       },
       {
@@ -807,15 +793,22 @@ export const fetch_issue_for_packing_items_by_customer_and_order_category =
           preserveNullAndEmptyArrays: true,
         },
       },
+      {
+        $lookup: {
+          from: 'grouping_done_items_details',
+          localField: 'group_no',
+          foreignField: 'group_no',
+          as: 'grouping_details',
+        },
+      },
+      {
+        $unwind: {
+          path:'$grouping_details',
+          preserveNullAndEmptyArrays: true,
+        }
+      },
       { $match: match_query },
-      // {
-      //   $project: {
-      //     order_details: 0,
-      //   },
-      // },
     ];
-
-    // console.log("pipeline => ",pipeline)
 
     const issue_for_packing_items = await (
       order_type === order_category?.raw
@@ -830,6 +823,7 @@ export const fetch_issue_for_packing_items_by_customer_and_order_category =
     );
     return res.status(response.statusCode).json(response);
   });
+
 
 export const generatePackingInvoiceBillPDF = catchAsync(async (req, res) => {
   const { id } = req.params;

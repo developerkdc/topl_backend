@@ -462,7 +462,7 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
   const match_query = {
     ...filterData,
     ...search_query,
-    is_dispatch_done: false,
+    // is_dispatch_done: false,
   };
 
   const aggregatePackingDoneItems = {
