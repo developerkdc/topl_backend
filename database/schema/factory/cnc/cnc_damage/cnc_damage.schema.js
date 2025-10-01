@@ -11,6 +11,10 @@ const cnc_damage_schema = new mongoose.Schema(
       type: Number,
       required: [true, 'No. of Sheets is required.'],
     },
+    amount: {
+      type: Number,
+      required: [true, 'Amount is required.'],
+    },
     sqm: {
       type: Number,
       required: [true, 'SQM is required.'],
