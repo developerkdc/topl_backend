@@ -751,7 +751,7 @@ export const revert_issued_for_smoking_dying_item = catchAsync(
           delete_dressing_done_history_doc.deletedCount === 0
         ) {
           throw new ApiError(
-            'Failed to delete dressing history documnet',
+            'Failed to delete dressing history document',
             StatusCodes.BAD_REQUEST
           );
         }
