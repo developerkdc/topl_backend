@@ -1282,7 +1282,7 @@ export const fetch_all_dispatch_details = catchAsync(async (req, res, next) => {
                   onNull: 0,
                 },
               },
-              1000, 
+              1000,
             ],
           },
           {
@@ -1560,8 +1560,14 @@ export const packing_done_dropdown = catchAsync(async (req, res, next) => {
 
   const match = {
     customer_id: mongoose.Types.ObjectId.createFromHexString(customer_id),
-    order_category,
-    product_type,
+  }
+
+  if (order_category && order_category.length > 0) {
+    match.order_category = { $in: order_category };
+  }
+
+  if (product_type && product_type.length > 0) {
+    match.product_type = { $in: product_type };
   }
 
   if (exclude_dispatched) {

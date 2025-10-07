@@ -62,7 +62,7 @@ const dispatch_items_schema = new mongoose.Schema(
         ]?.join(', ')}`,
       },
       uppercase: true,
-      required: [true, 'Order category is required'],
+      // required: [true, 'Order category is required'],
       trim: true,
     },
     product_category: {
