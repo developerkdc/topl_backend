@@ -607,7 +607,7 @@ export const dropdownPhoto = catchAsync(async (req, res, next) => {
     status: true,
   };
 
-  if(sub_category.hybrid === sub_category_type){
+  if (sub_category.hybrid === sub_category_type) {
     match_query.sub_category_type = sub_category.hybrid
   }
 
@@ -795,6 +795,31 @@ export const downloadPhotoAlbumZip = catchAsync(async (req, res, next) => {
       archive.file(fullPath, {
         name: downloadFileName,
       });
+    } else {
+      console.warn(`File not found: ${fullPath}`);
+    }
+  }
+
+  await archive.finalize();
+});
+
+export const downloadPhotoAlbumImagesZip = catchAsync(async (req, res, next) => {
+  const { filenames = [] } = req.body;
+  if (!Array.isArray(filenames) || filenames.length === 0) {
+    return res.status(400).json({ status: false, message: 'No photos selected' });
+  }
+
+  res.setHeader('Content-Type', 'application/zip');
+  res.setHeader('Content-Disposition', 'attachment; filename=photos.zip');
+
+  const archive = archiver('zip', { zlib: { level: 9 } });
+  archive.on('error', (err) => next(err));
+  archive.pipe(res);
+
+  for (let filename of filenames) {
+    const fullPath = path.join(process.cwd(), 'public', 'upload', 'images', 'photo_no', filename);
+    if (fs.existsSync(fullPath)) {
+      archive.file(fullPath, { name: filename });
     } else {
       console.warn(`File not found: ${fullPath}`);
     }

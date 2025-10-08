@@ -1258,10 +1258,63 @@ export const fetch_all_dispatch_details = catchAsync(async (req, res, next) => {
       preserveNullAndEmptyArrays: true,
     },
   };
-  const aggSort = {
-    $sort: {
-      [sortBy]: sort === 'desc' ? -1 : 1,
+  const aggAddInvoiceSort = {
+    $addFields: {
+      invoice_sort_key: {
+        $add: [
+          {
+            $multiply: [
+              {
+                $convert: {
+                  input: {
+                    $getField: {
+                      field: "match",
+                      input: {
+                        $regexFind: {
+                          input: { $ifNull: ['$invoice_no', '0'] },
+                          regex: '(?<=/)(\\d{2})',
+                        },
+                      },
+                    },
+                  },
+                  to: "int",
+                  onError: 0,
+                  onNull: 0,
+                },
+              },
+              1000,
+            ],
+          },
+          {
+            $convert: {
+              input: {
+                $getField: {
+                  field: "match",
+                  input: {
+                    $regexFind: {
+                      input: { $ifNull: ['$invoice_no', '0'] },
+                      regex: '^[0-9]+',
+                    },
+                  },
+                },
+              },
+              to: "int",
+              onError: 0,
+              onNull: 0,
+            },
+          },
+        ],
+      },
     },
+  };
+  const aggSort = {
+    $sort:
+      sortBy === 'invoice_no'
+        ? {
+          invoice_sort_key: sort === 'desc' ? -1 : 1,
+          invoice_no: sort === 'desc' ? -1 : 1,
+        }
+        : { [sortBy]: sort === 'desc' ? -1 : 1 },
   };
   const aggSkip = {
     $skip: (parseInt(page) - 1) * parseInt(limit),
@@ -1279,6 +1332,7 @@ export const fetch_all_dispatch_details = catchAsync(async (req, res, next) => {
     aggUnwindCreatedUser,
     aggUnwindUpdatedUser,
     aggMatch,
+    aggAddInvoiceSort,
     aggSort,
     aggSkip,
     aggLimit,
@@ -1506,8 +1560,14 @@ export const packing_done_dropdown = catchAsync(async (req, res, next) => {
 
   const match = {
     customer_id: mongoose.Types.ObjectId.createFromHexString(customer_id),
-    order_category,
-    product_type,
+  }
+
+  if (order_category && order_category.length > 0) {
+    match.order_category = { $in: order_category };
+  }
+
+  if (product_type && product_type.length > 0) {
+    match.product_type = { $in: product_type };
   }
 
   if (exclude_dispatched) {

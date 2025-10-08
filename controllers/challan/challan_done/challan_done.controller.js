@@ -292,10 +292,68 @@ export const listing_challan_done = catchAsync(async (req, res, next) => {
       ...match_query,
     },
   };
-  const aggSort = {
-    $sort: {
-      [sortBy]: sort === 'desc' ? -1 : 1,
+  // const aggSort = {
+  //   $sort: {
+  //     [sortBy]: sort === 'desc' ? -1 : 1,
+  //   },
+  // };
+  const aggAddChallanNoSort = {
+    $addFields: {
+      invoice_sort_key: {
+        $add: [
+          {
+            $multiply: [
+              {
+                $convert: {
+                  input: {
+                    $getField: {
+                      field: "match",
+                      input: {
+                        $regexFind: {
+                          input: { $ifNull: ['$challan_no', '0'] },
+                          regex: '(?<=/)(\\d{2})',
+                        },
+                      },
+                    },
+                  },
+                  to: "int",
+                  onError: 0,
+                  onNull: 0,
+                },
+              },
+              1000,
+            ],
+          },
+          {
+            $convert: {
+              input: {
+                $getField: {
+                  field: "match",
+                  input: {
+                    $regexFind: {
+                      input: { $ifNull: ['$challan_no', '0'] },
+                      regex: '^[0-9]+',
+                    },
+                  },
+                },
+              },
+              to: "int",
+              onError: 0,
+              onNull: 0,
+            },
+          },
+        ],
+      },
     },
+  };
+  const aggSort = {
+    $sort:
+      sortBy === 'challan_no'
+        ? {
+          challan_no_sort_key: sort === 'desc' ? -1 : 1,
+          challan_no: sort === 'desc' ? -1 : 1,
+        }
+        : { [sortBy]: sort === 'desc' ? -1 : 1 },
   };
   const aggSkip = {
     $skip: (parseInt(page) - 1) * parseInt(limit),
@@ -317,6 +375,7 @@ export const listing_challan_done = catchAsync(async (req, res, next) => {
     aggUpdatedByLookup,
     aggUpdatedByUnwind,
     aggMatch,
+    aggAddChallanNoSort,
     aggSort,
     aggSkip,
     aggLimit,

@@ -94,21 +94,45 @@ const dispatchSchema = new mongoose.Schema(
         return customer_details?.is_tcs_applicable || false;
       },
     },
+    // order_category: {
+    //   type: String,
+    //   enum: {
+    //     values: [
+    //       order_category?.raw,
+    //       order_category?.decorative,
+    //       order_category?.series_product,
+    //     ],
+    //     message: `Invalid type {{VALUE}} it must be one of the ${(order_category?.raw, order_category?.decorative, order_category?.series_product)}`,
+    //   },
+    //   required: [true, 'Order category is required'],
+    //   trim: true,
+    // },
+    // product_category: {
+    //   type: String,
+    //   default: null,
+    //   trim: true,
+    //   uppercase: true,
+    // },
     order_category: {
-      type: String,
+      type: [String],
       enum: {
         values: [
           order_category?.raw,
           order_category?.decorative,
           order_category?.series_product,
         ],
-        message: `Invalid type {{VALUE}} it must be one of the ${(order_category?.raw, order_category?.decorative, order_category?.series_product)}`,
+        message: `Invalid type {{VALUE}} it must be one of the ${[
+          order_category?.raw,
+          order_category?.decorative,
+          order_category?.series_product,
+        ]?.join(', ')}`,
       },
+      uppercase: true,
       required: [true, 'Order category is required'],
       trim: true,
     },
     product_category: {
-      type: String,
+      type: [String],
       default: null,
       trim: true,
       uppercase: true,
