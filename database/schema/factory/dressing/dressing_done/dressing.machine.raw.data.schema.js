@@ -19,6 +19,7 @@ const raw_machine_data_schema = new mongoose.Schema(
       type: Date,
       required: [true, 'Dressing Date is required'],
     },
+    //log_no
     Tronco: {
       type: String,
       required: [true, 'Tronco is required.'],

@@ -532,6 +532,14 @@ export const listing_bunito_history = catchAsync(async (req, res) => {
       as: 'issue_for_bunito_details',
     },
   };
+  const aggLookUpDoneDetails = {
+    $lookup: {
+      from: 'bunito_done_details',
+      localField: 'issued_item_id',
+      foreignField: '_id',
+      as: 'bunito_done_details',
+    },
+  };
 
   const aggCreatedByLookup = {
     $lookup: {
@@ -593,6 +601,12 @@ export const listing_bunito_history = catchAsync(async (req, res) => {
       preserveNullAndEmptyArrays: true,
     },
   };
+  const aggDoneDetailsUnwind = {
+    $unwind: {
+      path: '$bunito_done_details',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
   const aggMatch = {
     $match: {
       ...match_query,
@@ -612,6 +626,8 @@ export const listing_bunito_history = catchAsync(async (req, res) => {
 
   const listAggregate = [
     // aggCommonMatch,
+    aggLookUpDoneDetails,
+    aggDoneDetailsUnwind,
     aggLookUpIssuedDetails,
     aggIssuedCncDetailsUnwind,
     aggCreatedByLookup,
@@ -805,7 +821,7 @@ export const download_excel_bunito_done = catchAsync(async (req, res) => {
   const bunito_done_list =
     await bunito_done_details_model.aggregate(listAggregate);
 
-  await createFactoryBunitoDoneExcel(bunito_done_list,req,res);
+  await createFactoryBunitoDoneExcel(bunito_done_list, req, res);
 });
 
 
@@ -964,5 +980,5 @@ export const download_excel_bunito_history = catchAsync(async (req, res) => {
   ]; // aggregation pipiline
 
   const bunito_history_list = await bunito_history_model.aggregate(listAggregate);
-  await createFactoryBunitoHistoryExcel(bunito_history_list,req,res);
+  await createFactoryBunitoHistoryExcel(bunito_history_list, req, res);
 });

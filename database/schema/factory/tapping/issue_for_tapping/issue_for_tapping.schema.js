@@ -16,6 +16,16 @@ const issue_for_tapping_schema = new mongoose.Schema(
       default: null,
       required: [validateOrderField, 'order_id is required'],
     },
+     common_instructions: {
+      type: [
+        {
+          type: String,
+          trim: true,
+          uppercase: true,
+        },
+      ],
+      default: null,
+    },
     order_item_id: {
       type: mongoose.Schema.Types.ObjectId,
       default: null,

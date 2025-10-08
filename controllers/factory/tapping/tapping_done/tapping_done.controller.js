@@ -699,6 +699,7 @@ export const fetch_all_details_by_tapping_id = catchAsync(
                 orderDate: 1,
                 order_category: 1,
                 series_product: 1,
+                common_instructions: 1,
               },
             },
           ],

@@ -1,65 +1,64 @@
-import { isValidObjectId } from 'mongoose';
-import ApiError from '../../../utils/errors/apiError.js';
-import { StatusCodes } from '../../../utils/constants.js';
 import {
   issues_for_status,
   item_issued_from,
 } from '../../../database/Utils/constants/constants.js';
-import {
-  log_inventory_invoice_model,
-  log_inventory_items_model,
-} from '../../../database/schema/inventory/log/log.schema.js';
-import {
-  flitch_inventory_invoice_model,
-  flitch_inventory_items_model,
-} from '../../../database/schema/inventory/Flitch/flitch.schema.js';
-import {
-  plywood_inventory_invoice_details,
-  plywood_inventory_items_details,
-} from '../../../database/schema/inventory/Plywood/plywood.schema.js';
 import issue_for_challan_model from '../../../database/schema/challan/issue_for_challan/issue_for_challan.schema.js';
-import plywood_history_model from '../../../database/schema/inventory/Plywood/plywood.history.schema.js';
-import {
-  veneer_inventory_invoice_model,
-  veneer_inventory_items_model,
-} from '../../../database/schema/inventory/venner/venner.schema.js';
-import {
-  mdf_inventory_invoice_details,
-  mdf_inventory_items_details,
-} from '../../../database/schema/inventory/mdf/mdf.schema.js';
-import mdf_history_model from '../../../database/schema/inventory/mdf/mdf.history.schema.js';
-import {
-  face_inventory_invoice_details,
-  face_inventory_items_details,
-} from '../../../database/schema/inventory/face/face.schema.js';
-import face_history_model from '../../../database/schema/inventory/face/face.history.schema.js';
-import {
-  core_inventory_invoice_details,
-  core_inventory_items_details,
-} from '../../../database/schema/inventory/core/core.schema.js';
-import core_history_model from '../../../database/schema/inventory/core/core.history.schema.js';
-import {
-  fleece_inventory_invoice_modal,
-  fleece_inventory_items_modal,
-} from '../../../database/schema/inventory/fleece/fleece.schema.js';
-import fleece_history_model from '../../../database/schema/inventory/fleece/fleece.history.schema.js';
-import {
-  othergoods_inventory_invoice_details,
-  othergoods_inventory_items_details,
-} from '../../../database/schema/inventory/otherGoods/otherGoodsNew.schema.js';
-import other_goods_history_model from '../../../database/schema/inventory/otherGoods/otherGoods.history.schema.js';
-import { flitching_done_model } from '../../../database/schema/factory/flitching/flitching.schema.js';
 import { crosscutting_done_model } from '../../../database/schema/factory/crossCutting/crosscutting.schema.js';
+import dressing_done_history_model from '../../../database/schema/factory/dressing/dressing_done/dressing.done.history.schema.js';
+import {
+  dressing_done_items_model,
+  dressing_done_other_details_model,
+} from '../../../database/schema/factory/dressing/dressing_done/dressing.done.schema.js';
+import { flitching_done_model } from '../../../database/schema/factory/flitching/flitching.schema.js';
 import {
   grouping_done_details_model,
   grouping_done_items_details_model,
 } from '../../../database/schema/factory/grouping/grouping_done.schema.js';
 import grouping_done_history_model from '../../../database/schema/factory/grouping/grouping_done_history.schema.js';
 import {
-  dressing_done_items_model,
-  dressing_done_other_details_model,
-} from '../../../database/schema/factory/dressing/dressing_done/dressing.done.schema.js';
-import dressing_done_history_model from '../../../database/schema/factory/dressing/dressing_done/dressing.done.history.schema.js';
+  flitch_inventory_invoice_model,
+  flitch_inventory_items_model,
+} from '../../../database/schema/inventory/Flitch/flitch.schema.js';
+import plywood_history_model from '../../../database/schema/inventory/Plywood/plywood.history.schema.js';
+import {
+  plywood_inventory_invoice_details,
+  plywood_inventory_items_details,
+} from '../../../database/schema/inventory/Plywood/plywood.schema.js';
+import core_history_model from '../../../database/schema/inventory/core/core.history.schema.js';
+import {
+  core_inventory_invoice_details,
+  core_inventory_items_details,
+} from '../../../database/schema/inventory/core/core.schema.js';
+import face_history_model from '../../../database/schema/inventory/face/face.history.schema.js';
+import {
+  face_inventory_invoice_details,
+  face_inventory_items_details,
+} from '../../../database/schema/inventory/face/face.schema.js';
+import fleece_history_model from '../../../database/schema/inventory/fleece/fleece.history.schema.js';
+import {
+  fleece_inventory_invoice_modal,
+  fleece_inventory_items_modal,
+} from '../../../database/schema/inventory/fleece/fleece.schema.js';
+import {
+  log_inventory_invoice_model,
+  log_inventory_items_model,
+} from '../../../database/schema/inventory/log/log.schema.js';
+import mdf_history_model from '../../../database/schema/inventory/mdf/mdf.history.schema.js';
+import {
+  mdf_inventory_invoice_details,
+  mdf_inventory_items_details,
+} from '../../../database/schema/inventory/mdf/mdf.schema.js';
+import other_goods_history_model from '../../../database/schema/inventory/otherGoods/otherGoods.history.schema.js';
+import {
+  othergoods_inventory_invoice_details,
+  othergoods_inventory_items_details,
+} from '../../../database/schema/inventory/otherGoods/otherGoodsNew.schema.js';
+import {
+  veneer_inventory_invoice_model,
+  veneer_inventory_items_model,
+} from '../../../database/schema/inventory/venner/venner.schema.js';
+import { StatusCodes } from '../../../utils/constants.js';
+import ApiError from '../../../utils/errors/apiError.js';
 
 //add for each inventory and factory item
 const issued_from_map = {

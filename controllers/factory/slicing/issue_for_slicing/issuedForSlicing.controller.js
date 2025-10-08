@@ -245,6 +245,7 @@ export const add_issue_for_slicing_from_flitching_done = catchAsync(
           per_cmt_cost: 1,
           expense_amount: 1,
           flitch_formula: 1,
+          remarks: 1,
           issueForFlitchingDetails: {
             item_sr_no: 1,
             supplier_item_name: 1,

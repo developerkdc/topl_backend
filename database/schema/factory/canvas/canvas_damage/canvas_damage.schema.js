@@ -15,6 +15,10 @@ const canvas_damage_schema = new mongoose.Schema(
       type: Number,
       required: [true, 'SQM is required.'],
     },
+    amount: {
+      type: Number,
+      required: [true, 'Amount is required.'],
+    },
     remark: {
       type: String,
       default: null,

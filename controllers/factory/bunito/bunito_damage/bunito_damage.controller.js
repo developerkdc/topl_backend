@@ -230,6 +230,11 @@ export const add_bunito_damage = catchAsync(async (req, res) => {
       )?.toFixed(3)
     );
 
+    const damage_amount = Number(
+      ((damage_sheets / bunito_done_details?.available_details?.no_of_sheets) *
+        bunito_done_details?.available_details?.amount)?.toFixed(2)
+    );
+
     const [maxSrNo] = await bunito_damage_model.aggregate([
       {
         $group: {
@@ -246,6 +251,7 @@ export const add_bunito_damage = catchAsync(async (req, res) => {
           bunito_done_id: bunito_done_details?._id,
           no_of_sheets: damage_sheets,
           sqm: damage_sqm,
+          amount: damage_amount,
           sr_no: maxSrNo ? maxSrNo?.max_sr_no + 1 : 1,
           created_by: userDetails?._id,
           updated_by: userDetails?._id,
@@ -267,6 +273,7 @@ export const add_bunito_damage = catchAsync(async (req, res) => {
         $inc: {
           'available_details.sqm': -damage_sqm,
           'available_details.no_of_sheets': -damage_sheets,
+          'available_details.amount': -damage_amount,
         },
         $set: {
           updated_by: userDetails?._id,
@@ -357,6 +364,7 @@ export const revert_damage_to_bunito_done = catchAsync(async (req, res) => {
             'available_details.no_of_sheets':
               bunito_damage_details.no_of_sheets,
             'available_details.sqm': bunito_damage_details.sqm,
+            'available_details.amount': bunito_damage_details.amount,
           },
         },
         { session }
@@ -568,5 +576,5 @@ export const download_excel_bunito_damage = catchAsync(async (req, res) => {
   ]; // aggregation pipiline
 
   const bunito_damage_list = await bunito_damage_model.aggregate(listAggregate);
-  await createFactoryBunitoDamageExcel(bunito_damage_list,req,res);
+  await createFactoryBunitoDamageExcel(bunito_damage_list, req, res);
 });

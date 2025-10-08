@@ -48,8 +48,26 @@ export const fetch_all_raw_ready_for_packing = catchAsync(async (req, res) => {
   const match_query = {
     ...filterData,
     ...search_query,
+    is_packing_done: false
     // is_challan_done: false,
   };
+
+  const aggOrderDetailsLookup = {
+    $lookup: {
+      from: "orders",
+      localField: "order_id",
+      foreignField: "_id",
+      as: "order_details"
+    }
+  }
+  const aggOrderItemDetailsLookup = {
+    $lookup: {
+      from: "raw_order_item_details",
+      localField: "order_item_id",
+      foreignField: "_id",
+      as: "raw_order_item_details"
+    }
+  }
 
   const aggCreatedByLookup = {
     $lookup: {
@@ -105,6 +123,18 @@ export const fetch_all_raw_ready_for_packing = catchAsync(async (req, res) => {
       preserveNullAndEmptyArrays: true,
     },
   };
+  const aggOrderDetailsUnwind = {
+    $unwind: {
+      path: '$order_details',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
+  const aggOrderItemDetailsUnwind = {
+    $unwind: {
+      path: '$raw_order_item_details',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
   const aggMatch = {
     $match: {
       ...match_query,
@@ -123,6 +153,10 @@ export const fetch_all_raw_ready_for_packing = catchAsync(async (req, res) => {
   };
 
   const listAggregate = [
+    aggOrderDetailsLookup,
+    aggOrderItemDetailsLookup,
+    aggOrderDetailsUnwind,
+    aggOrderItemDetailsUnwind,
     aggCreatedByLookup,
     aggCreatedByUnwind,
     aggUpdatedByLookup,

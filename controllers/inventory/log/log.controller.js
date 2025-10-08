@@ -822,6 +822,10 @@ export const add_issue_for_flitching = catchAsync(async (req, res, next) => {
       issued_from: issues_for_status.log,
       remark: data?.remark,
       invoice_id: data?.invoice_id,
+      color:{
+        color_id: data?.color?.color_id,
+        color_name: data?.color?.color_name, 
+      },
       created_by: created_by,
     };
   });

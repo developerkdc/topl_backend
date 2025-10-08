@@ -165,13 +165,13 @@ const grouping_done_items_details_schema = new mongoose.Schema(
     },
     process_id: {
       type: mongoose.Schema.Types.ObjectId,
-      required: [true, 'process id is required'],
+      // required: [true, 'process id is required'],
     },
     process_name: {
       type: String,
       uppercase: true,
       trim: true,
-      required: [true, 'process name is required'],
+      // required: [true, 'process name is required'],
     },
     cut_id: {
       type: mongoose.Schema.Types.ObjectId,
