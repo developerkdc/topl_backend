@@ -142,6 +142,16 @@ const issues_for_grouping_schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       default: null,
     },
+    process_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
+    process_name: {
+      type: String,
+      uppercase: true,
+      trim: true,
+      default: null,
+    },
     character_name: {
       type: String,
       uppercase: true,
