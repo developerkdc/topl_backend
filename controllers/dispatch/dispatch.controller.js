@@ -1634,3 +1634,19 @@ export const generate_invoice_no = catchAsync(async (req, res, next) => {
     invoice_no: latest_invoice_no,
   });
 });
+
+export const invoice_no_dropdown = catchAsync(async (req, res, next) => {
+  try {
+    const InvoiceNo = await dispatchModel.find({}, { _id: 1, invoice_no: 1 }).sort({ createdAt: -1 });
+    res.status(200).json({
+      success: true,
+      result: InvoiceNo.map((i) => ({
+        _id: i._id,
+        invoice_no: i.invoice_no,
+      })),
+    });
+  }
+  catch (err) {
+    next(err);
+  }
+});

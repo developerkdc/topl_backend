@@ -15,6 +15,9 @@ const dispatch_items_schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Packing Done Mongodb ID is required.'],
     },
+    packing_date: {
+      type: Date,
+    },
     dispatch_id: {
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Dispatch ID is required.'],

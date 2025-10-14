@@ -153,15 +153,16 @@
       <h2 style="font-weight: bold; text-decoration: underline; margin: 0;">URGENT</h2>
     </div>
     <div class="title-row" style="font-weight: bold; font-size: 18px; text-decoration: underline;">
-      Decorative Plywood
+      {{order.order_category}} {{base_type}}
     </div>
   </div>
   <div style="display: flex;">
     <table>
       <thead>
         <tr style="text-decoration: underline;">
+          <th>Priority</th>
           <th>Series</th>
-          <th>Sales/Itemname</th>
+          <th>Sales Itemname</th>
           <th>Photo Number</th>
           <th>LogX</th>
           <th>Character</th>
@@ -176,8 +177,9 @@
       <tbody>
         {{#each items}}
         <tr>
+          <td>{{priority}}</td>
           <td>{{series_name}}</td>
-          <td>{{item_name}}</td>
+          <td>{{sales_item_name}}</td>
           <td style="font-weight: 800;">{{photo_number}}</td>
           <td>{{group_no}}</td>
           <td>{{character}}</td>
@@ -189,7 +191,7 @@
         </tr>
         {{/each}}
         <tr>
-          <td colspan="7" style="text-align: right; font-weight: bold;">Total :</td>
+          <td colspan="8" style="text-align: right; font-weight: bold;">Total :</td>
           <td>{{totalSheets}}</td>
           <td>{{totalSqMtr}}</td>
           <td colspan="6"></td>
@@ -218,7 +220,8 @@
           {{!-- {{#if @first}}{{../series_name}}{{/if}} --}}
           {{../series_name}}
         </td>
-        <td colspan="2" style="text-align: left;">{{item_name}}</td>
+        <td colspan="2" style="max-width: 300px; white-space: normal; word-wrap: break-word; word-break: break-word;">
+          {{sales_item_name}}</td>
         <td style="text-align: right;"><strong>{{no_of_sheets}}</strong></td>
         <td style="text-align: right;"><strong>{{sqm}}</strong></td>
       </tr>
