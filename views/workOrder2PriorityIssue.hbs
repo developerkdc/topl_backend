@@ -140,7 +140,7 @@
             <thead>
                 <tr>
                     <th>Series</th>
-                    <th>Sales/Itemname</th>
+                    <th>Sales Itemname</th>
                     <th>Photo Number</th>
                     <th>LogX</th>
                     <th>Character</th>
@@ -161,7 +161,7 @@
                 <tr style="margin: 0; padding: 0;">
                     <td colspan="15" style="padding: 10px; border-bottom: none !important;">
                         <div style="display: flex; justify-content: flex-end;">
-                            <div class="title-row">Decorative Plywood</div>
+                            <div class="title-row">{{order.order_category}} {{base_type}}</div>
                         </div>
                     </td>
                 </tr>
@@ -176,7 +176,7 @@
                 {{#each items}}
                 <tr>
                     <td>{{series_name}}</td>
-                    <td>{{item_name}}</td>
+                    <td style="max-width: 300px; white-space: normal; word-wrap: break-word; word-break: break-word;">{{sales_item_name}}</td>
                     <td>{{photo_number}}</td>
                     <td>{{group_no}}</td>
                     <td>{{character}}</td>
@@ -203,52 +203,43 @@
     </div>
 
     <div class="summary-title">Order Summary</div>
-    <table class="summary-table" cellspacing="0" cellpadding="6" style="border-collapse: collapse; width: 100%;">
+    <table class='summary' cellspacing='0' cellpadding='6' style='border-collapse: collapse; width: 50%;'>
         <thead>
             <tr>
-                <td class="vertical-bar"></td>
-                <td colspan="3"></td>
-                <th>Sheet</th>
-                <th>Sq.Mtr.</th>
+                <td rowspan='{{add items.length 2}}' style='width: 100px;'></td>
+
+                <!-- Header row -->
+                <td></td>
+                <td>Sheet</td>
+                <td>Sq.Mtr.</td>
             </tr>
         </thead>
 
         <tbody>
-            {{#each groupedSeries}}
             {{#each items}}
             <tr>
-                <td class="vertical-bar"></td>
-                <td>
-                    {{../series_name}}
-                    {{!-- {{#if @first}}{{../series_name}}{{/if}} --}}
-                </td>
-                <td colspan="2" style="text-align: left;">{{item_name}}</td>
-                <td style="text-align: right;"><strong>{{no_of_sheets}}</strong></td>
-                <td style="text-align: right;"><strong>{{sqm}}</strong></td>
+                <td class='vertical-bar'></td>
+                <td style="max-width: 300px; white-space: normal; word-wrap: break-word; word-break: break-word;">{{sales_item_name}}</td>
+                <td style='text-align: right;'>{{no_of_sheets}}</td>
+                <td style='text-align: right;'>{{sqm}}</td>
             </tr>
-            {{/each}}
             {{/each}}
 
+            <!-- Total rows -->
             <tr>
-                <td class="vertical-bar"></td>
-                <td></td>
-                <td colspan="2" style="font-weight: bold; text-align: left;">Total</td>
-                <td style="text-align: right; font-weight: bold;">{{totalSheets}}</td>
-                <td style="text-align: right; font-weight: bold;">{{totalSqMtr}}</td>
+                <td class='vertical-bar'></td>
+                <td style='font-weight: bold; text-align: left;'>Total</td>
+                <td style='text-align: right; font-weight: bold;'>{{totalSheets}}</td>
+                <td style='text-align: right; font-weight: bold;'>{{totalSqMtr}}</td>
             </tr>
             <tr>
-                <td class="vertical-bar"></td>
-                <td colspan="3" style="font-weight: bold; text-align: left;">Total</td>
-                <td style="text-align: right; font-weight: bold;">{{totalSheets}}</td>
-                <td style="text-align: right; font-weight: bold;">{{totalSqMtr}}</td>
-            </tr>
-            <tr>
-                <td colspan="4" style="font-weight: bold; text-align: left;">Total</td>
-                <td style="text-align: right; font-weight: bold;">{{totalSheets}}</td>
-                <td style="text-align: right; font-weight: bold;">{{totalSqMtr}}</td>
+                <td colspan='2' style='font-weight: bold; text-align: left;'>Total</td>
+                <td style='text-align: right; font-weight: bold;'>{{totalSheets}}</td>
+                <td style='text-align: right; font-weight: bold;'>{{totalSqMtr}}</td>
             </tr>
         </tbody>
     </table>
+
 </body>
 
 </html>

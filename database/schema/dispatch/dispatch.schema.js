@@ -148,6 +148,9 @@ const dispatchSchema = new mongoose.Schema(
             type: String,
             required: [true, 'Packing Done ID is required.'],
           },
+          packing_date: {
+            type: Date,
+          }
         },
       ],
       default: [],

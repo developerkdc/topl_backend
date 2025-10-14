@@ -8,6 +8,7 @@ import mongoose from "mongoose";
 
 import ApiError from "../../utils/errors/apiError.js";
 import dispatchModel from "../../database/schema/dispatch/dispatch.schema.js";
+import moment from "moment";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -42,16 +43,23 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
         throw new ApiError("Dispatch not found", StatusCodes.NOT_FOUND);
     }
 
+    const removalDateTime = dispatchDetails.removal_of_good_date_time;
+    const removalDate = removalDateTime ? moment(removalDateTime).format("DD-MM-YYYY") : null;
+    const removalTime = removalDateTime ? moment(removalDateTime).format("HH:mm:ss") : null;
+
     const pdfData = {
         headerUrl: "https://example.com/header.png", // your logo/header
         footerUrl: "https://example.com/footer.png", // QR code or footer image
+        logoUrl: "https://example.com/topl_logo.png",
         customer_details: dispatchDetails.customer_details,
         address: dispatchDetails.address,
         invoice_no: dispatchDetails.invoice_no,
-        invoice_date_time: dispatchDetails.invoice_date_time,
+        invoice_date_time: dispatchDetails.invoice_date_time ? moment(dispatchDetails.invoice_date_time).format("DD-MM-YYYY,HH:mm:ss") : "",
         removal_of_good_date_time: dispatchDetails.removal_of_good_date_time,
-        goods_removal_time: dispatchDetails.goods_removal_time || "", // if separate
+        removal_date: removalDate,
+        goods_removal_time: removalTime,
         vehicle_details: dispatchDetails.vehicle_details,
+        vehicle_number: dispatchDetails.vehicle_details?.map(v => v.vehicle_number) || [],
         item_summary: dispatchDetails.dispatch_items_details?.map(item => ({
             item_name: item.item_name,
             length: item.length,
@@ -73,8 +81,8 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
         additional_remarks: dispatchDetails.remark || "",
         msme_number: dispatchDetails.customer_details?.msme_number || "",
         msme_type: dispatchDetails.customer_details?.msme_type || "",
-        packing_id: dispatchDetails.packing_done_ids?.[0]?.packing_done_id || "",
-        packing_date: dispatchDetails.invoice_date_time, // or actual packing date
+        packing_id: dispatchDetails.packing_done_ids?.map(p => p.packing_done_id) || [],
+        packing_date: Array.isArray(dispatchDetails.packing_done_ids) ? dispatchDetails.packing_done_ids.map(p => p.packing_date ? moment(p.packing_date).format("DD-MM-YYYY, HH:mm:ss") : "") : [],
         eway_bill_no: dispatchDetails.eway_bill_no,
         eway_bill_date: dispatchDetails.eway_bill_date,
     };
