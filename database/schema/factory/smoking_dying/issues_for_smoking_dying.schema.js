@@ -109,6 +109,16 @@ const issues_for_smoking_dying_schema = new mongoose.Schema(
       trim: true,
       default: null,
     },
+    process_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
+    process_name: {
+      type: String,
+      uppercase: true,
+      trim: true,
+      default: null,
+    },
     character_id: {
       type: mongoose.Schema.Types.ObjectId,
       default: null,

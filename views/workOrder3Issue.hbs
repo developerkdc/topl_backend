@@ -31,9 +31,9 @@
         </div>
         <p style='font-size: 20px;'>Client by
           <span style='bold'>{{order.order_received_from}}</span></p>
-        <p style='font-size: 20px;'>{{base_type}}
+        <p style='font-size: 20px;'>
           Sub Type:
-          <strong>{{order.order_category}}</strong></p>
+          <strong>{{base_sub_category}} {{base_type}} {{order.order_category}}</strong></p>
       </div>
 
       <div class='work-order-info'>
@@ -52,7 +52,7 @@
         <thead>
           <tr>
             <th>Series</th>
-            <th>SalesItemname</th>
+            <th>Sales Itemname</th>
             <th>Photo Number</th>
             <th>LogX</th>
             <th>Character</th>
@@ -76,7 +76,7 @@
           {{#each items}}
             <tr>
               <td>{{series_name}}</td>
-              <td>{{item_name}}</td>
+              <td>{{sales_item_name}}</td>
               <td>{{photo_number}}</td>
               <td>{{group_no}}</td>
               <td>{{character}}</td>
@@ -117,7 +117,7 @@
         <tbody>
           {{#each items}}
             <tr>
-              <td>{{item_name}}</td>
+              <td style="max-width: 300px; white-space: normal; word-wrap: break-word; word-break: break-word;">{{sales_item_name}}</td>
               <td>{{no_of_sheets}}</td>
               <td>{{sqm}}</td>
             </tr>

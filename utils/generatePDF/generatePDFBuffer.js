@@ -33,6 +33,8 @@ export default async function generatePDFBuffer({ templateName, data }) {
   const html = template({ ...data, logoUrl: logoBase64 });
 
   const browser = await puppeteer.launch({
+    // executablePath: '/home/ubuntu/chrome/linux-141.0.7390.76/chrome-linux64/chrome',
+    // headless: true, have to check if works on server
     args: ['--no-sandbox', '--disable-setuid-sandbox']
   });
   const page = await browser.newPage();
@@ -71,6 +73,8 @@ export async function generatePDF({ templateName, templatePath, data }) {
   const html = template({ ...data, logoUrl: logoBase64, headerUrl: headerBase64, footerUrl: footerBase64 });
 
   const browser = await puppeteer.launch({
+    // executablePath: '/home/ubuntu/chrome/linux-141.0.7390.76/chrome-linux64/chrome',
+    // headless: true,
     args: ['--no-sandbox', '--disable-setuid-sandbox']
   });
   const page = await browser.newPage();
@@ -109,6 +113,8 @@ export async function generatePDF_packing({ templateName, templatePath, data }) 
   const html = template({ ...data, logoUrl: logoBase64, headerUrl: headerBase64, footerUrl: footerBase64 });
 
   const browser = await puppeteer.launch({
+    // executablePath: '/home/ubuntu/chrome/linux-141.0.7390.76/chrome-linux64/chrome',
+    // headless: true,
     args: ['--no-sandbox', '--disable-setuid-sandbox']
   });
   const page = await browser.newPage();

@@ -739,6 +739,7 @@ export const fetch_single_packing_done_item = catchAsync(async (req, res) => {
 
 export const generatePackingSlip = catchAsync(async (req, res) => {
   const { id } = req.params;
+  console.log("id=>", id);
 
   const item = await packing_done_items_model.findById(id).lean();
   if (!item) {
@@ -790,11 +791,20 @@ export const generatePackingSlip = catchAsync(async (req, res) => {
 
   const item_summary = Object.values(summaryMap);
 
+  // ✅ Inject photo_no and remark from otherDetails into each item
+  const itemsWithExtraFields = allItems.map(i => ({
+    ...i,
+    photo_no: otherDetails.photo_no || '',
+    remark: otherDetails.remark || '',
+  }));
+
+  console.log("remark", otherDetails.remark);
+
   // Prepare final data for Handlebars
   const combinedData = {
     ...otherDetails,
     packing_date: formattedPackingDate,
-    packing_done_item_details: allItems,
+    packing_done_item_details: itemsWithExtraFields, // updated
     totalSheets,
     totalSqMtr,
     item_summary,

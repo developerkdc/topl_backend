@@ -385,25 +385,52 @@ class DecorativeSeriesOrderCancelController {
                 }
             }, session);
 
-            const fetch_order_item_closed = await mongoose.model(this.order_item_collections[order_category]).find({
+            // const fetch_order_item_closed = await mongoose.model(this.order_item_collections[order_category]).find({
+            //     order_id: order_item_details?.order_id,
+            //     item_status: { $ne: null }
+            // });
+
+            // if (fetch_order_item_closed?.length <= 0) {
+            //     const order_closed = await OrderModel.findOneAndUpdate({
+            //         _id: order_item_details?.order_id
+            //     }, {
+            //         $set: {
+            //             order_status: order_status.cancelled
+            //         }
+            //     }, { new: true, session });
+
+            //     if (!order_closed) {
+            //         throw new ApiError(`Failed to update order status as closed`, StatusCodes.BAD_REQUEST);
+            //     }
+
+            // }
+
+            const remaining_open_items = await mongoose
+            .model(this.order_item_collections[order_category])
+            .find({
                 order_id: order_item_details?.order_id,
-                item_status: { $ne: null }
-            });
+                item_status: null,
+            })
+            .session(session);
 
-            if (fetch_order_item_closed?.length <= 0) {
-                const order_closed = await OrderModel.findOneAndUpdate({
-                    _id: order_item_details?.order_id
-                }, {
-                    $set: {
-                        order_status: order_status.cancelled
-                    }
-                }, { new: true, session });
-
-                if (!order_closed) {
-                    throw new ApiError(`Failed to update order status as closed`, StatusCodes.BAD_REQUEST);
-                }
-
+            if (remaining_open_items.length === 0) {
+            // All items cancelled (or single item order)
+            await OrderModel.findOneAndUpdate(
+                { _id: order_item_details?.order_id },
+                { $set: { order_status: order_status.cancelled } },
+                { session }
+            );
+            } else {
+            // Some items still open, keep order_status as null
+            await OrderModel.findOneAndUpdate(
+                { _id: order_item_details?.order_id },
+                { $set: { order_status: null } },
+                { session }
+            );
             }
+
+
+            
 
             await session.commitTransaction();
             const response = new ApiResponse(
