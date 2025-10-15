@@ -22,7 +22,12 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-bottom: 20px;
+      margin-bottom: 40px;
+    }
+
+    .table-1{
+      margin-top: 50px;
+      margin-bottom: 150px;
     }
 
     th,
@@ -90,7 +95,7 @@
       </b></p>
 
     <!-- Items Table -->
-    <table>
+    <table class="table-1">
       <thead>
         <tr>
           <th>Item Name</th>
@@ -101,8 +106,8 @@
           <th>Sheet</th>
           <th>Sq Mtr</th>
           <th>Bund. No</th>
-          <th>Bundles</th>
-          <th>No of Bund.</th>
+          {{!-- <th>Bundles</th>
+          <th>No of Bund.</th> --}}
           <th>Remarks</th>
         </tr>
       </thead>
@@ -112,14 +117,14 @@
           <td>{{item_name}}</td>
           <td>{{photo_no}}</td>
           <td>{{pressing_id}}</td>
-          <td>{{length}}</td>
-          <td>{{width}}</td>
+          <td>{{new_length}}</td>
+          <td>{{new_width}}</td>
           <td>{{no_of_sheets}}</td>
           <td>{{sqm}}</td>
-          <td>{{bundle_no}}</td>
-          <td>{{bundles}}</td>
+          {{!-- <td>{{bundle_no}}</td>
+          <td>{{bundles}}</td> --}}
           <td>{{no_of_bundles}}</td>
-          <td>{{remarks}}</td>
+          <td>{{remark}}</td>
         </tr>
         {{/each}}
 
