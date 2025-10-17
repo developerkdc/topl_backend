@@ -8,6 +8,8 @@ import logRouter from './log/log.routes.js';
 import mdfInventoryRoutes from './mdf/mdf.routes.js';
 import otherGoodsInventoryRouter from './otherGoods/otherGoods.routes.js';
 import plywoodInventoryRoutes from './plywood/plywood.routes.js';
+import AuthMiddleware from '../../middlewares/verifyToken.js';
+import { bulk_upload_inventory } from '../../controllers/bulk_uploads/inventory/inventory_bulk_upload.controller.js';
 const allInventoryRouter = express.Router();
 
 allInventoryRouter.use(`/log-inventory`, logRouter);
@@ -20,4 +22,5 @@ allInventoryRouter.use(`/face-inventory`, faceInventoryRoutes);
 allInventoryRouter.use(`/core-inventory`, coreInventoryRoutes);
 allInventoryRouter.use(`/fleece-inventory`, fleece_router);
 
+allInventoryRouter.use('/inventory/bulk-upload', AuthMiddleware, bulk_upload_inventory)
 export default allInventoryRouter;

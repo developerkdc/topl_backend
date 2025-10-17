@@ -46,8 +46,10 @@ const master_config_model = {
             'destination_pallet_no',
             'min_rate',
             'max_rate',
+            'sales_item_name',
             'remark',
         ],
+        filepath: '/bulk_uploads/masters/photo_master/',
     },
     dispatch_address_master: {
         model: 'dispatchAddress',
@@ -102,6 +104,11 @@ const master_config_model = {
         model: 'cut',
         fields: ['cut_name', 'cut_remarks'],
         filepath: '/bulk_uploads/masters/cut_master/',
+    },
+    character_master: {
+        model: 'characters',
+        fields: ['name'],
+        filepath: '/bulk_uploads/masters/character_master/',
     },
     currency_master: {
         model: 'currency',
@@ -187,27 +194,40 @@ const master_config_model = {
     },
     color_master: {
         model: 'colors',
-        fields: [
-            'process_name', 'type', 'name'
-        ],
+        fields: ['process_name', 'type', 'name'],
         filepath: '/bulk_uploads/masters/color_master/',
     },
     customer_master: {
         model: 'customers',
-        fields: ['company_name', 'customer_type', 'owner_name', 'supplier_type', 'dob', 'email_id', 'web_url', 'gst_number', 'pan_number', 'legal_name', 'preferable_transport_for_part_load', 'is_tcs_applicable', 'is_insurance_applicable', 'branding_type', 'credit_schedule', 'freight', 'local_freight', "remark"],
+        fields: [
+            'company_name',
+            'customer_type',
+            'owner_name',
+            'supplier_type',
+            'dob',
+            'email_id',
+            'web_url',
+            'gst_number',
+            'pan_number',
+            'legal_name',
+            'preferable_transport_for_part_load',
+            'is_tcs_applicable',
+            'is_insurance_applicable',
+            'branding_type',
+            'credit_schedule',
+            'freight',
+            'local_freight',
+            'remark',
+        ],
         filepath: '/bulk_uploads/masters/customer_master/',
     },
     machine_master: {
         model: 'machine',
         fields: ['machine_name', 'department'],
         filepath: '/bulk_uploads/masters/machine_master/',
-    },
-    transporter_master: {
-        model: 'transporters',
-        fields: ['name', 'branch', 'area_of_operation', 'type', 'transport_id'],
-        filepath: '/bulk_uploads/masters/transporter_master/',
-    },
+    }
 };
+
 
 const parse_form = (req, form) => {
     return new Promise((resolve, reject) => {
@@ -225,8 +245,8 @@ const build_address = (prefix, doc) => {
         state: doc[`${prefix}_state`] || null,
         city: doc[`${prefix}_city`] || null,
         pincode: doc[`${prefix}_pincode`] || null,
-    }
-}
+    };
+};
 
 async function subcategory_master(doc, session) {
     // Lookup category by name and get category_id
@@ -268,7 +288,7 @@ async function item_name_master(doc, session) {
         // Store color info
         doc.color = {
             color_id: colorDoc._id,
-            color_name: doc.color_name
+            color_name: doc.color_name,
         };
         delete doc.color_name; // Remove original field
     }
@@ -331,12 +351,17 @@ async function supplier_branches_master(doc, session) {
     }
 
     // Handle contact person array
-    if (doc.contact_person_name || doc.contact_person_email || doc.contact_person_mobile_number || doc.contact_person_designation) {
+    if (
+        doc.contact_person_name ||
+        doc.contact_person_email ||
+        doc.contact_person_mobile_number ||
+        doc.contact_person_designation
+    ) {
         const contactPersonData = {
             name: doc.contact_person_name || null,
             email: doc.contact_person_email || null,
             mobile_number: doc.contact_person_mobile_number || null,
-            designation: doc.contact_person_designation || null
+            designation: doc.contact_person_designation || null,
         };
 
         // Only add contact person if name is provided
@@ -396,7 +421,6 @@ async function color_master(doc, session) {
     return doc;
 }
 async function customer_master(doc, session) {
-
     if (doc?.preferable_transport_for_part_load) {
         const transporter_doc = await model('transporters')
             .findOne({ name: doc.preferable_transport_for_part_load })
@@ -410,7 +434,7 @@ async function customer_master(doc, session) {
             );
         }
         doc.preferable_transport_for_part_load = transporter_doc._id;
-        doc.dob = moment(doc?.dob).format('DD/MM/YYYY');
+        doc.dob = moment.parseZone(doc?.dob, 'DD/MM/YYYY').toDate();
     }
     doc.photo_type = {
         photo_type_a: doc?.photo_type_a ?? null,
@@ -418,140 +442,266 @@ async function customer_master(doc, session) {
         photo_type_c: doc?.photo_type_c ?? null,
     };
 
-    doc.adress = {
+    doc.address = {
         billing_address: build_address('billing', doc),
         delivery_address: build_address('delivery', doc),
         alternate_delivery_address: build_address('alternate_delivery', doc),
         communication_address: build_address('communication', doc),
-    }
+    };
 
     return doc;
 }
 
+
+//using switch case
+// async function photo_master(doc, session) {
+//     let value_added_processes, additonal_charcters = [];
+
+//     switch (doc) {
+//         case doc?.group_no:
+//             const group_doc = await model('grouping_done_items_details').findOne({ grouping_done_items_details: doc?.group_no }).session(session);
+
+//             if (!group_doc) {
+//                 throw new ApiError(`${doc?.group_no} not found.`, StatusCodes.NOT_FOUND)
+//             };
+
+//             doc.group_id = group_doc?._id
+//             break;
+//         case doc?.item_name:
+//             const item = await model('item_name').findOne({ item_name: doc?.item_name }).session(session);
+//             if (!item) {
+//                 throw new ApiError(`${doc?.item_name} not found.`, StatusCodes.NOT_FOUND)
+//             };
+
+//             doc.item_name_id = item?._id
+//             doc.item_name = item?.item_name;
+//             break;
+
+//         case doc?.timber_colour_name:
+//             const color = await model('colors').findOne({ name: doc?.timber_colour_name }).session(session);
+
+//             if (!color) {
+//                 throw new ApiError(`${doc?.timber_colour_name} not found.`, StatusCodes.NOT_FOUND)
+//             };
+//             doc.timber_colour_id = color?._id;
+//             doc.timber_colour_name = color.name
+//             break;
+
+//         case doc?.process_name:
+//             const process = await model('process').findOne({ name: doc?.process_name }).session(session);
+
+//             if (!process) {
+//                 throw new ApiError(`${doc?.process_name} not found.`, StatusCodes.NOT_FOUND)
+//             };
+//             doc.process_id = process?._id;
+//             doc.process_name = process.name
+//             break;
+//         case doc?.grade_name:
+//             const grade = await model('grade').findOne({ grade_name: doc?.grade_name }).session(session);
+
+//             if (!grade) {
+//                 throw new ApiError(`${doc?.grade_name} not found.`, StatusCodes.NOT_FOUND)
+//             };
+//             doc.grade_id = grade?._id;
+//             doc.grade_name = grade.grade_name
+//             break;
+//         case doc?.series_name:
+//             const series = await model('series_master').findOne({ series_name: doc?.series_name }).session(session);
+
+//             if (!series) {
+//                 throw new ApiError(`${doc?.series_name} not found.`, StatusCodes.NOT_FOUND)
+//             };
+//             doc.series_id = series?._id;
+//             doc.series_name = series.series_name
+//             break;
+//         case doc?.pattern_name:
+//             const pattern = await model('patterns').findOne({ name: doc?.pattern_name }).session(session);
+
+//             if (!pattern) {
+//                 throw new ApiError(`${doc?.pattern_name} not found.`, StatusCodes.NOT_FOUND)
+//             };
+//             doc.pattern_id = pattern?._id;
+//             doc.pattern_name = pattern.name
+//             break;
+//         case doc?.character_name:
+//             const character = await model('characters').findOne({ name: doc?.character_name }).session(session);
+
+//             if (!character) {
+//                 throw new ApiError(`${doc?.character_name} not found.`, StatusCodes.NOT_FOUND)
+//             };
+//             doc.character_id = character?._id;
+//             doc.character_name = character.name
+//             break;
+//         case doc?.cut_name:
+//             const cut = await model('cuts').findOne({ cut_name: doc?.cut_name }).session(session);
+
+//             if (!cut) {
+//                 throw new ApiError(`${doc?.cut_name} not found.`, StatusCodes.NOT_FOUND)
+//             };
+//             doc.cut_id = cut?._id;
+//             doc.cut_name = cut.name
+//             break;
+
+//         case doc?.value_added_process:
+//             const value_added_process = await model('process').findOne({ name: doc?.value_added_process }).session(session);
+
+//             if (!value_added_process) {
+//                 throw new ApiError(`${doc?.value_added_process} not found.`, StatusCodes.NOT_FOUND)
+//             };
+//             value_added_processes.push({
+//                 process_id: value_added_process?._id,
+//                 process_name: value_added_process.name
+//             });
+//             doc.value_added_process = value_added_processes;
+
+//             break;
+//         case doc?.additional_character:
+//             const additional_character_doc = await model('characters').findOne({ name: doc?.additional_character }).session(session);
+
+//             if (!additional_character_doc) {
+//                 throw new ApiError(`${doc?.additional_character} not found.`, StatusCodes.NOT_FOUND)
+//             };
+//             additonal_charcters.push({
+//                 type: additional_character_doc?._id,
+//                 character_name: additional_character_doc?.name
+//             })
+//             doc.additional_character = additonal_charcters
+//             break;
+
+//         default:
+//             break;
+//     }
+//     console.log("doc in photo master", doc)
+//     return doc;
+// }
+
+//here it is dyanmic and created using field map
+
 async function photo_master(doc, session) {
-    let value_added_processes, additonal_charcters = [];
+    const value_added_processes = [];
+    const additional_characters = [];
 
-    switch (doc) {
-        case doc?.group_no:
-            const group_doc = await model('grouping_done_items_details').findOne({ grouping_done_items_details: doc?.group_no }).session(session);
+    const fieldMap = [
+        {
+            key: 'group_no',
+            model: 'grouping_done_items_details',
+            queryField: 'group_no',
+            assignId: 'group_id',
+            assignName: null,
+        },
+        {
+            key: 'item_name',
+            model: 'item_name',
+            queryField: 'item_name',
+            assignId: 'item_name_id',
+            assignName: 'item_name',
+        },
+        {
+            key: 'timber_colour_name',
+            model: 'colors',
+            queryField: 'name',
+            assignId: 'timber_colour_id',
+            assignName: 'timber_colour_name',
+        },
+        {
+            key: 'process_name',
+            model: 'process',
+            queryField: 'name',
+            assignId: 'process_id',
+            assignName: 'process_name',
+        },
+        {
+            key: 'grade_name',
+            model: 'grade',
+            queryField: 'grade_name',
+            assignId: 'grade_id',
+            assignName: 'grade_name',
+        },
+        {
+            key: 'series_name',
+            model: 'series_master',
+            queryField: 'series_name',
+            assignId: 'series_id',
+            assignName: 'series_name',
+        },
+        {
+            key: 'pattern_name',
+            model: 'patterns',
+            queryField: 'name',
+            assignId: 'pattern_id',
+            assignName: 'pattern_name',
+        },
+        {
+            key: 'character_name',
+            model: 'characters',
+            queryField: 'name',
+            assignId: 'character_id',
+            assignName: 'character_name',
+        },
+        {
+            key: 'cut_name',
+            model: 'cut',
+            queryField: 'cut_name',
+            assignId: 'cut_id',
+            assignName: 'cut_name',
+        },
+        {
+            key: 'value_added_process',
+            model: 'process',
+            queryField: 'name',
+            assignArray: value_added_processes,
+            arrayId: 'process_id',
+            arrayName: 'process_name',
+        },
+        {
+            key: 'additional_character',
+            model: 'characters',
+            queryField: 'name',
+            assignArray: additional_characters,
+            arrayId: 'character_id',
+            arrayName: 'character_name',
+        },
+    ];
 
-            if (!group_doc) {
-                throw new ApiError(`${doc?.group_no} not found.`, StatusCodes.NOT_FOUND)
-            };
+    for (const field of fieldMap) {
+        if (doc[field.key]) {
+            const found = await model(field.model)
+                .findOne({ [field.queryField]: doc[field.key] })
+                .session(session);
 
-            doc.group_id = group_doc?._id
-            break;
-        case doc?.item_name:
-            const item = await model('item_name').findOne({ item_name: doc?.item_name }).session(session);
-            if (!item) {
-                throw new ApiError(`${doc?.item_name} not found.`, StatusCodes.NOT_FOUND)
-            };
+            if (!found) {
+                throw new ApiError(
+                    `${doc[field.key]} not found in ${field.model}`,
+                    StatusCodes.NOT_FOUND
+                );
+            }
 
-            doc.item_name_id = item?._id
-            doc.item_name = item?.item_name;
-            break;
-
-        case doc?.timber_colour_name:
-            const color = await model('colors').findOne({ name: doc?.timber_colour_name }).session(session);
-
-            if (!color) {
-                throw new ApiError(`${doc?.timber_colour_name} not found.`, StatusCodes.NOT_FOUND)
-            };
-            doc.timber_colour_id = color?._id;
-            doc.timber_colour_name = color.name
-            break;
-
-        case doc?.process_name:
-            const process = await model('process').findOne({ name: doc?.process_name }).session(session);
-
-            if (!process) {
-                throw new ApiError(`${doc?.process_name} not found.`, StatusCodes.NOT_FOUND)
-            };
-            doc.process_id = process?._id;
-            doc.process_name = process.name
-            break;
-        case doc?.grade_name:
-            const grade = await model('grade').findOne({ grade_name: doc?.grade_name }).session(session);
-
-            if (!grade) {
-                throw new ApiError(`${doc?.grade_name} not found.`, StatusCodes.NOT_FOUND)
-            };
-            doc.grade_id = grade?._id;
-            doc.grade_name = grade.grade_name
-            break;
-        case doc?.series_name:
-            const series = await model('series_master').findOne({ series_name: doc?.series_name }).session(session);
-
-            if (!series) {
-                throw new ApiError(`${doc?.series_name} not found.`, StatusCodes.NOT_FOUND)
-            };
-            doc.series_id = series?._id;
-            doc.series_name = series.series_name
-            break;
-        case doc?.pattern_name:
-            const pattern = await model('patterns').findOne({ name: doc?.pattern_name }).session(session);
-
-            if (!pattern) {
-                throw new ApiError(`${doc?.pattern_name} not found.`, StatusCodes.NOT_FOUND)
-            };
-            doc.pattern_id = pattern?._id;
-            doc.pattern_name = pattern.name
-            break;
-        case doc?.character_name:
-            const character = await model('characters').findOne({ name: doc?.character_name }).session(session);
-
-            if (!character) {
-                throw new ApiError(`${doc?.character_name} not found.`, StatusCodes.NOT_FOUND)
-            };
-            doc.character_id = character?._id;
-            doc.character_name = character.name
-            break;
-        case doc?.cut_name:
-            const cut = await model('cuts').findOne({ cut_name: doc?.cut_name }).session(session);
-
-            if (!cut) {
-                throw new ApiError(`${doc?.cut_name} not found.`, StatusCodes.NOT_FOUND)
-            };
-            doc.cut_id = cut?._id;
-            doc.cut_name = cut.name
-            break;
-
-        case doc?.value_added_process:
-            const value_added_process = await model('process').findOne({ name: doc?.value_added_process }).session(session);
-
-            if (!value_added_process) {
-                throw new ApiError(`${doc?.value_added_process} not found.`, StatusCodes.NOT_FOUND)
-            };
-            value_added_processes.push({
-                process_id: value_added_process?._id,
-                process_name: value_added_process.name
-            });
-            doc.value_added_process = value_added_processes;
-
-            break;
-        case doc?.additional_character:
-            const additional_character_doc = await model('characters').findOne({ name: doc?.additional_character }).session(session);
-
-            if (!additional_character_doc) {
-                throw new ApiError(`${doc?.additional_character} not found.`, StatusCodes.NOT_FOUND)
-            };
-            additonal_charcters.push({
-                type: additional_character_doc?._id,
-                character_name: additional_character_doc?.name
-            })
-            doc.additional_character = additonal_charcters
-            break;
-
-        default:
-            break;
+            if (field.assignArray) {
+                field.assignArray.push({
+                    [field.arrayId]: found._id,
+                    [field.arrayName]: found[field.assignName || field.queryField],
+                });
+                doc[field.key] = field.assignArray;
+            } else {
+                doc[field.assignId] = found?._id;
+                // if (field.assignName)
+                //     doc[field.assignName] = found[field.assignName || field.queryField];
+            }
+        }
     }
-
+    return doc;
 }
+
 export const bulk_upload_masters = catchAsync(async (req, res) => {
     const { master_name } = req.query;
     const user = req.userDetails;
     const configs = master_config_model[master_name];
-    const upload_dir = path.join(process.cwd(), 'public', 'upload', configs?.filepath);
+    const upload_dir = path.join(
+        process.cwd(),
+        'public',
+        'upload',
+        configs?.filepath
+    );
 
     if (!fs.existsSync(upload_dir)) {
         fs.mkdirSync(upload_dir, { recursive: true });
@@ -565,13 +715,14 @@ export const bulk_upload_masters = catchAsync(async (req, res) => {
             return `${name}_${Date.now()}${ext}`;
         },
     });
+
     if (!master_name) {
         throw new ApiError('Master name is required', StatusCodes.BAD_REQUEST);
     }
 
     if (!master_config_model[master_name]) {
         throw new ApiError('Invalid master name', StatusCodes.BAD_REQUEST);
-    };
+    }
     const session = await mongoose.startSession();
     let file_path = null;
     try {
@@ -588,26 +739,29 @@ export const bulk_upload_masters = catchAsync(async (req, res) => {
 
         session.startTransaction();
         try {
-            const workbook_reader = new exceljs.stream.xlsx.WorkbookReader(file.filepath, {
-                entries: 'emit',
-                sharedStrings: 'cache',
-                hyperlinks: "ignore",
-                styles: 'ignore',
-            });
-            const maxNumber = await model(configs?.model).aggregate([
+            const workbook_reader = new exceljs.stream.xlsx.WorkbookReader(
+                file.filepath,
                 {
-                    $group: {
-                        _id: null,
-                        max: { $max: '$sr_no' },
+                    entries: 'emit',
+                    sharedStrings: 'cache',
+                    hyperlinks: 'ignore',
+                    styles: 'ignore',
+                }
+            );
+            const maxNumber = await model(configs?.model)
+                .aggregate([
+                    {
+                        $group: {
+                            _id: null,
+                            max: { $max: '$sr_no' },
+                        },
                     },
-                },
-            ]);
+                ])
+                .session(session);
 
             let max_sr_no = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1;
             for await (const worksheet of workbook_reader) {
-
                 for await (const row of worksheet) {
-                    //here it will skip the header row..
                     if (row?.number === 1) continue;
 
                     let doc = { sr_no: max_sr_no++ };
@@ -615,10 +769,9 @@ export const bulk_upload_masters = catchAsync(async (req, res) => {
                     for (let i = 0; i < configs?.fields?.length; i++) {
                         const excel_field = configs?.fields[i];
                         let raw_value = row.getCell(i + 1).value ?? null;
-                        doc[excel_field] = raw_value
+                        doc[excel_field] = raw_value;
                     }
 
-                    // Apply custom logic for masters with lookups
                     switch (master_name) {
                         // case 'category_master':
                         //     doc = await category_master(doc, session);
@@ -637,6 +790,7 @@ export const bulk_upload_masters = catchAsync(async (req, res) => {
                             break;
                         case 'customer_master':
                             doc = await customer_master(doc, session);
+                            console.log("doc in customer master", doc)
                             break;
                         case 'color_master':
                             doc = await color_master(doc, session);
@@ -648,10 +802,20 @@ export const bulk_upload_masters = catchAsync(async (req, res) => {
                             break;
                     }
 
-                    if (["unit_master", "grade_master", "currency_master", "cut_master", "expense_type_master", "gst_master", "department_master"]?.includes(master_name)) {
+                    if (
+                        [
+                            'unit_master',
+                            'grade_master',
+                            'currency_master',
+                            'cut_master',
+                            'expense_type_master',
+                            'gst_master',
+                            'department_master',
+                        ]?.includes(master_name)
+                    ) {
                         doc.created_employee_id = user?._id;
                     } else {
-                        doc.created_by = user?._id
+                        doc.created_by = user?._id;
                     }
                     doc.updated_by = user?._id;
                     buffer_data?.push(doc);
@@ -659,33 +823,33 @@ export const bulk_upload_masters = catchAsync(async (req, res) => {
                     if (buffer_data?.length >= batch_size) {
                         await model(configs?.model)?.insertMany(buffer_data, { session });
                         total += buffer_data?.length;
-                        buffer_data = []
+                        buffer_data = [];
                     }
                 }
-            };
+            }
 
             if (buffer_data?.length > 0) {
                 await model(configs?.model)?.insertMany(buffer_data, { session });
                 total += buffer_data?.length;
+            }
 
-            };
-
-            const response = new ApiResponse(StatusCodes.OK, `${master_name?.split("_")?.join(" ")?.toUpperCase()} uploaded successfully`, total);
+            const response = new ApiResponse(
+                StatusCodes.OK,
+                `${master_name?.split('_')?.join(' ')?.toUpperCase()} uploaded successfully`,
+                total
+            );
             await session.commitTransaction();
-            return res.status(response.statusCode).json(response)
+            return res.status(response.statusCode).json(response);
         } catch (error) {
             await session.abortTransaction();
-            throw error
+            throw error;
         }
     } catch (error) {
         if (file_path) {
             fs.unlinkSync(file_path);
         }
-        throw error
+        throw error;
     } finally {
         await session.endSession();
     }
 });
-
-
-
