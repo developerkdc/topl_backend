@@ -384,14 +384,7 @@ export const listing_issued_for_color = catchAsync(async (req, res, next) => {
     $limit: parseInt(limit),
   };
 
-  const listAggregate = [
-    // aggCreatedByLookup,
-    // aggCreatedByUnwind,
-    // aggUpdatedByLookup,
-    // aggUpdatedByUnwind,
-    aggCommonMatch,
-    aggMatch,
-
+  const orderItems = [
     {
       $lookup: {
         from: 'series_product_order_item_details',
@@ -406,9 +399,8 @@ export const listing_issued_for_color = catchAsync(async (req, res, next) => {
         localField: 'order_item_id',
         foreignField: '_id',
         as: 'decorative_items',
-      }
+      },
     },
-    // Flatten the array to get a single object
     {
       $addFields: {
         order_item_details: {
@@ -420,6 +412,16 @@ export const listing_issued_for_color = catchAsync(async (req, res, next) => {
         },
       },
     },
+  ];
+
+  const listAggregate = [
+    // aggCreatedByLookup,
+    // aggCreatedByUnwind,
+    // aggUpdatedByLookup,
+    // aggUpdatedByUnwind,
+    aggCommonMatch,
+    aggMatch,
+    ...orderItems,
     aggSort,
     aggSkip,
     aggLimit,
