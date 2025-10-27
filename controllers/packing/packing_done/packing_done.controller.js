@@ -315,19 +315,23 @@ export const update_packing_details = catchAsync(async (req, res) => {
 export const revert_packing_done_items = catchAsync(async (req, res) => {
   const { id } = req.params;
   const user = req.userDetails;
+
   if (!id) {
     throw new ApiError('Packing ID is required.', StatusCodes.BAD_REQUEST);
   }
   if (!isValidObjectId(id)) {
     throw new ApiError('Invalid Packing ID.', StatusCodes.BAD_REQUEST);
   }
+
   const session = await mongoose.startSession();
   try {
     await session.startTransaction();
+
     const packing_done_other_details = await packing_done_other_details_model
       .findById(id)
       .session(session)
       .lean();
+
     if (!packing_done_other_details) {
       throw new ApiError(
         'Packing done other details not found.',
@@ -349,6 +353,7 @@ export const revert_packing_done_items = catchAsync(async (req, res) => {
         { _id: id },
         { session }
       );
+
     if (
       !delete_packing_done_other_details_result?.acknowledged ||
       delete_packing_done_other_details_result.deletedCount === 0
@@ -364,6 +369,7 @@ export const revert_packing_done_items = catchAsync(async (req, res) => {
         { packing_done_other_details_id: id },
         { session }
       );
+
     if (
       !delete_packing_done_items_result?.acknowledged ||
       delete_packing_done_items_result.deletedCount === 0
@@ -373,9 +379,25 @@ export const revert_packing_done_items = catchAsync(async (req, res) => {
         StatusCodes.INTERNAL_SERVER_ERROR
       );
     }
+
+    // ✅ Sanitize issue_for_packing_set to only include valid ObjectIds
     const issue_for_packing_set = [
-      ...new Set(packing_done_items?.map((item) => item?.issue_for_packing_id)),
+      ...new Set(
+        packing_done_items
+          ?.map((item) => item?.issue_for_packing_id)
+          .filter((id) => mongoose.Types.ObjectId.isValid(id))
+      ),
     ];
+
+    // ✅ Log for debugging (safe to keep or remove)
+    console.log('Updating issue_for_packing IDs:', issue_for_packing_set);
+    console.log(
+      'Target model:',
+      packing_done_other_details?.order_category === order_category?.raw
+        ? 'issue_for_order_model'
+        : 'finished_ready_for_packing_model'
+    );
+
     const update_issue_for_order_result = await (
       packing_done_other_details?.order_category === order_category?.raw
         ? issue_for_order_model
@@ -391,13 +413,19 @@ export const revert_packing_done_items = catchAsync(async (req, res) => {
       { session }
     );
 
-    if (
-      !update_issue_for_order_result?.acknowledged ||
-      update_issue_for_order_result.modifiedCount === 0
-    ) {
+    // ✅ Safer condition — only throw if update failed entirely
+    if (!update_issue_for_order_result?.acknowledged) {
       throw new ApiError(
         'Failed to update issued for packing item status.',
         StatusCodes.INTERNAL_SERVER_ERROR
+      );
+    }
+
+    // Just warn if no documents matched/updated
+    if (update_issue_for_order_result.matchedCount === 0) {
+      console.warn(
+        '⚠️ No matching issued for packing items found for IDs:',
+        issue_for_packing_set
       );
     }
 
@@ -409,6 +437,7 @@ export const revert_packing_done_items = catchAsync(async (req, res) => {
         item_details: delete_packing_done_items_result,
       }
     );
+
     await session.commitTransaction();
     return res.status(response.statusCode).json(response);
   } catch (error) {
@@ -418,6 +447,7 @@ export const revert_packing_done_items = catchAsync(async (req, res) => {
     await session.endSession();
   }
 });
+
 
 export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
   const {
@@ -798,7 +828,7 @@ export const generatePackingSlip = catchAsync(async (req, res) => {
     remark: otherDetails.remark || '',
   }));
 
-  console.log("remark", otherDetails.remark);
+  console.log("itemsWithExtraFields", itemsWithExtraFields);
 
   // Prepare final data for Handlebars
   const combinedData = {
