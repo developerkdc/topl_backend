@@ -28,7 +28,7 @@ const order_items_collections = {
 
 export const fetch_all_group_no_by_item_name = catchAsync(async (req, res) => {
   const { id } = req.params;
-  const category = req?.query?.category;
+  const { category, thickness } = req.query;
   console.log('category : ', category);
   if (!isValidObjectId(id)) {
     throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
@@ -64,11 +64,17 @@ export const fetch_all_group_no_by_item_name = catchAsync(async (req, res) => {
       $gt: 0,
     },
   };
+
+  // if (thickness) {
+  //   match_query.thickness = { $lte: Number(thickness) };
+  // }
+
   const pipeline = [
     { $match: { ...match_query } },
     {
       $project: {
         group_no: 1,
+        thickness: 1,
       },
     },
   ];

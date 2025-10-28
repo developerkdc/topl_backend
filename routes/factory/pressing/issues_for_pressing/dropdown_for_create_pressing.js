@@ -15,6 +15,7 @@ import {
   getPlywoodProductionItemNameDropdown,
   getPlywoodResizingItemDetails,
   getPlywoodResizingItemNameDropdown,
+  issue_for_pressing_orderNo,
   // item_name_dropdown_for_base_details,
 } from '../../../../controllers/factory/pressing/issues_for_pressing/dropdown_for_create_pressing.js';
 
@@ -81,5 +82,11 @@ dropdown_for_pressing_router.get(
   AuthMiddleware,
   fetch_fleece_paper_details_by_id
 );
+dropdown_for_pressing_router.get(
+  '/issue-for-pressing-order-no-dropdown',
+  AuthMiddleware,
+  issue_for_pressing_orderNo
+);
+
 
 export default dropdown_for_pressing_router;
