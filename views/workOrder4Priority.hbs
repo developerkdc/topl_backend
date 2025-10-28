@@ -1,180 +1,244 @@
 <html lang='en'>
 
-  <head>
-    <meta charset='UTF-8' />
-    <title>Work Order</title>
-    <style>
-      * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial,
-      sans-serif; } table { border-collapse: collapse; width: 100%; } td, th {
-      border: 1px solid #000; padding: 4px; font-size: 12px; vertical-align:
-      middle; } .no-border td, .no-border th { border: none; } .header,
-      .footer-row { width: 100%; border: none; } .header td { border: none;
-      padding: 2px; } .title-text { font-size: 18px; font-weight: bold; }
-      .branding { text-align: right; font-size: 12px; } .branding .order-no {
-      font-size: 22px; font-weight: bold; display: block; } .section-line {
-      margin: 8px 0; } .section-line strong { margin-right: 12px; } .first-table
-      th { text-decoration: underline; font-size: 15px; } .urgent-row {
-      font-weight: bold; } .urgent-row td { text-align: left; background:
-      transparent; } .summary { border: 1px solid #000; width: 40%; margin-top:
-      8px; } .summary th, .summary td { font-size: 12px; } .page-note {
-      margin-top: 8px; text-align: right; font-size: 12px; } .vertical-bar {
-      width: 70px; }
-    </style>
-  </head>
+<head>
+  <meta charset='UTF-8' />
+  <title>Work Order</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Arial,
+        sans-serif;
+    }
 
-  <body>
-    <h3
-      style='font-weight: 900; text-align:center; text-decoration: underline;'
-    >WORK ORDER</h3>
+    table {
+      border-collapse: collapse;
+      width: 100%;
+    }
 
-    <!-- Header -->
-    <table class='header'>
-      <tr>
-        <td>
-          <div style='display: flex; align-items: center; gap: 12px;'>
-            <img
-              style='width: 180px; height: 180px;'
-              src='{{logoUrl}}'
-              alt='Logo'
-            />
-            <div class='title-text' style='font-size: 20px; font-weight: bold;'>
-              Turakhia Overseas Private Limited
-            </div>
+    td,
+    th {
+      border: 1px solid #000;
+      padding: 4px;
+      font-size: 12px;
+      vertical-align:
+        middle;
+    }
+
+    .no-border td,
+    .no-border th {
+      border: none;
+    }
+
+    .header,
+    .footer-row {
+      width: 100%;
+      border: none;
+    }
+
+    .header td {
+      border: none;
+      padding: 2px;
+    }
+
+    .title-text {
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    .branding {
+      text-align: right;
+      font-size: 12px;
+    }
+
+    .branding .order-no {
+      font-size: 22px;
+      font-weight: bold;
+      display: block;
+    }
+
+    .section-line {
+      margin: 8px 0;
+    }
+
+    .section-line strong {
+      margin-right: 12px;
+    }
+
+    .first-table th {
+      text-decoration: underline;
+      font-size: 10px;
+    }
+
+    .urgent-row {
+      font-weight: bold;
+    }
+
+    .urgent-row td {
+      text-align: left;
+      background:
+        transparent;
+    }
+
+    .summary {
+      border: 1px solid #000;
+      width: 40%;
+      margin-top:
+        8px;
+    }
+
+    .summary th,
+    .summary td {
+      font-size: 12px;
+    }
+
+    .page-note {
+      margin-top: 8px;
+      text-align: right;
+      font-size: 12px;
+    }
+
+    .vertical-bar {
+      width: 70px;
+    }
+  </style>
+</head>
+
+<body>
+  <h3 style='font-weight: 900; text-align:center; text-decoration: underline;'>WORK ORDER</h3>
+
+  <!-- Header -->
+  <table class='header'>
+    <tr>
+      <td>
+        <div style='display: flex; align-items: center; gap: 12px;'>
+          <img style='width: 120px; height: 120px;' src='{{logoUrl}}' alt='Logo' />
+          <div class='title-text' style='font-size: 20px; font-weight: bold;'>
+            Turakhia Overseas Private Limited
           </div>
-        </td>
+        </div>
+      </td>
 
-        <td class='branding'>
-          <span class='order-no'>Work Order No : {{order.order_no}}</span>
-          <div style='font-size: 16px; margin-top: 10px'>
-            Order Date:
-            {{order.orderDateFormatted}}
-          </div>
-        </td>
-      </tr>
-    </table>
+      <td class='branding'>
+        <span class='order-no'>Work Order No : {{order.order_no}}</span>
+        <div style='font-size: 16px; margin-top: 10px'>
+          Order Date:
+          {{order.orderDateFormatted}}
+        </div>
+      </td>
+    </tr>
+  </table>
 
-    <!-- Sub-header -->
-    <!-- <div class="section-line">
+  <!-- Sub-header -->
+  <!-- <div class="section-line">
       <strong>PlywoodSubType :</strong> Malaysian
       <strong>Decorative Plywood</strong>
     </div> -->
 
-    <table class='first-table'>
-      <!-- Table Headers -->
-      <thead>
-        <tr>
-          <th>Series</th>
-          <th>Sales Itemname</th>
-          <th>Photo Number</th>
-          <th>LogX</th>
-          <th>Character</th>
-          <th>Length</th>
-          <th>Width</th>
-          <th>Sheet</th>
-          <th>SqMtr</th>
-          <th>Remarks</th>
-          <th>Raw Veneer Issue</th>
-          <th>Sample Sheet</th>
-          <th>Remarks</th>
-        </tr>
-      </thead>
-      <!-- URGENT row -->
-      <tr class='urgent-row'>
-        <td colspan='10'>
-          <div
-            style='display: flex; justify-content: space-between; text-decoration: underline; font-size: 18px;'
-          >
-            <span>URGENT</span>
-            <span>Decorative Plywood</span>
-          </div>
-        </td>
+  <table class='first-table'>
+    <!-- Table Headers -->
+    <thead>
+      <tr>
+        <th>Series</th>
+        <th style="width: 130px;">Sales Itemname</th>
+        <th>Photo Number</th>
+        <th>LogX</th>
+        <th>Character</th>
+        <th>Length</th>
+        <th>Width</th>
+        <th>Sheet</th>
+        <th>SqMtr</th>
+        <th>Remarks</th>
+        <th>Raw Veneer Issue</th>
+        <th>Sample Sheet</th>
+        <th>Remarks</th>
       </tr>
+    </thead>
+    <!-- URGENT row -->
+    <tr class='urgent-row'>
+      <td colspan='13'>
+        <div style='display: flex; justify-content: space-between; text-decoration: underline; font-size: 15px;'>
+          <span>URGENT</span>
+          <span>Decorative Plywood</span>
+        </div>
+      </td>
+    </tr>
 
-      <tbody>
-        {{#each items}}
-          <tr>
-            <td style='font-size: 15px;'>{{series_name}}</td>
-            <td style="font-size: 15px;">{{sales_item_name}}</td>
-            <td style='font-size: 15px;'><strong>{{photo_number}}</strong></td>
-            <td style='font-size: 15px;'>{{group_no}}</td>
-            <td style='font-size: 15px;'>{{character}}</td>
-            <td style='font-size: 15px;'>{{length}}</td>
-            <td style='font-size: 15px;'>{{width}}</td>
-            <td style='font-size: 15px;'>{{no_of_sheets}}</td>
-            <td style='font-size: 15px;'>{{sqm}}</td>
-            <td style='font-size: 15px;'>{{remark}}</td>
-            <td></td>
-            <td></td>
-            <td></td>
-          </tr>
-        {{/each}}
-      </tbody>
-      <!-- Totals Row -->
-      <tr style='font-weight: bold; text-align: right;'>
-        <td colspan='7' style='text-align: right;font-size: 15px;'>Total</td>
-        <td style='font-size: 15px;'>{{totalSheets}}</td>
-        <td style='font-size: 15px;'>{{totalSqMtr}}</td>
-        <td colspan='4'></td>
+    <tbody>
+      {{#each items}}
+      <tr>
+        <td style='font-size: 10px;'>{{series_name}}</td>
+        <td style="font-size: 10px;">{{sales_item_name}}</td>
+        <td style='font-size: 10px;'><strong>{{photo_number}}</strong></td>
+        <td style='font-size: 10px;'>{{group_no}}</td>
+        <td style='font-size: 10px;'>{{character}}</td>
+        <td style='font-size: 10px;'>{{length}}</td>
+        <td style='font-size: 10px;'>{{width}}</td>
+        <td style='font-size: 10px;'>{{no_of_sheets}}</td>
+        <td style='font-size: 10px;'>{{sqm}}</td>
+        <td style='font-size: 10px;'>{{remark}}</td>
+        <td></td>
+        <td></td>
+        <td></td>
       </tr>
-    </table>
+      {{/each}}
+    </tbody>
+    <!-- Totals Row -->
+    <tr style='font-weight: bold; text-align: left;'>
+      <td colspan='7' style='text-align: right;font-size: 12px;'>Total</td>
+      <td style='font-size: 12px;'>{{totalSheets}}</td>
+      <td style='font-size: 12px;'>{{totalSqMtr}}</td>
+      <td colspan='4'></td>
+    </tr>
+  </table>
 
-    <!-- Order summary -->
-    <p
-      style='margin-left: 20px; font-weight: bold; text-decoration: underline;margin-top: 20px;'
-    >
-      Order Summary
-    </p>
-    <table
-      class='summary'
-      cellspacing='0'
-      cellpadding='6'
-      style='border-collapse: collapse; width: 50%;'
-    >
-      <thead>
-        <tr>
-          <td rowspan='{{add items.length 2}}' style='width: 100px;'></td>
+  <!-- Order summary -->
+  <p style='margin-left: 20px; font-weight: bold; text-decoration: underline;margin-top: 20px;'>
+    Order Summary
+  </p>
+  <table class='summary' cellspacing='0' cellpadding='6' style='border-collapse: collapse; width: 50%;'>
+    <thead>
+      <tr>
+        <td rowspan='{{add items.length 2}}' style='width: 100px;'></td>
 
-          <!-- Header row -->
-          <td></td>
-          <td>Sheet</td>
-          <td>Sq.Mtr.</td>
-        </tr>
-      </thead>
+        <!-- Header row -->
+        <td></td>
+        <td>Sheet</td>
+        <td>Sq.Mtr.</td>
+      </tr>
+    </thead>
 
-      <tbody>
-        {{#each items}}
-          <tr>
-            <td class='vertical-bar'></td>
-            <td style="max-width: 300px; white-space: normal; word-wrap: break-word; word-break: break-word;">{{sales_item_name}}</td>
-            <td style='text-align: right;'>{{no_of_sheets}}</td>
-            <td style='text-align: right;'>{{sqm}}</td>
-          </tr>
-        {{/each}}
+    <tbody>
+      {{#each items}}
+      <tr>
+        <td class='vertical-bar'></td>
+        <td style="max-width: 300px; white-space: normal; word-wrap: break-word; word-break: break-word;">
+          {{sales_item_name}}</td>
+        <td style='text-align: left;'>{{no_of_sheets}}</td>
+        <td style='text-align: left;'>{{sqm}}</td>
+      </tr>
+      {{/each}}
 
-        <!-- Total rows -->
-        <tr>
-          <td class='vertical-bar'></td>
-          <td style='font-weight: bold; text-align: left;'>Total</td>
-          <td style='text-align: right; font-weight: bold;'>{{totalSheets}}</td>
-          <td style='text-align: right; font-weight: bold;'>{{totalSqMtr}}</td>
-        </tr>
-        <tr>
-          <td
-            colspan='2'
-            style='font-weight: bold; text-align: left;'
-          >Total</td>
-          <td style='text-align: right; font-weight: bold;'>{{totalSheets}}</td>
-          <td style='text-align: right; font-weight: bold;'>{{totalSqMtr}}</td>
-        </tr>
-      </tbody>
-    </table>
+      <!-- Total rows -->
+      <tr>
+        <td class='vertical-bar'></td>
+        <td style='font-weight: bold; text-align: left;'>Total</td>
+        <td style='text-align: left; font-weight: bold;'>{{totalSheets}}</td>
+        <td style='text-align: left; font-weight: bold;'>{{totalSqMtr}}</td>
+      </tr>
+      <tr>
+        <td colspan='2' style='font-weight: bold; text-align: left;'>Total</td>
+        <td style='text-align: left; font-weight: bold;'>{{totalSheets}}</td>
+        <td style='text-align: left; font-weight: bold;'>{{totalSqMtr}}</td>
+      </tr>
+    </tbody>
+  </table>
 
-    <div
-      style='margin-top: 200px; display: flex; justify-content: space-between;'
-    >
-      <div style='display: flex;'>APPROVED BY: __________________</div>
-      <div style='display: flex;'>RECEIVED BY: __________________</div>
-    </div>
-  </body>
+  <div style='margin-top: 200px; display: flex; justify-content: space-between;'>
+    <div style='display: flex;'>APPROVED BY: __________________</div>
+    <div style='display: flex;'>RECEIVED BY: __________________</div>
+  </div>
+</body>
 
 </html>

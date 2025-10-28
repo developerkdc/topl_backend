@@ -139,6 +139,10 @@ const dispatch_items_schema = new mongoose.Schema(
       type: Number,
       default: null,
     },
+    number_of_rolls: {
+      type: Number,
+      default: null,
+    },
     no_of_leaves: {
       type: Number,
       default: null,

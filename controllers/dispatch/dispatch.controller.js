@@ -297,7 +297,7 @@ export const add_dispatch_details = catchAsync(async (req, res, next) => {
 
     // update order and order item as closed status
     for (let item of add_dispatch_items_data) {
-      const dispatch_no_of_sheets = (item?.no_of_sheets || 0) + (item?.no_of_leaves || 0) + (item?.number_of_rolls || 0);
+      const dispatch_no_of_sheets = (item?.no_of_sheets || 0) + (item?.no_of_leaves || 0) + (item?.number_of_rolls || 0) + (item?.quantity || 0);
 
       const order_items_details = await order_items_models[item?.order_category].findOneAndUpdate({
         _id: item?.order_item_id,
@@ -349,6 +349,11 @@ export const add_dispatch_details = catchAsync(async (req, res, next) => {
 
 
       }
+      console.log({
+        category: item?.order_category,
+        incValue: dispatch_no_of_sheets,
+        before: order_items_details?.dispatch_no_of_sheets,
+      });
 
     }
 
