@@ -179,7 +179,7 @@ export const update_packing_details = catchAsync(async (req, res) => {
       (item) => item?.issue_for_packing_id
     );
 
-    const update_existing_pakcing_done_item_status = await (
+    const update_existing_packing_done_item_status = await (
       other_details?.order_category === order_category?.raw
         ? issue_for_order_model
         : finished_ready_for_packing_model
@@ -192,9 +192,20 @@ export const update_packing_details = catchAsync(async (req, res) => {
       },
       { session }
     );
+    console.log('old_packing_done_item_ids', old_packing_done_item_ids);
+    console.log('order_category:', order_category);
+    console.log('other_details.order_category:', other_details.order_category);
+    console.log(
+      'Model:',
+      other_details?.order_category === order_category?.raw
+        ? 'issue_for_order_model'
+        : 'finished_ready_for_packing_model'
+    );
+    console.log('IDs being updated:', old_packing_done_item_ids);
+
     if (
-      !update_existing_pakcing_done_item_status?.acknowledged ||
-      update_existing_pakcing_done_item_status.modifiedCount === 0
+      !update_existing_packing_done_item_status?.acknowledged ||
+      update_existing_packing_done_item_status.modifiedCount === 0
     ) {
       throw new ApiError(
         'Failed to update issued for packing item status.',
@@ -269,9 +280,10 @@ export const update_packing_details = catchAsync(async (req, res) => {
         packing_done_item_details?.map((item) => item?.issue_for_packing_id)
       ),
     ];
-    console.log(issue_for_packing_set)
+    console.log(issue_for_packing_set);
+
     const update_issue_for_order_result = await (
-      other_details?.order_category === order_category?.raw
+      other_details?.order_category.toUpperCase() === order_category?.raw
         ? issue_for_order_model
         : finished_ready_for_packing_model
     ).updateMany(
@@ -380,7 +392,6 @@ export const revert_packing_done_items = catchAsync(async (req, res) => {
       );
     }
 
-    // ✅ Sanitize issue_for_packing_set to only include valid ObjectIds
     const issue_for_packing_set = [
       ...new Set(
         packing_done_items
@@ -413,7 +424,6 @@ export const revert_packing_done_items = catchAsync(async (req, res) => {
       { session }
     );
 
-    // ✅ Safer condition — only throw if update failed entirely
     if (!update_issue_for_order_result?.acknowledged) {
       throw new ApiError(
         'Failed to update issued for packing item status.',
@@ -448,7 +458,6 @@ export const revert_packing_done_items = catchAsync(async (req, res) => {
   }
 });
 
-
 export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
   const {
     page = 1,
@@ -457,12 +466,14 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
     sort = 'desc',
     search = '',
   } = req.query;
+
   const {
     string,
     boolean,
     numbers,
     arrayField = [],
   } = req?.body?.searchFields || {};
+
   const filter = req.body?.filter;
 
   let search_query = {};
@@ -492,7 +503,6 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
   const match_query = {
     ...filterData,
     ...search_query,
-    // is_dispatch_done: false,
   };
 
   const aggregatePackingDoneItems = {
@@ -503,6 +513,7 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
       as: 'packing_done_item_details',
     },
   };
+
   const aggCreatedByLookup = {
     $lookup: {
       from: 'users',
@@ -524,6 +535,7 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
       as: 'created_by',
     },
   };
+
   const aggUpdatedByLookup = {
     $lookup: {
       from: 'users',
@@ -545,37 +557,119 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
       as: 'updated_by',
     },
   };
-  // const aggPackingDoneItemsUnwind = {
-  //     $unwind: {
-  //         path: '$packing_done_item_details',
-  //         preserveNullAndEmptyArrays: true,
-  //     },
-  // };
+
   const aggCreatedByUnwind = {
     $unwind: {
       path: '$created_by',
       preserveNullAndEmptyArrays: true,
     },
   };
+
   const aggUpdatedByUnwind = {
     $unwind: {
       path: '$updated_by',
       preserveNullAndEmptyArrays: true,
     },
   };
+
+  const aggCustomerDetailsLookup = {
+    $lookup: {
+      from: 'customers',
+      localField: 'customer_id',
+      foreignField: '_id',
+      pipeline: [
+        {
+          $project: {
+            owner_name: 1,
+            // customer_details: 1,
+            company_name: 1
+          },
+        },
+      ],
+      as: 'customer_details',
+    },
+  };
+
+  const aggCustomerDetailsUnwind = {
+    $unwind: {
+      path: '$customer_details',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
+
   const aggMatch = {
     $match: {
       ...match_query,
     },
   };
-  const aggSort = {
-    $sort: {
-      [sortBy]: sort === 'desc' ? -1 : 1,
+
+  const aggComputeProductTypeSort = {
+    $addFields: {
+      __sort_product_type: {
+        $cond: [
+          { $eq: ['$order_category', 'RAW'] },
+          // if RAW -> use top-level product_type
+          '$product_type',
+          // else -> use packing_done_item_details[0].product_type if exists, otherwise top-level product_type
+          {
+            $ifNull: [
+              { $arrayElemAt: ['$packing_done_item_details.product_type', 0] },
+              '$product_type',
+            ],
+          },
+        ],
+      },
     },
   };
+  const aggFlattenProductType = {
+  $addFields: {
+    sort_product_type: {
+      $reduce: {
+        input: "$product_type",
+        initialValue: "",
+        in: {
+          $concat: [
+            "$$value",
+            { $cond: [{ $eq: ["$$value", ""] }, "", ", "] },
+            "$$this"
+          ]
+        }
+      }
+    }
+  }
+};
+
+
+  // const aggSort = {
+  //   $sort: {
+  //     ...(sortBy === 'product_type'
+  //       ? { __sort_product_type: sort === 'desc' ? -1 : 1 }
+  //       : sortBy === 'customer_details.owner_name'
+  //         ? { 'customer_details.owner_name': sort === 'desc' ? -1 : 1 }
+  //         : sortBy === 'customer_details'
+  //           ? { 'customer_details.customer_details': sort === 'desc' ? -1 : 1 }
+  //           : { [sortBy]: sort === 'desc' ? -1 : 1 }),
+  //   },
+  // };
+
+
+  // const aggSort = {
+  //     $sort: {
+  //       [sortBy]: sort === 'desc' ? -1 : 1,
+  //     },
+  //   };
+    const aggSort = {
+  $sort: {
+    ...(sortBy === "product_type"
+      ? { sort_product_type: sort === "desc" ? -1 : 1 }
+      : { [sortBy]: sort === "desc" ? -1 : 1 }),
+  },
+};
+
   const aggSkip = {
     $skip: (parseInt(page) - 1) * parseInt(limit),
   };
+
   const aggLimit = {
     $limit: parseInt(limit),
   };
@@ -586,11 +680,15 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
     aggCreatedByUnwind,
     aggUpdatedByLookup,
     aggUpdatedByUnwind,
+    aggCustomerDetailsLookup,
+    aggCustomerDetailsUnwind,
+    // aggComputeProductTypeSort,
     // aggMatch,
+    aggComputeProductTypeSort,
     aggSort,
     aggSkip,
     aggLimit,
-  ]; // aggregation pipeline
+  ];
 
   const list_aggregate = [
     aggMatch,
@@ -608,14 +706,6 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
 
   const issue_for_raw_packing =
     await packing_done_other_details_model.aggregate(list_aggregate);
-  // const aggCount = {
-  //     $count: 'totalCount',
-  // }; // count aggregation stage
-
-  // const totalAggregate = [...listAggregate?.slice(0, -2), aggCount]; // total aggregation pipiline
-
-  // const totalDocument =
-  //     await packing_done_other_details_model.aggregate(totalAggregate);
 
   const totalPages = Math.ceil(
     (issue_for_raw_packing[0]?.totalCount?.[0]?.totalCount || 0) / limit
@@ -629,27 +719,29 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
       totalPages: totalPages,
     }
   );
+
   return res.status(StatusCodes.OK).json(response);
 });
 
 export const fetch_single_packing_done_item = catchAsync(async (req, res) => {
-  const {request_id} = req.params;
+  const { request_id } = req.params;
   const id = request_id?.trim()
   let issue_for_packing_model;
+
   if (!id) {
     throw new ApiError('Packing Done ID is required.', StatusCodes.BAD_REQUEST);
   }
   if (!isValidObjectId(id)) {
     throw new ApiError('Invalid Packing ID.', StatusCodes.BAD_REQUEST);
   }
+
   const { customer_id, order_type, product_type } = req.query;
   const match_query = {
     is_packing_done: false,
-    // product_type: product_type,
-    // order_category: order_type,
     'order_details.customer_id':
       mongoose.Types.ObjectId.createFromHexString(customer_id),
   };
+
   const models_map = {
     raw: 'raw_order_item_details',
     decorative: 'decorative_order_item_details',
@@ -669,6 +761,11 @@ export const fetch_single_packing_done_item = catchAsync(async (req, res) => {
   } else {
     issue_for_packing_model = 'finished_ready_for_packing_details';
   }
+
+  // ✅ FIX: ensure the 'from' value is always a valid string
+  const lookupCollection =
+    models_map[order_type?.toLowerCase()] || 'raw_order_item_details';
+
   const pipeline = [
     {
       $match: { _id: mongoose.Types.ObjectId.createFromHexString(id) },
@@ -733,8 +830,9 @@ export const fetch_single_packing_done_item = catchAsync(async (req, res) => {
             },
           },
           {
+            // ✅ FIXED: using safe variable for 'from'
             $lookup: {
-              from: models_map[order_type?.toLowerCase()],
+              from: lookupCollection,
               localField: 'order_item_id',
               foreignField: '_id',
               as: 'order_item_details',
@@ -769,7 +867,7 @@ export const fetch_single_packing_done_item = catchAsync(async (req, res) => {
 
 export const generatePackingSlip = catchAsync(async (req, res) => {
   const { id } = req.params;
-  console.log("id=>", id);
+  console.log('id=>', id);
 
   const item = await packing_done_items_model.findById(id).lean();
   if (!item) {
@@ -796,7 +894,6 @@ export const generatePackingSlip = catchAsync(async (req, res) => {
     ? moment(otherDetails.packing_date).format('DD-MM-YYYY')
     : '';
 
-  // Compute totals
   const totalSheets = allItems.reduce(
     (sum, i) => sum + (i.no_of_sheets || 0),
     0
@@ -821,23 +918,62 @@ export const generatePackingSlip = catchAsync(async (req, res) => {
 
   const item_summary = Object.values(summaryMap);
 
-  // ✅ Inject photo_no and remark from otherDetails into each item
-  const itemsWithExtraFields = allItems.map(i => ({
+  // ✅ Add `sales_item_name` from otherDetails to each item
+  const itemsWithExtraFields = allItems.map((i) => ({
     ...i,
     photo_no: otherDetails.photo_no || '',
     remark: otherDetails.remark || '',
+    sales_item_name: otherDetails.sales_item_name || '', // ✅ Added field
   }));
 
-  console.log("itemsWithExtraFields", itemsWithExtraFields);
+  console.log('itemsWithExtraFields', itemsWithExtraFields);
 
-  // Prepare final data for Handlebars
+  // Handle flexible customer name structure
+  let customer_name = '';
+  if (typeof otherDetails.customer_details === 'string') {
+    customer_name = otherDetails.customer_details;
+  } else if (
+    otherDetails.customer_details &&
+    typeof otherDetails.customer_details === 'object' &&
+    otherDetails.customer_details.owner_name
+  ) {
+    customer_name = otherDetails.customer_details.owner_name;
+  }
+
+  // ✅ Map product_type to display name (safe string handling)
+  let productDisplayName = '';
+  const productType =
+    typeof otherDetails.product_type === 'string'
+      ? otherDetails.product_type.trim()
+      : String(otherDetails.product_type || '').trim();
+
+  switch (productType) {
+    case 'CROSSCUTTING':
+      productDisplayName = 'Log';
+      break;
+    case 'FLITCHING_FACTORY':
+      productDisplayName = 'Flitch';
+      break;
+    case 'DRESSING_FACTORY':
+    case 'GROUPING_FACTORY':
+      productDisplayName = 'Veneer';
+      break;
+    default:
+      productDisplayName = productType;
+      break;
+  }
+
+  // ✅ Also pass `sales_item_name` to top-level data (optional global access)
   const combinedData = {
     ...otherDetails,
+    product_display_type: productDisplayName, // 👈 use this in HBS
+    customer_name,
     packing_date: formattedPackingDate,
-    packing_done_item_details: itemsWithExtraFields, // updated
+    packing_done_item_details: itemsWithExtraFields,
     totalSheets,
     totalSqMtr,
     item_summary,
+    sales_item_name: otherDetails.sales_item_name || '', // ✅ Added globally
   };
 
   const pdfBuffer = await generatePDF({

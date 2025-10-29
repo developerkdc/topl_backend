@@ -177,6 +177,7 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
               $project: {
                 _id: 1,
                 item_no: 1,
+                sales_item_name: 1
               },
             },
           ],
@@ -241,6 +242,9 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
       order_item_no:
         pressing_done_details?.series_items?.[0]?.item_no ||
         pressing_done_details?.decorative_items?.[0]?.item_no,
+      sales_item_name:
+        pressing_done_details?.series_items?.[0]?.sales_item_name ||
+        pressing_done_details?.decorative_items?.[0]?.sales_item_name,
       group_no:
         pressing_done_details?.group_no ||
         pressing_done_details?.pressing_details?.group_no,
@@ -484,6 +488,7 @@ export const fetch_all_finished_ready_for_packing = catchAsync(
         ],
       },
     };
+   
     const aggCreatedByLookup = {
       $lookup: {
         from: 'users',

@@ -6,6 +6,7 @@ import {
   downloadPhotoAlbumImagesZip,
   downloadPhotoAlbumZip,
   dropdownPhoto,
+  fetch_available_photo_quantity,
   fetchPhotoAlbumList,
   fetchPhotoList,
   fetchSinglePhoto,
@@ -67,6 +68,11 @@ photoRouter.post(
   '/group-no-dropdown-for-hybrid-photo-master',
   AuthMiddleware,
   group_no_dropdown_for_hybrid_photo_master
+);
+photoRouter.post(
+  '/fetch-available-photo-quantity',
+  // AuthMiddleware,
+  fetch_available_photo_quantity
 );
 
 export default photoRouter;

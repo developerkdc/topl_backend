@@ -48,26 +48,26 @@ export const fetch_all_raw_ready_for_packing = catchAsync(async (req, res) => {
   const match_query = {
     ...filterData,
     ...search_query,
-    is_packing_done: false
+    is_packing_done: false,
     // is_challan_done: false,
   };
 
   const aggOrderDetailsLookup = {
     $lookup: {
-      from: "orders",
-      localField: "order_id",
-      foreignField: "_id",
-      as: "order_details"
-    }
-  }
+      from: 'orders',
+      localField: 'order_id',
+      foreignField: '_id',
+      as: 'order_details',
+    },
+  };
   const aggOrderItemDetailsLookup = {
     $lookup: {
-      from: "raw_order_item_details",
-      localField: "order_item_id",
-      foreignField: "_id",
-      as: "raw_order_item_details"
-    }
-  }
+      from: 'raw_order_item_details',
+      localField: 'order_item_id',
+      foreignField: '_id',
+      as: 'raw_order_item_details',
+    },
+  };
 
   const aggCreatedByLookup = {
     $lookup: {
@@ -140,9 +140,126 @@ export const fetch_all_raw_ready_for_packing = catchAsync(async (req, res) => {
       ...match_query,
     },
   };
+  const aggAddLength = {
+    $addFields: {
+      final_length: {
+        $ifNull: [
+          '$item_details.total_length',
+          {
+            $ifNull: ['$item_details.length', '$item_details.physical_length'],
+          },
+        ],
+      },
+    },
+  };
+  const aggAddWidth = {
+    $addFields: {
+      final_width: {
+        $cond: {
+          if: { $regexMatch: { input: '$issued_from', regex: /flitch/i } }, // check if "flitch" in issued_from
+          then: {
+            $max: [
+              { $ifNull: ['$item_details.width1', 0] },
+              { $ifNull: ['$item_details.width2', 0] },
+              { $ifNull: ['$item_details.width3', 0] },
+            ],
+          },
+          else: {
+            $ifNull: ['$item_details.width', '$width'],
+          },
+        },
+      },
+    },
+  };
+  const aggAddSheets = {
+    $addFields: {
+      final_sheets: {
+        $ifNull: [
+          '$number_of_sheets',
+          {
+            $ifNull: [
+              '$item_details.issued_sheets',
+              {
+                $ifNull: [
+                  '$item_details.available_details.no_of_sheets',
+                  {
+                    $ifNull: [
+                      '$item_details.no_of_sheet',
+                      '$item_details.number_of_sheets',
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    },
+  };
+  const aggAddRolls = {
+    $addFields: {
+      final_rolls: {
+        $ifNull: [
+          '$item_details.issued_number_of_roll',
+          '$item_details.no_of_roll',
+        ],
+      },
+    },
+  };
+  const aggAddCBM = {
+    $addFields: {
+      final_cbm: {
+        $ifNull: [
+          '$cbm',
+          {
+            $ifNull: [
+              '$item_details.physical_cmt',
+              {
+                $ifNull: [
+                  '$item_details.flitch_cmt',
+                  {
+                    $ifNull: ['$item_details.crosscut_cmt', 0],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    },
+  };
+  const aggAddSQM = {
+    $addFields: {
+      final_sqm: {
+        $ifNull: [
+          '$item_details.issued_sqm',
+          {
+            $ifNull: [
+              '$item_details.sqm',
+              {
+                $ifNull: ['$item_details.total_sq_meter', 0],
+              },
+            ],
+          },
+        ],
+      },
+    },
+  };
   const aggSort = {
     $sort: {
-      [sortBy]: sort === 'desc' ? -1 : 1,
+      [sortBy === 'length'
+        ? 'final_length'
+        : sortBy === 'item_details.width'
+          ? 'final_width'
+          : sortBy === 'number_of_sheets'
+            ? 'final_sheets'
+            : sortBy === 'item_details.no_of_roll'
+              ? 'final_rolls'
+              : sortBy === 'cbm'
+                ? 'final_cbm'
+                : sortBy === 'item_details.issued_sqm'
+                  ? 'final_sqm'
+                  : sortBy]: sort === 'desc' ? -1 : 1,
     },
   };
   const aggSkip = {
@@ -162,6 +279,12 @@ export const fetch_all_raw_ready_for_packing = catchAsync(async (req, res) => {
     aggUpdatedByLookup,
     aggUpdatedByUnwind,
     aggMatch,
+    aggAddLength,
+    aggAddWidth,
+    aggAddSheets,
+    aggAddRolls,
+    aggAddCBM,
+    aggAddSQM,
     aggSort,
     aggSkip,
     aggLimit,
@@ -179,6 +302,7 @@ export const fetch_all_raw_ready_for_packing = catchAsync(async (req, res) => {
   const totalDocument = await issue_for_order_model.aggregate(totalAggregate);
 
   const totalPages = Math.ceil((totalDocument?.[0]?.totalCount || 0) / limit);
+  console.log('Sort by', sortBy);
 
   const response = new ApiResponse(
     StatusCodes.OK,

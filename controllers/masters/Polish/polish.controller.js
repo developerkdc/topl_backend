@@ -5,6 +5,9 @@ import ApiError from '../../../utils/errors/apiError.js';
 import catchAsync from '../../../utils/errors/catchAsync.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
+import formidable from 'formidable';
+import exceljs from 'exceljs'
+import { StatusCodes } from '../../../utils/constants.js';
 
 export const addPolish = catchAsync(async (req, res, next) => {
   const { name, code } = req.body;
@@ -349,3 +352,68 @@ export const dropdownPolish = catchAsync(async (req, res, next) => {
   );
   return res.status(200).json(response);
 });
+
+export const bulk_upload_polish_master = catchAsync(async (req, res) => {
+  const user = req.userDetails
+  const form = formidable({ multiples: false });
+
+  form.parse(req, async (errorMonitor, fields, files) => {
+    if (err) {
+      throw new ApiError(err.message || "Something went wrong", 400)
+    };
+
+    const file = files.file;
+
+    if (!file) {
+      throw new ApiError("No File Uploaded", StatusCodes.NOT_FOUND)
+    };
+
+    const session = await mongoose.startSession();
+
+    await session.startTransaction();
+    try {
+      const workbook = new exceljs.Workbook();
+      await workbook.xlsx.readFile(file.filepath);
+
+      const worksheet = workbook.worksheets[0];
+      const rows = [];
+
+      worksheet.eachRow((row, row_number) => {
+        if (row_number === 1) return;
+
+        const [name, code] = row.values.slice(1);
+
+        if (!name || !code) {
+          throw new ApiError(`Invalid data at row ${row_number}`, StatusCodes.BAD_REQUEST)
+        };
+        rows.push({
+          ...row,
+          created_by: user?._id,
+          updated_by: user?._id,
+        })
+      });
+
+      if (rows?.length === 0) {
+        throw new ApiError("No data found in file", StatusCodes.NOT_FOUND)
+      };
+
+      const result = await polishModel.insertMany(rows, { session });
+
+      if (result?.length === 0) {
+        throw new ApiError("Failed to upload data", StatusCodes.BAD_REQUEST)
+      };
+
+      const response = new ApiResponse(StatusCodes.OK, "Polish Master Uploaded Successfully", result);
+      await session.commitTransaction();
+      return res.status(response.statusCode).json(response);
+
+    } catch (error) {
+      await session.abortTransaction();
+      throw error
+    } finally {
+      await session.endSession();
+    }
+
+  })
+
+})

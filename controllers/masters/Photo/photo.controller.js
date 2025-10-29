@@ -922,3 +922,22 @@ export const download_excel_photo_album = catchAsync(async (req, res, next) => {
   //   })
   // );
 });
+
+
+export const fetch_available_photo_quantity = catchAsync(async (req, res) => {
+  const { photoNumber, desiredQuantity } = req.body;
+
+  if (!photoNumber) {
+    throw new ApiError('Photo number is required', 400);
+  }
+  if (!desiredQuantity || desiredQuantity <= 0) {
+    throw new ApiError('Desired quantity should be greater than zero', 400);
+  }
+  const result = await photoModel.find({ photo_number: photoNumber, available_no_of_sheets: { $gte: desiredQuantity } });
+  return res.status(StatusCodes.OK).json({
+    ReturnMessage: desiredQuantity <= result[0]?.available_no_of_sheets ? `Desired quantity exist` : `Desired quantity does not exists`,
+    result: result?.length,
+    AvailableSheet: result[0]?.available_no_of_sheets ? result[0]?.available_no_of_sheets : 0
+  });
+
+})

@@ -447,3 +447,68 @@ export const fetch_fleece_paper_details_by_id = catchAsync(async (req, res) => {
   );
   return res.status(StatusCodes.OK).json(response);
 });
+
+export const issue_for_pressing_orderNo = catchAsync(async (req, res, next) => {
+  const category = req?.query?.category;
+
+  // --- Build match query ---
+  const matchQuery = {
+    is_pressing_done: false, // Only show where pressing is not done
+  };
+
+  if (category) {
+    matchQuery.order_category = category;
+  }
+
+  // --- Aggregation Pipeline ---
+  const aggMatch = { $match: matchQuery };
+
+  const aggLookup = {
+    $lookup: {
+      from: "orders",
+      localField: "order_id",
+      foreignField: "_id",
+      as: "orderDetails",
+    },
+  };
+
+  const aggUnwind = { $unwind: "$orderDetails" };
+
+  const aggProject = {
+    $project: {
+      order_id: "$orderDetails._id",
+      order_no: "$orderDetails.order_no",
+      order_category: "$orderDetails.order_category",
+    },
+  };
+
+  const aggGroup = {
+    $group: {
+      _id: "$order_id",
+      order_no: { $first: "$order_no" },
+      order_category: { $first: "$order_category" },
+    },
+  };
+
+  const aggSort = { $sort: { order_no: 1 } };
+
+  // --- Execute aggregate ---
+  const fetch_order_no = await issues_for_pressing_model.aggregate([
+    aggMatch,
+    aggLookup,
+    aggUnwind,
+    aggProject,
+    aggGroup,
+    aggSort,
+  ]);
+
+  // --- Send response ---
+  const response = new ApiResponse(
+    StatusCodes.OK,
+    "Fetch Pressing Orders Successfully.",
+    fetch_order_no
+  );
+
+  return res.status(StatusCodes.OK).json(response);
+});
+
