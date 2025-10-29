@@ -94,7 +94,6 @@ export const issue_for_color_schema = new mongoose.Schema(
     },
     remark: {
       type: String,
-      default: null,
     },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,
