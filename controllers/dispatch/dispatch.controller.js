@@ -107,6 +107,7 @@ export const load_packing_details = catchAsync(async (req, res, next) => {
               product_category: 1,
               rate: 1,
               sales_item_name: 1,
+              number_of_rolls: 1,
             },
           },
         ],
@@ -132,8 +133,10 @@ export const load_packing_details = catchAsync(async (req, res, next) => {
               item_name: 1,
               item_sub_category_name: 1,
               product_category: 1,
-              rate: 1,
+              rate_per_sqm: 1,
               sales_item_name: 1,
+              photo_no: 1,
+              rate: 1,
             },
           },
         ],
@@ -159,6 +162,7 @@ export const load_packing_details = catchAsync(async (req, res, next) => {
               item_sub_category_name: 1,
               product_category: 1,
               rate: 1,
+              rate_per_sqm: 1,
               sales_item_name: 1,
             },
           },
@@ -502,7 +506,8 @@ export const edit_dispatch_details = catchAsync(async (req, res, next) => {
       const update_order_item = await order_items_models[item?.order_category].findOneAndUpdate({
         _id: order_items_details?._id,
         order_id: order_items_details?.order_id,
-        no_of_sheets: order_items_details?.dispatch_no_of_sheets
+        // no_of_sheets: order_items_details?.dispatch_no_of_sheets
+        no_of_sheets: order_items_details?.no_of_sheets
       }, {
         $set: {
           item_status: null
@@ -692,6 +697,20 @@ export const edit_dispatch_details = catchAsync(async (req, res, next) => {
     const packing_done_ids_data = packing_done_ids.map(
       (item) => item?.packing_done_other_details_id
     );
+
+    const alreadyDispatched = await packing_done_other_details_model.find({
+      _id: { $in: packing_done_ids_data },
+      is_dispatch_done: true,
+      dispatch_id: { $ne: dispatch_id }
+    }).session(session);
+
+    if (alreadyDispatched?.length > 0) {
+      throw new ApiError(
+        'Packing done details not found or already dispatch for some packing id',
+        StatusCodes.BAD_REQUEST
+      );
+    }
+
     const update_packing_done_details =
       await packing_done_other_details_model.updateMany(
         { _id: { $in: packing_done_ids_data } },
@@ -1240,10 +1259,63 @@ export const fetch_all_dispatch_details = catchAsync(async (req, res, next) => {
       preserveNullAndEmptyArrays: true,
     },
   };
-  const aggSort = {
-    $sort: {
-      [sortBy]: sort === 'desc' ? -1 : 1,
+  const aggAddInvoiceSort = {
+    $addFields: {
+      invoice_sort_key: {
+        $add: [
+          {
+            $multiply: [
+              {
+                $convert: {
+                  input: {
+                    $getField: {
+                      field: "match",
+                      input: {
+                        $regexFind: {
+                          input: { $ifNull: ['$invoice_no', '0'] },
+                          regex: '(?<=/)(\\d{2})',
+                        },
+                      },
+                    },
+                  },
+                  to: "int",
+                  onError: 0,
+                  onNull: 0,
+                },
+              },
+              1000,
+            ],
+          },
+          {
+            $convert: {
+              input: {
+                $getField: {
+                  field: "match",
+                  input: {
+                    $regexFind: {
+                      input: { $ifNull: ['$invoice_no', '0'] },
+                      regex: '^[0-9]+',
+                    },
+                  },
+                },
+              },
+              to: "int",
+              onError: 0,
+              onNull: 0,
+            },
+          },
+        ],
+      },
     },
+  };
+  const aggSort = {
+    $sort:
+      sortBy === 'invoice_no'
+        ? {
+          invoice_sort_key: sort === 'desc' ? -1 : 1,
+          invoice_no: sort === 'desc' ? -1 : 1,
+        }
+        : { [sortBy]: sort === 'desc' ? -1 : 1 },
   };
   const aggSkip = {
     $skip: (parseInt(page) - 1) * parseInt(limit),
@@ -1261,6 +1333,7 @@ export const fetch_all_dispatch_details = catchAsync(async (req, res, next) => {
     aggUnwindCreatedUser,
     aggUnwindUpdatedUser,
     aggMatch,
+    aggAddInvoiceSort,
     aggSort,
     aggSkip,
     aggLimit,
@@ -1472,7 +1545,7 @@ export const fetch_all_dispatch_items_details = catchAsync(
 );
 
 export const packing_done_dropdown = catchAsync(async (req, res, next) => {
-  const { customer_id, order_category, product_type } = req.body;
+  const { customer_id, order_category, product_type, exclude_dispatched } = req.body;
 
   const required_fields = ['customer_id', 'order_category', 'product_type'];
   for (const field of required_fields) {
@@ -1486,14 +1559,25 @@ export const packing_done_dropdown = catchAsync(async (req, res, next) => {
     }
   }
 
+  const match = {
+    customer_id: mongoose.Types.ObjectId.createFromHexString(customer_id),
+  }
+
+  if (order_category && order_category.length > 0) {
+    match.order_category = { $in: order_category };
+  }
+
+  if (product_type && product_type.length > 0) {
+    match.product_type = { $in: product_type };
+  }
+
+  if (exclude_dispatched) {
+    match.is_dispatch_done = { $ne: true };
+  }
+
   const pipeline = [
     {
-      $match: {
-        customer_id: mongoose.Types.ObjectId.createFromHexString(customer_id),
-        order_category: order_category,
-        product_type: product_type,
-        is_dispatch_done: false, //filters out dispatches that have already been done
-      },
+      $match: match,
     },
     {
       $sort: {
@@ -1523,31 +1607,26 @@ export const generate_invoice_no = catchAsync(async (req, res, next) => {
   const getFinancialYear = () => {
     const today = new Date();
     const year = today.getFullYear();
-    const month = today.getMonth(); // 0 = Jan, 11 = Dec
-    const fyStartYear = month >= 3 ? year : year - 1; // FY starts in April
+    const month = today.getMonth();
+    const fyStartYear = month >= 3 ? year : year - 1;
     const fyEndYear = fyStartYear + 1;
     return `${fyStartYear.toString().slice(-2)}-${fyEndYear.toString().slice(-2)}`;
   };
+
+  const currentFY = getFinancialYear();
 
   const latestDispatch = await dispatchModel
     .findOne({}, { invoice_no: 1 })
     .sort({ createdAt: -1 });
 
   let latest_invoice_no;
-  const currentFY = getFinancialYear();
 
   if (latestDispatch?.invoice_no) {
-    const [seqPart, fyPart] = latestDispatch.invoice_no.split('/'); // e.g., "1", "24-25"
-    const prevFY = fyPart;
+    const [seqPart, fyPart] = latestDispatch.invoice_no.split('/');
     const dispatchNumber = parseInt(seqPart);
-
-    if (prevFY === currentFY) {
-      latest_invoice_no = `${dispatchNumber + 1}/${currentFY}`;
-    } else {
-      latest_invoice_no = `1/${currentFY}`; // reset for new FY
-    }
+    latest_invoice_no = fyPart === currentFY ? `${dispatchNumber + 1}/${currentFY}` : `1/${currentFY}`;
   } else {
-    latest_invoice_no = `1/${currentFY}`; // first ever dispatch
+    latest_invoice_no = `1/${currentFY}`;
   }
 
   return res.status(200).json({
@@ -1861,3 +1940,19 @@ export const fetch_packing_details_by_customer_id = catchAsync(async (req, res) 
 
   return res.status(StatusCodes.OK).json(result);
 })
+
+export const invoice_no_dropdown = catchAsync(async (req, res, next) => {
+  try {
+    const InvoiceNo = await dispatchModel.find({}, { _id: 1, invoice_no: 1 }).sort({ createdAt: -1 });
+    res.status(200).json({
+      success: true,
+      result: InvoiceNo.map((i) => ({
+        _id: i._id,
+        invoice_no: i.invoice_no,
+      })),
+    });
+  }
+  catch (err) {
+    next(err);
+  }
+});

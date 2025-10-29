@@ -581,6 +581,7 @@ export const fetch_single_issue_for_tapping_details = catchAsync(
                 orderDate: 1,
                 order_category: 1,
                 series_product: 1,
+                common_instructions: 1,
               },
             },
           ],

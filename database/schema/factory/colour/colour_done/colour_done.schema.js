@@ -45,6 +45,9 @@ const color_done_details_schema = new mongoose.Schema(
       type: Number,
       required: [true, 'Amount is required.'],
     },
+    order_item_id: {
+      type: mongoose.Schema.Types.ObjectId,
+    },
     available_details: {
       no_of_sheets: {
         type: Number,

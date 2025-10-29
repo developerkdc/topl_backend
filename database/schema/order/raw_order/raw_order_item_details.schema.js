@@ -85,6 +85,10 @@ const RawOrderItemDetailsSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    dispatch_no_of_sheets: {
+      type: Number,
+      default: 0,
+    },
     cbm: {
       type: Number,
       default: 0,

@@ -84,6 +84,8 @@ export const add_issue_for_smoking_dying_from_veneer_inventory = catchAsync(
             pallet_number: item?.pallet_number,
             color_id: item?.color?.color_id,
             color_name: item?.color?.color_name,
+            process_name: item?.process_name,
+            process_id: item?.process_id,
             character_id: item?.character_id,
             character_name: item?.character_name,
             pattern_id: item?.pattern_id,
@@ -256,6 +258,8 @@ export const add_issue_for_smoking_dying_from_dressing_done_factory =
             grade_id: item?.grade_id,
             grade_name: item?.grade_name,
             amount: item?.amount,
+            process_name: item?.process_name,
+            process_id: item?.process_id,
             expense_amount: item?.expense_amount,
             issued_from: issues_for_status?.dressing,
             pattern_name: item?.pattern_name,
@@ -751,7 +755,7 @@ export const revert_issued_for_smoking_dying_item = catchAsync(
           delete_dressing_done_history_doc.deletedCount === 0
         ) {
           throw new ApiError(
-            'Failed to delete dressing history documnet',
+            'Failed to delete dressing history document',
             StatusCodes.BAD_REQUEST
           );
         }

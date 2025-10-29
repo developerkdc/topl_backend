@@ -430,7 +430,7 @@ export const bulk_upload_machine_raw_data_new = async (req, res, next) => {
   }
 };
 
-export const fetch_all_issue_for_dressing_items_by_item_other_details_id =
+export const fetch_all_issue_for_dressing_items_by_item_other_details_id = 
   catchAsync(async (req, res) => {
     const { id } = req.params;
 

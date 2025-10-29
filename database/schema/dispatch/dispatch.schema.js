@@ -94,21 +94,45 @@ const dispatchSchema = new mongoose.Schema(
         return customer_details?.is_tcs_applicable || false;
       },
     },
+    // order_category: {
+    //   type: String,
+    //   enum: {
+    //     values: [
+    //       order_category?.raw,
+    //       order_category?.decorative,
+    //       order_category?.series_product,
+    //     ],
+    //     message: `Invalid type {{VALUE}} it must be one of the ${(order_category?.raw, order_category?.decorative, order_category?.series_product)}`,
+    //   },
+    //   required: [true, 'Order category is required'],
+    //   trim: true,
+    // },
+    // product_category: {
+    //   type: String,
+    //   default: null,
+    //   trim: true,
+    //   uppercase: true,
+    // },
     order_category: {
-      type: String,
+      type: [String],
       enum: {
         values: [
           order_category?.raw,
           order_category?.decorative,
           order_category?.series_product,
         ],
-        message: `Invalid type {{VALUE}} it must be one of the ${(order_category?.raw, order_category?.decorative, order_category?.series_product)}`,
+        message: `Invalid type {{VALUE}} it must be one of the ${[
+          order_category?.raw,
+          order_category?.decorative,
+          order_category?.series_product,
+        ]?.join(', ')}`,
       },
+      uppercase: true,
       required: [true, 'Order category is required'],
       trim: true,
     },
     product_category: {
-      type: String,
+      type: [String],
       default: null,
       trim: true,
       uppercase: true,
@@ -124,6 +148,9 @@ const dispatchSchema = new mongoose.Schema(
             type: String,
             required: [true, 'Packing Done ID is required.'],
           },
+          packing_date: {
+            type: Date,
+          }
         },
       ],
       default: [],
@@ -167,6 +194,28 @@ const dispatchSchema = new mongoose.Schema(
       dispatch_from_address: address_schema,
       bill_to_address: address_schema,
       ship_to_address: address_schema,
+    },
+    address_of_buyer_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      // required: [true, 'Address of buyer is required.'],
+      default: null,
+    },
+    address_of_seller_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      // required: [true, 'Address of seller is required.'],
+      default: null,
+    },
+    address_of_buyer: {
+      type: String,
+      uppercase: true,
+      // required: [true, 'Address of buyer is required.'],
+      default: null,
+    },
+    address_of_seller: {
+      type: String,
+      uppercase: true,
+      // required: [true, 'Address of seller is required.'],
+      default: null,
     },
     is_part_b: {
       type: Boolean,

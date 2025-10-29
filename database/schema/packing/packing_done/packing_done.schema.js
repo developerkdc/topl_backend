@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { order_category } from '../../../Utils/constants/constants.js';
+import { type } from 'os';
 
 const packing_done_other_details_schema = new mongoose.Schema(
   {
@@ -22,21 +23,46 @@ const packing_done_other_details_schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Customer ID is required.'],
     },
-    order_category: {
+    photo_no: {
       type: String,
+    },
+    // order_category: {
+    //   type: String,
+    //   enum: {
+    //     values: [
+    //       order_category?.raw,
+    //       order_category?.decorative,
+    //       order_category?.series_product,
+    //     ],
+    //     message: `Invalid type {{VALUE}} it must be one of the ${(order_category?.raw, order_category?.decorative, order_category?.series_product)}`,
+    //   },
+    //   required: [true, 'Order category is required'],
+    //   trim: true,
+    // },
+    // product_type: {
+    //   type: String,
+    //   required: [true, 'Product Type is required'],
+    //   trim: true,
+    // },
+    order_category: {
+      type: [String],
       enum: {
         values: [
           order_category?.raw,
           order_category?.decorative,
           order_category?.series_product,
         ],
-        message: `Invalid type {{VALUE}} it must be one of the ${(order_category?.raw, order_category?.decorative, order_category?.series_product)}`,
+        message: `Invalid type {{VALUE}}. It must be one of ${[
+          order_category?.raw,
+          order_category?.decorative,
+          order_category?.series_product,
+        ].join(', ')}`,
       },
       required: [true, 'Order category is required'],
       trim: true,
     },
     product_type: {
-      type: String,
+      type: [String],
       required: [true, 'Product Type is required'],
       trim: true,
     },
@@ -56,6 +82,10 @@ const packing_done_other_details_schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Updated by is required.'],
     },
+    remark: {
+      type: String,
+      default: null
+    }
   },
   {
     timestamps: true,

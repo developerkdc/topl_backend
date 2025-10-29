@@ -3,6 +3,7 @@ import AuthMiddleware from '../../../middlewares/verifyToken.js';
 import {
   addPhoto,
   download_excel_photo_album,
+  downloadPhotoAlbumImagesZip,
   downloadPhotoAlbumZip,
   dropdownPhoto,
   fetch_available_photo_quantity,
@@ -49,6 +50,11 @@ photoRouter.post(
   '/download-photo-album-zip',
   AuthMiddleware,
   downloadPhotoAlbumZip
+);
+photoRouter.post(
+  '/download-photo-images',
+  AuthMiddleware,
+  downloadPhotoAlbumImagesZip
 );
 // Export APi Done
 photoRouter.post(

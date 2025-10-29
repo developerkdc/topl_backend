@@ -64,7 +64,7 @@
       <thead>
         <tr>
           <th>Series</th>
-          <th>SalesItemname</th>
+          <th>Sales Itemname</th>
           <th>Photo Number</th>
           <th>LogX</th>
           <th>Character</th>
@@ -94,7 +94,7 @@
         {{#each items}}
           <tr>
             <td style='font-size: 15px;'>{{series_name}}</td>
-            <td style='font-size: 15px;'>{{item_name}}</td>
+            <td style="font-size: 15px;">{{sales_item_name}}</td>
             <td style='font-size: 15px;'><strong>{{photo_number}}</strong></td>
             <td style='font-size: 15px;'>{{group_no}}</td>
             <td style='font-size: 15px;'>{{character}}</td>
@@ -145,7 +145,7 @@
         {{#each items}}
           <tr>
             <td class='vertical-bar'></td>
-            <td style='text-align: left;'>{{item_name}}</td>
+            <td style="max-width: 300px; white-space: normal; word-wrap: break-word; word-break: break-word;">{{sales_item_name}}</td>
             <td style='text-align: right;'>{{no_of_sheets}}</td>
             <td style='text-align: right;'>{{sqm}}</td>
           </tr>

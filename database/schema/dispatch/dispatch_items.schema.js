@@ -15,6 +15,9 @@ const dispatch_items_schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Packing Done Mongodb ID is required.'],
     },
+    packing_date: {
+      type: Date,
+    },
     dispatch_id: {
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Dispatch ID is required.'],
@@ -62,7 +65,7 @@ const dispatch_items_schema = new mongoose.Schema(
         ]?.join(', ')}`,
       },
       uppercase: true,
-      required: [true, 'Order category is required'],
+      // required: [true, 'Order category is required'],
       trim: true,
     },
     product_category: {
@@ -82,6 +85,12 @@ const dispatch_items_schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       // required: [true, 'Group Number ID is required.'],
       default: null,
+    },
+    photo_no: {
+      type: String,
+      default: null,
+      trim: true,
+      uppercase: true,
     },
     log_no: {
       type: String,
@@ -175,7 +184,7 @@ const dispatch_items_schema = new mongoose.Schema(
     discount_percentage: {
       type: Number,
       default: 0,
-      required: [true, 'Item Amount is required'],
+      // required: [true, 'Item Amount is required'],
     },
     discount_value: {
       type: Number,

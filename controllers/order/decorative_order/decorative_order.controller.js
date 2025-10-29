@@ -105,7 +105,7 @@ export const add_decorative_order = catchAsync(async (req, res) => {
     }
 
     const create_order_result =
-      await decorative_order_item_details_model?.insertMany(
+      await decorative_order_item_details_model?.create(
         updated_item_details,
         { session }
       );
@@ -174,9 +174,9 @@ export const update_decorative_order = catchAsync(async (req, res) => {
       );
     }
 
-    if (order_details_result.order_status === order_status.cancelled) {
-      throw new ApiError("Order is already cancelled", StatusCodes.BAD_REQUEST);
-    }
+    // if (order_details_result.order_status === order_status.cancelled) {
+    //   throw new ApiError("Order is already cancelled", StatusCodes.BAD_REQUEST);
+    // }
     if (order_details_result.order_status === order_status.closed) {
       throw new ApiError("Order is already closed", StatusCodes.BAD_REQUEST);
     }

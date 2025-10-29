@@ -200,9 +200,9 @@ export const update_series_order = catchAsync(async (req, res) => {
       );
     }
 
-    if (order_details_result.order_status === order_status.cancelled) {
-      throw new ApiError('Order is already cancelled', StatusCodes.BAD_REQUEST);
-    }
+    // if (order_details_result.order_status === order_status.cancelled) {
+    //   throw new ApiError('Order is already cancelled', StatusCodes.BAD_REQUEST);
+    // }
     if (order_details_result.order_status === order_status.closed) {
       throw new ApiError('Order is already closed', StatusCodes.BAD_REQUEST);
     }
