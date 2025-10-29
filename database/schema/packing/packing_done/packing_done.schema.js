@@ -85,6 +85,10 @@ const packing_done_other_details_schema = new mongoose.Schema(
     remark: {
       type: String,
       default: null
+    },
+    sales_item_name: {
+      type: String,
+      required: [true, "Sales Item Name is required"]
     }
   },
   {

@@ -11,17 +11,20 @@ const contactPersonSchema = new mongoose.Schema({
     uppercase: true,
     trim: true,
     required: [true, 'Person name is required'],
+    // default: null
   },
   mobile_no: {
     type: String,
     trim: true,
     required: [true, 'Mobile No is required'],
+    // default: null
   },
   email_id: {
     type: String,
     trim: true,
     match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Please enter a valid email address'],
     required: [true, 'Email Id is required'],
+    // default: null
   },
 });
 
@@ -30,27 +33,32 @@ const addressSchema = new mongoose.Schema({
     type: String,
     uppercase: true,
     trim: true,
-    required: [true, 'Address is required'],
+    // required: [true, 'Address is required'],
+    default: null
   },
   country: {
     type: String,
     trim: true,
-    required: [true, 'country is required'],
+    // required: [true, 'country is required'],
+    default: null
   },
   state: {
     type: String,
     trim: true,
-    required: [true, 'state is required'],
+    // required: [true, 'state is required'],
+    default: null
   },
   city: {
     type: String,
     trim: true,
-    required: [true, 'city is required'],
+    // required: [true, 'city is required'],
+    default: null
   },
   pincode: {
     type: String,
     trim: true,
-    required: [true, 'pincode is required'],
+    // required: [true, 'pincode is required'],
+    default: null
   },
 });
 
@@ -169,29 +177,33 @@ const customerSchema = new mongoose.Schema(
     },
     contact_person: {
       type: [contactPersonSchema],
-      validate: {
-        validator: function (value) {
-          return value.length > 0;
-        },
-        message: 'Atleast one contact person is required',
-      },
+      // validate: {
+      //   validator: function (value) {
+      //     return value.length > 0;
+      //   },
+      //   message: 'Atleast one contact person is required',
+      // },
+      default: []
     },
     address: {
       billing_address: {
         type: addressSchema,
-        required: [true, 'Billing address is required'],
+        // required: [true, 'Billing address is required'],
+        default: null
       },
       delivery_address: {
         type: addressSchema,
-        required: [true, 'Delivery address is required'],
+        // required: [true, 'Delivery address is required'],
+        default: null
       },
       alternate_delivery_address: {
         type: addressSchema,
-        required: [true, 'Alternate delivery address is required'],
+        // required: [true, 'Alternate delivery address is required'],
+        default: null
       },
       communication_address: {
         type: addressSchema,
-        required: [true, 'Communication address is required'],
+        // required: [true, 'Communication address is required'],
       },
     },
     photo_type: {

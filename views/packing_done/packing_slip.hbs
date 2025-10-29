@@ -1,137 +1,223 @@
 <html lang='en'>
 
-  <head>
-    <meta charset='UTF-8' />
-    <meta name='viewport' content='width=device-width, initial-scale=1.0' />
-    <title>Packing Details Report</title>
-    <style>
-      body { font-family: Arial, sans-serif; margin: 20px; } img.banner { width:
-      100%; max-width: 1000px; height: auto; display: block; margin: 0 auto
-      20px; } table { width: 100%; border-collapse: collapse; margin-bottom:
-      40px; } .table-1{ margin-top: 50px; margin-bottom: 150px; } th, td {
-      border: 1px solid #000; padding: 8px; text-align: center; font-size: 14px;
-      } th { background-color: #f2f2f2; } h2 { margin-top: 40px; } @media print
-      { body { margin-top: 160px; margin-bottom: 100px; } .banner-header,
-      .banner-footer { position: fixed; left: 0; width: 100%; z-index: 9999; }
-      .banner-header { top: 0; height: 150px; } .banner-footer { bottom: 0;
-      height: 100px; } .screen-only { display: none; } }
-    </style>
-  </head>
+<head>
+  <meta charset='UTF-8' />
+  <meta name='viewport' content='width=device-width, initial-scale=1.0' />
+  <title>Packing Details Report</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      text-align: left; /* Ensure base alignment */
+    }
 
-  <body>
+    img.banner {
+      width: 100%;
+      max-width: 1000px;
+      height: auto;
+      display: block;
+      margin: 0 auto 20px;
+    }
 
-    <img src='{{headerUrl}}' alt='Header Banner' class='banner-header' />
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 40px;
+      text-align: left; /* Left-align all table content */
+    }
 
-    <div class='outer'>
-      <h3>
-        Packing Details Report Date:
-        {{packing_date}}
-        &nbsp;&nbsp; Packing Id:
-        {{packing_id}}
-        &nbsp;&nbsp; Customer Name:
-        {{customer_name}}
-      </h3>
+    .table-1 {
+      margin-top: 50px;
+      margin-bottom: 150px;
+      font-size: 14px;
+    }
+    .table-1 th,{
+      font-size: 14px;
+    }
+    .table-1 td,{
+      font-size: 14px;
+    }
 
-      <p><b>
-          Product Category:
-          {{product_type}}
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-          {{remark}}
-        </b></p>
+    th,
+    td {
+      border: 1px solid #000;
+      padding: 8px;
+      text-align: left; /* Force text to the left inside cells */
+      font-size: 14px;
+      vertical-align: top; /* Keeps text neatly aligned at the top */
+    }
 
-      <table class='table-1'>
-        <thead>
-          <tr>
-            <th>Item Name</th>
-            <th>Photo No.</th>
-            <th>Pressing ID</th>
-            <th>Length</th>
-            <th>Width</th>
-            <th>
-              {{#if packing_done_item_details.[0].number_of_rolls}}Rolls
-              {{else if packing_done_item_details.[0].no_of_leaves}}Leaves
-              {{else if packing_done_item_details.[0].quantity}}Quantity
-              {{else}}Sheets
-              {{/if}}
-            </th>
+    th {
+      background-color: #f2f2f2;
+      font-weight: bold;
+    }
 
-            <th>Sq Mtr</th>
-            <th>Bund. No</th>
-            {{! <th>Bundles</th>
+    h2,
+    h5,
+    p {
+      text-align: left; /* Left-align all headings and paragraphs */
+    }
+
+    @media print {
+      .table-1 {
+        page-break-before: auto;
+      }
+
+      .table-1+* {
+        page-break-before: avoid;
+      }
+
+      .table-1:not(:first-of-type),
+      .page-break~.table-1 {
+        margin-top: 100px !important;
+        margin-bottom: 100px !important;
+      }
+
+      body {
+        margin-top: 160px;
+        margin-bottom: 100px;
+      }
+
+      .banner-header,
+      .banner-footer {
+        position: fixed;
+        left: 0;
+        width: 100%;
+        z-index: 9999;
+      }
+
+      .banner-header {
+        top: 0;
+        height: 150px;
+      }
+
+      .banner-footer {
+        bottom: 0;
+        height: 100px;
+      }
+
+      .screen-only {
+        display: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <img src='{{headerUrl}}' alt='Header Banner' class='banner-header' />
+
+  <div class='outer'>
+    <h5 style='font-size: 12px; font-weight:bold'>
+      Packing Details Report Date:
+      {{packing_date}}
+      &nbsp;&nbsp; Packing Id:
+      {{packing_id}}
+      &nbsp;&nbsp; Customer Name:
+      {{customer_name}}
+    </h5>
+
+    <p style='font-size: 12px;'><b>
+        Product Category:
+        {{product_display_type}}
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        Remark:
+        {{remark}}
+      </b></p>
+
+    <table class='table-1'>
+      <thead>
+        <tr>
+          <th>Item Name</th>
+          <th>Photo No.</th>
+          <th>Pressing ID</th>
+          <th>Length</th>
+          <th>Width</th>
+          <th>
+            {{#if packing_done_item_details.[0].number_of_rolls}}Rolls
+            {{else if packing_done_item_details.[0].no_of_leaves}}Leaves
+            {{else if packing_done_item_details.[0].quantity}}Quantity
+            {{else}}Sheets
+            {{/if}}
+          </th>
+
+          <th>Sq Mtr</th>
+          <th>Bund. No</th>
+          {{! <th>Bundles</th>
           <th>No of Bund.</th> }}
-            <th>Remarks</th>
-          </tr>
-        </thead>
-        <tbody>
-          {{#each packing_done_item_details}}
-            <tr>
-              <td>{{item_name}}</td>
-              <td>{{photo_no}}</td>
-              <td>{{pressing_id}}</td>
-              <td>{{#if new_length}}{{new_length}}{{else}}{{length}}{{/if}}</td>
-              <td>{{#if new_width}}{{new_width}}{{else}}{{width}}{{/if}}</td>
-              <td>
-                {{#if number_of_rolls}}{{number_of_rolls}}
-                {{else if no_of_leaves}}{{no_of_leaves}}
-                {{else if quantity}}{{quantity}}
-                {{else}}{{no_of_sheets}}{{/if}}
-              </td>
-              <td>{{sqm}}</td>
-              <td>{{no_of_bundles}}</td>
-              <td>{{remark}}</td>
-            </tr>
+          <th>Remarks</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each packing_done_item_details}}
+        <tr style="font-size; 14px">
+          <td>{{sales_item_name}}</td>
+          <td>{{photo_no}}</td>
+          <td>{{pressing_id}}</td>
+          <td>{{#if new_length}}{{new_length}}{{else}}{{length}}{{/if}}</td>
+          <td>{{#if new_width}}{{new_width}}{{else}}{{width}}{{/if}}</td>
+          <td>
+            {{#if number_of_rolls}}{{number_of_rolls}}
+            {{else if no_of_leaves}}{{no_of_leaves}}
+            {{else if quantity}}{{quantity}}
+            {{else}}{{no_of_sheets}}{{/if}}
+          </td>
+          <td>{{sqm}}</td>
+          <td>{{no_of_bundles}}</td>
+          <td>{{remark}}</td>
+        </tr>
 
-          {{/each}}
+        {{/each}}
 
-          <tr>
-            <td>{{customer_name}}</td>
-            <td colspan='4'></td>
-            <td>{{totalSheets}}</td>
-            <td>{{totalSqMtr}}</td>
-            <td colspan='4'></td>
-          </tr>
-          <tr>
-            <td colspan='5'>Grand Total</td>
-            <td>{{totalSheets}}</td>
-            <td>{{totalSqMtr}}</td>
-            <td colspan='4'></td>
-          </tr>
-        </tbody>
-      </table>
+        <tr>
+          <td>{{customer_name}}</td>
+          <td colspan='4'></td>
+          <td>{{totalSheets}}</td>
+          <td>{{totalSqMtr}}</td>
+          <td colspan='4'></td>
+        </tr>
+        <tr>
+          <td colspan='5'>Grand Total</td>
+          <td>{{totalSheets}}</td>
+          <td>{{totalSqMtr}}</td>
+          <td colspan='4'></td>
+        </tr>
+      </tbody>
+    </table>
 
-      <!-- Item + Size wise Summary -->
-      <h2 style='text-decoration: underline; font-size: 20px;'>Item + Size wise
-        Summary</h2>
+    <!-- Item + Size wise Summary -->
+    <h2 style='text-decoration: underline; font-size: 20px;'>Item + Size wise
+      Summary</h2>
 
-      <table>
-        <thead>
-          <tr>
-            <th>Item Name</th>
-            <th>Size</th>
-            <th>Sheets</th>
-            <th>Sq Mtr</th>
-          </tr>
-        </thead>
-        <tbody>
-          {{#each item_summary}}
-            <tr>
-              <td>{{item_name}}</td>
-              <td>{{size}}</td>
-              <td>{{sheets}}</td>
-              <td>{{sqm}}</td>
-            </tr>
-          {{/each}}
-          <tr>
-            <td colspan='2'>Total</td>
-            <td>{{totalSheets}}</td>
-            <td>{{totalSqMtr}}</td>
-          </tr>
-        </tbody>
-      </table>
+    <table>
+      <thead>
+        <tr>
+          <th>Item Name</th>
+          <th>Size</th>
+          <th>Sheets</th>
+          <th>Sq Mtr</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each item_summary}}
+        <tr>
+          <td>{{item_name}}</td>
+          <td>{{size}}</td>
+          <td>{{sheets}}</td>
+          <td>{{sqm}}</td>
+        </tr>
+        {{/each}}
+        <tr>
+          <td colspan='2'>Total</td>
+          <td>{{totalSheets}}</td>
+          <td>{{totalSqMtr}}</td>
+        </tr>
+      </tbody>
+    </table>
 
-    </div>
+  </div>
 
-    <img src='{{footerUrl}}' alt='Footer Banner' class='banner-footer' />
-  </body>
+  <img src='{{footerUrl}}' alt='Footer Banner' class='banner-footer' />
+</body>
 
 </html>
