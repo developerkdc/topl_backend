@@ -87,7 +87,6 @@ const color_done_details_schema = new mongoose.Schema(
     },
     remark: {
       type: String,
-      default: null,
       uppercase: true,
     },
     created_by: {

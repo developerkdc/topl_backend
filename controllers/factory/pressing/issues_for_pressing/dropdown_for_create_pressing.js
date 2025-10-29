@@ -15,13 +15,26 @@ import catchAsync from '../../../../utils/errors/catchAsync.js';
 export const fetch_all_group_no_based_on_issued_status = catchAsync(
   async (req, res) => {
     const { type, order_id, order_item_id } = req.query;
+
     const search_query = {
       issued_for: type?.toUpperCase(),
     };
+
     if (type?.toUpperCase() === item_issued_for.order) {
+      //Validate ObjectIds before using them to prevent BSONError
+      if (
+        !mongoose.Types.ObjectId.isValid(order_id) ||
+        !mongoose.Types.ObjectId.isValid(order_item_id)
+      ) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: 'Invalid order_id or order_item_id format',
+        });
+      }
+
       search_query.order_id = new mongoose.Types.ObjectId(order_id);
       search_query.order_item_id = new mongoose.Types.ObjectId(order_item_id);
     }
+
     const match_query = {
       ...search_query,
       'available_details.no_of_sheets': {
@@ -50,6 +63,7 @@ export const fetch_all_group_no_based_on_issued_status = catchAsync(
       'Group No Dropdown fetched successfully',
       result
     );
+
     return res.status(StatusCodes.OK).json(response);
   }
 );
@@ -465,28 +479,28 @@ export const issue_for_pressing_orderNo = catchAsync(async (req, res, next) => {
 
   const aggLookup = {
     $lookup: {
-      from: "orders",
-      localField: "order_id",
-      foreignField: "_id",
-      as: "orderDetails",
+      from: 'orders',
+      localField: 'order_id',
+      foreignField: '_id',
+      as: 'orderDetails',
     },
   };
 
-  const aggUnwind = { $unwind: "$orderDetails" };
+  const aggUnwind = { $unwind: '$orderDetails' };
 
   const aggProject = {
     $project: {
-      order_id: "$orderDetails._id",
-      order_no: "$orderDetails.order_no",
-      order_category: "$orderDetails.order_category",
+      order_id: '$orderDetails._id',
+      order_no: '$orderDetails.order_no',
+      order_category: '$orderDetails.order_category',
     },
   };
 
   const aggGroup = {
     $group: {
-      _id: "$order_id",
-      order_no: { $first: "$order_no" },
-      order_category: { $first: "$order_category" },
+      _id: '$order_id',
+      order_no: { $first: '$order_no' },
+      order_category: { $first: '$order_category' },
     },
   };
 
@@ -505,10 +519,9 @@ export const issue_for_pressing_orderNo = catchAsync(async (req, res, next) => {
   // --- Send response ---
   const response = new ApiResponse(
     StatusCodes.OK,
-    "Fetch Pressing Orders Successfully.",
+    'Fetch Pressing Orders Successfully.',
     fetch_order_no
   );
 
   return res.status(StatusCodes.OK).json(response);
 });
-
