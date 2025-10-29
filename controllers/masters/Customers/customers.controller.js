@@ -8,6 +8,7 @@ import ApiError from '../../../utils/errors/apiError.js';
 import ApiResponse from '../../../utils/ApiResponse.js';
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
+import { StatusCodes } from '../../../utils/constants.js';
 
 export const addCustomer = catchAsync(async (req, res, next) => {
   const session = await mongoose.startSession();
@@ -491,3 +492,209 @@ export const dropdownCustomer = catchAsync(async (req, res, next) => {
   );
   return res.status(200).json(response);
 });
+
+//mobile API's
+
+export const fetch_single_customer_by_id = catchAsync(async (req, res, next) => {
+  const { CustomerId } = req.body;
+
+  if (!CustomerId) {
+    throw new ApiError("Customer Id is required", StatusCodes.BAD_REQUEST);
+  }
+
+  if (!mongoose.isValidObjectId(CustomerId)) {
+    throw new ApiError("Invalid Customer Id", StatusCodes.BAD_REQUEST);
+  };
+  const aggCreatedByLookup = {
+    $lookup: {
+      from: 'users',
+      localField: 'created_by',
+      foreignField: '_id',
+      pipeline: [
+        {
+          $project: {
+            user_name: 1,
+            user_type: 1,
+            dept_name: 1,
+            first_name: 1,
+            last_name: 1,
+            email_id: 1,
+            mobile_no: 1,
+          },
+        },
+      ],
+      as: 'created_by',
+    },
+  };
+  const aggUpdatedByLookup = {
+    $lookup: {
+      from: 'users',
+      localField: 'updated_by',
+      foreignField: '_id',
+      pipeline: [
+        {
+          $project: {
+            user_name: 1,
+            user_type: 1,
+            dept_name: 1,
+            first_name: 1,
+            last_name: 1,
+            email_id: 1,
+            mobile_no: 1,
+          },
+        },
+      ],
+      as: 'updated_by',
+    },
+  };
+  const aggCreatedByUnwind = {
+    $unwind: {
+      path: '$created_by',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
+  const aggUpdatedByUnwind = {
+    $unwind: {
+      path: '$updated_by',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
+
+  const list_aggregate = [
+    aggCreatedByLookup,
+    aggCreatedByUnwind,
+    aggUpdatedByLookup,
+    aggUpdatedByUnwind
+  ]
+  const pipeline = [
+    {
+      $match: {
+        _id: mongoose.Types.ObjectId.createFromHexString(CustomerId)
+      }
+    },
+    ...list_aggregate
+  ]
+  const [customerData] = await customer_model.aggregate(pipeline);
+
+  if (!customerData) {
+    throw new ApiError("Customer not found", StatusCodes.NOT_FOUND);
+  }
+  // const updated_payload = {
+  //   bi_CustomerId: customerData.sr_no || null,
+  //   vc_CustomerName: customerData.company_name || null,
+  //   d_BirthDate: customerData.dob || null,
+  //   vc_OwnerName: customerData.owner_name || null,
+  //   vc_EmailId: customerData.email_id || null,
+  //   vc_WebUrl: customerData.web_url || null,
+  //   vc_GSTNo: customerData.gst_number || null,
+  //   vc_CSTNo: customerData.pan_number || null,
+
+  //   vc_BillingAddressLine1: customerData.address?.billing_address?.address || null,
+  //   vc_BillingAddressLine2: customerData.address?.billing_address?.address_line_2 || null,
+  //   bi_BillingCityId: customerData.address?.billing_address?.city || null,
+  //   i_BillingStateId: customerData.address?.billing_address?.state || null,
+  //   i_BillingCountryId: customerData.address?.billing_address?.country || null,
+  //   vc_BillingPinCode: customerData.address?.billing_address?.pincode || null,
+
+  //   vc_DeliveryAddressLine1: customerData.address?.delivery_address?.address || null,
+  //   vc_DeliveryAddressLine2: customerData.address?.delivery_address?.address_line_2 || null,
+  //   bi_DeliveryCityId: customerData.address?.delivery_address?.city || null,
+  //   i_DeliveryStateId: customerData.address?.delivery_address?.state || null,
+  //   i_DeliveryCountryId: customerData.address?.delivery_address?.country || null,
+  //   vc_DeliveryPinCode: customerData.address?.delivery_address?.pincode || null,
+
+  //   b_IsCForm: customerData.is_tcs_applicable ? "1" : "0",
+  //   b_IsTaxInvoice: customerData.is_tcs_applicable ? "1" : "0",
+  //   vc_SaleType: customerData.supplier_type || null,
+  //   f_Freight: customerData.freight ?? null,
+  //   b_Status: customerData.status ? "1" : "0",
+
+  //   i_CreditPeriodDays: customerData.credit_schedule || null,
+
+  //   PhotoTypeA: customerData.photo_type?.photo_type_a || null,
+  //   PhotoTypeB: customerData.photo_type?.photo_type_b || null,
+  //   PhotoTypeC: customerData.photo_type?.photo_type_c || null,
+
+  //   vc_Remark: customerData.remark || null,
+  //   d_CreatedOn: customerData.createdAt,
+  //   bi_CreatedBy: customerData.created_by?.user_name || null,
+  //   d_ModifiedOn: customerData.updatedAt || null,
+  //   bi_ModifiedBy: customerData.updated_by?.user_name || null,
+  //   ToSync: "1",
+  //   GSTNoFromJuly2017: customerData.gst_number || null,
+  // };
+
+  const updated_payload = {
+    bi_CustomerId: customerData?.sr_no ?? null,
+    vc_CustomerName: customerData?.company_name ?? null,
+    d_BirthDate: customerData?.dob ?? null,
+    vc_OwnerName: customerData?.owner_name ?? null,
+    bi_ParentCustomerId: null,
+    i_GroupId: null,
+    vc_Phone1: customerData?.phone_number ?? null,
+    vc_Phone2: customerData?.alternate_phone_number ?? null,
+    vc_MobileNo1: customerData?.contact_person?.[0]?.mobile_no ?? null,
+    vc_MobileNo2: customerData?.contact_person?.[1]?.mobile_no ?? null,
+    vc_EmailId: customerData?.email_id ?? null,
+    vc_FaxNo: null,
+    vc_WebUrl: customerData?.web_url ?? null,
+    vc_ECCNo: null,
+    vc_CSTNo: customerData?.pan_number ?? null,
+    vc_GSTNo: customerData?.gst_number ?? null,
+
+    vc_BillingAddressLine1: customerData?.address?.billing_address?.address ?? null,
+    vc_BillingAddressLine2: customerData?.address?.billing_address?.address_line_2 ?? null,
+    bi_BillingCityId: customerData?.address?.billing_address?.city ?? null,
+    vc_BillingOtherCity: null,
+    i_BillingStateId: customerData?.address?.billing_address?.state ?? null,
+    i_BillingCountryId: customerData?.address?.billing_address?.country ?? null,
+    vc_BillingPinCode: customerData?.address?.billing_address?.pincode ?? null,
+
+    vc_DeliveryAddressLine1: customerData?.address?.delivery_address?.address ?? null,
+    vc_DeliveryAddressLine2: customerData?.address?.alternate_delivery_address?.address ?? null,
+    bi_DeliveryCityId: customerData?.address?.delivery_address?.city ?? null,
+    vc_DeliveryOtherCity: null,
+    i_DeliveryStateId: customerData?.address?.delivery_address?.state ?? null,
+    i_DeliveryCountryId: customerData?.address?.delivery_address?.country ?? null,
+    vc_DeliveryPinCode: customerData?.address?.delivery_address?.pincode ?? null,
+
+    b_IsCForm: customerData?.is_tcs_applicable ? "1" : "0",
+    f_Freight: customerData?.freight ?? null,
+    vc_ApplicableTax: null,
+    vc_PTForFullLoad: customerData?.preferable_transport_for_full_load?.transport_name ?? null,
+    vc_PTForPartLoad: customerData?.preferable_transport_for_part_load?.transport_name ?? null,
+    b_IsWBandDEPRequired: "0",
+    vc_DEPName: null,
+    vc_DEPPhone: null,
+    vc_DEPMobileNo: null,
+    vc_DEPEmailId: null,
+    vc_DEPFaxNo: null,
+    vc_ACName: null,
+    vc_ACPhone: null,
+    vc_ACMobileNo: null,
+    vc_ACEmailId: null,
+    vc_ACFaxNo: null,
+    vc_PURName: null,
+    vc_PURPhone: null,
+    vc_PURMobileNo: null,
+    vc_PUREmailId: null,
+    vc_PURFaxNo: null,
+
+    b_Status: customerData?.status ? "1" : "0",
+    d_CreatedOn: customerData?.createdAt ?? null,
+    bi_CreatedBy: customerData?.created_by?.user_name ?? null,
+    d_ModifiedOn: customerData?.updatedAt ?? null,
+    bi_ModifiedBy: customerData?.updated_by?.user_name ?? null,
+    vc_Remark: customerData?.remark ?? null,
+    b_IsTaxInvoice: customerData?.is_tcs_applicable ? "1" : "0",
+    vc_SaleType: customerData?.supplier_type ?? null,
+    i_CreditPeriodDays: customerData?.credit_schedule ?? null,
+    ToSync: "1",
+    PhotoTypeA: customerData?.photo_type?.photo_type_a ?? null,
+    PhotoTypeB: customerData?.photo_type?.photo_type_b ?? null,
+    PhotoTypeC: customerData?.photo_type?.photo_type_c ?? null,
+    GSTNoFromJuly2017: customerData?.gst_number ?? null,
+  };
+  return res.status(StatusCodes.OK).json(updated_payload);
+});
+

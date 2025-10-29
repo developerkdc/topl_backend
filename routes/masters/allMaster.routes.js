@@ -26,6 +26,8 @@ import customerRouter from './Customers/customers.routes.js';
 import customerClientRouter from './Customers/CustomerClients/customerClients.routes.js';
 import sizeRouter from './Size/size.routes.js';
 import salesItemNameRouter from './SalesItemName/salesItemName.routes.js';
+import AuthMiddleware from '../../middlewares/verifyToken.js';
+import { bulk_upload_masters } from '../../controllers/bulk_uploads/masters/masters_bulk_upload.controller.js';
 
 const allMasterRouter = express.Router();
 
@@ -56,5 +58,8 @@ allMasterRouter.use(`/salesItemName-master`, salesItemNameRouter);
 allMasterRouter.use(`/customer-master`, [customerRouter, customerClientRouter]);
 allMasterRouter.use(`/polish-master`, polishRouter);
 allMasterRouter.use(`/size-master`, sizeRouter);
+
+//masters bulk upload routes
+allMasterRouter.use('/masters/bulk-upload', AuthMiddleware, bulk_upload_masters)
 
 export default allMasterRouter;

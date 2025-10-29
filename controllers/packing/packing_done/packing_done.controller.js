@@ -725,7 +725,7 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
 
 export const fetch_single_packing_done_item = catchAsync(async (req, res) => {
   const { request_id } = req.params;
-  const id = request_id?.trim();
+  const id = request_id?.trim()
   let issue_for_packing_model;
 
   if (!id) {

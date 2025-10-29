@@ -16,6 +16,7 @@ import { decorative_order_item_details_model } from '../../database/schema/order
 import series_product_order_item_details_model from '../../database/schema/order/series_product_order/series_product_order_item_details.schema.js';
 import { OrderModel } from '../../database/schema/order/orders.schema.js';
 import { RawOrderItemDetailsModel } from '../../database/schema/order/raw_order/raw_order_item_details.schema.js';
+import { pipeline } from 'stream';
 
 
 const order_items_models = {
@@ -1639,6 +1640,311 @@ export const generate_invoice_no = catchAsync(async (req, res, next) => {
     invoice_no: latest_invoice_no,
   });
 });
+
+//mobile api
+export const fetch_dispatch_details_by_invoice_no = catchAsync(
+  async (req, res) => {
+
+    const { invoiceId } = req.body;
+
+    if (!invoiceId) {
+      throw new ApiError('Invalid Invoice No', StatusCodes.NOT_FOUND);;
+    };
+    const pipeline = [
+      {
+        $match: {
+          invoice_no: invoiceId,
+        },
+      },
+      {
+        $lookup: {
+          from: 'dispatch_items',
+          localField: '_id',
+          foreignField: 'dispatch_id',
+          as: 'dispatch_items_details',
+        },
+      },
+
+    ]
+    const dispatch_details = await dispatchModel.aggregate(pipeline);
+
+
+    const response = new ApiResponse(
+      StatusCodes.OK,
+      'Dispatch Details Fetched Successfully',
+      dispatch_details
+    );
+    return res.status(StatusCodes.OK).json(response);
+  });
+
+export const fetch_purchase_history = catchAsync(async (req, res) => {
+  const { customerId, fromDate, toDate, startRowIndex, maximumRows, strSearch } = req.body;
+
+  for (let field of ['fromDate', 'toDate', 'maximumRows']) {
+    if (!req.body[field]) {
+      throw new ApiError(`${field} is required`, StatusCodes.BAD_REQUEST);
+    }
+  };
+
+  const match_query = {
+    invoice_date_time: {
+      $gte: new Date(fromDate),
+      $lte: new Date(toDate),
+    },
+    ...(customerId && {
+      customer_id: mongoose.Types.ObjectId.createFromHexString(customerId)
+    }),
+    ...(strSearch && {
+      $or: [
+        { invoice_no: { $regex: strSearch, $options: 'i' } },
+        { 'customer_details.company_name': { $regex: strSearch, $options: 'i' } },
+        { 'customer_details.owner_name': { $regex: strSearch, $options: 'i' } },
+        { 'dispatch_item_details.packing_done_id': { $regex: strSearch, $options: 'i' } }
+      ]
+    })
+  }
+
+
+  const pipeline = [
+    {
+      $match: match_query
+    },
+    {
+      $sort: {
+        updatedAt: -1,
+      },
+    },
+    {
+      $skip: parseInt(startRowIndex),
+    },
+
+    {
+      $limit: parseInt(maximumRows),
+    },
+    {
+      $lookup: {
+        from: 'dispatch_items',
+        localField: '_id',
+        foreignField: 'dispatch_id',
+        as: 'dispatch_items_details',
+      },
+    },
+    {
+      $unwind: {
+        path: '$dispatch_items_details',
+        preserveNullAndEmptyArrays: true
+      }
+    },
+    {
+      $lookup: {
+        from: "grouping_done_items_details",
+        localField: 'dispatch_items_details.group_no',
+        foreignField: 'group_no',
+        as: 'grouping_done_item_details'
+      }
+    },
+    {
+      $unwind: {
+        path: '$grouping_done_item_details',
+        preserveNullAndEmptyArrays: true
+      }
+    },
+    {
+      $project: {
+        _id: 0,
+        InvoiceId: '$invoice_no',
+        OrdrNo: '$dispatch_items_details.order_no',
+        InvoiceDate: '$invoice_date_time',
+        SalesItemName: '$dispatch_items_details.product_name',
+        PhotoNumber: '$grouping_done_item_details.photo_no',
+        Length: "$dispatch_items_details.length",
+        Width: "$dispatch_items_details.width",
+        NoOfSheets: "$dispatch_items_details.no_of_sheets",
+        SQMtr: "$dispatch_items_details.sqm",
+        Rate: "$dispatch_items_details.rate",
+        Amount: "$dispatch_items_details.amount",
+      }
+    }
+  ];
+
+  const result = await dispatchModel.aggregate(pipeline);
+
+  return res.status(StatusCodes.OK).json(result);
+})
+
+export const fetch_invoices = catchAsync(async (req, res) => {
+  const { customerId, fromDate, toDate, startRowIndex, maximumRows, strSearch } = req.body;
+
+  for (let field of ['fromDate', 'toDate', 'maximumRows']) {
+    if (!req.body[field]) {
+      throw new ApiError(`${field} is required`, StatusCodes.BAD_REQUEST);
+    }
+  };
+
+  const match_query = {
+    invoice_date_time: {
+      $gte: new Date(fromDate),
+      $lte: new Date(toDate),
+    },
+    ...(customerId && {
+      customer_id: mongoose.Types.ObjectId.createFromHexString(customerId)
+    }),
+    ...(strSearch && {
+      $or: [
+        { invoice_no: { $regex: strSearch, $options: 'i' } },
+        { 'customer_details.company_name': { $regex: strSearch, $options: 'i' } },
+        { 'customer_details.owner_name': { $regex: strSearch, $options: 'i' } },
+        { 'dispatch_item_details.packing_done_id': { $regex: strSearch, $options: 'i' } }
+      ]
+    })
+  }
+
+
+  const pipeline = [
+    {
+      $match: match_query
+    },
+    {
+      $lookup: {
+        from: 'dispatch_items',
+        // localField: '_id',
+        let: { dispatchId: '$_id' },
+        pipeline: [
+          { $match: { $expr: { $eq: ['$dispatch_id', '$$dispatchId'] } } },
+          {
+            $group: {
+              _id: null,
+              total_quantity: { $sum: '$no_of_sheets' },
+              total_amount: { $sum: '$amount' }
+            }
+          }
+        ],
+        // foreignField: 'dispatch_id',
+        as: 'dispatch_items_details',
+      },
+    },
+    {
+      $sort: {
+        updatedAt: -1,
+      },
+    },
+    {
+      $skip: parseInt(startRowIndex),
+    },
+
+    {
+      $limit: parseInt(maximumRows),
+    },
+    {
+      $project: {
+        _id: 0,
+        CustomerId: '$customer_details.sr_no',
+        InvoiceNo: '$invoice_no',
+        InvoiceDate: '$invoice_date_time',
+        TotalQuantity: { $arrayElemAt: ['$dispatch_items_details.total_quantity', 0] },
+        TotalAmount: { $round: [{ $arrayElemAt: ['$dispatch_items_details.total_amount', 0] }, 2] },
+      }
+    }
+  ];
+
+  const result = await dispatchModel.aggregate(pipeline);
+
+  return res.status(StatusCodes.OK).json(result);
+})
+export const fetch_packing_details_by_customer_id = catchAsync(async (req, res) => {
+  const { customerId, fromDate, toDate, startRowIndex, maximumRows, strSearch } = req.body;
+
+  for (let field of ['fromDate', 'toDate', 'maximumRows']) {
+    if (!req.body[field]) {
+      throw new ApiError(`${field} is required`, StatusCodes.BAD_REQUEST);
+    }
+  };
+
+  const match_query = {
+    invoice_date_time: {
+      $gte: new Date(fromDate),
+      $lte: new Date(toDate),
+    },
+    ...(customerId && {
+      customer_id: mongoose.Types.ObjectId.createFromHexString(customerId)
+    }),
+    ...(strSearch && {
+      $or: [
+        { invoice_no: { $regex: strSearch, $options: 'i' } },
+        { 'customer_details.company_name': { $regex: strSearch, $options: 'i' } },
+        { 'customer_details.owner_name': { $regex: strSearch, $options: 'i' } },
+        { 'packing_details.packing_id': { $regex: strSearch, $options: 'i' } }
+      ]
+    })
+  };
+
+
+
+  const pipeline = [
+    {
+      $match: match_query
+    },
+    {
+      $lookup: {
+        from: "dispatch_items",
+        localField: "_id",
+        foreignField: "dispatch_id",
+        as: "dispatch_items"
+      }
+    },
+    {
+      $lookup: {
+        from: "packing_done_other_details",
+        localField: "dispatch_items.packing_done_other_details_id",
+        foreignField: "_id",
+        pipeline: [
+          {
+            $project: {
+              packing_id: 1,
+              packing_date: 1
+            }
+          }
+        ],
+        as: "packing_details"
+      }
+    },
+    {
+      $unwind: {
+        path: "$packing_details",
+        preserveNullAndEmptyArrays: true
+      }
+    },
+    {
+      $sort: {
+        updatedAt: -1,
+      },
+    },
+    {
+      $skip: parseInt(startRowIndex),
+    },
+
+    {
+      $limit: parseInt(maximumRows),
+    },
+
+    {
+      $project: {
+        _id: 0,
+        CustomerId: '$customer_details.sr_no',
+        InvoiceId: '$invoice_no',
+        InvoiceDate: '$invoice_date_time',
+        PackingId: "$packing_details.packing_id",
+        PackingDate: "$packing_details.packing_date",
+        CreatedOn: "$createdAt",
+        ModifiedOn: "$updatedAt",
+      }
+    }
+  ];
+
+  const result = await dispatchModel.aggregate(pipeline);
+
+  return res.status(StatusCodes.OK).json(result);
+})
 
 export const invoice_no_dropdown = catchAsync(async (req, res, next) => {
   try {

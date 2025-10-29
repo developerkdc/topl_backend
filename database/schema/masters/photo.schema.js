@@ -15,7 +15,8 @@ const photoSchema = new mongoose.Schema(
     },
     banner_image: {
       type: Schema.Types.Mixed,
-      required: [true, 'Banner Images is required'],
+      // required: [true, 'Banner Images is required'],
+      default: null
     },
     images: {
       type: [Schema.Types.Mixed],
@@ -100,7 +101,7 @@ const photoSchema = new mongoose.Schema(
     },
     available_no_of_sheets: {
       type: Number,
-      default: function(){
+      default: function () {
         return this.no_of_sheets;
       },
     },
