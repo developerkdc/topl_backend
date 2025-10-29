@@ -84,6 +84,13 @@ export const add_peeling_done = catchAsync(async (req, res, next) => {
     }
     const add_other_details_id = other_details_data?._id;
 
+    items_details = items_details.map(item => {
+      ['character_id', 'pattern_id', 'series_id'].forEach(field => {
+        if (!item[field] || item[field] === '') item[field] = null;
+      });
+      return item;
+    });
+
     // item details
     const items_details_data = items_details?.map((item, index) => {
       item.peeling_done_other_details_id = add_other_details_id;
@@ -246,6 +253,14 @@ export const edit_peeling_done = catchAsync(async (req, res, next) => {
 
     // item details
 
+    items_details = items_details.map(item => {
+      ['character_id', 'pattern_id', 'series_id'].forEach(field => {
+        if (!item[field] || item[field] === '') item[field] = null;
+      });
+      return item;
+    });
+
+
     const items_details_data = items_details?.map((item, index) => {
       item.peeling_done_other_details_id = add_other_details_id;
       item.created_by = item.created_by ? item.created_by : userDetails?._id;
@@ -268,6 +283,8 @@ export const edit_peeling_done = catchAsync(async (req, res, next) => {
     ) {
       throw new ApiError('Failed to delete items details', 400);
     }
+
+    
 
     const add_items_details_data = await peeling_done_items_model.insertMany(
       items_details_data,
