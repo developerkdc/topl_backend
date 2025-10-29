@@ -55,6 +55,7 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
         address: dispatchDetails.address,
         invoice_no: dispatchDetails.invoice_no,
         invoice_date_time: dispatchDetails.invoice_date_time ? moment(dispatchDetails.invoice_date_time).format("DD-MM-YYYY,HH:mm:ss") : "",
+        invoice_date: dispatchDetails.invoice_date_time ? moment(dispatchDetails.invoice_date_time).format("DD-MM-YYYY") : "",
         removal_of_good_date_time: dispatchDetails.removal_of_good_date_time,
         removal_date: removalDate,
         goods_removal_time: removalTime,
@@ -82,7 +83,7 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
         msme_number: dispatchDetails.customer_details?.msme_number || "",
         msme_type: dispatchDetails.customer_details?.msme_type || "",
         packing_id: dispatchDetails.packing_done_ids?.map(p => p.packing_done_id) || [],
-        packing_date: Array.isArray(dispatchDetails.packing_done_ids) ? dispatchDetails.packing_done_ids.map(p => p.packing_date ? moment(p.packing_date).format("DD-MM-YYYY, HH:mm:ss") : "") : [],
+        packing_date: Array.isArray(dispatchDetails.packing_done_ids) ? dispatchDetails.packing_done_ids.map(p => p.packing_date ? moment(p.packing_date).format("DD-MM-YYYY") : "") : [],
         eway_bill_no: dispatchDetails.eway_bill_no,
         eway_bill_date: dispatchDetails.eway_bill_date,
     };
