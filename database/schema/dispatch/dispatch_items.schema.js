@@ -105,6 +105,12 @@ const dispatch_items_schema = new mongoose.Schema(
       trim: true,
       uppercase: true,
     },
+    sales_item_name: {
+      type: String,
+      default: null,
+      trim: true,
+      uppercase: true,
+    },
     item_id: {
       type: mongoose.Schema.Types.ObjectId,
       default: null,

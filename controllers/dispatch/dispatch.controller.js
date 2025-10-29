@@ -346,15 +346,7 @@ export const add_dispatch_details = catchAsync(async (req, res, next) => {
           }
 
         }
-
-
       }
-      console.log({
-        category: item?.order_category,
-        incValue: dispatch_no_of_sheets,
-        before: order_items_details?.dispatch_no_of_sheets,
-      });
-
     }
 
     const packing_done_ids = add_dispatch_details_data?.packing_done_ids;
