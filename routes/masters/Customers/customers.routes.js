@@ -19,6 +19,6 @@ customerRouter.post('/list-customer', AuthMiddleware, fetchCustomerList);
 customerRouter.get('/dropdown-customer', AuthMiddleware, dropdownCustomer);
 
 //mobile API's
-customerRouter.post('/single-customer-by-id', fetch_single_customer_by_id);
+customerRouter.post('/fetch-single-customer-by-id', fetch_single_customer_by_id);
 
 export default customerRouter;

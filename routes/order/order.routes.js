@@ -1,6 +1,7 @@
 import express from 'express';
 import AuthMiddleware from '../../middlewares/verifyToken.js';
 import {
+  fetch_decorative_and_series_product_order_items,
   fetch_single_order_items,
   order_items_dropdown,
   order_no_dropdown,
@@ -30,5 +31,6 @@ orderRouter.post(
   AuthMiddleware,
   DecorativeSeriesOrderCancelController.cancel_order_item
 );
+orderRouter.post("/fetch-orders", fetch_decorative_and_series_product_order_items)
 
 export default orderRouter;

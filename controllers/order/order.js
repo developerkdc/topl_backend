@@ -3,7 +3,11 @@ import { decorative_order_item_details_model } from '../../database/schema/order
 import { OrderModel } from '../../database/schema/order/orders.schema.js';
 import { RawOrderItemDetailsModel } from '../../database/schema/order/raw_order/raw_order_item_details.schema.js';
 import series_product_order_item_details_model from '../../database/schema/order/series_product_order/series_product_order_item_details.schema.js';
-import { order_category, order_item_status, order_status } from '../../database/Utils/constants/constants.js';
+import {
+  order_category,
+  order_item_status,
+  order_status,
+} from '../../database/Utils/constants/constants.js';
 import ApiResponse from '../../utils/ApiResponse.js';
 import { StatusCodes } from '../../utils/constants.js';
 import ApiError from '../../utils/errors/apiError.js';
@@ -42,7 +46,9 @@ export const order_no_dropdown = catchAsync(async (req, res, next) => {
   };
 
   if (fetch_all_order !== 'true') {
-    aggMatch.$match.order_status = { $nin: [order_status.cancelled, order_status.closed] }
+    aggMatch.$match.order_status = {
+      $nin: [order_status.cancelled, order_status.closed],
+    };
   }
 
   const aggProject = {
@@ -88,16 +94,17 @@ export const order_items_dropdown = catchAsync(async (req, res, next) => {
 
   const match_query = {
     order_id: orderId,
-  }
+  };
 
   if (fetch_all_order !== 'true') {
-    match_query.item_status = { $nin: [order_item_status?.cancelled, order_item_status?.closed] }
+    match_query.item_status = {
+      $nin: [order_item_status?.cancelled, order_item_status?.closed],
+    };
   }
-
 
   const order_items_data = await order_items_models?.[category]?.find(
     {
-      ...match_query
+      ...match_query,
     },
     {
       order_id: 1,
@@ -227,3 +234,109 @@ export const revert_order_by_order_id = catchAsync(async (req, res) => {
     await session?.endSession();
   }
 });
+
+export const fetch_decorative_and_series_product_order_items = catchAsync(
+  async (req, res) => {
+    const { createdDate, orderType } = req.body;
+
+    if (!createdDate) {
+      throw new ApiError('Created date is required', StatusCodes.BAD_REQUEST);
+    }
+
+    if (!orderType) {
+      throw new ApiError('Order Type is required', StatusCodes.BAD_REQUEST);
+    }
+    const models_map = {
+      decorative: 'decorative_order_item_details',
+      series: 'series_product_order_item_details',
+    };
+
+    const pipeline = [
+      {
+        $match: {
+          $expr: {
+            $eq: [
+              {
+                $dateToString: {
+                  format: '%Y-%m-%d',
+                  date: '$createdAt',
+                  timezone: 'Asia/Kolkata',
+                },
+              },
+              createdDate,
+            ],
+          },
+        },
+      },
+      {
+        $lookup: {
+          from: models_map[orderType],
+          localField: '_id',
+          foreignField: 'order_id',
+          as: 'order_item_details',
+        },
+      },
+      { $unwind: '$order_item_details' },
+
+      {
+        $lookup: {
+          from: 'customers',
+          localField: 'customer_id',
+          foreignField: '_id',
+          as: 'customer_details',
+        },
+      },
+      {
+        $unwind: {
+          path: '$customer_details',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+
+      {
+        $project: {
+          _id: 0,
+          OrderNo: '$order_no',
+          SODetId: '$order_item_details.item_no',
+          Date: '$orderDate',
+          Priority: null,
+          CustomerId: '$customer_details.sr_no',
+          CustomerName: '$customer_details.company_name',
+          Product: '$order_category',
+          CurrentStage: {
+            $ifNull: ['$order_item_details.current_stage', null],
+          },
+          FinishedStage: {
+            $ifNull: ['$order_item_details.finished_stage', null],
+          },
+          PhotoNumber: '$order_item_details.photo_number',
+          Thickness: {
+            $ifNull: ['$order_item_details.thickness', null],
+          },
+          ItemName: '$order_item_details.item_name',
+          SalesItemname: '$order_item_details.sales_item_name',
+          LogX: '$order_item_details.group_number',
+          Length: '$order_item_details.length',
+          Width: '$order_item_details.width',
+          'Sheets/PCS': '$order_item_details.no_of_sheets',
+          SqMtr: '$order_item_details.sqm',
+          Character: null,
+          Pattern: null,
+          Series: '$order_item_details.series_name',
+          Remarks: '$order_item_details.remark',
+          Instruction: '$order_item_details.pressing_instructions',
+          DeliveryDate: null,
+          Remark: '$order_remarks',
+          PlywoodSubType: '$order_item_details.base_type',
+          CreatedOn: '$createdAt',
+          ModifiedOn: '$updatedAt',
+          OrderStatus: '$order_status',
+          PalletNo: null,
+        },
+      },
+    ];
+
+    const result = await OrderModel.aggregate(pipeline);
+    return res.status(StatusCodes.OK).json(result);
+  }
+);
