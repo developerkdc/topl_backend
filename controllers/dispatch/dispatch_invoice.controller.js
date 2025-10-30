@@ -70,7 +70,7 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
             sheets: item.sheets,
             sqm: item.sqm,
             rate: item.rate,
-            taxable_value: item.taxable_value,
+            taxable_value: item.final_row_amount,
         })) || [],
         basic_amount: dispatchDetails.total_base_amount,
         insurance: dispatchDetails.insurance_amount,
