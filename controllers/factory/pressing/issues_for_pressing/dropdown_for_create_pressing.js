@@ -468,6 +468,7 @@ export const issue_for_pressing_orderNo = catchAsync(async (req, res, next) => {
   // --- Build match query ---
   const matchQuery = {
     is_pressing_done: false, // Only show where pressing is not done
+    'available_details.no_of_sheets': { $gt: 0 },
   };
 
   if (category) {

@@ -314,40 +314,6 @@ const dispatchSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-    gst_details: {
-      gst_percentage: {
-        type: Number,
-        default: 0,
-      },
-      gst_amount: {
-        type: Number,
-        default: 0,
-      },
-      igst_percentage: {
-        type: Number,
-        default: 0,
-      },
-      igst_amount: {
-        type: Number,
-        default: 0,
-      },
-      cgst_percentage: {
-        type: Number,
-        default: 0,
-      },
-      cgst_amount: {
-        type: Number,
-        default: 0,
-      },
-      sgst_percentage: {
-        type: Number,
-        default: 0,
-      },
-      sgst_amount: {
-        type: Number,
-        default: 0,
-      },
-    },
     total_amount_with_gst: {
       type: Number,
       default: 0,
