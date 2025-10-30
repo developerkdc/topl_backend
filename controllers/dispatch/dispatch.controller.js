@@ -5,7 +5,12 @@ import { StatusCodes } from '../../utils/constants.js';
 import dispatchModel from '../../database/schema/dispatch/dispatch.schema.js';
 import ApiError from '../../utils/errors/apiError.js';
 import dispatchItemsModel from '../../database/schema/dispatch/dispatch_items.schema.js';
-import { dispatch_status, order_category, order_item_status, order_status } from '../../database/Utils/constants/constants.js';
+import {
+  dispatch_status,
+  order_category,
+  order_item_status,
+  order_status,
+} from '../../database/Utils/constants/constants.js';
 import {
   packing_done_items_model,
   packing_done_other_details_model,
@@ -17,7 +22,6 @@ import series_product_order_item_details_model from '../../database/schema/order
 import { OrderModel } from '../../database/schema/order/orders.schema.js';
 import { RawOrderItemDetailsModel } from '../../database/schema/order/raw_order/raw_order_item_details.schema.js';
 import { pipeline } from 'stream';
-
 
 const order_items_models = {
   [order_category.raw]: RawOrderItemDetailsModel,
@@ -295,67 +299,96 @@ export const add_dispatch_details = catchAsync(async (req, res, next) => {
       );
     }
 
-
     // update order and order item as closed status
     for (let item of add_dispatch_items_data) {
-      const dispatch_no_of_sheets = (item?.no_of_sheets || 0) + (item?.no_of_leaves || 0) + (item?.number_of_rolls || 0) + (item?.quantity || 0);
+      const dispatch_no_of_sheets =
+        (item?.no_of_sheets || 0) +
+        (item?.no_of_leaves || 0) +
+        (item?.number_of_rolls || 0) +
+        (item?.quantity || 0);
 
-      const order_items_details = await order_items_models[item?.order_category].findOneAndUpdate({
-        _id: item?.order_item_id,
-        order_id: item?.order_id,
-      }, {
-        $inc: {
-          dispatch_no_of_sheets: dispatch_no_of_sheets
-        }
-      }, { new: true, session: session });
+      const order_items_details = await order_items_models[
+        item?.order_category
+      ].findOneAndUpdate(
+        {
+          _id: item?.order_item_id,
+          order_id: item?.order_id,
+        },
+        {
+          $inc: {
+            dispatch_no_of_sheets: dispatch_no_of_sheets,
+          },
+        },
+        { new: true, session: session }
+      );
 
       if (!order_items_details) {
-        throw new ApiError(`Failed to update dispatch no of sheets in order for ${item?.order_category}`, StatusCodes.BAD_REQUEST);
+        throw new ApiError(
+          `Failed to update dispatch no of sheets in order for ${item?.order_category}`,
+          StatusCodes.BAD_REQUEST
+        );
       }
 
-      if (order_items_details?.no_of_sheets === order_items_details?.dispatch_no_of_sheets) {
-        const order_item_closed = await order_items_models[item?.order_category].findOneAndUpdate({
-          _id: order_items_details?._id,
-          order_id: order_items_details?.order_id,
-          no_of_sheets: order_items_details?.dispatch_no_of_sheets
-        }, {
-          $set: {
-            item_status: order_item_status.closed
-          }
-        }, { new: true, session: session });
+      if (
+        order_items_details?.no_of_sheets ===
+        order_items_details?.dispatch_no_of_sheets
+      ) {
+        const order_item_closed = await order_items_models[
+          item?.order_category
+        ].findOneAndUpdate(
+          {
+            _id: order_items_details?._id,
+            order_id: order_items_details?.order_id,
+            no_of_sheets: order_items_details?.dispatch_no_of_sheets,
+          },
+          {
+            $set: {
+              item_status: order_item_status.closed,
+            },
+          },
+          { new: true, session: session }
+        );
 
         if (!order_item_closed) {
-          throw new ApiError(`Failed to update order item status as closed`, StatusCodes.BAD_REQUEST);
+          throw new ApiError(
+            `Failed to update order item status as closed`,
+            StatusCodes.BAD_REQUEST
+          );
         }
 
-        const fetch_order_item_closed = await order_items_models[item?.order_category].find({
+        const fetch_order_item_closed = await order_items_models[
+          item?.order_category
+        ].find({
           order_id: order_items_details?.order_id,
-          item_status: { $ne: null }
+          item_status: { $ne: null },
         });
 
         if (fetch_order_item_closed?.length <= 0) {
-          const order_closed = await OrderModel.findOneAndUpdate({
-            _id: order_items_details?.order_id
-          }, {
-            $set: {
-              order_status: order_status.closed
-            }
-          }, { new: true, session });
+          const order_closed = await OrderModel.findOneAndUpdate(
+            {
+              _id: order_items_details?.order_id,
+            },
+            {
+              $set: {
+                order_status: order_status.closed,
+              },
+            },
+            { new: true, session }
+          );
 
           if (!order_closed) {
-            throw new ApiError(`Failed to update order status as closed`, StatusCodes.BAD_REQUEST);
+            throw new ApiError(
+              `Failed to update order status as closed`,
+              StatusCodes.BAD_REQUEST
+            );
           }
-
         }
-
-
       }
       console.log({
         category: item?.order_category,
         incValue: dispatch_no_of_sheets,
         before: order_items_details?.dispatch_no_of_sheets,
       });
-
     }
 
     const packing_done_ids = add_dispatch_details_data?.packing_done_ids;
@@ -493,46 +526,74 @@ export const edit_dispatch_details = catchAsync(async (req, res, next) => {
 
     // revert order status
     for (let item of fetch_dispatch_items_details) {
-      const dispatch_no_of_sheets = (item?.no_of_sheets || 0) + (item?.no_of_leaves || 0) + (item?.number_of_rolls || 0);
+      const dispatch_no_of_sheets =
+        (item?.no_of_sheets || 0) +
+        (item?.no_of_leaves || 0) +
+        (item?.number_of_rolls || 0);
 
-      const order_items_details = await order_items_models[item?.order_category].findOneAndUpdate({
-        _id: item?.order_item_id,
-        order_id: item?.order_id,
-      }, {
-        $inc: {
-          dispatch_no_of_sheets: -dispatch_no_of_sheets
-        }
-      }, { new: true, session: session });
+      const order_items_details = await order_items_models[
+        item?.order_category
+      ].findOneAndUpdate(
+        {
+          _id: item?.order_item_id,
+          order_id: item?.order_id,
+        },
+        {
+          $inc: {
+            dispatch_no_of_sheets: -dispatch_no_of_sheets,
+          },
+        },
+        { new: true, session: session }
+      );
 
       if (!order_items_details) {
-        throw new ApiError(`Failed to update dispatch no of sheets in order for ${item?.order_category}`, StatusCodes.BAD_REQUEST);
+        throw new ApiError(
+          `Failed to update dispatch no of sheets in order for ${item?.order_category}`,
+          StatusCodes.BAD_REQUEST
+        );
       }
 
-      const update_order_item = await order_items_models[item?.order_category].findOneAndUpdate({
-        _id: order_items_details?._id,
-        order_id: order_items_details?.order_id,
-        // no_of_sheets: order_items_details?.dispatch_no_of_sheets
-        no_of_sheets: order_items_details?.no_of_sheets
-      }, {
-        $set: {
-          item_status: null
-        }
-      }, { new: true, session: session });
+      const update_order_item = await order_items_models[
+        item?.order_category
+      ].findOneAndUpdate(
+        {
+          _id: order_items_details?._id,
+          order_id: order_items_details?.order_id,
+          // no_of_sheets: order_items_details?.dispatch_no_of_sheets
+          no_of_sheets: order_items_details?.no_of_sheets,
+        },
+        {
+          $set: {
+            item_status: null,
+          },
+        },
+        { new: true, session: session }
+      );
 
       if (!update_order_item) {
-        throw new ApiError(`Failed to update order item status as closed`, StatusCodes.BAD_REQUEST);
+        throw new ApiError(
+          `Failed to update order item status as closed`,
+          StatusCodes.BAD_REQUEST
+        );
       }
 
-      const update_order = await OrderModel.findOneAndUpdate({
-        _id: order_items_details?.order_id
-      }, {
-        $set: {
-          order_status: null
-        }
-      }, { new: true, session });
+      const update_order = await OrderModel.findOneAndUpdate(
+        {
+          _id: order_items_details?.order_id,
+        },
+        {
+          $set: {
+            order_status: null,
+          },
+        },
+        { new: true, session }
+      );
 
       if (!update_order) {
-        throw new ApiError(`Failed to update order status as closed`, StatusCodes.BAD_REQUEST);
+        throw new ApiError(
+          `Failed to update order status as closed`,
+          StatusCodes.BAD_REQUEST
+        );
       }
     }
 
@@ -602,61 +663,91 @@ export const edit_dispatch_details = catchAsync(async (req, res, next) => {
       );
     }
 
-
     // update order and order item as closed status
     for (let item of add_dispatch_items_data) {
-      const dispatch_no_of_sheets = (item?.no_of_sheets || 0) + (item?.no_of_leaves || 0) + (item?.number_of_rolls || 0);
+      const dispatch_no_of_sheets =
+        (item?.no_of_sheets || 0) +
+        (item?.no_of_leaves || 0) +
+        (item?.number_of_rolls || 0);
 
-      const order_items_details = await order_items_models[item?.order_category].findOneAndUpdate({
-        _id: item?.order_item_id,
-        order_id: item?.order_id,
-      }, {
-        $inc: {
-          dispatch_no_of_sheets: dispatch_no_of_sheets
-        }
-      }, { new: true, session: session });
+      const order_items_details = await order_items_models[
+        item?.order_category
+      ].findOneAndUpdate(
+        {
+          _id: item?.order_item_id,
+          order_id: item?.order_id,
+        },
+        {
+          $inc: {
+            dispatch_no_of_sheets: dispatch_no_of_sheets,
+          },
+        },
+        { new: true, session: session }
+      );
 
       if (!order_items_details) {
-        throw new ApiError(`Failed to update dispatch no of sheets in order for ${item?.order_category}`, StatusCodes.BAD_REQUEST);
+        throw new ApiError(
+          `Failed to update dispatch no of sheets in order for ${item?.order_category}`,
+          StatusCodes.BAD_REQUEST
+        );
       }
 
-      if (order_items_details?.no_of_sheets === order_items_details?.dispatch_no_of_sheets) {
-        const order_item_closed = await order_items_models[item?.order_category].findOneAndUpdate({
-          _id: order_items_details?._id,
-          order_id: order_items_details?.order_id,
-          no_of_sheets: order_items_details?.dispatch_no_of_sheets
-        }, {
-          $set: {
-            item_status: order_item_status.closed
-          }
-        }, { new: true, session: session });
+      if (
+        order_items_details?.no_of_sheets ===
+        order_items_details?.dispatch_no_of_sheets
+      ) {
+        const order_item_closed = await order_items_models[
+          item?.order_category
+        ].findOneAndUpdate(
+          {
+            _id: order_items_details?._id,
+            order_id: order_items_details?.order_id,
+            no_of_sheets: order_items_details?.dispatch_no_of_sheets,
+          },
+          {
+            $set: {
+              item_status: order_item_status.closed,
+            },
+          },
+          { new: true, session: session }
+        );
 
         if (!order_item_closed) {
-          throw new ApiError(`Failed to update order item status as closed`, StatusCodes.BAD_REQUEST);
+          throw new ApiError(
+            `Failed to update order item status as closed`,
+            StatusCodes.BAD_REQUEST
+          );
         }
 
-        const fetch_order_item_closed = await order_items_models[item?.order_category].find({
+        const fetch_order_item_closed = await order_items_models[
+          item?.order_category
+        ].find({
           order_id: order_items_details?.order_id,
-          item_status: { $ne: null }
+          item_status: { $ne: null },
         });
 
         if (fetch_order_item_closed?.length <= 0) {
-          const order_closed = await OrderModel.findOneAndUpdate({
-            _id: order_items_details?.order_id
-          }, {
-            $set: {
-              order_status: order_status.closed
-            }
-          }, { new: true, session });
+          const order_closed = await OrderModel.findOneAndUpdate(
+            {
+              _id: order_items_details?.order_id,
+            },
+            {
+              $set: {
+                order_status: order_status.closed,
+              },
+            },
+            { new: true, session }
+          );
 
           if (!order_closed) {
-            throw new ApiError(`Failed to update order status as closed`, StatusCodes.BAD_REQUEST);
+            throw new ApiError(
+              `Failed to update order status as closed`,
+              StatusCodes.BAD_REQUEST
+            );
           }
-
         }
       }
     }
-
 
     // Update packing done other details
     const prev_packing_done_ids = fetch_dipsatch_details?.packing_done_ids;
@@ -703,11 +794,13 @@ export const edit_dispatch_details = catchAsync(async (req, res, next) => {
       (item) => item?.packing_done_other_details_id
     );
 
-    const alreadyDispatched = await packing_done_other_details_model.find({
-      _id: { $in: packing_done_ids_data },
-      is_dispatch_done: true,
-      dispatch_id: { $ne: dispatch_id }
-    }).session(session);
+    const alreadyDispatched = await packing_done_other_details_model
+      .find({
+        _id: { $in: packing_done_ids_data },
+        is_dispatch_done: true,
+        dispatch_id: { $ne: dispatch_id },
+      })
+      .session(session);
 
     if (alreadyDispatched?.length > 0) {
       throw new ApiError(
@@ -798,51 +891,78 @@ export const revert_dispatch_details = catchAsync(async (req, res, next) => {
       );
     }
 
-
-    // revert order status 
-    const dispatch_items_details = await dispatchItemsModel.find(
-      { dispatch_id: dispatch_id },
-    ).session(session);
+    // revert order status
+    const dispatch_items_details = await dispatchItemsModel
+      .find({ dispatch_id: dispatch_id })
+      .session(session);
 
     for (let item of dispatch_items_details) {
-      const dispatch_no_of_sheets = (item?.no_of_sheets || 0) + (item?.no_of_leaves || 0) + (item?.number_of_rolls || 0);
+      const dispatch_no_of_sheets =
+        (item?.no_of_sheets || 0) +
+        (item?.no_of_leaves || 0) +
+        (item?.number_of_rolls || 0);
 
-      const order_items_details = await order_items_models[item?.order_category].findOneAndUpdate({
-        _id: item?.order_item_id,
-        order_id: item?.order_id,
-      }, {
-        $inc: {
-          dispatch_no_of_sheets: -dispatch_no_of_sheets
-        }
-      }, { new: true, session: session });
+      const order_items_details = await order_items_models[
+        item?.order_category
+      ].findOneAndUpdate(
+        {
+          _id: item?.order_item_id,
+          order_id: item?.order_id,
+        },
+        {
+          $inc: {
+            dispatch_no_of_sheets: -dispatch_no_of_sheets,
+          },
+        },
+        { new: true, session: session }
+      );
 
       if (!order_items_details) {
-        throw new ApiError(`Failed to update dispatch no of sheets in order for ${item?.order_category}`, StatusCodes.BAD_REQUEST);
+        throw new ApiError(
+          `Failed to update dispatch no of sheets in order for ${item?.order_category}`,
+          StatusCodes.BAD_REQUEST
+        );
       }
 
-      const update_order_item = await order_items_models[item?.order_category].findOneAndUpdate({
-        _id: order_items_details?._id,
-        order_id: order_items_details?.order_id,
-      }, {
-        $set: {
-          item_status: null
-        }
-      }, { new: true, session: session });
+      const update_order_item = await order_items_models[
+        item?.order_category
+      ].findOneAndUpdate(
+        {
+          _id: order_items_details?._id,
+          order_id: order_items_details?.order_id,
+        },
+        {
+          $set: {
+            item_status: null,
+          },
+        },
+        { new: true, session: session }
+      );
 
       if (!update_order_item) {
-        throw new ApiError(`Failed to update order item status as closed`, StatusCodes.BAD_REQUEST);
+        throw new ApiError(
+          `Failed to update order item status as closed`,
+          StatusCodes.BAD_REQUEST
+        );
       }
 
-      const update_order = await OrderModel.findOneAndUpdate({
-        _id: order_items_details?.order_id
-      }, {
-        $set: {
-          order_status: null
-        }
-      }, { new: true, session });
+      const update_order = await OrderModel.findOneAndUpdate(
+        {
+          _id: order_items_details?.order_id,
+        },
+        {
+          $set: {
+            order_status: null,
+          },
+        },
+        { new: true, session }
+      );
 
       if (!update_order) {
-        throw new ApiError(`Failed to update order status as closed`, StatusCodes.BAD_REQUEST);
+        throw new ApiError(
+          `Failed to update order status as closed`,
+          StatusCodes.BAD_REQUEST
+        );
       }
     }
 
@@ -859,8 +979,7 @@ export const revert_dispatch_details = catchAsync(async (req, res, next) => {
         'Failed to delete dispatch items',
         StatusCodes.INTERNAL_SERVER_ERROR
       );
-    };
-
+    }
 
     // Update packing done other details
     const packing_done_ids = fetch_dipsatch_details?.packing_done_ids;
@@ -966,50 +1085,78 @@ export const cancel_dispatch_details = catchAsync(async (req, res, next) => {
       );
     }
 
-    // revert order status 
-    const dispatch_items_details = await dispatchItemsModel.find(
-      { dispatch_id: dispatch_id },
-    ).session(session);
+    // revert order status
+    const dispatch_items_details = await dispatchItemsModel
+      .find({ dispatch_id: dispatch_id })
+      .session(session);
 
     for (let item of dispatch_items_details) {
-      const dispatch_no_of_sheets = (item?.no_of_sheets || 0) + (item?.no_of_leaves || 0) + (item?.number_of_rolls || 0);
+      const dispatch_no_of_sheets =
+        (item?.no_of_sheets || 0) +
+        (item?.no_of_leaves || 0) +
+        (item?.number_of_rolls || 0);
 
-      const order_items_details = await order_items_models[item?.order_category].findOneAndUpdate({
-        _id: item?.order_item_id,
-        order_id: item?.order_id,
-      }, {
-        $inc: {
-          dispatch_no_of_sheets: dispatch_no_of_sheets
-        }
-      }, { new: true, session: session });
+      const order_items_details = await order_items_models[
+        item?.order_category
+      ].findOneAndUpdate(
+        {
+          _id: item?.order_item_id,
+          order_id: item?.order_id,
+        },
+        {
+          $inc: {
+            dispatch_no_of_sheets: dispatch_no_of_sheets,
+          },
+        },
+        { new: true, session: session }
+      );
 
       if (!order_items_details) {
-        throw new ApiError(`Failed to update dispatch no of sheets in order for ${item?.order_category}`, StatusCodes.BAD_REQUEST);
+        throw new ApiError(
+          `Failed to update dispatch no of sheets in order for ${item?.order_category}`,
+          StatusCodes.BAD_REQUEST
+        );
       }
 
-      const update_order_item = await order_items_models[item?.order_category].findOneAndUpdate({
-        _id: order_items_details?._id,
-        order_id: order_items_details?.order_id,
-      }, {
-        $set: {
-          item_status: null
-        }
-      }, { new: true, session: session });
+      const update_order_item = await order_items_models[
+        item?.order_category
+      ].findOneAndUpdate(
+        {
+          _id: order_items_details?._id,
+          order_id: order_items_details?.order_id,
+        },
+        {
+          $set: {
+            item_status: null,
+          },
+        },
+        { new: true, session: session }
+      );
 
       if (!update_order_item) {
-        throw new ApiError(`Failed to update order item status as closed`, StatusCodes.BAD_REQUEST);
+        throw new ApiError(
+          `Failed to update order item status as closed`,
+          StatusCodes.BAD_REQUEST
+        );
       }
 
-      const update_order = await OrderModel.findOneAndUpdate({
-        _id: order_items_details?.order_id
-      }, {
-        $set: {
-          order_status: null
-        }
-      }, { new: true, session });
+      const update_order = await OrderModel.findOneAndUpdate(
+        {
+          _id: order_items_details?.order_id,
+        },
+        {
+          $set: {
+            order_status: null,
+          },
+        },
+        { new: true, session }
+      );
 
       if (!update_order) {
-        throw new ApiError(`Failed to update order status as closed`, StatusCodes.BAD_REQUEST);
+        throw new ApiError(
+          `Failed to update order status as closed`,
+          StatusCodes.BAD_REQUEST
+        );
       }
     }
 
@@ -1274,7 +1421,7 @@ export const fetch_all_dispatch_details = catchAsync(async (req, res, next) => {
                 $convert: {
                   input: {
                     $getField: {
-                      field: "match",
+                      field: 'match',
                       input: {
                         $regexFind: {
                           input: { $ifNull: ['$invoice_no', '0'] },
@@ -1283,7 +1430,7 @@ export const fetch_all_dispatch_details = catchAsync(async (req, res, next) => {
                       },
                     },
                   },
-                  to: "int",
+                  to: 'int',
                   onError: 0,
                   onNull: 0,
                 },
@@ -1295,7 +1442,7 @@ export const fetch_all_dispatch_details = catchAsync(async (req, res, next) => {
             $convert: {
               input: {
                 $getField: {
-                  field: "match",
+                  field: 'match',
                   input: {
                     $regexFind: {
                       input: { $ifNull: ['$invoice_no', '0'] },
@@ -1304,7 +1451,7 @@ export const fetch_all_dispatch_details = catchAsync(async (req, res, next) => {
                   },
                 },
               },
-              to: "int",
+              to: 'int',
               onError: 0,
               onNull: 0,
             },
@@ -1317,9 +1464,9 @@ export const fetch_all_dispatch_details = catchAsync(async (req, res, next) => {
     $sort:
       sortBy === 'invoice_no'
         ? {
-          invoice_sort_key: sort === 'desc' ? -1 : 1,
-          invoice_no: sort === 'desc' ? -1 : 1,
-        }
+            invoice_sort_key: sort === 'desc' ? -1 : 1,
+            invoice_no: sort === 'desc' ? -1 : 1,
+          }
         : { [sortBy]: sort === 'desc' ? -1 : 1 },
   };
   const aggSkip = {
@@ -1550,7 +1697,8 @@ export const fetch_all_dispatch_items_details = catchAsync(
 );
 
 export const packing_done_dropdown = catchAsync(async (req, res, next) => {
-  const { customer_id, order_category, product_type, exclude_dispatched } = req.body;
+  const { customer_id, order_category, product_type, exclude_dispatched } =
+    req.body;
 
   const required_fields = ['customer_id', 'order_category', 'product_type'];
   for (const field of required_fields) {
@@ -1566,7 +1714,7 @@ export const packing_done_dropdown = catchAsync(async (req, res, next) => {
 
   const match = {
     customer_id: mongoose.Types.ObjectId.createFromHexString(customer_id),
-  }
+  };
 
   if (order_category && order_category.length > 0) {
     match.order_category = { $in: order_category };
@@ -1629,27 +1777,41 @@ export const generate_invoice_no = catchAsync(async (req, res, next) => {
   if (latestDispatch?.invoice_no) {
     const [seqPart, fyPart] = latestDispatch.invoice_no.split('/');
     const dispatchNumber = parseInt(seqPart);
-    latest_invoice_no = fyPart === currentFY ? `${dispatchNumber + 1}/${currentFY}` : `1/${currentFY}`;
+    latest_invoice_no =
+      fyPart === currentFY
+        ? `${dispatchNumber + 1}/${currentFY}`
+        : `1/${currentFY}`;
   } else {
     latest_invoice_no = `1/${currentFY}`;
   }
 
   return res.status(200).json({
     success: true,
-    message: "Invoice number generated",
+    message: 'Invoice number generated',
     invoice_no: latest_invoice_no,
+  });
+});
+
+//Eway Bill IRN Apis
+
+export const generate_irn_no = catchAsync(async (req, res, next) => {
+  const authToken = req.eInvoiceAuthToken;
+  
+  return res.status(200).json({
+    success: true,
+    message: 'Invoice number generated',
+    invoice_no: req.eInvoiceAuthToken,
   });
 });
 
 //mobile api
 export const fetch_dispatch_details_by_invoice_no = catchAsync(
   async (req, res) => {
-
     const { invoiceId } = req.body;
 
     if (!invoiceId) {
-      throw new ApiError('Invalid Invoice No', StatusCodes.NOT_FOUND);;
-    };
+      throw new ApiError('Invalid Invoice No', StatusCodes.NOT_FOUND);
+    }
     const pipeline = [
       {
         $match: {
@@ -1664,10 +1826,8 @@ export const fetch_dispatch_details_by_invoice_no = catchAsync(
           as: 'dispatch_items_details',
         },
       },
-
-    ]
+    ];
     const dispatch_details = await dispatchModel.aggregate(pipeline);
-
 
     const response = new ApiResponse(
       StatusCodes.OK,
@@ -1675,16 +1835,24 @@ export const fetch_dispatch_details_by_invoice_no = catchAsync(
       dispatch_details
     );
     return res.status(StatusCodes.OK).json(response);
-  });
+  }
+);
 
 export const fetch_purchase_history = catchAsync(async (req, res) => {
-  const { customerId, fromDate, toDate, startRowIndex, maximumRows, strSearch } = req.body;
+  const {
+    customerId,
+    fromDate,
+    toDate,
+    startRowIndex,
+    maximumRows,
+    strSearch,
+  } = req.body;
 
   for (let field of ['fromDate', 'toDate', 'maximumRows']) {
     if (!req.body[field]) {
       throw new ApiError(`${field} is required`, StatusCodes.BAD_REQUEST);
     }
-  };
+  }
 
   const match_query = {
     invoice_date_time: {
@@ -1692,22 +1860,28 @@ export const fetch_purchase_history = catchAsync(async (req, res) => {
       $lte: new Date(toDate),
     },
     ...(customerId && {
-      customer_id: mongoose.Types.ObjectId.createFromHexString(customerId)
+      customer_id: mongoose.Types.ObjectId.createFromHexString(customerId),
     }),
     ...(strSearch && {
       $or: [
         { invoice_no: { $regex: strSearch, $options: 'i' } },
-        { 'customer_details.company_name': { $regex: strSearch, $options: 'i' } },
+        {
+          'customer_details.company_name': { $regex: strSearch, $options: 'i' },
+        },
         { 'customer_details.owner_name': { $regex: strSearch, $options: 'i' } },
-        { 'dispatch_item_details.packing_done_id': { $regex: strSearch, $options: 'i' } }
-      ]
-    })
-  }
-
+        {
+          'dispatch_item_details.packing_done_id': {
+            $regex: strSearch,
+            $options: 'i',
+          },
+        },
+      ],
+    }),
+  };
 
   const pipeline = [
     {
-      $match: match_query
+      $match: match_query,
     },
     {
       $sort: {
@@ -1732,22 +1906,22 @@ export const fetch_purchase_history = catchAsync(async (req, res) => {
     {
       $unwind: {
         path: '$dispatch_items_details',
-        preserveNullAndEmptyArrays: true
-      }
+        preserveNullAndEmptyArrays: true,
+      },
     },
     {
       $lookup: {
-        from: "grouping_done_items_details",
+        from: 'grouping_done_items_details',
         localField: 'dispatch_items_details.group_no',
         foreignField: 'group_no',
-        as: 'grouping_done_item_details'
-      }
+        as: 'grouping_done_item_details',
+      },
     },
     {
       $unwind: {
         path: '$grouping_done_item_details',
-        preserveNullAndEmptyArrays: true
-      }
+        preserveNullAndEmptyArrays: true,
+      },
     },
     {
       $project: {
@@ -1757,29 +1931,36 @@ export const fetch_purchase_history = catchAsync(async (req, res) => {
         InvoiceDate: '$invoice_date_time',
         SalesItemName: '$dispatch_items_details.product_name',
         PhotoNumber: '$grouping_done_item_details.photo_no',
-        Length: "$dispatch_items_details.length",
-        Width: "$dispatch_items_details.width",
-        NoOfSheets: "$dispatch_items_details.no_of_sheets",
-        SQMtr: "$dispatch_items_details.sqm",
-        Rate: "$dispatch_items_details.rate",
-        Amount: "$dispatch_items_details.amount",
-      }
-    }
+        Length: '$dispatch_items_details.length',
+        Width: '$dispatch_items_details.width',
+        NoOfSheets: '$dispatch_items_details.no_of_sheets',
+        SQMtr: '$dispatch_items_details.sqm',
+        Rate: '$dispatch_items_details.rate',
+        Amount: '$dispatch_items_details.amount',
+      },
+    },
   ];
 
   const result = await dispatchModel.aggregate(pipeline);
 
   return res.status(StatusCodes.OK).json(result);
-})
+});
 
 export const fetch_invoices = catchAsync(async (req, res) => {
-  const { customerId, fromDate, toDate, startRowIndex, maximumRows, strSearch } = req.body;
+  const {
+    customerId,
+    fromDate,
+    toDate,
+    startRowIndex,
+    maximumRows,
+    strSearch,
+  } = req.body;
 
   for (let field of ['fromDate', 'toDate', 'maximumRows']) {
     if (!req.body[field]) {
       throw new ApiError(`${field} is required`, StatusCodes.BAD_REQUEST);
     }
-  };
+  }
 
   const match_query = {
     invoice_date_time: {
@@ -1787,22 +1968,28 @@ export const fetch_invoices = catchAsync(async (req, res) => {
       $lte: new Date(toDate),
     },
     ...(customerId && {
-      customer_id: mongoose.Types.ObjectId.createFromHexString(customerId)
+      customer_id: mongoose.Types.ObjectId.createFromHexString(customerId),
     }),
     ...(strSearch && {
       $or: [
         { invoice_no: { $regex: strSearch, $options: 'i' } },
-        { 'customer_details.company_name': { $regex: strSearch, $options: 'i' } },
+        {
+          'customer_details.company_name': { $regex: strSearch, $options: 'i' },
+        },
         { 'customer_details.owner_name': { $regex: strSearch, $options: 'i' } },
-        { 'dispatch_item_details.packing_done_id': { $regex: strSearch, $options: 'i' } }
-      ]
-    })
-  }
-
+        {
+          'dispatch_item_details.packing_done_id': {
+            $regex: strSearch,
+            $options: 'i',
+          },
+        },
+      ],
+    }),
+  };
 
   const pipeline = [
     {
-      $match: match_query
+      $match: match_query,
     },
     {
       $lookup: {
@@ -1815,9 +2002,9 @@ export const fetch_invoices = catchAsync(async (req, res) => {
             $group: {
               _id: null,
               total_quantity: { $sum: '$no_of_sheets' },
-              total_amount: { $sum: '$amount' }
-            }
-          }
+              total_amount: { $sum: '$amount' },
+            },
+          },
         ],
         // foreignField: 'dispatch_id',
         as: 'dispatch_items_details',
@@ -1841,114 +2028,139 @@ export const fetch_invoices = catchAsync(async (req, res) => {
         CustomerId: '$customer_details.sr_no',
         InvoiceNo: '$invoice_no',
         InvoiceDate: '$invoice_date_time',
-        TotalQuantity: { $arrayElemAt: ['$dispatch_items_details.total_quantity', 0] },
-        TotalAmount: { $round: [{ $arrayElemAt: ['$dispatch_items_details.total_amount', 0] }, 2] },
-      }
-    }
-  ];
-
-  const result = await dispatchModel.aggregate(pipeline);
-
-  return res.status(StatusCodes.OK).json(result);
-})
-export const fetch_packing_details_by_customer_id = catchAsync(async (req, res) => {
-  const { customerId, fromDate, toDate, startRowIndex, maximumRows, strSearch } = req.body;
-
-  for (let field of ['fromDate', 'toDate', 'maximumRows']) {
-    if (!req.body[field]) {
-      throw new ApiError(`${field} is required`, StatusCodes.BAD_REQUEST);
-    }
-  };
-
-  const match_query = {
-    invoice_date_time: {
-      $gte: new Date(fromDate),
-      $lte: new Date(toDate),
-    },
-    ...(customerId && {
-      customer_id: mongoose.Types.ObjectId.createFromHexString(customerId)
-    }),
-    ...(strSearch && {
-      $or: [
-        { invoice_no: { $regex: strSearch, $options: 'i' } },
-        { 'customer_details.company_name': { $regex: strSearch, $options: 'i' } },
-        { 'customer_details.owner_name': { $regex: strSearch, $options: 'i' } },
-        { 'packing_details.packing_id': { $regex: strSearch, $options: 'i' } }
-      ]
-    })
-  };
-
-
-
-  const pipeline = [
-    {
-      $match: match_query
-    },
-    {
-      $lookup: {
-        from: "dispatch_items",
-        localField: "_id",
-        foreignField: "dispatch_id",
-        as: "dispatch_items"
-      }
-    },
-    {
-      $lookup: {
-        from: "packing_done_other_details",
-        localField: "dispatch_items.packing_done_other_details_id",
-        foreignField: "_id",
-        pipeline: [
-          {
-            $project: {
-              packing_id: 1,
-              packing_date: 1
-            }
-          }
-        ],
-        as: "packing_details"
-      }
-    },
-    {
-      $unwind: {
-        path: "$packing_details",
-        preserveNullAndEmptyArrays: true
-      }
-    },
-    {
-      $sort: {
-        updatedAt: -1,
+        TotalQuantity: {
+          $arrayElemAt: ['$dispatch_items_details.total_quantity', 0],
+        },
+        TotalAmount: {
+          $round: [
+            { $arrayElemAt: ['$dispatch_items_details.total_amount', 0] },
+            2,
+          ],
+        },
       },
     },
-    {
-      $skip: parseInt(startRowIndex),
-    },
-
-    {
-      $limit: parseInt(maximumRows),
-    },
-
-    {
-      $project: {
-        _id: 0,
-        CustomerId: '$customer_details.sr_no',
-        InvoiceId: '$invoice_no',
-        InvoiceDate: '$invoice_date_time',
-        PackingId: "$packing_details.packing_id",
-        PackingDate: "$packing_details.packing_date",
-        CreatedOn: "$createdAt",
-        ModifiedOn: "$updatedAt",
-      }
-    }
   ];
 
   const result = await dispatchModel.aggregate(pipeline);
 
   return res.status(StatusCodes.OK).json(result);
-})
+});
+export const fetch_packing_details_by_customer_id = catchAsync(
+  async (req, res) => {
+    const {
+      customerId,
+      fromDate,
+      toDate,
+      startRowIndex,
+      maximumRows,
+      strSearch,
+    } = req.body;
+
+    for (let field of ['fromDate', 'toDate', 'maximumRows']) {
+      if (!req.body[field]) {
+        throw new ApiError(`${field} is required`, StatusCodes.BAD_REQUEST);
+      }
+    }
+
+    const match_query = {
+      invoice_date_time: {
+        $gte: new Date(fromDate),
+        $lte: new Date(toDate),
+      },
+      ...(customerId && {
+        customer_id: mongoose.Types.ObjectId.createFromHexString(customerId),
+      }),
+      ...(strSearch && {
+        $or: [
+          { invoice_no: { $regex: strSearch, $options: 'i' } },
+          {
+            'customer_details.company_name': {
+              $regex: strSearch,
+              $options: 'i',
+            },
+          },
+          {
+            'customer_details.owner_name': { $regex: strSearch, $options: 'i' },
+          },
+          {
+            'packing_details.packing_id': { $regex: strSearch, $options: 'i' },
+          },
+        ],
+      }),
+    };
+
+    const pipeline = [
+      {
+        $match: match_query,
+      },
+      {
+        $lookup: {
+          from: 'dispatch_items',
+          localField: '_id',
+          foreignField: 'dispatch_id',
+          as: 'dispatch_items',
+        },
+      },
+      {
+        $lookup: {
+          from: 'packing_done_other_details',
+          localField: 'dispatch_items.packing_done_other_details_id',
+          foreignField: '_id',
+          pipeline: [
+            {
+              $project: {
+                packing_id: 1,
+                packing_date: 1,
+              },
+            },
+          ],
+          as: 'packing_details',
+        },
+      },
+      {
+        $unwind: {
+          path: '$packing_details',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $sort: {
+          updatedAt: -1,
+        },
+      },
+      {
+        $skip: parseInt(startRowIndex),
+      },
+
+      {
+        $limit: parseInt(maximumRows),
+      },
+
+      {
+        $project: {
+          _id: 0,
+          CustomerId: '$customer_details.sr_no',
+          InvoiceId: '$invoice_no',
+          InvoiceDate: '$invoice_date_time',
+          PackingId: '$packing_details.packing_id',
+          PackingDate: '$packing_details.packing_date',
+          CreatedOn: '$createdAt',
+          ModifiedOn: '$updatedAt',
+        },
+      },
+    ];
+
+    const result = await dispatchModel.aggregate(pipeline);
+
+    return res.status(StatusCodes.OK).json(result);
+  }
+);
 
 export const invoice_no_dropdown = catchAsync(async (req, res, next) => {
   try {
-    const InvoiceNo = await dispatchModel.find({}, { _id: 1, invoice_no: 1 }).sort({ createdAt: -1 });
+    const InvoiceNo = await dispatchModel
+      .find({}, { _id: 1, invoice_no: 1 })
+      .sort({ createdAt: -1 });
     res.status(200).json({
       success: true,
       result: InvoiceNo.map((i) => ({
@@ -1956,8 +2168,7 @@ export const invoice_no_dropdown = catchAsync(async (req, res, next) => {
         invoice_no: i.invoice_no,
       })),
     });
-  }
-  catch (err) {
+  } catch (err) {
     next(err);
   }
 });
