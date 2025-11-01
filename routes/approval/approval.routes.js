@@ -10,6 +10,7 @@ import fleeceApprovalRouter from '../inventory/fleece/fleeceApproval.routes.js';
 import otherGoodsApprovalRouter from '../inventory/otherGoods/otherGoodsApproval.routes.js';
 import crossCutApprovalRouter from '../factory/crossCutting/crossCuttingApproval.routes.js';
 import flitchingApprovalRouter from '../factory/flitching/flitchingApproval.routes.js';
+import approval_raw_order_router from '../order/raw_order/approval.raw_order.routes.js';
 const approvalRouters = express.Router();
 
 approvalRouters.use('/approval', [
@@ -25,6 +26,9 @@ approvalRouters.use('/approval', [
   //factory
   crossCutApprovalRouter,
   flitchingApprovalRouter,
+
+  //order
+  approval_raw_order_router
 ]);
 // approvalRouters.use(logApprovalRouter);
 // approvalRouters.use(flitchApprovalRouter);
