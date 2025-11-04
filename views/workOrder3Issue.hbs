@@ -17,6 +17,12 @@
       word-wrap: break-word;
     }
 
+    .approved {
+      page-break-inside: avoid;
+      page-break-before: avoid;
+      page-break-after: avoid;
+    }
+
     .header,
     .footer {
       display: flex;
@@ -93,7 +99,7 @@
       }
 
       @page {
-        size: A4 landscape;
+        size: A4;
       }
     }
   </style>
@@ -213,7 +219,7 @@
   </div>
 
   <div class="approved"
-    style="display: flex; justify-content: center; gap: 40px; margin-top: 150px; align-items: center; font-size: 12px; text-align: center;">
+    style="display: flex; justify-content: center; gap: 40px; margin-top: 50px; align-items: center; font-size: 12px; text-align: center;">
     <div>APPROVED BY: __________________</div>
     <div>RECEIVED BY: __________________</div>
     <div>INSTRUCTION: __________________</div>
