@@ -229,6 +229,10 @@ const dispatchSchema = new mongoose.Schema(
       type: Object,
       required: [true, 'Transporter details are required']
     },
+    transport_mode: {
+      type: Object,
+      required: [true, 'Transport mode is required']
+    },
     approx_distance: {
       type: Number,
       default: null,
