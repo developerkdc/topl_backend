@@ -75,6 +75,12 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
     issued_sqm,
     issued_from_id,
     issued_from,
+    order_id,
+    order_item_id,
+    order_number,
+    order_item_no,
+    sales_item_name,
+    order_category
   } = req.body;
 
   const user = req.userDetails;
@@ -218,6 +224,8 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
       },
     ]);
 
+    console.log('pressing_done_details =>', pressing_done_details);
+
     if (!pressing_done_details) {
       throw new ApiError('Order details not found.', StatusCodes.NOT_FOUND);
     }
@@ -234,17 +242,17 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
         pressing_done_details?.pressing_details?._id,
       order_id:
         pressing_done_details?.order_id ||
-        pressing_done_details?.pressing_details?.order_id,
+        pressing_done_details?.pressing_details?.order_id || order_id,
       order_item_id:
         pressing_done_details?.order_item_id ||
-        pressing_done_details?.pressing_details?.order_item_id,
-      order_number: pressing_done_details?.order_details?.order_no,
+        pressing_done_details?.pressing_details?.order_item_id || order_item_id,
+      order_number: pressing_done_details?.order_details?.order_no || order_number,
       order_item_no:
         pressing_done_details?.series_items?.[0]?.item_no ||
-        pressing_done_details?.decorative_items?.[0]?.item_no,
+        pressing_done_details?.decorative_items?.[0]?.item_no || order_item_no,
       sales_item_name:
         pressing_done_details?.series_items?.[0]?.sales_item_name ||
-        pressing_done_details?.decorative_items?.[0]?.sales_item_name,
+        pressing_done_details?.decorative_items?.[0]?.sales_item_name || sales_item_name,
       group_no:
         pressing_done_details?.group_no ||
         pressing_done_details?.pressing_details?.group_no,
@@ -262,7 +270,7 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
         pressing_done_details?.pressing_details?.thickness,
       order_category:
         pressing_done_details?.order_category ||
-        pressing_done_details?.order_details?.order_category,
+        pressing_done_details?.order_details?.order_category || order_category,
       product_type:
         pressing_done_details?.product_type ||
         pressing_done_details?.pressing_details?.product_type,
@@ -343,14 +351,14 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
       pressing_details_id: pressing_done_details?._id,
       order_id:
         pressing_done_details?.order_id ||
-        pressing_done_details?.order_details?._id,
+        pressing_done_details?.order_details?._id || order_id,
       order_item_id:
         pressing_done_details?.order_item_id ||
-        pressing_done_details?.order_item_details?._id,
-      order_number: pressing_done_details?.order_details?.order_no,
+        pressing_done_details?.order_item_details?._id || order_item_id,
+      order_number: pressing_done_details?.order_details?.order_no || order_number,
       order_item_no:
         pressing_done_details?.series_items?.[0]?.item_no ||
-        pressing_done_details?.decorative_items?.[0]?.item_no,
+        pressing_done_details?.decorative_items?.[0]?.item_no || order_item_no,
       group_no:
         pressing_done_details?.group_no ||
         pressing_done_details?.pressing_details?.group_no,
@@ -374,7 +382,7 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
         pressing_done_details?.pressing_details?.product_type,
       order_category:
         pressing_done_details?.order_category ||
-        pressing_done_details?.pressing_details?.order_category,
+        pressing_done_details?.pressing_details?.order_category || order_category,
       issued_from: item_issued_from,
       issued_for: item_issued_for?.order,
       issued_for_id: add_finished_ready_for_packing_result?._id,

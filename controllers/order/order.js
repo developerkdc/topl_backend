@@ -109,6 +109,7 @@ export const order_items_dropdown = catchAsync(async (req, res, next) => {
     {
       order_id: 1,
       item_no: 1,
+      sales_item_name: 1
     }
   );
 

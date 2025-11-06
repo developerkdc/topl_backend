@@ -73,8 +73,9 @@ const issue_for_polishing_schema = new mongoose.Schema(
           item_issued_from?.pressing_factory,
           item_issued_from?.polishing_factory,
           item_issued_from?.color_factory,
-          item_issued_from?.polishing_factory,
+          item_issued_from?.bunito_factory,
           item_issued_from?.canvas_factory,
+          item_issued_from?.cnc_factory
         ],
         message: `Invalid Type -> {{VALUE}} , it must be one of the ${(item_issued_from?.pressing_factory, item_issued_from?.polishing_factory, item_issued_from?.color_factory, item_issued_from?.polishing_factory, item_issued_from?.canvas_factory)}`,
       },
