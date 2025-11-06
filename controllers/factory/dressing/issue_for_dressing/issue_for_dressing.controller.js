@@ -631,7 +631,7 @@ export const list_issue_for_dressing_machine_miss_match_data = catchAsync(
 
     const response = new ApiResponse(
       StatusCodes.OK,
-      'Dressing Machine MissMatch Data Fetched Successfully',
+      'Dressing Machine MisMatch Data Fetched Successfully',
       { data: list_dressing_machine_missmatch_data, totalPages: totalPages }
     );
 
@@ -661,7 +661,7 @@ export const update_machine_raw_and_mismatch_data = catchAsync(async (req, res) 
     const old_machine_missmatch_data = await dressing_miss_match_data_model.findById(id).lean().session(session);
 
     if (!old_machine_missmatch_data) {
-      throw new ApiError('Dressing Machine Missmatch Data not found', StatusCodes.NOT_FOUND);
+      throw new ApiError('Dressing Machine Mismatch Data not found', StatusCodes.NOT_FOUND);
     };
 
     const old_machine_raw_data = await dressing_raw_machine_data_model.findOne({
@@ -702,7 +702,7 @@ export const update_machine_raw_and_mismatch_data = catchAsync(async (req, res) 
 
     const update_machine_missmatch_data_result = await dressing_miss_match_data_model.updateOne({ _id: old_machine_missmatch_data?._id }, { $set: updated_machine_missmatch_data }).session(session);
     if (!update_machine_missmatch_data_result?.acknowledged || update_machine_missmatch_data_result?.modifiedCount === 0) {
-      throw new ApiError('Failed to update dressing missmatch data', StatusCodes.BAD_REQUEST);
+      throw new ApiError('Failed to update dressing mismatch data', StatusCodes.BAD_REQUEST);
     }
 
     const update_machine_raw_data_result = await dressing_raw_machine_data_model.updateOne({
@@ -714,7 +714,7 @@ export const update_machine_raw_and_mismatch_data = catchAsync(async (req, res) 
       throw new ApiError('Failed to update dressing machine raw data', StatusCodes.BAD_REQUEST);
     };
 
-    const response = new ApiResponse(StatusCodes.OK, 'Dressing Machine Raw Data and Missmatch Data updated successfully', {
+    const response = new ApiResponse(StatusCodes.OK, 'Dressing Machine Raw Data and Mismatch Data updated successfully', {
       updated_machine_missmatch_data: update_machine_missmatch_data_result,
       updated_machine_raw_data: update_machine_raw_data_result
     });
