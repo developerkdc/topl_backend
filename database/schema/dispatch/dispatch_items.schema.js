@@ -105,6 +105,12 @@ const dispatch_items_schema = new mongoose.Schema(
       trim: true,
       uppercase: true,
     },
+    sales_item_name: {
+      type: String,
+      default: null,
+      trim: true,
+      uppercase: true,
+    },
     item_id: {
       type: mongoose.Schema.Types.ObjectId,
       default: null,
@@ -201,6 +207,40 @@ const dispatch_items_schema = new mongoose.Schema(
         return this.amount - this.discount_value;
       },
       required: [true, 'Item Amount with discount is required'],
+    },
+    gst_details: {
+      gst_percentage: {
+        type: Number,
+        default: 0,
+      },
+      gst_amount: {
+        type: Number,
+        default: 0,
+      },
+      igst_percentage: {
+        type: Number,
+        default: 0,
+      },
+      igst_amount: {
+        type: Number,
+        default: 0,
+      },
+      cgst_percentage: {
+        type: Number,
+        default: 0,
+      },
+      cgst_amount: {
+        type: Number,
+        default: 0,
+      },
+      sgst_percentage: {
+        type: Number,
+        default: 0,
+      },
+      sgst_amount: {
+        type: Number,
+        default: 0,
+      },
     },
     remark: {
       type: String,
