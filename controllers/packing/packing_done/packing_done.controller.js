@@ -622,22 +622,22 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
     },
   };
   const aggFlattenProductType = {
-  $addFields: {
-    sort_product_type: {
-      $reduce: {
-        input: "$product_type",
-        initialValue: "",
-        in: {
-          $concat: [
-            "$$value",
-            { $cond: [{ $eq: ["$$value", ""] }, "", ", "] },
-            "$$this"
-          ]
+    $addFields: {
+      sort_product_type: {
+        $reduce: {
+          input: "$product_type",
+          initialValue: "",
+          in: {
+            $concat: [
+              "$$value",
+              { $cond: [{ $eq: ["$$value", ""] }, "", ", "] },
+              "$$this"
+            ]
+          }
         }
       }
     }
-  }
-};
+  };
 
 
   // const aggSort = {
@@ -658,13 +658,13 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
   //       [sortBy]: sort === 'desc' ? -1 : 1,
   //     },
   //   };
-    const aggSort = {
-  $sort: {
-    ...(sortBy === "product_type"
-      ? { sort_product_type: sort === "desc" ? -1 : 1 }
-      : { [sortBy]: sort === "desc" ? -1 : 1 }),
-  },
-};
+  const aggSort = {
+    $sort: {
+      ...(sortBy === "product_type"
+        ? { sort_product_type: sort === "desc" ? -1 : 1 }
+        : { [sortBy]: sort === "desc" ? -1 : 1 }),
+    },
+  };
 
   const aggSkip = {
     $skip: (parseInt(page) - 1) * parseInt(limit),
