@@ -151,3 +151,64 @@ export async function generatePDF_packing({ templateName, templatePath, data }) 
   await browser.close();
   return pdfBuffer;
 }
+
+export async function generatePackingPDF({ templateName, templatePath, data }) {
+  // Load template and image files
+  const templateContent = await fs.readFile(templatePath, 'utf8');
+  const logoPath = path.join(__dirname, '..', '..', 'views', 'images', 'topl_logo.png');
+  const headerPath = path.join(__dirname, '..', '..', 'views', 'images', 'HEADER.png');
+  const footerPath = path.join(__dirname, '..', '..', 'views', 'images', 'FOOTER.png');
+
+  const logoBuffer = await fs.readFile(logoPath);
+  const headerBuffer = await fs.readFile(headerPath);
+  const footerBuffer = await fs.readFile(footerPath);
+
+  const logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
+  const headerBase64 = `data:image/png;base64,${headerBuffer.toString('base64')}`;
+  const footerBase64 = `data:image/png;base64,${footerBuffer.toString('base64')}`;
+
+  // Register helper
+  Handlebars.registerHelper('add', (a, b) => a + b);
+
+  // Compile Handlebars HTML
+  const template = Handlebars.compile(templateContent);
+  const html = template({
+    ...data,
+    logoUrl: logoBase64,
+    headerUrl: headerBase64,
+    footerUrl: footerBase64,
+  });
+
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+  });
+
+  const page = await browser.newPage();
+  await page.setContent(html, { waitUntil: 'networkidle0' });
+
+  const pdfBuffer = await page.pdf({
+    format: 'A4',
+    printBackground: true,
+    displayHeaderFooter: true,
+    margin: {
+      top: '160px',
+      bottom: '80px',
+      left: '10px',
+      right: '30px',
+    },
+    headerTemplate: `
+      <div style="width:100%; text-align:center; font-size:0; margin-top:-10px;">
+        <img src="${headerBase64}" style="width:100%; height:auto;" />
+      </div>
+    `,
+    footerTemplate: `
+      <div style="width:100%; text-align:center; font-size:0; margin-bottom:-10px;">
+        <img src="${footerBase64}" style="width:100%; height:auto;" />
+      </div>
+    `,
+  });
+
+  await browser.close();
+  return pdfBuffer;
+}
