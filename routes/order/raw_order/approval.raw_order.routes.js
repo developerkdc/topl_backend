@@ -19,7 +19,7 @@ approval_raw_order_router.get(
   fetch_all_raw_order_items_by_order_id
 );
 approval_raw_order_router.post(
-  '/raw/approve-order/:order_id',
+  '/raw/approve-order/:id',
   AuthMiddleware,
   approve_raw_order
 );

@@ -149,7 +149,7 @@ const raw_order_item_details_schema = new mongoose.Schema(
 );
 
 const indexingFields = [
-  [{ order_id: 1, item_no: 1 }, { unique: true }],
+  [{ order_id: 1 }],
   [{ raw_material: 1 }],
   [{ item_name: 1 }],
   [{ item_name_id: 1 }],
