@@ -22,6 +22,9 @@ import series_product_order_item_details_model from '../../database/schema/order
 import { OrderModel } from '../../database/schema/order/orders.schema.js';
 import { RawOrderItemDetailsModel } from '../../database/schema/order/raw_order/raw_order_item_details.schema.js';
 import { pipeline } from 'stream';
+import { EInvoiceHeaderVariable } from '../../middlewares/eInvoiceAuth.middleware.js';
+import moment from 'moment';
+import axios from 'axios';
 
 const order_items_models = {
   [order_category.raw]: RawOrderItemDetailsModel,
@@ -1791,13 +1794,414 @@ export const generate_invoice_no = catchAsync(async (req, res, next) => {
 
 export const generate_irn_no = catchAsync(async (req, res, next) => {
   const authToken = req.eInvoiceAuthToken;
-  
+
+  const dispatch_id = req.params.id;
+  const dispatch_details = await dispatchModel.findById(dispatch_id);
+  console.log(
+    'start dispatch details',
+    dispatch_details,
+    'end dispatch details'
+  );
+  if (!dispatch_details) {
+    throw new ApiError('Dispatch details not found', StatusCodes.NOT_FOUND);
+  }
+
+  // Find dispatch items for this dispatch id and validate that there should be at least one item
+  const dispatch_items = await dispatchItemsModel.find({ dispatch_id });
+  if (!dispatch_items || dispatch_items.length === 0) {
+    throw new ApiError(
+      'No dispatch items found for this dispatch',
+      StatusCodes.BAD_REQUEST
+    );
+  }
+  console.log('start dispatch_items', dispatch_items, 'end dispatch_items');
+
+  // Construct IRN body according to required format
+
+  function formatDateToDDMMYYYY(date) {
+    if (!date) return '';
+    return moment(date).format('DD/MM/YYYY');
+  }
+
+  var { bill_from_address, bill_to_address } = dispatch_details?.address;
+  // Seller Details - consider these as sample/static; replace with actual company master data as per your prod logic
+  const sellerDetails = {
+    Gstin: '29AAGCB1286Q000',
+    LglNm: 'TURAKHIA OVERSEAS PVT. LTD.',
+    Addr1: bill_from_address?.address,
+    Loc: bill_from_address?.city,
+    Pin: bill_from_address?.pincode,
+    Stcd: '29',
+    // Optionally, TrdNm, Ph, Em, etc.
+  };
+
+  // Buyer Details
+  // Assuming below fields are present in dispatch_details or adapt as per your DB
+  const buyerDetails = {
+    Gstin: dispatch_details?.customer_details?.gst_number || '',
+    LglNm: dispatch_details?.customer_details?.legal_name || '',
+    Pos: dispatch_details?.customer_details?.buyer_pos || '29', // Place of supply (state code as string)
+    Addr1: bill_to_address?.address || '',
+    Loc: bill_to_address?.city || '',
+    Pin: bill_to_address?.pincode || '',
+    Stcd: '29',
+  };
+
+  // Document Details
+  const docDtls = {
+    Typ: 'INV',
+    No: dispatch_details.invoice_no || '00000',
+    Dt: formatDateToDDMMYYYY(dispatch_details.invoice_date_time),
+  };
+
+  // Items Formatting
+  const itemsArr = dispatch_items.map((item, idx) => {
+    const ass_amt = Number((item?.amount - item?.discount_value).toFixed(2)); // Handle IGST/CGST/SGST later
+
+    return {
+      SlNo: String(idx + 1),
+      IsServc: 'N',
+      PrdDesc: item?.product_category || item?.item_name,
+      HsnCd: item?.hsn_code || '',
+      Qty: Number(item?.qty) || 0,
+      Unit: item?.uom || 'NOS',
+      UnitPrice: Number(item?.rate),
+      TotAmt: item?.amount || 0,
+      Discount: Number(item?.discount_value),
+      AssAmt: ass_amt,
+
+      GstRt: Number(item?.gst_details?.gst_percentage || 0),
+      IgstAmt: Number(item?.gst_details?.igst_percentage || 0),
+      SgstAmt: Number(item?.gst_details?.sgst_percentage || 0),
+      CgstAmt: Number(item?.gst_details?.cgst_percentage || 0),
+
+      TotItemVal: Number(item?.final_amount.toFixed(2)),
+    };
+  });
+
+  // Value summary for invoice
+  const AssVal = itemsArr.reduce((acc, i) => acc + i.AssAmt, 0);
+  const CgstVal = itemsArr.reduce((acc, i) => acc + i.CgstAmt, 0);
+  const SgstVal = itemsArr.reduce((acc, i) => acc + i.SgstAmt, 0);
+  const IgstVal = itemsArr.reduce((acc, i) => acc + i.IgstAmt, 0);
+  const TotInvVal = itemsArr.reduce((acc, i) => acc + i.TotItemVal, 0);
+
+  const irnBody = {
+    Version: '1.1',
+    TranDtls: {
+      TaxSch: 'GST',
+      SupTyp: 'B2B',
+    },
+    DocDtls: docDtls,
+    SellerDtls: sellerDetails,
+    BuyerDtls: buyerDetails,
+    ItemList: itemsArr,
+    ValDtls: {
+      AssVal: Number(AssVal.toFixed(2)),
+      CgstVal: Number(CgstVal.toFixed(2)),
+      SgstVal: Number(SgstVal.toFixed(2)),
+      IgstVal: Number(IgstVal.toFixed(2)),
+      TotInvVal: Number(TotInvVal.toFixed(2)),
+    },
+  };
+
+  const irnResponse = await axios.post(
+    `${process.env.E_INVOICE_BASE_URL}/einvoice/type/GENERATE/version/V1_03?email=${process.env.E_INVOICE_EMAIL_ID}`,
+    irnBody,
+    {
+      headers: {
+        ...EInvoiceHeaderVariable,
+        'auth-token': authToken,
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+
+  if (irnResponse?.data?.status_cd === '1') {
+    // Update dispatch details with IRN number and IRP
+    dispatch_details.irn_number = irnResponse?.data?.data?.Irn;
+    dispatch_details.acknowledgement_number = irnResponse?.data?.data?.AckNo;
+    dispatch_details.acknowledgement_date = irnResponse?.data?.data?.AckDt;
+    dispatch_details.irp = irnResponse?.data?.irp;
+    dispatch_details.dispatch_status = dispatch_status?.irn_generated;
+    await dispatch_details.save();
+  } else {
+    // Extracting error details from irnResponse and throwing an error
+    let errorMessage = 'Unknown error occurred';
+
+    const statusDescArr = JSON.parse(irnResponse.data.status_desc);
+    if (Array.isArray(statusDescArr) && statusDescArr.length > 0) {
+      errorMessage = statusDescArr[0]?.ErrorMessage || errorMessage;
+    }
+
+    throw new ApiError(
+      `IRN Generation Failed. Error : ${errorMessage}`,
+      StatusCodes.BAD_REQUEST
+    );
+  }
+  console.log('Irn response', irnResponse, 'Irn response');
+  // Optionally: req.body.irnBody = irnBody
+
   return res.status(200).json({
     success: true,
-    message: 'Invoice number generated',
-    invoice_no: req.eInvoiceAuthToken,
+    message: 'IRN number generated successfully.',
+    result: irnResponse?.data,
   });
 });
+
+export const get_irn_by_doc = catchAsync(async (req, res, next) => {
+  const authToken = req.eInvoiceAuthToken;
+
+  const dispatch_id = req.params.id;
+  const dispatch_details = await dispatchModel.findById(dispatch_id);
+  // console.log(
+  //   'start dispatch details',
+  //   dispatch_details,
+  //   'end dispatch details'
+  // );
+  if (!dispatch_details) {
+    throw new ApiError('Dispatch details not found', StatusCodes.NOT_FOUND);
+  }
+
+  // if (!dispatch_details?.irn_number) {
+  //   throw new ApiError(
+  //     'IRN number not found for this dispatch',
+  //     StatusCodes.BAD_REQUEST
+  //   );
+  // }
+  // if (!dispatch_details?.irp) {
+  //   throw new ApiError(
+  //     'IRP not found for this dispatch',
+  //     StatusCodes.BAD_REQUEST
+  //   );
+  // }
+  const docType = 'INV';
+  // const irnBody = {
+  //   Irn: dispatch_details?.irn_number,
+  //   CnlRsn: '1',
+  //   CnlRem: 'Wrong entry',
+  // };
+
+  const irnResponse = await axios.get(
+    `${process.env.E_INVOICE_BASE_URL}/einvoice/type/GETIRNBYDOCDETAILS/version/V1_03?email=${process.env.E_INVOICE_EMAIL_ID}&param1=${docType}`,
+    {
+      headers: {
+        ...EInvoiceHeaderVariable,
+        'auth-token': authToken,
+        'Content-Type': 'application/json',
+        docnum: dispatch_details?.invoice_no,
+        docdate: moment(dispatch_details?.invoice_date_time).format(
+          'DD/MM/YYYY'
+        ),
+      },
+    }
+  );
+
+  if (irnResponse?.data?.status_cd === '1') {
+    // Update dispatch details with IRN number and IRP
+    dispatch_details.irn_number = irnResponse?.data?.data?.Irn;
+    dispatch_details.acknowledgement_number = irnResponse?.data?.data?.AckNo;
+    dispatch_details.acknowledgement_date = irnResponse?.data?.data?.AckDt;
+    dispatch_details.irp = irnResponse?.data?.irp;
+    dispatch_details.dispatch_status = dispatch_status?.irn_generated;
+    await dispatch_details.save();
+  } else {
+    // Extracting error details from irnResponse and throwing an error
+    let errorMessage = 'Unknown error occurred';
+
+    const statusDescArr = JSON.parse(irnResponse.data.status_desc);
+    if (Array.isArray(statusDescArr) && statusDescArr.length > 0) {
+      errorMessage = statusDescArr[0]?.ErrorMessage || errorMessage;
+    }
+
+    throw new ApiError(
+      `IRN Cancellation Failed. Error : ${errorMessage}`,
+      StatusCodes.BAD_REQUEST
+    );
+  }
+  // console.log('Irn response', irnResponse, 'Irn response');
+  // Optionally: req.body.irnBody = irnBody
+
+  return res.status(200).json({
+    success: true,
+    message: 'IRN Number Cancelled successfully.',
+    result: irnResponse?.data,
+  });
+});
+
+export const cancel_irn_no = catchAsync(async (req, res, next) => {
+  const authToken = req.eInvoiceAuthToken;
+
+  const dispatch_id = req.params.id;
+  const dispatch_details = await dispatchModel.findById(dispatch_id);
+  // console.log(
+  //   'start dispatch details',
+  //   dispatch_details,
+  //   'end dispatch details'
+  // );
+  if (!dispatch_details) {
+    throw new ApiError('Dispatch details not found', StatusCodes.NOT_FOUND);
+  }
+
+  if (!dispatch_details?.irn_number) {
+    throw new ApiError(
+      'IRN number not found for this dispatch',
+      StatusCodes.BAD_REQUEST
+    );
+  }
+  if (!dispatch_details?.irp) {
+    throw new ApiError(
+      'IRP not found for this dispatch',
+      StatusCodes.BAD_REQUEST
+    );
+  }
+
+  const irnBody = {
+    Irn: dispatch_details?.irn_number,
+    CnlRsn: '1',
+    CnlRem: 'Wrong entry',
+  };
+
+  const irnResponse = await axios.post(
+    `${process.env.E_INVOICE_BASE_URL}/einvoice/type/CANCEL/version/V1_03?email=${process.env.E_INVOICE_EMAIL_ID}&irp=${dispatch_details?.irp}`,
+    irnBody,
+    {
+      headers: {
+        ...EInvoiceHeaderVariable,
+        'auth-token': authToken,
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+
+  if (irnResponse?.data?.status_cd === '1') {
+    // Update dispatch details with IRN number and IRP
+    dispatch_details.dispatch_status = dispatch_status?.cancelled;
+    await dispatch_details.save();
+  } else {
+    // Extracting error details from irnResponse and throwing an error
+    let errorMessage = 'Unknown error occurred';
+
+    const statusDescArr = JSON.parse(irnResponse.data.status_desc);
+    if (Array.isArray(statusDescArr) && statusDescArr.length > 0) {
+      errorMessage = statusDescArr[0]?.ErrorMessage || errorMessage;
+    }
+
+    throw new ApiError(
+      `IRN Cancellation Failed. Error : ${errorMessage}`,
+      StatusCodes.BAD_REQUEST
+    );
+  }
+  // console.log('Irn response', irnResponse, 'Irn response');
+  // Optionally: req.body.irnBody = irnBody
+
+  return res.status(200).json({
+    success: true,
+    message: 'IRN Number Cancelled successfully.',
+    result: irnResponse?.data,
+  });
+});
+
+export const generate_ewaybill_using_irn_no = catchAsync(
+  async (req, res, next) => {
+    const authToken = req.eInvoiceAuthToken;
+
+    const dispatch_id = req.params.id;
+    const dispatch_details = await dispatchModel.findById(dispatch_id);
+    // console.log(
+    //   'start dispatch details',
+    //   dispatch_details,
+    //   'end dispatch details'
+    // );
+    if (!dispatch_details) {
+      throw new ApiError('Dispatch details not found', StatusCodes.NOT_FOUND);
+    }
+
+    if (!dispatch_details?.irn_number) {
+      throw new ApiError(
+        'IRN number not found for this dispatch',
+        StatusCodes.BAD_REQUEST
+      );
+    }
+    if (!dispatch_details?.irp) {
+      throw new ApiError(
+        'IRP not found for this dispatch',
+        StatusCodes.BAD_REQUEST
+      );
+    }
+    var {
+      bill_from_address,
+      bill_to_address,
+      dispatch_from_address,
+      ship_to_address,
+    } = dispatch_details?.address;
+    const ewayBillBody = {
+      Irn: dispatch_details?.irn_number,
+      Distance: dispatch_details?.approx_distance,
+      TransMode: '1',
+      TransId: '12AWGPV7107B1Z1',
+      TransName: dispatch_details?.transporter_details?.name,
+      TransDocDt: dispatch_details?.trans_doc_date,
+      TransDocNo: dispatch_details?.trans_doc_no,
+      VehNo: dispatch_details?.vehicle_details?.vehicle_number,
+      VehType: 'R',
+      ExpShipDtls: {
+        Addr1: '7th block, kuvempu layout',
+        Addr2: 'kuvempu layout',
+        Loc: 'Banagalore',
+        Pin: 562160,
+        Stcd: '29',
+      },
+      DispDtls: {
+        Nm: 'TURAKHIA OVERSEAS PVT. LTD.',
+        Addr1: '7th block, kuvempu layout',
+        Addr2: 'kuvempu layout',
+        Loc: 'Banagalore',
+        Pin: 562160,
+        Stcd: '29',
+      },
+    };
+
+    const ewayBillResponse = await axios.post(
+      `${process.env.E_INVOICE_BASE_URL}/einvoice/type/GENERATE_EWAYBILL/version/V1_03?email=${process.env.E_INVOICE_EMAIL_ID}&irp=${dispatch_details?.irp}`,
+      ewayBillBody,
+      {
+        headers: {
+          ...EInvoiceHeaderVariable,
+          'auth-token': authToken,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (ewayBillResponse?.data?.status_cd === '1') {
+      // Update dispatch details with IRN number and IRP
+      dispatch_details.dispatch_status = dispatch_status?.cancelled;
+      await dispatch_details.save();
+    } else {
+      // Extracting error details from ewayBillResponse and throwing an error
+      let errorMessage = 'Unknown error occurred';
+
+      const statusDescArr = JSON.parse(ewayBillResponse.data.status_desc);
+      if (Array.isArray(statusDescArr) && statusDescArr.length > 0) {
+        errorMessage = statusDescArr[0]?.ErrorMessage || errorMessage;
+      }
+
+      throw new ApiError(
+        `IRN Cancellation Failed. Error : ${errorMessage}`,
+        StatusCodes.BAD_REQUEST
+      );
+    }
+    // console.log('Irn response', ewayBillResponse, 'Irn response');
+    // Optionally: req.body.irnBody = irnBody
+
+    return res.status(200).json({
+      success: true,
+      message: 'IRN Number Cancelled successfully.',
+      result: ewayBillResponse?.data,
+    });
+  }
+);
 
 //mobile api
 export const fetch_dispatch_details_by_invoice_no = catchAsync(
