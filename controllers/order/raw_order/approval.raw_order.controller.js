@@ -9,7 +9,7 @@ import ApiError from '../../../utils/errors/apiError.js';
 import catchAsync from '../../../utils/errors/catchAsync.js';
 import { RawOrderItemDetailsModel } from '../../../database/schema/order/raw_order/raw_order_item_details.schema.js';
 import { OrderModel } from '../../../database/schema/order/orders.schema.js';
-
+import { create_raw_order_approval_report } from '../../../config/downloadExcel/orders/raw_order/raw_order.approval.report.js';
 
 export const fetch_all_raw_order_items = catchAsync(async (req, res, next) => {
   const {
@@ -18,6 +18,7 @@ export const fetch_all_raw_order_items = catchAsync(async (req, res, next) => {
     sort = 'desc',
     limit = 10,
     search = '',
+    export_report = 'false',
   } = req.query;
   const {
     string,
@@ -27,7 +28,7 @@ export const fetch_all_raw_order_items = catchAsync(async (req, res, next) => {
   } = req.body?.searchFields || {};
 
   const filter = req.body?.filter;
-  const { _id } = req.userDetails
+  const { _id } = req.userDetails;
 
   let search_query = {};
   if (search != '' && req?.body?.searchFields) {
@@ -113,6 +114,75 @@ export const fetch_all_raw_order_items = catchAsync(async (req, res, next) => {
         {
           $unwind: {
             path: '$order_updated_user_details',
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'approval.rejectedBy.user',
+            foreignField: '_id',
+            pipeline: [
+              {
+                $project: {
+                  first_name: 1,
+                  last_name: 1,
+                  user_name: 1,
+                },
+              },
+            ],
+            as: 'rejected_user_details',
+          },
+        },
+        {
+          $unwind: {
+            path: '$rejected_user_details',
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'approval.approvalBy.user',
+            foreignField: '_id',
+            pipeline: [
+              {
+                $project: {
+                  first_name: 1,
+                  last_name: 1,
+                  user_name: 1,
+                },
+              },
+            ],
+            as: 'approved_user_details',
+          },
+        },
+        {
+          $unwind: {
+            path: '$approved_user_details',
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'approval.editedBy',
+            foreignField: '_id',
+            pipeline: [
+              {
+                $project: {
+                  first_name: 1,
+                  last_name: 1,
+                  user_name: 1,
+                },
+              },
+            ],
+            as: 'edited_user_details',
+          },
+        },
+        {
+          $unwind: {
+            path: '$edited_user_details',
             preserveNullAndEmptyArrays: true,
           },
         },
@@ -220,8 +290,12 @@ export const fetch_all_raw_order_items = catchAsync(async (req, res, next) => {
     aggLimit,
   ];
 
-  const result = await approval_raw_order_item_details?.aggregate(list_aggregate);
+  const result =
+    await approval_raw_order_item_details?.aggregate(list_aggregate);
 
+  if (export_report === 'true') {
+    await create_raw_order_approval_report(result, req, res);
+  }
   const aggCount = {
     $count: 'totalCount',
   };
@@ -237,7 +311,8 @@ export const fetch_all_raw_order_items = catchAsync(async (req, res, next) => {
     aggCount,
   ];
 
-  const total_docs = await approval_raw_order_item_details.aggregate(count_total_docs);
+  const total_docs =
+    await approval_raw_order_item_details.aggregate(count_total_docs);
 
   const totalPages = Math.ceil((total_docs[0]?.totalCount || 0) / limit);
 
@@ -263,18 +338,67 @@ export const fetch_all_raw_order_items_by_order_id = catchAsync(
       throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
     }
 
+    const order_result = await orders_approval_model.findById(id).lean();
+
+    if (!order_result) {
+      throw new ApiError('Order not found', StatusCodes.NOT_FOUND);
+    }
+
+    const is_approval_sent =
+      order_result?.approval_status?.sendForApproval?.status;
+
+    // if (!is_approval_sent) {
+    //   throw new ApiError('Approval not sent for this order', StatusCodes.BAD_REQUEST);
+    // };
+
+    const previous_order_details_pipeline = [
+      {
+        $lookup: {
+          from: 'raw_order_item_details',
+          foreignField: '_id',
+          localField: 'raw_item_id',
+          as: 'previous_order_item_details',
+        },
+      },
+      {
+        $unwind: {
+          path: '$previous_order_item_details',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+    ];
     const pipeline = [
       {
         $match: {
           _id: mongoose.Types.ObjectId.createFromHexString(id),
         },
       },
+      ...(is_approval_sent
+        ? [
+          {
+            $lookup: {
+              from: 'orders',
+              foreignField: '_id',
+              localField: 'order_id',
+              as: 'previous_order_details',
+            },
+          },
+          {
+            $unwind: {
+              path: '$previous_order_details',
+              preserveNullAndEmptyArrays: true,
+            },
+          },
+        ]
+        : []),
+
       {
         $lookup: {
           from: 'approval_raw_order_item_details',
           foreignField: 'approval_order_id',
           localField: '_id',
           as: 'order_items_details',
+          pipeline: is_approval_sent ? previous_order_details_pipeline : [],
         },
       },
       {
@@ -329,7 +453,7 @@ export const fetch_all_raw_order_items_by_order_id = catchAsync(
       },
     ];
 
-    const result = await orders_approval_model.aggregate(pipeline);
+    const [result] = await orders_approval_model.aggregate(pipeline);
 
     const response = new ApiResponse(
       StatusCodes.OK,
@@ -341,13 +465,13 @@ export const fetch_all_raw_order_items_by_order_id = catchAsync(
 );
 
 export const approve_raw_order = catchAsync(async (req, res) => {
-  const { order_id } = req.params;
+  const { id } = req.params;
   const user = req.userDetails;
 
-  if (!order_id) {
+  if (!id) {
     throw new ApiError('Order ID is required', StatusCodes.BAD_REQUEST);
   }
-  if (!isValidObjectId(order_id)) {
+  if (!isValidObjectId(id)) {
     throw new ApiError('Invalid Order ID', StatusCodes.BAD_REQUEST);
   }
   const session = await mongoose.startSession();
@@ -360,77 +484,118 @@ export const approve_raw_order = catchAsync(async (req, res) => {
         status: true,
         remark: null,
       },
-    }
-
-    const order_approval = await orders_approval_model.findOneAndUpdate(
-      {
-        _id: order_id,
-      },
-      {
-        $set: {
-          approval_status: updated_approval_status,
-          'approval.approvalBy.user': user._id,
-        },
-      },
-      { session, new: true, runValidators: true }
-    ).lean();
-    if (!order_approval) {
-      throw new ApiError('Failed to update order details', StatusCodes.BAD_REQUEST);
     };
+
+    const order_approval = await orders_approval_model
+      .findOneAndUpdate(
+        {
+          _id: id,
+        },
+        {
+          $set: {
+            approval_status: updated_approval_status,
+            'approval.approvalBy.user': user._id,
+          },
+        },
+        { session, new: true, runValidators: true }
+      )
+      .lean();
+    if (!order_approval) {
+      throw new ApiError(
+        'Failed to update order details',
+        StatusCodes.BAD_REQUEST
+      );
+    }
 
     const { _id, order_id, approvalBy, ...rest_order_Details } = order_approval;
 
-    const update_order_details_result = await OrderModel.updateOne({ _id: order_id }, {
-      $set: { ...rest_order_Details }
-    }, { session }).lean();
+    const update_order_details_result = await OrderModel.updateOne(
+      { _id: order_id },
+      {
+        $set: { ...rest_order_Details },
+      },
+      { session }
+    ).lean();
 
     if (update_order_details_result?.matchedCount === 0) {
       throw new ApiError('Order details not found', StatusCodes.BAD_REQUEST);
-    };
+    }
 
-    if (!update_order_details_result?.acknowledged || update_order_details_result?.modifiedCount === 0) {
-      throw new ApiError('Failed to approve order details', StatusCodes.BAD_REQUEST);
-    };
+    if (
+      !update_order_details_result?.acknowledged ||
+      update_order_details_result?.modifiedCount === 0
+    ) {
+      throw new ApiError(
+        'Failed to approve order details',
+        StatusCodes.BAD_REQUEST
+      );
+    }
 
-
-    const approval_item_details = await approval_raw_order_item_details.find({ approval_order_id: order_id, order_id: order_id }).lean();
+    const approval_item_details = await approval_raw_order_item_details
+      .find({ approval_order_id: id, order_id: order_id })
+      .lean();
 
     if (approval_item_details?.length <= 0) {
-      throw new ApiError('No approval item details found for this order', StatusCodes.BAD_REQUEST);
-    };
+      throw new ApiError(
+        'No approval item details found for this order',
+        StatusCodes.BAD_REQUEST
+      );
+    }
 
-    const delete_existing_raw_order_items = await RawOrderItemDetailsModel.deleteMany({ order_id: order_id }, { session }).lean();
+    const delete_existing_raw_order_items =
+      await RawOrderItemDetailsModel.deleteMany(
+        { order_id: order_id },
+        { session }
+      ).lean();
 
-    if (!delete_existing_raw_order_items?.acknowledged || delete_existing_raw_order_items?.deletedCount === 0) {
-      throw new ApiError('Failed to delete existing raw order items', StatusCodes.BAD_REQUEST);
-    };
+    if (
+      !delete_existing_raw_order_items?.acknowledged ||
+      delete_existing_raw_order_items?.deletedCount === 0
+    ) {
+      throw new ApiError(
+        'Failed to delete existing raw order items',
+        StatusCodes.BAD_REQUEST
+      );
+    }
 
-    const approval_raw_items = await approval_raw_order_item_details.aggregate([
-      {
-        $match: {
-          approval_order_id: mongoose.Types.ObjectId.createFromHexString(order_id),
-          order_id: mongoose.Types.ObjectId.createFromHexString(order_id),
-        }
-      },
-      {
-        $set: {
-          _id: '$raw_order_item_id',
-        }
-      },
-      {
-        $unset: ['approval_order_id', 'raw_order_item_id']
-      }
-    ]).session(session);
+    const approval_raw_items = await approval_raw_order_item_details
+      .aggregate([
+        {
+          $match: {
+            approval_order_id: mongoose.Types.ObjectId.createFromHexString(id),
+            order_id: order_id,
+            // order_id: mongoose.Types.ObjectId.createFromHexString(order_id),
+          },
+        },
+        {
+          $set: {
+            _id: '$raw_order_item_id',
+          },
+        },
+        {
+          $unset: ['approval_order_id', 'raw_order_item_id'],
+        },
+      ])
+      .session(session);
 
     if (approval_raw_items?.length <= 0) {
-      throw new ApiError('No raw order items found to approve', StatusCodes.BAD_REQUEST);
-    };
+      throw new ApiError(
+        'No raw order items found to approve',
+        StatusCodes.BAD_REQUEST
+      );
+    }
 
-    const insert_raw_order_items_result = await RawOrderItemDetailsModel.insertMany(approval_raw_items, { session });
+    const insert_raw_order_items_result =
+      await RawOrderItemDetailsModel.insertMany(approval_raw_items, {
+        session,
+      });
 
     if (insert_raw_order_items_result?.length <= 0) {
-      throw new ApiError('Failed to insert approved raw order items', StatusCodes.BAD_REQUEST);
-    };
+      throw new ApiError(
+        'Failed to insert approved raw order items',
+        StatusCodes.BAD_REQUEST
+      );
+    }
     await session.commitTransaction();
 
     const response = new ApiResponse(
@@ -438,7 +603,7 @@ export const approve_raw_order = catchAsync(async (req, res) => {
       'Raw Order approved successfully',
       {
         order_details: update_order_details_result,
-        approved_raw_order_items: insert_raw_order_items_result
+        approved_raw_order_items: insert_raw_order_items_result,
       }
     );
     return res.status(StatusCodes.OK).json(response);
@@ -469,35 +634,50 @@ export const reject_raw_order = catchAsync(async (req, res) => {
         status: true,
         remark: null,
       },
-    }
-
-    const order_approval_status_result = await orders_approval_model.findOneAndUpdate(
-      {
-        _id: order_id,
-      },
-      {
-        $set: {
-          approval_status: updated_approval_status,
-          'approval.rejectedBy.user': user._id,
-        },
-      },
-      { session, new: true, runValidators: true }
-    ).lean();
-
-    if (!order_approval_status_result) {
-      throw new ApiError('Failed to update order details', StatusCodes.BAD_REQUEST);
     };
 
-    const update_raw_order_details_result = await OrderModel.updateOne({ _id: order_approval_status_result?.order_id }, {
-      $set: { approval_status: updated_approval_status }
-    }, { session }).lean();
+    const order_approval_status_result = await orders_approval_model
+      .findOneAndUpdate(
+        {
+          _id: order_id,
+        },
+        {
+          $set: {
+            approval_status: updated_approval_status,
+            'approval.rejectedBy.user': user._id,
+          },
+        },
+        { session, new: true, runValidators: true }
+      )
+      .lean();
+
+    if (!order_approval_status_result) {
+      throw new ApiError(
+        'Failed to update order details',
+        StatusCodes.BAD_REQUEST
+      );
+    }
+
+    const update_raw_order_details_result = await OrderModel.updateOne(
+      { _id: order_approval_status_result?.order_id },
+      {
+        $set: { approval_status: updated_approval_status },
+      },
+      { session }
+    ).lean();
 
     if (update_raw_order_details_result?.matchedCount === 0) {
       throw new ApiError('Order details not found', StatusCodes.BAD_REQUEST);
     }
-    if (!update_raw_order_details_result?.acknowledged || update_raw_order_details_result?.modifiedCount === 0) {
-      throw new ApiError('Failed to reject order details', StatusCodes.BAD_REQUEST);
-    };
+    if (
+      !update_raw_order_details_result?.acknowledged ||
+      update_raw_order_details_result?.modifiedCount === 0
+    ) {
+      throw new ApiError(
+        'Failed to reject order details',
+        StatusCodes.BAD_REQUEST
+      );
+    }
     await session.commitTransaction();
 
     const response = new ApiResponse(

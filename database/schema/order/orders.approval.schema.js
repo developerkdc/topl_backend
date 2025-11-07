@@ -175,7 +175,7 @@ order_approval_schema.add(approvalSchema)
 
 // indexing
 const indexingFields = [
-  [{ order_no: 1 }, { unique: true }],
+  [{ order_no: 1 }],
   [{ order_category: 1 }],
   [{ orderDate: 1 }],
   [{ owner_name: 1 }],
