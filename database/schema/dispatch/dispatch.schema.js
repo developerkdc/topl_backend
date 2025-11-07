@@ -164,6 +164,7 @@ const dispatchSchema = new mongoose.Schema(
       type: String,
       enum: {
         values: [
+          dispatch_status?.irn_generated,
           dispatch_status?.cancelled
         ],
         message: `Invalid type {{VALUE}} it must be one of the ${[
@@ -249,6 +250,10 @@ const dispatchSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    irp: {
+      type: String,
+      default: null,
+    },
     acknowledgement_number: {
       type: String,
       default: null,
@@ -313,40 +318,6 @@ const dispatchSchema = new mongoose.Schema(
     total_amount_with_expenses: {
       type: Number,
       default: 0,
-    },
-    gst_details: {
-      gst_percentage: {
-        type: Number,
-        default: 0,
-      },
-      gst_amount: {
-        type: Number,
-        default: 0,
-      },
-      igst_percentage: {
-        type: Number,
-        default: 0,
-      },
-      igst_amount: {
-        type: Number,
-        default: 0,
-      },
-      cgst_percentage: {
-        type: Number,
-        default: 0,
-      },
-      cgst_amount: {
-        type: Number,
-        default: 0,
-      },
-      sgst_percentage: {
-        type: Number,
-        default: 0,
-      },
-      sgst_amount: {
-        type: Number,
-        default: 0,
-      },
     },
     total_amount_with_gst: {
       type: Number,

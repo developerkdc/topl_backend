@@ -63,6 +63,7 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
         vehicle_number: dispatchDetails.vehicle_details?.map(v => v.vehicle_number) || [],
         item_summary: dispatchDetails.dispatch_items_details?.map(item => ({
             item_name: item.item_name,
+            sales_item_name: item.sales_item_name,
             length: item.length,
             width: item.width,
             size: `${item.length} x ${item.width}`,

@@ -113,6 +113,19 @@ export const add_veneer_inventory = catchAsync(async (req, res, next) => {
   session.startTransaction();
   try {
     const { inventory_invoice_details, inventory_items_details } = req.body;
+
+     const convertEmptyToNull = (obj) => {
+      for (let key in obj) {
+        if (obj[key] === "") obj[key] = null;
+        if (typeof obj[key] === "object" && obj[key] !== null) {
+          convertEmptyToNull(obj[key]); // ✅ recursive for nested fields
+        }
+      }
+    };
+
+    convertEmptyToNull(inventory_invoice_details);
+    convertEmptyToNull(inventory_items_details);
+
     const created_by = req.userDetails.id; //extract userid from req.userDetails
     const inward_sr_no = await veneer_inventory_invoice_model.aggregate([
       {
