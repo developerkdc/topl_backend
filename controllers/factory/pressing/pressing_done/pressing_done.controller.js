@@ -1248,26 +1248,30 @@ export const fetch_pressing_done_consumed_item_details = catchAsync(
         },
       },
       // Uncomment if needed:
-      // {
-      //   $unwind: '$group_details',
-      // },
-      // {
-      //   $lookup: {
-      //     from: 'grouping_done_items_details',
-      //     localField: 'group_details.group_no',
-      //     foreignField: 'group_no',
-      //     pipeline: [
-      //       {
-      //         $project: {
-      //           group_no: 1,
-      //           photo_no: 1,
-      //           photo_id: 1,
-      //         },
-      //       },
-      //     ],
-      //     as: 'grouping_done_items_details',
-      //   },
-      // },
+      
+        {
+        $unwind: {
+          path: '$group_details',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $lookup: {
+          from: 'grouping_done_items_details',
+          localField: 'group_details.group_no',
+          foreignField: 'group_no',
+          pipeline: [
+            {
+              $project: {
+                group_no: 1,
+                photo_no: 1,
+                photo_id: 1,
+              },
+            },
+          ],
+          as: 'grouping_done_items_details',
+        },
+      },
     ]);
 
     console.log('Fetched Result:', JSON.stringify(result, null, 2));

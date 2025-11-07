@@ -26,6 +26,7 @@ import mongoose from 'mongoose';
 import all_challan_router from './routes/challan/all_challan.routes.js';
 import allPackingRoutes from './routes/packing/all_packing.routes.js';
 import dispatchRouter from './routes/dispatch/dispatch.routes.js';
+import { handle_photo_master_streams } from './controllers/masters/Photo/photo.controller.js';
 // import { start_worker_thread } from './utils/constants.js';
 
 const Configs = getConfigs();
@@ -55,6 +56,9 @@ global.config = {
 //start worker thread for dressing missmatch data
 // start_worker_thread();
 insert_raw_machine_data_into_machine_mismatch_model();
+
+//handler to handle photo updates 
+handle_photo_master_streams();
 
 var corsOptions = {
   origin: Configs.cors.origin,

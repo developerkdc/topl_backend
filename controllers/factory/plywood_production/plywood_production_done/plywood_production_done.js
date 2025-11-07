@@ -341,77 +341,159 @@ export const update_plywood_production_done = catchAsync(async (req, res) => {
     }
     //checking available details for issue face and core item is greate than issue items
 
-    const is_face_available_greater_than_consumed = await Promise.all(
-      face_details_array.map(async (item) => {
-        const res = await face_inventory_items_details
-          .findOne({
-            _id: item?._id,
-            available_sheets: { $gte: item?.issued_sheets },
-            available_sqm: { $gte: item?.issued_sqm },
-            available_amount: { $gte: item?.issued_amount },
-          })
-          .session(session)
-          .lean();
-        return res || null; // Explicitly return `null` if no matching record is found
-      })
+    // const is_face_available_greater_than_consumed = await Promise.all(
+    //   face_details_array.map(async (item) => {
+    //     const res = await face_inventory_items_details
+    //       .findOne({
+    //         _id: item?._id,
+    //         available_sheets: { $gte: item?.issued_sheets },
+    //         available_sqm: { $gte: item?.issued_sqm },
+    //         available_amount: { $gte: item?.issued_amount },
+    //       })
+    //       .session(session)
+    //       .lean();
+    //     return res || null; // Explicitly return `null` if no matching record is found
+    //   })
+    // );
+
+    // const missingItems = face_details_array.filter(
+    //   (_, index) => is_face_available_greater_than_consumed[index] === null
+    // );
+
+    // const is_core_available_greater_than_consumed = await Promise.all(
+    //   core_details_array.map(async (item) => {
+    //     const res = await core_inventory_items_details
+    //       .findOne({
+    //         _id: item?._id,
+    //         available_sheets: { $gte: item?.issued_sheets },
+    //         available_sqm: { $gte: item?.issued_sqm },
+    //         available_amount: { $gte: item?.issued_amount },
+    //       })
+    //       .session(session)
+    //       .lean();
+    //     return res || null;
+    //   })
+    // );
+
+    // const missingCoreItems = core_details_array.filter(
+    //   (_, index) => is_core_available_greater_than_consumed[index] === null
+    // );
+
+    // if (missingItems.length > 0 && missingCoreItems.length > 0) {
+    //   const newMSGDetails = missingItems.map((item) => {
+    //     return `Inward No : ${item.inward_sr_no} and Sr No :${item.face_sr_no}`;
+    //   });
+
+    //   const newCoreMSGDetails = missingCoreItems.map((item) => {
+    //     return `Inward No: ${item.inward_sr_no} and Sr No: ${item.core_sr_no}`;
+    //   });
+
+    //   throw new ApiError(
+    //     `Available face sheets are issued by someone for ${newMSGDetails.join()} and Available core sheets are issued by someone for ${newCoreMSGDetails.join()}`
+    //   );
+    // }
+
+    // if (missingItems.length > 0) {
+    //   const newMSGDetails = missingItems.map((item) => {
+    //     return `Inward No : ${item.inward_sr_no} and Sr No :${item.face_sr_no}`;
+    //   });
+
+    //   throw new ApiError(
+    //     `Available face sheets are issued by someone for ${newMSGDetails.join()}`
+    //   );
+    // }
+
+    // if (missingCoreItems.length > 0) {
+    //   const newCoreMSGDetails = missingCoreItems.map((item) => {
+    //     return `Inward No: ${item.inward_sr_no} and Sr No: ${item.core_sr_no}`;
+    //   });
+
+    //   throw new ApiError(
+    //     `Available core sheets are issued by someone for ${newCoreMSGDetails.join()}`
+    //   );
+    // }
+
+    //  STEP-1: Fetch old consumed records (existing issued items)
+    const oldConsumedItems = await plywood_production_consumed_items_model
+      .find({ plywood_production_id: plywood_production_done_data._id })
+      .lean();
+
+    // STEP-2: Extract IDs
+    const oldFaceIds = oldConsumedItems
+      .filter(i => i.face_inventory_item_id)
+      .map(i => i.face_inventory_item_id.toString());
+
+    const oldCoreIds = oldConsumedItems
+      .filter(i => i.core_inventory_item_id)
+      .map(i => i.core_inventory_item_id.toString());
+
+    // STEP-3: Filter newly added items only
+    const newFaceItems = face_details_array.filter(
+      item => !oldFaceIds.includes(item.face_inventory_item_id?.toString())
     );
 
-    const missingItems = face_details_array.filter(
-      (_, index) => is_face_available_greater_than_consumed[index] === null
+    const newCoreItems = core_details_array.filter(
+      item => !oldCoreIds.includes(item.core_inventory_item_id?.toString())
     );
 
-    const is_core_available_greater_than_consumed = await Promise.all(
-      core_details_array.map(async (item) => {
-        const res = await core_inventory_items_details
-          .findOne({
-            _id: item?._id,
-            available_sheets: { $gte: item?.issued_sheets },
-            available_sqm: { $gte: item?.issued_sqm },
-            available_amount: { $gte: item?.issued_amount },
-          })
-          .session(session)
-          .lean();
-        return res || null;
-      })
+
+    // STEP-4: Validate only new Face items
+    const faceValidation = await Promise.all(
+      newFaceItems.map(item =>
+        face_inventory_items_details.findOne({
+          _id: item._id,
+          available_sheets: { $gte: item.issued_sheets },
+          available_sqm: { $gte: item.issued_sqm },
+          available_amount: { $gte: item.issued_amount },
+        })
+        .session(session)
+        .lean()
+      )
     );
 
-    const missingCoreItems = core_details_array.filter(
-      (_, index) => is_core_available_greater_than_consumed[index] === null
+    const missingFaceItems = newFaceItems.filter(
+      (_, index) => !faceValidation[index]
     );
 
-    if (missingItems.length > 0 && missingCoreItems.length > 0) {
-      const newMSGDetails = missingItems.map((item) => {
-        return `Inward No : ${item.inward_sr_no} and Sr No :${item.face_sr_no}`;
-      });
+    //  STEP-5: Validate only new Core items
+    const coreValidation = await Promise.all(
+      newCoreItems.map(item =>
+        core_inventory_items_details.findOne({
+          _id: item._id,
+          available_sheets: { $gte: item.issued_sheets },
+          available_sqm: { $gte: item.issued_sqm },
+          available_amount: { $gte: item.issued_amount },
+        })
+        .session(session)
+        .lean()
+      )
+    );
 
-      const newCoreMSGDetails = missingCoreItems.map((item) => {
-        return `Inward No: ${item.inward_sr_no} and Sr No: ${item.core_sr_no}`;
-      });
+    const missingCoreItems = newCoreItems.filter(
+      (_, index) => !coreValidation[index]
+    );
 
-      throw new ApiError(
-        `Available face sheets are issued by someone for ${newMSGDetails.join()} and Available core sheets are issued by someone for ${newCoreMSGDetails.join()}`
-      );
+    //  STEP-6: Throw error if shortage only in newly added items
+    if (missingFaceItems.length > 0 || missingCoreItems.length > 0) {
+      let msg = '';
+
+      if (missingFaceItems.length > 0) {
+        msg += 'Face shortage at: ' +
+          missingFaceItems.map(i =>
+            `Inward ${i.inward_sr_no} Sr.No ${i.face_sr_no}`
+          ).join(' | ');
+      }
+
+      if (missingCoreItems.length > 0) {
+        msg += ' | Core shortage at: ' +
+          missingCoreItems.map(i =>
+            `Inward ${i.inward_sr_no} Sr.No ${i.core_sr_no}`
+          ).join(' | ');
+      }
+      throw new ApiError(msg, StatusCodes.BAD_REQUEST);
     }
 
-    if (missingItems.length > 0) {
-      const newMSGDetails = missingItems.map((item) => {
-        return `Inward No : ${item.inward_sr_no} and Sr No :${item.face_sr_no}`;
-      });
 
-      throw new ApiError(
-        `Available face sheets are issued by someone for ${newMSGDetails.join()}`
-      );
-    }
-
-    if (missingCoreItems.length > 0) {
-      const newCoreMSGDetails = missingCoreItems.map((item) => {
-        return `Inward No: ${item.inward_sr_no} and Sr No: ${item.core_sr_no}`;
-      });
-
-      throw new ApiError(
-        `Available core sheets are issued by someone for ${newCoreMSGDetails.join()}`
-      );
-    }
 
     //fetching all plywood_production_consumed_items_details base on plywood_production_id so we can revert sheets face and core inventory
     const plywood_production_consumed_items =

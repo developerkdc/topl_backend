@@ -67,7 +67,7 @@ export const insert_raw_machine_data_into_machine_mismatch_model = async () => {
           );
         } catch (error) {
           console.log(
-            `An err occured while inserting data in dressing missmatch collection => ${error.message}`
+            `An err occured while inserting data in dressing mismatch collection => ${error.message}`
           );
           // throw error
         }

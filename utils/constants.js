@@ -60,3 +60,19 @@ export const start_worker_thread = () => {
     }
   });
 };
+
+
+export const approval_status = {
+  sendForApproval: {
+    status: false,
+    remark: null,
+  },
+  approved: {
+    status: false,
+    remark: null,
+  },
+  rejected: {
+    status: false,
+    remark: null,
+  }
+}
