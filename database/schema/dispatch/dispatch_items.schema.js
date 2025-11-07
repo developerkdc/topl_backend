@@ -242,6 +242,14 @@ const dispatch_items_schema = new mongoose.Schema(
         default: 0,
       },
     },
+    discount_amount: {
+      type: Number,
+      default: 0,
+    },
+    final_row_amount: {
+      type: Number,
+      default: 0,
+    },
     remark: {
       type: String,
       default: null,

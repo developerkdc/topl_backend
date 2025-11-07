@@ -11,10 +11,16 @@
 
     body {
       margin: 0 auto;
-      padding: 20px;
-      max-width: 1000px;
+      padding: 5px;
+      max-width: 1500px;
       /* keeps layout centered and prevents overflow */
       word-wrap: break-word;
+    }
+
+    .approved {
+      page-break-inside: avoid;
+      page-break-before: avoid;
+      page-break-after: avoid;
     }
 
     .header,
@@ -93,8 +99,7 @@
       }
 
       @page {
-        size: A4 landscape;
-        margin: 10mm;
+        size: A4;
       }
     }
   </style>
@@ -129,11 +134,11 @@
   </div>
 
   <div class='section'>
-    <table style="width:100%; font-size:8px !important;">
+    <table style="width:112%; font-size:8px !important; margin-left:-35px;">
       <thead>
         <tr>
           <th>Series</th>
-          <th style="width: 150px;">Sales Itemname</th>
+          <th style="width: 120px;">Sales Itemname</th>
           <th>Photo Number</th>
           <th>LogX</th>
           <th>Character</th>
@@ -213,7 +218,8 @@
     </table>
   </div>
 
-  <div style='margin-top: 200px; display: flex; justify-content: space-between;'>
+  <div class="approved"
+    style="display: flex; justify-content: center; gap: 40px; margin-top: 50px; align-items: center; font-size: 12px; text-align: center;">
     <div>APPROVED BY: __________________</div>
     <div>RECEIVED BY: __________________</div>
     <div>INSTRUCTION: __________________</div>
