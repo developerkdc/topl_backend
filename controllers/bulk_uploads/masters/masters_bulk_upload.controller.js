@@ -332,6 +332,7 @@ const build_address = (prefix, doc) => {
 
 async function subcategory_master(doc, session) {
 
+
     if (doc.category) {
         const categoryNames = doc.category.split(',').map(cat => cat.trim());
         const categoryIds = [];
@@ -874,6 +875,12 @@ export const bulk_upload_masters = catchAsync(async (req, res) => {
                         let raw_value = row.getCell(i + 1).value ?? null;
                         doc[excel_field] = raw_value;
                     }
+                    const is_empty = Object.values(doc)
+                        .filter((v, i) => i > 0)
+                        .every(v => v === null || v === undefined || v === '');
+                    if (is_empty) continue;
+
+                    console.log("doc file fields => ", doc)
 
                     switch (master_name) {
                         // case 'category_master':
