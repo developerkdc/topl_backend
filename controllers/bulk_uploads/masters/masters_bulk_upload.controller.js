@@ -1,7 +1,7 @@
 import mongoose, { model } from 'mongoose';
 import ApiResponse from '../../../utils/ApiResponse.js';
 import { StatusCodes } from '../../../utils/constants.js';
-import ApiError from '../../../utils/errors/ApiError.js';
+import ApiError from '../../../utils/errors/apiError.js';
 import catchAsync from '../../../utils/errors/catchAsync.js';
 import formidable from 'formidable';
 import path from 'path';
@@ -248,30 +248,119 @@ const build_address = (prefix, doc) => {
     };
 };
 
-async function subcategory_master(doc, session) {
-    // Lookup category by name and get category_id
-    if (doc.category) {
-        const categoryDoc = await model('item_category')
-            .findOne({ category: doc.category })
-            .lean()
-            .session(session);
+// async function subcategory_master(doc, session) {
+//     // Lookup category by name and get category_id
+//     if (doc.category) {
+//         const categoryDoc = await model('item_category')
+//             .findOne({ category: doc.category })
+//             .lean()
+//             .session(session);
 
-        if (!categoryDoc) {
-            throw new ApiError(
-                `Invalid category "${doc.category}" - not found in item_categories`,
-                StatusCodes.BAD_REQUEST
-            );
+//         if (!categoryDoc) {
+//             throw new ApiError(
+//                 `Invalid category "${doc.category}" - not found in item_categories`,
+//                 StatusCodes.BAD_REQUEST
+//             );
+//         }
+
+//         // Replace category name with category_id
+//         doc.category = [categoryDoc._id];
+//     }
+
+//     return doc;
+// }
+
+// async function item_name_master(doc, session) {
+//     // Lookup color by name
+//     if (doc.color_name) {
+//         const colorDoc = await model('colors')
+//             .findOne({ name: doc.color_name })
+//             .lean()
+//             .session(session);
+
+//         if (!colorDoc) {
+//             throw new ApiError(
+//                 `Invalid color "${doc.color_name}" - not found in colors`,
+//                 StatusCodes.BAD_REQUEST
+//             );
+//         }
+
+//         // Store color info
+//         doc.color = {
+//             color_id: colorDoc._id,
+//             color_name: doc.color_name,
+//         };
+//         delete doc.color_name; // Remove original field
+//     }
+
+//     // Lookup category by name
+//     if (doc.category) {
+//         const categoryDoc = await model('item_category')
+//             .findOne({ category: doc.category })
+//             .lean()
+//             .session(session);
+
+//         if (!categoryDoc) {
+//             throw new ApiError(
+//                 `Invalid category "${doc.category}" - not found in item_categories`,
+//                 StatusCodes.BAD_REQUEST
+//             );
+//         }
+
+//         doc.category = [categoryDoc._id];
+//     }
+
+//     // Lookup subcategory by name
+//     if (doc.item_subcategory) {
+//         const subcategoryDoc = await model('item_subcategory')
+//             .findOne({ name: doc.item_subcategory })
+//             .lean()
+//             .session(session);
+
+//         if (!subcategoryDoc) {
+//             throw new ApiError(
+//                 `Invalid subcategory "${doc.item_subcategory}" - not found in item_subcategories`,
+//                 StatusCodes.BAD_REQUEST
+//             );
+//         }
+
+//         doc.item_subcategory = [subcategoryDoc._id];
+//     }
+
+//     return doc;
+// }
+
+async function subcategory_master(doc, session) {
+
+    if (doc.category) {
+        const categoryNames = doc.category.split(',').map(cat => cat.trim());
+        const categoryIds = [];
+
+        for (const categoryName of categoryNames) {
+            const categoryDoc = await model('item_category')
+                .findOne({ category: categoryName })
+                .lean()
+                .session(session);
+
+            if (!categoryDoc) {
+                throw new ApiError(
+                    `Invalid category "${categoryName}" - not found in item_categories`,
+                    StatusCodes.BAD_REQUEST
+                );
+            }
+
+            categoryIds.push(categoryDoc._id);
         }
 
-        // Replace category name with category_id
-        doc.category = [categoryDoc._id];
+
+        doc.category = categoryIds;
     }
 
     return doc;
 }
 
 async function item_name_master(doc, session) {
-    // Lookup color by name
+
     if (doc.color_name) {
         const colorDoc = await model('colors')
             .findOne({ name: doc.color_name })
@@ -285,46 +374,60 @@ async function item_name_master(doc, session) {
             );
         }
 
-        // Store color info
+
         doc.color = {
             color_id: colorDoc._id,
             color_name: doc.color_name,
         };
-        delete doc.color_name; // Remove original field
+        delete doc.color_name;
     }
 
-    // Lookup category by name
+
     if (doc.category) {
-        const categoryDoc = await model('item_category')
-            .findOne({ category: doc.category })
-            .lean()
-            .session(session);
+        const categoryNames = doc.category.split(',').map(cat => cat.trim());
+        const categoryIds = [];
 
-        if (!categoryDoc) {
-            throw new ApiError(
-                `Invalid category "${doc.category}" - not found in item_categories`,
-                StatusCodes.BAD_REQUEST
-            );
+        for (const categoryName of categoryNames) {
+            const categoryDoc = await model('item_category')
+                .findOne({ category: categoryName })
+                .lean()
+                .session(session);
+
+            if (!categoryDoc) {
+                throw new ApiError(
+                    `Invalid category "${categoryName}" - not found in item_categories`,
+                    StatusCodes.BAD_REQUEST
+                );
+            }
+
+            categoryIds.push(categoryDoc._id);
         }
 
-        doc.category = [categoryDoc._id];
+        doc.category = categoryIds;
     }
 
-    // Lookup subcategory by name
-    if (doc.item_subcategory) {
-        const subcategoryDoc = await model('item_subcategory')
-            .findOne({ name: doc.item_subcategory })
-            .lean()
-            .session(session);
 
-        if (!subcategoryDoc) {
-            throw new ApiError(
-                `Invalid subcategory "${doc.item_subcategory}" - not found in item_subcategories`,
-                StatusCodes.BAD_REQUEST
-            );
+    if (doc.item_subcategory) {
+        const subcategoryNames = doc.item_subcategory.split(',').map(sub => sub.trim());
+        const subcategoryIds = [];
+
+        for (const subcategoryName of subcategoryNames) {
+            const subcategoryDoc = await model('item_subcategory')
+                .findOne({ name: subcategoryName })
+                .lean()
+                .session(session);
+
+            if (!subcategoryDoc) {
+                throw new ApiError(
+                    `Invalid subcategory "${subcategoryName}" - not found in item_subcategories`,
+                    StatusCodes.BAD_REQUEST
+                );
+            }
+
+            subcategoryIds.push(subcategoryDoc._id);
         }
 
-        doc.item_subcategory = [subcategoryDoc._id];
+        doc.item_subcategory = subcategoryIds;
     }
 
     return doc;

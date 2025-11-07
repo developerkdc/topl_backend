@@ -267,7 +267,7 @@ export const update_raw_order = catchAsync(async (req, res) => {
       const { _id, createdAt, updatedAt, ...rest_item_details } = item;
       return {
         ...rest_item_details,
-        raw_item_id: _id,
+        raw_item_id: _id ? _id : new mongoose.Types.ObjectId(),
         order_id: add_approval_order_result?.order_id,
         approval_order_id: add_approval_order_result?._id,
         product_category: add_approval_order_result?.raw_materials,
