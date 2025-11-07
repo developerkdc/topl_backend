@@ -14,6 +14,7 @@ import ApiError from '../../utils/errors/apiError.js';
 import catchAsync from '../../utils/errors/catchAsync.js';
 import RevertOrderItem from './revert_issued_order_item/revert_issued_order_item.controller..js';
 import issue_for_order_model from '../../database/schema/order/issue_for_order/issue_for_order.schema.js';
+import path from 'path';
 
 const order_items_models = {
   [order_category.raw]: RawOrderItemDetailsModel,
@@ -251,6 +252,8 @@ export const fetch_decorative_and_series_product_order_items = catchAsync(
       series: 'series_product_order_item_details',
     };
 
+
+
     const pipeline = [
       {
         $match: {
@@ -280,6 +283,38 @@ export const fetch_decorative_and_series_product_order_items = catchAsync(
 
       {
         $lookup: {
+          from: "photos",
+          localField: "order_item_details.photo_number_id",
+          foreignField: "_id",
+          as: "photo_details"
+        }
+      },
+      {
+        $unwind: {
+          path: "$photo_details", preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $lookup: {
+          from: "grouping_done_items_details",
+          localField: "photo_details._id",
+          foreignField: "photo_no_id",
+          as: "grouping_done_items",
+          pipeline: [
+            {
+              $project: {
+                group_no: 1,
+              }
+            }
+          ]
+        }
+      }, {
+        $unwind: {
+          path: "$grouping_done_items", preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $lookup: {
           from: 'customers',
           localField: 'customer_id',
           foreignField: '_id',
@@ -299,12 +334,14 @@ export const fetch_decorative_and_series_product_order_items = catchAsync(
           OrderNo: '$order_no',
           SODetId: '$order_item_details.item_no',
           Date: '$orderDate',
-          Priority: null,
+          Priority: {
+            $ifNull: ['$order_item_details.dispatch_schedule', null],
+          },
           CustomerId: '$customer_details.sr_no',
           CustomerName: '$customer_details.company_name',
           Product: '$order_category',
           CurrentStage: {
-            $ifNull: ['$order_item_details.current_stage', null],
+            $ifNull: ['$photo_details.current_stage', null],
           },
           FinishedStage: {
             $ifNull: ['$order_item_details.finished_stage', null],
@@ -315,13 +352,13 @@ export const fetch_decorative_and_series_product_order_items = catchAsync(
           },
           ItemName: '$order_item_details.item_name',
           SalesItemname: '$order_item_details.sales_item_name',
-          LogX: '$order_item_details.group_number',
+          LogX: "$grouping_done_items.group_no",
           Length: '$order_item_details.length',
           Width: '$order_item_details.width',
           'Sheets/PCS': '$order_item_details.no_of_sheets',
           SqMtr: '$order_item_details.sqm',
-          Character: null,
-          Pattern: null,
+          Character: '$photo_details.character_name',
+          Pattern: '$photo_details.pattern_name',
           Series: '$order_item_details.series_name',
           Remarks: '$order_item_details.remark',
           Instruction: '$order_item_details.pressing_instructions',

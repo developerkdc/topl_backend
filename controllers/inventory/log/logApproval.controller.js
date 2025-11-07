@@ -145,21 +145,21 @@ export const logApproval_item_listing_by_invoice = catchAsync(
         },
         ...(isApprovalPending
           ? [
-              {
-                $lookup: {
-                  from: 'log_inventory_invoice_details',
-                  localField: 'invoice_id',
-                  foreignField: '_id',
-                  as: 'previous_data',
-                },
+            {
+              $lookup: {
+                from: 'log_inventory_invoice_details',
+                localField: 'invoice_id',
+                foreignField: '_id',
+                as: 'previous_data',
               },
-              {
-                $unwind: {
-                  path: '$previous_data',
-                  preserveNullAndEmptyArrays: true,
-                },
+            },
+            {
+              $unwind: {
+                path: '$previous_data',
+                preserveNullAndEmptyArrays: true,
               },
-            ]
+            },
+          ]
           : []),
       ]);
 
@@ -174,21 +174,21 @@ export const logApproval_item_listing_by_invoice = catchAsync(
       },
       ...(isApprovalPending
         ? [
-            {
-              $lookup: {
-                from: 'log_inventory_items_details',
-                localField: 'log_item_id',
-                foreignField: '_id',
-                as: 'previous_data',
-              },
+          {
+            $lookup: {
+              from: 'log_inventory_items_details',
+              localField: 'log_item_id',
+              foreignField: '_id',
+              as: 'previous_data',
             },
-            {
-              $unwind: {
-                path: '$previous_data',
-                preserveNullAndEmptyArrays: true,
-              },
+          },
+          {
+            $unwind: {
+              path: '$previous_data',
+              preserveNullAndEmptyArrays: true,
             },
-          ]
+          },
+        ]
         : []),
       {
         $sort: {

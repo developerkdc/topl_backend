@@ -81,14 +81,14 @@ export const create_dressing = catchAsync(async (req, res, next) => {
           peeling_done_data?.no_of_leaves
         ) {
           throw new ApiError(
-            `No.of Leaves Missmatch for ${item?.log_no_code}, Actual No. of Leaves Issued : ${item?.no_of_leaves}, Dressing Done No.of Leaves : ${item?.no_of_leaves} `,
+            `No.of Leaves Mismatch for ${item?.log_no_code}, Actual No. of Leaves Issued : ${item?.no_of_leaves}, Dressing Done No.of Leaves : ${item?.no_of_leaves} `,
             StatusCodes.BAD_REQUEST
           );
         }
 
         if (item.thickness !== peeling_done_data?.thickness) {
           throw new ApiError(
-            `Thickness missmatch for Log No.Code ${item?.log_no_code}`
+            `Thickness mismatch for Log No.Code ${item?.log_no_code}`
           );
         }
       }
@@ -181,14 +181,14 @@ export const create_dressing = catchAsync(async (req, res, next) => {
           slicing_done_data?.no_of_leaves
         ) {
           throw new ApiError(
-            `No.of Leaves Missmatch for ${item?.log_no_code}, Actual No. of Leaves Issued : ${slicing_done_data?.no_of_leaves}, Dressing Done No.of Leaves : ${item?.no_of_leaves} `,
+            `No.of Leaves Mismatch for ${item?.log_no_code}, Actual No. of Leaves Issued : ${slicing_done_data?.no_of_leaves}, Dressing Done No.of Leaves : ${item?.no_of_leaves} `,
             StatusCodes.BAD_REQUEST
           );
         }
 
         if (item.thickness !== slicing_done_data?.thickness) {
           throw new ApiError(
-            `Thickness missmatch for Log No.Code ${item?.log_no_code}, Provided : ${item?.thickness},Actual : ${slicing_done_data?.thickness} Thickness`
+            `Thickness mismatch for Log No.Code ${item?.log_no_code}, Provided : ${item?.thickness},Actual : ${slicing_done_data?.thickness} Thickness`
           );
         }
       }
@@ -714,14 +714,14 @@ export const edit_dressing_done_items = catchAsync(async (req, res) => {
           peeling_done_data?.no_of_leaves
         ) {
           throw new ApiError(
-            `No.of Leaves Missmatch for ${item?.log_no_code}, Actual No. of Leaves Issued : ${item?.no_of_leaves}, Dressing Done No.of Leaves : ${item?.no_of_leaves} `,
+            `No.of Leaves Mismatch for ${item?.log_no_code}, Actual No. of Leaves Issued : ${item?.no_of_leaves}, Dressing Done No.of Leaves : ${item?.no_of_leaves} `,
             StatusCodes.BAD_REQUEST
           );
         }
 
         if (item.thickness !== peeling_done_data?.thickness) {
           throw new ApiError(
-            `Thickness missmatch for Log No.Code ${item?.log_no_code}`
+            `Thickness mismatch for Log No.Code ${item?.log_no_code}`
           );
         }
       }

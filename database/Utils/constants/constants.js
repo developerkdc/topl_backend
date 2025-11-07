@@ -185,5 +185,6 @@ export const color_type = {
 };
 
 export const dispatch_status = {
+  irn_generated: 'IRN GENERATED',
   cancelled: 'CANCELLED',
 };

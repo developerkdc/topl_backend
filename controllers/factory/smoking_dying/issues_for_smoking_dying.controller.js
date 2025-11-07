@@ -730,13 +730,14 @@ export const revert_issued_for_smoking_dying_item = catchAsync(
 
         const dressing_done_item_details = await dressing_done_items_model
           .find({
-            _id: { $nin: dressing_done_ids },
+            _id: { $in: dressing_done_ids },
           })
           .lean();
         const dressing_done_other_details_id = dressing_done_item_details.map(
           (ele) => ele.dressing_done_other_details_id
         );
 
+        console.log("dressing ids => ",dressing_done_other_details_id)
         const delete_dressing_done_history_doc =
           await dressing_done_history_model.deleteOne(
             {
