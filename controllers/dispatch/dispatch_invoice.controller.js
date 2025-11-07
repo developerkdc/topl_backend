@@ -63,13 +63,14 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
         vehicle_number: dispatchDetails.vehicle_details?.map(v => v.vehicle_number) || [],
         item_summary: dispatchDetails.dispatch_items_details?.map(item => ({
             item_name: item.item_name,
+            sales_item_name: item.sales_item_name,
             length: item.length,
             width: item.width,
             size: `${item.length} x ${item.width}`,
             sheets: item.sheets,
             sqm: item.sqm,
             rate: item.rate,
-            taxable_value: item.taxable_value,
+            taxable_value: item.final_row_amount,
         })) || [],
         basic_amount: dispatchDetails.total_base_amount,
         insurance: dispatchDetails.insurance_amount,
@@ -98,14 +99,23 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
     );
 
     const pdfBuffer = await generatePDF({
-        templateName: "Invoice_bill",
+        templateName: `${dispatchDetails?.invoice_no}_${dispatchDetails?.customer_details?.company_name}_${dispatchDetails?.invoice_date}`,
         templatePath,
         data: pdfData,
     });
 
+    const sanitizeForFilename = (str = "") =>
+        str.replace(/[\/\\:*?"<>|]/g, "-").trim();
+
+    const safeInvoiceNo = sanitizeForFilename(dispatchDetails.invoice_no || "");
+    const safeCompanyName = sanitizeForFilename(dispatchDetails.customer_details?.company_name || "");
+
+    const fileName = `Invoice-${safeInvoiceNo}_${safeCompanyName}_${pdfData.invoice_date}.pdf`;
+
     res.set({
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename=Invoice-${id}.pdf`,
+        "Content-Disposition": `attachment; filename="${fileName}"`,
+        "Access-Control-Expose-Headers": "Content-Disposition",
         "Content-Length": pdfBuffer.length,
     });
 

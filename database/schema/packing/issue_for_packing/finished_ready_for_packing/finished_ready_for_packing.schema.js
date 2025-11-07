@@ -142,13 +142,11 @@ const finished_ready_for_packing_schema = new mongoose.Schema(
   }
 );
 
-const indexed_fields = [
-  [{ group_no: 1 }],
-]
+const indexed_fields = [[{ group_no: 1 }]];
 
 indexed_fields.forEach((field) => {
-  finished_ready_for_packing_schema.index(...field)
-})
+  finished_ready_for_packing_schema.index(...field);
+});
 const finished_ready_for_packing_model = mongoose.model(
   'finished_ready_for_packing_details',
   finished_ready_for_packing_schema,

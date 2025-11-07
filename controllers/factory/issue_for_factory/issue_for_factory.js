@@ -114,6 +114,7 @@ class Issue_For_Factory {
           },
         ])
         .session(this.session);
+        console.log("this.issued_from_details => ",this.issued_from_details)
       const new_sr_no = max_sr_no ? max_sr_no?.max_sr_no + 1 : 1;
       //add issue data to the factory
       const [add_data_to_factory_result] = await add_to_factory_model.create(
@@ -140,6 +141,7 @@ class Issue_For_Factory {
                 : this?.issued_from_details?.pressing_details_id,
             created_by: this.userDetails?._id,
             updated_by: this.userDetails?._id,
+            remark: this.issued_from_details?.remark,
           },
         ],
         { session: this.session }

@@ -307,6 +307,12 @@ export const listing_issued_for_polishing = catchAsync(
       is_polishing_done: false,
     };
 
+    const aggCommonMatch = {
+      $match: {
+        'available_details.no_of_sheets': { $ne: 0 },
+      },
+    };
+
     const aggCreatedByLookup = {
       $lookup: {
         from: 'users',
@@ -379,6 +385,7 @@ export const listing_issued_for_polishing = catchAsync(
     };
 
     const listAggregate = [
+      aggCommonMatch,
       aggCreatedByLookup,
       aggCreatedByUnwind,
       aggUpdatedByLookup,
@@ -445,8 +452,6 @@ export const fetch_single_issue_for_polishing_item = catchAsync(
     return res.status(StatusCodes.OK).json(response);
   }
 );
-
-
 
 export const download_excel_issued_for_polishing = catchAsync(
   async (req, res, next) => {
@@ -580,6 +585,5 @@ export const download_excel_issued_for_polishing = catchAsync(
     const data = await issue_for_polishing_view_model.aggregate(listAggregate);
 
     await createFactoryIssueForPolishExcel(data, req, res);
-
   }
 );
