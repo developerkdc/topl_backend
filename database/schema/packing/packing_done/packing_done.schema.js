@@ -8,7 +8,7 @@ const packing_done_other_details_schema = new mongoose.Schema(
       type: Number,
       required: [true, 'Packing ID is required.'],
       trim: true,
-      unique: true
+      unique: true,
     },
     packing_date: {
       type: Date,
@@ -89,26 +89,6 @@ const packing_done_other_details_schema = new mongoose.Schema(
     sales_item_name: {
       type: String,
       // required: [true, "Sales Item Name is required"]
-    },
-    bundle_no: {
-      type: Number,
-      default: null,
-    },
-    bundle_description: {
-      type: String,
-      default: null,
-      trim: true,
-      validate: {
-        validator: function (v) {
-          return v === null || /^[0-9+\-*/.() ]*$/.test(v);
-        },
-        message: (props) => `${props.value} contains invalid characters!`,
-      },
-    },
-
-    total_no_of_bundles: {
-      type: Number,
-      default: null,
     },
   },
   {
@@ -267,6 +247,26 @@ const packing_done_items_schema = new mongoose.Schema(
     updated_by: {
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Updated by is required.'],
+    },
+    bundle_no: {
+      type: Number,
+      default: null,
+    },
+    bundle_description: {
+      type: String,
+      default: null,
+      trim: true,
+      validate: {
+        validator: function (v) {
+          return v === null || /^[0-9+\-*/.() ]*$/.test(v);
+        },
+        message: (props) => `${props.value} contains invalid characters!`,
+      },
+    },
+
+    total_no_of_bundles: {
+      type: Number,
+      default: null,
     },
   },
   {

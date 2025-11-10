@@ -50,15 +50,28 @@ export const create_packing = catchAsync(async (req, res) => {
   try {
     session.startTransaction();
 
-    // 🔹 Find the latest packing_id and increment it
+    // ✅ Step 1: Ensure all packing_id are treated as numbers
+    // (this prevents the $inc type error)
+    await packing_done_other_details_model.updateMany(
+      { packing_id: { $type: 'string' } },
+      [{ $set: { packing_id: { $toInt: '$packing_id' } } }],
+      { session }
+    );
+
+    // ✅ Step 2: Safely find the latest numeric packing_id and increment it manually
     const lastPacking = await packing_done_other_details_model
       .findOne({}, { packing_id: 1 })
       .sort({ packing_id: -1 })
       .lean()
       .session(session);
 
-    const next_packing_id = lastPacking ? lastPacking.packing_id + 1 : 1;
+    const next_packing_id = lastPacking
+      ? Number(lastPacking.packing_id) + 1
+      : 1;
 
+    console.log('next_packing_id', next_packing_id);
+
+    // ✅ Step 3: Assign next ID safely
     const updated_other_details_payload = {
       ...other_details,
       packing_id: next_packing_id,
@@ -66,11 +79,33 @@ export const create_packing = catchAsync(async (req, res) => {
       updated_by: user._id,
     };
 
-    const [create_packing_done_other_details_result] =
-      await packing_done_other_details_model.create(
-        [updated_other_details_payload],
-        { session }
-      );
+    // ✅ Step 4: Attempt insert; if duplicate, retry once
+    let create_packing_done_other_details_result;
+    try {
+      [create_packing_done_other_details_result] =
+        await packing_done_other_details_model.create(
+          [updated_other_details_payload],
+          { session }
+        );
+    } catch (err) {
+      if (err.code === 11000) {
+        // In rare case of concurrency duplicate, retry with incremented ID
+        const retry_id = next_packing_id + 1;
+        console.warn(
+          `Duplicate packing_id ${next_packing_id}, retrying with ${retry_id}`
+        );
+
+        updated_other_details_payload.packing_id = retry_id;
+
+        [create_packing_done_other_details_result] =
+          await packing_done_other_details_model.create(
+            [updated_other_details_payload],
+            { session }
+          );
+      } else {
+        throw err;
+      }
+    }
 
     if (!create_packing_done_other_details_result) {
       throw new ApiError(
@@ -211,16 +246,6 @@ export const update_packing_details = catchAsync(async (req, res) => {
       },
       { session }
     );
-    console.log('old_packing_done_item_ids', old_packing_done_item_ids);
-    console.log('order_category:', order_category);
-    console.log('other_details.order_category:', other_details.order_category);
-    console.log(
-      'Model:',
-      other_details?.order_category === order_category?.raw
-        ? 'issue_for_order_model'
-        : 'finished_ready_for_packing_model'
-    );
-    console.log('IDs being updated:', old_packing_done_item_ids);
 
     if (
       !update_existing_packing_done_item_status?.acknowledged ||
@@ -299,7 +324,6 @@ export const update_packing_details = catchAsync(async (req, res) => {
         packing_done_item_details?.map((item) => item?.issue_for_packing_id)
       ),
     ];
-    console.log(issue_for_packing_set);
 
     const update_issue_for_order_result = await (
       other_details?.order_category.toUpperCase() === order_category?.raw
@@ -418,15 +442,6 @@ export const revert_packing_done_items = catchAsync(async (req, res) => {
           .filter((id) => mongoose.Types.ObjectId.isValid(id))
       ),
     ];
-
-    // ✅ Log for debugging (safe to keep or remove)
-    console.log('Updating issue_for_packing IDs:', issue_for_packing_set);
-    console.log(
-      'Target model:',
-      packing_done_other_details?.order_category === order_category?.raw
-        ? 'issue_for_order_model'
-        : 'finished_ready_for_packing_model'
-    );
 
     const update_issue_for_order_result = await (
       packing_done_other_details?.order_category === order_category?.raw
@@ -900,7 +915,6 @@ export const generatePackingSlip = catchAsync(async (req, res) => {
     .findById(item.packing_done_other_details_id)
     .lean();
 
-  console.log('otherDetails', otherDetails?.sales_item_name);
   if (!otherDetails) {
     return res
       .status(404)
@@ -943,8 +957,6 @@ export const generatePackingSlip = catchAsync(async (req, res) => {
 
   const item_summary = Object.values(summaryMap);
 
-  console.log('item_summary', item_summary);
-
   const itemsWithExtraFields = allItems.map((i) => ({
     ...i,
     photo_no: otherDetails.photo_no || '',
@@ -952,9 +964,9 @@ export const generatePackingSlip = catchAsync(async (req, res) => {
     sales_item_name: otherDetails?.order_category.includes('RAW')
       ? i?.item_name
       : otherDetails.sales_item_name,
-    bundle_no: otherDetails.bundle_no,
-    bundle_description: otherDetails.bundle_description,
-    total_no_of_bundles: otherDetails.total_no_of_bundles,
+    // bundle_no: otherDetails.bundle_no,
+    // bundle_description: otherDetails.bundle_description,
+    // total_no_of_bundles: otherDetails.total_no_of_bundles,
   }));
 
   let customer_name = '';
@@ -1002,8 +1014,6 @@ export const generatePackingSlip = catchAsync(async (req, res) => {
     sales_item_name: otherDetails.sales_item_name || '',
     order_category: otherDetails.order_category,
   };
-
-  console.log('otherDetails', otherDetails);
 
   const pdfBuffer = await generatePackingPDF({
     templateName: 'packing_slip',

@@ -302,6 +302,41 @@ export const listing_bunito_done = catchAsync(async (req, res) => {
     $limit: parseInt(limit),
   };
 
+  const orderItems = [
+    {
+      $addFields: {
+        order_item_id: '$issue_for_bunito_details.order_item_id',
+      },
+    },
+    {
+      $lookup: {
+        from: 'series_product_order_item_details',
+        localField: 'order_item_id',
+        foreignField: '_id',
+        as: 'series_items',
+      },
+    },
+    {
+      $lookup: {
+        from: 'decorative_order_item_details',
+        localField: 'order_item_id',
+        foreignField: '_id',
+        as: 'decorative_items',
+      },
+    },
+    {
+      $addFields: {
+        order_item_details: {
+          $cond: {
+            if: { $gt: [{ $size: '$series_items' }, 0] },
+            then: { $arrayElemAt: ['$series_items', 0] },
+            else: { $arrayElemAt: ['$decorative_items', 0] },
+          },
+        },
+      },
+    },
+  ];
+
   const listAggregate = [
     aggCommonMatch,
     aggLookUpIssuedDetails,
@@ -311,6 +346,7 @@ export const listing_bunito_done = catchAsync(async (req, res) => {
     aggUpdatedByLookup,
     aggUpdatedByUnwind,
     aggMatch,
+    ...orderItems,
     aggSort,
     aggSkip,
     aggLimit,
@@ -824,8 +860,6 @@ export const download_excel_bunito_done = catchAsync(async (req, res) => {
   await createFactoryBunitoDoneExcel(bunito_done_list, req, res);
 });
 
-
-
 // Download Bunito history excel api
 export const download_excel_bunito_history = catchAsync(async (req, res) => {
   const {
@@ -881,12 +915,12 @@ export const download_excel_bunito_history = catchAsync(async (req, res) => {
 
   const aggLookUpIssuedDetails = {
     $lookup: {
-      from: "issue_for_bunito_details_view",
-      localField: "issue_for_bunito_id",
-      foreignField: "_id",
-      as: "issue_for_bunito_details"
-    }
-  }
+      from: 'issue_for_bunito_details_view',
+      localField: 'issue_for_bunito_id',
+      foreignField: '_id',
+      as: 'issue_for_bunito_details',
+    },
+  };
 
   const aggCreatedByLookup = {
     $lookup: {
@@ -979,6 +1013,7 @@ export const download_excel_bunito_history = catchAsync(async (req, res) => {
     // aggLimit,
   ]; // aggregation pipiline
 
-  const bunito_history_list = await bunito_history_model.aggregate(listAggregate);
+  const bunito_history_list =
+    await bunito_history_model.aggregate(listAggregate);
   await createFactoryBunitoHistoryExcel(bunito_history_list, req, res);
 });
