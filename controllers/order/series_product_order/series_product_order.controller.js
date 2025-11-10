@@ -1,12 +1,13 @@
 import mongoose, { isValidObjectId } from 'mongoose';
 import { OrderModel } from '../../../database/schema/order/orders.schema.js';
 import ApiResponse from '../../../utils/ApiResponse.js';
-import { StatusCodes } from '../../../utils/constants.js';
+import { approval_status, StatusCodes } from '../../../utils/constants.js';
 import series_product_order_item_details_model from '../../../database/schema/order/series_product_order/series_product_order_item_details.schema.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
 import catchAsync from '../../../utils/errors/catchAsync.js';
 import {
+  order_category,
   order_item_status,
   order_status,
 } from '../../../database/Utils/constants/constants.js';
@@ -15,6 +16,8 @@ import generatePDFBuffer from '../../../utils/generatePDF/generatePDFBuffer.js';
 import moment from 'moment';
 import photoModel from '../../../database/schema/masters/photo.schema.js';
 import salesItemNameModel from '../../../database/schema/masters/salesItemName.schema.js';
+import { orders_approval_model } from '../../../database/schema/order/orders.approval.schema.js';
+import approval_series_product_order_item_details_model from '../../../database/schema/order/series_product_order/approval.series_product_order_item_details.schema.js';
 
 export const add_series_order = catchAsync(async (req, res) => {
   const session = await mongoose.startSession();
@@ -164,11 +167,14 @@ export const add_series_order = catchAsync(async (req, res) => {
 export const update_series_order = catchAsync(async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
+
   try {
     const { order_details_id } = req.params;
 
     const { order_details, item_details } = req.body;
     const userDetails = req.userDetails;
+    // const send_for_approval = req.sendForApproval;
+    const send_for_approval = true; //for now always sending for approval
 
     for (let field of ['order_details', 'item_details']) {
       if (!req.body[field]) {
@@ -180,181 +186,271 @@ export const update_series_order = catchAsync(async (req, res) => {
         'Item details must be an array',
         StatusCodes.BAD_REQUEST
       );
-    }
-
-    const order_details_result = await OrderModel.findOneAndUpdate(
-      { _id: order_details_id },
-      {
-        $set: {
-          ...order_details,
-          product_category: order_details?.series_product,
-          updated_by: userDetails?._id,
-        },
-      },
-      { session, runValidators: true, new: true }
-    );
+    };
+    const order_details_result = await OrderModel.findOne({ _id: order_details_id });
     if (!order_details_result) {
-      throw new ApiError(
-        'Failed to Update order details data.',
-        StatusCodes.BAD_REQUEST
-      );
+      throw new ApiError('Order details not found', StatusCodes.NOT_FOUND);
     }
 
-    // if (order_details_result.order_status === order_status.cancelled) {
-    //   throw new ApiError('Order is already cancelled', StatusCodes.BAD_REQUEST);
-    // }
-    if (order_details_result.order_status === order_status.closed) {
-      throw new ApiError('Order is already closed', StatusCodes.BAD_REQUEST);
-    }
-
-    const order_items_details =
-      await series_product_order_item_details_model?.find(
-        { order_id: order_details_result?._id },
-        { _id: 1, photo_number_id: 1, photo_number: 1, no_of_sheets: 1 },
-        { session }
+    if (!send_for_approval) {
+      const order_details_result = await OrderModel.findOneAndUpdate(
+        { _id: order_details_id },
+        {
+          $set: {
+            ...order_details,
+            product_category: order_details?.series_product,
+            updated_by: userDetails?._id,
+          },
+        },
+        { session, runValidators: true, new: true }
       );
-
-    //revert photo sheets
-    for (const item of order_items_details) {
-      if (item.photo_number && item.photo_number_id) {
-        const update_photo_sheets = await photoModel.updateOne(
-          {
-            _id: item.photo_number_id,
-            photo_number: item.photo_number,
-          },
-          {
-            $inc: { available_no_of_sheets: item.no_of_sheets },
-          },
-          { session }
+      if (!order_details_result) {
+        throw new ApiError(
+          'Failed to Update order details data.',
+          StatusCodes.BAD_REQUEST
         );
-
-        if (!update_photo_sheets?.acknowledged) {
-          throw new ApiError(
-            `Photo number ${item?.photo_number} falied to revert sheets.`,
-            StatusCodes.BAD_REQUEST
-          );
-        }
       }
 
-      // 2. Auto-create sales_item_name if not found
-      if (item?.sales_item_name) {
-        const upperCaseName = item.sales_item_name.toUpperCase();
+      if (order_details_result.order_status === order_status.closed) {
+        throw new ApiError('Order is already closed', StatusCodes.BAD_REQUEST);
+      }
 
-        const existingItem = await salesItemNameModel.findOne(
-          { sales_item_name: upperCaseName },
-          null,
+      const order_items_details =
+        await series_product_order_item_details_model?.find(
+          { order_id: order_details_result?._id },
+          { _id: 1, photo_number_id: 1, photo_number: 1, no_of_sheets: 1 },
           { session }
         );
 
-        if (!existingItem) {
-          const maxNumber = await salesItemNameModel
-            .aggregate([
-              {
-                $group: {
-                  _id: null,
-                  max: { $max: '$sr_no' },
-                },
-              },
-            ])
-            .session(session);
-
-          const maxSrNo = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1;
-
-          await salesItemNameModel.create(
-            [
-              {
-                sales_item_name: upperCaseName,
-                sr_no: maxSrNo,
-                created_by: userDetails?._id,
-                updated_by: userDetails?._id,
-              },
-            ],
+      //revert photo sheets
+      for (const item of order_items_details) {
+        if (item.photo_number && item.photo_number_id) {
+          const update_photo_sheets = await photoModel.updateOne(
+            {
+              _id: item.photo_number_id,
+              photo_number: item.photo_number,
+            },
+            {
+              $inc: { available_no_of_sheets: item.no_of_sheets },
+            },
             { session }
           );
+
+          if (!update_photo_sheets?.acknowledged) {
+            throw new ApiError(
+              `Photo number ${item?.photo_number} falied to revert sheets.`,
+              StatusCodes.BAD_REQUEST
+            );
+          }
+        }
+
+        // 2. Auto-create sales_item_name if not found
+        if (item?.sales_item_name) {
+          const upperCaseName = item.sales_item_name.toUpperCase();
+
+          const existingItem = await salesItemNameModel.findOne(
+            { sales_item_name: upperCaseName },
+            null,
+            { session }
+          );
+
+          if (!existingItem) {
+            const maxNumber = await salesItemNameModel
+              .aggregate([
+                {
+                  $group: {
+                    _id: null,
+                    max: { $max: '$sr_no' },
+                  },
+                },
+              ])
+              .session(session);
+
+            const maxSrNo = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1;
+
+            await salesItemNameModel.create(
+              [
+                {
+                  sales_item_name: upperCaseName,
+                  sr_no: maxSrNo,
+                  created_by: userDetails?._id,
+                  updated_by: userDetails?._id,
+                },
+              ],
+              { session }
+            );
+          }
         }
       }
-    }
 
-    const delete_order_items =
-      await series_product_order_item_details_model?.deleteMany(
-        { order_id: order_details_result?._id },
-        { session }
+      const delete_order_items =
+        await series_product_order_item_details_model?.deleteMany(
+          { order_id: order_details_result?._id },
+          { session }
+        );
+
+      if (
+        !delete_order_items?.acknowledged ||
+        delete_order_items?.deletedCount === 0
+      ) {
+        throw new ApiError(
+          'Failed to delete item details',
+          StatusCodes.BAD_REQUEST
+        );
+      }
+
+      const updated_item_details = [];
+      for (const item of item_details) {
+        // Validate photo availability - await properly in loop
+        if (item.photo_number && item.photo_number_id) {
+          const photoUpdate = await photoModel.findOneAndUpdate(
+            {
+              _id: item.photo_number_id,
+              photo_number: item.photo_number,
+              available_no_of_sheets: { $gte: item.no_of_sheets },
+            },
+            { $inc: { available_no_of_sheets: -item.no_of_sheets } },
+            { session, new: true }
+          );
+
+          if (!photoUpdate) {
+            throw new ApiError(
+              `Photo number ${item?.photo_number} does not have enough sheets.`,
+              StatusCodes.BAD_REQUEST
+            );
+          }
+        }
+
+        updated_item_details.push({
+          ...item,
+          order_id: order_details_result?._id,
+          product_category: order_details_result?.series_product,
+          created_by: item.created_by ? item?.created_by : userDetails?._id,
+          updated_by: userDetails?._id,
+          createdAt: item.createdAt ? item?.createdAt : new Date(),
+          updatedAt: new Date(),
+        });
+      }
+
+      const create_order_result =
+        await series_product_order_item_details_model?.insertMany(
+          updated_item_details,
+          { session }
+        );
+      if (create_order_result?.length === 0) {
+        throw new ApiError(
+          'Failed to add order item details',
+          StatusCodes?.BAD_REQUEST
+        );
+      }
+
+      const response = new ApiResponse(
+        StatusCodes.OK,
+        'Order Updated Successfully.',
+        {
+          order_details: order_details_result,
+          item_details: create_order_result,
+        }
       );
+      await session?.commitTransaction();
+      return res.status(StatusCodes.OK).json(response);
+    };
+    const { _id, createdAt, ...rest_order_details } = order_details;
+    const updated_approval_status = {
+      ...approval_status,
+      sendForApproval: {
+        status: true,
+        remark: 'Approval Pending',
+      },
+    };
+    const updated_approval_order_payload = {
+      ...rest_order_details,
+      order_no: order_details_result?.order_no,
+      order_id: order_details_id,
+      product_category: order_category?.series_product,
+      approval_status: updated_approval_status,
+      approval: {
+        editedBy: userDetails?._id,
+        approvalPerson: userDetails?.approver_id,
+      },
+      created_by: userDetails?._id,
+      updated_by: userDetails?._id,
 
-    if (
-      !delete_order_items?.acknowledged ||
-      delete_order_items?.deletedCount === 0
-    ) {
+    };
+
+    const [add_approval_order_result] = await orders_approval_model.create(
+      [updated_approval_order_payload],
+      { session }
+    );
+
+    if (!add_approval_order_result) {
       throw new ApiError(
-        'Failed to delete item details',
+        'Failed to send order for approval',
         StatusCodes.BAD_REQUEST
       );
     }
 
-    const updated_item_details = [];
-    for (const item of item_details) {
-      // Validate photo availability - await properly in loop
-      if (item.photo_number && item.photo_number_id) {
-        const photoUpdate = await photoModel.findOneAndUpdate(
-          {
-            _id: item.photo_number_id,
-            photo_number: item.photo_number,
-            available_no_of_sheets: { $gte: item.no_of_sheets },
-          },
-          { $inc: { available_no_of_sheets: -item.no_of_sheets } },
-          { session, new: true }
-        );
+    const update_order_status_result = await OrderModel.updateOne(
+      { _id: order_details_id },
+      {
+        $set: { approval_status: updated_approval_status },
+      },
+      { session }
+    );
 
-        if (!photoUpdate) {
-          throw new ApiError(
-            `Photo number ${item?.photo_number} does not have enough sheets.`,
-            StatusCodes.BAD_REQUEST
-          );
-        }
-      }
-
-      updated_item_details.push({
-        ...item,
-        order_id: order_details_result?._id,
-        product_category: order_details_result?.series_product,
-        created_by: item.created_by ? item?.created_by : userDetails?._id,
-        updated_by: userDetails?._id,
-        createdAt: item.createdAt ? item?.createdAt : new Date(),
-        updatedAt: new Date(),
-      });
-    }
-
-    // const updated_item_details = item_details?.map((item) => {
-    //   item.order_id = order_details_result?._id;
-    //   item.product_category = order_details_result?.series_product;
-    //   item.created_by = item.created_by ? item.created_by : userDetails?._id;
-    //   item.updated_by = userDetails?._id;
-    //   item.createdAt = item.createdAt ? item.createdAt : new Date();
-    //   item.updatedAt = new Date();
-    //   return item;
-    // });
-
-    const create_order_result =
-      await series_product_order_item_details_model?.insertMany(
-        updated_item_details,
-        { session }
-      );
-    if (create_order_result?.length === 0) {
+    if (update_order_status_result?.matchedCount === 0) {
       throw new ApiError(
-        'Failed to add order item details',
-        StatusCodes?.BAD_REQUEST
+        'Order not found to update approval status',
+        StatusCodes.NOT_FOUND
+      );
+    }
+    if (
+      !update_order_status_result?.acknowledged ||
+      update_order_status_result?.modifiedCount === 0
+    ) {
+      throw new ApiError(
+        'Failed to update order approval status',
+        StatusCodes.BAD_REQUEST
       );
     }
 
+    const updated_item_details = item_details?.map((item) => {
+      const { _id, createdAt, updatedAt, ...rest_item_details } = item;
+      return {
+        ...rest_item_details,
+        series_product_item_id: _id ? _id : new mongoose.Types.ObjectId(),
+        order_id: add_approval_order_result?.order_id,
+        approval_order_id: add_approval_order_result?._id,
+        product_category: add_approval_order_result?.product_category,
+        created_by: item.created_by ? item?.created_by : userDetails?._id,
+        updated_by: item.updated_by ? item?.updated_by : userDetails?._id,
+      };
+    });
+
+    const add_approval_order_items_result =
+      await approval_series_product_order_item_details_model.insertMany(updated_item_details, {
+        session,
+      });
+
+    if (
+      !add_approval_order_items_result ||
+      add_approval_order_items_result.length === 0
+    ) {
+      throw new ApiError(
+        'Failed to add approval order items',
+        StatusCodes.BAD_REQUEST
+      );
+    }
+
+    await session?.commitTransaction();
     const response = new ApiResponse(
       StatusCodes.OK,
-      'Order Updated Successfully.',
+      'Series Product Order Sent for Approval Successfully.',
       {
-        order_details: order_details_result,
-        item_details: create_order_result,
+        order_details: update_order_status_result,
+        item_details: add_approval_order_items_result,
       }
     );
-    await session?.commitTransaction();
     return res.status(StatusCodes.OK).json(response);
   } catch (error) {
     await session?.abortTransaction();

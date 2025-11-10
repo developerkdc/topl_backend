@@ -39,15 +39,32 @@ export default async function generatePDFBuffer({ templateName, data }) {
   });
   const page = await browser.newPage();
   await page.setContent(html, { waitUntil: 'networkidle0' });
+  // Adjust zoom / scale before generating the PDF
+  await page.emulateMediaType('screen');
+
+  // Force consistent font rendering scale
+  await page.addStyleTag({
+    content: `
+    html, body {
+      font-size: 16px !important;
+      zoom: 1;
+      transform: scale(0.9);
+      transform-origin: top center; 
+      width: 100%; 
+      margin: 0 auto;
+    }
+  `
+  });
 
   const pdfBuffer = await page.pdf({
     format: 'A4',
     printBackground: true,
+    preferCSSPageSize: true,  
     margin: {
-      top: '50px',
-      bottom: '50px',
-      left: '20px',
-      right: '20px',
+      top: '30px',
+      bottom: '30px',
+      left: '10px',
+      right: '10px',
     },
   });
 

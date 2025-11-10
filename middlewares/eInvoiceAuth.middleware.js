@@ -2,23 +2,23 @@ import axios from 'axios';
 import dotenv from 'dotenv';
 dotenv.config();
 
+export const EInvoiceHeaderVariable = {
+  username: process.env.E_INVOICE_USERNAME,
+  password: process.env.E_INVOICE_PASSWORD,
+  ip_address: process.env.E_INVOICE_IP_ADDRESS,
+  client_id: process.env.E_INVOICE_CLIENT_ID,
+  client_secret: process.env.E_INVOICE_CLIENT_SECRET,
+  gstin: process.env.E_INVOICE_GSTIN,
+};
+
 const EInvoiceAuthMiddleware = async (req, res, next) => {
   var authURl =
     process.env.E_INVOICE_BASE_URL +
     `/einvoice/authenticate?email=${process.env.E_INVOICE_EMAIL_ID}`;
 
-  const headerVariableObj = {
-    username: process.env.E_INVOICE_USERNAME,
-    password: process.env.E_INVOICE_PASSWORD,
-    ip_address: process.env.E_INVOICE_IP_ADDRESS,
-    client_id: process.env.E_INVOICE_CLIENT_ID,
-    client_secret: process.env.E_INVOICE_CLIENT_SECRET,
-    gstin: process.env.E_INVOICE_GSTIN,
-  };
-
   try {
     const { data } = await axios.get(authURl, {
-      headers: headerVariableObj,
+      headers: EInvoiceHeaderVariable,
     });
     console.log(data, 'sdfy');
     if (data.status_cd == '0') {

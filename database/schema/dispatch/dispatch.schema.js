@@ -164,6 +164,7 @@ const dispatchSchema = new mongoose.Schema(
       type: String,
       enum: {
         values: [
+          dispatch_status?.irn_generated,
           dispatch_status?.cancelled
         ],
         message: `Invalid type {{VALUE}} it must be one of the ${[
@@ -229,6 +230,10 @@ const dispatchSchema = new mongoose.Schema(
       type: Object,
       required: [true, 'Transporter details are required']
     },
+    transport_mode: {
+      type: Object,
+      required: [true, 'Transport mode is required']
+    },
     approx_distance: {
       type: Number,
       default: null,
@@ -246,6 +251,10 @@ const dispatchSchema = new mongoose.Schema(
       default: null,
     },
     irn_number: {
+      type: String,
+      default: null,
+    },
+    irp: {
       type: String,
       default: null,
     },

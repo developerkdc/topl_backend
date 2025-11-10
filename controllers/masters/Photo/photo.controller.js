@@ -12,6 +12,7 @@ import { StatusCodes } from '../../../utils/constants.js';
 import path from 'path';
 import { createPhotoAlbumExcel } from '../../../config/downloadExcel/Logs/Masters/photoAlbum.js';
 import { sub_category } from '../../../database/Utils/constants/constants.js';
+import axios from 'axios';
 
 export const addPhoto = catchAsync(async (req, res, next) => {
   let { photo_number } = req.body;
@@ -600,7 +601,6 @@ export const fetchSinglePhoto = catchAsync(async (req, res, next) => {
 });
 
 export const dropdownPhoto = catchAsync(async (req, res, next) => {
-
   const { sub_category_type } = req.query;
 
   const match_query = {
@@ -608,13 +608,13 @@ export const dropdownPhoto = catchAsync(async (req, res, next) => {
   };
 
   if (sub_category.hybrid === sub_category_type) {
-    match_query.sub_category_type = sub_category.hybrid
+    match_query.sub_category_type = sub_category.hybrid;
   }
 
   const photoList = await photoModel.aggregate([
     {
       $match: {
-        ...match_query
+        ...match_query,
       },
     },
     {
@@ -622,7 +622,6 @@ export const dropdownPhoto = catchAsync(async (req, res, next) => {
         images: 0,
         grouping_done_items_details: 0,
         banner_image: 0,
-
       },
     },
   ]);
@@ -803,30 +802,41 @@ export const downloadPhotoAlbumZip = catchAsync(async (req, res, next) => {
   await archive.finalize();
 });
 
-export const downloadPhotoAlbumImagesZip = catchAsync(async (req, res, next) => {
-  const { filenames = [] } = req.body;
-  if (!Array.isArray(filenames) || filenames.length === 0) {
-    return res.status(400).json({ status: false, message: 'No photos selected' });
-  }
-
-  res.setHeader('Content-Type', 'application/zip');
-  res.setHeader('Content-Disposition', 'attachment; filename=photos.zip');
-
-  const archive = archiver('zip', { zlib: { level: 9 } });
-  archive.on('error', (err) => next(err));
-  archive.pipe(res);
-
-  for (let filename of filenames) {
-    const fullPath = path.join(process.cwd(), 'public', 'upload', 'images', 'photo_no', filename);
-    if (fs.existsSync(fullPath)) {
-      archive.file(fullPath, { name: filename });
-    } else {
-      console.warn(`File not found: ${fullPath}`);
+export const downloadPhotoAlbumImagesZip = catchAsync(
+  async (req, res, next) => {
+    const { filenames = [] } = req.body;
+    if (!Array.isArray(filenames) || filenames.length === 0) {
+      return res
+        .status(400)
+        .json({ status: false, message: 'No photos selected' });
     }
-  }
 
-  await archive.finalize();
-});
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', 'attachment; filename=photos.zip');
+
+    const archive = archiver('zip', { zlib: { level: 9 } });
+    archive.on('error', (err) => next(err));
+    archive.pipe(res);
+
+    for (let filename of filenames) {
+      const fullPath = path.join(
+        process.cwd(),
+        'public',
+        'upload',
+        'images',
+        'photo_no',
+        filename
+      );
+      if (fs.existsSync(fullPath)) {
+        archive.file(fullPath, { name: filename });
+      } else {
+        console.warn(`File not found: ${fullPath}`);
+      }
+    }
+
+    await archive.finalize();
+  }
+);
 
 export const download_excel_photo_album = catchAsync(async (req, res, next) => {
   const { sortBy = 'updatedAt', sort = 'desc', search = '' } = req.query;
@@ -923,7 +933,6 @@ export const download_excel_photo_album = catchAsync(async (req, res, next) => {
   // );
 });
 
-
 export const fetch_available_photo_quantity = catchAsync(async (req, res) => {
   const { photoNumber, desiredQuantity } = req.body;
 
@@ -933,11 +942,109 @@ export const fetch_available_photo_quantity = catchAsync(async (req, res) => {
   if (!desiredQuantity || desiredQuantity <= 0) {
     throw new ApiError('Desired quantity should be greater than zero', 400);
   }
-  const result = await photoModel.find({ photo_number: photoNumber, available_no_of_sheets: { $gte: desiredQuantity } });
-  return res.status(StatusCodes.OK).json({
-    ReturnMessage: desiredQuantity <= result[0]?.available_no_of_sheets ? `Desired quantity exist` : `Desired quantity does not exists`,
-    result: result?.length,
-    AvailableSheet: result[0]?.available_no_of_sheets ? result[0]?.available_no_of_sheets : 0
+  const result = await photoModel.find({
+    photo_number: photoNumber,
+    available_no_of_sheets: { $gte: desiredQuantity },
   });
+  return res.status(StatusCodes.OK).json({
+    ReturnMessage:
+      desiredQuantity <= result[0]?.available_no_of_sheets
+        ? `Desired quantity exist`
+        : `Desired quantity does not exists`,
+    result: result?.length,
+    AvailableSheet: result[0]?.available_no_of_sheets
+      ? result[0]?.available_no_of_sheets
+      : 0,
+  });
+});
 
-})
+export const handle_photo_master_streams = async () => {
+  try {
+    const photo_master_stream = photoModel.watch([], { fullDocument: 'updateLookup' });
+
+    photo_master_stream.on('change', async (operation) => {
+      if (
+        ['insert', 'update'].includes(operation?.operationType)
+      ) {
+        console.log("operation => ", operation)
+        const record = operation?.fullDocument;
+
+        const updated_payload = {
+          PhotoNumber: record?.photo_number,
+          PADetId: record?._id,
+          LogX: record?.group_no,
+          Length: record?.length,
+          Width: record?.width,
+          Sheets: record?.no_of_sheets,
+          ConsumedSheets: Number(
+            record?.no_of_sheets - record?.available_no_of_sheets
+          ),
+          BalanceSheets: record?.available_no_of_sheets,
+          SalesItemName: record?.sales_item_name,
+          NewSalesItemname: record?.sales_item_name, //for now adding same field
+          Processes: record?.process_name,
+          ValueAddedProcess: record?.value_added_process?.map((i) => i?.process_name).join(', '),
+          Placements: record?.placement,
+          VeneerThickness: record?.thickness,
+          Characters: record?.character_name,
+          // "PlywoodCategory": "Regular (8x4)", need to discuss
+          GroupCategory: record?.sub_category_type, //for now add subcategory type
+          Collections: record?.collection_name,
+          // "EcoFriendlyRating": "3.5 Star",
+          GroupGrade: record?.grade_name,
+          TimberColour: record?.timber_colour_name,
+          GrainDirection: record?.grain_direction,
+          DyedColour: record?.process_color_name,
+          AddedDateAndTime: record?.createdAt,
+          ModifiedDateAndTime: record?.updatedAt,
+        }
+
+        console.log("payload => ", updated_payload)
+
+        // const insert_or_update_result = await axios.post(
+        //   'https://app.naturalveneers.com/services/updategroups.phpsss',
+        //   {
+        //     PhotoNumber: record?.photo_number,
+        //     PADetId: record?._id,
+        //     LogX: record?.group_no,
+        //     Length: record?.length,
+        //     Width: record?.width,
+        //     Sheets: record?.no_of_sheets,
+        //     ConsumedSheets: Number(
+        //       record?.no_of_sheets - record?.available_no_of_sheets
+        //     ),
+        //     BalanceSheets: record?.available_no_of_sheets,
+        //     SalesItemName: record?.sales_item_name,
+        //     NewSalesItemname: record?.sales_item_name, //for now adding same field
+        //     Processes: record?.process_name,
+        //     ValueAddedProcess: record?.value_added_process,
+        //     Placements: record?.placement,
+        //     VeneerThickness: record?.thickness,
+        //     Characters: record?.character_name,
+        //     // "PlywoodCategory": "Regular (8x4)", need to discuss
+        //     GroupCategory: record?.sub_category_type, //for now add subcategory type
+        //     Collections: record?.collection_name,
+        //     // "EcoFriendlyRating": "3.5 Star",
+        //     GroupGrade: record?.grade_name,
+        //     TimberColour: record?.timber_colour_name,
+        //     GrainDirection: record?.grain_direction,
+        //     DyedColour: record?.process_color_name,
+        //     AddedDateAndTime: record?.createdAt,
+        //     ModifiedDateAndTime: record?.updatedAt,
+        //   }
+        // );
+
+        // if (insert_or_update_result?.data?.success) {
+        //   console.log('Photo master synced with client db successfully');
+        //   return;
+        // }
+        console.log('Failed to sync photo master with client db');
+      }
+    });
+  } catch (error) {
+    console.log(
+      'Error occured while syncing the client db for photo master',
+      error?.response
+    );
+  }
+};

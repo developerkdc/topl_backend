@@ -17,6 +17,12 @@
       width: 100%;
     }
 
+    .approved {
+      page-break-inside: avoid;
+      page-break-before: avoid;
+      page-break-after: avoid;
+    }
+
     td,
     th {
       border: 1px solid #000;
@@ -235,7 +241,7 @@
     </tbody>
   </table>
 
-  <div style='margin-top: 200px; display: flex; justify-content: space-between;'>
+  <div class="approved" style='margin-top: 100px; display: flex; justify-content: space-between;'>
     <div style='display: flex;'>APPROVED BY: __________________</div>
     <div style='display: flex;'>RECEIVED BY: __________________</div>
   </div>

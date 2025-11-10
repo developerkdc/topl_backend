@@ -6,12 +6,17 @@ import {
   order_type,
 } from '../../Utils/constants/constants.js';
 import { approval_status } from '../../Utils/approvalStatus.schema.js';
+import approvalSchema from '../../Utils/approval.schema.js';
 
-const OrderSchema = new mongoose.Schema(
+const order_approval_schema = new mongoose.Schema(
   {
     order_no: {
       type: Number,
       required: true,
+    },
+    order_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, 'Order Id is required'],
     },
     order_category: {
       type: String,
@@ -166,9 +171,11 @@ const OrderSchema = new mongoose.Schema(
   }
 );
 
+order_approval_schema.add(approvalSchema)
+
 // indexing
 const indexingFields = [
-  [{ order_no: 1 }, { unique: true }],
+  [{ order_no: 1 }],
   [{ order_category: 1 }],
   [{ orderDate: 1 }],
   [{ owner_name: 1 }],
@@ -182,6 +189,6 @@ const indexingFields = [
   [{ createdAt: 1 }],
 ];
 
-indexingFields.forEach((index) => OrderSchema.index(...index));
+indexingFields.forEach((index) => order_approval_schema.index(...index));
 
-export const OrderModel = mongoose.model('orders', OrderSchema, 'orders');
+export const orders_approval_model = mongoose.model('orders_approval', order_approval_schema, 'orders_approval');
