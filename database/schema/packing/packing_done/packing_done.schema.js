@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import { order_category } from '../../../Utils/constants/constants.js';
-import { type } from 'os';
+import { approval_status } from '../../../Utils/approvalStatus.schema.js';
 
 const packing_done_other_details_schema = new mongoose.Schema(
   {
@@ -89,7 +89,8 @@ const packing_done_other_details_schema = new mongoose.Schema(
     sales_item_name: {
       type: String,
       required: [true, "Sales Item Name is required"]
-    }
+    },
+    approval_status: approval_status,
   },
   {
     timestamps: true,
