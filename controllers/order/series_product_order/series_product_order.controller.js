@@ -173,8 +173,8 @@ export const update_series_order = catchAsync(async (req, res) => {
 
     const { order_details, item_details } = req.body;
     const userDetails = req.userDetails;
-    // const send_for_approval = req.sendForApproval;
-    const send_for_approval = true; //for now always sending for approval
+    const send_for_approval = req.sendForApproval;
+    // const send_for_approval = true; //for now always sending for approval
 
     for (let field of ['order_details', 'item_details']) {
       if (!req.body[field]) {
