@@ -8,7 +8,7 @@ const dispatch_items_schema = new mongoose.Schema(
       required: [true, 'Packing Done Mongodb ID is required.'],
     },
     packing_done_id: {
-      type: String,
+      type: Number,
       required: [true, 'Packing Done ID is required.'],
     },
     packing_done_item_id: {
@@ -243,6 +243,10 @@ const dispatch_items_schema = new mongoose.Schema(
       },
     },
     discount_amount: {
+      type: Number,
+      default: 0,
+    },
+    hsn_number: {
       type: Number,
       default: 0,
     },
