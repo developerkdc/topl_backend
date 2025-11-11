@@ -1462,9 +1462,9 @@ export const fetch_all_dispatch_details = catchAsync(async (req, res, next) => {
     $sort:
       sortBy === 'invoice_no'
         ? {
-            invoice_sort_key: sort === 'desc' ? -1 : 1,
-            invoice_no: sort === 'desc' ? -1 : 1,
-          }
+          invoice_sort_key: sort === 'desc' ? -1 : 1,
+          invoice_no: sort === 'desc' ? -1 : 1,
+        }
         : { [sortBy]: sort === 'desc' ? -1 : 1 },
   };
   const aggSkip = {

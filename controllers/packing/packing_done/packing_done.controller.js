@@ -273,7 +273,6 @@ export const update_packing_details = catchAsync(async (req, res) => {
           packing_done_item_details?.map((item) => item?.issue_for_packing_id)
         ),
       ];
-      console.log(issue_for_packing_set);
 
       const update_issue_for_order_result = await (
         other_details?.order_category.toUpperCase() === order_category?.raw
@@ -370,12 +369,12 @@ export const update_packing_details = catchAsync(async (req, res) => {
     }
 
     const updated_item_details = packing_done_item_details?.map((item) => {
-      const { _id, item_id, createdAt, updatedAt, ...rest_item_details } = item;
+      const { _id, packing_item_id, createdAt, updatedAt, ...rest_item_details } = item;
       return {
         ...rest_item_details,
         approval_packing_done_other_details_id: add_approval_packing_done_other_deatils_result?._id,
         packing_done_other_details_id: add_approval_packing_done_other_deatils_result?.approval_packing_id,
-        packing_item_id: item_id ? item_id : new mongoose.Types.ObjectId(),
+        packing_item_id: packing_item_id ? packing_item_id : new mongoose.Types.ObjectId(),
         created_by: item.created_by ? item?.created_by : user?._id,
         updated_by: item.updated_by ? item?.updated_by : user?._id,
       };
