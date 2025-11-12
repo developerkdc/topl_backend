@@ -526,3 +526,67 @@ export const issue_for_pressing_orderNo = catchAsync(async (req, res, next) => {
 
   return res.status(StatusCodes.OK).json(response);
 });
+
+export const pressing_item_no_dropdown = catchAsync(async (req, res, next) => {
+  const { order_id, category } = req.query;
+
+  if (!order_id) {
+    return next(new ApiError(StatusCodes.BAD_REQUEST, "Order ID is required"));
+  }
+
+  if (!category) {
+    return next(new ApiError(StatusCodes.BAD_REQUEST, "Order Category is required"));
+  }
+
+  let modelName = "";
+
+  if (category === "DECORATIVE") {
+    modelName = "decorative_order_item_details";
+  } else if (category === "SERIES PRODUCT") {
+    modelName = "series_product_order_item_details";
+  } else {
+    return next(new ApiError(StatusCodes.BAD_REQUEST, "Invalid Category"));
+  }
+
+  const pipeline = [
+    {
+      $match: {
+        order_id: new mongoose.Types.ObjectId(order_id),
+      },
+    },
+    {
+      $group: {
+        _id: "$order_item_id", // unique
+        order_id: { $first: "$order_id" },
+      },
+    },
+    {
+      $lookup: {
+        from: modelName,
+        localField: "_id",
+        foreignField: "_id",
+        as: "details",
+      },
+    },
+    { $unwind: "$details" },
+    {
+      $project: {
+        order_id: 1,
+        order_item_id: "$_id",
+        item_no: "$details.item_no",
+      },
+    },
+    { $sort: { item_no: 1 } },
+  ];
+
+  const itemDropdown = await issues_for_pressing_model.aggregate(pipeline);
+
+  const response = new ApiResponse(
+    StatusCodes.OK,
+    "Fetch Pressing Item No Successfully.",
+    itemDropdown
+  );
+
+  return res.status(StatusCodes.OK).json(response);
+});
+

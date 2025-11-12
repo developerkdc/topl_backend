@@ -13,6 +13,7 @@ import flitchingApprovalRouter from '../factory/flitching/flitchingApproval.rout
 import approval_raw_order_router from '../order/raw_order/approval.raw_order.routes.js';
 import approval_decorative_order_router from '../order/decorative_order/approval.decorative_order.routes.js';
 import approval_series_product_order_router from '../order/series_product_order/approval.series_product_order.routes.js';
+import approval_packing_done_router from '../packing/packing_done/approval.packing_done.routes.js';
 const approvalRouters = express.Router();
 
 approvalRouters.use('/approval', [
@@ -35,7 +36,10 @@ approvalRouters.use('/approval', [
   //decorative order router
   approval_decorative_order_router,
   //series product order router
-  approval_series_product_order_router
+  approval_series_product_order_router,
+
+  //packing routes
+  approval_packing_done_router
 ]);
 // approvalRouters.use(logApprovalRouter);
 // approvalRouters.use(flitchApprovalRouter);
