@@ -449,8 +449,6 @@ export const update_packing_details = catchAsync(async (req, res) => {
         StatusCodes.BAD_REQUEST
       );
     }
-
-
     const response = new ApiResponse(
       StatusCodes.OK,
       'Packing Details Sent for Approval Successfully.',
@@ -459,6 +457,7 @@ export const update_packing_details = catchAsync(async (req, res) => {
         item_details: add_approval_packing_items_result,
       }
     );
+    await session.commitTransaction()
     return res.status(StatusCodes.OK).json(response);
   } catch (error) {
     await session.abortTransaction();
