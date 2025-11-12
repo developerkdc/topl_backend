@@ -191,8 +191,7 @@ export const update_packing_details = catchAsync(async (req, res) => {
   const { id } = req.params;
   const { other_details, packing_done_item_details } = req.body;
   const user = req.userDetails;
-  // const send_for_approval = req.sendForApproval;
-  const send_for_approval = true; //for testing it will always be sent for approval
+  const send_for_approval = req.sendForApproval;
   if (!id) {
     throw new ApiError('Packing ID is required.', StatusCodes.BAD_REQUEST);
   }
@@ -232,6 +231,9 @@ export const update_packing_details = catchAsync(async (req, res) => {
         .find({ packing_done_other_details_id: id }, { issue_for_packing_id: 1 })
         .session(session);
 
+      const old_packing_done_item_ids = old_packing_done_items?.map(
+        (item) => item?.issue_for_packing_id
+      );
       const old_packing_done_item_ids = old_packing_done_items?.map(
         (item) => item?.issue_for_packing_id
       );
@@ -326,7 +328,6 @@ export const update_packing_details = catchAsync(async (req, res) => {
           packing_done_item_details?.map((item) => item?.issue_for_packing_id)
         ),
       ];
-      console.log(issue_for_packing_set);
 
       const update_issue_for_order_result = await (
         other_details?.order_category.toUpperCase() === order_category?.raw
@@ -423,12 +424,12 @@ export const update_packing_details = catchAsync(async (req, res) => {
     }
 
     const updated_item_details = packing_done_item_details?.map((item) => {
-      const { _id, item_id, createdAt, updatedAt, ...rest_item_details } = item;
+      const { _id, packing_item_id, createdAt, updatedAt, ...rest_item_details } = item;
       return {
         ...rest_item_details,
         approval_packing_done_other_details_id: add_approval_packing_done_other_deatils_result?._id,
         packing_done_other_details_id: add_approval_packing_done_other_deatils_result?.approval_packing_id,
-        packing_item_id: item_id ? item_id : new mongoose.Types.ObjectId(),
+        packing_item_id: packing_item_id ? packing_item_id : new mongoose.Types.ObjectId(),
         created_by: item.created_by ? item?.created_by : user?._id,
         updated_by: item.updated_by ? item?.updated_by : user?._id,
       };
@@ -449,7 +450,7 @@ export const update_packing_details = catchAsync(async (req, res) => {
       );
     }
 
-    await session?.commitTransaction();
+
     const response = new ApiResponse(
       StatusCodes.OK,
       'Packing Details Sent for Approval Successfully.',
@@ -791,13 +792,13 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
   //       [sortBy]: sort === 'desc' ? -1 : 1,
   //     },
   //   };
-    const aggSort = {
-  $sort: {
-    ...(sortBy === "product_type"
-      ? { sort_product_type: sort === "desc" ? -1 : 1 }
-      : { [sortBy]: sort === "desc" ? -1 : 1 }),
-  },
-};
+  const aggSort = {
+    $sort: {
+      ...(sortBy === "product_type"
+        ? { sort_product_type: sort === "desc" ? -1 : 1 }
+        : { [sortBy]: sort === "desc" ? -1 : 1 }),
+    },
+  };
 
   const aggSkip = {
     $skip: (parseInt(page) - 1) * parseInt(limit),
@@ -1043,7 +1044,7 @@ export const generatePackingSlip = catchAsync(async (req, res) => {
       summaryMap[key] = {
         item_name:
           Array.isArray(otherDetails?.order_category) &&
-          otherDetails.order_category.includes('RAW')
+            otherDetails.order_category.includes('RAW')
             ? i.item_name || ' '
             : otherDetails.sales_item_name || i.item_name || ' ',
 

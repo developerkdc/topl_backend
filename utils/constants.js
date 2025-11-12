@@ -61,7 +61,6 @@ export const start_worker_thread = () => {
   });
 };
 
-
 export const approval_status = {
   sendForApproval: {
     status: false,
@@ -74,5 +73,25 @@ export const approval_status = {
   rejected: {
     status: false,
     remark: null,
-  }
+  },
+};
+
+
+
+export const format_date = (serial) => {
+  if (!serial || isNaN(serial)) return null;
+  // Excel's day 1 is 1900-01-01, but JS's Date epoch starts 1970
+  const utc_days = Math.floor(serial - 25569);
+  const utc_value = utc_days * 86400; // seconds
+  const date_info = new Date(utc_value * 1000);
+
+  // Handle time part (for non-whole numbers like 45972.5)
+  const fractional_day = serial - Math.floor(serial);
+  const total_seconds = Math.floor(86400 * fractional_day);
+  const seconds = total_seconds % 60;
+  const minutes = Math.floor(total_seconds / 60) % 60;
+  const hours = Math.floor(total_seconds / (60 * 60));
+
+  date_info.setUTCHours(hours, minutes, seconds);
+  return date_info;
 }

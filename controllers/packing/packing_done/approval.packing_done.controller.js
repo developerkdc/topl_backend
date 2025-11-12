@@ -10,6 +10,7 @@ import { dynamic_filter } from '../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import ApiError from '../../../utils/errors/apiError.js';
 import catchAsync from '../../../utils/errors/catchAsync.js';
+import { create_packing_done_approval_report } from '../../../config/downloadExcel/packing/packing.approval.report.js';
 
 
 export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
@@ -19,6 +20,7 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
     sortBy = 'updatedAt',
     sort = 'desc',
     search = '',
+    export_report = 'false',
   } = req.query;
 
   const {
@@ -59,6 +61,78 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
     ...search_query,
     'approval.approvalPerson': _id,
   };
+
+  const approval_user_details_pipeline = [
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'approval.rejectedBy.user',
+        foreignField: '_id',
+        pipeline: [
+          {
+            $project: {
+              first_name: 1,
+              last_name: 1,
+              user_name: 1,
+            },
+          },
+        ],
+        as: 'rejected_user_details',
+      },
+    },
+    {
+      $unwind: {
+        path: '$rejected_user_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'approval.approvalBy.user',
+        foreignField: '_id',
+        pipeline: [
+          {
+            $project: {
+              first_name: 1,
+              last_name: 1,
+              user_name: 1,
+            },
+          },
+        ],
+        as: 'approved_user_details',
+      },
+    },
+    {
+      $unwind: {
+        path: '$approved_user_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'approval.editedBy',
+        foreignField: '_id',
+        pipeline: [
+          {
+            $project: {
+              first_name: 1,
+              last_name: 1,
+              user_name: 1,
+            },
+          },
+        ],
+        as: 'edited_user_details',
+      },
+    },
+    {
+      $unwind: {
+        path: '$edited_user_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+  ]
 
   const aggregatePackingDoneItems = {
     $lookup: {
@@ -197,6 +271,7 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
 
   const listAggregate = [
     aggregatePackingDoneItems,
+    ...approval_user_details_pipeline,
     aggCreatedByLookup,
     aggCreatedByUnwind,
     aggUpdatedByLookup,
@@ -227,6 +302,10 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
 
   const issue_for_raw_packing =
     await approval_packing_done_other_details_model.aggregate(list_aggregate);
+
+  if (export_report === 'true') {
+    await create_packing_done_approval_report(issue_for_raw_packing?.[0]?.data, req, res)
+  }
 
   const totalPages = Math.ceil(
     (issue_for_raw_packing[0]?.totalCount?.[0]?.totalCount || 0) / limit
@@ -469,7 +548,7 @@ export const approve_packing_details = catchAsync(async (req, res) => {
     );
 
     const update_existing_packing_done_item_status = await (
-      other_details?.order_category === order_category?.raw
+      packing_done_other_details_approval_result?.order_category?.[0]?.toUpperCase() === order_category?.raw
         ? issue_for_order_model
         : finished_ready_for_packing_model
     ).updateMany(
@@ -494,7 +573,7 @@ export const approve_packing_details = catchAsync(async (req, res) => {
       await packing_done_items_model.deleteMany(
         {
           packing_done_other_details_id:
-            packing_done_other_details_approval_result?._id,
+            packing_done_other_details_approval_result?.approval_packing_id,
         },
         { session }
       );
@@ -543,7 +622,7 @@ export const approve_packing_details = catchAsync(async (req, res) => {
       ),
     ];
     const update_issue_for_order_result = await (
-      other_details?.order_category.toUpperCase() === order_category?.raw
+      packing_done_other_details_approval_result?.order_category?.[0]?.toUpperCase() === order_category?.raw
         ? issue_for_order_model
         : finished_ready_for_packing_model
     ).updateMany(
@@ -622,7 +701,7 @@ export const reject_packing_details = catchAsync(async (req, res) => {
 
     if (!packing_done_other_details_approval_status_result) {
       throw new ApiError(
-        'Failed to update packing done other details details',
+        'Failed to update packing done other details ',
         StatusCodes.BAD_REQUEST
       );
     }
