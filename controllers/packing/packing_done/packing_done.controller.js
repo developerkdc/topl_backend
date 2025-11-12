@@ -12,11 +12,15 @@ import { dynamic_filter } from '../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import ApiError from '../../../utils/errors/apiError.js';
 import catchAsync from '../../../utils/errors/catchAsync.js';
-import { generatePDF } from '../../../utils/generatePDF/generatePDFBuffer.js';
+import {
+  generatePackingPDF,
+  generatePDF,
+} from '../../../utils/generatePDF/generatePDFBuffer.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import moment from 'moment';
 import { approval_packing_done_items_model, approval_packing_done_other_details_model } from '../../../database/schema/packing/packing_done/approval.packing_done_schema.js';
+import Handlebars from 'handlebars';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -26,11 +30,13 @@ export const create_packing = catchAsync(async (req, res) => {
 
   const issue_for_packing_set = new Set();
   const user = req.userDetails;
+
   for (let field of ['packing_done_item_details', 'other_details']) {
     if (!req.body[field]) {
       throw new ApiError(`${field} is required`, StatusCodes.BAD_REQUEST);
     }
   }
+
   if (
     !Array.isArray(packing_done_item_details) ||
     packing_done_item_details.length === 0
@@ -40,22 +46,68 @@ export const create_packing = catchAsync(async (req, res) => {
       StatusCodes.BAD_REQUEST
     );
   }
+
   const session = await mongoose.startSession();
   try {
     session.startTransaction();
 
+    // ✅ Step 1: Ensure all packing_id are treated as numbers
+    // (this prevents the $inc type error)
+    await packing_done_other_details_model.updateMany(
+      { packing_id: { $type: 'string' } },
+      [{ $set: { packing_id: { $toInt: '$packing_id' } } }],
+      { session }
+    );
+
+    // ✅ Step 2: Safely find the latest numeric packing_id and increment it manually
+    const lastPacking = await packing_done_other_details_model
+      .findOne({}, { packing_id: 1 })
+      .sort({ packing_id: -1 })
+      .lean()
+      .session(session);
+
+    const next_packing_id = lastPacking
+      ? Number(lastPacking.packing_id) + 1
+      : 1;
+
+    console.log('next_packing_id', next_packing_id);
+
+    // ✅ Step 3: Assign next ID safely
     const updated_other_details_payload = {
       ...other_details,
       packing_id: 98,
+      packing_id: next_packing_id,
       created_by: user._id,
       updated_by: user._id,
     };
 
-    const [create_packing_done_other_details_result] =
-      await packing_done_other_details_model.create(
-        [updated_other_details_payload],
-        { session }
-      );
+    // ✅ Step 4: Attempt insert; if duplicate, retry once
+    let create_packing_done_other_details_result;
+    try {
+      [create_packing_done_other_details_result] =
+        await packing_done_other_details_model.create(
+          [updated_other_details_payload],
+          { session }
+        );
+    } catch (err) {
+      if (err.code === 11000) {
+        // In rare case of concurrency duplicate, retry with incremented ID
+        const retry_id = next_packing_id + 1;
+        console.warn(
+          `Duplicate packing_id ${next_packing_id}, retrying with ${retry_id}`
+        );
+
+        updated_other_details_payload.packing_id = retry_id;
+
+        [create_packing_done_other_details_result] =
+          await packing_done_other_details_model.create(
+            [updated_other_details_payload],
+            { session }
+          );
+      } else {
+        throw err;
+      }
+    }
 
     if (!create_packing_done_other_details_result) {
       throw new ApiError(
@@ -106,6 +158,7 @@ export const create_packing = catchAsync(async (req, res) => {
       },
       { session }
     );
+
     if (
       !update_issue_for_order_result?.acknowledged ||
       update_issue_for_order_result.modifiedCount === 0
@@ -124,6 +177,7 @@ export const create_packing = catchAsync(async (req, res) => {
         item_details: create_packing_done_item_details_result,
       }
     );
+
     await session.commitTransaction();
     res.status(response.statusCode).json(response);
   } catch (error) {
@@ -138,8 +192,7 @@ export const update_packing_details = catchAsync(async (req, res) => {
   const { id } = req.params;
   const { other_details, packing_done_item_details } = req.body;
   const user = req.userDetails;
-  // const send_for_approval = req.sendForApproval;
-  const send_for_approval = true; //for testing it will always be sent for approval
+  const send_for_approval = req.sendForApproval;
   if (!id) {
     throw new ApiError('Packing ID is required.', StatusCodes.BAD_REQUEST);
   }
@@ -489,15 +542,6 @@ export const revert_packing_done_items = catchAsync(async (req, res) => {
       ),
     ];
 
-    // ✅ Log for debugging (safe to keep or remove)
-    console.log('Updating issue_for_packing IDs:', issue_for_packing_set);
-    console.log(
-      'Target model:',
-      packing_done_other_details?.order_category === order_category?.raw
-        ? 'issue_for_order_model'
-        : 'finished_ready_for_packing_model'
-    );
-
     const update_issue_for_order_result = await (
       packing_done_other_details?.order_category === order_category?.raw
         ? issue_for_order_model
@@ -671,7 +715,7 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
           $project: {
             owner_name: 1,
             // customer_details: 1,
-            company_name: 1
+            company_name: 1,
           },
         },
       ],
@@ -740,7 +784,6 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
   //           : { [sortBy]: sort === 'desc' ? -1 : 1 }),
   //   },
   // };
-
 
   // const aggSort = {
   //     $sort: {
@@ -814,7 +857,7 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
 
 export const fetch_single_packing_done_item = catchAsync(async (req, res) => {
   const { request_id } = req.params;
-  const id = request_id?.trim()
+  const id = request_id?.trim();
   let issue_for_packing_model;
 
   if (!id) {
@@ -954,9 +997,12 @@ export const fetch_single_packing_done_item = catchAsync(async (req, res) => {
   return res.status(response.statusCode).json(response);
 });
 
+Handlebars.registerHelper('eq', function (a, b) {
+  return a === b;
+});
+
 export const generatePackingSlip = catchAsync(async (req, res) => {
   const { id } = req.params;
-  console.log('id=>', id);
 
   const item = await packing_done_items_model.findById(id).lean();
   if (!item) {
@@ -989,13 +1035,17 @@ export const generatePackingSlip = catchAsync(async (req, res) => {
   );
   const totalSqMtr = allItems.reduce((sum, i) => sum + (i.sqm || 0), 0);
 
-  // Compute item_summary (group by item + size)
   const summaryMap = {};
   for (const i of allItems) {
     const key = `${i.item_name || ' '}_${i.length || 0}x${i.width || 0}`;
     if (!summaryMap[key]) {
       summaryMap[key] = {
-        item_name: i.item_name || ' ',
+        item_name:
+          Array.isArray(otherDetails?.order_category) &&
+            otherDetails.order_category.includes('RAW')
+            ? i.item_name || ' '
+            : otherDetails.sales_item_name || i.item_name || ' ',
+
         size: `${i.length || 0} x ${i.width || 0}`,
         sheets: 0,
         sqm: 0,
@@ -1007,17 +1057,18 @@ export const generatePackingSlip = catchAsync(async (req, res) => {
 
   const item_summary = Object.values(summaryMap);
 
-  // ✅ Add `sales_item_name` from otherDetails to each item
   const itemsWithExtraFields = allItems.map((i) => ({
     ...i,
     photo_no: otherDetails.photo_no || '',
     remark: otherDetails.remark || '',
-    sales_item_name: otherDetails.sales_item_name || '', // ✅ Added field
+    sales_item_name: otherDetails?.order_category.includes('RAW')
+      ? i?.item_name
+      : otherDetails.sales_item_name,
+    // bundle_no: otherDetails.bundle_no,
+    // bundle_description: otherDetails.bundle_description,
+    // total_no_of_bundles: otherDetails.total_no_of_bundles,
   }));
 
-  console.log('itemsWithExtraFields', itemsWithExtraFields);
-
-  // Handle flexible customer name structure
   let customer_name = '';
   if (typeof otherDetails.customer_details === 'string') {
     customer_name = otherDetails.customer_details;
@@ -1029,7 +1080,6 @@ export const generatePackingSlip = catchAsync(async (req, res) => {
     customer_name = otherDetails.customer_details.owner_name;
   }
 
-  // ✅ Map product_type to display name (safe string handling)
   let productDisplayName = '';
   const productType =
     typeof otherDetails.product_type === 'string'
@@ -1052,20 +1102,20 @@ export const generatePackingSlip = catchAsync(async (req, res) => {
       break;
   }
 
-  // ✅ Also pass `sales_item_name` to top-level data (optional global access)
   const combinedData = {
     ...otherDetails,
-    product_display_type: productDisplayName, // 👈 use this in HBS
+    product_display_type: productDisplayName,
     customer_name,
     packing_date: formattedPackingDate,
     packing_done_item_details: itemsWithExtraFields,
     totalSheets,
     totalSqMtr,
     item_summary,
-    sales_item_name: otherDetails.sales_item_name || '', // ✅ Added globally
+    sales_item_name: otherDetails.sales_item_name || '',
+    order_category: otherDetails.order_category,
   };
 
-  const pdfBuffer = await generatePDF({
+  const pdfBuffer = await generatePackingPDF({
     templateName: 'packing_slip',
     templatePath: path.join(
       __dirname,
@@ -1079,11 +1129,29 @@ export const generatePackingSlip = catchAsync(async (req, res) => {
     data: combinedData,
   });
 
+  // const safeCustomerName = (customer_name || 'Unknown')
+  //   .replace(/[^a-zA-Z0-9-_]/g, '_')
+  //   .substring(0, 50);
+
+  const safeCustomerName = (customer_name || 'Unknown')
+    .trim()
+    .replace(/\s+/g, '-') // replace spaces with hyphen
+    .replace(/[^a-zA-Z0-9-_.]/g, '') // keep letters, numbers, dash, underscore, dot
+    .substring(0, 50);
+
+  const safePackingDate = (formattedPackingDate || 'NoDate').replace(
+    /[^0-9-]/g,
+    '_'
+  );
+  const packing_id = otherDetails?.packing_id;
+
+  const fileName = `${packing_id}_${safeCustomerName}_${safePackingDate}.pdf`;
+
   res.set({
     'Content-Type': 'application/pdf',
-    'Content-Disposition': 'attachment; filename="packing-slip.pdf"',
+    'Content-Disposition': `attachment; filename="${fileName}"`,
+    'Access-Control-Expose-Headers': 'Content-Disposition',
     'Content-Length': pdfBuffer.length,
   });
-
   return res.status(200).end(pdfBuffer);
 });

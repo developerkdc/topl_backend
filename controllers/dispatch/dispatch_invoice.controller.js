@@ -70,7 +70,7 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
             sheets: item.sheets,
             sqm: item.sqm,
             rate: item.rate,
-            taxable_value: item.taxable_value,
+            taxable_value: item.final_row_amount,
         })) || [],
         basic_amount: dispatchDetails.total_base_amount,
         insurance: dispatchDetails.insurance_amount,
@@ -99,14 +99,23 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
     );
 
     const pdfBuffer = await generatePDF({
-        templateName: "Invoice_bill",
+        templateName: `${dispatchDetails?.invoice_no}_${dispatchDetails?.customer_details?.company_name}_${dispatchDetails?.invoice_date}`,
         templatePath,
         data: pdfData,
     });
 
+    const sanitizeForFilename = (str = "") =>
+        str.replace(/[\/\\:*?"<>|]/g, "-").trim();
+
+    const safeInvoiceNo = sanitizeForFilename(dispatchDetails.invoice_no || "");
+    const safeCompanyName = sanitizeForFilename(dispatchDetails.customer_details?.company_name || "");
+
+    const fileName = `Invoice-${safeInvoiceNo}_${safeCompanyName}_${pdfData.invoice_date}.pdf`;
+
     res.set({
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename=Invoice-${id}.pdf`,
+        "Content-Disposition": `attachment; filename="${fileName}"`,
+        "Access-Control-Expose-Headers": "Content-Disposition",
         "Content-Length": pdfBuffer.length,
     });
 

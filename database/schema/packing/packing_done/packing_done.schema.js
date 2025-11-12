@@ -5,10 +5,10 @@ import { approval_status } from '../../../Utils/approvalStatus.schema.js';
 const packing_done_other_details_schema = new mongoose.Schema(
   {
     packing_id: {
-      type: String,
+      type: Number,
       required: [true, 'Packing ID is required.'],
       trim: true,
-      uppercase: true,
+      unique: true,
     },
     packing_date: {
       type: Date,
@@ -84,11 +84,11 @@ const packing_done_other_details_schema = new mongoose.Schema(
     },
     remark: {
       type: String,
-      default: null
+      default: null,
     },
     sales_item_name: {
       type: String,
-      required: [true, "Sales Item Name is required"]
+      // required: [true, "Sales Item Name is required"]
     },
     approval_status: approval_status,
   },
@@ -249,19 +249,37 @@ const packing_done_items_schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Updated by is required.'],
     },
+    bundle_no: {
+      type: Number,
+      default: null,
+    },
+    bundle_description: {
+      type: String,
+      default: null,
+      trim: true,
+      validate: {
+        validator: function (v) {
+          return v === null || /^[0-9+\-*/.() ]*$/.test(v);
+        },
+        message: (props) => `${props.value} contains invalid characters!`,
+      },
+    },
+
+    total_no_of_bundles: {
+      type: Number,
+      default: null,
+    },
   },
   {
     timestamps: true,
   }
 );
 
-const indexed_fields = [
-  [{ packing_done_other_details_id: 1 }]
-]
+const indexed_fields = [[{ packing_done_other_details_id: 1 }]];
 
 indexed_fields.forEach((field) => {
-  packing_done_items_schema.index(...field)
-})
+  packing_done_items_schema.index(...field);
+});
 export const packing_done_other_details_model = mongoose.model(
   'packing_done_other_details',
   packing_done_other_details_schema,

@@ -10,10 +10,8 @@ const approval_packing_done_other_details_schema = new mongoose.Schema(
             required: [true, "Approval Packing ID is required."]
         },
         packing_id: {
-            type: String,
-            required: [true, 'Packing ID is required.'],
-            trim: true,
-            uppercase: true,
+            type: Number,
+            required: [true, 'Packing ID is required.']
         },
         packing_date: {
             type: Date,
@@ -253,6 +251,26 @@ const approval_packing_done_items_schema = new mongoose.Schema(
             type: String,
             required: [true, 'Product Type is required'],
             trim: true,
+        },
+        bundle_no: {
+            type: Number,
+            default: null,
+        },
+        bundle_description: {
+            type: String,
+            default: null,
+            trim: true,
+            validate: {
+                validator: function (v) {
+                    return v === null || /^[0-9+\-*/.() ]*$/.test(v);
+                },
+                message: (props) => `${props.value} contains invalid characters!`,
+            },
+        },
+
+        total_no_of_bundles: {
+            type: Number,
+            default: null,
         },
         created_by: {
             type: mongoose.Schema.Types.ObjectId,
