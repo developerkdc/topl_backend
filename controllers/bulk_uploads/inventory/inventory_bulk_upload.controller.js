@@ -1,6 +1,6 @@
 import mongoose, { model } from 'mongoose';
 import ApiResponse from '../../../utils/ApiResponse.js';
-import { format_date, StatusCodes } from '../../../utils/constants.js';
+import { format_date, format_date, StatusCodes } from '../../../utils/constants.js';
 import ApiError from '../../../utils/errors/apiError.js';
 import catchAsync from '../../../utils/errors/catchAsync.js';
 import formidable from 'formidable';
@@ -380,9 +380,9 @@ const fetch_machine_details_by_name = async (name, session) => {
 const add_inventory_invoice_data = async (doc, session) => {
     const invoice_data = {};
     console.log("inward_date => ", doc.inward_date)
-    // doc.inward_date = moment.parseZone(doc?.inward_date, 'DD/MM/YYYY').toDate();
+    // // doc.inward_date = moment.parseZone(doc?.inward_date, 'DD/MM/YYYY').toDate();
     doc.inward_date = format_date(doc?.inward_date);
-
+    doc.inward_date = format_date(doc?.inward_date);
     if (doc.workers_details) {
         invoice_data.workers_details = {
             no_of_workers: doc.workers_details.no_of_workers,
@@ -434,7 +434,6 @@ const add_inventory_invoice_data = async (doc, session) => {
         let updated_invoice_date = format_date(doc.invoice_Details.invoice_date)
 
         invoice_data.invoice_Details.invoice_date = updated_invoice_date;
-
         for (let field of [
             'isFreightInclude',
             'isLoadUnloadInclude',

@@ -311,6 +311,10 @@ const dispatchSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    base_amount_without_gst: {
+      type: Number,
+      default: 0,
+    },
     freight_amount: {
       type: Number,
       default: 0,

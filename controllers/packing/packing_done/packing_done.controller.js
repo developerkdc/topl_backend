@@ -75,7 +75,6 @@ export const create_packing = catchAsync(async (req, res) => {
     // ✅ Step 3: Assign next ID safely
     const updated_other_details_payload = {
       ...other_details,
-      packing_id: 98,
       packing_id: next_packing_id,
       created_by: user._id,
       updated_by: user._id,
@@ -448,7 +447,7 @@ export const update_packing_details = catchAsync(async (req, res) => {
       );
     }
 
-    await session?.commitTransaction();
+
     const response = new ApiResponse(
       StatusCodes.OK,
       'Packing Details Sent for Approval Successfully.',

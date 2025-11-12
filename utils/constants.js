@@ -61,7 +61,6 @@ export const start_worker_thread = () => {
   });
 };
 
-
 export const approval_status = {
   sendForApproval: {
     status: false,
@@ -74,8 +73,10 @@ export const approval_status = {
   rejected: {
     status: false,
     remark: null,
-  }
-}
+  },
+};
+
+
 
 export const format_date = (serial) => {
   if (!serial || isNaN(serial)) return null;
