@@ -1,6 +1,6 @@
 import mongoose, { model } from 'mongoose';
 import ApiResponse from '../../../utils/ApiResponse.js';
-import { format_date, format_date, StatusCodes } from '../../../utils/constants.js';
+import { format_date, StatusCodes } from '../../../utils/constants.js';
 import ApiError from '../../../utils/errors/apiError.js';
 import catchAsync from '../../../utils/errors/catchAsync.js';
 import formidable from 'formidable';
