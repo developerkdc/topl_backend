@@ -1,3 +1,4 @@
+import { customer_model } from '../../../../database/schema/masters/customer.schema.js';
 import issue_for_order_model from '../../../../database/schema/order/issue_for_order/issue_for_order.schema.js';
 import ApiResponse from '../../../../utils/ApiResponse.js';
 import { StatusCodes } from '../../../../utils/constants.js';
@@ -313,4 +314,134 @@ export const fetch_all_raw_ready_for_packing = catchAsync(async (req, res) => {
     }
   );
   return res.status(StatusCodes.OK).json(response);
+});
+
+// export const dropdownRawReadyForPacking = catchAsync(async (req, res, next) => {
+//   const rawList = await issue_for_order_model.aggregate([
+//     {
+//       $match: {
+//         is_packing_done: false, // only those not yet packed
+//       },
+//     },
+//     {
+//       $lookup: {
+//         from: 'orders',
+//         localField: 'order_id',
+//         foreignField: '_id',
+//         as: 'order_details',
+//       },
+//     },
+//     {
+//       $unwind: {
+//         path: '$order_details',
+//         preserveNullAndEmptyArrays: true,
+//       },
+//     },
+//     {
+//       $lookup: {
+//         from: 'raw_order_item_details',
+//         localField: 'order_item_id',
+//         foreignField: '_id',
+//         as: 'raw_order_item_details',
+//       },
+//     },
+//     {
+//       $unwind: {
+//         path: '$raw_order_item_details',
+//         preserveNullAndEmptyArrays: true,
+//       },
+//     },
+//     {
+//       $project: {
+//         _id: 1,
+//         order_number: '$order_details.order_number',
+//         item_name: '$raw_order_item_details.item_name',
+//         grade: '$raw_order_item_details.grade',
+//         species: '$raw_order_item_details.species',
+//         thickness: '$raw_order_item_details.thickness',
+//         issued_from: 1,
+//         createdAt: 1,
+//         updatedAt: 1,
+//       },
+//     },
+//     {
+//       $sort: { updatedAt: -1 },
+//     },
+//   ]);
+
+//   const response = new ApiResponse(
+//     200,
+//     'Raw Items Dropdown Fetched Successfully',
+//     rawList
+//   );
+//   return res.status(200).json(response);
+// });
+
+export const dropdownRawReadyForPacking = catchAsync(async (req, res, next) => {
+  const unfinishedRawPackingOwners = await issue_for_order_model.aggregate([
+    {
+      $match: {
+        is_packing_done: false,
+      },
+    },
+    {
+      $lookup: {
+        from: 'orders',
+        localField: 'order_id',
+        foreignField: '_id',
+        as: 'order_details',
+        pipeline: [
+          {
+            $project: {
+              owner_name: 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $unwind: {
+        path: '$order_details',
+        preserveNullAndEmptyArrays: false,
+      },
+    },
+    {
+      $group: {
+        _id: '$order_details.owner_name',
+      },
+    },
+  ]);
+
+  const ownerNames = unfinishedRawPackingOwners.map((item) => item._id).filter(Boolean);
+
+  const customerList = await customer_model.aggregate([
+    {
+      $match: {
+        status: true,
+        company_name: { $in: ownerNames },
+      },
+    },
+    {
+      $project: {
+        company_name: 1,
+        gst_number: 1,
+        pan_number: 1,
+        branding_type: 1,
+        credit_schedule: 1,
+        freight: 1,
+        local_freight: 1,
+      },
+    },
+    {
+      $sort: { company_name: 1 },
+    },
+  ]);
+
+  const response = new ApiResponse(
+    200,
+    'Customer list for unfinished RAW packing fetched successfully',
+    customerList
+  );
+
+  return res.status(200).json(response);
 });
