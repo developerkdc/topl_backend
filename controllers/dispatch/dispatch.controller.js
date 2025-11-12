@@ -2203,6 +2203,743 @@ export const generate_ewaybill_using_irn_no = catchAsync(
   }
 );
 
+//===============EwayBill Apis=======================
+export const generate_ewaybill = catchAsync(
+  async (req, res, next) => {
+    const authToken = req.eInvoiceAuthToken;
+
+    const dispatch_id = req.params.id;
+    const dispatch_details = await dispatchModel.findById(dispatch_id);
+    // console.log(
+    //   'start dispatch details',
+    //   dispatch_details,
+    //   'end dispatch details'
+    // );
+    if (!dispatch_details) {
+      throw new ApiError('Dispatch details not found', StatusCodes.NOT_FOUND);
+    }
+
+    if (!dispatch_details?.irn_number) {
+      throw new ApiError(
+        'IRN number not found for this dispatch',
+        StatusCodes.BAD_REQUEST
+      );
+    }
+    if (!dispatch_details?.irp) {
+      throw new ApiError(
+        'IRP not found for this dispatch',
+        StatusCodes.BAD_REQUEST
+      );
+    }
+    var {
+      bill_from_address,
+      bill_to_address,
+      dispatch_from_address,
+      ship_to_address,
+    } = dispatch_details?.address;
+
+    // Reference: E-Way Bill sample body structure in the provided image.
+
+    // Example: ewaybill body creation as per input image reference.
+    // Map your dispatch object properties to the fields as required.
+
+    const ewayBillBody = {
+      supplyType: "O", // Outward
+      subSupplyType: "1", // Supply
+      docType: "INV", // Invoice
+      docNo: dispatch_details?.invoice_no,
+      docDate: dispatch_details?.invoice_date_time // format: "DD/MM/YYYY"
+        ? new Date(dispatch_details.invoice_date_time)
+            .toLocaleDateString('en-GB')
+            .split('/')
+            .join('/')
+        : "",
+      fromGstin: bill_from_address?.gstin || "",
+      fromTrdName: bill_from_address?.trade_name || "",
+      fromAddr1: bill_from_address?.address_line1 || "",
+      fromAddr2: bill_from_address?.address_line2 || "",
+      fromPlace: bill_from_address?.city || "",
+      fromPincode: bill_from_address?.pincode || "",
+      fromStateCode: bill_from_address?.state_code || "",
+      toGstin: bill_to_address?.gstin || "",
+      toTrdName: bill_to_address?.trade_name || "",
+      toAddr1: bill_to_address?.address_line1 || "",
+      toAddr2: bill_to_address?.address_line2 || "",
+      toPlace: bill_to_address?.city || "",
+      toPincode: bill_to_address?.pincode || "",
+      toStateCode: bill_to_address?.state_code || "",
+      transactionType: 1,
+      dispatchFromGSTIN: dispatch_from_address?.gstin || undefined,
+      dispatchFromTradeName: dispatch_from_address?.trade_name || undefined,
+      shipToGSTIN: ship_to_address?.gstin || undefined,
+      shipToTradeName: ship_to_address?.trade_name || undefined,
+      shipToAddr1: ship_to_address?.address_line1 || "",
+      shipToAddr2: ship_to_address?.address_line2 || "",
+      shipToPlace: ship_to_address?.city || "",
+      shipToPincode: ship_to_address?.pincode || "",
+      shipToStateCode: ship_to_address?.state_code || "",
+      itemList: (dispatch_details?.items || []).map(item => ({
+        productName: item?.name || "",
+        productDesc: item?.description || "",
+        hsnCode: item?.hsn_code || "",
+        quantity: item?.quantity || 0,
+        qtyUnit: item?.unit || "",
+        cgstRate: item?.cgst_rate || 0,
+        sgstRate: item?.sgst_rate || 0,
+        igstRate: item?.igst_rate || 0,
+        cessRate: item?.cess_rate || 0,
+        taxableAmount: item?.taxable_amount || 0
+      })),
+      totalValue: dispatch_details?.total_value || 0,
+      cgstValue: dispatch_details?.cgst_value || 0,
+      sgstValue: dispatch_details?.sgst_value || 0,
+      igstValue: dispatch_details?.igst_value || 0,
+      cessValue: dispatch_details?.cess_value || 0,
+      totInvValue: dispatch_details?.invoice_value || 0,
+      transporterId: dispatch_details?.transporter_details?.transporter_id || "",
+      transporterName: dispatch_details?.transporter_details?.name || "",
+      transMode: dispatch_details?.transporter_details?.mode || "1",
+      transDistance: dispatch_details?.approx_distance || 0,
+      transDocNo: dispatch_details?.trans_doc_no || "",
+      transDocDate: dispatch_details?.trans_doc_date // format: "DD/MM/YYYY"
+        ? new Date(dispatch_details.trans_doc_date)
+            .toLocaleDateString('en-GB')
+            .split('/')
+            .join('/')
+        : "",
+      vehicleNo: dispatch_details?.vehicle_details?.vehicle_number || "",
+      vehicleType: dispatch_details?.vehicle_details?.vehicle_type || "R"
+    };
+
+    const ewayBillResponse = await axios.post(
+      `${process.env.E_INVOICE_BASE_URL}/ewaybillapi/v1.03/ewayapi/genewaybill?email=${process.env.E_INVOICE_EMAIL_ID}`,
+      ewayBillBody,
+      {
+        headers: {
+          ...EInvoiceHeaderVariable,
+          'auth-token': authToken,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (ewayBillResponse?.data?.status_cd === '1') {
+      // Update dispatch details with IRN number and IRP
+      dispatch_details.dispatch_status = dispatch_status?.cancelled;
+      await dispatch_details.save();
+    } else {
+      // Extracting error details from ewayBillResponse and throwing an error
+      let errorMessage = 'Unknown error occurred';
+
+      const statusDescArr = JSON.parse(ewayBillResponse.data.status_desc);
+      if (Array.isArray(statusDescArr) && statusDescArr.length > 0) {
+        errorMessage = statusDescArr[0]?.ErrorMessage || errorMessage;
+      }
+
+      throw new ApiError(
+        `IRN Cancellation Failed. Error : ${errorMessage}`,
+        StatusCodes.BAD_REQUEST
+      );
+    }
+    // console.log('Irn response', ewayBillResponse, 'Irn response');
+    // Optionally: req.body.irnBody = irnBody
+
+    return res.status(200).json({
+      success: true,
+      message: 'IRN Number Cancelled successfully.',
+      result: ewayBillResponse?.data,
+    });
+  }
+);
+export const cancel_ewaybill = catchAsync(
+  async (req, res, next) => {
+    const authToken = req.eInvoiceAuthToken;
+
+    const dispatch_id = req.params.id;
+    const dispatch_details = await dispatchModel.findById(dispatch_id);
+    // console.log(
+    //   'start dispatch details',
+    //   dispatch_details,
+    //   'end dispatch details'
+    // );
+    if (!dispatch_details) {
+      throw new ApiError('Dispatch details not found', StatusCodes.NOT_FOUND);
+    }
+
+    if (!dispatch_details?.irn_number) {
+      throw new ApiError(
+        'IRN number not found for this dispatch',
+        StatusCodes.BAD_REQUEST
+      );
+    }
+    if (!dispatch_details?.irp) {
+      throw new ApiError(
+        'IRP not found for this dispatch',
+        StatusCodes.BAD_REQUEST
+      );
+    }
+    var {
+      bill_from_address,
+      bill_to_address,
+      dispatch_from_address,
+      ship_to_address,
+    } = dispatch_details?.address;
+
+    // Reference: E-Way Bill sample body structure in the provided image.
+
+    // Example: ewaybill body creation as per input image reference.
+    // Map your dispatch object properties to the fields as required.
+
+    const ewayBillBody = {
+      supplyType: "O", // Outward
+      subSupplyType: "1", // Supply
+      docType: "INV", // Invoice
+      docNo: dispatch_details?.invoice_no,
+      docDate: dispatch_details?.invoice_date_time // format: "DD/MM/YYYY"
+        ? new Date(dispatch_details.invoice_date_time)
+            .toLocaleDateString('en-GB')
+            .split('/')
+            .join('/')
+        : "",
+      fromGstin: bill_from_address?.gstin || "",
+      fromTrdName: bill_from_address?.trade_name || "",
+      fromAddr1: bill_from_address?.address_line1 || "",
+      fromAddr2: bill_from_address?.address_line2 || "",
+      fromPlace: bill_from_address?.city || "",
+      fromPincode: bill_from_address?.pincode || "",
+      fromStateCode: bill_from_address?.state_code || "",
+      toGstin: bill_to_address?.gstin || "",
+      toTrdName: bill_to_address?.trade_name || "",
+      toAddr1: bill_to_address?.address_line1 || "",
+      toAddr2: bill_to_address?.address_line2 || "",
+      toPlace: bill_to_address?.city || "",
+      toPincode: bill_to_address?.pincode || "",
+      toStateCode: bill_to_address?.state_code || "",
+      transactionType: 1,
+      dispatchFromGSTIN: dispatch_from_address?.gstin || undefined,
+      dispatchFromTradeName: dispatch_from_address?.trade_name || undefined,
+      shipToGSTIN: ship_to_address?.gstin || undefined,
+      shipToTradeName: ship_to_address?.trade_name || undefined,
+      shipToAddr1: ship_to_address?.address_line1 || "",
+      shipToAddr2: ship_to_address?.address_line2 || "",
+      shipToPlace: ship_to_address?.city || "",
+      shipToPincode: ship_to_address?.pincode || "",
+      shipToStateCode: ship_to_address?.state_code || "",
+      itemList: (dispatch_details?.items || []).map(item => ({
+        productName: item?.name || "",
+        productDesc: item?.description || "",
+        hsnCode: item?.hsn_code || "",
+        quantity: item?.quantity || 0,
+        qtyUnit: item?.unit || "",
+        cgstRate: item?.cgst_rate || 0,
+        sgstRate: item?.sgst_rate || 0,
+        igstRate: item?.igst_rate || 0,
+        cessRate: item?.cess_rate || 0,
+        taxableAmount: item?.taxable_amount || 0
+      })),
+      totalValue: dispatch_details?.total_value || 0,
+      cgstValue: dispatch_details?.cgst_value || 0,
+      sgstValue: dispatch_details?.sgst_value || 0,
+      igstValue: dispatch_details?.igst_value || 0,
+      cessValue: dispatch_details?.cess_value || 0,
+      totInvValue: dispatch_details?.invoice_value || 0,
+      transporterId: dispatch_details?.transporter_details?.transporter_id || "",
+      transporterName: dispatch_details?.transporter_details?.name || "",
+      transMode: dispatch_details?.transporter_details?.mode || "1",
+      transDistance: dispatch_details?.approx_distance || 0,
+      transDocNo: dispatch_details?.trans_doc_no || "",
+      transDocDate: dispatch_details?.trans_doc_date // format: "DD/MM/YYYY"
+        ? new Date(dispatch_details.trans_doc_date)
+            .toLocaleDateString('en-GB')
+            .split('/')
+            .join('/')
+        : "",
+      vehicleNo: dispatch_details?.vehicle_details?.vehicle_number || "",
+      vehicleType: dispatch_details?.vehicle_details?.vehicle_type || "R"
+    };
+
+    const ewayBillResponse = await axios.post(
+      `${process.env.E_INVOICE_BASE_URL}/ewaybillapi/v1.03/ewayapi/genewaybill?email=${process.env.E_INVOICE_EMAIL_ID}`,
+      ewayBillBody,
+      {
+        headers: {
+          ...EInvoiceHeaderVariable,
+          'auth-token': authToken,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (ewayBillResponse?.data?.status_cd === '1') {
+      // Update dispatch details with IRN number and IRP
+      dispatch_details.dispatch_status = dispatch_status?.cancelled;
+      await dispatch_details.save();
+    } else {
+      // Extracting error details from ewayBillResponse and throwing an error
+      let errorMessage = 'Unknown error occurred';
+
+      const statusDescArr = JSON.parse(ewayBillResponse.data.status_desc);
+      if (Array.isArray(statusDescArr) && statusDescArr.length > 0) {
+        errorMessage = statusDescArr[0]?.ErrorMessage || errorMessage;
+      }
+
+      throw new ApiError(
+        `IRN Cancellation Failed. Error : ${errorMessage}`,
+        StatusCodes.BAD_REQUEST
+      );
+    }
+    // console.log('Irn response', ewayBillResponse, 'Irn response');
+    // Optionally: req.body.irnBody = irnBody
+
+    return res.status(200).json({
+      success: true,
+      message: 'IRN Number Cancelled successfully.',
+      result: ewayBillResponse?.data,
+    });
+  }
+);
+export const get_ewaybill_details = catchAsync(
+  async (req, res, next) => {
+    const authToken = req.eInvoiceAuthToken;
+
+    const dispatch_id = req.params.id;
+    const dispatch_details = await dispatchModel.findById(dispatch_id);
+    // console.log(
+    //   'start dispatch details',
+    //   dispatch_details,
+    //   'end dispatch details'
+    // );
+    if (!dispatch_details) {
+      throw new ApiError('Dispatch details not found', StatusCodes.NOT_FOUND);
+    }
+
+    if (!dispatch_details?.irn_number) {
+      throw new ApiError(
+        'IRN number not found for this dispatch',
+        StatusCodes.BAD_REQUEST
+      );
+    }
+    if (!dispatch_details?.irp) {
+      throw new ApiError(
+        'IRP not found for this dispatch',
+        StatusCodes.BAD_REQUEST
+      );
+    }
+    var {
+      bill_from_address,
+      bill_to_address,
+      dispatch_from_address,
+      ship_to_address,
+    } = dispatch_details?.address;
+
+    // Reference: E-Way Bill sample body structure in the provided image.
+
+    // Example: ewaybill body creation as per input image reference.
+    // Map your dispatch object properties to the fields as required.
+
+    const ewayBillBody = {
+      supplyType: "O", // Outward
+      subSupplyType: "1", // Supply
+      docType: "INV", // Invoice
+      docNo: dispatch_details?.invoice_no,
+      docDate: dispatch_details?.invoice_date_time // format: "DD/MM/YYYY"
+        ? new Date(dispatch_details.invoice_date_time)
+            .toLocaleDateString('en-GB')
+            .split('/')
+            .join('/')
+        : "",
+      fromGstin: bill_from_address?.gstin || "",
+      fromTrdName: bill_from_address?.trade_name || "",
+      fromAddr1: bill_from_address?.address_line1 || "",
+      fromAddr2: bill_from_address?.address_line2 || "",
+      fromPlace: bill_from_address?.city || "",
+      fromPincode: bill_from_address?.pincode || "",
+      fromStateCode: bill_from_address?.state_code || "",
+      toGstin: bill_to_address?.gstin || "",
+      toTrdName: bill_to_address?.trade_name || "",
+      toAddr1: bill_to_address?.address_line1 || "",
+      toAddr2: bill_to_address?.address_line2 || "",
+      toPlace: bill_to_address?.city || "",
+      toPincode: bill_to_address?.pincode || "",
+      toStateCode: bill_to_address?.state_code || "",
+      transactionType: 1,
+      dispatchFromGSTIN: dispatch_from_address?.gstin || undefined,
+      dispatchFromTradeName: dispatch_from_address?.trade_name || undefined,
+      shipToGSTIN: ship_to_address?.gstin || undefined,
+      shipToTradeName: ship_to_address?.trade_name || undefined,
+      shipToAddr1: ship_to_address?.address_line1 || "",
+      shipToAddr2: ship_to_address?.address_line2 || "",
+      shipToPlace: ship_to_address?.city || "",
+      shipToPincode: ship_to_address?.pincode || "",
+      shipToStateCode: ship_to_address?.state_code || "",
+      itemList: (dispatch_details?.items || []).map(item => ({
+        productName: item?.name || "",
+        productDesc: item?.description || "",
+        hsnCode: item?.hsn_code || "",
+        quantity: item?.quantity || 0,
+        qtyUnit: item?.unit || "",
+        cgstRate: item?.cgst_rate || 0,
+        sgstRate: item?.sgst_rate || 0,
+        igstRate: item?.igst_rate || 0,
+        cessRate: item?.cess_rate || 0,
+        taxableAmount: item?.taxable_amount || 0
+      })),
+      totalValue: dispatch_details?.total_value || 0,
+      cgstValue: dispatch_details?.cgst_value || 0,
+      sgstValue: dispatch_details?.sgst_value || 0,
+      igstValue: dispatch_details?.igst_value || 0,
+      cessValue: dispatch_details?.cess_value || 0,
+      totInvValue: dispatch_details?.invoice_value || 0,
+      transporterId: dispatch_details?.transporter_details?.transporter_id || "",
+      transporterName: dispatch_details?.transporter_details?.name || "",
+      transMode: dispatch_details?.transporter_details?.mode || "1",
+      transDistance: dispatch_details?.approx_distance || 0,
+      transDocNo: dispatch_details?.trans_doc_no || "",
+      transDocDate: dispatch_details?.trans_doc_date // format: "DD/MM/YYYY"
+        ? new Date(dispatch_details.trans_doc_date)
+            .toLocaleDateString('en-GB')
+            .split('/')
+            .join('/')
+        : "",
+      vehicleNo: dispatch_details?.vehicle_details?.vehicle_number || "",
+      vehicleType: dispatch_details?.vehicle_details?.vehicle_type || "R"
+    };
+
+    const ewayBillResponse = await axios.post(
+      `${process.env.E_INVOICE_BASE_URL}/ewaybillapi/v1.03/ewayapi/genewaybill?email=${process.env.E_INVOICE_EMAIL_ID}`,
+      ewayBillBody,
+      {
+        headers: {
+          ...EInvoiceHeaderVariable,
+          'auth-token': authToken,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (ewayBillResponse?.data?.status_cd === '1') {
+      // Update dispatch details with IRN number and IRP
+      dispatch_details.dispatch_status = dispatch_status?.cancelled;
+      await dispatch_details.save();
+    } else {
+      // Extracting error details from ewayBillResponse and throwing an error
+      let errorMessage = 'Unknown error occurred';
+
+      const statusDescArr = JSON.parse(ewayBillResponse.data.status_desc);
+      if (Array.isArray(statusDescArr) && statusDescArr.length > 0) {
+        errorMessage = statusDescArr[0]?.ErrorMessage || errorMessage;
+      }
+
+      throw new ApiError(
+        `IRN Cancellation Failed. Error : ${errorMessage}`,
+        StatusCodes.BAD_REQUEST
+      );
+    }
+    // console.log('Irn response', ewayBillResponse, 'Irn response');
+    // Optionally: req.body.irnBody = irnBody
+
+    return res.status(200).json({
+      success: true,
+      message: 'IRN Number Cancelled successfully.',
+      result: ewayBillResponse?.data,
+    });
+  }
+);
+export const update_ewaybill_transporter = catchAsync(
+  async (req, res, next) => {
+    const authToken = req.eInvoiceAuthToken;
+
+    const dispatch_id = req.params.id;
+    const dispatch_details = await dispatchModel.findById(dispatch_id);
+    // console.log(
+    //   'start dispatch details',
+    //   dispatch_details,
+    //   'end dispatch details'
+    // );
+    if (!dispatch_details) {
+      throw new ApiError('Dispatch details not found', StatusCodes.NOT_FOUND);
+    }
+
+    if (!dispatch_details?.irn_number) {
+      throw new ApiError(
+        'IRN number not found for this dispatch',
+        StatusCodes.BAD_REQUEST
+      );
+    }
+    if (!dispatch_details?.irp) {
+      throw new ApiError(
+        'IRP not found for this dispatch',
+        StatusCodes.BAD_REQUEST
+      );
+    }
+    var {
+      bill_from_address,
+      bill_to_address,
+      dispatch_from_address,
+      ship_to_address,
+    } = dispatch_details?.address;
+
+    // Reference: E-Way Bill sample body structure in the provided image.
+
+    // Example: ewaybill body creation as per input image reference.
+    // Map your dispatch object properties to the fields as required.
+
+    const ewayBillBody = {
+      supplyType: "O", // Outward
+      subSupplyType: "1", // Supply
+      docType: "INV", // Invoice
+      docNo: dispatch_details?.invoice_no,
+      docDate: dispatch_details?.invoice_date_time // format: "DD/MM/YYYY"
+        ? new Date(dispatch_details.invoice_date_time)
+            .toLocaleDateString('en-GB')
+            .split('/')
+            .join('/')
+        : "",
+      fromGstin: bill_from_address?.gstin || "",
+      fromTrdName: bill_from_address?.trade_name || "",
+      fromAddr1: bill_from_address?.address_line1 || "",
+      fromAddr2: bill_from_address?.address_line2 || "",
+      fromPlace: bill_from_address?.city || "",
+      fromPincode: bill_from_address?.pincode || "",
+      fromStateCode: bill_from_address?.state_code || "",
+      toGstin: bill_to_address?.gstin || "",
+      toTrdName: bill_to_address?.trade_name || "",
+      toAddr1: bill_to_address?.address_line1 || "",
+      toAddr2: bill_to_address?.address_line2 || "",
+      toPlace: bill_to_address?.city || "",
+      toPincode: bill_to_address?.pincode || "",
+      toStateCode: bill_to_address?.state_code || "",
+      transactionType: 1,
+      dispatchFromGSTIN: dispatch_from_address?.gstin || undefined,
+      dispatchFromTradeName: dispatch_from_address?.trade_name || undefined,
+      shipToGSTIN: ship_to_address?.gstin || undefined,
+      shipToTradeName: ship_to_address?.trade_name || undefined,
+      shipToAddr1: ship_to_address?.address_line1 || "",
+      shipToAddr2: ship_to_address?.address_line2 || "",
+      shipToPlace: ship_to_address?.city || "",
+      shipToPincode: ship_to_address?.pincode || "",
+      shipToStateCode: ship_to_address?.state_code || "",
+      itemList: (dispatch_details?.items || []).map(item => ({
+        productName: item?.name || "",
+        productDesc: item?.description || "",
+        hsnCode: item?.hsn_code || "",
+        quantity: item?.quantity || 0,
+        qtyUnit: item?.unit || "",
+        cgstRate: item?.cgst_rate || 0,
+        sgstRate: item?.sgst_rate || 0,
+        igstRate: item?.igst_rate || 0,
+        cessRate: item?.cess_rate || 0,
+        taxableAmount: item?.taxable_amount || 0
+      })),
+      totalValue: dispatch_details?.total_value || 0,
+      cgstValue: dispatch_details?.cgst_value || 0,
+      sgstValue: dispatch_details?.sgst_value || 0,
+      igstValue: dispatch_details?.igst_value || 0,
+      cessValue: dispatch_details?.cess_value || 0,
+      totInvValue: dispatch_details?.invoice_value || 0,
+      transporterId: dispatch_details?.transporter_details?.transporter_id || "",
+      transporterName: dispatch_details?.transporter_details?.name || "",
+      transMode: dispatch_details?.transporter_details?.mode || "1",
+      transDistance: dispatch_details?.approx_distance || 0,
+      transDocNo: dispatch_details?.trans_doc_no || "",
+      transDocDate: dispatch_details?.trans_doc_date // format: "DD/MM/YYYY"
+        ? new Date(dispatch_details.trans_doc_date)
+            .toLocaleDateString('en-GB')
+            .split('/')
+            .join('/')
+        : "",
+      vehicleNo: dispatch_details?.vehicle_details?.vehicle_number || "",
+      vehicleType: dispatch_details?.vehicle_details?.vehicle_type || "R"
+    };
+
+    const ewayBillResponse = await axios.post(
+      `${process.env.E_INVOICE_BASE_URL}/ewaybillapi/v1.03/ewayapi/genewaybill?email=${process.env.E_INVOICE_EMAIL_ID}`,
+      ewayBillBody,
+      {
+        headers: {
+          ...EInvoiceHeaderVariable,
+          'auth-token': authToken,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (ewayBillResponse?.data?.status_cd === '1') {
+      // Update dispatch details with IRN number and IRP
+      dispatch_details.dispatch_status = dispatch_status?.cancelled;
+      await dispatch_details.save();
+    } else {
+      // Extracting error details from ewayBillResponse and throwing an error
+      let errorMessage = 'Unknown error occurred';
+
+      const statusDescArr = JSON.parse(ewayBillResponse.data.status_desc);
+      if (Array.isArray(statusDescArr) && statusDescArr.length > 0) {
+        errorMessage = statusDescArr[0]?.ErrorMessage || errorMessage;
+      }
+
+      throw new ApiError(
+        `IRN Cancellation Failed. Error : ${errorMessage}`,
+        StatusCodes.BAD_REQUEST
+      );
+    }
+    // console.log('Irn response', ewayBillResponse, 'Irn response');
+    // Optionally: req.body.irnBody = irnBody
+
+    return res.status(200).json({
+      success: true,
+      message: 'IRN Number Cancelled successfully.',
+      result: ewayBillResponse?.data,
+    });
+  }
+);
+export const update_ewaybill_partB = catchAsync(
+  async (req, res, next) => {
+    const authToken = req.eInvoiceAuthToken;
+
+    const dispatch_id = req.params.id;
+    const dispatch_details = await dispatchModel.findById(dispatch_id);
+    // console.log(
+    //   'start dispatch details',
+    //   dispatch_details,
+    //   'end dispatch details'
+    // );
+    if (!dispatch_details) {
+      throw new ApiError('Dispatch details not found', StatusCodes.NOT_FOUND);
+    }
+
+    if (!dispatch_details?.irn_number) {
+      throw new ApiError(
+        'IRN number not found for this dispatch',
+        StatusCodes.BAD_REQUEST
+      );
+    }
+    if (!dispatch_details?.irp) {
+      throw new ApiError(
+        'IRP not found for this dispatch',
+        StatusCodes.BAD_REQUEST
+      );
+    }
+    var {
+      bill_from_address,
+      bill_to_address,
+      dispatch_from_address,
+      ship_to_address,
+    } = dispatch_details?.address;
+
+    // Reference: E-Way Bill sample body structure in the provided image.
+
+    // Example: ewaybill body creation as per input image reference.
+    // Map your dispatch object properties to the fields as required.
+
+    const ewayBillBody = {
+      supplyType: "O", // Outward
+      subSupplyType: "1", // Supply
+      docType: "INV", // Invoice
+      docNo: dispatch_details?.invoice_no,
+      docDate: dispatch_details?.invoice_date_time // format: "DD/MM/YYYY"
+        ? new Date(dispatch_details.invoice_date_time)
+            .toLocaleDateString('en-GB')
+            .split('/')
+            .join('/')
+        : "",
+      fromGstin: bill_from_address?.gstin || "",
+      fromTrdName: bill_from_address?.trade_name || "",
+      fromAddr1: bill_from_address?.address_line1 || "",
+      fromAddr2: bill_from_address?.address_line2 || "",
+      fromPlace: bill_from_address?.city || "",
+      fromPincode: bill_from_address?.pincode || "",
+      fromStateCode: bill_from_address?.state_code || "",
+      toGstin: bill_to_address?.gstin || "",
+      toTrdName: bill_to_address?.trade_name || "",
+      toAddr1: bill_to_address?.address_line1 || "",
+      toAddr2: bill_to_address?.address_line2 || "",
+      toPlace: bill_to_address?.city || "",
+      toPincode: bill_to_address?.pincode || "",
+      toStateCode: bill_to_address?.state_code || "",
+      transactionType: 1,
+      dispatchFromGSTIN: dispatch_from_address?.gstin || undefined,
+      dispatchFromTradeName: dispatch_from_address?.trade_name || undefined,
+      shipToGSTIN: ship_to_address?.gstin || undefined,
+      shipToTradeName: ship_to_address?.trade_name || undefined,
+      shipToAddr1: ship_to_address?.address_line1 || "",
+      shipToAddr2: ship_to_address?.address_line2 || "",
+      shipToPlace: ship_to_address?.city || "",
+      shipToPincode: ship_to_address?.pincode || "",
+      shipToStateCode: ship_to_address?.state_code || "",
+      itemList: (dispatch_details?.items || []).map(item => ({
+        productName: item?.name || "",
+        productDesc: item?.description || "",
+        hsnCode: item?.hsn_code || "",
+        quantity: item?.quantity || 0,
+        qtyUnit: item?.unit || "",
+        cgstRate: item?.cgst_rate || 0,
+        sgstRate: item?.sgst_rate || 0,
+        igstRate: item?.igst_rate || 0,
+        cessRate: item?.cess_rate || 0,
+        taxableAmount: item?.taxable_amount || 0
+      })),
+      totalValue: dispatch_details?.total_value || 0,
+      cgstValue: dispatch_details?.cgst_value || 0,
+      sgstValue: dispatch_details?.sgst_value || 0,
+      igstValue: dispatch_details?.igst_value || 0,
+      cessValue: dispatch_details?.cess_value || 0,
+      totInvValue: dispatch_details?.invoice_value || 0,
+      transporterId: dispatch_details?.transporter_details?.transporter_id || "",
+      transporterName: dispatch_details?.transporter_details?.name || "",
+      transMode: dispatch_details?.transporter_details?.mode || "1",
+      transDistance: dispatch_details?.approx_distance || 0,
+      transDocNo: dispatch_details?.trans_doc_no || "",
+      transDocDate: dispatch_details?.trans_doc_date // format: "DD/MM/YYYY"
+        ? new Date(dispatch_details.trans_doc_date)
+            .toLocaleDateString('en-GB')
+            .split('/')
+            .join('/')
+        : "",
+      vehicleNo: dispatch_details?.vehicle_details?.vehicle_number || "",
+      vehicleType: dispatch_details?.vehicle_details?.vehicle_type || "R"
+    };
+
+    const ewayBillResponse = await axios.post(
+      `${process.env.E_INVOICE_BASE_URL}/ewaybillapi/v1.03/ewayapi/genewaybill?email=${process.env.E_INVOICE_EMAIL_ID}`,
+      ewayBillBody,
+      {
+        headers: {
+          ...EInvoiceHeaderVariable,
+          'auth-token': authToken,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (ewayBillResponse?.data?.status_cd === '1') {
+      // Update dispatch details with IRN number and IRP
+      dispatch_details.dispatch_status = dispatch_status?.cancelled;
+      await dispatch_details.save();
+    } else {
+      // Extracting error details from ewayBillResponse and throwing an error
+      let errorMessage = 'Unknown error occurred';
+
+      const statusDescArr = JSON.parse(ewayBillResponse.data.status_desc);
+      if (Array.isArray(statusDescArr) && statusDescArr.length > 0) {
+        errorMessage = statusDescArr[0]?.ErrorMessage || errorMessage;
+      }
+
+      throw new ApiError(
+        `IRN Cancellation Failed. Error : ${errorMessage}`,
+        StatusCodes.BAD_REQUEST
+      );
+    }
+    // console.log('Irn response', ewayBillResponse, 'Irn response');
+    // Optionally: req.body.irnBody = irnBody
+
+    return res.status(200).json({
+      success: true,
+      message: 'IRN Number Cancelled successfully.',
+      result: ewayBillResponse?.data,
+    });
+  }
+);
+
 //mobile api
 export const fetch_dispatch_details_by_invoice_no = catchAsync(
   async (req, res) => {
