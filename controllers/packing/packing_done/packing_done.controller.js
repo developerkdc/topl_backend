@@ -232,36 +232,8 @@ export const update_packing_details = catchAsync(async (req, res) => {
         .find({ packing_done_other_details_id: id }, { issue_for_packing_id: 1 })
         .session(session);
 
-<<<<<<< HEAD
-    const old_packing_done_item_ids = old_packing_done_items?.map(
-      (item) => item?.issue_for_packing_id
-    );
-
-    const update_existing_packing_done_item_status = await (
-      other_details?.order_category === order_category?.raw
-        ? issue_for_order_model
-        : finished_ready_for_packing_model
-    ).updateMany(
-      { _id: { $in: old_packing_done_item_ids } },
-      {
-        $set: {
-          is_packing_done: false,
-        },
-      },
-      { session }
-    );
-
-    if (
-      !update_existing_packing_done_item_status?.acknowledged ||
-      update_existing_packing_done_item_status.modifiedCount === 0
-    ) {
-      throw new ApiError(
-        'Failed to update issued for packing item status.',
-        StatusCodes.INTERNAL_SERVER_ERROR
-=======
       const old_packing_done_item_ids = old_packing_done_items?.map(
         (item) => item?.issue_for_packing_id
->>>>>>> 0de8fb7bed58b63d126f08ba142d3e70791fd118
       );
 
       const update_existing_packing_done_item_status = await (
@@ -477,40 +449,7 @@ export const update_packing_details = catchAsync(async (req, res) => {
       );
     }
 
-<<<<<<< HEAD
-    const issue_for_packing_set = [
-      ...new Set(
-        packing_done_item_details?.map((item) => item?.issue_for_packing_id)
-      ),
-    ];
-
-    const update_issue_for_order_result = await (
-      other_details?.order_category.toUpperCase() === order_category?.raw
-        ? issue_for_order_model
-        : finished_ready_for_packing_model
-    ).updateMany(
-      { _id: { $in: issue_for_packing_set } },
-      {
-        $set: {
-          is_packing_done: true,
-          updated_by: user._id,
-        },
-      },
-      { session }
-    );
-
-    if (
-      !update_issue_for_order_result?.acknowledged ||
-      update_issue_for_order_result.modifiedCount === 0
-    ) {
-      throw new ApiError(
-        'Failed to update issued for packing item status.',
-        StatusCodes.INTERNAL_SERVER_ERROR
-      );
-    }
-=======
     await session?.commitTransaction();
->>>>>>> 0de8fb7bed58b63d126f08ba142d3e70791fd118
     const response = new ApiResponse(
       StatusCodes.OK,
       'Packing Details Sent for Approval Successfully.',
