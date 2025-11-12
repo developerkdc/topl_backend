@@ -379,8 +379,10 @@ const fetch_machine_details_by_name = async (name, session) => {
 //utility to add inventory invoice data
 const add_inventory_invoice_data = async (doc, session) => {
     const invoice_data = {};
-    // doc.inward_date = moment.parseZone(doc?.inward_date, 'DD/MM/YYYY').toDate();
-doc.inward_date = format_date(doc?.inward_date);
+    console.log("inward_date => ", doc.inward_date)
+    // // doc.inward_date = moment.parseZone(doc?.inward_date, 'DD/MM/YYYY').toDate();
+    doc.inward_date = format_date(doc?.inward_date);
+    doc.inward_date = format_date(doc?.inward_date);
     if (doc.workers_details) {
         invoice_data.workers_details = {
             no_of_workers: doc.workers_details.no_of_workers,
@@ -460,6 +462,7 @@ doc.inward_date = format_date(doc?.inward_date);
             invoice_data[key] = doc[key];
         }
     }
+    console.log("invoice data => ", invoice_data)
     return invoice_data;
 };
 
