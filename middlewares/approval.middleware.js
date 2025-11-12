@@ -5,7 +5,9 @@ export const verifyApproval = function (module, action) {
   return catchAsync(async (req, res, next) => {
     const users = req.userDetails;
     const configurationData = await ApprovalConfigModel.findOne();
+
     const configuration = configurationData?.['configuration'];
+
     req.sendForApproval = false;
     if (configuration?.[module] && configuration?.[module]?.[action]) {
       if (

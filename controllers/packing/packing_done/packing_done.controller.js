@@ -7,7 +7,7 @@ import {
 } from '../../../database/schema/packing/packing_done/packing_done.schema.js';
 import { order_category } from '../../../database/Utils/constants/constants.js';
 import ApiResponse from '../../../utils/ApiResponse.js';
-import { StatusCodes } from '../../../utils/constants.js';
+import { approval_status, StatusCodes } from '../../../utils/constants.js';
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import ApiError from '../../../utils/errors/apiError.js';
@@ -19,6 +19,7 @@ import {
 import path from 'path';
 import { fileURLToPath } from 'url';
 import moment from 'moment';
+import { approval_packing_done_items_model, approval_packing_done_other_details_model } from '../../../database/schema/packing/packing_done/approval.packing_done_schema.js';
 import Handlebars from 'handlebars';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -50,15 +51,28 @@ export const create_packing = catchAsync(async (req, res) => {
   try {
     session.startTransaction();
 
-    // 🔹 Find the latest packing_id and increment it
+    // ✅ Step 1: Ensure all packing_id are treated as numbers
+    // (this prevents the $inc type error)
+    await packing_done_other_details_model.updateMany(
+      { packing_id: { $type: 'string' } },
+      [{ $set: { packing_id: { $toInt: '$packing_id' } } }],
+      { session }
+    );
+
+    // ✅ Step 2: Safely find the latest numeric packing_id and increment it manually
     const lastPacking = await packing_done_other_details_model
       .findOne({}, { packing_id: 1 })
       .sort({ packing_id: -1 })
       .lean()
       .session(session);
 
-    const next_packing_id = lastPacking ? lastPacking.packing_id + 1 : 1;
+    const next_packing_id = lastPacking
+      ? Number(lastPacking.packing_id) + 1
+      : 1;
 
+    console.log('next_packing_id', next_packing_id);
+
+    // ✅ Step 3: Assign next ID safely
     const updated_other_details_payload = {
       ...other_details,
       packing_id: next_packing_id,
@@ -66,11 +80,33 @@ export const create_packing = catchAsync(async (req, res) => {
       updated_by: user._id,
     };
 
-    const [create_packing_done_other_details_result] =
-      await packing_done_other_details_model.create(
-        [updated_other_details_payload],
-        { session }
-      );
+    // ✅ Step 4: Attempt insert; if duplicate, retry once
+    let create_packing_done_other_details_result;
+    try {
+      [create_packing_done_other_details_result] =
+        await packing_done_other_details_model.create(
+          [updated_other_details_payload],
+          { session }
+        );
+    } catch (err) {
+      if (err.code === 11000) {
+        // In rare case of concurrency duplicate, retry with incremented ID
+        const retry_id = next_packing_id + 1;
+        console.warn(
+          `Duplicate packing_id ${next_packing_id}, retrying with ${retry_id}`
+        );
+
+        updated_other_details_payload.packing_id = retry_id;
+
+        [create_packing_done_other_details_result] =
+          await packing_done_other_details_model.create(
+            [updated_other_details_payload],
+            { session }
+          );
+      } else {
+        throw err;
+      }
+    }
 
     if (!create_packing_done_other_details_result) {
       throw new ApiError(
@@ -153,9 +189,10 @@ export const create_packing = catchAsync(async (req, res) => {
 
 export const update_packing_details = catchAsync(async (req, res) => {
   const { id } = req.params;
-
   const { other_details, packing_done_item_details } = req.body;
   const user = req.userDetails;
+  // const send_for_approval = req.sendForApproval;
+  const send_for_approval = true; //for testing it will always be sent for approval
   if (!id) {
     throw new ApiError('Packing ID is required.', StatusCodes.BAD_REQUEST);
   }
@@ -190,10 +227,12 @@ export const update_packing_details = catchAsync(async (req, res) => {
       );
     }
 
-    const old_packing_done_items = await packing_done_items_model
-      .find({ packing_done_other_details_id: id }, { issue_for_packing_id: 1 })
-      .session(session);
+    if (!send_for_approval) {
+      const old_packing_done_items = await packing_done_items_model
+        .find({ packing_done_other_details_id: id }, { issue_for_packing_id: 1 })
+        .session(session);
 
+<<<<<<< HEAD
     const old_packing_done_item_ids = old_packing_done_items?.map(
       (item) => item?.issue_for_packing_id
     );
@@ -211,16 +250,6 @@ export const update_packing_details = catchAsync(async (req, res) => {
       },
       { session }
     );
-    console.log('old_packing_done_item_ids', old_packing_done_item_ids);
-    console.log('order_category:', order_category);
-    console.log('other_details.order_category:', other_details.order_category);
-    console.log(
-      'Model:',
-      other_details?.order_category === order_category?.raw
-        ? 'issue_for_order_model'
-        : 'finished_ready_for_packing_model'
-    );
-    console.log('IDs being updated:', old_packing_done_item_ids);
 
     if (
       !update_existing_packing_done_item_status?.acknowledged ||
@@ -229,77 +258,231 @@ export const update_packing_details = catchAsync(async (req, res) => {
       throw new ApiError(
         'Failed to update issued for packing item status.',
         StatusCodes.INTERNAL_SERVER_ERROR
+=======
+      const old_packing_done_item_ids = old_packing_done_items?.map(
+        (item) => item?.issue_for_packing_id
+>>>>>>> 0de8fb7bed58b63d126f08ba142d3e70791fd118
       );
-    }
 
-    const updated_other_details_payload = {
-      ...other_details,
-      updated_by: user._id,
-    };
-    const update_packing_done_other_details_result =
-      await packing_done_other_details_model.findOneAndUpdate(
-        { _id: id },
-        { $set: updated_other_details_payload },
-        { session, new: true, runValidators: true }
-      );
-    if (!update_packing_done_other_details_result) {
-      throw new ApiError(
-        'Failed to update packing done other details.',
-        StatusCodes.INTERNAL_SERVER_ERROR
-      );
-    }
-
-    const delete_old_packing_done_item_result =
-      await packing_done_items_model.deleteMany(
+      const update_existing_packing_done_item_status = await (
+        other_details?.order_category === order_category?.raw
+          ? issue_for_order_model
+          : finished_ready_for_packing_model
+      ).updateMany(
+        { _id: { $in: old_packing_done_item_ids } },
         {
-          packing_done_other_details_id:
-            update_packing_done_other_details_result?._id,
+          $set: {
+            is_packing_done: false,
+          },
+        },
+        { session }
+      );
+      if (
+        !update_existing_packing_done_item_status?.acknowledged ||
+        update_existing_packing_done_item_status.modifiedCount === 0
+      ) {
+        throw new ApiError(
+          'Failed to update issued for packing item status.',
+          StatusCodes.INTERNAL_SERVER_ERROR
+        );
+      }
+
+      const updated_other_details_payload = {
+        ...other_details,
+        updated_by: user._id,
+      };
+      const update_packing_done_other_details_result =
+        await packing_done_other_details_model.findOneAndUpdate(
+          { _id: id },
+          { $set: updated_other_details_payload },
+          { session, new: true, runValidators: true }
+        );
+      if (!update_packing_done_other_details_result) {
+        throw new ApiError(
+          'Failed to update packing done other details.',
+          StatusCodes.INTERNAL_SERVER_ERROR
+        );
+      }
+
+      const delete_old_packing_done_item_result =
+        await packing_done_items_model.deleteMany(
+          {
+            packing_done_other_details_id:
+              update_packing_done_other_details_result?._id,
+          },
+          { session }
+        );
+
+      if (
+        !delete_old_packing_done_item_result?.acknowledged ||
+        delete_old_packing_done_item_result.deletedCount === 0
+      ) {
+        throw new ApiError(
+          'Failed to delete old packing done item details.',
+          StatusCodes.INTERNAL_SERVER_ERROR
+        );
+      }
+
+      const updated_packing_done_item_details_payload =
+        packing_done_item_details?.map((item) => {
+          return {
+            ...item,
+            packing_done_other_details_id:
+              update_packing_done_other_details_result._id,
+            created_by: user._id,
+            updated_by: user._id,
+          };
+        });
+
+      const create_packing_done_item_details_result =
+        await packing_done_items_model.insertMany(
+          updated_packing_done_item_details_payload,
+          { session }
+        );
+      if (
+        !create_packing_done_item_details_result ||
+        create_packing_done_item_details_result?.length === 0
+      ) {
+        throw new ApiError(
+          'Failed to create packing done item details.',
+          StatusCodes.INTERNAL_SERVER_ERROR
+        );
+      }
+
+      const issue_for_packing_set = [
+        ...new Set(
+          packing_done_item_details?.map((item) => item?.issue_for_packing_id)
+        ),
+      ];
+      console.log(issue_for_packing_set);
+
+      const update_issue_for_order_result = await (
+        other_details?.order_category.toUpperCase() === order_category?.raw
+          ? issue_for_order_model
+          : finished_ready_for_packing_model
+      ).updateMany(
+        { _id: { $in: issue_for_packing_set } },
+        {
+          $set: {
+            is_packing_done: true,
+            updated_by: user._id,
+          },
         },
         { session }
       );
 
-    if (
-      !delete_old_packing_done_item_result?.acknowledged ||
-      delete_old_packing_done_item_result.deletedCount === 0
-    ) {
+      if (
+        !update_issue_for_order_result?.acknowledged ||
+        update_issue_for_order_result.modifiedCount === 0
+      ) {
+        throw new ApiError(
+          'Failed to update issued for packing item status.',
+          StatusCodes.INTERNAL_SERVER_ERROR
+        );
+      }
+      const response = new ApiResponse(
+        StatusCodes.OK,
+        'Packing Items Updated Successfully',
+        {
+          other_details: update_packing_done_other_details_result,
+          item_details: create_packing_done_item_details_result,
+        }
+      );
+      await session.commitTransaction();
+      return res.status(response.statusCode).json(response);
+    }
+    const { _id, createdAt, ...rest_order_details } = other_details;
+    const updated_approval_status = {
+      ...approval_status,
+      sendForApproval: {
+        status: true,
+        remark: 'Approval Pending',
+      },
+    };
+    const updated_approval_other_details_payload = {
+      ...rest_order_details,
+      approval_packing_id: packing_done_other_details?._id,
+      packing_id: packing_done_other_details?.packing_id,
+      sales_item_name: packing_done_other_details?.sales_item_name,
+      approval_status: updated_approval_status,
+      approval: {
+        editedBy: user?._id,
+        approvalPerson: user?.approver_id,
+      },
+      created_by: user?._id,
+      updated_by: user?._id,
+
+    };
+
+    const [add_approval_packing_done_other_deatils_result] = await approval_packing_done_other_details_model.create(
+      [updated_approval_other_details_payload],
+      { session }
+    );
+
+    if (!add_approval_packing_done_other_deatils_result) {
       throw new ApiError(
-        'Failed to delete old packing done item details.',
-        StatusCodes.INTERNAL_SERVER_ERROR
+        'Failed to send for approval',
+        StatusCodes.BAD_REQUEST
       );
     }
 
-    const updated_packing_done_item_details_payload =
-      packing_done_item_details?.map((item) => {
-        return {
-          ...item,
-          packing_done_other_details_id:
-            update_packing_done_other_details_result._id,
-          created_by: user._id,
-          updated_by: user._id,
-        };
+    const update_packing_done_other_details_status_result = await packing_done_other_details_model.updateOne(
+      { _id: packing_done_other_details?._id },
+      {
+        $set: { approval_status: updated_approval_status },
+      },
+      { session }
+    );
+
+    if (update_packing_done_other_details_status_result?.matchedCount === 0) {
+      throw new ApiError(
+        'Packing Details not found for approval',
+        StatusCodes.NOT_FOUND
+      );
+    }
+    if (
+      !update_packing_done_other_details_status_result?.acknowledged ||
+      update_packing_done_other_details_status_result?.modifiedCount === 0
+    ) {
+      throw new ApiError(
+        'Failed to update packing done approval status',
+        StatusCodes.BAD_REQUEST
+      );
+    }
+
+    const updated_item_details = packing_done_item_details?.map((item) => {
+      const { _id, item_id, createdAt, updatedAt, ...rest_item_details } = item;
+      return {
+        ...rest_item_details,
+        approval_packing_done_other_details_id: add_approval_packing_done_other_deatils_result?._id,
+        packing_done_other_details_id: add_approval_packing_done_other_deatils_result?.approval_packing_id,
+        packing_item_id: item_id ? item_id : new mongoose.Types.ObjectId(),
+        created_by: item.created_by ? item?.created_by : user?._id,
+        updated_by: item.updated_by ? item?.updated_by : user?._id,
+      };
+    });
+
+    const add_approval_packing_items_result =
+      await approval_packing_done_items_model.insertMany(updated_item_details, {
+        session,
       });
 
-    const create_packing_done_item_details_result =
-      await packing_done_items_model.insertMany(
-        updated_packing_done_item_details_payload,
-        { session }
-      );
     if (
-      !create_packing_done_item_details_result ||
-      create_packing_done_item_details_result?.length === 0
+      !add_approval_packing_items_result ||
+      add_approval_packing_items_result.length === 0
     ) {
       throw new ApiError(
-        'Failed to create packing done item details.',
-        StatusCodes.INTERNAL_SERVER_ERROR
+        'Failed to add approval packing items',
+        StatusCodes.BAD_REQUEST
       );
     }
 
+<<<<<<< HEAD
     const issue_for_packing_set = [
       ...new Set(
         packing_done_item_details?.map((item) => item?.issue_for_packing_id)
       ),
     ];
-    console.log(issue_for_packing_set);
 
     const update_issue_for_order_result = await (
       other_details?.order_category.toUpperCase() === order_category?.raw
@@ -325,16 +508,18 @@ export const update_packing_details = catchAsync(async (req, res) => {
         StatusCodes.INTERNAL_SERVER_ERROR
       );
     }
+=======
+    await session?.commitTransaction();
+>>>>>>> 0de8fb7bed58b63d126f08ba142d3e70791fd118
     const response = new ApiResponse(
       StatusCodes.OK,
-      'Packing Items Updated Successfully',
+      'Packing Details Sent for Approval Successfully.',
       {
-        other_details: update_packing_done_other_details_result,
-        item_details: create_packing_done_item_details_result,
+        order_details: add_approval_packing_done_other_deatils_result,
+        item_details: add_approval_packing_items_result,
       }
     );
-    await session.commitTransaction();
-    return res.status(response.statusCode).json(response);
+    return res.status(StatusCodes.OK).json(response);
   } catch (error) {
     await session.abortTransaction();
     throw error;
@@ -345,7 +530,7 @@ export const update_packing_details = catchAsync(async (req, res) => {
 
 export const revert_packing_done_items = catchAsync(async (req, res) => {
   const { id } = req.params;
-  const user = req.userDetails;
+  const user = req.user;
 
   if (!id) {
     throw new ApiError('Packing ID is required.', StatusCodes.BAD_REQUEST);
@@ -418,15 +603,6 @@ export const revert_packing_done_items = catchAsync(async (req, res) => {
           .filter((id) => mongoose.Types.ObjectId.isValid(id))
       ),
     ];
-
-    // ✅ Log for debugging (safe to keep or remove)
-    console.log('Updating issue_for_packing IDs:', issue_for_packing_set);
-    console.log(
-      'Target model:',
-      packing_done_other_details?.order_category === order_category?.raw
-        ? 'issue_for_order_model'
-        : 'finished_ready_for_packing_model'
-    );
 
     const update_issue_for_order_result = await (
       packing_done_other_details?.order_category === order_category?.raw
@@ -901,7 +1077,6 @@ export const generatePackingSlip = catchAsync(async (req, res) => {
     .findById(item.packing_done_other_details_id)
     .lean();
 
-  console.log('otherDetails', otherDetails?.sales_item_name);
   if (!otherDetails) {
     return res
       .status(404)
@@ -944,8 +1119,6 @@ export const generatePackingSlip = catchAsync(async (req, res) => {
 
   const item_summary = Object.values(summaryMap);
 
-  console.log('item_summary', item_summary);
-
   const itemsWithExtraFields = allItems.map((i) => ({
     ...i,
     photo_no: otherDetails.photo_no || '',
@@ -953,9 +1126,9 @@ export const generatePackingSlip = catchAsync(async (req, res) => {
     sales_item_name: otherDetails?.order_category.includes('RAW')
       ? i?.item_name
       : otherDetails.sales_item_name,
-    bundle_no: otherDetails.bundle_no,
-    bundle_description: otherDetails.bundle_description,
-    total_no_of_bundles: otherDetails.total_no_of_bundles,
+    // bundle_no: otherDetails.bundle_no,
+    // bundle_description: otherDetails.bundle_description,
+    // total_no_of_bundles: otherDetails.total_no_of_bundles,
   }));
 
   let customer_name = '';
@@ -1003,8 +1176,6 @@ export const generatePackingSlip = catchAsync(async (req, res) => {
     sales_item_name: otherDetails.sales_item_name || '',
     order_category: otherDetails.order_category,
   };
-
-  console.log('otherDetails', otherDetails);
 
   const pdfBuffer = await generatePackingPDF({
     templateName: 'packing_slip',

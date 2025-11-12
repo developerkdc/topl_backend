@@ -39,6 +39,7 @@ import {
 import moment from 'moment';
 import dispatchModel from '../../../../database/schema/dispatch/dispatch.schema.js';
 import dispatchItemsModel from '../../../../database/schema/dispatch/dispatch_items.schema.js';
+import { customer_model } from '../../../../database/schema/masters/customer.schema.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -68,6 +69,73 @@ const issued_from_issue_for_map = {
   [item_issued_from?.polishing_factory]: issue_for_polishing_view_model,
 };
 
+export const packing_customer_name_list = catchAsync(async (req, res, next) => {
+  const unfinishedPackingOwners = await finished_ready_for_packing_model.aggregate([
+    {
+      $match: {
+        is_packing_done: false,
+      },
+    },
+    {
+      $lookup: {
+        from: 'orders',
+        localField: 'order_id',
+        foreignField: '_id',
+        as: 'order_details',
+        pipeline: [
+          {
+            $project: {
+              owner_name: 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $unwind: {
+        path: '$order_details',
+        preserveNullAndEmptyArrays: false,
+      },
+    },
+    {
+      $group: {
+        _id: '$order_details.owner_name',
+      },
+    },
+  ]);
+
+  const ownerNames = unfinishedPackingOwners.map((item) => item._id).filter(Boolean);
+
+  const customerList = await customer_model.aggregate([
+    {
+      $match: {
+        status: true,
+        company_name: { $in: ownerNames },
+      },
+    },
+    {
+      $project: {
+        company_name: 1,
+        gst_number: 1,
+        pan_number: 1,
+        branding_type: 1,
+        credit_schedule: 1,
+        freight: 1,
+        local_freight: 1,
+      },
+    },
+    { $sort: { company_name: 1 } },
+  ]);
+
+  const response = new ApiResponse(
+    200,
+    'Customer list for unfinished packing fetched successfully',
+    customerList
+  );
+
+  return res.status(200).json(response);
+});
+
 export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
   const {
     issued_sheets,
@@ -80,7 +148,7 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
     order_number,
     order_item_no,
     sales_item_name,
-    order_category
+    order_category,
   } = req.body;
 
   const user = req.userDetails;
@@ -183,7 +251,7 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
               $project: {
                 _id: 1,
                 item_no: 1,
-                sales_item_name: 1
+                sales_item_name: 1,
               },
             },
           ],
@@ -242,17 +310,22 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
         pressing_done_details?.pressing_details?._id,
       order_id:
         pressing_done_details?.order_id ||
-        pressing_done_details?.pressing_details?.order_id || order_id,
+        pressing_done_details?.pressing_details?.order_id ||
+        order_id,
       order_item_id:
         pressing_done_details?.order_item_id ||
-        pressing_done_details?.pressing_details?.order_item_id || order_item_id,
-      order_number: pressing_done_details?.order_details?.order_no || order_number,
+        pressing_done_details?.pressing_details?.order_item_id ||
+        order_item_id,
+      order_number:
+        pressing_done_details?.order_details?.order_no || order_number,
       order_item_no:
         pressing_done_details?.series_items?.[0]?.item_no ||
-        pressing_done_details?.decorative_items?.[0]?.item_no || order_item_no,
+        pressing_done_details?.decorative_items?.[0]?.item_no ||
+        order_item_no,
       sales_item_name:
         pressing_done_details?.series_items?.[0]?.sales_item_name ||
-        pressing_done_details?.decorative_items?.[0]?.sales_item_name || sales_item_name,
+        pressing_done_details?.decorative_items?.[0]?.sales_item_name ||
+        sales_item_name,
       group_no:
         pressing_done_details?.group_no ||
         pressing_done_details?.pressing_details?.group_no,
@@ -270,7 +343,8 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
         pressing_done_details?.pressing_details?.thickness,
       order_category:
         pressing_done_details?.order_category ||
-        pressing_done_details?.order_details?.order_category || order_category,
+        pressing_done_details?.order_details?.order_category ||
+        order_category,
       product_type:
         pressing_done_details?.product_type ||
         pressing_done_details?.pressing_details?.product_type,
@@ -351,14 +425,18 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
       pressing_details_id: pressing_done_details?._id,
       order_id:
         pressing_done_details?.order_id ||
-        pressing_done_details?.order_details?._id || order_id,
+        pressing_done_details?.order_details?._id ||
+        order_id,
       order_item_id:
         pressing_done_details?.order_item_id ||
-        pressing_done_details?.order_item_details?._id || order_item_id,
-      order_number: pressing_done_details?.order_details?.order_no || order_number,
+        pressing_done_details?.order_item_details?._id ||
+        order_item_id,
+      order_number:
+        pressing_done_details?.order_details?.order_no || order_number,
       order_item_no:
         pressing_done_details?.series_items?.[0]?.item_no ||
-        pressing_done_details?.decorative_items?.[0]?.item_no || order_item_no,
+        pressing_done_details?.decorative_items?.[0]?.item_no ||
+        order_item_no,
       group_no:
         pressing_done_details?.group_no ||
         pressing_done_details?.pressing_details?.group_no,
@@ -382,7 +460,8 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
         pressing_done_details?.pressing_details?.product_type,
       order_category:
         pressing_done_details?.order_category ||
-        pressing_done_details?.pressing_details?.order_category || order_category,
+        pressing_done_details?.pressing_details?.order_category ||
+        order_category,
       issued_from: item_issued_from,
       issued_for: item_issued_for?.order,
       issued_for_id: add_finished_ready_for_packing_result?._id,
@@ -496,7 +575,7 @@ export const fetch_all_finished_ready_for_packing = catchAsync(
         ],
       },
     };
-   
+
     const aggCreatedByLookup = {
       $lookup: {
         from: 'users',
@@ -816,9 +895,9 @@ export const fetch_issue_for_packing_items_by_customer_and_order_category =
       },
       {
         $unwind: {
-          path:'$grouping_details',
+          path: '$grouping_details',
           preserveNullAndEmptyArrays: true,
-        }
+        },
       },
       { $match: match_query },
     ];
@@ -836,7 +915,6 @@ export const fetch_issue_for_packing_items_by_customer_and_order_category =
     );
     return res.status(response.statusCode).json(response);
   });
-
 
 export const generatePackingInvoiceBillPDF = catchAsync(async (req, res) => {
   const { id } = req.params;

@@ -9,6 +9,7 @@ import {
   getPreviousRate,
 } from '../../../controllers/order/decorative_order/decorative_order.controller.js';
 import AuthMiddleware from '../../../middlewares/verifyToken.js';
+import { verifyApproval } from '../../../middlewares/approval.middleware.js';
 
 const decorativeOrderRouter = express.Router();
 
@@ -16,6 +17,7 @@ decorativeOrderRouter.post('/add-order', AuthMiddleware, add_decorative_order);
 decorativeOrderRouter.post(
   '/update-order/:order_details_id',
   AuthMiddleware,
+  verifyApproval('order', 'edit'),
   update_decorative_order
 );
 decorativeOrderRouter.post(

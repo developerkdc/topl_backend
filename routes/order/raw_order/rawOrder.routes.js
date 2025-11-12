@@ -16,7 +16,7 @@ rawOrderRouter.post('/add-raw-order', AuthMiddleware, add_raw_order);
 rawOrderRouter.post(
   '/update-raw-order/:order_details_id',
   AuthMiddleware,
-  // verifyApproval('raw', 'edit'),//need to add approval for raw order edit
+  verifyApproval('order', 'edit'),//need to add approval for raw order edit
   update_raw_order
 );
 rawOrderRouter.post(
