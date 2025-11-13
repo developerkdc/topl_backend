@@ -315,6 +315,22 @@ const dispatchSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    total_gst_amt: {
+      type: Number,
+      default: 0,
+    },
+    total_cgst_amt: {
+      type: Number,
+      default: 0,
+    },
+    total_sgst_amt: {
+      type: Number,
+      default: 0,
+    },
+    total_igst_amt: {
+      type: Number,
+      default: 0,
+    },
     freight_amount: {
       type: Number,
       default: 0,
