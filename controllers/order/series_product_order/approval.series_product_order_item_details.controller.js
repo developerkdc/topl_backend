@@ -3,7 +3,6 @@ import { create_series_product_order_approval_report } from '../../../config/dow
 import { order_status } from '../../../database/Utils/constants/constants.js';
 import photoModel from '../../../database/schema/masters/photo.schema.js';
 import salesItemNameModel from '../../../database/schema/masters/salesItemName.schema.js';
-import { approval_decorative_order_item_details_model } from '../../../database/schema/order/decorative_order/approval.decorative_order_item_details.schema.js';
 import { orders_approval_model } from '../../../database/schema/order/orders.approval.schema.js';
 import { OrderModel } from '../../../database/schema/order/orders.schema.js';
 import approval_series_product_order_item_details_model from '../../../database/schema/order/series_product_order/approval.series_product_order_item_details.schema.js';
@@ -557,7 +556,7 @@ export const approve_order = catchAsync(async (req, res) => {
         }
 
         const existing_series_product_order_items =
-            await approval_decorative_order_item_details_model
+            await series_product_order_item_details_model
                 .find({ order_id: order_id })
                 .session(session)
                 .lean();
@@ -586,7 +585,6 @@ export const approve_order = catchAsync(async (req, res) => {
                 );
             }
         };
-
         for (const item of existing_series_product_order_items) {
             if (item.photo_number && item.photo_number_id) {
                 await revert_photo_details(
@@ -645,7 +643,6 @@ export const approve_order = catchAsync(async (req, res) => {
                     item.photo_number,
                     item.no_of_sheets
                 );
-                console.log("updated_photo_details => ", updated_photo_details)
                 if (item?.sales_item_name) {
                     const upperCaseName = item.sales_item_name.toUpperCase();
 
@@ -689,7 +686,7 @@ export const approve_order = catchAsync(async (req, res) => {
                 approval_order_id: null,
                 decorative_item_id: null,
                 order_id: order_approval?.order_id,
-                product_category: `${order_approval?.product_category} ${item.base_type}`,
+                product_category: order_approval?.product_category,
                 created_by: item.created_by ? item?.created_by : user?._id,
                 updated_by: user?._id,
                 createdAt: item.createdAt ? item?.createdAt : new Date(),

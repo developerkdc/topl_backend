@@ -89,7 +89,7 @@ export const editSeries = catchAsync(async (req, res) => {
 });
 
 export const listSeriesDetails = catchAsync(async (req, res) => {
-  const { query, sortField, sortOrder, page, limit } = req.query;
+  const { query, sortField = "updatedAt", sortOrder = "desc", page = 1, limit = 10 } = req.query;
   const {
     string,
     boolean,
@@ -156,12 +156,10 @@ export const listSeriesDetails = catchAsync(async (req, res) => {
   //   pipeline.push({ $sort: sortObj });
   // }
   const allDetails = await seriesModel.aggregate(pipeline);
-  if (allDetails.length === 0) {
-    return res.json(new ApiResponse(StatusCodes.OK, 'NO Data found...'));
-  }
-
   const totalDocs = await seriesModel.countDocuments({ ...searchQuery });
-  const totalPage = Math.ceil(totalDocs / limitInt);
+  // const totalPage = Math.ceil(totalDocs / limitInt);
+  const totalPage = totalDocs > 0 ? Math.ceil(totalDocs / limitInt) : 1;
+
   return res.json(
     new ApiResponse(StatusCodes.OK, 'All Details fetched succesfully..', {
       allDetails,
@@ -175,8 +173,8 @@ export const DropdownSeriesNameMaster = catchAsync(async (req, res) => {
 
   const searchQuery = type
     ? {
-        $or: [{ series_name: { $regex: type, $options: 'i' } }],
-      }
+      $or: [{ series_name: { $regex: type, $options: 'i' } }],
+    }
     : {};
 
   const list = await seriesModel.aggregate([
