@@ -20,7 +20,7 @@ const EInvoiceAuthMiddleware = async (req, res, next) => {
     const { data } = await axios.get(authURl, {
       headers: EInvoiceHeaderVariable,
     });
-    console.log(data, 'sdfy');
+    // console.log(data, 'sdfy');
     if (data.status_cd == '0') {
       return res.status(401).json({
         result: null,
