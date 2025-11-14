@@ -234,6 +234,9 @@ export const update_packing_details = catchAsync(async (req, res) => {
       const old_packing_done_item_ids = old_packing_done_items?.map(
         (item) => item?.issue_for_packing_id
       );
+      // const old_packing_done_item_ids = old_packing_done_items?.map(
+      //   (item) => item?.issue_for_packing_id
+      // );
 
       const update_existing_packing_done_item_status = await (
         other_details?.order_category === order_category?.raw
@@ -446,8 +449,6 @@ export const update_packing_details = catchAsync(async (req, res) => {
         StatusCodes.BAD_REQUEST
       );
     }
-
-
     const response = new ApiResponse(
       StatusCodes.OK,
       'Packing Details Sent for Approval Successfully.',
@@ -456,6 +457,7 @@ export const update_packing_details = catchAsync(async (req, res) => {
         item_details: add_approval_packing_items_result,
       }
     );
+    await session.commitTransaction()
     return res.status(StatusCodes.OK).json(response);
   } catch (error) {
     await session.abortTransaction();
@@ -467,7 +469,8 @@ export const update_packing_details = catchAsync(async (req, res) => {
 
 export const revert_packing_done_items = catchAsync(async (req, res) => {
   const { id } = req.params;
-  const user = req.user;
+  const user = req.userDetails;
+
 
   if (!id) {
     throw new ApiError('Packing ID is required.', StatusCodes.BAD_REQUEST);

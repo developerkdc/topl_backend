@@ -384,6 +384,36 @@ export const listing_issued_for_polishing = catchAsync(
       $limit: parseInt(limit),
     };
 
+    const orderItems = [
+      {
+        $lookup: {
+          from: 'series_product_order_item_details',
+          localField: 'order_item_id',
+          foreignField: '_id',
+          as: 'series_items',
+        },
+      },
+      {
+        $lookup: {
+          from: 'decorative_order_item_details',
+          localField: 'order_item_id',
+          foreignField: '_id',
+          as: 'decorative_items',
+        },
+      },
+      {
+        $addFields: {
+          order_item_details: {
+            $cond: {
+              if: { $gt: [{ $size: '$series_items' }, 0] },
+              then: { $arrayElemAt: ['$series_items', 0] },
+              else: { $arrayElemAt: ['$decorative_items', 0] },
+            },
+          },
+        },
+      },
+    ];
+
     const listAggregate = [
       aggCommonMatch,
       aggCreatedByLookup,
@@ -391,6 +421,7 @@ export const listing_issued_for_polishing = catchAsync(
       aggUpdatedByLookup,
       aggUpdatedByUnwind,
       aggMatch,
+      ...orderItems,
       aggSort,
       aggSkip,
       aggLimit,

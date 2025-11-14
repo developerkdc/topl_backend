@@ -155,6 +155,36 @@ export const listing_bunito_damage = catchAsync(async (req, res) => {
     $limit: parseInt(limit),
   };
 
+  const orderItems = [
+    {
+      $lookup: {
+        from: 'series_product_order_item_details',
+        localField: 'issue_for_bunito_details.order_item_id',
+        foreignField: '_id',
+        as: 'series_items',
+      },
+    },
+    {
+      $lookup: {
+        from: 'decorative_order_item_details',
+        localField: 'issue_for_bunito_details.order_item_id',
+        foreignField: '_id',
+        as: 'decorative_items',
+      },
+    },
+    {
+      $addFields: {
+        order_item_details: {
+          $cond: {
+            if: { $gt: [{ $size: '$series_items' }, 0] },
+            then: { $arrayElemAt: ['$series_items', 0] },
+            else: { $arrayElemAt: ['$decorative_items', 0] },
+          },
+        },
+      },
+    },
+  ];
+
   const listAggregate = [
     aggLookupBunitoDoneDetails,
     aggUnwindCncDoneDetails,
@@ -165,6 +195,7 @@ export const listing_bunito_damage = catchAsync(async (req, res) => {
     aggUpdatedByLookup,
     aggUpdatedByUnwind,
     aggMatch,
+    ...orderItems,
     aggSort,
     aggSkip,
     aggLimit,
@@ -231,8 +262,10 @@ export const add_bunito_damage = catchAsync(async (req, res) => {
     );
 
     const damage_amount = Number(
-      ((damage_sheets / bunito_done_details?.available_details?.no_of_sheets) *
-        bunito_done_details?.available_details?.amount)?.toFixed(2)
+      (
+        (damage_sheets / bunito_done_details?.available_details?.no_of_sheets) *
+        bunito_done_details?.available_details?.amount
+      )?.toFixed(2)
     );
 
     const [maxSrNo] = await bunito_damage_model.aggregate([
@@ -411,7 +444,6 @@ export const revert_damage_to_bunito_done = catchAsync(async (req, res) => {
     await session.endSession();
   }
 });
-
 
 // BUnito Damage excel api
 export const download_excel_bunito_damage = catchAsync(async (req, res) => {
