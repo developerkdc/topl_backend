@@ -716,3 +716,202 @@ export const listing_single_challan = catchAsync(async (req, res, next) => {
   );
   return res.status(StatusCodes.OK).json(response);
 });
+
+export const generate_challan_ewaybill = catchAsync(async (req, res, next) => {
+  // Similar to generate_ewaybill in dispatch.controller.js but for challan
+  const challan_id = req.params.id;
+
+  if (!challan_id) {
+    throw new ApiError('Challan ID is missing.', StatusCodes.NOT_FOUND);
+  }
+  if (!isValidObjectId(challan_id)) {
+    throw new ApiError('Invalid Challan ID', StatusCodes.BAD_REQUEST);
+  }
+
+  const challan_details = await challan_done_model.findById(challan_id);
+  if (!challan_details) {
+    throw new ApiError('Challan details not found', StatusCodes.NOT_FOUND);
+  }
+
+  // You may need to fetch items of this challan if needed, e.g.
+  // const challan_items = await challanItemsModel.find({ challan_id });
+
+  // Adapted payload (structure may vary based on schema and requirements)
+  // Align this payload based on your challan format and the EwayBill API docs.
+  const {
+    challan_no,
+    challan_date,
+    customer_details,
+    transporter_details,
+    vehicle_details,
+    items = [],
+    total_amount,
+    base_amount_without_gst,
+    transaction_type,
+    approx_distance,
+    address = {}
+  } = challan_details;
+
+  let {
+    bill_from_address,
+    bill_to_address,
+    dispatch_from_address,
+    ship_to_address,
+  } = address;
+
+  // Transaction type mapping may differ for challan. Adjust if needed.
+  let transType = 1; // replace with correct logic if needed
+
+  const ewayBillBody = {
+    supplyType: "O", // Outward
+    subSupplyType: "4", // Supply; adjust if challan sub supply different
+    subSupplyDesc: "",
+    docType: "CHL", // CHL for challan, assuming this is correct for challan ewaybill
+    docNo: challan_no,
+    docDate: challan_date ? moment(challan_date).format('DD/MM/YYYY') : "",
+    // seller/biller details
+    fromGstin: process.env.CHALLAN_FROM_GSTIN || "",
+    fromTrdName: process.env.CHALLAN_FROM_TRADE_NAME || "",
+    fromAddr1:
+      dispatch_from_address?.address && dispatch_from_address.address.length > 50
+        ? dispatch_from_address.address.slice(0, 50)
+        : dispatch_from_address?.address || '',
+    fromAddr2:
+      dispatch_from_address?.address && dispatch_from_address.address.length > 50
+        ? dispatch_from_address.address.slice(50)
+        : '',
+    fromPlace: dispatch_from_address?.city || '',
+    fromPincode: Number(dispatch_from_address?.pincode) || '',
+    fromStateCode: getStateCode(dispatch_from_address?.state),
+    actFromStateCode: getStateCode(dispatch_from_address?.state),
+    dispatchFromGSTIN: process.env.CHALLAN_FROM_GSTIN || "",
+    dispatchFromTradeName: process.env.CHALLAN_FROM_TRADE_NAME || "",
+    // buyer/recipient details
+    toGstin: customer_details?.gst_number || '',
+    toTrdName: customer_details?.legal_name || customer_details?.company_name || '',
+    toAddr1:
+      ship_to_address?.address && ship_to_address.address.length > 50
+        ? ship_to_address.address.slice(0, 50)
+        : ship_to_address?.address || '',
+    toAddr2:
+      ship_to_address?.address && ship_to_address.address.length > 50
+        ? ship_to_address.address.slice(50)
+        : '',
+    toPlace: ship_to_address?.city || '',
+    toPincode: Number(ship_to_address?.pincode) || '',
+    toStateCode: getStateCode(ship_to_address?.state),
+    actToStateCode: getStateCode(ship_to_address?.state),
+    shipToGSTIN: customer_details?.gst_number || '',
+    shipToTradeName: customer_details?.legal_name || customer_details?.company_name || '',
+    // transport details
+    transactionType: transType,
+    transMode: challan_details?.transport_mode?.id,
+    transporterId: transporter_details?.transport_id,
+    transDistance: approx_distance?.toString() || '',
+    transporterName: transporter_details?.name,
+    transDocNo: challan_details?.trans_doc_no,
+    transDocDate: challan_details?.trans_doc_date
+      ? moment(challan_details.trans_doc_date).format('DD/MM/YYYY')
+      : "",
+    vehicleNo: vehicle_details?.[0]?.vehicle_number,
+    vehicleType: "R",
+
+    itemList: (items || []).map((item) => ({
+      hsnCode: item?.hsn_code || '',
+      productName: item?.product_name || '',
+      productDesc: item?.product_desc || '',
+      quantity: item?.quantity || 0,
+      qtyUnit: item?.unit || 'NOS',
+      cgstRate: item?.gst_details?.cgst_percentage || 0,
+      sgstRate: item?.gst_details?.sgst_percentage || 0,
+      igstRate: item?.gst_details?.igst_percentage || 0,
+      taxableAmount: item?.discount_amount || 0,
+    })),
+    totalValue: base_amount_without_gst || 0,
+    cgstValue: (items || []).reduce((sum, item) => sum + (item?.gst_details?.cgst_amount || 0), 0),
+    sgstValue: (items || []).reduce((sum, item) => sum + (item?.gst_details?.sgst_amount || 0), 0),
+    igstValue: (items || []).reduce((sum, item) => sum + (item?.gst_details?.igst_amount || 0), 0),
+    totInvValue: total_amount || 0,
+  };
+
+  console.log('Challan ewayBillBody', ewayBillBody);
+
+  const ewayBillResponse = await axios.post(
+    `${process.env.E_INVOICE_BASE_URL}/ewaybillapi/v1.03/ewayapi/genewaybill?email=${process.env.EWAY_BILL_EMAIL_ID}`,
+    ewayBillBody,
+    {
+      headers: {
+        ...EwayBillHeaderVariable,
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+
+  console.log('Challan ewayBillResponse', ewayBillResponse.data);
+
+  if (ewayBillResponse?.data?.status_cd === '1') {
+    challan_details.eway_bill_no = ewayBillResponse?.data?.data?.EwbNo;
+    challan_details.eway_bill_date = ewayBillResponse?.data?.data?.EwbDt;
+    await challan_details.save();
+  } else {
+    let errorMessage = 'Unknown error occurred';
+    const error = ewayBillResponse?.data?.error;
+
+    if (error && typeof error === 'object' && error.message) {
+      const message = error.message;
+      const arrayMatch = message.match(/\[(.*?)\]/);
+      if (arrayMatch?.[1]) {
+        const errors = arrayMatch[1].split(/, #\//);
+        if (errors.length > 0) {
+          let firstError = errors[0].trim();
+          if (firstError.startsWith('#/')) {
+            firstError = firstError.substring(2);
+          }
+          errorMessage = firstError;
+        } else {
+          errorMessage = message;
+        }
+      } else {
+        try {
+          const parsedError = JSON.parse(message);
+          if (parsedError?.errorCodes) {
+            const errorCode = parsedError.errorCodes.split(',')[0]?.trim();
+            if (errorCode) {
+              const errorCodeMap = {};
+              if (
+                errorCodeMapForEwayBill &&
+                Array.isArray(errorCodeMapForEwayBill)
+              ) {
+                for (const e of errorCodeMapForEwayBill) {
+                  errorCodeMap[e.errorCode] = e.errorDesc;
+                }
+              }
+              errorMessage =
+                errorCodeMap[errorCode] ||
+                `Eway Bill API Error. Error Code: ${errorCode}`;
+            } else {
+              errorMessage = message;
+            }
+          } else {
+            const singleMatch = message.match(/#\/(.+)/);
+            errorMessage = singleMatch?.[1]?.trim() || message;
+          }
+        } catch {
+          const singleMatch = message.match(/#\/(.+)/);
+          errorMessage = singleMatch?.[1]?.trim() || message;
+        }
+      }
+    }
+
+    throw new ApiError(
+      `Eway Bill Generation Failed for Challan. Error : ${errorMessage}`,
+      StatusCodes.BAD_REQUEST
+    );
+  }
+
+  return res.status(200).json({
+    success: true,
+    message: 'Challan EWay Bill generated successfully.',
+    result: ewayBillResponse?.data,
+  });
+});
