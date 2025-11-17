@@ -46,6 +46,160 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
     const removalDateTime = dispatchDetails.removal_of_good_date_time;
     const removalDate = removalDateTime ? moment(removalDateTime).format("DD-MM-YYYY") : null;
     const removalTime = removalDateTime ? moment(removalDateTime).format("HH:mm:ss") : null;
+    // GROUP ITEMS LIKE THE IMAGE
+    const groupedItems = {};
+
+    (dispatchDetails.dispatch_items_details || []).forEach(item => {
+        const groupName = item.product_category || "Others"; 
+
+        if (!groupedItems[groupName]) {
+            groupedItems[groupName] = {
+                group_name: groupName,
+                hsn: item.hsn_code || "",
+                items: []
+            };
+        }
+
+        groupedItems[groupName].items.push({
+            sales_item_name: item.sales_item_name,
+            size: `${item.length}x${item.width}`,
+            sheets: item.no_of_sheets,
+            total_sheets: item.no_of_sheets || item.no_of_sheets,
+            sqm: item.sqm,
+            rate: item.rate,
+            taxable_value: Number(item.discount_amount).toFixed(2),
+        });
+    });
+
+    const summaryMap = {};   
+
+    (dispatchDetails.dispatch_items_details || []).forEach(item => {
+
+        const gst = item.gst_details || {};
+        const cat = item.product_category || "Others";
+
+        if (!summaryMap[cat]) {
+            summaryMap[cat] = {
+                series: cat,
+                sheet: 0,
+                qty_total: 0,
+                qty_sqm: 0,
+                unit: item.calculate_unit,   
+                value: 0,
+                discount: 0,
+                taxable_value: 0,
+                gst_rate: gst.gst_percentage || gst.igst_percentage || 0,              
+                cgst: 0,
+                sgst: 0,
+                igst: 0,
+            };
+        }
+
+        summaryMap[cat].sheet += Number(item.no_of_sheets || 0);
+        summaryMap[cat].qty_total += Number(item.no_of_sheets || 0);
+        summaryMap[cat].qty_sqm += Number(item.sqm || 0);
+
+        summaryMap[cat].value += Number(item.rate || 0);
+        summaryMap[cat].discount += Number(item.discount_amount || 0);
+
+        summaryMap[cat].taxable_value += Number(item.final_row_amount || item.final_amount || 0);
+
+        summaryMap[cat].cgst += Number(gst.cgst_amount || 0);
+        summaryMap[cat].sgst += Number(gst.sgst_amount || 0);
+        summaryMap[cat].igst += Number(gst.igst_amount || 0);
+    });
+ 
+    const summaryRows = Object.values(summaryMap).map(row => ({
+        ...row,
+        value: row.value.toFixed(2),
+        discount: row.discount.toFixed(2),
+        taxable_value: row.taxable_value.toFixed(2),
+        cgst: row.cgst.toFixed(2),
+        sgst: row.sgst.toFixed(2),
+        igst: row.igst.toFixed(2),
+    }));
+
+    const insurance = dispatchDetails.insurance_details || {};
+    const freight = dispatchDetails.freight_details || {};
+    const other = dispatchDetails.other_amount_details || {};
+
+ 
+    summaryRows.push({
+        series: "Insurance",
+        sheet: 0,
+        qty_total: 0,
+        qty_sqm: 0,
+        unit: "OTHER",
+
+        value: 0,
+        discount: 0,
+
+        taxable_value: Number(insurance.insurance_amount || 0).toFixed(2),
+
+        gst_rate: insurance.insurance_gst_rate || 18,
+
+        cgst: Number(insurance.insurance_cgst_amt || 0).toFixed(2),
+        sgst: Number(insurance.insurance_sgst_amt || 0).toFixed(2),
+        igst: Number(insurance.insurance_igst_amt || 0).toFixed(2),
+    });
+
+    // FREIGHT ROW
+    summaryRows.push({
+        series: "Freight",
+        sheet: 0,
+        qty_total: 0,
+        qty_sqm: 0,
+        unit: "OTHER",
+
+        value: 0,
+        discount: 0,
+
+        taxable_value: Number(freight.freight_amount || 0).toFixed(2),
+
+        gst_rate: freight.freight_gst_rate || 18,
+
+        cgst: Number(freight.freight_cgst_amt || 0).toFixed(2),
+        sgst: Number(freight.freight_sgst_amt || 0).toFixed(2),
+        igst: Number(freight.freight_igst_amt || 0).toFixed(2),
+    });
+
+    // OTHER CHARGES ROW
+    summaryRows.push({
+        series: "Other Charges",
+        sheet: 0,
+        qty_total: 0,
+        qty_sqm: 0,
+        unit: "OTHER",
+
+        value: 0,
+        discount: 0,
+
+        taxable_value: Number(other.other_amount || 0).toFixed(2),
+
+        gst_rate: other.other_gst_rate || 18,
+
+        cgst: Number(other.other_cgst_amt || 0).toFixed(2),
+        sgst: Number(other.other_sgst_amt || 0).toFixed(2),
+        igst: Number(other.other_igst_amt || 0).toFixed(2),
+    });
+
+
+    // TOTALS (unchanged except rounding fields)
+    const summaryTotals = {
+        sheet: summaryRows.reduce((sum, r) => sum + Number(r.sheet || 0), 0),
+        qty_total: summaryRows.reduce((sum, r) => sum + Number(r.qty_total || 0), 0),
+        qty_sqm: summaryRows.reduce((sum, r) => sum + Number(r.qty_sqm || 0), 0),
+
+        value: summaryRows.reduce((sum, r) => sum + Number(r.value || 0), 0),
+
+        discount: Number(summaryRows.reduce((sum, r) => sum + Number(r.discount || 0), 0)).toFixed(2),
+        taxable_value: Number(summaryRows.reduce((sum, r) => sum + Number(r.taxable_value || 0), 0)).toFixed(2),
+
+        cgst: Number(summaryRows.reduce((sum, r) => sum + Number(r.cgst || 0), 0)).toFixed(2),
+        sgst: Number(summaryRows.reduce((sum, r) => sum + Number(r.sgst || 0), 0)).toFixed(2),
+        igst: Number(summaryRows.reduce((sum, r) => sum + Number(r.igst || 0), 0)).toFixed(2),
+    };
+
 
     const pdfData = {
         headerUrl: "https://example.com/header.png", // your logo/header
@@ -61,18 +215,22 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
         goods_removal_time: removalTime,
         vehicle_details: dispatchDetails.vehicle_details,
         vehicle_number: dispatchDetails.vehicle_details?.map(v => v.vehicle_number) || [],
-        item_summary: dispatchDetails.dispatch_items_details?.map(item => ({
-            item_name: item.item_name,
-            sales_item_name: item.sales_item_name,
-            length: item.length,
-            width: item.width,
-            size: `${item.length} x ${item.width}`,
-            sheets: item.sheets,
-            sqm: item.sqm,
-            rate: item.rate,
-            taxable_value: item.final_row_amount,
-        })) || [],
+        // item_summary: dispatchDetails.dispatch_items_details?.map(item => ({
+        //     item_name: item.item_name,
+        //     sales_item_name: item.sales_item_name,
+        //     length: item.length,
+        //     width: item.width,
+        //     size: `${item.length} x ${item.width}`,
+        //     sheets: item.sheets,
+        //     sqm: item.sqm,
+        //     rate: item.rate,
+        //     taxable_value: item.final_row_amount,
+        // })) || [],
+        grouped_items: Object.values(groupedItems),
+        summary_rows: summaryRows,
+        summary_totals: summaryTotals,
         basic_amount: dispatchDetails.total_base_amount,
+        base_amount_without_gst: dispatchDetails.base_amount_without_gst,
         insurance: dispatchDetails.insurance_amount,
         freight: dispatchDetails.freight_amount,
         total: dispatchDetails.total_amount_with_expenses,

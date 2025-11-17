@@ -85,6 +85,12 @@
       margin: 10px 0;
     }
 
+    .keep-together {
+      break-inside: avoid;
+      page-break-inside: avoid;
+      break-before: avoid;
+    }
+
     .page-footer {
       position: fixed;
       bottom: 0;
@@ -92,7 +98,7 @@
       right: 0;
       margin-left: 10px;
       margin-right: 10px;
-      height: 335px;
+      height: 305px;
       /* footer height */
       background: #fff;
       border-top: 1px solid #000;
@@ -107,16 +113,16 @@
       text-align: left;
     }
 
-    .page-header{
+    .page-header {
       margin-top: 10px;
     }
 
     @media print {
       @page {
         size: A4;
-        margin: 366px 10px 351px 10px;
+        margin: 366px 10px 301px 10px; 
         /*   top    right   bottom  left   */
-
+        /*change the margin to adjust height */
         @top-center {
           content: element(page-header);
         }
@@ -166,204 +172,411 @@
     </div>
 
     <div class="info-section no-break"
-      style="display:flex; margin:10px 0; border-right: 1px solid #000; border-left: 1px solid #000; border-bottom: 1px solid #000; text-align: left;  margin:0; padding: 0;">
-      <div class="info-box" style="display:flex; gap:20px; padding:10px; width:60%;">
-        <div class="address-block" style="flex:1;">
-          <p style="font-size: 14px;">Bill To M/S.</p>
-          <p><strong>{{customer_details.company_name}}</strong></p>
-          <p>{{address.bill_to_address.address}},{{address.bill_to_address.city}},{{address.bill_to_address.pincode}}
+      style="display:flex; border:1px solid #000; border-top:none; margin:0; padding:0;">
+
+      <!-- LEFT SECTION -->
+      <div style="display:flex; flex-direction:column; width:60%; border-right:1px solid #000; font-size:11px;">
+
+        <!-- BILL TO -->
+        <div style="padding:6px; border-bottom:1px solid #000; text-align:left;">
+          <p style="font-weight:700; margin:0;">BILL TO :</p>
+          <p style="margin:2px 0; font-weight:700;">{{customer_details.company_name}}</p>
+          <br>
+          <p style="margin:2px 0;">
+            ADDRESS:- {{address.bill_to_address.address}}, {{address.bill_to_address.city}},
+            {{address.bill_to_address.pincode}}
           </p>
-          <p><strong>{{address.bill_to_address.state}}</strong></p>
+
+          <p style="margin:2px 0;">{{address.bill_to_address.state}}</p>
+
+          <p style="margin:2px 0;">
+            GST NO: {{customer_details.gst_number}} &nbsp; PAN NO: {{customer_details.pan_number}}
+          </p>
         </div>
-        <div class="address-block" style="flex:1;">
-          <p style="font-size: 14px;">Ship To M/S.</p>
-          <p><strong>{{customer_details.company_name}}</strong></p>
-          <p>{{address.ship_to_address.address}},{{address.ship_to_address.city}},{{address.ship_to_address.pincode}}
+
+        <!-- SHIP TO -->
+        <div style="padding:6px; text-align:left;">
+          <p style="font-weight:700; margin:0;">SHIP TO :</p>
+          <p style="margin:2px 0; font-weight:700;">{{customer_details.company_name}}</p>
+          <br>
+          <p style="margin:2px 0;">
+            ADDRESS:- {{address.ship_to_address.address}}, {{address.ship_to_address.city}},
+            {{address.ship_to_address.pincode}}
           </p>
-          <p><strong>{{address.ship_to_address.state}}</strong></p>
+
+          <p style="margin:2px 0;">{{address.ship_to_address.state}}</p>
         </div>
       </div>
-      <div class="tax-invoice-box" style="width:40%;">
-        <table style="
-          width: 100%;
-          border-collapse: collapse;
-          border-left: 1px solid #000;
-        ">
-          <tr>
-            <th colspan="2"
-              style="text-align: center; border-left: 1px solid #000; border-right: none; border-top: none;">TAX INVOICE
+
+      <!-- RIGHT SECTION -->
+      <div style="width:40%; font-size:11px; text-align:left;">
+
+        <!-- TAX INVOICE TABLE : TOP ALIGNED WITH BILL TO -->
+        <table style="width:100%; border-collapse:collapse; font-size:11px; margin:0;">
+
+          <!-- HEADER -->
+          <tr style="background:#d9d9d9;">
+            <th style="padding:2px; border-right:1px solid #000; border-bottom:1px solid #000; text-align:left;">
+              TAX INVOICE
+            </th>
+            <th style="padding:2px; border-bottom:1px solid #000; text-align:left;">
+              ORIGINAL
             </th>
           </tr>
+
           <tr>
-            <td style="border-left: 1px solid #000; border-right: 1px solid #000;">Goods Removal Date</td>
-            <td style="border-left: none; border-right: none;">{{removal_date}}</td>
+            <td style="padding:2px; border-right:1px solid #000;">Goods Removal Date</td>
+            <td style="padding:2px;">{{removal_date}}</td>
           </tr>
-          <tr>
-            <td style="border-left: 1px solid #000; border-right: 1px solid #000;">Goods Removal Time</td>
-            <td style="border-left: none; border-right: none;">{{goods_removal_time}}</td>
+
+          <tr style="background:#d9d9d9;">
+            <td style="padding:2px; border-right:1px solid #000;">Invoice Number</td>
+            <td style="padding:2px; font-weight:700;">{{invoice_no}}</td>
           </tr>
+
           <tr>
-            <td style="border-left: 1px solid #000; border-right: 1px solid #000;">Vehicle Number</td>
-            <td style="border-left: none; border-right: none;">{{vehicle_number}}</td>
+            <td style="padding:2px; border-right:1px solid #000;">Invoice Date</td>
+            <td style="padding:2px; font-weight:700;">{{invoice_date}}</td>
           </tr>
-          <tr>
-            <td style="border-left: 1px solid #000; border-right: 1px solid #000;">Invoice No.</td>
-            <td style="border-left: none; background-color: rgb(160, 160, 160); font-weight:900;">{{invoice_no}}</td>
-          </tr>
-          <tr>
-            <td style="border-left: 1px solid #000; border-right: 1px solid #000;">Date</td>
-            <td style="border-left: none; border-right: none;">{{invoice_date}}</td>
-          </tr>
-          <tr>
-            <td style="border-left: 1px solid #000; border-right: 1px solid #000; border-bottom: none;">Reverse Charges
-            </td>
-            <td style="border-left: none; border-right: none; border-bottom: none;">{{reverse_charges}}</td>
+
+          <tr style="background:#d9d9d9;">
+            <td style="padding:4px; border-right:1px solid #000;"></td>
+            <td class="page-number" style="padding:4px; font-weight:700;"></td>
           </tr>
         </table>
 
+        <!-- DISPATCH ADDRESS -->
+        <div style="padding:6px; font-weight:bold; border-top:1px solid #000;">
+          Dispatch From:- <br>
+          Plot No 317-325 At Karoli, Post-Hajipur, Talal-Kalol 382721, Dist. -Gandhinagar Gujarat
+        </div>
+
       </div>
     </div>
-
-    <div style="display: flex; border-right: 1px solid #000; border-left: 1px solid #000;" class="no-break">
-      <div style="flex: 1; border-right: 1px solid #000; font-size: 14px">GST NO: {{customer_details.gst_number}}</div>
-      <div style="flex: 1; border-right: 1px solid #000; font-size: 14px">CUSTOMER PAN NO:
-        {{customer_details.pan_number}}</div>
-      <div class="page-number" style="flex:0.5; font-size: 14px; background-color: rgb(160, 160, 160); "></div>
-    </div>
-    <table>
+    {{!--
+    <table style="width:100%; border-collapse:collapse; text-align:center; font-size:11px;">
       <thead>
         <tr>
-          <th rowspan="2" style="max-width: 170px;">Product Description</th>
-          <th rowspan="2" style="max-width: 60px;">Ply Size</th>
-          <th rowspan="2" style="max-width: 30px;">Nos.</th>
-          <th rowspan="2" style="max-width: 40px;">Qty Sq.Mtr.</th>
-          <th style="max-width: 50px;">Rate - Sq Mtr</th>
-          <th style="max-width: 50px;">Taxable Value</th>
-        </tr>
-        <tr>
-          <th>Rs.</th>
-          <th>Rs.</th>
+          <th rowspan="2" style="border:1px solid #000; padding:4px; width:170px;">
+            Product Description
+          </th>
+
+          <th rowspan="2" style="border:1px solid #000; padding:4px; width:50px;">
+            Ply<br>Size
+          </th>
+
+          <th rowspan="2" style="border:1px solid #000; padding:4px; width:50px;">
+            Qty-<br>Sheets
+          </th>
+
+          <th rowspan="2" style="border:1px solid #000; padding:4px; width:70px;">
+            Qty.<br>Total Sheets
+          </th>
+
+          <th rowspan="2" style="border:1px solid #000; padding:4px; width:70px;">
+            Qty.<br>Sq. Mtr.
+          </th>
+
+          <!-- These two are separate columns, not grouped -->
+          <th style="border:1px solid #000; padding:4px; width:60px;">
+            Rate (Rs.)<br>Per Sq. Mtr.
+          </th>
+
+          <th style="border:1px solid #000; padding:4px; width:60px;">
+            Value<br>(Rs.)
+          </th>
         </tr>
       </thead>
-    </table>
+    </table> --}}
+
   </div>
 
   <!-- CONTENT -->
-  <table class="invoice-table" style="margin:0; padding:0;">
-    <tbody style="font-size: 10px;">
-      {{#each item_summary}}
+  <table style="width:100%; border-collapse:collapse; font-size:11px; margin:0; padding:0;">
+    <thead>
       <tr>
-        <td>{{sales_item_name}}</td>
-        <td>{{size}}</td>
-        <td>{{sheets}}</td>
-        <td>{{sqm}}</td>
-        <td>{{rate}}</td>
-        <td>{{taxable_value}}</td>
+        <th rowspan="2" style="border:1px solid #000; padding:4px; width:170px;">
+          Product Description
+        </th>
+
+        <th rowspan="2" style="border:1px solid #000; padding:4px; width:50px;">
+          Ply<br>Size
+        </th>
+
+        <th rowspan="2" style="border:1px solid #000; padding:4px; width:50px;">
+          Qty-<br>Sheets
+        </th>
+
+        <th rowspan="2" style="border:1px solid #000; padding:4px; width:70px;">
+          Qty.<br>Total Sheets
+        </th>
+
+        <th rowspan="2" style="border:1px solid #000; padding:4px; width:70px;">
+          Qty.<br>Sq. Mtr.
+        </th>
+
+        <th style="border:1px solid #000; padding:4px; width:60px;">
+          Rate (Rs.)<br>Per Sq. Mtr.
+        </th>
+
+        <th style="border:1px solid #000; padding:4px; width:60px;">
+          Value<br>(Rs.)
+        </th>
+      </tr>
+    </thead>
+
+    <tbody>
+
+      {{#each grouped_items}}
+
+      <tr style="background:#f2f2f2; font-weight:700;">
+        <td colspan="7" style="border:1px solid #000; padding:4px; text-align:left;">
+          {{this.group_name}} (HSN Code - {{this.hsn}})
+        </td>
+      </tr>
+
+      {{#each this.items}}
+      <tr>
+        <td style="border:1px solid #000; padding:4px; width:170px; text-align:left;">
+          {{sales_item_name}}
+        </td>
+
+        <td style="border:1px solid #000; padding:4px; width:50px;">
+          {{size}}
+        </td>
+
+        <td style="border:1px solid #000; padding:4px; width:50px;">
+          {{sheets}}
+        </td>
+
+        <td style="border:1px solid #000; padding:4px; width:70px;">
+          {{total_sheets}}
+        </td>
+
+        <td style="border:1px solid #000; padding:4px; width:70px;">
+          {{sqm}}
+        </td>
+
+        <td style="border:1px solid #000; padding:4px; width:60px;">
+          {{rate}}
+        </td>
+
+        <td style="border:1px solid #000; padding:4px; width:60px;">
+          {{taxable_value}}
+        </td>
       </tr>
       {{/each}}
+
+      <tr>
+        <td colspan="7" style="border:none; height:4px;"></td>
+      </tr>
+
+      {{/each}}
+
     </tbody>
   </table>
+  <table>
+    <td>
+      <p><br></p>
+    </td>
+  </table>
+  <table>
+    <td colspan="10"><strong>Invoice Summary</strong></td>
+    <td>{{base_amount_without_gst}}</td>
+  </table>
+
+  <!-- FINAL SUMMARY TABLE -->
+  <table style="
+  width:100%;
+  border-collapse:collapse;
+  font-size:9px;
+  line-height:1.15;
+  margin-top:6px;
+  table-layout:fixed;
+">
+
+    <thead>
+      <tr>
+        <th style="border:1px solid #000; padding:2px; width:110px;">SERIES</th>
+        <th style="border:1px solid #000; padding:2px; width:30px;">Sheet</th>
+        <th style="border:1px solid #000; padding:2px; width:55px;">QTY.</th>
+        <th style="border:1px solid #000; padding:2px; width:55px;">UNIT</th>
+        <th style="border:1px solid #000; padding:2px; width:75px;">VALUE</th>
+        <th style="border:1px solid #000; padding:2px; width:60px;">Discount</th>
+        <th style="border:1px solid #000; padding:2px; width:95px;">Taxable Value</th>
+        <th style="border:1px solid #000; padding:2px; width:50px;">GST RATE</th>
+        <th style="border:1px solid #000; padding:2px; width:65px;">CGST</th>
+        <th style="border:1px solid #000; padding:2px; width:65px;">SGST</th>
+        <th style="border:1px solid #000; padding:2px; width:65px;">IGST</th>
+      </tr>
+    </thead>
+
+    <tbody>
+
+      {{!-- REPEATING ITEM ROWS --}}
+      {{#each summary_rows}}
+      <tr>
+        <td>{{series}}</td>
+        <td>{{sheet}}</td>
+        <td>{{qty_total}}</td>
+        <td>{{unit}}</td>
+        <td>{{value}}</td>
+        <td>{{discount}}</td>
+        <td>{{taxable_value}}</td>
+        <td>{{gst_rate}}</td>
+        <td>{{cgst}}</td>
+        <td>{{sgst}}</td>
+        <td>{{igst}}</td>
+      </tr>
+      {{/each}}
 
 
-  <!-- FOOTER -->
-  <div class="invoice-footer no-break"
-    style="display: flex; border: 1px solid #000; font-size: 12px; margin-top: 5px; line-height: 1.3;">
 
-    <!-- LEFT SECTION: Remarks + QR -->
-    <div class="remarks-qr"
-      style="flex: 2; display: flex; justify-content: space-between; align-items: flex-start; border-right: 1px solid #000; padding: 6px 8px;">
+      {{!-- FINAL TOTAL --}}
+      <tr style="background:#d9d9d9;">
+        <td>TOTAL</td>
+        <td>{{summary_totals.sheet}}</td>
+        <td>{{summary_totals.qty_total}}</td>
+        <td></td>
+        <td>{{summary_totals.value}}</td>
+        <td>{{summary_totals.discount}}</td>
+        <td>{{summary_totals.taxable_value}}</td>
+        <td></td>
+        <td>{{summary_totals.cgst}}</td>
+        <td>{{summary_totals.sgst}}</td>
+        <td>{{summary_totals.igst}}</td>
+      </tr>
 
-      <!-- Remarks -->
-      <div class="remarks-qr" style="flex:2; padding:18px; display:flex; justify-content:space-between;">
-        <div class="remarks">
-          <strong>Remarks:</strong><br />
-          <p></p><br />
-          <p></p><br />
-          IRN:{{irn}}<br />
-          MSME UAM No. {{msme_number}} ({{msme_type}})
-        </div>
-        <div class="qr" style="text-align:center;">
-          <img src="{{footerUrl}}" alt="QR Code" width="120" height="120" />
-        </div>
+    </tbody>
+
+  </table>
+
+  <div class="keep-together">
+    <!-- REMARK + FINAL TOTAL -->
+    <table style="
+    width:100%;
+    border-collapse:collapse;
+    font-size:9px;
+    line-height:1.15;
+    table-layout:fixed;
+    margin-top:4px;
+  ">
+      <tr style="background:#d9d9d9;">
+        <td style="border:1px solid #000; padding:4px; width:75%;">
+          REMARK: {{additional_remarks}}
+        </td>
+        <td
+          style="border:1px solid #000; padding:4px; font-weight:bold; text-align:right; width:25%; white-space:nowrap;">
+          INVOICE TOTAL&nbsp;&nbsp; {{grand_total}}
+        </td>
+      </tr>
+    </table>
+
+    <!-- FOOTER -->
+    <div class="invoice-footer no-break" style="
+      display:flex;
+      border:1px solid #000;
+      font-size:10px;
+      margin-top:4px;
+      line-height:1.2;
+    ">
+
+      <!-- LEFT COLUMN: QR -->
+      <div style="
+        width:22%;
+        border-right:1px solid #000;
+        padding:5px;
+        display:flex;
+        justify-content:center;
+        align-items:center;
+      ">
+        <img src="{{footerUrl}}" alt="QR Code" width="90" height="90" />
+      </div>
+
+      <!-- MIDDLE COLUMN: IRN + ACK + EWAY -->
+      <div style="
+        width:45%;
+        border-right:1px solid #000;
+        padding:5px;
+        font-size:9px;
+        line-height:1.3;
+      ">
+        <div><strong>IRN NO:</strong> {{irn}}</div>
+        <div><strong>ACK NO & DATE:</strong> {{ack_no}} & {{ack_date}}</div>
+        <div><strong>EWAY BILL NO & DATE:</strong> {{eway_bill_no}} & {{eway_bill_date}}</div>
+      </div>
+
+      <!-- RIGHT COLUMN: BANK DETAILS -->
+      <div style="
+        width:33%;
+        padding:5px;
+        font-size:9px;
+        line-height:1.3;
+      ">
+        <strong>BANK DETAIL:-</strong><br />
+        <div><strong>BANK-</strong> HDFC BANK LTD</div>
+        <div><strong>IFSC CODE-</strong> HDFC0000049</div>
+        <div><strong>A/C NO-</strong> 00492320000507</div>
+        <div><strong>BRANCH-</strong> BODAKDEV AHMEDABAD</div>
+      </div>
+
+    </div>
+
+    <div class="page-footer">
+
+      <div class="footer no-break" style="font-size:10px; margin-top:10px;">
+        <table style="width:100%; border:1px solid #000; margin-top:10px; border-collapse:collapse;">
+          <tr>
+            <td style="padding:10px; text-align: left;">
+              <strong>Bank Details: HDFC - A/C No. 00492320000507 RTGS :HDFC0000049 BODAKDEV BRANCH, AHMEDABAD</strong>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:10px; font-size: 8px">
+              CERTIFIED THAT THE PARTICULARS GIVEN ABOVE ARE TRUE AND CORRECT AND THE AMOUNT INDICATED REPRESENTS THE
+              PRICE ACTUALLY CHARGED AND THAT THERE IS NO FLOW ADDITIONAL
+              CONSIDERATION OR INDIRECTLY FROM THE BUYER
+            </td>
+          </tr>
+        </table>
+        <table style="width:100%; border:1px solid #000; margin-top:10px; border-collapse:collapse;">
+          <tr>
+            <!-- N.B. + Logo -->
+            <td
+              style="width:9%; vertical-align:top; text-align:center; font-size:12px; border-right:1px solid #000; padding:2px;">
+              <p>N.B.</p><br />
+              <img src={{logoUrl}} alt="logo" style="width:80px; height:50px; padding-right: 30px">
+            </td>
+
+            <!-- Notes -->
+            <td style="vertical-align:top; padding:10px; font-size:8px; line-height:1.4; border-right:1px solid #000;">
+              (1) Subject to Ahmedabad Jurisdiction.
+              (2) This bill certifies that you have visited our plant or confirmed the order through App.
+              (3) Goods once sold will not be taken back in any circumstances and no claims will be entertained for any
+              kind of damages.
+              (4) If payment is not received within due date of invoice, you are liable to pay interest @24% p.a.
+              (5) It is the responsibility of the buyer to provide all the necessary permit(s) for the goods purchased,
+              failing which only buyer will be responsible for the consequences thereof.
+              (6) Our responsibility ceases as soon as goods leave our premises.
+            </td>
+
+            <!-- Signature -->
+            <td style="vertical-align:top; padding:10px; text-align:left; font-size:8px;">
+              For, <strong>TURAKHIA OVERSEAS PVT. LTD.</strong><br /><br /><br /><br />
+              <p></p><br />
+              AUTHORISED SIGNATORY
+            </td>
+          </tr>
+        </table>
+
+        <p style="text-align: left; padding-top: 10px">Dispatch From :- Plot No 317 And 325 , At Karoli , P.O. Hajipur ,
+          Near Khatraj ,Kalol ,382721 , Dist.
+          Gandhinagar , Gujarat</p>
+        <img src="{{footerUrl}}" alt="Footer Banner" style="width:100%; margin-top:5px;" />
+
       </div>
     </div>
 
-    <!-- MIDDLE SECTION: Packing Info -->
-    <div class="packing-info" style="flex: 1.3; border-right: 1px solid #000; padding: 6px 8px;">
-      <div style="font-size: 12px; line-height: 1.5;">
-        <div><strong>Pack No:</strong> {{packing_id}}</div>
-        <div><strong>Pack Date:</strong> {{packing_date}}</div>
-        <div><strong>EWay Bill:</strong> {{eway_bill_no}}</div>
-        <div><strong>EWay Date:</strong> {{eway_bill_date}}</div>
-      </div>
-    </div>
-
-    <!-- RIGHT SECTION: Totals -->
-    <div class="totals" style="flex: 1.2; padding: 6px 8px;">
-      <div style="font-size: 12px; line-height: 1.5;">
-        <div>Basic Amount<span style="float: right;">{{basic_amount}}</span></div>
-        <div>Insurance @0.125%<span style="float: right;">{{insurance}}</span></div>
-        <div>Total<span style="float: right;">{{total}}</span></div>
-        <div>18% IGST<span style="float: right;">{{igst}}</span></div>
-        <div style="font-weight: bold;">Grand Total<span style="float: right;">{{grand_total}}</span></div>
-      </div>
-    </div>
-  </div>
-
-
-  <div class="page-footer">
-
-    <div class="footer no-break" style="font-size:10px; margin-top:10px;">
-      <table style="width:100%; border:1px solid #000; margin-top:10px; border-collapse:collapse;">
-        <tr>
-          <td style="padding:10px; text-align: left;">
-            <strong>Bank Details: HDFC - A/C No. 00492320000507 RTGS :HDFC0000049 BODAKDEV BRANCH, AHMEDABAD</strong>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:10px; font-size: 8px">
-            CERTIFIED THAT THE PARTICULARS GIVEN ABOVE ARE TRUE AND CORRECT AND THE AMOUNT INDICATED REPRESENTS THE
-            PRICE ACTUALLY CHARGED AND THAT THERE IS NO FLOW ADDITIONAL
-            CONSIDERATION OR INDIRECTLY FROM THE BUYER
-          </td>
-        </tr>
-      </table>
-      <table style="width:100%; border:1px solid #000; margin-top:10px; border-collapse:collapse;">
-        <tr>
-          <!-- N.B. + Logo -->
-          <td
-            style="width:9%; vertical-align:top; text-align:center; font-size:14px; border-right:1px solid #000; padding:2px;">
-            <p>N.B.</p><br />
-            <img src={{logoUrl}} alt="logo" style="width:100px; height:80px; padding-right: 30px">
-          </td>
-
-          <!-- Notes -->
-          <td style="vertical-align:top; padding:10px; font-size:8px; line-height:1.4; border-right:1px solid #000;">
-            (1) Subject to Ahmedabad Jurisdiction.
-            (2) This bill certifies that you have visited our plant or confirmed the order through App.
-            (3) Goods once sold will not be taken back in any circumstances and no claims will be entertained for any
-            kind of damages.
-            (4) If payment is not received within due date of invoice, you are liable to pay interest @24% p.a.
-            (5) It is the responsibility of the buyer to provide all the necessary permit(s) for the goods purchased,
-            failing which only buyer will be responsible for the consequences thereof.
-            (6) Our responsibility ceases as soon as goods leave our premises.
-          </td>
-
-          <!-- Signature -->
-          <td style="vertical-align:top; padding:10px; text-align:left; font-size:12px;">
-            For, <strong>TURAKHIA OVERSEAS PVT. LTD.</strong><br /><br /><br /><br />
-            <p></p><br />
-            AUTHORISED SIGNATORY
-          </td>
-        </tr>
-      </table>
-
-      <p style="text-align: left; padding-top: 10px">Dispatch From :- Plot No 317 And 325 , At Karoli , P.O. Hajipur ,
-        Near Khatraj ,Kalol ,382721 , Dist.
-        Gandhinagar , Gujarat</p>
-      <img src="{{footerUrl}}" alt="Footer Banner" style="width:100%; margin-top:5px;" />
-
-    </div>
   </div>
 
 </body>

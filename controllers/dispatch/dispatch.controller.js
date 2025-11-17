@@ -219,6 +219,7 @@ export const load_packing_details = catchAsync(async (req, res, next) => {
       },
     },
   ];
+  
   const aggGstandHsn = [
     {
       $lookup: {
@@ -230,6 +231,7 @@ export const load_packing_details = catchAsync(async (req, res, next) => {
             $project: {
               gst_percentage: 1,
               product_hsn_code: 1,
+              calculate_unit: 1,
               category: 1,
             },
           },
