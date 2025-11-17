@@ -26,13 +26,13 @@ dispatchRouter.post("/cancel-irn-no/:id", AuthMiddleware, EInvoiceAuthMiddleware
 dispatchRouter.post("/generate-ewaybill-using-irn/:id", AuthMiddleware,EInvoiceAuthMiddleware, generate_ewaybill_using_irn_no);
 
 // generate ewaybill
-dispatchRouter.post("/generate-ewaybill/:id", AuthMiddleware,EwayBillAuthMiddleware, generate_ewaybill);
-// dispatchRouter.post("/cancel-ewaybill/:id", AuthMiddleware,EwayBillHeaderVariable, cancel_ewaybill);
-// dispatchRouter.post("/get-ewaybill/:id", AuthMiddleware,EwayBillHeaderVariable, get_ewaybill_details);
-// dispatchRouter.post("/update-ewaybill-transporter/:id", AuthMiddleware,EwayBillHeaderVariable, update_ewaybill_transporter);
-// dispatchRouter.post("/update-ewaybill-partB/:id", AuthMiddleware,EwayBillHeaderVariable, update_ewaybill_partB);
+dispatchRouter.post("/generate-ewaybill/:id", AuthMiddleware, generate_ewaybill);
+dispatchRouter.post("/cancel-ewaybill/:id", AuthMiddleware, cancel_ewaybill);
+dispatchRouter.post("/get-ewaybill/:id", AuthMiddleware, get_ewaybill_details);
+dispatchRouter.post("/update-ewaybill-transporter/:id", AuthMiddleware, update_ewaybill_transporter);
+dispatchRouter.post("/update-ewaybill-partB/:id", AuthMiddleware, update_ewaybill_partB);
 
-
+ 
 //mobile api
 dispatchRouter.post("/fetch-invoice-details-by-invoice-no", fetch_dispatch_details_by_invoice_no);
 dispatchRouter.post('/fetch-purchase-history', fetch_purchase_history)
