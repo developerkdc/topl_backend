@@ -5,7 +5,8 @@ import {
   fetch_all_packing_done_items,
   revert_packing_done_items,
   update_packing_details, fetch_single_packing_done_item,
-  generatePackingSlip
+  generatePackingSlip,
+  generatePackingPrintPDF
 } from '../../../controllers/packing/packing_done/packing_done.controller.js';
 import { verifyApproval } from '../../../middlewares/approval.middleware.js';
 const packing_done_router = Router();
@@ -20,5 +21,6 @@ packing_done_router.post(
   revert_packing_done_items
 );
 packing_done_router.get('/fetch-single-packing-done-details/:request_id', AuthMiddleware, fetch_single_packing_done_item)
+packing_done_router.get('/print-pdf/:id', AuthMiddleware, generatePackingPrintPDF)
 
 export default packing_done_router;
