@@ -14,11 +14,22 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
-    const { id } = req.params;
+    const { type, id } = req.params;
 
     if (!id || !mongoose.isValidObjectId(id)) {
         throw new ApiError("Invalid ID", StatusCodes.BAD_REQUEST);
     }
+
+    const action_map = {
+        normal: {
+            templateFileName: 'invoice_bill.hbs',
+        },
+        print: {
+            templateFileName: 'invoice_bill_print.hbs',
+        },
+    };
+
+    const selectedAction = action_map[type] || action_map.normal;
 
     const pipeline = [
         {
@@ -50,7 +61,7 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
     const groupedItems = {};
 
     (dispatchDetails.dispatch_items_details || []).forEach(item => {
-           const labelMap = {
+        const labelMap = {
             "DRESSING_FACTORY": "VENEER (DRESSING FACTORY)",
             "GROUPING_FACTORY": "VENEER (GROUPING FACTORY)",
             "CROSSCUTTING": "LOG (CROSSCUTTING)",
@@ -69,9 +80,9 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
         groupedItems[groupName].items.push({
             sales_item_name: item.sales_item_name,
             size: `${item.length}x${item.width}`,
-            sheets: item.no_of_sheets,
-            total_sheets: item.no_of_sheets || item.no_of_sheets,
-            sqm: item.sqm,
+            quantity_items: item.no_of_sheets || item.no_of_leaves || item.number_of_rolls || item.quantity,
+            total_sheets: item.no_of_sheets || item.no_of_leaves || item.number_of_rolls || item.quantity,
+            sqm: Number(item.sqm).toFixed(3),
             rate: item.rate,
             taxable_value: Number(item.discount_amount).toFixed(2),
         });
@@ -93,7 +104,7 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
         if (!summaryMap[cat]) {
             summaryMap[cat] = {
                 series: cat,
-                sheet: 0,
+                items: 0,
                 qty_total: 0,
                 qty_sqm: 0,
                 unit: item.calculate_unit,
@@ -107,9 +118,9 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
             };
         }
 
-        summaryMap[cat].sheet += Number(item.no_of_sheets || 0);
-        summaryMap[cat].qty_total += Number(item.no_of_sheets || 0);
-        summaryMap[cat].qty_sqm += Number(item.sqm || 0);
+        summaryMap[cat].items += Number(item.no_of_sheets || item.no_of_leaves || item.number_of_rolls || item.quantity || 0);
+        summaryMap[cat].qty_total += Number(item.no_of_sheets || item.no_of_leaves || item.number_of_rolls || item.quantity || 0);
+        summaryMap[cat].qty_sqm += Number(item.sqm || 0).toFixed(3);
 
         summaryMap[cat].value += Number(item.rate || 0);
         summaryMap[cat].discount += Number(item.discount_amount || 0);
@@ -138,7 +149,7 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
     // INSURANCE ROW
     summaryRows.push({
         series: "Insurance",
-        sheet: 0,
+        items: 0,
         qty_total: 0,
         qty_sqm: 0,
         unit: "OTHER",
@@ -158,7 +169,7 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
     // FREIGHT ROW
     summaryRows.push({
         series: "Freight",
-        sheet: 0,
+        items: 0,
         qty_total: 0,
         qty_sqm: 0,
         unit: "OTHER",
@@ -178,7 +189,7 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
     // OTHER CHARGES ROW
     summaryRows.push({
         series: "Other Charges",
-        sheet: 0,
+        items: 0,
         qty_total: 0,
         qty_sqm: 0,
         unit: "OTHER",
@@ -198,7 +209,7 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
 
     // TOTALS (unchanged except rounding fields)
     const summaryTotals = {
-        sheet: summaryRows.reduce((sum, r) => sum + Number(r.sheet || 0), 0),
+        items: summaryRows.reduce((sum, r) => sum + Number(r.items || 0), 0),
         qty_total: summaryRows.reduce((sum, r) => sum + Number(r.qty_total || 0), 0),
         qty_sqm: summaryRows.reduce((sum, r) => sum + Number(r.qty_sqm || 0), 0),
 
@@ -265,7 +276,8 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
         "..",
         "..",
         "views",
-        "dispatch/invoice_bill.hbs"
+        "dispatch",
+        selectedAction.templateFileName,
     );
 
     const pdfBuffer = await generatePDF({
@@ -290,4 +302,4 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
     });
 
     return res.status(StatusCodes.OK).end(pdfBuffer);
-});
+}); 

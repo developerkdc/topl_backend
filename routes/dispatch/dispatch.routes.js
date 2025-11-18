@@ -16,7 +16,7 @@ dispatchRouter.post("/get-all-dispatch-details", AuthMiddleware, fetch_all_dispa
 dispatchRouter.post("/get-all-dispatch-item-details", AuthMiddleware, fetch_all_dispatch_items_details);
 dispatchRouter.post("/load-packing-details", AuthMiddleware, load_packing_details);
 dispatchRouter.post("/packing-done-dropdown", AuthMiddleware, packing_done_dropdown);
-dispatchRouter.get("/download-invoice-pdf/:id", dispatch_invoice_pdf);
+dispatchRouter.get("/download-invoice-pdf/:type/:id", dispatch_invoice_pdf);
 dispatchRouter.post("/generate-invoice-no", AuthMiddleware, generate_invoice_no);
 
 // Irn related apis

@@ -137,12 +137,6 @@ const dispatchSchema = new mongoose.Schema(
       trim: true,
       uppercase: true,
     },
-    product_category_label: {
-      type: [String],
-      default: null,
-      trim: true,
-      uppercase: true,
-    },
     packing_done_ids: {
       type: [
         {
@@ -294,6 +288,7 @@ const dispatchSchema = new mongoose.Schema(
       default: null,
     },
     total_no_of_sheets: {
+      //total quantity in frontend
       type: Number,
       default: 0,
     },

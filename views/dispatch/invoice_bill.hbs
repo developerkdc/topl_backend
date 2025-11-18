@@ -300,11 +300,11 @@
         </th>
 
         <th rowspan="2" style="border:1px solid #000; padding:4px; width:50px;">
-          Qty-<br>Sheets
+          Qty-<br>Items
         </th>
 
         <th rowspan="2" style="border:1px solid #000; padding:4px; width:70px;">
-          Qty.<br>Total Sheets
+          Qty.<br>Total Items
         </th>
 
         <th rowspan="2" style="border:1px solid #000; padding:4px; width:70px;">
@@ -342,7 +342,7 @@
         </td>
 
         <td style="border:1px solid #000; padding:4px; width:50px;">
-          {{sheets}}
+          {{quantity_items}}
         </td>
 
         <td style="border:1px solid #000; padding:4px; width:70px;">
@@ -394,12 +394,12 @@
     <thead>
       <tr>
         <th style="border:1px solid #000; padding:2px; width:110px;">SERIES</th>
-        <th style="border:1px solid #000; padding:2px; width:30px;">Sheet</th>
+        <th style="border:1px solid #000; padding:2px; width:30px;">ITEMS</th>
         <th style="border:1px solid #000; padding:2px; width:30px;">QTY.</th>
         <th style="border:1px solid #000; padding:2px; width:55px;">UNIT</th>
         <th style="border:1px solid #000; padding:2px; width:75px;">VALUE</th>
-        <th style="border:1px solid #000; padding:2px; width:60px;">Discount</th>
-        <th style="border:1px solid #000; padding:2px; width:95px;">Taxable Value</th>
+        <th style="border:1px solid #000; padding:2px; width:60px;">DISCOUNT</th>
+        <th style="border:1px solid #000; padding:2px; width:95px;">TAXABLE VALUE</th>
         <th style="border:1px solid #000; padding:2px; width:50px;">GST RATE</th>
         <th style="border:1px solid #000; padding:2px; width:65px;">CGST</th>
         <th style="border:1px solid #000; padding:2px; width:65px;">SGST</th>
@@ -413,7 +413,7 @@
       {{#each summary_rows}}
       <tr>
         <td>{{series}}</td>
-        <td>{{sheet}}</td>
+        <td>{{items}}</td>
         <td>{{qty_total}}</td>
         <td>{{unit}}</td>
         <td>{{value}}</td>
@@ -431,7 +431,7 @@
       {{!-- FINAL TOTAL --}}
       <tr style="background:#d9d9d9;">
         <td>TOTAL</td>
-        <td>{{summary_totals.sheet}}</td>
+        <td>{{summary_totals.items}}</td>
         <td>{{summary_totals.qty_total}}</td>
         <td></td>
         <td>{{summary_totals.value}}</td>
