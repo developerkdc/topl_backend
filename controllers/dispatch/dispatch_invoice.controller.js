@@ -50,12 +50,18 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
     const groupedItems = {};
 
     (dispatchDetails.dispatch_items_details || []).forEach(item => {
-        const groupName = item.product_category || "Others"; 
+           const labelMap = {
+            "DRESSING_FACTORY": "VENEER (DRESSING FACTORY)",
+            "GROUPING_FACTORY": "VENEER (GROUPING FACTORY)",
+            "CROSSCUTTING": "LOG (CROSSCUTTING)",
+            "FLITCHING_FACTORY": "FLITCH (FLITCHING FACTORY)",
+        };
+        const groupName = labelMap[item.product_category] || item.product_category || "Others";
 
         if (!groupedItems[groupName]) {
             groupedItems[groupName] = {
                 group_name: groupName,
-                hsn: item.hsn_code || "",
+                hsn: item.hsn_number || "",
                 items: []
             };
         }
@@ -71,12 +77,18 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
         });
     });
 
-    const summaryMap = {};   
+    const summaryMap = {};
 
     (dispatchDetails.dispatch_items_details || []).forEach(item => {
 
         const gst = item.gst_details || {};
-        const cat = item.product_category || "Others";
+        const labelMap = {
+            "DRESSING_FACTORY": "VENEER (DRESSING FACTORY)",
+            "GROUPING_FACTORY": "VENEER (GROUPING FACTORY)",
+            "CROSSCUTTING": "LOG (CROSSCUTTING)",
+            "FLITCHING_FACTORY": "FLITCH (FLITCHING FACTORY)",
+        };
+        const cat = labelMap[item.product_category] || item.product_category || "Others";
 
         if (!summaryMap[cat]) {
             summaryMap[cat] = {
@@ -84,11 +96,11 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
                 sheet: 0,
                 qty_total: 0,
                 qty_sqm: 0,
-                unit: item.calculate_unit,   
+                unit: item.calculate_unit,
                 value: 0,
                 discount: 0,
                 taxable_value: 0,
-                gst_rate: gst.gst_percentage || gst.igst_percentage || 0,              
+                gst_rate: gst.gst_percentage || gst.igst_percentage || 0,
                 cgst: 0,
                 sgst: 0,
                 igst: 0,
@@ -108,7 +120,7 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
         summaryMap[cat].sgst += Number(gst.sgst_amount || 0);
         summaryMap[cat].igst += Number(gst.igst_amount || 0);
     });
- 
+
     const summaryRows = Object.values(summaryMap).map(row => ({
         ...row,
         value: row.value.toFixed(2),
@@ -123,7 +135,7 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
     const freight = dispatchDetails.freight_details || {};
     const other = dispatchDetails.other_amount_details || {};
 
- 
+    // INSURANCE ROW
     summaryRows.push({
         series: "Insurance",
         sheet: 0,

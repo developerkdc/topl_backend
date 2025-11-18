@@ -98,7 +98,7 @@
       right: 0;
       margin-left: 10px;
       margin-right: 10px;
-      height: 305px;
+      height: 245px;
       /* footer height */
       background: #fff;
       border-top: 1px solid #000;
@@ -113,14 +113,10 @@
       text-align: left;
     }
 
-    .page-header {
-      margin-top: 10px;
-    }
-
     @media print {
       @page {
         size: A4;
-        margin: 366px 10px 301px 10px; 
+        margin: 366px 10px 271px 10px; 
         /*   top    right   bottom  left   */
         /*change the margin to adjust height */
         @top-center {
@@ -399,7 +395,7 @@
       <tr>
         <th style="border:1px solid #000; padding:2px; width:110px;">SERIES</th>
         <th style="border:1px solid #000; padding:2px; width:30px;">Sheet</th>
-        <th style="border:1px solid #000; padding:2px; width:55px;">QTY.</th>
+        <th style="border:1px solid #000; padding:2px; width:30px;">QTY.</th>
         <th style="border:1px solid #000; padding:2px; width:55px;">UNIT</th>
         <th style="border:1px solid #000; padding:2px; width:75px;">VALUE</th>
         <th style="border:1px solid #000; padding:2px; width:60px;">Discount</th>
@@ -451,8 +447,8 @@
 
   </table>
 
-  <div class="keep-together">
-    <!-- REMARK + FINAL TOTAL -->
+  <div>
+ 
     <table style="
     width:100%;
     border-collapse:collapse;
@@ -527,11 +523,6 @@
       <div class="footer no-break" style="font-size:10px; margin-top:10px;">
         <table style="width:100%; border:1px solid #000; margin-top:10px; border-collapse:collapse;">
           <tr>
-            <td style="padding:10px; text-align: left;">
-              <strong>Bank Details: HDFC - A/C No. 00492320000507 RTGS :HDFC0000049 BODAKDEV BRANCH, AHMEDABAD</strong>
-            </td>
-          </tr>
-          <tr>
             <td style="padding:10px; font-size: 8px">
               CERTIFIED THAT THE PARTICULARS GIVEN ABOVE ARE TRUE AND CORRECT AND THE AMOUNT INDICATED REPRESENTS THE
               PRICE ACTUALLY CHARGED AND THAT THERE IS NO FLOW ADDITIONAL
@@ -568,10 +559,6 @@
             </td>
           </tr>
         </table>
-
-        <p style="text-align: left; padding-top: 10px">Dispatch From :- Plot No 317 And 325 , At Karoli , P.O. Hajipur ,
-          Near Khatraj ,Kalol ,382721 , Dist.
-          Gandhinagar , Gujarat</p>
         <img src="{{footerUrl}}" alt="Footer Banner" style="width:100%; margin-top:5px;" />
 
       </div>
