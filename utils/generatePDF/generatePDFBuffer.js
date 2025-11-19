@@ -212,3 +212,55 @@ export async function generatePackingPDF({ templateName, templatePath, data }) {
   await browser.close();
   return pdfBuffer;
 }
+
+export async function generatePrintPDF({ templateName, templatePath, data }) {
+  // Load template and logo
+  const templateContent = await fs.readFile(templatePath, 'utf8');
+  const logoPath = path.join(__dirname, '..', '..', 'views', 'images', 'topl_logo.png');
+
+  const logoBuffer = await fs.readFile(logoPath);
+  const logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
+
+  // Register helper
+  Handlebars.registerHelper('add', (a, b) => a + b);
+
+  // Compile Handlebars HTML
+  const template = Handlebars.compile(templateContent);
+  const html = template({
+    ...data,
+    logoUrl: logoBase64,
+    // Removed headerUrl & footerUrl
+  });
+
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+  });
+
+  const page = await browser.newPage();
+  await page.setContent(html, { waitUntil: 'networkidle0' });
+
+  const pdfBuffer = await page.pdf({
+    format: 'A4',
+    printBackground: true,
+    displayHeaderFooter: true,
+    margin: {
+      top: '160px',
+      bottom: '80px',
+      left: '10px',
+      right: '30px',
+    },
+    // Empty header & footer (no images)
+    headerTemplate: `
+      <div style="width:100%; text-align:center; font-size:10px;">
+      </div>
+    `,
+    footerTemplate: `
+      <div style="width:100%; text-align:center; font-size:10px;">
+      </div>
+    `,
+  });
+
+  await browser.close();
+  return pdfBuffer;
+}
