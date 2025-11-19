@@ -78,8 +78,8 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
         }
 
         groupedItems[groupName].items.push({
-            sales_item_name: item.sales_item_name,
-            size: `${item.length}x${item.width}`,
+            sales_item_name: item.sales_item_name || item.item_name,
+            size: `${item.length || "-"}x${item.width || "-"}`,
             quantity_items: item.no_of_sheets || item.no_of_leaves || item.number_of_rolls || item.quantity,
             total_sheets: item.no_of_sheets || item.no_of_leaves || item.number_of_rolls || item.quantity,
             sqm: Number(item.sqm).toFixed(3),
@@ -98,6 +98,7 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
             "GROUPING_FACTORY": "VENEER (GROUPING FACTORY)",
             "CROSSCUTTING": "LOG (CROSSCUTTING)",
             "FLITCHING_FACTORY": "FLITCH (FLITCHING FACTORY)",
+            "OTHER_GOODS": "STORE",
         };
         const cat = labelMap[item.product_category] || item.product_category || "Others";
 
@@ -106,7 +107,6 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
                 series: cat,
                 items: 0,
                 qty_total: 0,
-                qty_sqm: 0,
                 unit: item.calculate_unit,
                 value: 0,
                 discount: 0,
@@ -119,11 +119,10 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
         }
 
         summaryMap[cat].items += Number(item.no_of_sheets || item.no_of_leaves || item.number_of_rolls || item.quantity || 0);
-        summaryMap[cat].qty_total += Number(item.no_of_sheets || item.no_of_leaves || item.number_of_rolls || item.quantity || 0);
-        summaryMap[cat].qty_sqm += Number(item.sqm || 0).toFixed(3);
+        summaryMap[cat].qty_total += Number(item.sqm || item.cbm || item.cmt || 0);
 
         summaryMap[cat].value += Number(item.rate || 0);
-        summaryMap[cat].discount += Number(item.discount_amount || 0);
+        summaryMap[cat].discount += Number(item.discount_value || 0);
 
         summaryMap[cat].taxable_value += Number(item.final_row_amount || item.final_amount || 0);
 
@@ -151,7 +150,6 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
         series: "Insurance",
         items: 0,
         qty_total: 0,
-        qty_sqm: 0,
         unit: "OTHER",
 
         value: 0,
@@ -171,7 +169,6 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
         series: "Freight",
         items: 0,
         qty_total: 0,
-        qty_sqm: 0,
         unit: "OTHER",
 
         value: 0,
@@ -191,7 +188,6 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
         series: "Other Charges",
         items: 0,
         qty_total: 0,
-        qty_sqm: 0,
         unit: "OTHER",
 
         value: 0,
@@ -211,7 +207,6 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
     const summaryTotals = {
         items: summaryRows.reduce((sum, r) => sum + Number(r.items || 0), 0),
         qty_total: summaryRows.reduce((sum, r) => sum + Number(r.qty_total || 0), 0),
-        qty_sqm: summaryRows.reduce((sum, r) => sum + Number(r.qty_sqm || 0), 0),
 
         value: summaryRows.reduce((sum, r) => sum + Number(r.value || 0), 0),
 
@@ -228,7 +223,9 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
         headerUrl: "https://example.com/header.png", // your logo/header
         footerUrl: "https://example.com/footer.png", // QR code or footer image
         logoUrl: "https://example.com/topl_logo.png",
+        transaction_is_regular: dispatchDetails.transaction_type === "REGULAR",
         customer_details: dispatchDetails.customer_details,
+        dispatch_from: dispatchDetails.address,
         address: dispatchDetails.address,
         invoice_no: dispatchDetails.invoice_no,
         invoice_date_time: dispatchDetails.invoice_date_time ? moment(dispatchDetails.invoice_date_time).format("DD-MM-YYYY,HH:mm:ss") : "",
