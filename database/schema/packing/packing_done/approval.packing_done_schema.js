@@ -91,7 +91,7 @@ const approval_packing_done_other_details_schema = new mongoose.Schema(
         },
         sales_item_name: {
             type: String,
-            required: [true, "Sales Item Name is required"]
+            // required: [true, "Sales Item Name is required"]
         },
         approval_status: approval_status,
     },

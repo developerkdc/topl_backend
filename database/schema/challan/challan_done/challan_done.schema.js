@@ -65,6 +65,10 @@ const cnc_done_schema = new mongoose.Schema(
       uppercase: true,
       required: [true, 'Customer name is required.'],
     },
+    customer_details: {
+      type: Object,
+      required: [true, 'Customer details are required'],
+    },
     customer_id: {
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Customer ID is required.'],
@@ -73,6 +77,10 @@ const cnc_done_schema = new mongoose.Schema(
       type: String,
       uppercase: true,
       required: [true, 'Transporter name is required.'],
+    },
+    transporter_details: {
+      type: Object,
+      required: [true, 'Transporter details are required']
     },
     transporter_id: {
       type: mongoose.Schema.Types.ObjectId,
