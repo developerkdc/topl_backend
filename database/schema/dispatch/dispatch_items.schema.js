@@ -257,6 +257,10 @@ const dispatch_items_schema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    calculate_unit: {
+      type: String,
+      default: null,
+    },
     final_row_amount: {
       type: Number,
       default: 0,
