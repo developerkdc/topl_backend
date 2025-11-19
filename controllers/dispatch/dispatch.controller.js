@@ -222,32 +222,53 @@ export const load_packing_details = catchAsync(async (req, res, next) => {
       },
     },
   ];
+  
   const aggGstandHsn = [
-    {
-      $lookup: {
-        from: 'item_categories',
-        localField: 'product_type',
-        foreignField: 'category',
-        pipeline: [
-          {
-            $project: {
-              gst_percentage: 1,
-              product_hsn_code: 1,
-              category: 1,
-              calculate_unit: 1,
-            },
-          },
-        ],
-        as: 'item_category_gst_details',
-      },
-    },
-    {
-      $unwind: {
-        path: '$item_category_gst_details',
-        preserveNullAndEmptyArrays: true,
-      },
-    },
-  ];
+  {
+    $lookup: {
+      from: "item_categories",
+      let: { ptype: "$product_type" },
+      pipeline: [
+        {
+          $match: {
+            $expr: {
+              $eq: [
+                "$category",
+                {
+                  $switch: {
+                    branches: [
+                      { case: { $eq: ["$$ptype", "DRESSING_FACTORY"] }, then: "VENEER" },
+                      { case: { $eq: ["$$ptype", "CROSSCUTTING"] }, then: "LOG" },
+                      { case: { $eq: ["$$ptype", "GROUPING_FACTORY"] }, then: "VENEER" },
+                      { case: { $eq: ["$$ptype", "FLITCHING_FACTORY"] }, then: "FLITCH" }
+                    ],
+                    default: "$$ptype" // fallback: match same as product_type
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          $project: {
+            gst_percentage: 1,
+            product_hsn_code: 1,
+            calculate_unit: 1,
+            category: 1
+          }
+        }
+      ],
+      as: "item_category_gst_details"
+    }
+  },
+  {
+    $unwind: {
+      path: "$item_category_gst_details",
+      preserveNullAndEmptyArrays: true
+    }
+  }
+];
+
 
   const fetch_packing_items_details = await packing_done_items_model.aggregate([
     aggMatchPackingDetails,

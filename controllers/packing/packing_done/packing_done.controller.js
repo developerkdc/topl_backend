@@ -15,6 +15,7 @@ import catchAsync from '../../../utils/errors/catchAsync.js';
 import {
   generatePackingPDF,
   generatePDF,
+  generatePrintPDF,
 } from '../../../utils/generatePDF/generatePDFBuffer.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -1118,6 +1119,161 @@ export const generatePackingSlip = catchAsync(async (req, res) => {
   };
 
   const pdfBuffer = await generatePackingPDF({
+    templateName: 'packing_slip',
+    templatePath: path.join(
+      __dirname,
+      '..',
+      '..',
+      '..',
+      'views',
+      'packing_done',
+      'packing_slip.hbs'
+    ),
+    data: combinedData,
+  });
+
+  // const safeCustomerName = (customer_name || 'Unknown')
+  //   .replace(/[^a-zA-Z0-9-_]/g, '_')
+  //   .substring(0, 50);
+
+  const safeCustomerName = (customer_name || 'Unknown')
+    .trim()
+    .replace(/\s+/g, '-') // replace spaces with hyphen
+    .replace(/[^a-zA-Z0-9-_.]/g, '') // keep letters, numbers, dash, underscore, dot
+    .substring(0, 50);
+
+  const safePackingDate = (formattedPackingDate || 'NoDate').replace(
+    /[^0-9-]/g,
+    '_'
+  );
+  const packing_id = otherDetails?.packing_id;
+
+  const fileName = `${packing_id}_${safeCustomerName}_${safePackingDate}.pdf`;
+
+  res.set({
+    'Content-Type': 'application/pdf',
+    'Content-Disposition': `attachment; filename="${fileName}"`,
+    'Access-Control-Expose-Headers': 'Content-Disposition',
+    'Content-Length': pdfBuffer.length,
+  });
+  return res.status(200).end(pdfBuffer);
+});
+
+export const generatePackingPrintPDF = catchAsync(async (req, res) => {
+  const { id } = req.params;
+
+  const item = await packing_done_items_model.findById(id).lean();
+  if (!item) {
+    return res
+      .status(404)
+      .json({ status: false, message: 'Packing item not found' });
+  }
+
+  const otherDetails = await packing_done_other_details_model
+    .findById(item.packing_done_other_details_id)
+    .lean();
+
+  if (!otherDetails) {
+    return res
+      .status(404)
+      .json({ status: false, message: 'Packing details not found' });
+  }
+
+  const allItems = await packing_done_items_model
+    .find({ packing_done_other_details_id: item.packing_done_other_details_id })
+    .lean();
+
+  const formattedPackingDate = otherDetails.packing_date
+    ? moment(otherDetails.packing_date).format('DD-MM-YYYY')
+    : '';
+
+  const totalSheets = allItems.reduce(
+    (sum, i) => sum + (i.no_of_sheets || 0),
+    0
+  );
+  const totalSqMtr = allItems.reduce((sum, i) => sum + (i.sqm || 0), 0);
+
+  const summaryMap = {};
+  for (const i of allItems) {
+    const key = `${i.item_name || ' '}_${i.length || 0}x${i.width || 0}`;
+    if (!summaryMap[key]) {
+      summaryMap[key] = {
+        item_name:
+          Array.isArray(otherDetails?.order_category) &&
+            otherDetails.order_category.includes('RAW')
+            ? i.item_name || ' '
+            : otherDetails.sales_item_name || i.item_name || ' ',
+
+        size: `${i.length || 0} x ${i.width || 0}`,
+        sheets: 0,
+        sqm: 0,
+      };
+    }
+    summaryMap[key].sheets += i.no_of_sheets || 0;
+    summaryMap[key].sqm += i.sqm || 0;
+  }
+
+  const item_summary = Object.values(summaryMap);
+
+  const itemsWithExtraFields = allItems.map((i) => ({
+    ...i,
+    photo_no: otherDetails.photo_no || '',
+    remark: otherDetails.remark || '',
+    sales_item_name: otherDetails?.order_category.includes('RAW')
+      ? i?.item_name
+      : otherDetails.sales_item_name,
+    // bundle_no: otherDetails.bundle_no,
+    // bundle_description: otherDetails.bundle_description,
+    // total_no_of_bundles: otherDetails.total_no_of_bundles,
+  }));
+
+  let customer_name = '';
+  if (typeof otherDetails.customer_details === 'string') {
+    customer_name = otherDetails.customer_details;
+  } else if (
+    otherDetails.customer_details &&
+    typeof otherDetails.customer_details === 'object' &&
+    otherDetails.customer_details.owner_name
+  ) {
+    customer_name = otherDetails.customer_details.owner_name;
+  }
+
+  let productDisplayName = '';
+  const productType =
+    typeof otherDetails.product_type === 'string'
+      ? otherDetails.product_type.trim()
+      : String(otherDetails.product_type || '').trim();
+
+  switch (productType) {
+    case 'CROSSCUTTING':
+      productDisplayName = 'Log';
+      break;
+    case 'FLITCHING_FACTORY':
+      productDisplayName = 'Flitch';
+      break;
+    case 'DRESSING_FACTORY':
+    case 'GROUPING_FACTORY':
+      productDisplayName = 'Veneer';
+      break;
+    default:
+      productDisplayName = productType;
+      break;
+  }
+
+  const combinedData = {
+    ...otherDetails,
+    product_display_type: productDisplayName,
+    customer_name,
+    packing_date: formattedPackingDate,
+    packing_done_item_details: itemsWithExtraFields,
+    totalSheets,
+    totalSqMtr,
+    item_summary,
+    sales_item_name: otherDetails.sales_item_name || '',
+    order_category: otherDetails.order_category,
+  };
+
+  const pdfBuffer = await generatePrintPDF({
     templateName: 'packing_slip',
     templatePath: path.join(
       __dirname,

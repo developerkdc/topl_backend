@@ -288,6 +288,7 @@ const dispatchSchema = new mongoose.Schema(
       default: null,
     },
     total_no_of_sheets: {
+      //total quantity in frontend
       type: Number,
       default: 0,
     },
@@ -299,13 +300,35 @@ const dispatchSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-    insurance_percentage: {
-      type: Number,
-      default: 0,
-    },
-    insurance_amount: {
-      type: Number,
-      default: 0,
+    insurance_details: {
+      insurance_percentage: {
+        type: Number,
+        default: 0,
+      },
+      insurance_amount: {
+        type: Number,
+        default: 0,
+      },
+      insurance_amount_with_gst: {
+        type: Number,
+        default: 0,
+      },
+      insurance_gst_rate: {
+        type: Number,
+        default: 0,
+      },
+      insurance_igst_amt: {
+        type: Number,
+        default: 0,
+      },
+      insurance_cgst_amt: {
+        type: Number,
+        default: 0,
+      },
+      insurance_sgst_amt: {
+        type: Number,
+        default: 0,
+      },
     },
     total_amount_with_insurance: {
       type: Number,
@@ -331,15 +354,59 @@ const dispatchSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-    freight_amount: {
-      type: Number,
-      default: 0,
+    freight_details: {
+      freight_amount: {
+        type: Number,
+        default: 0,
+      },
+      freight_gst_rate: {
+        type: Number,
+        default: 0,
+      },
+      freight_igst_amt: {
+        type: Number,
+        default: 0,
+      },
+      freight_cgst_amt: {
+        type: Number,
+        default: 0,
+      },
+      freight_sgst_amt: {
+        type: Number,
+        default: 0,
+      },
+      freight_amt_with_gst: {
+        type: Number,
+        default: 0,
+      }
     },
-    other_amount: {
-      type: Number,
-      default: 0,
+    other_amount_details: {
+      other_amount: {
+        type: Number,
+        default: 0,
+      },
+      other_gst_rate: {
+        type: Number,
+        default: 0,
+      },
+      other_igst_amt: {
+        type: Number,
+        default: 0,
+      },
+      other_cgst_amt: {
+        type: Number,
+        default: 0,
+      },
+      other_sgst_amt: {
+        type: Number,
+        default: 0,
+      },
+      other_amt_with_gst: {
+        type: Number,
+        default: 0,
+      }
     },
-    total_amount_with_expenses: {
+    expense_amount_with_gst: {
       type: Number,
       default: 0,
     },
