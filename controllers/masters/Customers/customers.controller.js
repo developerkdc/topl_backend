@@ -481,6 +481,7 @@ export const dropdownCustomer = catchAsync(async (req, res, next) => {
         credit_schedule: 1,
         freight: 1,
         local_freight: 1,
+        supplier_type: 1,
       },
     },
   ]);
@@ -492,6 +493,43 @@ export const dropdownCustomer = catchAsync(async (req, res, next) => {
   );
   return res.status(200).json(response);
 });
+
+export const verify_customer_gstin = catchAsync(async (req, res, next) => {
+  const { param1 } = req.body;
+  const authToken = req.eInvoiceAuthToken;
+
+  const irnResponse = await axios.get(
+    `${process.env.E_INVOICE_BASE_URL}/einvoice/type/GSTNDETAILS/version/V1_03?email=${process.env.E_INVOICE_EMAIL_ID}&param1=${param1}`,
+    {
+      headers: {
+        ...EInvoiceHeaderVariable,
+        'auth-token': authToken,
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+  if (irnResponse?.data?.status_cd === '1') {
+    return res.status(200).json({
+      success: true,
+      message: 'Customer GSTIN Verified Successfully',
+      result: irnResponse?.data?.data,
+    });
+  }else{
+    // Try to parse the error response and extract the first error object from status_desc array
+    let errorMessage = "Customer GSTIN Verification Failed.";
+    try {
+      if (irnResponse?.data?.status_desc) {
+        const statusDescArr = JSON.parse(irnResponse.data.status_desc);
+        if (Array.isArray(statusDescArr) && statusDescArr.length > 0) {
+          errorMessage = statusDescArr[0]?.ErrorMessage || errorMessage;
+        }
+      }
+    } catch (parseErr) {
+      errorMessage = "An unknown error occurred.";
+    }
+    throw new ApiError(errorMessage, StatusCodes.BAD_REQUEST);
+  }
+})
 
 //mobile API's
 

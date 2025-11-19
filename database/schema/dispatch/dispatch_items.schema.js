@@ -74,6 +74,7 @@ const dispatch_items_schema = new mongoose.Schema(
       trim: true,
       uppercase: true,
     },
+
     group_no: {
       type: String,
       // required: [true, 'Group Number is required.'],
@@ -140,6 +141,12 @@ const dispatch_items_schema = new mongoose.Schema(
     thickness: {
       type: Number,
       default: null,
+    },
+    unit: {
+      type: String,
+      default: null,
+      trim: true,
+      uppercase: true,
     },
     no_of_sheets: {
       type: Number,
