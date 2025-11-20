@@ -78,6 +78,10 @@ const cnc_done_schema = new mongoose.Schema(
       uppercase: true,
       required: [true, 'Transporter name is required.'],
     },
+    transport_mode: {
+      type: Object,
+      required: [true, 'Transport mode is required']
+    },
     transporter_details: {
       type: Object,
       required: [true, 'Transporter details are required']

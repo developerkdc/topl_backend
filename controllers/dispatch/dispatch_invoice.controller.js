@@ -79,10 +79,10 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
 
         groupedItems[groupName].items.push({
             sales_item_name: item.sales_item_name || item.item_name,
-            size: `${item.length || "-"}x${item.width || "-"}`,
+            size: `${item.length || "-"}x${item.width || item.diameter || "-"}`,
             quantity_items: item.no_of_sheets || item.no_of_leaves || item.number_of_rolls || item.quantity,
             total_sheets: item.no_of_sheets || item.no_of_leaves || item.number_of_rolls || item.quantity,
-            sqm: Number(item.sqm).toFixed(3),
+            sqm: Number(item.sqm ?? item.cbm ?? item.cmt ?? 0).toFixed(3),
             rate: item.rate,
             taxable_value: Number(item.discount_amount).toFixed(2),
         });
@@ -117,14 +117,16 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
                 igst: 0,
             };
         }
-
+        const qty = Number(item.sqm ?? item.cbm ?? item.cmt ?? 0);
+        const qty3 = Number(qty.toFixed(3));
         summaryMap[cat].items += Number(item.no_of_sheets || item.no_of_leaves || item.number_of_rolls || item.quantity || 0);
-        summaryMap[cat].qty_total += Number(item.sqm || item.cbm || item.cmt || 0);
-
-        summaryMap[cat].value += Number(item.rate || 0);
+        summaryMap[cat].qty_total = Number(
+            (Number(summaryMap[cat].qty_total) + qty3).toFixed(3)
+        )
+        summaryMap[cat].value += Number(item.amount || 0);
         summaryMap[cat].discount += Number(item.discount_value || 0);
 
-        summaryMap[cat].taxable_value += Number(item.final_row_amount || item.final_amount || 0);
+        summaryMap[cat].taxable_value += Number(item.final_amount || 0);
 
         summaryMap[cat].cgst += Number(gst.cgst_amount || 0);
         summaryMap[cat].sgst += Number(gst.sgst_amount || 0);
@@ -149,11 +151,11 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
     summaryRows.push({
         series: "Insurance",
         items: 0,
-        qty_total: 0,
+        qty_total: Number(0).toFixed(3),
         unit: "OTHER",
 
-        value: 0,
-        discount: 0,
+        value: Number(0).toFixed(2),
+        discount: Number(0).toFixed(2),
 
         taxable_value: Number(insurance.insurance_amount || 0).toFixed(2),
 
@@ -168,11 +170,11 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
     summaryRows.push({
         series: "Freight",
         items: 0,
-        qty_total: 0,
+        qty_total: Number(0).toFixed(3),
         unit: "OTHER",
 
-        value: 0,
-        discount: 0,
+        value: Number(0).toFixed(2),
+        discount: Number(0).toFixed(2),
 
         taxable_value: Number(freight.freight_amount || 0).toFixed(2),
 
@@ -187,11 +189,11 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
     summaryRows.push({
         series: "Other Charges",
         items: 0,
-        qty_total: 0,
+        qty_total: Number(0).toFixed(3),
         unit: "OTHER",
 
-        value: 0,
-        discount: 0,
+        value: Number(0).toFixed(2),
+        discount: Number(0).toFixed(2),
 
         taxable_value: Number(other.other_amount || 0).toFixed(2),
 
@@ -233,6 +235,10 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
         removal_of_good_date_time: dispatchDetails.removal_of_good_date_time,
         removal_date: removalDate,
         goods_removal_time: removalTime,
+        TOPLGSTIN: "24AAACT5636N1Z2",
+        TOPLPAN: "AAACT5636N",
+        TOPLMSME: "UDAYAM-GJ-18-564545",
+        TOPLState: "GUJARAT(24)",
         vehicle_details: dispatchDetails.vehicle_details,
         vehicle_number: dispatchDetails.vehicle_details?.map(v => v.vehicle_number) || [],
         // item_summary: dispatchDetails.dispatch_items_details?.map(item => ({
