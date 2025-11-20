@@ -8,7 +8,9 @@ import { dynamic_filter } from '../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import challan_done_model from '../../../database/schema/challan/challan_done/challan_done.schema.js';
 import { isValidObjectId } from 'mongoose';
-import { challan_status } from '../../../database/Utils/constants/constants.js';
+import { challan_status, transaction_type } from '../../../database/Utils/constants/constants.js';
+import transporterModel from '../../../database/schema/masters/transporter.schema.js';
+import moment from 'moment';
 
 export const create_challan = catchAsync(async (req, res) => {
   const { challan_details } = req.body;
@@ -721,6 +723,20 @@ export const listing_single_challan = catchAsync(async (req, res, next) => {
 
 export const generate_challan_ewaybill = catchAsync(async (req, res, next) => {
   const challan_id = req.params.id;
+  const matchQuery = {
+    $match: {
+      _id: mongoose.Types.ObjectId.createFromHexString(challan_id),
+    },
+  };
+  const aggIssuedChallanDetailsLookup = {
+    $lookup: {
+      from: 'issue_for_challan_details',
+      localField: 'raw_material_items',
+      foreignField: '_id',
+      as: 'issue_for_challan_item_details',
+    },
+  };
+  const listAggregate = [matchQuery, aggIssuedChallanDetailsLookup];
 
   if (!challan_id) {
     throw new ApiError('Challan ID is missing.', StatusCodes.NOT_FOUND);
@@ -729,19 +745,20 @@ export const generate_challan_ewaybill = catchAsync(async (req, res, next) => {
     throw new ApiError('Invalid Challan ID', StatusCodes.BAD_REQUEST);
   }
 
-  const challan_details = await challan_done_model.findById(challan_id);
-  if (!challan_details) {
+  const challanDetails = await challan_done_model.aggregate(listAggregate);
+  if (!challanDetails || challanDetails.length === 0) {
     throw new ApiError('Challan details not found', StatusCodes.NOT_FOUND);
   }
-  let challan_items = [];
-  if (Array.isArray(challan_details.items) && challan_details.items.length) {
-    challan_items = challan_details.items;
-  } else if (
-    Array.isArray(challan_details.raw_material_items) &&
-    challan_details.raw_material_items.length
-  ) {
-    challan_items = challan_details.raw_material_items;
+  const challan_details = challanDetails[0];
+  const issue_for_challan_item_details = challan_details?.issue_for_challan_item_details;
+
+  if (!issue_for_challan_item_details || issue_for_challan_item_details.length === 0) {
+    throw new ApiError('Issue for challan item details not found', StatusCodes.NOT_FOUND);
   }
+
+  console.log('challanDetails', challan_details, 'challanDetails');
+  console.log('issue_for_challan_item_details', issue_for_challan_item_details, 'issue_for_challan_item_details');
+
 
   // Optionally, eager load related entities (transporter, vehicle) if you need deeper metadata, like dispatch
   let transporter_details = challan_details.transporter_details;
