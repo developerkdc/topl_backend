@@ -339,10 +339,31 @@ export const dropdownProcess = catchAsync(async (req, res, next) => {
       },
     },
     {
+      $lookup: {
+        from: "colors",
+        let: { pid: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $eq: ["$process_id", "$$pid"] }
+            }
+          },
+          {
+            $project: {
+              _id: 1,
+              name: 1
+            }
+          }
+        ],
+        as: "colors",
+      },
+    },
+    {
       $project: {
         _id: 1,
         name: 1,
         process_type: 1,
+        colors: 1
       },
     },
     {
