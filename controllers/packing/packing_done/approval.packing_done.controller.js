@@ -2,8 +2,14 @@ import mongoose, { isValidObjectId } from 'mongoose';
 import { order_category } from '../../../database/Utils/constants/constants.js';
 import issue_for_order_model from '../../../database/schema/order/issue_for_order/issue_for_order.schema.js';
 import finished_ready_for_packing_model from '../../../database/schema/packing/issue_for_packing/finished_ready_for_packing/finished_ready_for_packing.schema.js';
-import { approval_packing_done_items_model, approval_packing_done_other_details_model } from '../../../database/schema/packing/packing_done/approval.packing_done_schema.js';
-import { packing_done_items_model, packing_done_other_details_model } from '../../../database/schema/packing/packing_done/packing_done.schema.js';
+import {
+  approval_packing_done_items_model,
+  approval_packing_done_other_details_model,
+} from '../../../database/schema/packing/packing_done/approval.packing_done_schema.js';
+import {
+  packing_done_items_model,
+  packing_done_other_details_model,
+} from '../../../database/schema/packing/packing_done/packing_done.schema.js';
 import ApiResponse from '../../../utils/ApiResponse.js';
 import { approval_status, StatusCodes } from '../../../utils/constants.js';
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
@@ -11,7 +17,6 @@ import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import ApiError from '../../../utils/errors/apiError.js';
 import catchAsync from '../../../utils/errors/catchAsync.js';
 import { create_packing_done_approval_report } from '../../../config/downloadExcel/packing/packing.approval_csv.js';
-
 
 export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
   const {
@@ -132,7 +137,7 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
         preserveNullAndEmptyArrays: true,
       },
     },
-  ]
+  ];
 
   const aggregatePackingDoneItems = {
     $lookup: {
@@ -140,7 +145,6 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
       foreignField: 'approval_packing_done_other_details_id',
       localField: '_id',
       as: 'packing_done_item_details',
-
     },
   };
 
@@ -212,7 +216,7 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
           $project: {
             owner_name: 1,
             // customer_details: 1,
-            company_name: 1
+            company_name: 1,
           },
         },
       ],
@@ -252,12 +256,11 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
     },
   };
 
-
   const aggSort = {
     $sort: {
-      ...(sortBy === "product_type"
-        ? { sort_product_type: sort === "desc" ? -1 : 1 }
-        : { [sortBy]: sort === "desc" ? -1 : 1 }),
+      ...(sortBy === 'product_type'
+        ? { sort_product_type: sort === 'desc' ? -1 : 1 }
+        : { [sortBy]: sort === 'desc' ? -1 : 1 }),
     },
   };
 
@@ -304,7 +307,12 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
     await approval_packing_done_other_details_model.aggregate(list_aggregate);
 
   if (export_report === 'true') {
-    await create_packing_done_approval_report(issue_for_raw_packing?.[0]?.data, req, res)
+    await create_packing_done_approval_report(
+      issue_for_raw_packing?.[0]?.data,
+      req,
+      res
+    );
+    return;
   }
 
   const totalPages = Math.ceil(
@@ -323,8 +331,8 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
   return res.status(StatusCodes.OK).json(response);
 });
 
-export const fetch_all_packing_items_by_packing_done_other_details_id = catchAsync(
-  async (req, res) => {
+export const fetch_all_packing_items_by_packing_done_other_details_id =
+  catchAsync(async (req, res) => {
     const { id } = req.params;
 
     if (!id) {
@@ -334,17 +342,17 @@ export const fetch_all_packing_items_by_packing_done_other_details_id = catchAsy
       throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
     }
 
-    const pakcing_done_other_details_result = await approval_packing_done_other_details_model.findById(id).lean();
+    const pakcing_done_other_details_result =
+      await approval_packing_done_other_details_model.findById(id).lean();
 
     if (!pakcing_done_other_details_result) {
       throw new ApiError('Order not found', StatusCodes.NOT_FOUND);
     }
 
     const is_approval_sent =
-      pakcing_done_other_details_result?.approval_status?.sendForApproval?.status;
+      pakcing_done_other_details_result?.approval_status?.sendForApproval
+        ?.status;
 
-
-    
     // if (!is_approval_sent) {
     //   throw new ApiError('Approval not sent for this order', StatusCodes.BAD_REQUEST);
     // };
@@ -373,21 +381,21 @@ export const fetch_all_packing_items_by_packing_done_other_details_id = catchAsy
       },
       ...(is_approval_sent
         ? [
-          {
-            $lookup: {
-              from: 'packing_done_other_details',
-              foreignField: '_id',
-              localField: 'approval_packing_id',
-              as: 'previous_packing_done_other_details',
+            {
+              $lookup: {
+                from: 'packing_done_other_details',
+                foreignField: '_id',
+                localField: 'approval_packing_id',
+                as: 'previous_packing_done_other_details',
+              },
             },
-          },
-          {
-            $unwind: {
-              path: '$previous_packing_done_other_details',
-              preserveNullAndEmptyArrays: true,
+            {
+              $unwind: {
+                path: '$previous_packing_done_other_details',
+                preserveNullAndEmptyArrays: true,
+              },
             },
-          },
-        ]
+          ]
         : []),
 
       {
@@ -396,7 +404,9 @@ export const fetch_all_packing_items_by_packing_done_other_details_id = catchAsy
           foreignField: 'approval_packing_done_other_details_id',
           localField: '_id',
           as: 'packing_items_details',
-          pipeline: is_approval_sent ? previous_packing_items_details_pipeline : [],
+          pipeline: is_approval_sent
+            ? previous_packing_items_details_pipeline
+            : [],
         },
       },
       {
@@ -451,7 +461,8 @@ export const fetch_all_packing_items_by_packing_done_other_details_id = catchAsy
       },
     ];
 
-    const [result] = await approval_packing_done_other_details_model.aggregate(pipeline);
+    const [result] =
+      await approval_packing_done_other_details_model.aggregate(pipeline);
 
     const response = new ApiResponse(
       StatusCodes.OK,
@@ -459,8 +470,7 @@ export const fetch_all_packing_items_by_packing_done_other_details_id = catchAsy
       result
     );
     return res.status(StatusCodes.OK).json(response);
-  }
-);
+  });
 
 export const approve_packing_details = catchAsync(async (req, res) => {
   const { id } = req.params;
@@ -484,20 +494,21 @@ export const approve_packing_details = catchAsync(async (req, res) => {
       },
     };
 
-    const packing_done_other_details_approval_result = await approval_packing_done_other_details_model
-      .findOneAndUpdate(
-        {
-          _id: id,
-        },
-        {
-          $set: {
-            approval_status: updated_approval_status,
-            'approval.approvalBy.user': user._id,
+    const packing_done_other_details_approval_result =
+      await approval_packing_done_other_details_model
+        .findOneAndUpdate(
+          {
+            _id: id,
           },
-        },
-        { session, new: true, runValidators: true }
-      )
-      .lean();
+          {
+            $set: {
+              approval_status: updated_approval_status,
+              'approval.approvalBy.user': user._id,
+            },
+          },
+          { session, new: true, runValidators: true }
+        )
+        .lean();
     if (!packing_done_other_details_approval_result) {
       throw new ApiError(
         'Failed to update packing details',
@@ -505,15 +516,19 @@ export const approve_packing_details = catchAsync(async (req, res) => {
       );
     }
 
-    const { _id, approval_packing_id, approvalBy, ...rest_order_Details } = packing_done_other_details_approval_result;
+    const { _id, approval_packing_id, approvalBy, ...rest_order_Details } =
+      packing_done_other_details_approval_result;
 
-    const update_packing_done_details_result = await packing_done_other_details_model.updateOne(
-      { _id: approval_packing_id },
-      {
-        $set: { ...rest_order_Details },
-      },
-      { session }
-    ).lean();
+    const update_packing_done_details_result =
+      await packing_done_other_details_model
+        .updateOne(
+          { _id: approval_packing_id },
+          {
+            $set: { ...rest_order_Details },
+          },
+          { session }
+        )
+        .lean();
 
     if (update_packing_done_details_result?.matchedCount === 0) {
       throw new ApiError('Order details not found', StatusCodes.BAD_REQUEST);
@@ -529,11 +544,13 @@ export const approve_packing_details = catchAsync(async (req, res) => {
       );
     }
 
-    const approval_item_details =
-      await approval_packing_done_items_model
-        .find({ approval_packing_done_other_details_id: id, packing_done_other_details_id: approval_packing_id })
-        .session(session)
-        .lean();
+    const approval_item_details = await approval_packing_done_items_model
+      .find({
+        approval_packing_done_other_details_id: id,
+        packing_done_other_details_id: approval_packing_id,
+      })
+      .session(session)
+      .lean();
     if (approval_item_details?.length <= 0) {
       throw new ApiError(
         'No approval item details found',
@@ -542,7 +559,13 @@ export const approve_packing_details = catchAsync(async (req, res) => {
     }
 
     const old_packing_done_items = await packing_done_items_model
-      .find({ packing_done_other_details_id: packing_done_other_details_approval_result?.approval_packing_id }, { issue_for_packing_id: 1 })
+      .find(
+        {
+          packing_done_other_details_id:
+            packing_done_other_details_approval_result?.approval_packing_id,
+        },
+        { issue_for_packing_id: 1 }
+      )
       .session(session);
 
     const old_packing_done_item_ids = old_packing_done_items?.map(
@@ -550,7 +573,8 @@ export const approve_packing_details = catchAsync(async (req, res) => {
     );
 
     const update_existing_packing_done_item_status = await (
-      packing_done_other_details_approval_result?.order_category?.[0]?.toUpperCase() === order_category?.raw
+      packing_done_other_details_approval_result?.order_category?.[0]?.toUpperCase() ===
+      order_category?.raw
         ? issue_for_order_model
         : finished_ready_for_packing_model
     ).updateMany(
@@ -624,7 +648,8 @@ export const approve_packing_details = catchAsync(async (req, res) => {
       ),
     ];
     const update_issue_for_order_result = await (
-      packing_done_other_details_approval_result?.order_category?.[0]?.toUpperCase() === order_category?.raw
+      packing_done_other_details_approval_result?.order_category?.[0]?.toUpperCase() ===
+      order_category?.raw
         ? issue_for_order_model
         : finished_ready_for_packing_model
     ).updateMany(
@@ -669,10 +694,16 @@ export const reject_packing_details = catchAsync(async (req, res) => {
   const user = req.userDetails;
 
   if (!packing_done_other_details_id) {
-    throw new ApiError('Packing Done other details ID is required', StatusCodes.BAD_REQUEST);
+    throw new ApiError(
+      'Packing Done other details ID is required',
+      StatusCodes.BAD_REQUEST
+    );
   }
   if (!isValidObjectId(packing_done_other_details_id)) {
-    throw new ApiError('Invalid Packing Done other details ID', StatusCodes.BAD_REQUEST);
+    throw new ApiError(
+      'Invalid Packing Done other details ID',
+      StatusCodes.BAD_REQUEST
+    );
   }
   const session = await mongoose.startSession();
   try {
@@ -686,20 +717,21 @@ export const reject_packing_details = catchAsync(async (req, res) => {
       },
     };
 
-    const packing_done_other_details_approval_status_result = await approval_packing_done_other_details_model
-      .findOneAndUpdate(
-        {
-          _id: packing_done_other_details_id,
-        },
-        {
-          $set: {
-            approval_status: updated_approval_status,
-            'approval.rejectedBy.user': user._id,
+    const packing_done_other_details_approval_status_result =
+      await approval_packing_done_other_details_model
+        .findOneAndUpdate(
+          {
+            _id: packing_done_other_details_id,
           },
-        },
-        { session, new: true, runValidators: true }
-      )
-      .lean();
+          {
+            $set: {
+              approval_status: updated_approval_status,
+              'approval.rejectedBy.user': user._id,
+            },
+          },
+          { session, new: true, runValidators: true }
+        )
+        .lean();
 
     if (!packing_done_other_details_approval_status_result) {
       throw new ApiError(
@@ -708,16 +740,24 @@ export const reject_packing_details = catchAsync(async (req, res) => {
       );
     }
 
-    const update_packing_doone_other_details_result = await packing_done_other_details_model.updateOne(
-      { _id: packing_done_other_details_approval_status_result?.approval_packing_id },
-      {
-        $set: { approval_status: updated_approval_status },
-      },
-      { session }
-    ).lean();
+    const update_packing_doone_other_details_result =
+      await packing_done_other_details_model
+        .updateOne(
+          {
+            _id: packing_done_other_details_approval_status_result?.approval_packing_id,
+          },
+          {
+            $set: { approval_status: updated_approval_status },
+          },
+          { session }
+        )
+        .lean();
 
     if (update_packing_doone_other_details_result?.matchedCount === 0) {
-      throw new ApiError('Packing Done details not found', StatusCodes.BAD_REQUEST);
+      throw new ApiError(
+        'Packing Done details not found',
+        StatusCodes.BAD_REQUEST
+      );
     }
     if (
       !update_packing_doone_other_details_result?.acknowledged ||

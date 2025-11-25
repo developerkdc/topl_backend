@@ -416,7 +416,7 @@ export const update_decorative_order = catchAsync(async (req, res) => {
         order_id: add_approval_order_result?.order_id,
         approval_order_id: add_approval_order_result?._id,
         product_category: add_approval_order_result?.product_category,
-        created_by: item.created_by ? item?.created_by : userDetails?._id,
+        // created_by: item.created_by ? item?.created_by : userDetails?._id,
         updated_by: item.updated_by ? item?.updated_by : userDetails?._id,
       };
     });

@@ -902,7 +902,6 @@ export const fetch_single_packing_done_item = catchAsync(async (req, res) => {
     issue_for_packing_model = 'finished_ready_for_packing_details';
   }
 
-  // ✅ FIX: ensure the 'from' value is always a valid string
   const lookupCollection =
     models_map[order_type?.toLowerCase()] || 'raw_order_item_details';
 
@@ -970,7 +969,6 @@ export const fetch_single_packing_done_item = catchAsync(async (req, res) => {
             },
           },
           {
-            // ✅ FIXED: using safe variable for 'from'
             $lookup: {
               from: lookupCollection,
               localField: 'order_item_id',
