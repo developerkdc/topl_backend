@@ -297,6 +297,7 @@ export const fetch_all_raw_order_items = catchAsync(async (req, res, next) => {
 
   if (export_report === 'true') {
     await create_raw_order_approval_report(result, req, res);
+    return;
   }
   const aggCount = {
     $count: 'totalCount',
