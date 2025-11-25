@@ -525,7 +525,7 @@ export const add_dispatch_details = catchAsync(async (req, res, next) => {
     await session.endSession();
   }
 });
-
+ 
 export const edit_dispatch_details = catchAsync(async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -650,7 +650,6 @@ export const edit_dispatch_details = catchAsync(async (req, res, next) => {
 
     const update_dispatch_details = {
       ...dispatch_details,
-      created_by: userDetails?._id,
       updated_by: userDetails?._id,
     };
 
