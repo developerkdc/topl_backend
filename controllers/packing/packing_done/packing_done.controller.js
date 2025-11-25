@@ -273,6 +273,7 @@ export const update_packing_details = catchAsync(async (req, res) => {
           { session, new: true, runValidators: true }
         );
       if (!update_packing_done_other_details_result) {
+
         throw new ApiError(
           'Failed to update packing done other details.',
           StatusCodes.INTERNAL_SERVER_ERROR
@@ -326,10 +327,9 @@ export const update_packing_details = catchAsync(async (req, res) => {
 
       const issue_for_packing_set = [
         ...new Set(
-          packing_done_item_details?.map((item) => item?.issue_for_packing_id)
+          packing_done_item_details?.map((item) => mongoose.Types.ObjectId.createFromHexString(item?.issue_for_packing_id))
         ),
       ];
-
       const update_issue_for_order_result = await (
         other_details?.order_category.toUpperCase() === order_category?.raw
           ? issue_for_order_model
@@ -541,12 +541,11 @@ export const revert_packing_done_items = catchAsync(async (req, res) => {
       ...new Set(
         packing_done_items
           ?.map((item) => item?.issue_for_packing_id)
-          .filter((id) => mongoose.Types.ObjectId.isValid(id))
+        // .filter((id) => mongoose.Types.ObjectId.isValid(id))
       ),
     ];
-
     const update_issue_for_order_result = await (
-      packing_done_other_details?.order_category === order_category?.raw
+      packing_done_other_details?.order_category?.[0] === order_category?.raw
         ? issue_for_order_model
         : finished_ready_for_packing_model
     ).updateMany(
@@ -559,19 +558,12 @@ export const revert_packing_done_items = catchAsync(async (req, res) => {
       },
       { session }
     );
+    console.log("update_issue_for_order_result => ", update_issue_for_order_result)
 
-    if (!update_issue_for_order_result?.acknowledged) {
+    if (!update_issue_for_order_result?.acknowledged || update_issue_for_order_result.matchedCount === 0) {
       throw new ApiError(
         'Failed to update issued for packing item status.',
         StatusCodes.INTERNAL_SERVER_ERROR
-      );
-    }
-
-    // Just warn if no documents matched/updated
-    if (update_issue_for_order_result.matchedCount === 0) {
-      console.warn(
-        '⚠️ No matching issued for packing items found for IDs:',
-        issue_for_packing_set
       );
     }
 
