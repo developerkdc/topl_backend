@@ -657,7 +657,6 @@ export const edit_dispatch_details = catchAsync(async (req, res, next) => {
 
       const update_dispatch_details = {
         ...dispatch_details,
-        created_by: userDetails?._id,
         updated_by: userDetails?._id,
       };
 

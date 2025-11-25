@@ -205,6 +205,8 @@ export const update_packing_details = catchAsync(async (req, res) => {
     }
   }
 
+  console.log("send_for_approval => ",send_for_approval)
+
   if (
     !Array.isArray(packing_done_item_details) ||
     packing_done_item_details?.length === 0
@@ -426,6 +428,8 @@ export const update_packing_details = catchAsync(async (req, res) => {
 
     const updated_item_details = packing_done_item_details?.map((item) => {
       const { _id, packing_item_id, createdAt, updatedAt, ...rest_item_details } = item;
+      console.log("item => ",item)
+      console.log("packing item => ",packing_item_id)
       return {
         ...rest_item_details,
         approval_packing_done_other_details_id: add_approval_packing_done_other_deatils_result?._id,
@@ -436,6 +440,7 @@ export const update_packing_details = catchAsync(async (req, res) => {
       };
     });
 
+    console.log("updated_item_details => ",updated_item_details)
     const add_approval_packing_items_result =
       await approval_packing_done_items_model.insertMany(updated_item_details, {
         session,
@@ -889,7 +894,6 @@ export const fetch_single_packing_done_item = catchAsync(async (req, res) => {
     issue_for_packing_model = 'finished_ready_for_packing_details';
   }
 
-  // ✅ FIX: ensure the 'from' value is always a valid string
   const lookupCollection =
     models_map[order_type?.toLowerCase()] || 'raw_order_item_details';
 
@@ -957,7 +961,6 @@ export const fetch_single_packing_done_item = catchAsync(async (req, res) => {
             },
           },
           {
-            // ✅ FIXED: using safe variable for 'from'
             $lookup: {
               from: lookupCollection,
               localField: 'order_item_id',
