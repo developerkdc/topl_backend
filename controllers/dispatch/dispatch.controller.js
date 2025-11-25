@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import catchAsync from '../../utils/errors/catchAsync.js';
 import ApiResponse from '../../utils/ApiResponse.js';
-import { StatusCodes } from '../../utils/constants.js';
+import { approval_status, StatusCodes } from '../../utils/constants.js';
 import dispatchModel from '../../database/schema/dispatch/dispatch.schema.js';
 import ApiError from '../../utils/errors/apiError.js';
 import dispatchItemsModel from '../../database/schema/dispatch/dispatch_items.schema.js';
@@ -30,6 +30,8 @@ import transporterModel from '../../database/schema/masters/transporter.schema.j
 import { getStateCode } from '../../utils/stateCode.js';
 import { EwayBillHeaderVariable } from '../../middlewares/ewaybillAuth.middleware.js';
 import errorCodeMapForEwayBill from './errorCodeMapForEwayBill.js';
+import approval_dispatch_model from '../../database/schema/dispatch/approval/approval.dispatch.schema.js';
+import approval_dispatch_items_model from '../../database/schema/dispatch/approval/approval.dispatch_items.schema.js';
 
 const order_items_models = {
   [order_category.raw]: RawOrderItemDetailsModel,
@@ -222,52 +224,52 @@ export const load_packing_details = catchAsync(async (req, res, next) => {
       },
     },
   ];
-  
+
   const aggGstandHsn = [
-  {
-    $lookup: {
-      from: "item_categories",
-      let: { ptype: "$product_type" },
-      pipeline: [
-        {
-          $match: {
-            $expr: {
-              $eq: [
-                "$category",
-                {
-                  $switch: {
-                    branches: [
-                      { case: { $eq: ["$$ptype", "DRESSING_FACTORY"] }, then: "VENEER" },
-                      { case: { $eq: ["$$ptype", "CROSSCUTTING"] }, then: "LOG" },
-                      { case: { $eq: ["$$ptype", "GROUPING_FACTORY"] }, then: "VENEER" },
-                      { case: { $eq: ["$$ptype", "FLITCHING_FACTORY"] }, then: "FLITCH" }
-                    ],
-                    default: "$$ptype" // fallback: match same as product_type
+    {
+      $lookup: {
+        from: "item_categories",
+        let: { ptype: "$product_type" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $eq: [
+                  "$category",
+                  {
+                    $switch: {
+                      branches: [
+                        { case: { $eq: ["$$ptype", "DRESSING_FACTORY"] }, then: "VENEER" },
+                        { case: { $eq: ["$$ptype", "CROSSCUTTING"] }, then: "LOG" },
+                        { case: { $eq: ["$$ptype", "GROUPING_FACTORY"] }, then: "VENEER" },
+                        { case: { $eq: ["$$ptype", "FLITCHING_FACTORY"] }, then: "FLITCH" }
+                      ],
+                      default: "$$ptype" // fallback: match same as product_type
+                    }
                   }
-                }
-              ]
+                ]
+              }
+            }
+          },
+          {
+            $project: {
+              gst_percentage: 1,
+              product_hsn_code: 1,
+              calculate_unit: 1,
+              category: 1
             }
           }
-        },
-        {
-          $project: {
-            gst_percentage: 1,
-            product_hsn_code: 1,
-            calculate_unit: 1,
-            category: 1
-          }
-        }
-      ],
-      as: "item_category_gst_details"
+        ],
+        as: "item_category_gst_details"
+      }
+    },
+    {
+      $unwind: {
+        path: "$item_category_gst_details",
+        preserveNullAndEmptyArrays: true
+      }
     }
-  },
-  {
-    $unwind: {
-      path: "$item_category_gst_details",
-      preserveNullAndEmptyArrays: true
-    }
-  }
-];
+  ];
 
 
   const fetch_packing_items_details = await packing_done_items_model.aggregate([
@@ -532,6 +534,9 @@ export const edit_dispatch_details = catchAsync(async (req, res, next) => {
   try {
     const userDetails = req.userDetails;
     const { dispatch_id } = req.params;
+    // const send_for_approval = req.sendForApproval;
+    const send_for_approval = true;
+
     if (!dispatch_id || !mongoose.isValidObjectId(dispatch_id)) {
       throw new ApiError('Invalid Dispatch ID', StatusCodes.BAD_REQUEST);
     }
@@ -559,9 +564,10 @@ export const edit_dispatch_details = catchAsync(async (req, res, next) => {
     if (!fetch_dipsatch_details) {
       throw new ApiError('Dispatch details not found', StatusCodes.NOT_FOUND);
     }
-    if (fetch_dipsatch_details?.dispatch_status === dispatch_status.cancelled) {
-      throw new ApiError('Dispatch already cancelled', StatusCodes.BAD_REQUEST);
+    if ([dispatch_status.cancelled, dispatch_status?.irn_generated]?.includes(fetch_dipsatch_details?.dispatch_status) && fetch_dipsatch_details?.irn_number !== null) {
+      throw new ApiError('Unable to edit the dispatch details once irn number is generated', StatusCodes.BAD_REQUEST);
     }
+
     const fetch_dispatch_items_details = await dispatchItemsModel
       .find({ dispatch_id: dispatch_id })
       .session(session);
@@ -575,328 +581,424 @@ export const edit_dispatch_details = catchAsync(async (req, res, next) => {
       );
     }
 
-    // revert order status
-    for (let item of fetch_dispatch_items_details) {
-      const dispatch_no_of_sheets =
-        (item?.no_of_sheets || 0) +
-        (item?.no_of_leaves || 0) +
-        (item?.number_of_rolls || 0);
+    if (!send_for_approval) {
+      // revert order status
+      for (let item of fetch_dispatch_items_details) {
+        const dispatch_no_of_sheets =
+          (item?.no_of_sheets || 0) +
+          (item?.no_of_leaves || 0) +
+          (item?.number_of_rolls || 0);
 
-      const order_items_details = await order_items_models[
-        item?.order_category
-      ].findOneAndUpdate(
-        {
-          _id: item?.order_item_id,
-          order_id: item?.order_id,
-        },
-        {
-          $inc: {
-            dispatch_no_of_sheets: -dispatch_no_of_sheets,
-          },
-        },
-        { new: true, session: session }
-      );
-
-      if (!order_items_details) {
-        throw new ApiError(
-          `Failed to update dispatch no of sheets in order for ${item?.order_category}`,
-          StatusCodes.BAD_REQUEST
-        );
-      }
-
-      const update_order_item = await order_items_models[
-        item?.order_category
-      ].findOneAndUpdate(
-        {
-          _id: order_items_details?._id,
-          order_id: order_items_details?.order_id,
-          // no_of_sheets: order_items_details?.dispatch_no_of_sheets
-          no_of_sheets: order_items_details?.no_of_sheets,
-        },
-        {
-          $set: {
-            item_status: null,
-          },
-        },
-        { new: true, session: session }
-      );
-
-      if (!update_order_item) {
-        throw new ApiError(
-          `Failed to update order item status as closed`,
-          StatusCodes.BAD_REQUEST
-        );
-      }
-
-      const update_order = await OrderModel.findOneAndUpdate(
-        {
-          _id: order_items_details?.order_id,
-        },
-        {
-          $set: {
-            order_status: null,
-          },
-        },
-        { new: true, session }
-      );
-
-      if (!update_order) {
-        throw new ApiError(
-          `Failed to update order status as closed`,
-          StatusCodes.BAD_REQUEST
-        );
-      }
-    }
-
-    const update_dispatch_details = {
-      ...dispatch_details,
-      created_by: userDetails?._id,
-      updated_by: userDetails?._id,
-    };
-
-    const update_dispatch_details_data = await dispatchModel.findOneAndUpdate(
-      {
-        _id: dispatch_id,
-      },
-      {
-        $set: update_dispatch_details,
-      },
-      { session, new: true, runValidators: true }
-    );
-
-    if (!update_dispatch_details_data) {
-      throw new ApiError(
-        'Failed to update dispatch details',
-        StatusCodes.INTERNAL_SERVER_ERROR
-      );
-    }
-
-    // delete existing dispatch items
-    const delete_dispatch_items = await dispatchItemsModel.deleteMany(
-      { dispatch_id: dispatch_id },
-      { session }
-    );
-    if (
-      !delete_dispatch_items?.acknowledged ||
-      delete_dispatch_items?.deletedCount === 0
-    ) {
-      throw new ApiError(
-        'Failed to delete existing dispatch items',
-        StatusCodes.INTERNAL_SERVER_ERROR
-      );
-    }
-
-    // Create new dispatch items details
-    const dispatch_items_data = dispatch_items_details.map((items) => {
-      items.dispatch_id = update_dispatch_details_data?._id;
-      items.invoice_no = update_dispatch_details_data?.invoice_no;
-      items.created_by = items.created_by ? items.created_by : userDetails?._id;
-      items.updated_by = userDetails?._id;
-      items.createdAt = items.createdAt ? items.createdAt : new Date();
-      items.updatedAt = new Date();
-      return items;
-    });
-    if (!dispatch_items_data || dispatch_items_data?.length === 0) {
-      throw new ApiError(
-        'Dispatch items details are required',
-        StatusCodes.BAD_REQUEST
-      );
-    }
-
-    const add_dispatch_items_data = await dispatchItemsModel.insertMany(
-      dispatch_items_data,
-      { session }
-    );
-    if (!add_dispatch_items_data || add_dispatch_items_data?.length === 0) {
-      throw new ApiError(
-        'Failed to create dispatch items',
-        StatusCodes.INTERNAL_SERVER_ERROR
-      );
-    }
-
-    // update order and order item as closed status
-    for (let item of add_dispatch_items_data) {
-      const dispatch_no_of_sheets =
-        (item?.no_of_sheets || 0) +
-        (item?.no_of_leaves || 0) +
-        (item?.number_of_rolls || 0);
-
-      const order_items_details = await order_items_models[
-        item?.order_category
-      ].findOneAndUpdate(
-        {
-          _id: item?.order_item_id,
-          order_id: item?.order_id,
-        },
-        {
-          $inc: {
-            dispatch_no_of_sheets: dispatch_no_of_sheets,
-          },
-        },
-        { new: true, session: session }
-      );
-
-      if (!order_items_details) {
-        throw new ApiError(
-          `Failed to update dispatch no of sheets in order for ${item?.order_category}`,
-          StatusCodes.BAD_REQUEST
-        );
-      }
-
-      if (
-        order_items_details?.no_of_sheets ===
-        order_items_details?.dispatch_no_of_sheets
-      ) {
-        const order_item_closed = await order_items_models[
+        const order_items_details = await order_items_models[
           item?.order_category
         ].findOneAndUpdate(
           {
-            _id: order_items_details?._id,
-            order_id: order_items_details?.order_id,
-            no_of_sheets: order_items_details?.dispatch_no_of_sheets,
+            _id: item?.order_item_id,
+            order_id: item?.order_id,
           },
           {
-            $set: {
-              item_status: order_item_status.closed,
+            $inc: {
+              dispatch_no_of_sheets: -dispatch_no_of_sheets,
             },
           },
           { new: true, session: session }
         );
 
-        if (!order_item_closed) {
+        if (!order_items_details) {
+          throw new ApiError(
+            `Failed to update dispatch no of sheets in order for ${item?.order_category}`,
+            StatusCodes.BAD_REQUEST
+          );
+        }
+
+        const update_order_item = await order_items_models[
+          item?.order_category
+        ].findOneAndUpdate(
+          {
+            _id: order_items_details?._id,
+            order_id: order_items_details?.order_id,
+            // no_of_sheets: order_items_details?.dispatch_no_of_sheets
+            no_of_sheets: order_items_details?.no_of_sheets,
+          },
+          {
+            $set: {
+              item_status: null,
+            },
+          },
+          { new: true, session: session }
+        );
+
+        if (!update_order_item) {
           throw new ApiError(
             `Failed to update order item status as closed`,
             StatusCodes.BAD_REQUEST
           );
         }
 
-        const fetch_order_item_closed = await order_items_models[
-          item?.order_category
-        ].find({
-          order_id: order_items_details?.order_id,
-          item_status: { $ne: null },
-        });
+        const update_order = await OrderModel.findOneAndUpdate(
+          {
+            _id: order_items_details?.order_id,
+          },
+          {
+            $set: {
+              order_status: null,
+            },
+          },
+          { new: true, session }
+        );
 
-        if (fetch_order_item_closed?.length <= 0) {
-          const order_closed = await OrderModel.findOneAndUpdate(
+        if (!update_order) {
+          throw new ApiError(
+            `Failed to update order status as closed`,
+            StatusCodes.BAD_REQUEST
+          );
+        }
+      }
+
+      const update_dispatch_details = {
+        ...dispatch_details,
+        created_by: userDetails?._id,
+        updated_by: userDetails?._id,
+      };
+
+      const update_dispatch_details_data = await dispatchModel.findOneAndUpdate(
+        {
+          _id: dispatch_id,
+        },
+        {
+          $set: update_dispatch_details,
+        },
+        { session, new: true, runValidators: true }
+      );
+
+      if (!update_dispatch_details_data) {
+        throw new ApiError(
+          'Failed to update dispatch details',
+          StatusCodes.INTERNAL_SERVER_ERROR
+        );
+      }
+
+      // delete existing dispatch items
+      const delete_dispatch_items = await dispatchItemsModel.deleteMany(
+        { dispatch_id: dispatch_id },
+        { session }
+      );
+      if (
+        !delete_dispatch_items?.acknowledged ||
+        delete_dispatch_items?.deletedCount === 0
+      ) {
+        throw new ApiError(
+          'Failed to delete existing dispatch items',
+          StatusCodes.INTERNAL_SERVER_ERROR
+        );
+      }
+
+      // Create new dispatch items details
+      const dispatch_items_data = dispatch_items_details.map((items) => {
+        items.dispatch_id = update_dispatch_details_data?._id;
+        items.invoice_no = update_dispatch_details_data?.invoice_no;
+        items.created_by = items.created_by ? items.created_by : userDetails?._id;
+        items.updated_by = userDetails?._id;
+        items.createdAt = items.createdAt ? items.createdAt : new Date();
+        items.updatedAt = new Date();
+        return items;
+      });
+      if (!dispatch_items_data || dispatch_items_data?.length === 0) {
+        throw new ApiError(
+          'Dispatch items details are required',
+          StatusCodes.BAD_REQUEST
+        );
+      }
+
+      const add_dispatch_items_data = await dispatchItemsModel.insertMany(
+        dispatch_items_data,
+        { session }
+      );
+      if (!add_dispatch_items_data || add_dispatch_items_data?.length === 0) {
+        throw new ApiError(
+          'Failed to create dispatch items',
+          StatusCodes.INTERNAL_SERVER_ERROR
+        );
+      }
+
+      // update order and order item as closed status
+      for (let item of add_dispatch_items_data) {
+        const dispatch_no_of_sheets =
+          (item?.no_of_sheets || 0) +
+          (item?.no_of_leaves || 0) +
+          (item?.number_of_rolls || 0);
+
+        const order_items_details = await order_items_models[
+          item?.order_category
+        ].findOneAndUpdate(
+          {
+            _id: item?.order_item_id,
+            order_id: item?.order_id,
+          },
+          {
+            $inc: {
+              dispatch_no_of_sheets: dispatch_no_of_sheets,
+            },
+          },
+          { new: true, session: session }
+        );
+
+        if (!order_items_details) {
+          throw new ApiError(
+            `Failed to update dispatch no of sheets in order for ${item?.order_category}`,
+            StatusCodes.BAD_REQUEST
+          );
+        }
+
+        if (
+          order_items_details?.no_of_sheets ===
+          order_items_details?.dispatch_no_of_sheets
+        ) {
+          const order_item_closed = await order_items_models[
+            item?.order_category
+          ].findOneAndUpdate(
             {
-              _id: order_items_details?.order_id,
+              _id: order_items_details?._id,
+              order_id: order_items_details?.order_id,
+              no_of_sheets: order_items_details?.dispatch_no_of_sheets,
             },
             {
               $set: {
-                order_status: order_status.closed,
+                item_status: order_item_status.closed,
               },
             },
-            { new: true, session }
+            { new: true, session: session }
           );
 
-          if (!order_closed) {
+          if (!order_item_closed) {
             throw new ApiError(
-              `Failed to update order status as closed`,
+              `Failed to update order item status as closed`,
               StatusCodes.BAD_REQUEST
             );
           }
+
+          const fetch_order_item_closed = await order_items_models[
+            item?.order_category
+          ].find({
+            order_id: order_items_details?.order_id,
+            item_status: { $ne: null },
+          });
+
+          if (fetch_order_item_closed?.length <= 0) {
+            const order_closed = await OrderModel.findOneAndUpdate(
+              {
+                _id: order_items_details?.order_id,
+              },
+              {
+                $set: {
+                  order_status: order_status.closed,
+                },
+              },
+              { new: true, session }
+            );
+
+            if (!order_closed) {
+              throw new ApiError(
+                `Failed to update order status as closed`,
+                StatusCodes.BAD_REQUEST
+              );
+            }
+          }
         }
       }
+
+      // Update packing done other details
+      const prev_packing_done_ids = fetch_dipsatch_details?.packing_done_ids;
+      const prev_packing_done_ids_data = prev_packing_done_ids.map(
+        (item) => item?.packing_done_other_details_id
+      );
+      const prev_update_packing_done_details =
+        await packing_done_other_details_model.updateMany(
+          { _id: { $in: prev_packing_done_ids_data } },
+          {
+            $set: {
+              is_dispatch_done: false,
+              isEditable: true,
+              updated_by: userDetails?._id,
+            },
+          },
+          { session }
+        );
+      if (prev_update_packing_done_details?.matchedCount === 0) {
+        throw new ApiError(
+          'Packing done details not found',
+          StatusCodes.NOT_FOUND
+        );
+      }
+      if (
+        !prev_update_packing_done_details?.acknowledged ||
+        prev_update_packing_done_details?.modifiedCount === 0
+      ) {
+        throw new ApiError(
+          'Failed to update packing done details',
+          StatusCodes.INTERNAL_SERVER_ERROR
+        );
+      }
+
+      // Update packing done other details with new packing done IDs
+      const packing_done_ids = update_dispatch_details_data?.packing_done_ids;
+      if (packing_done_ids?.length <= 0) {
+        throw new ApiError(
+          'Packing done IDs are not allowed for dispatch',
+          StatusCodes.BAD_REQUEST
+        );
+      }
+      const packing_done_ids_data = packing_done_ids.map(
+        (item) => item?.packing_done_other_details_id
+      );
+
+      const alreadyDispatched = await packing_done_other_details_model
+        .find({
+          _id: { $in: packing_done_ids_data },
+          is_dispatch_done: true,
+          dispatch_id: { $ne: dispatch_id },
+        })
+        .session(session);
+
+      if (alreadyDispatched?.length > 0) {
+        throw new ApiError(
+          'Packing done details not found or already dispatch for some packing id',
+          StatusCodes.BAD_REQUEST
+        );
+      }
+
+      const update_packing_done_details =
+        await packing_done_other_details_model.updateMany(
+          { _id: { $in: packing_done_ids_data } },
+          {
+            $set: {
+              is_dispatch_done: true,
+              isEditable: false,
+              updated_by: userDetails?._id,
+            },
+          },
+          { session }
+        );
+      if (update_packing_done_details?.matchedCount === 0) {
+        throw new ApiError(
+          'Packing done details not found',
+          StatusCodes.NOT_FOUND
+        );
+      }
+      if (
+        !update_packing_done_details?.acknowledged ||
+        update_packing_done_details?.modifiedCount === 0
+      ) {
+        throw new ApiError(
+          'Failed to update packing done details',
+          StatusCodes.INTERNAL_SERVER_ERROR
+        );
+      }
+
+      await session.commitTransaction();
+      const response = new ApiResponse(
+        StatusCodes.OK,
+        'Dispatched Updated Successfully',
+        {
+          dispatch_details: update_dispatch_details_data,
+          dispatch_items_details: add_dispatch_items_data,
+        }
+      );
+      return res.status(StatusCodes.OK).json(response);
+    }
+    const { _id, createdAt, ...rest_dispatch_details } = dispatch_details;
+    const updated_approval_status = {
+      ...approval_status,
+      sendForApproval: {
+        status: true,
+        remark: 'Approval Pending',
+      },
+    };
+    const updated_approval_dispatch_details_payload = {
+      ...rest_dispatch_details,
+      approval_dispatch_id: fetch_dipsatch_details?._id,
+      approval_status: updated_approval_status,
+      approval: {
+        editedBy: userDetails?._id,
+        approvalPerson: userDetails?.approver_id,
+      },
+      created_by: userDetails?._id,
+      updated_by: userDetails?._id,
+
+    };
+
+    const [add_approval_dispatch_done_deatils_result] = await approval_dispatch_model.create(
+      [updated_approval_dispatch_details_payload],
+      { session }
+    );
+
+    if (!add_approval_dispatch_done_deatils_result) {
+      throw new ApiError(
+        'Failed to send for approval',
+        StatusCodes.BAD_REQUEST
+      );
     }
 
-    // Update packing done other details
-    const prev_packing_done_ids = fetch_dipsatch_details?.packing_done_ids;
-    const prev_packing_done_ids_data = prev_packing_done_ids.map(
-      (item) => item?.packing_done_other_details_id
+    const update_dispatch_details_status_result = await dispatchModel.updateOne(
+      { _id: fetch_dipsatch_details?._id },
+      {
+        $set: { approval_status: updated_approval_status },
+      },
+      { session }
     );
-    const prev_update_packing_done_details =
-      await packing_done_other_details_model.updateMany(
-        { _id: { $in: prev_packing_done_ids_data } },
-        {
-          $set: {
-            is_dispatch_done: false,
-            isEditable: true,
-            updated_by: userDetails?._id,
-          },
-        },
-        { session }
-      );
-    if (prev_update_packing_done_details?.matchedCount === 0) {
+
+    if (update_dispatch_details_status_result?.matchedCount === 0) {
       throw new ApiError(
-        'Packing done details not found',
+        'Dispatch Details not found for approval',
         StatusCodes.NOT_FOUND
       );
     }
     if (
-      !prev_update_packing_done_details?.acknowledged ||
-      prev_update_packing_done_details?.modifiedCount === 0
+      !update_dispatch_details_status_result?.acknowledged ||
+      update_dispatch_details_status_result?.modifiedCount === 0
     ) {
       throw new ApiError(
-        'Failed to update packing done details',
-        StatusCodes.INTERNAL_SERVER_ERROR
-      );
-    }
-
-    // Update packing done other details with new packing done IDs
-    const packing_done_ids = update_dispatch_details_data?.packing_done_ids;
-    if (packing_done_ids?.length <= 0) {
-      throw new ApiError(
-        'Packing done IDs are not allowed for dispatch',
-        StatusCodes.BAD_REQUEST
-      );
-    }
-    const packing_done_ids_data = packing_done_ids.map(
-      (item) => item?.packing_done_other_details_id
-    );
-
-    const alreadyDispatched = await packing_done_other_details_model
-      .find({
-        _id: { $in: packing_done_ids_data },
-        is_dispatch_done: true,
-        dispatch_id: { $ne: dispatch_id },
-      })
-      .session(session);
-
-    if (alreadyDispatched?.length > 0) {
-      throw new ApiError(
-        'Packing done details not found or already dispatch for some packing id',
+        'Failed to update dispatch approval status',
         StatusCodes.BAD_REQUEST
       );
     }
 
-    const update_packing_done_details =
-      await packing_done_other_details_model.updateMany(
-        { _id: { $in: packing_done_ids_data } },
-        {
-          $set: {
-            is_dispatch_done: true,
-            isEditable: false,
-            updated_by: userDetails?._id,
-          },
-        },
-        { session }
-      );
-    if (update_packing_done_details?.matchedCount === 0) {
-      throw new ApiError(
-        'Packing done details not found',
-        StatusCodes.NOT_FOUND
-      );
-    }
+    const updated_item_details = dispatch_items_details?.map((item) => {
+      const { dispatch_item_id, createdAt, updatedAt, ...rest_item_details } = item;
+      return {
+        ...rest_item_details,
+        approval_dispatch_id: add_approval_dispatch_done_deatils_result?.id,
+        dispatch_id: add_approval_dispatch_done_deatils_result?.approval_dispatch_id,
+        approval_dispatch_item_id: dispatch_item_id ?? new mongoose.Types.ObjectId(),
+        invoice_no: add_approval_dispatch_done_deatils_result?.invoice_no,
+        created_by: item.created_by ? item?.created_by : userDetails?._id,
+        updated_by: item.updated_by ? item?.updated_by : userDetails?._id,
+      };
+    });
+
+    const add_approval_dispatch_items_result =
+      await approval_dispatch_items_model.insertMany(updated_item_details, {
+        session,
+      });
+
     if (
-      !update_packing_done_details?.acknowledged ||
-      update_packing_done_details?.modifiedCount === 0
+      !add_approval_dispatch_items_result ||
+      add_approval_dispatch_items_result.length === 0
     ) {
       throw new ApiError(
-        'Failed to update packing done details',
-        StatusCodes.INTERNAL_SERVER_ERROR
+        'Failed to add approval dispatch items',
+        StatusCodes.BAD_REQUEST
       );
     }
-
-    await session.commitTransaction();
     const response = new ApiResponse(
       StatusCodes.OK,
-      'Dispatched Updated Successfully',
+      'Dispatch Details Sent for Approval Successfully.',
       {
-        dispatch_details: update_dispatch_details_data,
-        dispatch_items_details: add_dispatch_items_data,
+        dispatch_details: add_approval_dispatch_done_deatils_result,
+        dispatch_item_details: add_approval_dispatch_items_result,
       }
     );
+    await session.commitTransaction()
     return res.status(StatusCodes.OK).json(response);
   } catch (error) {
     await session.abortTransaction();
@@ -910,7 +1012,7 @@ export const revert_dispatch_details = catchAsync(async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
-    const userDetails = req.userDetails;
+    const userDetailsDetails = req.userDetails;
     const { dispatch_id } = req.params;
     if (!dispatch_id || !mongoose.isValidObjectId(dispatch_id)) {
       throw new ApiError('Invalid Dispatch ID', StatusCodes.BAD_REQUEST);
@@ -1515,9 +1617,9 @@ export const fetch_all_dispatch_details = catchAsync(async (req, res, next) => {
     $sort:
       sortBy === 'invoice_no'
         ? {
-            invoice_sort_key: sort === 'desc' ? -1 : 1,
-            invoice_no: sort === 'desc' ? -1 : 1,
-          }
+          invoice_sort_key: sort === 'desc' ? -1 : 1,
+          invoice_no: sort === 'desc' ? -1 : 1,
+        }
         : { [sortBy]: sort === 'desc' ? -1 : 1 },
   };
   const aggSkip = {
@@ -1586,6 +1688,7 @@ export const fetch_all_dispatch_items_details = catchAsync(
       numbers,
       arrayField = [],
     } = req.body?.searchFields || {};
+
 
     const filter = req.body?.filter;
 
@@ -2389,12 +2492,12 @@ export const generate_ewaybill = catchAsync(async (req, res, next) => {
     fromTrdName: 'TURAKHIA OVERSEAS PVT. LTD.',
     fromAddr1:
       dispatch_from_address?.address &&
-      dispatch_from_address.address.length > 50
+        dispatch_from_address.address.length > 50
         ? dispatch_from_address.address.slice(0, 50)
         : dispatch_from_address?.address || '',
     fromAddr2:
       dispatch_from_address?.address &&
-      dispatch_from_address.address.length > 50
+        dispatch_from_address.address.length > 50
         ? dispatch_from_address.address.slice(50)
         : '',
     fromPlace: dispatch_from_address?.city || '',
@@ -2666,7 +2769,7 @@ export const cancel_ewaybill = catchAsync(async (req, res, next) => {
               // Sometimes there may be a trailing comma, split and clean
               errorCode = parsed.errorCodes.split(',')[0]?.trim();
             }
-          } catch (e) {}
+          } catch (e) { }
           // Provide specific error messages for known error codes
           // You can expand or modify this map as needed
           const errorCodeMap = {};
@@ -2767,7 +2870,7 @@ export const get_ewaybill_details = catchAsync(async (req, res, next) => {
               // Sometimes there may be a trailing comma, split and clean
               errorCode = parsed.errorCodes.split(',')[0]?.trim();
             }
-          } catch (e) {}
+          } catch (e) { }
           // Provide specific error messages for known error codes
           // You can expand or modify this map as needed
           const errorCodeMap = {};
@@ -2884,7 +2987,7 @@ export const update_ewaybill_transporter = catchAsync(
 );
 export const update_ewaybill_partB = catchAsync(async (req, res, next) => {
   const bodyData = req.body;
-  
+
   const dispatch_id = req.params.id;
   const dispatch_details = await dispatchModel.findById(dispatch_id);
   // console.log(

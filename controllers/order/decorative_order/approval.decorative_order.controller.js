@@ -299,7 +299,7 @@ export const fetch_all_decorative_order_items = catchAsync(
       );
 
     if (export_report === 'true') {
-      await create_decorative_order_approval_report(result, req, res);
+      return await create_decorative_order_approval_report(result, req, res);
     }
     const aggCount = {
       $count: 'totalCount',
