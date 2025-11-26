@@ -18,7 +18,7 @@ import ApiError from '../../../utils/errors/apiError.js';
 import catchAsync from '../../../utils/errors/catchAsync.js';
 import { create_packing_done_approval_report } from '../../../config/downloadExcel/packing/packing.approval_csv.js';
 
-export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
+export const fetch_all_packing_done_items = catchAsync(async (req, res, next) => {
   const {
     page = 1,
     limit = 10,
@@ -66,6 +66,8 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
     ...search_query,
     'approval.approvalPerson': _id,
   };
+
+  console.log("match query => ", match_query)
 
   const approval_user_details_pipeline = [
     {
@@ -273,6 +275,7 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
   };
 
   const listAggregate = [
+    aggMatch,
     aggregatePackingDoneItems,
     ...approval_user_details_pipeline,
     aggCreatedByLookup,
@@ -282,19 +285,18 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
     aggCustomerDetailsLookup,
     aggCustomerDetailsUnwind,
     // aggComputeProductTypeSort,
-    // aggMatch,
     aggComputeProductTypeSort,
     aggSort,
-    ...(export_report = 'false' ? [aggSkip,
+    ...(export_report === 'false' ? [aggSkip,
       aggLimit] : [])
   ];
 
   const list_aggregate = [
-    aggMatch,
     {
       $facet: {
         data: listAggregate,
         totalCount: [
+          aggMatch,
           {
             $count: 'totalCount',
           },
@@ -305,12 +307,12 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
 
   const issue_for_raw_packing =
     await approval_packing_done_other_details_model.aggregate(list_aggregate);
-
   if (export_report === 'true') {
     await create_packing_done_approval_report(
       issue_for_raw_packing?.[0]?.data,
       req,
-      res
+      res,
+      next
     );
     return;
   }
