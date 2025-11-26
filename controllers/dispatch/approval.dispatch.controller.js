@@ -226,9 +226,8 @@ export const fetch_all_dispatch_details = catchAsync(async (req, res, next) => {
         aggMatch,
         // aggAddInvoiceSort,
         aggSort,
-        // export_report === 'true' && (
-        aggSkip,
-        aggLimit
+        ...(export_report === 'false' ?
+            [aggSkip, aggLimit] : [])
     ];
 
     const result = await approval_dispatch_model.aggregate(list_aggregate);
@@ -876,7 +875,6 @@ export const reject_dispatch_details = catchAsync(async (req, res) => {
                 StatusCodes.BAD_REQUEST
             );
         }
-
         const response = new ApiResponse(
             StatusCodes.OK,
             'Dispatch Details Rejected successfully'

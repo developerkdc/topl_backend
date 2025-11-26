@@ -285,8 +285,8 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
     // aggMatch,
     aggComputeProductTypeSort,
     aggSort,
-    aggSkip,
-    aggLimit,
+    ...(export_report = 'false' ? [aggSkip,
+      aggLimit] : [])
   ];
 
   const list_aggregate = [

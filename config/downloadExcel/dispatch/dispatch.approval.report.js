@@ -1,15 +1,17 @@
 import exceljs from 'exceljs';
 
 export const create_dispatch_approval_report = async (data, req, res, next) => {
-    console.log("Data => ", data)
     try {
         const workbook = new exceljs.Workbook();
         const worksheet = workbook.addWorksheet('Dispatch Approval Report');
 
         worksheet.columns = [
-            // { header: 'Dispatch ID', key: 'approval_dispatch_id', width: 20 },
             { header: 'Invoice No', key: 'invoice_no', width: 20 },
             { header: 'Invoice Date', key: 'invoice_date_time', width: 20 },
+            { header: 'Updated By', key: 'edited_by', width: 18 },
+            { header: 'Approval Status', key: 'approval_status', width: 18 },
+            { header: 'Approved By', key: 'approved_by', width: 20 },
+            { header: 'Rejected By', key: 'rejected_by', width: 20 },
             { header: 'Removal of Goods Date', key: 'removal_of_good_date_time', width: 25 },
             { header: 'Transport Doc No', key: 'trans_doc_no', width: 20 },
             { header: 'Transport Doc Date', key: 'trans_doc_date', width: 20 },
@@ -29,12 +31,6 @@ export const create_dispatch_approval_report = async (data, req, res, next) => {
             { header: 'Total Sheets', key: 'total_no_of_sheets', width: 15 },
             { header: 'Total SQM', key: 'total_sqm', width: 12 },
             { header: 'Final Amount', key: 'final_total_amount', width: 18 },
-
-            { header: 'Approval Status', key: 'approval_status', width: 18 },
-            { header: 'Sent For Approval By', key: 'edited_by', width: 18 },
-            { header: 'Approved By', key: 'approved_by', width: 20 },
-            { header: 'Rejected By', key: 'rejected_by', width: 20 },
-
             // dispatch items details
             { header: 'Order No', key: 'order_no', width: 14 },
             { header: 'Order Item No', key: 'order_item_no', width: 18 },
@@ -70,7 +66,6 @@ export const create_dispatch_approval_report = async (data, req, res, next) => {
                         : 'Pending';
 
             const baseData = {
-                // approval_dispatch_id: record.approval_dispatch_id || '-',
                 invoice_no: record.invoice_no || '-',
                 invoice_date_time: record.invoice_date_time
                     ? new Date(record.invoice_date_time).toLocaleDateString()
@@ -89,25 +84,25 @@ export const create_dispatch_approval_report = async (data, req, res, next) => {
                 supp_type: record.supp_type || '-',
                 transaction_type: record.transaction_type || '-',
 
-                transporter_name: record.transporter_details?._name || '-',
+                transporter_name: record.transporter_details?.name || '-',
                 transport_mode: record.transport_mode?.value || '-',
 
-                vehicle_number: record.vehicle_number || '-',
-                driver_name: record.driver_name || '-',
-                driver_licence_number: record.driver_licence_number || '-',
+                vehicle_number: record.vehicle_details?.[0].vehicle_number || '-',
+                driver_name: record.vehicle_details?.[0].driver_name || '-',
+                driver_licence_number: record.vehicle_details?.[0].driver_licence_number || '-',
 
                 total_no_of_sheets: record.total_no_of_sheets || '-',
                 total_sqm: record.total_sqm || '-',
                 final_total_amount: record.final_total_amount || '-',
 
                 approval_status: approvalStatus,
-                edited_by: record.edited_by?.user_name || '-',
-                approved_by: record.approved_by?.user_name || '-',
-                rejected_by: record.rejected_by?.user_name || '-'
+                edited_by: record.edited_user_details?.user_name || '-',
+                approved_by: record.approved_user_details?.user_name || '-',
+                rejected_by: record.rejected_user_details?.user_name || '-'
             };
 
-            if (Array.isArray(record.dispatch_items) && record.dispatch_items.length > 0) {
-                for (const item of record.dispatch_items) {
+            if (Array.isArray(record.dispatch_items_details) && record.dispatch_items_details.length > 0) {
+                for (const item of record.dispatch_items_details) {
                     worksheet.addRow({
                         ...baseData,
                         order_no: item.order_no || '-',
