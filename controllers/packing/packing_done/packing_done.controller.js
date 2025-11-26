@@ -735,69 +735,11 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
       ...match_query,
     },
   };
-
-  // const aggComputeProductTypeSort = {
-  //   $addFields: {
-  //     __sort_product_type: {
-  //       $cond: [
-  //         { $eq: ['$order_category', 'RAW'] },
-  //         // if RAW -> use top-level product_type
-  //         '$product_type',
-  //         // else -> use packing_done_item_details[0].product_type if exists, otherwise top-level product_type
-  //         {
-  //           $ifNull: [
-  //             { $arrayElemAt: ['$packing_done_item_details.product_type', 0] },
-  //             '$product_type',
-  //           ],
-  //         },
-  //       ],
-  //     },
-  //   },
-  // };
-  const aggFlattenProductType = {
-    $addFields: {
-      sort_product_type: {
-        $reduce: {
-          input: "$product_type",
-          initialValue: "",
-          in: {
-            $concat: [
-              "$$value",
-              { $cond: [{ $eq: ["$$value", ""] }, "", ", "] },
-              "$$this"
-            ]
-          }
-        }
-      }
-    }
-  };
-
-
-  // const aggSort = {
-  //   $sort: {
-  //     ...(sortBy === 'product_type'
-  //       ? { __sort_product_type: sort === 'desc' ? -1 : 1 }
-  //       : sortBy === 'customer_details.owner_name'
-  //         ? { 'customer_details.owner_name': sort === 'desc' ? -1 : 1 }
-  //         : sortBy === 'customer_details'
-  //           ? { 'customer_details.customer_details': sort === 'desc' ? -1 : 1 }
-  //           : { [sortBy]: sort === 'desc' ? -1 : 1 }),
-  //   },
-  // };
-
-  // const aggSort = {
-  //     $sort: {
-  //       [sortBy]: sort === 'desc' ? -1 : 1,
-  //     },
-  //   };
   const aggSort = {
     $sort: {
-      ...(sortBy === "product_type"
-        ? { sort_product_type: sort === "desc" ? -1 : 1 }
-        : { [sortBy]: sort === "desc" ? -1 : 1 }),
+      [sortBy]: sort === 'desc' ? -1 : 1,
     },
   };
-
   const aggSkip = {
     $skip: (parseInt(page) - 1) * parseInt(limit),
   };

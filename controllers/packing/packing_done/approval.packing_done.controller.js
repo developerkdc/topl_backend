@@ -238,33 +238,12 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res, next) =>
       ...match_query,
     },
   };
-
-  const aggComputeProductTypeSort = {
-    $addFields: {
-      __sort_product_type: {
-        $cond: [
-          { $eq: ['$order_category', 'RAW'] },
-          // if RAW -> use top-level product_type
-          '$product_type',
-          // else -> use packing_done_item_details[0].product_type if exists, otherwise top-level product_type
-          {
-            $ifNull: [
-              { $arrayElemAt: ['$packing_done_item_details.product_type', 0] },
-              '$product_type',
-            ],
-          },
-        ],
-      },
-    },
-  };
-
   const aggSort = {
     $sort: {
-      ...(sortBy === 'product_type'
-        ? { sort_product_type: sort === 'desc' ? -1 : 1 }
-        : { [sortBy]: sort === 'desc' ? -1 : 1 }),
+      [sortBy]: sort === 'desc' ? -1 : 1,
     },
   };
+
 
   const aggSkip = {
     $skip: (parseInt(page) - 1) * parseInt(limit),
@@ -284,8 +263,7 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res, next) =>
     aggUpdatedByUnwind,
     aggCustomerDetailsLookup,
     aggCustomerDetailsUnwind,
-    // aggComputeProductTypeSort,
-    aggComputeProductTypeSort,
+
     aggSort,
     ...(export_report === 'false' ? [aggSkip,
       aggLimit] : [])
