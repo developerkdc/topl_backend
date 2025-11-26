@@ -805,7 +805,7 @@ export const approve_dispatch_details = catchAsync(async (req, res) => {
 
 export const reject_dispatch_details = catchAsync(async (req, res) => {
     const { dispatch_details_id } = req.params;
-    const user = req.user;
+    const user = req.userDetails;
 
     if (!dispatch_details_id) {
         throw new ApiError(
