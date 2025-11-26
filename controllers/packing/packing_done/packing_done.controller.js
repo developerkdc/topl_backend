@@ -736,24 +736,24 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
     },
   };
 
-  const aggComputeProductTypeSort = {
-    $addFields: {
-      __sort_product_type: {
-        $cond: [
-          { $eq: ['$order_category', 'RAW'] },
-          // if RAW -> use top-level product_type
-          '$product_type',
-          // else -> use packing_done_item_details[0].product_type if exists, otherwise top-level product_type
-          {
-            $ifNull: [
-              { $arrayElemAt: ['$packing_done_item_details.product_type', 0] },
-              '$product_type',
-            ],
-          },
-        ],
-      },
-    },
-  };
+  // const aggComputeProductTypeSort = {
+  //   $addFields: {
+  //     __sort_product_type: {
+  //       $cond: [
+  //         { $eq: ['$order_category', 'RAW'] },
+  //         // if RAW -> use top-level product_type
+  //         '$product_type',
+  //         // else -> use packing_done_item_details[0].product_type if exists, otherwise top-level product_type
+  //         {
+  //           $ifNull: [
+  //             { $arrayElemAt: ['$packing_done_item_details.product_type', 0] },
+  //             '$product_type',
+  //           ],
+  //         },
+  //       ],
+  //     },
+  //   },
+  // };
   const aggFlattenProductType = {
     $addFields: {
       sort_product_type: {
@@ -805,22 +805,6 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
   const aggLimit = {
     $limit: parseInt(limit),
   };
-
-  // const listAggregate = [
-  //   aggregatePackingDoneItems,
-  //   aggCreatedByLookup,
-  //   aggCreatedByUnwind,
-  //   aggUpdatedByLookup,
-  //   aggUpdatedByUnwind,
-  //   aggCustomerDetailsLookup,
-  //   aggCustomerDetailsUnwind,
-  //   // aggComputeProductTypeSort,
-  //   // aggMatch,
-  //   aggComputeProductTypeSort,
-  //   aggSort,
-  //   aggSkip,
-  //   aggLimit,
-  // ];
   const list_aggregate = [
     aggregatePackingDoneItems,
     aggCreatedByLookup,
@@ -829,7 +813,6 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
     aggUpdatedByUnwind,
     aggCustomerDetailsLookup,
     aggCustomerDetailsUnwind,
-    aggComputeProductTypeSort,
     aggMatch,
     {
       $facet: {
@@ -838,21 +821,6 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
       },
     },
   ];
-
-
-  // const list_aggregate = [
-  //   aggMatch,
-  //   {
-  //     $facet: {
-  //       data: listAggregate,
-  //       totalCount: [
-  //         {
-  //           $count: 'totalCount',
-  //         },
-  //       ],
-  //     },
-  //   },
-  // ];
 
   const issue_for_raw_packing =
     await packing_done_other_details_model.aggregate(list_aggregate);
