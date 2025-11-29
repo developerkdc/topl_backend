@@ -921,7 +921,7 @@ export const edit_dispatch_details = catchAsync(async (req, res, next) => {
         editedBy: userDetails?._id,
         approvalPerson: userDetails?.approver_id,
       },
-      created_by: userDetails?._id,
+      created_by: fetch_dipsatch_details?.created_by,
       updated_by: userDetails?._id,
 
     };
@@ -971,7 +971,9 @@ export const edit_dispatch_details = catchAsync(async (req, res, next) => {
         approval_dispatch_item_id: dispatch_item_id ?? new mongoose.Types.ObjectId(),
         invoice_no: add_approval_dispatch_done_deatils_result?.invoice_no,
         created_by: item.created_by ? item?.created_by : userDetails?._id,
-        updated_by: item.updated_by ? item?.updated_by : userDetails?._id,
+        updated_by: userDetails?._id,
+        createdAt: createdAt ?? new Date(),
+        updatedAt: new Date()
       };
     });
 

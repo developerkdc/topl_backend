@@ -547,8 +547,8 @@ export const approve_dispatch_details = catchAsync(async (req, res) => {
 
         const update_dispatch_details = {
             ...rest_dispatch_Details,
-            created_by: user?._id,
-            updated_by: user?._id,
+            created_by: dispatch_details_approval_result?.created_by ? dispatch_details_approval_result?.created_by : user?._id,
+            updated_by: dispatch_details_approval_result?.updated_by ? dispatch_details_approval_result?.updated_by : user?._id,
         };
 
         const update_dispatch_details_data = await dispatchModel.findOneAndUpdate(
@@ -588,9 +588,9 @@ export const approve_dispatch_details = catchAsync(async (req, res) => {
             items.dispatch_id = update_dispatch_details_data?._id;
             items.invoice_no = update_dispatch_details_data?.invoice_no;
             items.created_by = items.created_by ? items.created_by : user?._id;
-            items.updated_by = user?._id;
+            items.updated_by = items.updated_by ? items.updated_by : user?._id;
             items.createdAt = items.createdAt ? items.createdAt : new Date();
-            items.updatedAt = new Date();
+            items.updatedAt = items.updatedAt ? items.updatedAt : new Date();
             return items;
         });
         if (!dispatch_items_data || dispatch_items_data?.length === 0) {
