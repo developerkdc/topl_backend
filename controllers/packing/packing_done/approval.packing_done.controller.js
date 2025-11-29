@@ -601,7 +601,7 @@ export const approve_packing_details = catchAsync(async (req, res) => {
           packing_done_other_details_id:
             packing_done_other_details_approval_result?.approval_packing_id,
           created_by: item.created_by ? item?.created_by : user?._id,
-          updated_by: user._id,
+          updated_by: item?.updated_by ? item?.updated_by : user._id,
           createdAt: item.createdAt ? item?.createdAt : new Date(),
           updatedAt: new Date(),
         };

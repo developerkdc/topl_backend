@@ -1621,6 +1621,7 @@ export const fetch_all_dispatch_details = catchAsync(async (req, res, next) => {
         }
         : { [sortBy]: sort === 'desc' ? -1 : 1 },
   };
+  console.log("aggregate sort => ", aggSort)
   const aggSkip = {
     $skip: (parseInt(page) - 1) * parseInt(limit),
   };
@@ -1805,6 +1806,7 @@ export const fetch_all_dispatch_items_details = catchAsync(
       $limit: parseInt(limit),
     };
 
+
     const list_aggregate = [
       // match_common_query,
       aggLookupDispatchDetails,
@@ -1867,6 +1869,7 @@ export const packing_done_dropdown = catchAsync(async (req, res, next) => {
 
   const match = {
     customer_id: mongoose.Types.ObjectId.createFromHexString(customer_id),
+    "approval_status.sendForApproval.status": { $ne: true }
   };
 
   if (order_category && order_category.length > 0) {

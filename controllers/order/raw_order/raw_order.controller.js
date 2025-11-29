@@ -222,7 +222,7 @@ export const update_raw_order = catchAsync(async (req, res) => {
         editedBy: userDetails?._id,
         approvalPerson: userDetails?.approver_id,
       },
-      created_by: userDetails?._id,
+      created_by: order_details_result?.created_by,
       updated_by: userDetails?._id,
 
     };
@@ -271,8 +271,10 @@ export const update_raw_order = catchAsync(async (req, res) => {
         order_id: add_approval_order_result?.order_id,
         approval_order_id: add_approval_order_result?._id,
         product_category: add_approval_order_result?.raw_materials,
-        // created_by: item.created_by ? item?.created_by : userDetails?._id,
-        updated_by: item.updated_by ? item?.updated_by : userDetails?._id,
+        created_by: item.created_by ? item?.created_by : userDetails?._id,
+        // updated_by: item.updated_by ? item?.updated_by : userDetails?._id,
+        updated_by: userDetails?._id,
+        createdAt: createdAt ? createdAt : new Date()
       };
     });
 

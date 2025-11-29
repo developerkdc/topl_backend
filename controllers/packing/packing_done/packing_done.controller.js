@@ -385,9 +385,8 @@ export const update_packing_details = catchAsync(async (req, res) => {
         editedBy: user?._id,
         approvalPerson: user?.approver_id,
       },
-      created_by: user?._id,
+      created_by: packing_done_other_details?.created_by,
       updated_by: user?._id,
-
     };
 
     const [add_approval_packing_done_other_deatils_result] = await approval_packing_done_other_details_model.create(
@@ -428,8 +427,6 @@ export const update_packing_details = catchAsync(async (req, res) => {
 
     const updated_item_details = packing_done_item_details?.map((item) => {
       const { _id, packing_item_id, createdAt, updatedAt, ...rest_item_details } = item;
-      console.log("item => ", item)
-      console.log("packing item => ", packing_item_id)
       return {
         ...rest_item_details,
         approval_packing_done_other_details_id: add_approval_packing_done_other_deatils_result?._id,

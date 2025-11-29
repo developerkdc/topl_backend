@@ -20,6 +20,8 @@ export const fetch_all_raw_order_items = catchAsync(async (req, res, next) => {
     search = '',
     export_report = 'false',
   } = req.query;
+
+
   const {
     string,
     boolean,
@@ -286,12 +288,13 @@ export const fetch_all_raw_order_items = catchAsync(async (req, res, next) => {
     // aggOrderUnwindUpdatedUser,
     aggMatch,
     aggSort,
-    aggSkip,
-    aggLimit,
+    ...(export_report === "false" ? [aggSkip,
+      aggLimit] : [])
+
   ];
 
-  const result =
-    await approval_raw_order_item_details?.aggregate(list_aggregate);
+
+  const result = await approval_raw_order_item_details?.aggregate(list_aggregate);
 
 
 
