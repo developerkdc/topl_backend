@@ -79,7 +79,7 @@ export const create_dispatch_approval_report = async (data, req, res, next) => {
                     ? new Date(record.trans_doc_date).toLocaleDateString()
                     : '-',
 
-                customer_name: record.customer_details?.owner_name || '-',
+                customer_name: record.customer_details?.company_name || '-',
                 customer_gst: record.customer_details?.gst_number || '-',
                 supp_type: record.supp_type || '-',
                 transaction_type: record.transaction_type || '-',
