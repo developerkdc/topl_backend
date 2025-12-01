@@ -205,7 +205,7 @@ export const update_packing_details = catchAsync(async (req, res) => {
     }
   }
 
-  console.log("send_for_approval => ",send_for_approval)
+  console.log("send_for_approval => ", send_for_approval)
 
   if (
     !Array.isArray(packing_done_item_details) ||
@@ -275,6 +275,7 @@ export const update_packing_details = catchAsync(async (req, res) => {
           { session, new: true, runValidators: true }
         );
       if (!update_packing_done_other_details_result) {
+
         throw new ApiError(
           'Failed to update packing done other details.',
           StatusCodes.INTERNAL_SERVER_ERROR
@@ -328,10 +329,9 @@ export const update_packing_details = catchAsync(async (req, res) => {
 
       const issue_for_packing_set = [
         ...new Set(
-          packing_done_item_details?.map((item) => item?.issue_for_packing_id)
+          packing_done_item_details?.map((item) => mongoose.Types.ObjectId.createFromHexString(item?.issue_for_packing_id))
         ),
       ];
-
       const update_issue_for_order_result = await (
         other_details?.order_category.toUpperCase() === order_category?.raw
           ? issue_for_order_model
@@ -385,9 +385,8 @@ export const update_packing_details = catchAsync(async (req, res) => {
         editedBy: user?._id,
         approvalPerson: user?.approver_id,
       },
-      created_by: user?._id,
+      created_by: packing_done_other_details?.created_by,
       updated_by: user?._id,
-
     };
 
     const [add_approval_packing_done_other_deatils_result] = await approval_packing_done_other_details_model.create(
@@ -428,8 +427,6 @@ export const update_packing_details = catchAsync(async (req, res) => {
 
     const updated_item_details = packing_done_item_details?.map((item) => {
       const { _id, packing_item_id, createdAt, updatedAt, ...rest_item_details } = item;
-      console.log("item => ",item)
-      console.log("packing item => ",packing_item_id)
       return {
         ...rest_item_details,
         approval_packing_done_other_details_id: add_approval_packing_done_other_deatils_result?._id,
@@ -440,7 +437,7 @@ export const update_packing_details = catchAsync(async (req, res) => {
       };
     });
 
-    console.log("updated_item_details => ",updated_item_details)
+    console.log("updated_item_details => ", updated_item_details)
     const add_approval_packing_items_result =
       await approval_packing_done_items_model.insertMany(updated_item_details, {
         session,
@@ -546,12 +543,11 @@ export const revert_packing_done_items = catchAsync(async (req, res) => {
       ...new Set(
         packing_done_items
           ?.map((item) => item?.issue_for_packing_id)
-          .filter((id) => mongoose.Types.ObjectId.isValid(id))
+        // .filter((id) => mongoose.Types.ObjectId.isValid(id))
       ),
     ];
-
     const update_issue_for_order_result = await (
-      packing_done_other_details?.order_category === order_category?.raw
+      packing_done_other_details?.order_category?.[0] === order_category?.raw
         ? issue_for_order_model
         : finished_ready_for_packing_model
     ).updateMany(
@@ -564,19 +560,12 @@ export const revert_packing_done_items = catchAsync(async (req, res) => {
       },
       { session }
     );
+    console.log("update_issue_for_order_result => ", update_issue_for_order_result)
 
-    if (!update_issue_for_order_result?.acknowledged) {
+    if (!update_issue_for_order_result?.acknowledged || update_issue_for_order_result.matchedCount === 0) {
       throw new ApiError(
         'Failed to update issued for packing item status.',
         StatusCodes.INTERNAL_SERVER_ERROR
-      );
-    }
-
-    // Just warn if no documents matched/updated
-    if (update_issue_for_order_result.matchedCount === 0) {
-      console.warn(
-        '⚠️ No matching issued for packing items found for IDs:',
-        issue_for_packing_set
       );
     }
 
@@ -743,69 +732,11 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
       ...match_query,
     },
   };
-
-  const aggComputeProductTypeSort = {
-    $addFields: {
-      __sort_product_type: {
-        $cond: [
-          { $eq: ['$order_category', 'RAW'] },
-          // if RAW -> use top-level product_type
-          '$product_type',
-          // else -> use packing_done_item_details[0].product_type if exists, otherwise top-level product_type
-          {
-            $ifNull: [
-              { $arrayElemAt: ['$packing_done_item_details.product_type', 0] },
-              '$product_type',
-            ],
-          },
-        ],
-      },
-    },
-  };
-  const aggFlattenProductType = {
-    $addFields: {
-      sort_product_type: {
-        $reduce: {
-          input: "$product_type",
-          initialValue: "",
-          in: {
-            $concat: [
-              "$$value",
-              { $cond: [{ $eq: ["$$value", ""] }, "", ", "] },
-              "$$this"
-            ]
-          }
-        }
-      }
-    }
-  };
-
-
-  // const aggSort = {
-  //   $sort: {
-  //     ...(sortBy === 'product_type'
-  //       ? { __sort_product_type: sort === 'desc' ? -1 : 1 }
-  //       : sortBy === 'customer_details.owner_name'
-  //         ? { 'customer_details.owner_name': sort === 'desc' ? -1 : 1 }
-  //         : sortBy === 'customer_details'
-  //           ? { 'customer_details.customer_details': sort === 'desc' ? -1 : 1 }
-  //           : { [sortBy]: sort === 'desc' ? -1 : 1 }),
-  //   },
-  // };
-
-  // const aggSort = {
-  //     $sort: {
-  //       [sortBy]: sort === 'desc' ? -1 : 1,
-  //     },
-  //   };
   const aggSort = {
     $sort: {
-      ...(sortBy === "product_type"
-        ? { sort_product_type: sort === "desc" ? -1 : 1 }
-        : { [sortBy]: sort === "desc" ? -1 : 1 }),
+      [sortBy]: sort === 'desc' ? -1 : 1,
     },
   };
-
   const aggSkip = {
     $skip: (parseInt(page) - 1) * parseInt(limit),
   };
@@ -813,8 +744,7 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
   const aggLimit = {
     $limit: parseInt(limit),
   };
-
-  const listAggregate = [
+  const list_aggregate = [
     aggregatePackingDoneItems,
     aggCreatedByLookup,
     aggCreatedByUnwind,
@@ -822,24 +752,11 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
     aggUpdatedByUnwind,
     aggCustomerDetailsLookup,
     aggCustomerDetailsUnwind,
-    // aggComputeProductTypeSort,
-    // aggMatch,
-    aggComputeProductTypeSort,
-    aggSort,
-    aggSkip,
-    aggLimit,
-  ];
-
-  const list_aggregate = [
     aggMatch,
     {
       $facet: {
-        data: listAggregate,
-        totalCount: [
-          {
-            $count: 'totalCount',
-          },
-        ],
+        data: [aggSort, aggSkip, aggLimit],
+        totalCount: [{ $count: "totalCount" }],
       },
     },
   ];
