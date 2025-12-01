@@ -290,8 +290,10 @@ export const fetch_all_series_product_order_items = catchAsync(
             // aggOrderUnwindUpdatedUser,
             aggMatch,
             aggSort,
-            aggSkip,
-            aggLimit,
+            // aggSkip,
+            // aggLimit,
+            ...(export_report === "false" ? [aggSkip,
+                aggLimit] : [])
         ];
 
         const result =
@@ -688,7 +690,7 @@ export const approve_order = catchAsync(async (req, res) => {
                 order_id: order_approval?.order_id,
                 product_category: order_approval?.product_category,
                 created_by: item.created_by ? item?.created_by : user?._id,
-                updated_by: user?._id,
+                updated_by: item?.updated_by ? item?.updated_by : user?._id,
                 createdAt: item.createdAt ? item?.createdAt : new Date(),
                 updatedAt: new Date(),
             });
