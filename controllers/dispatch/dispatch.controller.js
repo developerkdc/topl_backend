@@ -1884,7 +1884,7 @@ export const generate_irn_no = catchAsync(async (req, res, next) => {
 
   // Seller Details - consider these as sample/static; replace with actual company master data as per your prod logic
   const sellerDetails = {
-    Gstin: '29AAGCB1286Q000',
+    Gstin: bill_from_address?.gst_no,
     LglNm: 'TURAKHIA OVERSEAS PVT. LTD.',
     Addr1: bill_from_address?.address,
     Loc: bill_from_address?.city,
@@ -2384,7 +2384,7 @@ export const generate_ewaybill = catchAsync(async (req, res, next) => {
       : '',
 
     //seller details
-    fromGstin: '29AAGCB1286Q000',
+    fromGstin: dispatch_from_address?.gst_no,
     fromTrdName: 'TURAKHIA OVERSEAS PVT. LTD.',
     fromAddr1:
       dispatch_from_address?.address &&
@@ -2401,7 +2401,7 @@ export const generate_ewaybill = catchAsync(async (req, res, next) => {
     fromStateCode: getStateCode(dispatch_from_address?.state),
     actFromStateCode: getStateCode(dispatch_from_address?.state),
 
-    dispatchFromGSTIN: '29AAGCB1286Q000',
+    dispatchFromGSTIN: dispatch_from_address?.gst_no,
     dispatchFromTradeName: 'TURAKHIA OVERSEAS PVT. LTD.',
 
     //buyer details
