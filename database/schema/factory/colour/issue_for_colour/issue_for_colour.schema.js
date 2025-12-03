@@ -75,6 +75,7 @@ export const issue_for_color_schema = new mongoose.Schema(
           item_issued_from?.color_factory,
           item_issued_from?.bunito_factory,
           item_issued_from?.polishing_factory,
+          item_issued_from?.canvas_factory
         ],
         message: `Invalid Type -> {{VALUE}} , it must be one of the ${(item_issued_from?.pressing_factory, item_issued_from?.cnc_factory, item_issued_from?.color_factory, item_issued_from?.bunito_factory, item_issued_from?.polishing_factory)}`,
       },
@@ -94,7 +95,6 @@ export const issue_for_color_schema = new mongoose.Schema(
     },
     remark: {
       type: String,
-      default: null,
     },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,

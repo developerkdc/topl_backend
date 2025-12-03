@@ -5,6 +5,7 @@ import {
   order_status,
   order_type,
 } from '../../Utils/constants/constants.js';
+import { approval_status } from '../../Utils/approvalStatus.schema.js';
 
 const OrderSchema = new mongoose.Schema(
   {
@@ -137,6 +138,11 @@ const OrderSchema = new mongoose.Schema(
       trim: true,
       required: [true, 'Product category is required'],
     },
+    isEditable: {
+      type: Boolean,
+      default: true,
+    },
+    approval_status: approval_status,
 
     // is_close: {
     //   type: String,
@@ -173,6 +179,7 @@ const indexingFields = [
   [{ series_product: 1 }],
   [{ created_by: 1 }],
   [{ updatedAt: 1 }],
+  [{ createdAt: 1 }],
 ];
 
 indexingFields.forEach((index) => OrderSchema.index(...index));

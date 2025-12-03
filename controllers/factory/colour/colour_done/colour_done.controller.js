@@ -55,6 +55,7 @@ export const create_color = catchAsync(async (req, res) => {
     ]);
     const updated_color_done_details = {
       ...color_done_details,
+      order_item_id: issue_for_color_details?.order_item_id,
       sr_no: max_sr_no ? max_sr_no?.max_sr_no + 1 : 1,
       pressing_details_id: issue_for_color_details?.pressing_details_id,
       created_by: userDetails?._id,
@@ -309,6 +310,36 @@ export const listing_color_done = catchAsync(async (req, res) => {
     $limit: parseInt(limit),
   };
 
+  const orderItems = [
+    {
+      $lookup: {
+        from: 'series_product_order_item_details',
+        localField: 'order_item_id',
+        foreignField: '_id',
+        as: 'series_items',
+      },
+    },
+    {
+      $lookup: {
+        from: 'decorative_order_item_details',
+        localField: 'order_item_id',
+        foreignField: '_id',
+        as: 'decorative_items',
+      },
+    },
+    {
+      $addFields: {
+        order_item_details: {
+          $cond: {
+            if: { $gt: [{ $size: '$series_items' }, 0] },
+            then: { $arrayElemAt: ['$series_items', 0] },
+            else: { $arrayElemAt: ['$decorative_items', 0] },
+          },
+        },
+      },
+    },
+  ];
+
   const listAggregate = [
     aggCommonMatch,
     aggLookUpColourIssuedDetails,
@@ -318,6 +349,7 @@ export const listing_color_done = catchAsync(async (req, res) => {
     aggUpdatedByLookup,
     aggUpdatedByUnwind,
     aggMatch,
+    ...orderItems,
     aggSort,
     aggSkip,
     aggLimit,
@@ -538,7 +570,14 @@ export const listing_color_history = catchAsync(async (req, res) => {
       as: 'issue_for_colour_details',
     },
   };
-
+  const aggLookUpDoneDetails = {
+    $lookup: {
+      from: 'color_done_details',
+      localField: 'issued_item_id',
+      foreignField: '_id',
+      as: 'color_done_details',
+    },
+  };
   const aggCreatedByLookup = {
     $lookup: {
       from: 'users',
@@ -599,6 +638,12 @@ export const listing_color_history = catchAsync(async (req, res) => {
       preserveNullAndEmptyArrays: true,
     },
   };
+  const aggDoneDetailsUnwind = {
+    $unwind: {
+      path: '$color_done_details',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
   const aggMatch = {
     $match: {
       ...match_query,
@@ -615,9 +660,40 @@ export const listing_color_history = catchAsync(async (req, res) => {
   const aggLimit = {
     $limit: parseInt(limit),
   };
+  const orderItems = [
+    {
+      $lookup: {
+        from: 'series_product_order_item_details',
+        localField: 'order_item_id',
+        foreignField: '_id',
+        as: 'series_items',
+      },
+    },
+    {
+      $lookup: {
+        from: 'decorative_order_item_details',
+        localField: 'order_item_id',
+        foreignField: '_id',
+        as: 'decorative_items',
+      },
+    },
+    {
+      $addFields: {
+        order_item_details: {
+          $cond: {
+            if: { $gt: [{ $size: '$series_items' }, 0] },
+            then: { $arrayElemAt: ['$series_items', 0] },
+            else: { $arrayElemAt: ['$decorative_items', 0] },
+          },
+        },
+      },
+    },
+  ];
 
   const listAggregate = [
     // aggCommonMatch,
+    aggLookUpDoneDetails,
+    aggDoneDetailsUnwind,
     aggLookUpIssuedDetails,
     aggIssuedCncDetailsUnwind,
     aggCreatedByLookup,
@@ -625,6 +701,7 @@ export const listing_color_history = catchAsync(async (req, res) => {
     aggUpdatedByLookup,
     aggUpdatedByUnwind,
     aggMatch,
+    ...orderItems,
     aggSort,
     aggSkip,
     aggLimit,

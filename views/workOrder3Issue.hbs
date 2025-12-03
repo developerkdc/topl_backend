@@ -1,143 +1,229 @@
 <html lang='en'>
 
-  <head>
-    <meta charset='UTF-8' />
-    <title>Work Order</title>
-    <style>
-      * { font-family: Arial, sans-serif; } .header, .footer { display: flex;
-      justify-content: space-between; align-items: center; } .title {
-      text-align: center; font-weight: bold; } .work-order-info { text-align:
-      center; font-size: 20px; } .section { margin-top: 20px; } .urgent-row {
-      font-weight: bold; } .urgent-row td { text-align: left; background:
-      transparent; } table { width: 100%; border-collapse: collapse; margin-top:
-      10px; } th, td { border: 1px solid #000; padding: 5px; text-align: center;
-      } .no-border td { border: none; } .urgent { font-weight: bold; margin-top:
-      20px; } .order-summary { margin-top: 10px; width: 50%; } .logo-with-name {
-      display: flex; align-items: center; }
-    </style>
-  </head>
+<head>
+  <meta charset='UTF-8' />
+  <title>Work Order</title>
+  <style>
+    * {
+      font-family: Arial, sans-serif;
+      box-sizing: border-box;
+    }
 
-  <body>
-    <h2 style='text-decoration: underline; text-align:center'><strong>WORK ORDER</strong></h2>
-    <div class='header'>
-      <div>
-        <div class='logo-with-name'>
-          <img
-            style='width: 150px; height: 150px;'
-            src='{{logoUrl}}'
-            alt='Logo'
-          />
-          <h2><span><strong>Turakhia Overseas Private Limited</strong></span></h2>
-        </div>
-        <p style='font-size: 20px;'>Client by
-          <span style='bold'>{{order.order_received_from}}</span></p>
-        <p style='font-size: 20px;'>{{base_type}}
-          Sub Type:
-          <strong>{{order.order_category}}</strong></p>
-      </div>
+    body {
+      margin: 0 auto;
+      padding: 5px;
+      max-width: 1500px;
+      /* keeps layout centered and prevents overflow */
+      word-wrap: break-word;
+    }
 
-      <div class='work-order-info'>
-        <p>Branding Type -: <strong>{{order.branding_type}}</strong></p>
-        <p>Work Order No :
-          <strong style='font-size: 20px;'>{{order.order_no}}</strong></p>
-        <p>Issue Date:
-          <span
-            style='font-weight: bold;'
-          >{{order.orderDateFormatted}}</span></p>
+    .approved {
+      page-break-inside: avoid;
+      page-break-before: avoid;
+      page-break-after: avoid;
+    }
+
+    .header,
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      /* allows wrapping on smaller screens */
+      align-items: center;
+    }
+
+    .logo-with-name img {
+      width: 120px;
+      height: auto;
+      max-width: 100%;
+    }
+
+    .logo-with-name h2 {
+      font-size: 22px;
+      margin-left: 10px;
+    }
+
+    .title {
+      text-align: center;
+      font-weight: bold;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      table-layout: fixed;
+      /* prevents uneven stretching */
+      word-break: break-word;
+    }
+
+    th,
+    td {
+      border: 1px solid #000;
+      padding: 5px;
+      text-align: left;
+      font-size: 9px;
+      word-wrap: break-word;
+    }
+
+    th {
+      background: #f4f4f4;
+    }
+
+    .urgent-row td {
+      text-align: left;
+      font-weight: bold;
+    }
+
+    .order-summary {
+      margin-top: 20px;
+      width: 100%;
+      /* full width for consistent layout */
+    }
+
+    /* Print-friendly adjustments */
+    @media print {
+      body {
+        max-width: 100%;
+        margin: 0;
+        padding: 10mm;
+      }
+
+      table {
+        page-break-inside: auto;
+      }
+
+      tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
+      }
+
+      @page {
+        size: A4;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <h2 style='text-decoration: underline; text-align:center'><strong>WORK ORDER</strong></h2>
+  <div class='header'>
+    <div>
+      <div class='logo-with-name' style="display: flex;">
+        <img style='width: 150px; height: 150px;' src='{{logoUrl}}' alt='Logo' />
+        <h2 style="margin-top: 50px;"><span><strong>Turakhia Overseas Private Limited</strong></span></h2>
       </div>
+      <p style='font-size: 20px;'>Client by
+        <span style='bold'>{{order.order_received_from}}</span>
+      </p>
+      <p style='font-size: 20px;'>
+        Sub Type:
+        <strong>{{base_sub_category}} {{base_type}} {{order.order_category}}</strong>
+      </p>
     </div>
 
-    <div class='section'>
-      <table>
-        <thead>
-          <tr>
-            <th>Series</th>
-            <th>SalesItemname</th>
-            <th>Photo Number</th>
-            <th>LogX</th>
-            <th>Character</th>
-            <th>Length</th>
-            <th>Width</th>
-            <th>Sheet</th>
-            <th>SqMtr</th>
-            <th>Remarks</th>
-            <th>Raw Issue</th>
-            <th>Clip</th>
-            <th>Splice</th>
-            <th>Taping</th>
-            <th>Pressing</th>
-            <th>Dispatch</th>
-          </tr>
-        </thead>
-        <tr class='urgent-row'>
-          <td colspan='9'>URGENT</td>
+    <div class='work-order-info'>
+      <p>Branding Type -: <strong>{{order.branding_type}}</strong></p>
+      <p>Work Order No :
+        <strong style='font-size: 20px;'>{{order.order_no}}</strong>
+      </p>
+      <p>Issue Date:
+        <span style='font-weight: bold;'>{{order.orderDateFormatted}}</span>
+      </p>
+    </div>
+  </div>
+
+  <div class='section'>
+    <table style="width:112%; font-size:8px !important; margin-left:-35px;">
+      <thead>
+        <tr>
+          <th>Series</th>
+          <th style="width: 120px;">Sales Itemname</th>
+          <th>Photo Number</th>
+          <th>LogX</th>
+          <th>Character</th>
+          <th>Length</th>
+          <th>Width</th>
+          <th>Sheet</th>
+          <th>SqMtr</th>
+          <th style="width: 50px;">Remarks</th>
+          <th>Raw Issue</th>
+          <th>Clip</th>
+          <th>Splice</th>
+          <th>Taping</th>
+          <th>Pressing</th>
+          <th>Dispatch</th>
         </tr>
-        <tbody>
-          {{#each items}}
-            <tr>
-              <td>{{series_name}}</td>
-              <td>{{item_name}}</td>
-              <td>{{photo_number}}</td>
-              <td>{{group_no}}</td>
-              <td>{{character}}</td>
-              <td>{{length}}</td>
-              <td>{{width}}</td>
-              <td>{{no_of_sheets}}</td>
-              <td>{{sqm}}</td>
-              <td>{{remark}}</td>
-              <td></td>
-              <td></td>
-              <td></td>
-              <td></td>
-              <td></td>
-              <td></td>
-            </tr>
-          {{/each}}
-          <tr>
-            <td colspan='7'><strong>Total</strong></td>
-            <td><strong>{{totalSqMtr}}</strong></td>
-            <td><strong>{{totalSheets}}</strong></td>
-            <td colspan='7'></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+      </thead>
+      <tr class='urgent-row'>
+        <td colspan='16'>URGENT</td>
+      </tr>
+      <tbody>
+        {{#each items}}
+        <tr>
+          <td>{{series_name}}</td>
+          <td>{{sales_item_name}}</td>
+          <td>{{photo_number}}</td>
+          <td>{{group_no}}</td>
+          <td>{{character}}</td>
+          <td>{{length}}</td>
+          <td>{{width}}</td>
+          <td>{{no_of_sheets}}</td>
+          <td>{{sqm}}</td>
+          <td>{{remark}}</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+        {{/each}}
+        <tr>
+          <td colspan='7'><strong>Total</strong></td>
+          <td><strong>{{totalSqMtr}}</strong></td>
+          <td><strong>{{totalSheets}}</strong></td>
+          <td colspan='7'></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 
-    <div class='section order-summary'>
-      <strong>Order Summary</strong>
-      <table>
-        <thead>
-          <tr>
-            <th>Order Summary</th>
-            <th>Sheet</th>
-            <th>Sq.Mtr.</th>
-          </tr>
-        </thead>
+  <div class='section order-summary'>
+    <strong>Order Summary</strong>
+    <table>
+      <thead>
+        <tr>
+          <th>Order Summary</th>
+          <th>Sheet</th>
+          <th>Sq.Mtr.</th>
+        </tr>
+      </thead>
 
-        <tbody>
-          {{#each items}}
-            <tr>
-              <td>{{item_name}}</td>
-              <td>{{no_of_sheets}}</td>
-              <td>{{sqm}}</td>
-            </tr>
-          {{/each}}
-          <tr>
-            <td><strong>Total</strong></td>
-            <td><strong>{{totalSheets}}</strong></td>
-            <td><strong>{{totalSqMtr}}</strong></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+      <tbody>
+        {{#each items}}
+        <tr>
+          <td style="max-width: 300px; white-space: normal; word-wrap: break-word; word-break: break-word;">
+            {{sales_item_name}}</td>
+          <td>{{no_of_sheets}}</td>
+          <td>{{sqm}}</td>
+        </tr>
+        {{/each}}
+        <tr>
+          <td><strong>Total</strong></td>
+          <td><strong>{{totalSheets}}</strong></td>
+          <td><strong>{{totalSqMtr}}</strong></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 
-    <div
-      style='margin-top: 200px; display: flex; justify-content: space-between;'
-    >
-      <div>APPROVED BY: __________________</div>
-      <div>RECEIVED BY: __________________</div>
-      <div>INSTRUCTION: __________________</div>
-    </div>
-  </body>
+  <div class="approved"
+    style="display: flex; justify-content: center; gap: 40px; margin-top: 50px; align-items: center; font-size: 12px; text-align: center;">
+    <div>APPROVED BY: __________________</div>
+    <div>RECEIVED BY: __________________</div>
+    <div>INSTRUCTION: __________________</div>
+  </div>
+</body>
 
 </html>

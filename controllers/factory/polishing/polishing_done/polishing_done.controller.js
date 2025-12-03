@@ -319,6 +319,36 @@ export const listing_polishing_done = catchAsync(async (req, res) => {
     $limit: parseInt(limit),
   };
 
+  const orderItems = [
+    {
+      $lookup: {
+        from: 'series_product_order_item_details',
+        localField: 'issue_for_polishing_details.order_item_id',
+        foreignField: '_id',
+        as: 'series_items',
+      },
+    },
+    {
+      $lookup: {
+        from: 'decorative_order_item_details',
+        localField: 'issue_for_polishing_details.order_item_id',
+        foreignField: '_id',
+        as: 'decorative_items',
+      },
+    },
+    {
+      $addFields: {
+        order_item_details: {
+          $cond: {
+            if: { $gt: [{ $size: '$series_items' }, 0] },
+            then: { $arrayElemAt: ['$series_items', 0] },
+            else: { $arrayElemAt: ['$decorative_items', 0] },
+          },
+        },
+      },
+    },
+  ];
+
   const listAggregate = [
     aggCommonMatch,
     aggLookUpIssuedDetails,
@@ -328,6 +358,7 @@ export const listing_polishing_done = catchAsync(async (req, res) => {
     aggUpdatedByLookup,
     aggUpdatedByUnwind,
     aggMatch,
+    ...orderItems,
     aggSort,
     aggSkip,
     aggLimit,
@@ -553,6 +584,15 @@ export const listing_polishing_history = catchAsync(async (req, res) => {
     },
   };
 
+  const aggLookUpDoneDetails = {
+    $lookup: {
+      from: 'polishing_done_details',
+      localField: 'issued_item_id',
+      foreignField: '_id',
+      as: 'polishing_done_details',
+    },
+  };
+
   const aggCreatedByLookup = {
     $lookup: {
       from: 'users',
@@ -613,6 +653,12 @@ export const listing_polishing_history = catchAsync(async (req, res) => {
       preserveNullAndEmptyArrays: true,
     },
   };
+  const aggDoneDetailsUnwind = {
+    $unwind: {
+      path: '$polishing_done_details',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
   const aggMatch = {
     $match: {
       ...match_query,
@@ -630,8 +676,40 @@ export const listing_polishing_history = catchAsync(async (req, res) => {
     $limit: parseInt(limit),
   };
 
+  const orderItems = [
+    {
+      $lookup: {
+        from: 'series_product_order_item_details',
+        localField: 'issue_for_polishing_details.order_item_id',
+        foreignField: '_id',
+        as: 'series_items',
+      },
+    },
+    {
+      $lookup: {
+        from: 'decorative_order_item_details',
+        localField: 'issue_for_polishing_details.order_item_id',
+        foreignField: '_id',
+        as: 'decorative_items',
+      },
+    },
+    {
+      $addFields: {
+        order_item_details: {
+          $cond: {
+            if: { $gt: [{ $size: '$series_items' }, 0] },
+            then: { $arrayElemAt: ['$series_items', 0] },
+            else: { $arrayElemAt: ['$decorative_items', 0] },
+          },
+        },
+      },
+    },
+  ];
+
   const listAggregate = [
     // aggCommonMatch,
+    aggLookUpDoneDetails,
+    aggDoneDetailsUnwind,
     aggLookUpIssuedDetails,
     aggIssuedCncDetailsUnwind,
     aggCreatedByLookup,
@@ -639,6 +717,7 @@ export const listing_polishing_history = catchAsync(async (req, res) => {
     aggUpdatedByLookup,
     aggUpdatedByUnwind,
     aggMatch,
+    ...orderItems,
     aggSort,
     aggSkip,
     aggLimit,
@@ -668,7 +747,6 @@ export const listing_polishing_history = catchAsync(async (req, res) => {
   );
   return res.status(200).json(response);
 });
-
 
 // Polishing done export api
 export const download_excel_polishing_done = catchAsync(async (req, res) => {
@@ -826,13 +904,10 @@ export const download_excel_polishing_done = catchAsync(async (req, res) => {
   const polishing_done_list =
     await polishing_done_details_model.aggregate(listAggregate);
 
-    await createFactoryPolishDoneExcel(polishing_done_list,req,res);
-
+  await createFactoryPolishDoneExcel(polishing_done_list, req, res);
 });
 
-
-
-// Polishing History export api 
+// Polishing History export api
 export const download_excel_polishing_history = catchAsync(async (req, res) => {
   const {
     page = 1,
@@ -887,12 +962,12 @@ export const download_excel_polishing_history = catchAsync(async (req, res) => {
 
   const aggLookUpIssuedDetails = {
     $lookup: {
-      from: "issue_for_polishing_details_view",
-      localField: "issue_for_polishing_id",
-      foreignField: "_id",
-      as: "issue_for_polishing_details"
-    }
-  }
+      from: 'issue_for_polishing_details_view',
+      localField: 'issue_for_polishing_id',
+      foreignField: '_id',
+      as: 'issue_for_polishing_details',
+    },
+  };
 
   const aggCreatedByLookup = {
     $lookup: {
@@ -986,5 +1061,5 @@ export const download_excel_polishing_history = catchAsync(async (req, res) => {
   ]; // aggregation pipiline
 
   const data = await polishing_history_model.aggregate(listAggregate);
-  await createFactoryPolishHistoryExcel(data,req,res);
+  await createFactoryPolishHistoryExcel(data, req, res);
 });

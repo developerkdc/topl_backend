@@ -86,6 +86,12 @@ const veneer_output_type_not_required_field = function () {
   return this.output_type !== peeling_done.veneer;
 };
 
+const core_face_output_type_not_required_field = function () {
+  return (
+    this.output_type !== peeling_done.face && this.output_type !== peeling_done.core
+  );
+}
+
 const peeling_done_items_schema = new mongoose.Schema(
   {
     peeling_done_other_details_id: {
@@ -187,33 +193,33 @@ const peeling_done_items_schema = new mongoose.Schema(
     },
     character_id: {
       type: mongoose.Schema.Types.ObjectId,
-      required: [true, 'Charcter ID is required'],
+      required: [core_face_output_type_not_required_field, 'Character ID is required'],
     },
     character_name: {
       type: String,
       uppercase: true,
       trim: true,
-      required: [true, 'Charcter Name is required'],
+      required: [core_face_output_type_not_required_field, 'Character Name is required'],
     },
     pattern_id: {
       type: mongoose.Schema.Types.ObjectId,
-      required: [true, 'Pattern ID is required'],
+      required:  [core_face_output_type_not_required_field, 'Pattern ID is required'],
     },
     pattern_name: {
       type: String,
       uppercase: true,
       trim: true,
-      required: [true, 'Pattern Name is required'],
+      required: [core_face_output_type_not_required_field, 'Pattern Name is required'],
     },
     series_id: {
       type: mongoose.Schema.Types.ObjectId,
-      required: [true, 'Series ID is required'],
+      required: [core_face_output_type_not_required_field, 'Series ID is required'],
     },
     series_name: {
       type: String,
       uppercase: true,
       trim: true,
-      required: [true, 'Series Name is required'],
+      required:[core_face_output_type_not_required_field, 'Series Name is required'],
     },
     grade_id: {
       type: mongoose.Schema.Types.ObjectId,

@@ -3,13 +3,18 @@ import { decorative_order_item_details_model } from '../../database/schema/order
 import { OrderModel } from '../../database/schema/order/orders.schema.js';
 import { RawOrderItemDetailsModel } from '../../database/schema/order/raw_order/raw_order_item_details.schema.js';
 import series_product_order_item_details_model from '../../database/schema/order/series_product_order/series_product_order_item_details.schema.js';
-import { order_category, order_item_status, order_status } from '../../database/Utils/constants/constants.js';
+import {
+  order_category,
+  order_item_status,
+  order_status,
+} from '../../database/Utils/constants/constants.js';
 import ApiResponse from '../../utils/ApiResponse.js';
 import { StatusCodes } from '../../utils/constants.js';
 import ApiError from '../../utils/errors/apiError.js';
 import catchAsync from '../../utils/errors/catchAsync.js';
 import RevertOrderItem from './revert_issued_order_item/revert_issued_order_item.controller..js';
 import issue_for_order_model from '../../database/schema/order/issue_for_order/issue_for_order.schema.js';
+import path from 'path';
 
 const order_items_models = {
   [order_category.raw]: RawOrderItemDetailsModel,
@@ -42,7 +47,9 @@ export const order_no_dropdown = catchAsync(async (req, res, next) => {
   };
 
   if (fetch_all_order !== 'true') {
-    aggMatch.$match.order_status = { $nin: [order_status.cancelled, order_status.closed] }
+    aggMatch.$match.order_status = {
+      $nin: [order_status.cancelled, order_status.closed],
+    };
   }
 
   const aggProject = {
@@ -88,20 +95,22 @@ export const order_items_dropdown = catchAsync(async (req, res, next) => {
 
   const match_query = {
     order_id: orderId,
-  }
+  };
 
   if (fetch_all_order !== 'true') {
-    match_query.item_status = { $nin: [order_item_status?.cancelled, order_item_status?.closed] }
+    match_query.item_status = {
+      $nin: [order_item_status?.cancelled, order_item_status?.closed],
+    };
   }
-
 
   const order_items_data = await order_items_models?.[category]?.find(
     {
-      ...match_query
+      ...match_query,
     },
     {
       order_id: 1,
       item_no: 1,
+      sales_item_name: 1
     }
   );
 
@@ -227,3 +236,145 @@ export const revert_order_by_order_id = catchAsync(async (req, res) => {
     await session?.endSession();
   }
 });
+
+export const fetch_decorative_and_series_product_order_items = catchAsync(
+  async (req, res) => {
+    const { createdDate, orderType } = req.body;
+
+    if (!createdDate) {
+      throw new ApiError('Created date is required', StatusCodes.BAD_REQUEST);
+    }
+
+    if (!orderType) {
+      throw new ApiError('Order Type is required', StatusCodes.BAD_REQUEST);
+    }
+    const models_map = {
+      decorative: 'decorative_order_item_details',
+      series: 'series_product_order_item_details',
+    };
+
+
+
+    const pipeline = [
+      {
+        $match: {
+          $expr: {
+            $eq: [
+              {
+                $dateToString: {
+                  format: '%Y-%m-%d',
+                  date: '$createdAt',
+                  timezone: 'Asia/Kolkata',
+                },
+              },
+              createdDate,
+            ],
+          },
+        },
+      },
+      {
+        $lookup: {
+          from: models_map[orderType],
+          localField: '_id',
+          foreignField: 'order_id',
+          as: 'order_item_details',
+        },
+      },
+      { $unwind: '$order_item_details' },
+
+      {
+        $lookup: {
+          from: "photos",
+          localField: "order_item_details.photo_number_id",
+          foreignField: "_id",
+          as: "photo_details"
+        }
+      },
+      {
+        $unwind: {
+          path: "$photo_details", preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $lookup: {
+          from: "grouping_done_items_details",
+          localField: "photo_details._id",
+          foreignField: "photo_no_id",
+          as: "grouping_done_items",
+          pipeline: [
+            {
+              $project: {
+                group_no: 1,
+              }
+            }
+          ]
+        }
+      }, {
+        $unwind: {
+          path: "$grouping_done_items", preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $lookup: {
+          from: 'customers',
+          localField: 'customer_id',
+          foreignField: '_id',
+          as: 'customer_details',
+        },
+      },
+      {
+        $unwind: {
+          path: '$customer_details',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+
+      {
+        $project: {
+          _id: 0,
+          OrderNo: '$order_no',
+          SODetId: '$order_item_details.item_no',
+          Date: '$orderDate',
+          Priority: {
+            $ifNull: ['$order_item_details.dispatch_schedule', null],
+          },
+          CustomerId: '$customer_details.sr_no',
+          CustomerName: '$customer_details.company_name',
+          Product: '$order_category',
+          CurrentStage: {
+            $ifNull: ['$photo_details.current_stage', null],
+          },
+          FinishedStage: {
+            $ifNull: ['$order_item_details.finished_stage', null],
+          },
+          PhotoNumber: '$order_item_details.photo_number',
+          Thickness: {
+            $ifNull: ['$order_item_details.thickness', null],
+          },
+          ItemName: '$order_item_details.item_name',
+          SalesItemname: '$order_item_details.sales_item_name',
+          LogX: "$grouping_done_items.group_no",
+          Length: '$order_item_details.length',
+          Width: '$order_item_details.width',
+          'Sheets/PCS': '$order_item_details.no_of_sheets',
+          SqMtr: '$order_item_details.sqm',
+          Character: '$photo_details.character_name',
+          Pattern: '$photo_details.pattern_name',
+          Series: '$order_item_details.series_name',
+          Remarks: '$order_item_details.remark',
+          Instruction: '$order_item_details.pressing_instructions',
+          DeliveryDate: null,
+          Remark: '$order_remarks',
+          PlywoodSubType: '$order_item_details.base_type',
+          CreatedOn: '$createdAt',
+          ModifiedOn: '$updatedAt',
+          OrderStatus: '$order_status',
+          PalletNo: null,
+        },
+      },
+    ];
+
+    const result = await OrderModel.aggregate(pipeline);
+    return res.status(StatusCodes.OK).json(result);
+  }
+);

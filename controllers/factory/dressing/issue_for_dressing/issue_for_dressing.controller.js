@@ -13,7 +13,7 @@ import { issue_for_dressing_model } from '../../../../database/schema/factory/sl
 //   dressing_bulk_upload_queue_events,
 // } from '../../../../utils/bullMyWorkers/bulk.upload.worker.js';
 import dressing_raw_machine_data_model from '../../../../database/schema/factory/dressing/dressing_done/dressing.machine.raw.data.schema.js';
-import mongoose from 'mongoose';
+import mongoose, { isValidObjectId } from 'mongoose';
 import {
   delete_session,
   get_session,
@@ -631,10 +631,100 @@ export const list_issue_for_dressing_machine_miss_match_data = catchAsync(
 
     const response = new ApiResponse(
       StatusCodes.OK,
-      'Dressing Machine MissMatch Data Fetched Successfully',
+      'Dressing Machine MisMatch Data Fetched Successfully',
       { data: list_dressing_machine_missmatch_data, totalPages: totalPages }
     );
 
     return res.status(StatusCodes.OK).json(response);
   }
 );
+
+export const update_machine_raw_and_mismatch_data = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  const user_details = req.userDetails;
+  const { updated_details } = req.body;
+
+  if (!id) {
+    throw new ApiError('ID is missing', StatusCodes.NOT_FOUND);
+  }
+
+  if (!isValidObjectId(id)) {
+    throw new ApiError('Invalid ID ', StatusCodes.BAD_REQUEST);
+  };
+
+  if (!updated_details) {
+    throw new ApiError('Updated Details are required', StatusCodes.BAD_REQUEST);
+  }
+  const session = await mongoose.startSession();
+  try {
+    await session.startTransaction();
+    const old_machine_missmatch_data = await dressing_miss_match_data_model.findById(id).lean().session(session);
+
+    if (!old_machine_missmatch_data) {
+      throw new ApiError('Dressing Machine Mismatch Data not found', StatusCodes.NOT_FOUND);
+    };
+
+    const old_machine_raw_data = await dressing_raw_machine_data_model.findOne({
+      Tronco: old_machine_missmatch_data?.log_no_code, Partida: old_machine_missmatch_data?.pallet_number,
+      NumPaqTronco: old_machine_missmatch_data?.bundle_number
+    }).lean().session(session);
+    if (!old_machine_raw_data) {
+      throw new ApiError('Dressing Machine Raw Data not found', StatusCodes.NOT_FOUND);
+    };
+
+
+    const updated_machine_missmatch_data = {
+      log_no_code: updated_details?.log_no_code,
+      pallet_number: updated_details?.pallet_number,
+      bundle_number: updated_details?.bundle_number,
+      thickness: updated_details?.thickness,
+      length: updated_details?.length,
+      width: updated_details?.width,
+      no_of_leaves: updated_details?.no_of_leaves,
+      sqm: updated_details?.sqm,
+      updated_by: user_details?._id,
+      updated_at: new Date()
+    };
+
+
+    const updated_machine_raw_data = {
+      Tronco: updated_details?.log_no_code,
+      Partida: updated_details?.pallet_number,
+      NumPaqTronco: updated_details?.bundle_number,
+      Grosor: updated_details?.thickness,
+      Largo: updated_details?.length,
+      Ancho: updated_details?.width,
+      Hojas: updated_details?.no_of_leaves,
+      M2: updated_details?.sqm,
+      updated_by: user_details?._id,
+      updated_at: new Date()
+    };
+
+    const update_machine_missmatch_data_result = await dressing_miss_match_data_model.updateOne({ _id: old_machine_missmatch_data?._id }, { $set: updated_machine_missmatch_data }).session(session);
+    if (!update_machine_missmatch_data_result?.acknowledged || update_machine_missmatch_data_result?.modifiedCount === 0) {
+      throw new ApiError('Failed to update dressing mismatch data', StatusCodes.BAD_REQUEST);
+    }
+
+    const update_machine_raw_data_result = await dressing_raw_machine_data_model.updateOne({
+      Tronco: old_machine_missmatch_data?.log_no_code, Partida: old_machine_missmatch_data?.pallet_number,
+      NumPaqTronco: old_machine_missmatch_data?.bundle_number
+    }, { $set: updated_machine_raw_data }).session(session);
+
+    if (!update_machine_raw_data_result?.acknowledged || update_machine_raw_data_result?.modifiedCount === 0) {
+      throw new ApiError('Failed to update dressing machine raw data', StatusCodes.BAD_REQUEST);
+    };
+
+    const response = new ApiResponse(StatusCodes.OK, 'Dressing Machine Raw Data and Mismatch Data updated successfully', {
+      updated_machine_missmatch_data: update_machine_missmatch_data_result,
+      updated_machine_raw_data: update_machine_raw_data_result
+    });
+    await session.commitTransaction();
+    return res.status(response.statusCode).json(response);
+  } catch (error) {
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    await session.endSession();
+  }
+
+})

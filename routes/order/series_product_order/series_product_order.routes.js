@@ -9,6 +9,7 @@ import {
   update_series_order,
   update_series_order_item_status_by_item_id,
 } from '../../../controllers/order/series_product_order/series_product_order.controller.js';
+import { verifyApproval } from '../../../middlewares/approval.middleware.js';
 
 const seriesOrderRouter = express.Router();
 
@@ -17,6 +18,7 @@ seriesOrderRouter.post('/add-order', AuthMiddleware, add_series_order);
 seriesOrderRouter.patch(
   '/update-order/:order_details_id',
   AuthMiddleware,
+  verifyApproval('order', 'edit'),
   update_series_order
 );
 seriesOrderRouter.post(

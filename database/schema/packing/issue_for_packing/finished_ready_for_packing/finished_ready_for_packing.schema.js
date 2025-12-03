@@ -4,6 +4,7 @@ import {
   item_issued_from,
   order_category,
 } from '../../../../Utils/constants/constants.js';
+import { group } from 'console';
 
 const finished_ready_for_packing_schema = new mongoose.Schema(
   {
@@ -27,6 +28,10 @@ const finished_ready_for_packing_schema = new mongoose.Schema(
     order_item_id: {
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Order Item ID is required.'],
+    },
+    sales_item_name: {
+      type: String,
+      required: [true, "Sales Item Name is required."]
     },
     order_number: {
       type: Number,
@@ -137,6 +142,11 @@ const finished_ready_for_packing_schema = new mongoose.Schema(
   }
 );
 
+const indexed_fields = [[{ group_no: 1 }]];
+
+indexed_fields.forEach((field) => {
+  finished_ready_for_packing_schema.index(...field);
+});
 const finished_ready_for_packing_model = mongoose.model(
   'finished_ready_for_packing_details',
   finished_ready_for_packing_schema,

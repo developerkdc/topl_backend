@@ -305,6 +305,12 @@ export const listing_issued_for_canvas = catchAsync(async (req, res, next) => {
     is_canvas_done: false,
   };
 
+  const aggCommonMatch = {
+    $match: {
+      'available_details.no_of_sheets': { $ne: 0 },
+    },
+  };
+
   const aggCreatedByLookup = {
     $lookup: {
       from: 'users',
@@ -376,12 +382,44 @@ export const listing_issued_for_canvas = catchAsync(async (req, res, next) => {
     $limit: parseInt(limit),
   };
 
+  const orderItems = [
+    {
+      $lookup: {
+        from: 'series_product_order_item_details',
+        localField: 'order_item_id',
+        foreignField: '_id',
+        as: 'series_items',
+      },
+    },
+    {
+      $lookup: {
+        from: 'decorative_order_item_details',
+        localField: 'order_item_id',
+        foreignField: '_id',
+        as: 'decorative_items',
+      },
+    },
+    {
+      $addFields: {
+        order_item_details: {
+          $cond: {
+            if: { $gt: [{ $size: '$series_items' }, 0] },
+            then: { $arrayElemAt: ['$series_items', 0] },
+            else: { $arrayElemAt: ['$decorative_items', 0] },
+          },
+        },
+      },
+    },
+  ];
+
   const listAggregate = [
+    aggCommonMatch,
     aggCreatedByLookup,
     aggCreatedByUnwind,
     aggUpdatedByLookup,
     aggUpdatedByUnwind,
     aggMatch,
+    ...orderItems,
     aggSort,
     aggSkip,
     aggLimit,

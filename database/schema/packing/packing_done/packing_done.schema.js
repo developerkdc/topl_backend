@@ -1,13 +1,14 @@
 import mongoose from 'mongoose';
 import { order_category } from '../../../Utils/constants/constants.js';
+import { approval_status } from '../../../Utils/approvalStatus.schema.js';
 
 const packing_done_other_details_schema = new mongoose.Schema(
   {
     packing_id: {
-      type: String,
+      type: Number,
       required: [true, 'Packing ID is required.'],
       trim: true,
-      uppercase: true,
+      unique: true,
     },
     packing_date: {
       type: Date,
@@ -22,21 +23,46 @@ const packing_done_other_details_schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Customer ID is required.'],
     },
-    order_category: {
+    photo_no: {
       type: String,
+    },
+    // order_category: {
+    //   type: String,
+    //   enum: {
+    //     values: [
+    //       order_category?.raw,
+    //       order_category?.decorative,
+    //       order_category?.series_product,
+    //     ],
+    //     message: `Invalid type {{VALUE}} it must be one of the ${(order_category?.raw, order_category?.decorative, order_category?.series_product)}`,
+    //   },
+    //   required: [true, 'Order category is required'],
+    //   trim: true,
+    // },
+    // product_type: {
+    //   type: String,
+    //   required: [true, 'Product Type is required'],
+    //   trim: true,
+    // },
+    order_category: {
+      type: [String],
       enum: {
         values: [
           order_category?.raw,
           order_category?.decorative,
           order_category?.series_product,
         ],
-        message: `Invalid type {{VALUE}} it must be one of the ${(order_category?.raw, order_category?.decorative, order_category?.series_product)}`,
+        message: `Invalid type {{VALUE}}. It must be one of ${[
+          order_category?.raw,
+          order_category?.decorative,
+          order_category?.series_product,
+        ].join(', ')}`,
       },
       required: [true, 'Order category is required'],
       trim: true,
     },
     product_type: {
-      type: String,
+      type: [String],
       required: [true, 'Product Type is required'],
       trim: true,
     },
@@ -56,6 +82,15 @@ const packing_done_other_details_schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Updated by is required.'],
     },
+    remark: {
+      type: String,
+      default: null,
+    },
+    sales_item_name: {
+      type: String,
+      // required: [true, "Sales Item Name is required"]
+    },
+    approval_status: approval_status,
   },
   {
     timestamps: true,
@@ -214,12 +249,37 @@ const packing_done_items_schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Updated by is required.'],
     },
+    bundle_no: {
+      type: Number,
+      default: null,
+    },
+    bundle_description: {
+      type: String,
+      default: null,
+      trim: true,
+      validate: {
+        validator: function (v) {
+          return v === null || /^[0-9+\-*/.() ]*$/.test(v);
+        },
+        message: (props) => `${props.value} contains invalid characters!`,
+      },
+    },
+
+    total_no_of_bundles: {
+      type: Number,
+      default: null,
+    },
   },
   {
     timestamps: true,
   }
 );
 
+const indexed_fields = [[{ packing_done_other_details_id: 1 }]];
+
+indexed_fields.forEach((field) => {
+  packing_done_items_schema.index(...field);
+});
 export const packing_done_other_details_model = mongoose.model(
   'packing_done_other_details',
   packing_done_other_details_schema,

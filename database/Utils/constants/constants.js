@@ -60,8 +60,8 @@ export const slicing_done_from = {
 };
 
 export const dressing_error_types = {
-  no_of_leaves_missmatch: 'no_of_leaves_missmatch',
-  thickness_missmatch: 'thickness_missmatch',
+  no_of_leaves_mismatch: 'no_of_leaves_mismatch',
+  thickness_mismatch: 'thickness_mismatch',
   process_pending: 'process_pending',
   slicing_not_done: 'slicing_not_done',
   peeling_not_done: 'peeling_not_done',
@@ -185,5 +185,6 @@ export const color_type = {
 };
 
 export const dispatch_status = {
+  irn_generated: 'IRN GENERATED',
   cancelled: 'CANCELLED',
 };

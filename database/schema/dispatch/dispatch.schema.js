@@ -4,6 +4,7 @@ import {
   order_category,
   transaction_type,
 } from '../../Utils/constants/constants.js';
+import { approval_status } from '../../Utils/approvalStatus.schema.js';
 const transaction_type_values = Object.values(transaction_type);
 
 const address_schema = {
@@ -94,21 +95,45 @@ const dispatchSchema = new mongoose.Schema(
         return customer_details?.is_tcs_applicable || false;
       },
     },
+    // order_category: {
+    //   type: String,
+    //   enum: {
+    //     values: [
+    //       order_category?.raw,
+    //       order_category?.decorative,
+    //       order_category?.series_product,
+    //     ],
+    //     message: `Invalid type {{VALUE}} it must be one of the ${(order_category?.raw, order_category?.decorative, order_category?.series_product)}`,
+    //   },
+    //   required: [true, 'Order category is required'],
+    //   trim: true,
+    // },
+    // product_category: {
+    //   type: String,
+    //   default: null,
+    //   trim: true,
+    //   uppercase: true,
+    // },
     order_category: {
-      type: String,
+      type: [String],
       enum: {
         values: [
           order_category?.raw,
           order_category?.decorative,
           order_category?.series_product,
         ],
-        message: `Invalid type {{VALUE}} it must be one of the ${(order_category?.raw, order_category?.decorative, order_category?.series_product)}`,
+        message: `Invalid type {{VALUE}} it must be one of the ${[
+          order_category?.raw,
+          order_category?.decorative,
+          order_category?.series_product,
+        ]?.join(', ')}`,
       },
+      uppercase: true,
       required: [true, 'Order category is required'],
       trim: true,
     },
     product_category: {
-      type: String,
+      type: [String],
       default: null,
       trim: true,
       uppercase: true,
@@ -124,204 +149,296 @@ const dispatchSchema = new mongoose.Schema(
             type: String,
             required: [true, 'Packing Done ID is required.'],
           },
-        }, 
-    ],
-    default: [],
-    validate: {
-      validator: (v) => v.length > 0,
-      message: 'Packing Ids cannot be empty',
-    },
-    required: [true, 'Packing Ids is required'],
-  },
-  dispatch_status: {
-    type: String,
-    enum: {
-      values: [
-        dispatch_status?.cancelled
-      ],
-      message: `Invalid type {{VALUE}} it must be one of the ${[
-        dispatch_status?.cancelled
-      ]?.join(', ')}`,
-    },
-    trim: true,
-    default: null,
-  },
-  supp_type: {
-    type: String,
-    required: [true, 'supp type is required'],
-    trim: true,
-    uppercase: true,
-  },
-  transaction_type: {
-    type: String,
-    required: [true, 'Transaction Type is required.'],
-    enum: {
-      values: transaction_type_values,
-      message:
-        'Invalid transaction type -> {{VALUE}}. It must be one of the : ' +
-        transaction_type_values?.join(', '),
-    },
-  },
-  address: {
-    bill_from_address: address_schema,
-    dispatch_from_address: address_schema,
-    bill_to_address: address_schema,
-    ship_to_address: address_schema,
-  },
-  is_part_b: {
-    type: Boolean,
-    default: false,
-  },
-  transporter_id: {
-    type: mongoose.Types.ObjectId,
-    required: [true, 'Transporter ID is required'],
-  },
-  transporter_details: {
-    type: Object,
-    required: [true, 'Transporter details are required']
-  },
-  approx_distance: {
-    type: Number,
-    default: null,
-  },
-  vehicle_id: {
-    type: mongoose.Types.ObjectId,
-    required: [true, 'Vehicle ID is required'],
-  },
-  vehicle_details: {
-    type: Object,
-    required: [true, 'Vehicle details are required']
-  },
-  irn_number: {
-    type: String,
-    default: null,
-  },
-  acknowledgement_number: {
-    type: String,
-    default: null,
-  },
-  acknowledgement_date: {
-    type: Date,
-    default: null,
-  },
-  eway_bill_no: {
-    type: String,
-    default: null,
-  },
-  eway_bill_date: {
-    type: Date,
-    default: null,
-  },
-  qr_code_link: {
-    type: [{
-      name: {
-        type: String,
-        enum: {
-          values: ['irn_number', 'eway_bill'],
-          message: 'Invalid name {{VALUE}}. It must be "irn_number", "eway_bill"',
+          packing_date: {
+            type: Date,
+          }
         },
+      ],
+      default: [],
+      validate: {
+        validator: (v) => v.length > 0,
+        message: 'Packing Ids cannot be empty',
       },
-      url: String,
-    }],
-    default: null,
-  },
-  total_no_of_sheets: {
-    type: Number,
-    default: 0,
-  },
-  total_sqm: {
-    type: Number,
-    default: 0,
-  },
-  total_base_amount: {
-    type: Number,
-    default: 0,
-  },
-  insurance_percentage: {
-    type: Number,
-    default: 0,
-  },
-  insurance_amount: {
-    type: Number,
-    default: 0,
-  },
-  total_amount_with_insurance: {
-    type: Number,
-    default: 0,
-  },
-  freight_amount: {
-    type: Number,
-    default: 0,
-  },
-  other_amount: {
-    type: Number,
-    default: 0,
-  },
-  total_amount_with_expenses: {
-    type: Number,
-    default: 0,
-  },
-  gst_details: {
-    gst_percentage: {
+      required: [true, 'Packing Ids is required'],
+    },
+    dispatch_status: {
+      type: String,
+      enum: {
+        values: [
+          dispatch_status?.irn_generated,
+          dispatch_status?.cancelled
+        ],
+        message: `Invalid type {{VALUE}} it must be one of the ${[
+          dispatch_status?.cancelled
+        ]?.join(', ')}`,
+      },
+      trim: true,
+      default: null,
+    },
+    supp_type: {
+      type: String,
+      required: [true, 'supp type is required'],
+      trim: true,
+      uppercase: true,
+    },
+    transaction_type: {
+      type: String,
+      required: [true, 'Transaction Type is required.'],
+      enum: {
+        values: transaction_type_values,
+        message:
+          'Invalid transaction type -> {{VALUE}}. It must be one of the : ' +
+          transaction_type_values?.join(', '),
+      },
+    },
+    address: {
+      bill_from_address: address_schema,
+      dispatch_from_address: address_schema,
+      bill_to_address: address_schema,
+      ship_to_address: address_schema,
+    },
+    address_of_buyer_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      // required: [true, 'Address of buyer is required.'],
+      default: null,
+    },
+    address_of_seller_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      // required: [true, 'Address of seller is required.'],
+      default: null,
+    },
+    address_of_buyer: {
+      type: String,
+      uppercase: true,
+      // required: [true, 'Address of buyer is required.'],
+      default: null,
+    },
+    address_of_seller: {
+      type: String,
+      uppercase: true,
+      // required: [true, 'Address of seller is required.'],
+      default: null,
+    },
+    is_part_b: {
+      type: Boolean,
+      default: false,
+    },
+    transporter_id: {
+      type: mongoose.Types.ObjectId,
+      required: [true, 'Transporter ID is required'],
+    },
+    transporter_details: {
+      type: Object,
+      required: [true, 'Transporter details are required']
+    },
+    transport_mode: {
+      type: Object,
+      required: [true, 'Transport mode is required']
+    },
+    approx_distance: {
+      type: Number,
+      default: null,
+    },
+    vehicle_id: {
+      type: mongoose.Types.ObjectId,
+      required: [true, 'Vehicle ID is required'],
+    },
+    vehicle_details: {
+      type: Object,
+      required: [true, 'Vehicle details are required']
+    },
+    invoice_amount: {
+      type: String,
+      default: null,
+    },
+    irn_number: {
+      type: String,
+      default: null,
+    },
+    irp: {
+      type: String,
+      default: null,
+    },
+    acknowledgement_number: {
+      type: String,
+      default: null,
+    },
+    acknowledgement_date: {
+      type: Date,
+      default: null,
+    },
+    eway_bill_no: {
+      type: String,
+      default: null,
+    },
+    eway_bill_date: {
+      type: Date,
+      default: null,
+    },
+    qr_code_link: {
+      type: [{
+        name: {
+          type: String,
+          enum: {
+            values: ['irn_number', 'eway_bill'],
+            message: 'Invalid name {{VALUE}}. It must be "irn_number", "eway_bill"',
+          },
+        },
+        url: String,
+      }],
+      default: null,
+    },
+    total_no_of_sheets: {
+      //total quantity in frontend
       type: Number,
       default: 0,
     },
-    gst_amount: {
+    total_sqm: {
       type: Number,
       default: 0,
     },
-    igst_percentage: {
+    total_base_amount: {
       type: Number,
       default: 0,
     },
-    igst_amount: {
+    insurance_details: {
+      insurance_percentage: {
+        type: Number,
+        default: 0,
+      },
+      insurance_amount: {
+        type: Number,
+        default: 0,
+      },
+      insurance_amount_with_gst: {
+        type: Number,
+        default: 0,
+      },
+      insurance_gst_rate: {
+        type: Number,
+        default: 0,
+      },
+      insurance_igst_amt: {
+        type: Number,
+        default: 0,
+      },
+      insurance_cgst_amt: {
+        type: Number,
+        default: 0,
+      },
+      insurance_sgst_amt: {
+        type: Number,
+        default: 0,
+      },
+    },
+    total_amount_with_insurance: {
       type: Number,
       default: 0,
     },
-    cgst_percentage: {
+    base_amount_without_gst: {
       type: Number,
       default: 0,
     },
-    cgst_amount: {
+    total_gst_amt: {
       type: Number,
       default: 0,
     },
-    sgst_percentage: {
+    total_cgst_amt: {
       type: Number,
       default: 0,
     },
-    sgst_amount: {
+    total_sgst_amt: {
       type: Number,
       default: 0,
     },
-  },
-  total_amount_with_gst: {
-    type: Number,
-    default: 0,
-  },
-  final_total_amount: {
-    type: Number,
-    default: 0,
-  },
-  remark: {
-    type: String,
-    default: null,
-    trim: true,
-    uppercase: true,
-  },
-  created_by: {
-    type: mongoose.Types.ObjectId,
-    ref: 'users',
-    required: [true, 'Created By is required'],
-    trim: true,
-  },
-  updated_by: {
-    type: mongoose.Types.ObjectId,
-    ref: 'users',
-    required: [true, 'Updated By is required'],
-    trim: true,
-  },
-}, {
+    total_igst_amt: {
+      type: Number,
+      default: 0,
+    },
+    freight_details: {
+      freight_amount: {
+        type: Number,
+        default: 0,
+      },
+      freight_gst_rate: {
+        type: Number,
+        default: 0,
+      },
+      freight_igst_amt: {
+        type: Number,
+        default: 0,
+      },
+      freight_cgst_amt: {
+        type: Number,
+        default: 0,
+      },
+      freight_sgst_amt: {
+        type: Number,
+        default: 0,
+      },
+      freight_amt_with_gst: {
+        type: Number,
+        default: 0,
+      }
+    },
+    other_amount_details: {
+      other_amount: {
+        type: Number,
+        default: 0,
+      },
+      other_gst_rate: {
+        type: Number,
+        default: 0,
+      },
+      other_igst_amt: {
+        type: Number,
+        default: 0,
+      },
+      other_cgst_amt: {
+        type: Number,
+        default: 0,
+      },
+      other_sgst_amt: {
+        type: Number,
+        default: 0,
+      },
+      other_amt_with_gst: {
+        type: Number,
+        default: 0,
+      }
+    },
+    expense_amount_with_gst: {
+      type: Number,
+      default: 0,
+    },
+    total_amount_with_gst: {
+      type: Number,
+      default: 0,
+    },
+    final_total_amount: {
+      type: Number,
+      default: 0,
+    },
+    remark: {
+      type: String,
+      default: null,
+      trim: true,
+      uppercase: true,
+    },
+    approval_status: approval_status,
+    created_by: {
+      type: mongoose.Types.ObjectId,
+      ref: 'users',
+      required: [true, 'Created By is required'],
+      trim: true,
+    },
+    updated_by: {
+      type: mongoose.Types.ObjectId,
+      ref: 'users',
+      required: [true, 'Updated By is required'],
+      trim: true,
+    },
+  }, {
   timestamps: true,
 });
 

@@ -312,6 +312,41 @@ export const listing_canvas_done = catchAsync(async (req, res) => {
     $limit: parseInt(limit),
   };
 
+  const orderItems = [
+    {
+      $addFields: {
+        order_item_id: '$issue_for_canvas_details.order_item_id',
+      },
+    },
+    {
+      $lookup: {
+        from: 'series_product_order_item_details',
+        localField: 'order_item_id',
+        foreignField: '_id',
+        as: 'series_items',
+      },
+    },
+    {
+      $lookup: {
+        from: 'decorative_order_item_details',
+        localField: 'order_item_id',
+        foreignField: '_id',
+        as: 'decorative_items',
+      },
+    },
+    {
+      $addFields: {
+        order_item_details: {
+          $cond: {
+            if: { $gt: [{ $size: '$series_items' }, 0] },
+            then: { $arrayElemAt: ['$series_items', 0] },
+            else: { $arrayElemAt: ['$decorative_items', 0] },
+          },
+        },
+      },
+    },
+  ];
+
   const listAggregate = [
     aggCommonMatch,
     aggLookUpIssuedDetails,
@@ -321,6 +356,7 @@ export const listing_canvas_done = catchAsync(async (req, res) => {
     aggUpdatedByLookup,
     aggUpdatedByUnwind,
     aggMatch,
+    ...orderItems,
     aggSort,
     aggSkip,
     aggLimit,
@@ -540,6 +576,14 @@ export const listing_canvas_history = catchAsync(async (req, res) => {
       as: 'issue_for_canvas_details',
     },
   };
+  const aggLookUpDoneDetails = {
+    $lookup: {
+      from: 'canvas_done_details',
+      localField: 'issued_item_id',
+      foreignField: '_id',
+      as: 'canvas_done_details',
+    },
+  };
 
   const aggCreatedByLookup = {
     $lookup: {
@@ -583,6 +627,12 @@ export const listing_canvas_history = catchAsync(async (req, res) => {
       as: 'updated_by',
     },
   };
+  const aggDoneDetailsUnwind = {
+    $unwind: {
+      path: '$canvas_done_details',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
   const aggCreatedByUnwind = {
     $unwind: {
       path: '$created_by',
@@ -618,8 +668,40 @@ export const listing_canvas_history = catchAsync(async (req, res) => {
     $limit: parseInt(limit),
   };
 
+  const orderItems = [
+    {
+      $lookup: {
+        from: 'series_product_order_item_details',
+        localField: 'order_item_id',
+        foreignField: '_id',
+        as: 'series_items',
+      },
+    },
+    {
+      $lookup: {
+        from: 'decorative_order_item_details',
+        localField: 'order_item_id',
+        foreignField: '_id',
+        as: 'decorative_items',
+      },
+    },
+    {
+      $addFields: {
+        order_item_details: {
+          $cond: {
+            if: { $gt: [{ $size: '$series_items' }, 0] },
+            then: { $arrayElemAt: ['$series_items', 0] },
+            else: { $arrayElemAt: ['$decorative_items', 0] },
+          },
+        },
+      },
+    },
+  ];
+
   const listAggregate = [
     // aggCommonMatch,
+    aggLookUpDoneDetails,
+    aggDoneDetailsUnwind, 
     aggLookUpIssuedDetails,
     aggIssuedCncDetailsUnwind,
     aggCreatedByLookup,
@@ -627,6 +709,7 @@ export const listing_canvas_history = catchAsync(async (req, res) => {
     aggUpdatedByLookup,
     aggUpdatedByUnwind,
     aggMatch,
+    ...orderItems,
     aggSort,
     aggSkip,
     aggLimit,

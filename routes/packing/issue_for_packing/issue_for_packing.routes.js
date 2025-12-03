@@ -1,15 +1,38 @@
 import { Router } from 'express';
 import AuthMiddleware from '../../../middlewares/verifyToken.js';
-import { fetch_all_raw_ready_for_packing } from '../../../controllers/packing/issue_for_packing/raw_ready_for_packing/raw_ready_for_packing.controller.js';
+import {
+  dropdownRawReadyForPacking,
+  fetch_all_raw_ready_for_packing,
+} from '../../../controllers/packing/issue_for_packing/raw_ready_for_packing/raw_ready_for_packing.controller.js';
 import {
   add_finished_ready_for_packing,
   fetch_all_finished_ready_for_packing,
   fetch_issue_for_packing_items_by_customer_and_order_category,
   generatePackingEwayBillPDF,
   generatePackingInvoiceBillPDF,
+  packing_customer_name_list,
   revert_finished_ready_for_packing,
 } from '../../../controllers/packing/issue_for_packing/finished_ready_for_packing/finished_ready_for_packing.controller.js';
 const issue_for_packing_router = Router();
+
+issue_for_packing_router.get(
+  '/finished-customer-list',
+  AuthMiddleware,
+  packing_customer_name_list
+);
+
+
+issue_for_packing_router.get(
+  '/raw-customer-list',
+  AuthMiddleware,
+  dropdownRawReadyForPacking
+);
+
+// issue_for_packing_router.get(
+//   'list-raw-ready-customers',
+//   AuthMiddleware,
+//   dropdownRawReadyForPacking
+// );
 
 //list all finished items ready for packing
 issue_for_packing_router.post(
@@ -43,9 +66,14 @@ issue_for_packing_router.get(
   fetch_issue_for_packing_items_by_customer_and_order_category
 );
 
-issue_for_packing_router.get('/packingInvoicePDF/:id', /*AuthMiddleware,*/ generatePackingInvoiceBillPDF);
+issue_for_packing_router.get(
+  '/packingInvoicePDF/:id',
+  /*AuthMiddleware,*/ generatePackingInvoiceBillPDF
+);
 
-issue_for_packing_router.get('/packingEwayBillPDF/:id', /*AuthMiddleware,*/ generatePackingEwayBillPDF);
-
+issue_for_packing_router.get(
+  '/packingEwayBillPDF/:id',
+  /*AuthMiddleware,*/ generatePackingEwayBillPDF
+);
 
 export default issue_for_packing_router;

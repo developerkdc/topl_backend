@@ -366,16 +366,6 @@ export const dropdownDispatchAddress = catchAsync(async (req, res, next) => {
         status: true,
       },
     },
-    {
-      $project: {
-        address: 1,
-        country: 1,
-        state: 1,
-        city: 1,
-        pincode: 1,
-        gst_number: 1,
-      },
-    },
   ]);
 
   const response = new ApiResponse(

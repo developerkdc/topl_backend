@@ -24,6 +24,12 @@
       border-collapse: collapse;
     }
 
+    .approved {
+      page-break-inside: avoid;
+      page-break-before: avoid;
+      page-break-after: avoid;
+    }
+
     .title {
       font-size: 22px;
       font-weight: bold;
@@ -46,7 +52,8 @@
     .table td {
       border: 1px solid #000;
       padding: 5px;
-      text-align: center;
+      text-align: left;
+      font-size: 10px;
     }
 
     .table th {
@@ -77,7 +84,7 @@
     .summary-table td {
       border: 1px solid #000;
       padding: 5px;
-      text-align: center;
+      text-align: left;
     }
 
     .logo-with-name {
@@ -93,18 +100,18 @@
 </head>
 
 <body>
-
+  <h3 style="text-align: center;"><strong><u>WORK ORDER</u></strong></h3>
   <table class="header">
     <tr>
       <td>
         <div class="logo-with-name">
-          <img style="width: 150px; height: 150px" src="{{logoUrl}}" alt="Logo" />
-          <h3 style="font-size: 20px;"><span><strong>Turakhia Overseas Private Limited</strong></span></h3>
+          <img style="width: 100px; height: 100px" src="{{logoUrl}}" alt="Logo" />
+          <h3 style="font-size: 17px;"><span><strong>Turakhia Overseas Private Limited</strong></span></h3>
         </div>
       </td>
       <td class="branding">
-        Branding Type -: {{order.branding_type}}<br />
-        <strong>Work Order No : {{order.order_no}}</strong><br />
+        Branding Type :- {{order.branding_type}}<br />
+        <strong style="font-size: 20px;">Work Order No : {{order.order_no}}</strong><br />
         Issue Date: {{order.orderDateFormatted}}
       </td>
     </tr>
@@ -112,10 +119,10 @@
 
 
   <div class="section">
-    <strong>Client by {{order.order_received_from}}</strong> &nbsp;&nbsp;
-    <strong>{{base_type}}SUBTYPE:</strong> {{order.order_category}} &nbsp;&nbsp;
+    <strong>Client by {{order.order_received_from}}</strong> &nbsp;&nbsp;&nbsp;&nbsp;
+    <strong>{{base_type}} SUBTYPE:</strong> {{base_sub_category}} &nbsp;&nbsp;&nbsp;&nbsp;
 
-    <strong>{{base_sub_category}}</strong>
+    <strong> {{order.order_category}} {{base_type}}</strong>
   </div>
 
   <div class="section">
@@ -123,7 +130,7 @@
       <thead>
         <tr>
           <th>Pallet No.</th>
-          <th>SalesItemname</th>
+          <th style="230px">Sales Itemname</th>
           <th>Photo Number</th>
           <th>LogX</th>
           <th>Character</th>
@@ -137,13 +144,13 @@
         </tr>
       </thead>
       <tr>
-        <td colspan="12" class="urgent">URGENT</td>
+        <td colspan="12" class="urgent" style="text-align: left;">URGENT</td>
       </tr>
-      <tbody>
+      <tbody style="text-align: left;">
         {{#each items}}
         <tr>
-          <td>{{series_name}}</td>
-          <td>{{item_name}}</td>
+          <td>{{pallet_no}}</td>
+          <td>{{sales_item_name}}</td>
           <td>{{photo_number}}</td>
           <td>{{group_no}}</td>
           <td>{{character}}</td>
@@ -176,7 +183,8 @@
       <tbody>
         {{#each items}}
         <tr>
-          <td>{{item_name}}</td>
+          <td style="max-width: 300px; white-space: normal; word-wrap: break-word; word-break: break-word;">
+            {{sales_item_name}}</td>
           <td>{{no_of_sheets}}</td>
           <td>{{sqm}}</td>
         </tr>
@@ -191,7 +199,7 @@
     </table>
   </div>
 
-  <div style="margin-top: 200px; display: flex; justify-content: space-between;">
+  <div class="approved" style="margin-top: 100px; display: flex; justify-content: space-between;">
     <div>APPROVED BY: __________________</div>
     <div>RECEIVED BY: __________________</div>
     <div>INSTRUCTION: __________________</div>

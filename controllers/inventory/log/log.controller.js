@@ -822,6 +822,10 @@ export const add_issue_for_flitching = catchAsync(async (req, res, next) => {
       issued_from: issues_for_status.log,
       remark: data?.remark,
       invoice_id: data?.invoice_id,
+      color: {
+        color_id: data?.color?.color_id,
+        color_name: data?.color?.color_name,
+      },
       created_by: created_by,
     };
   });
@@ -944,8 +948,8 @@ export const check_already_existing_log_no = catchAsync(
       log_no,
       ...(item_id &&
         item_id !== 'undefined' && {
-          _id: { $ne: new mongoose.Types.ObjectId(item_id) },
-        }),
+        _id: { $ne: new mongoose.Types.ObjectId(item_id) },
+      }),
     });
     if (isExistInLog) {
       throw new ApiError(
@@ -957,8 +961,8 @@ export const check_already_existing_log_no = catchAsync(
       log_no_code: log_no,
       ...(item_id &&
         item_id !== 'undefined' && {
-          _id: { $ne: new mongoose.Types.ObjectId(item_id) },
-        }),
+        _id: { $ne: new mongoose.Types.ObjectId(item_id) },
+      }),
     });
     if (isExistInFlitch) {
       throw new ApiError(
@@ -970,8 +974,8 @@ export const check_already_existing_log_no = catchAsync(
       log_code: log_no,
       ...(item_id &&
         item_id !== 'undefined' && {
-          _id: { $ne: new mongoose.Types.ObjectId(item_id) },
-        }),
+        _id: { $ne: new mongoose.Types.ObjectId(item_id) },
+      }),
     });
 
     if (isExistInVeneer) {

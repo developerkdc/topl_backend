@@ -307,6 +307,12 @@ export const listing_issued_for_polishing = catchAsync(
       is_polishing_done: false,
     };
 
+    const aggCommonMatch = {
+      $match: {
+        'available_details.no_of_sheets': { $ne: 0 },
+      },
+    };
+
     const aggCreatedByLookup = {
       $lookup: {
         from: 'users',
@@ -378,12 +384,44 @@ export const listing_issued_for_polishing = catchAsync(
       $limit: parseInt(limit),
     };
 
+    const orderItems = [
+      {
+        $lookup: {
+          from: 'series_product_order_item_details',
+          localField: 'order_item_id',
+          foreignField: '_id',
+          as: 'series_items',
+        },
+      },
+      {
+        $lookup: {
+          from: 'decorative_order_item_details',
+          localField: 'order_item_id',
+          foreignField: '_id',
+          as: 'decorative_items',
+        },
+      },
+      {
+        $addFields: {
+          order_item_details: {
+            $cond: {
+              if: { $gt: [{ $size: '$series_items' }, 0] },
+              then: { $arrayElemAt: ['$series_items', 0] },
+              else: { $arrayElemAt: ['$decorative_items', 0] },
+            },
+          },
+        },
+      },
+    ];
+
     const listAggregate = [
+      aggCommonMatch,
       aggCreatedByLookup,
       aggCreatedByUnwind,
       aggUpdatedByLookup,
       aggUpdatedByUnwind,
       aggMatch,
+      ...orderItems,
       aggSort,
       aggSkip,
       aggLimit,
@@ -445,8 +483,6 @@ export const fetch_single_issue_for_polishing_item = catchAsync(
     return res.status(StatusCodes.OK).json(response);
   }
 );
-
-
 
 export const download_excel_issued_for_polishing = catchAsync(
   async (req, res, next) => {
@@ -580,6 +616,5 @@ export const download_excel_issued_for_polishing = catchAsync(
     const data = await issue_for_polishing_view_model.aggregate(listAggregate);
 
     await createFactoryIssueForPolishExcel(data, req, res);
-
   }
 );

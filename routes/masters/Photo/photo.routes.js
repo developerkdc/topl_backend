@@ -3,8 +3,10 @@ import AuthMiddleware from '../../../middlewares/verifyToken.js';
 import {
   addPhoto,
   download_excel_photo_album,
+  downloadPhotoAlbumImagesZip,
   downloadPhotoAlbumZip,
   dropdownPhoto,
+  fetch_available_photo_quantity,
   fetchPhotoAlbumList,
   fetchPhotoList,
   fetchSinglePhoto,
@@ -49,6 +51,11 @@ photoRouter.post(
   AuthMiddleware,
   downloadPhotoAlbumZip
 );
+photoRouter.post(
+  '/download-photo-images',
+  AuthMiddleware,
+  downloadPhotoAlbumImagesZip
+);
 // Export APi Done
 photoRouter.post(
   '/download-photo-album-excel',
@@ -61,6 +68,11 @@ photoRouter.post(
   '/group-no-dropdown-for-hybrid-photo-master',
   AuthMiddleware,
   group_no_dropdown_for_hybrid_photo_master
+);
+photoRouter.post(
+  '/fetch-available-photo-quantity',
+  // AuthMiddleware,
+  fetch_available_photo_quantity
 );
 
 export default photoRouter;

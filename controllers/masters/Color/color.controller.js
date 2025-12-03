@@ -334,7 +334,7 @@ export const dropdownColor = catchAsync(async (req, res, next) => {
   if (process_name) {
     match_query.process_name = process_name;
   }
-  console.log(match_query);
+  console.log("match_query", match_query);
 
   const colorList = await colorModel.aggregate([
     {

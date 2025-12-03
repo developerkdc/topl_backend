@@ -65,7 +65,7 @@ const canvas_history_schema = new mongoose.Schema(
           item_issued_from?.polishing_factory,
           item_issued_from?.packing,
         ],
-        message: `Invalid Type -> {{VALUE}} , it must be one of the ${(item_issued_from?.pressing_factory, item_issued_from?.cnc_factory, item_issued_from?.color_factory, item_issued_from?.bunito_factory, item_issued_from?.polishing_factory)}`,
+        message: `Invalid Type -> {{VALUE}} , it must be one of the ${(item_issued_from?.pressing_factory, item_issued_from?.cnc_factory, item_issued_from?.color_factory, item_issued_from?.bunito_factory, item_issued_from?.polishing_factory, item_issued_from?.packing)}`,
       },
       default: issues_for_status?.order,
     },

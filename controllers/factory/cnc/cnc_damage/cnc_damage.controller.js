@@ -195,7 +195,7 @@ export const listing_cnc_damage = catchAsync(async (req, res) => {
 
 export const add_cnc_damage = catchAsync(async (req, res) => {
   const userDetails = req.userDetails;
-  const { id, damage_sheets } = req.query;
+  const { id, damage_sheets, } = req.query;
   const session = await mongoose.startSession();
   try {
     session.startTransaction();
@@ -230,6 +230,11 @@ export const add_cnc_damage = catchAsync(async (req, res) => {
       )?.toFixed(3)
     );
 
+    const damage_amount = Number(
+      ((damage_sheets / cnc_done_details?.available_details?.no_of_sheets) *
+        cnc_done_details?.available_details?.amount)?.toFixed(2)
+    );
+
     const [maxSrNo] = await cnc_damage_model.aggregate([
       {
         $group: {
@@ -246,6 +251,7 @@ export const add_cnc_damage = catchAsync(async (req, res) => {
           cnc_done_id: cnc_done_details?._id,
           no_of_sheets: damage_sheets,
           sqm: damage_sqm,
+          amount: damage_amount,
           sr_no: maxSrNo ? maxSrNo?.max_sr_no + 1 : 1,
           created_by: userDetails?._id,
           updated_by: userDetails?._id,
@@ -267,6 +273,7 @@ export const add_cnc_damage = catchAsync(async (req, res) => {
         $inc: {
           'available_details.sqm': -damage_sqm,
           'available_details.no_of_sheets': -damage_sheets,
+          'available_details.amount': -damage_amount,
         },
         $set: {
           updated_by: userDetails?._id,
@@ -353,6 +360,7 @@ export const revert_damage_to_cnc_done = catchAsync(async (req, res) => {
           $inc: {
             'available_details.no_of_sheets': cnc_damage_details.no_of_sheets,
             'available_details.sqm': cnc_damage_details.sqm,
+            'available_details.amount': cnc_damage_details.amount,
           },
         },
         { session }

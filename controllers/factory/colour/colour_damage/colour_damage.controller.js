@@ -154,7 +154,35 @@ export const listing_color_damage = catchAsync(async (req, res) => {
   const aggLimit = {
     $limit: parseInt(limit),
   };
-
+  const orderItems = [
+    {
+      $lookup: {
+        from: 'series_product_order_item_details',
+        localField: 'order_item_id',
+        foreignField: '_id',
+        as: 'series_items',
+      },
+    },
+    {
+      $lookup: {
+        from: 'decorative_order_item_details',
+        localField: 'order_item_id',
+        foreignField: '_id',
+        as: 'decorative_items',
+      },
+    },
+    {
+      $addFields: {
+        order_item_details: {
+          $cond: {
+            if: { $gt: [{ $size: '$series_items' }, 0] },
+            then: { $arrayElemAt: ['$series_items', 0] },
+            else: { $arrayElemAt: ['$decorative_items', 0] },
+          },
+        },
+      },
+    },
+  ];
   const listAggregate = [
     aggLookupColorDoneDetails,
     aggUnwindColorDoneDetails,
@@ -165,6 +193,7 @@ export const listing_color_damage = catchAsync(async (req, res) => {
     aggUpdatedByLookup,
     aggUpdatedByUnwind,
     aggMatch,
+    ...orderItems,
     aggSort,
     aggSkip,
     aggLimit,
@@ -233,6 +262,11 @@ export const add_color_damage = catchAsync(async (req, res) => {
       )?.toFixed(3)
     );
 
+    const damage_amount = Number(
+      ((damage_sheets / color_done_details?.available_details?.no_of_sheets) *
+        color_done_details?.available_details?.amount)?.toFixed(2)
+    );
+
     const [maxSrNo] = await color_damage_model.aggregate([
       {
         $group: {
@@ -248,7 +282,9 @@ export const add_color_damage = catchAsync(async (req, res) => {
         {
           color_done_id: color_done_details?._id,
           no_of_sheets: damage_sheets,
+          order_item_id: color_done_details?.order_item_id,
           sqm: damage_sqm,
+          amount: damage_amount,
           sr_no: maxSrNo ? maxSrNo?.max_sr_no + 1 : 1,
           created_by: userDetails?._id,
           updated_by: userDetails?._id,
@@ -270,6 +306,7 @@ export const add_color_damage = catchAsync(async (req, res) => {
         $inc: {
           'available_details.sqm': -damage_sqm,
           'available_details.no_of_sheets': -damage_sheets,
+          'available_details.amount': -damage_amount,
         },
         $set: {
           updated_by: userDetails?._id,
@@ -361,6 +398,7 @@ export const revert_from_color_damage_to_color_done = catchAsync(
               'available_details.no_of_sheets':
                 color_damage_details.no_of_sheets,
               'available_details.sqm': color_damage_details.sqm,
+              'available_details.amount': color_damage_details.amount,
             },
           },
           { session }

@@ -15,13 +15,26 @@ import catchAsync from '../../../../utils/errors/catchAsync.js';
 export const fetch_all_group_no_based_on_issued_status = catchAsync(
   async (req, res) => {
     const { type, order_id, order_item_id } = req.query;
+
     const search_query = {
       issued_for: type?.toUpperCase(),
     };
+
     if (type?.toUpperCase() === item_issued_for.order) {
+      //Validate ObjectIds before using them to prevent BSONError
+      if (
+        !mongoose.Types.ObjectId.isValid(order_id) ||
+        !mongoose.Types.ObjectId.isValid(order_item_id)
+      ) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: 'Invalid order_id or order_item_id format',
+        });
+      }
+
       search_query.order_id = new mongoose.Types.ObjectId(order_id);
       search_query.order_item_id = new mongoose.Types.ObjectId(order_item_id);
     }
+
     const match_query = {
       ...search_query,
       'available_details.no_of_sheets': {
@@ -50,6 +63,7 @@ export const fetch_all_group_no_based_on_issued_status = catchAsync(
       'Group No Dropdown fetched successfully',
       result
     );
+
     return res.status(StatusCodes.OK).json(response);
   }
 );
@@ -447,3 +461,132 @@ export const fetch_fleece_paper_details_by_id = catchAsync(async (req, res) => {
   );
   return res.status(StatusCodes.OK).json(response);
 });
+
+export const issue_for_pressing_orderNo = catchAsync(async (req, res, next) => {
+  const category = req?.query?.category;
+
+  // --- Build match query ---
+  const matchQuery = {
+    is_pressing_done: false, // Only show where pressing is not done
+    'available_details.no_of_sheets': { $gt: 0 },
+  };
+
+  if (category) {
+    matchQuery.order_category = category;
+  }
+
+  // --- Aggregation Pipeline ---
+  const aggMatch = { $match: matchQuery };
+
+  const aggLookup = {
+    $lookup: {
+      from: 'orders',
+      localField: 'order_id',
+      foreignField: '_id',
+      as: 'orderDetails',
+    },
+  };
+
+  const aggUnwind = { $unwind: '$orderDetails' };
+
+  const aggProject = {
+    $project: {
+      order_id: '$orderDetails._id',
+      order_no: '$orderDetails.order_no',
+      order_category: '$orderDetails.order_category',
+    },
+  };
+
+  const aggGroup = {
+    $group: {
+      _id: '$order_id',
+      order_no: { $first: '$order_no' },
+      order_category: { $first: '$order_category' },
+    },
+  };
+
+  const aggSort = { $sort: { order_no: 1 } };
+
+  // --- Execute aggregate ---
+  const fetch_order_no = await issues_for_pressing_model.aggregate([
+    aggMatch,
+    aggLookup,
+    aggUnwind,
+    aggProject,
+    aggGroup,
+    aggSort,
+  ]);
+
+  // --- Send response ---
+  const response = new ApiResponse(
+    StatusCodes.OK,
+    'Fetch Pressing Orders Successfully.',
+    fetch_order_no
+  );
+
+  return res.status(StatusCodes.OK).json(response);
+});
+
+export const pressing_item_no_dropdown = catchAsync(async (req, res, next) => {
+  const { order_id, category } = req.query;
+
+  if (!order_id) {
+    return next(new ApiError(StatusCodes.BAD_REQUEST, "Order ID is required"));
+  }
+
+  if (!category) {
+    return next(new ApiError(StatusCodes.BAD_REQUEST, "Order Category is required"));
+  }
+
+  let modelName = "";
+
+  if (category === "DECORATIVE") {
+    modelName = "decorative_order_item_details";
+  } else if (category === "SERIES PRODUCT") {
+    modelName = "series_product_order_item_details";
+  } else {
+    return next(new ApiError(StatusCodes.BAD_REQUEST, "Invalid Category"));
+  }
+
+  const pipeline = [
+    {
+      $match: {
+        order_id: new mongoose.Types.ObjectId(order_id),
+      },
+    },
+    {
+      $group: {
+        _id: "$order_item_id", // unique
+        order_id: { $first: "$order_id" },
+      },
+    },
+    {
+      $lookup: {
+        from: modelName,
+        localField: "_id",
+        foreignField: "_id",
+        as: "details",
+      },
+    },
+    { $unwind: "$details" },
+    {
+      $project: {
+        order_id: 1,
+        order_item_id: "$_id",
+        item_no: "$details.item_no",
+      },
+    },
+    { $sort: { item_no: 1 } },
+  ];
+
+  const itemDropdown = await issues_for_pressing_model.aggregate(pipeline);
+
+  const response = new ApiResponse(
+    StatusCodes.OK,
+    "Fetch Pressing Item No Successfully.",
+    itemDropdown
+  );
+
+  return res.status(StatusCodes.OK).json(response);
+});
+

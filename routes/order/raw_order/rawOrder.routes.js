@@ -8,6 +8,7 @@ import {
 } from '../../../controllers/order/raw_order/raw_order.controller.js';
 import AuthMiddleware from '../../../middlewares/verifyToken.js';
 import RawOrderCancelController from '../../../controllers/order/order_cancelled/raw_order_cancel.controller.js';
+import { verifyApproval } from '../../../middlewares/approval.middleware.js';
 
 const rawOrderRouter = express.Router();
 
@@ -15,6 +16,7 @@ rawOrderRouter.post('/add-raw-order', AuthMiddleware, add_raw_order);
 rawOrderRouter.post(
   '/update-raw-order/:order_details_id',
   AuthMiddleware,
+  verifyApproval('order', 'edit'),//need to add approval for raw order edit
   update_raw_order
 );
 rawOrderRouter.post(
