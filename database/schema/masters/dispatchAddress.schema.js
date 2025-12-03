@@ -12,6 +12,7 @@ const dispatchAddressSchema = new mongoose.Schema(
       uppercase: true,
       trim: true,
       required: [true, 'Address is required'],
+      unique: [true, 'Address must be unique'],
     },
     country: {
       type: String,
@@ -37,6 +38,10 @@ const dispatchAddressSchema = new mongoose.Schema(
       type: String,
       trim: true,
       required: [true, 'gst number is required'],
+    },
+    is_primary: {
+      type: Boolean,
+      default: false,
     },
     status: {
       type: Boolean,
