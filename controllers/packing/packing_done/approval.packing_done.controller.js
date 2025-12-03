@@ -67,7 +67,7 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res, next) =>
     'approval.approvalPerson': _id,
   };
 
-  console.log("match query => ", match_query)
+
 
   const approval_user_details_pipeline = [
     {

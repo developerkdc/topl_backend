@@ -534,8 +534,8 @@ export const edit_dispatch_details = catchAsync(async (req, res, next) => {
   try {
     const userDetails = req.userDetails;
     const { dispatch_id } = req.params;
-    // const send_for_approval = req.sendForApproval;
-    const send_for_approval = true;
+    const send_for_approval = req.sendForApproval;
+    // const send_for_approval = true;
 
     if (!dispatch_id || !mongoose.isValidObjectId(dispatch_id)) {
       throw new ApiError('Invalid Dispatch ID', StatusCodes.BAD_REQUEST);
@@ -1623,7 +1623,7 @@ export const fetch_all_dispatch_details = catchAsync(async (req, res, next) => {
         }
         : { [sortBy]: sort === 'desc' ? -1 : 1 },
   };
-  console.log("aggregate sort => ", aggSort)
+
   const aggSkip = {
     $skip: (parseInt(page) - 1) * parseInt(limit),
   };
