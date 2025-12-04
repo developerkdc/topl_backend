@@ -516,7 +516,7 @@ export const verify_customer_gstin = catchAsync(async (req, res, next) => {
       message: 'Customer GSTIN Verified Successfully',
       result: irnResponse?.data?.data,
     });
-  }else{
+  } else {
     // Try to parse the error response and extract the first error object from status_desc array
     let errorMessage = "Customer GSTIN Verification Failed.";
     try {

@@ -534,8 +534,8 @@ export const edit_dispatch_details = catchAsync(async (req, res, next) => {
   try {
     const userDetails = req.userDetails;
     const { dispatch_id } = req.params;
-    // const send_for_approval = req.sendForApproval;
-    const send_for_approval = true;
+    const send_for_approval = req.sendForApproval;
+    // const send_for_approval = true;
 
     if (!dispatch_id || !mongoose.isValidObjectId(dispatch_id)) {
       throw new ApiError('Invalid Dispatch ID', StatusCodes.BAD_REQUEST);
@@ -921,7 +921,7 @@ export const edit_dispatch_details = catchAsync(async (req, res, next) => {
         editedBy: userDetails?._id,
         approvalPerson: userDetails?.approver_id,
       },
-      created_by: userDetails?._id,
+      created_by: fetch_dipsatch_details?.created_by,
       updated_by: userDetails?._id,
 
     };
@@ -971,7 +971,9 @@ export const edit_dispatch_details = catchAsync(async (req, res, next) => {
         approval_dispatch_item_id: dispatch_item_id ?? new mongoose.Types.ObjectId(),
         invoice_no: add_approval_dispatch_done_deatils_result?.invoice_no,
         created_by: item.created_by ? item?.created_by : userDetails?._id,
-        updated_by: item.updated_by ? item?.updated_by : userDetails?._id,
+        updated_by: userDetails?._id,
+        createdAt: createdAt ?? new Date(),
+        updatedAt: new Date()
       };
     });
 
@@ -1621,6 +1623,7 @@ export const fetch_all_dispatch_details = catchAsync(async (req, res, next) => {
         }
         : { [sortBy]: sort === 'desc' ? -1 : 1 },
   };
+
   const aggSkip = {
     $skip: (parseInt(page) - 1) * parseInt(limit),
   };
@@ -1805,6 +1808,7 @@ export const fetch_all_dispatch_items_details = catchAsync(
       $limit: parseInt(limit),
     };
 
+
     const list_aggregate = [
       // match_common_query,
       aggLookupDispatchDetails,
@@ -1867,6 +1871,7 @@ export const packing_done_dropdown = catchAsync(async (req, res, next) => {
 
   const match = {
     customer_id: mongoose.Types.ObjectId.createFromHexString(customer_id),
+    "approval_status.sendForApproval.status": { $ne: true }
   };
 
   if (order_category && order_category.length > 0) {
@@ -1987,7 +1992,7 @@ export const generate_irn_no = catchAsync(async (req, res, next) => {
 
   // Seller Details - consider these as sample/static; replace with actual company master data as per your prod logic
   const sellerDetails = {
-    Gstin: '29AAGCB1286Q000',
+    Gstin: bill_from_address?.gst_no,
     LglNm: 'TURAKHIA OVERSEAS PVT. LTD.',
     Addr1: bill_from_address?.address,
     Loc: bill_from_address?.city,
@@ -2487,7 +2492,7 @@ export const generate_ewaybill = catchAsync(async (req, res, next) => {
       : '',
 
     //seller details
-    fromGstin: '29AAGCB1286Q000',
+    fromGstin: dispatch_from_address?.gst_no,
     fromTrdName: 'TURAKHIA OVERSEAS PVT. LTD.',
     fromAddr1:
       dispatch_from_address?.address &&
@@ -2504,7 +2509,7 @@ export const generate_ewaybill = catchAsync(async (req, res, next) => {
     fromStateCode: getStateCode(dispatch_from_address?.state),
     actFromStateCode: getStateCode(dispatch_from_address?.state),
 
-    dispatchFromGSTIN: '29AAGCB1286Q000',
+    dispatchFromGSTIN: dispatch_from_address?.gst_no,
     dispatchFromTradeName: 'TURAKHIA OVERSEAS PVT. LTD.',
 
     //buyer details

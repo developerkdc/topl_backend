@@ -157,7 +157,6 @@ export const listSeriesDetails = catchAsync(async (req, res) => {
   // }
   const allDetails = await seriesModel.aggregate(pipeline);
   const totalDocs = await seriesModel.countDocuments({ ...searchQuery });
-  // const totalPage = Math.ceil(totalDocs / limitInt);
   const totalPage = totalDocs > 0 ? Math.ceil(totalDocs / limitInt) : 1;
 
   return res.json(

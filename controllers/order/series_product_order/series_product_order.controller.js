@@ -373,7 +373,7 @@ export const update_series_order = catchAsync(async (req, res) => {
         editedBy: userDetails?._id,
         approvalPerson: userDetails?.approver_id,
       },
-      created_by: userDetails?._id,
+      created_by: order_details_result?.created_by || userDetails?._id,
       updated_by: userDetails?._id,
 
     };
@@ -422,8 +422,9 @@ export const update_series_order = catchAsync(async (req, res) => {
         order_id: add_approval_order_result?.order_id,
         approval_order_id: add_approval_order_result?._id,
         product_category: add_approval_order_result?.product_category,
-        // created_by: item.created_by ? item?.created_by : userDetails?._id,
-        updated_by: item.updated_by ? item?.updated_by : userDetails?._id,
+        created_by: item.created_by ? item?.created_by : userDetails?._id,
+        updated_by: userDetails?._id,
+        createdAt: createdAt ? createdAt : new Date()
       };
     });
 
@@ -1022,7 +1023,7 @@ export const getPreviousRate = catchAsync(async (req, res, next) => {
       },
     },
   ];
-  console.log(aggregationPipeline, 'kiuudxhgiuhxdgiu');
+
 
   const result =
     await series_product_order_item_details_model.aggregate(
