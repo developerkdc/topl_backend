@@ -1,13 +1,14 @@
-import mongoose from 'mongoose';
+import mongoose, { isValidObjectId } from 'mongoose';
 import { OrderModel } from '../../../database/schema/order/orders.schema.js';
 import {
+    approval_for_type,
     item_issued_for,
     item_issued_from,
     order_category,
     order_item_status,
     order_status,
 } from '../../../database/Utils/constants/constants.js';
-import { StatusCodes } from '../../../utils/constants.js';
+import { approval_status, StatusCodes } from '../../../utils/constants.js';
 import ApiError from '../../../utils/errors/apiError.js';
 import catchAsync from '../../../utils/errors/catchAsync.js';
 import photoModel from '../../../database/schema/masters/photo.schema.js';
@@ -25,6 +26,9 @@ import bunito_history_model from '../../../database/schema/factory/bunito/bunito
 import color_history_model from '../../../database/schema/factory/colour/colour_history/colour_history.schema.js';
 import canvas_history_model from '../../../database/schema/factory/canvas/canvas_history/canvas.history.schema.js';
 import polishing_history_model from '../../../database/schema/factory/polishing/polishing_history/polishing.history.schema.js';
+import { orders_approval_model } from '../../../database/schema/order/orders.approval.schema.js';
+import { approval_decorative_order_item_details_model } from '../../../database/schema/order/decorative_order/approval.decorative_order_item_details.schema.js';
+import approval_series_product_order_item_details_model from '../../../database/schema/order/series_product_order/approval.series_product_order_item_details.schema.js';
 
 class DecorativeSeriesOrderCancelController {
     static common_fields = {
@@ -41,6 +45,7 @@ class DecorativeSeriesOrderCancelController {
         [item_issued_from?.canvas_factory]: canvas_done_details_model,
         [item_issued_from?.polishing_factory]: polishing_done_details_model,
     };
+
     static issued_from_history_map = {
         [item_issued_from?.pressing_factory]: pressing_done_history_model,
         [item_issued_from?.cnc_factory]: cnc_history_model,
@@ -50,6 +55,13 @@ class DecorativeSeriesOrderCancelController {
         [item_issued_from?.polishing_factory]: polishing_history_model,
     };
 
+    //approval order items model map
+    static approval_items_model_map = {
+        [order_category?.decorative]: approval_decorative_order_item_details_model,
+        [order_category?.series_product]:
+            approval_series_product_order_item_details_model,
+    };
+
     // {
     //     collection_name:{
     //         fields: collection_fields_name,
@@ -57,6 +69,7 @@ class DecorativeSeriesOrderCancelController {
     //     }
     // } // structure for issued for order items
 
+    // issued for order items collections and their fields
     static issued_for_order_items = {
         // grouping
         grouping_done_history: {
@@ -131,6 +144,7 @@ class DecorativeSeriesOrderCancelController {
         [order_category?.series_product]: 'series_product_order_item_details',
     };
 
+    //validate fields for order and order item cancellation
     static validate_fields(fields, validate_for) {
         if (!fields?.order_id || !mongoose.isValidObjectId(fields?.order_id)) {
             throw new ApiError(
@@ -162,6 +176,7 @@ class DecorativeSeriesOrderCancelController {
         }
     }
 
+    //fetch order details
     static fetch_order_details = async ({ order_id, order_category }) => {
         try {
             // Fetch order details logic here
@@ -214,6 +229,7 @@ class DecorativeSeriesOrderCancelController {
         }
     };
 
+    //fetch order item details
     static fetch_order_item_details = async ({
         order_id,
         order_item_id,
@@ -276,6 +292,7 @@ class DecorativeSeriesOrderCancelController {
         }
     };
 
+    //make available for stock of issued order items
     static available_for_stock_for_issued_order = async (
         order_data,
         session = null
@@ -410,141 +427,336 @@ class DecorativeSeriesOrderCancelController {
         }
     };
 
-    // static revert_issue_for_packing_items = async (
-    //     { order_id, order_item_id, order_category, user },
-    //     session = null
-    // ) => {
-    //     const [finished_ready_for_packing_details] =
-    //         await finished_ready_for_packing_model.aggregate([
-    //             {
-    //                 $match: {
-    //                     order_id: mongoose.Types.ObjectId.createFromHexString(order_id),
-    //                     order_item_id:
-    //                         mongoose.Types.ObjectId.createFromHexString(order_item_id),
-    //                     order_category: order_category,
-    //                 },
-    //             },
-    //             {
-    //                 $facet: {
-    //                     not_packed: [
-    //                         {
-    //                             $match: {
-    //                                 is_packing_done: false,
-    //                             },
-    //                         },
-    //                     ],
-    //                     packed: [
-    //                         {
-    //                             $match: {
-    //                                 is_packing_done: true,
-    //                             },
-    //                         },
-    //                         { $count: 'count' },
-    //                     ],
-    //                 },
-    //             },
-    //         ]);
+    //revert issued items for packing
+    static revert_issue_for_packing_items = async (
+        { order_id, order_item_id, order_category, user },
+        session = null
+    ) => {
+        const [finished_ready_for_packing_details] =
+            await finished_ready_for_packing_model.aggregate([
+                {
+                    $match: {
+                        order_id: mongoose.Types.ObjectId.createFromHexString(order_id),
+                        order_item_id:
+                            mongoose.Types.ObjectId.createFromHexString(order_item_id),
+                        order_category: order_category,
+                    },
+                },
+                {
+                    $facet: {
+                        not_packed: [
+                            {
+                                $match: {
+                                    is_packing_done: false,
+                                },
+                            },
+                        ],
+                        packed: [
+                            {
+                                $match: {
+                                    is_packing_done: true,
+                                },
+                            },
+                            { $count: 'count' },
+                        ],
+                    },
+                },
+            ]);
 
-    //     if (finished_ready_for_packing_details.length === 0) {
-    //         return;
-    //     }
+        if (finished_ready_for_packing_details.length === 0) {
+            return;
+        }
 
-    //     if (finished_ready_for_packing_details.packed?.[0]?.count > 0) {
-    //         throw new ApiError(
-    //             'Cannot cancel order item as some items are already packed.',
-    //             StatusCodes.BAD_REQUEST
-    //         );
-    //     }
-    //     for (let item of finished_ready_for_packing_details?.not_packed) {
-    //         const issued_from_model = this.issued_from_map[item?.issued_from];
-    //         if (!issued_from_model) {
-    //             throw new ApiError(
-    //                 StatusCodes.BAD_REQUEST,
-    //                 'Invalid issued from type.'
-    //             );
-    //         }
+        if (finished_ready_for_packing_details.packed?.[0]?.count > 0) {
+            throw new ApiError(
+                'Cannot cancel order item as some items are already packed.',
+                StatusCodes.BAD_REQUEST
+            );
+        }
+        for (let item of finished_ready_for_packing_details?.not_packed) {
+            const issued_from_model = this.issued_from_map[item?.issued_from];
+            if (!issued_from_model) {
+                throw new ApiError(
+                    StatusCodes.BAD_REQUEST,
+                    'Invalid issued from type.'
+                );
+            }
 
-    //         const issued_from_details = await issued_from_model
-    //             .findById(item?.issued_from_id)
-    //             .session(session);
-    //         if (!issued_from_details) {
-    //             throw new ApiError(
-    //                 StatusCodes.NOT_FOUND,
-    //                 'Issued from details not found.'
-    //             );
-    //         }
+            const issued_from_details = await issued_from_model
+                .findById(item?.issued_from_id)
+                .session(session);
+            if (!issued_from_details) {
+                throw new ApiError(
+                    StatusCodes.NOT_FOUND,
+                    'Issued from details not found.'
+                );
+            }
 
-    //         const update_issued_item_details = await issued_from_model.updateOne(
-    //             { _id: issued_from_details?._id },
-    //             {
-    //                 $inc: {
-    //                     'available_details.no_of_sheets': Number(
-    //                         Number(item?.no_of_sheets)?.toFixed(2)
-    //                     ),
-    //                     'available_details.sqm': Number(Number(item?.sqm)?.toFixed(3)),
-    //                     'available_details.amount': Number(
-    //                         Number(item?.amount)?.toFixed(2)
-    //                     ),
-    //                 },
-    //                 $set: {
-    //                     isEditable: true,
-    //                     updated_by: user?._id,
-    //                 },
-    //             },
-    //             { session }
-    //         );
+            const update_issued_item_details = await issued_from_model.updateOne(
+                { _id: issued_from_details?._id },
+                {
+                    $inc: {
+                        'available_details.no_of_sheets': Number(
+                            Number(item?.no_of_sheets)?.toFixed(2)
+                        ),
+                        'available_details.sqm': Number(Number(item?.sqm)?.toFixed(3)),
+                        'available_details.amount': Number(
+                            Number(item?.amount)?.toFixed(2)
+                        ),
+                    },
+                    $set: {
+                        isEditable: true,
+                        updated_by: user?._id,
+                    },
+                },
+                { session }
+            );
 
-    //         if (update_issued_item_details?.matchedCount === 0) {
-    //             throw new ApiError(
-    //                 StatusCodes.NOT_FOUND,
-    //                 'Issued item details not found for update.'
-    //             );
-    //         }
+            if (update_issued_item_details?.matchedCount === 0) {
+                throw new ApiError(
+                    StatusCodes.NOT_FOUND,
+                    'Issued item details not found for update.'
+                );
+            }
 
-    //         if (
-    //             !update_issued_item_details?.acknowledged ||
-    //             update_issued_item_details?.modifiedCount === 0
-    //         ) {
-    //             throw new ApiError(
-    //                 StatusCodes.INTERNAL_SERVER_ERROR,
-    //                 'Failed to update issued item details.'
-    //             );
-    //         }
+            if (
+                !update_issued_item_details?.acknowledged ||
+                update_issued_item_details?.modifiedCount === 0
+            ) {
+                throw new ApiError(
+                    StatusCodes.INTERNAL_SERVER_ERROR,
+                    'Failed to update issued item details.'
+                );
+            }
 
-    //         const delete_finished_ready_for_packing_result =
-    //             await finished_ready_for_packing_model
-    //                 .deleteOne({ _id: item?._id })
-    //                 .session(session);
+            const delete_finished_ready_for_packing_result =
+                await finished_ready_for_packing_model
+                    .deleteOne({ _id: item?._id })
+                    .session(session);
 
-    //         if (
-    //             !delete_finished_ready_for_packing_result?.acknowledged ||
-    //             delete_finished_ready_for_packing_result.deletedCount === 0
-    //         ) {
-    //             throw new ApiError(
-    //                 StatusCodes.NOT_FOUND,
-    //                 'Failed to delete finished ready for packing details.'
-    //             );
-    //         }
+            if (
+                !delete_finished_ready_for_packing_result?.acknowledged ||
+                delete_finished_ready_for_packing_result.deletedCount === 0
+            ) {
+                throw new ApiError(
+                    StatusCodes.NOT_FOUND,
+                    'Failed to delete finished ready for packing details.'
+                );
+            }
 
-    //         const delete_history_result = await this.issued_from_history_map[
-    //             item?.issued_from
-    //         ]
-    //             .deleteOne({
-    //                 issued_for_id: item?._id,
-    //             })
-    //             .session(session);
+            const delete_history_result = await this.issued_from_history_map[
+                item?.issued_from
+            ]
+                .deleteOne({
+                    issued_for_id: item?._id,
+                })
+                .session(session);
 
-    //         if (
-    //             !delete_history_result?.acknowledged ||
-    //             delete_history_result.deletedCount === 0
-    //         ) {
-    //             throw new ApiError(
-    //                 StatusCodes.NOT_FOUND,
-    //                 'Failed to delete history for issued item.'
-    //             );
-    //         }
-    //     }
-    // };
+            if (
+                !delete_history_result?.acknowledged ||
+                delete_history_result.deletedCount === 0
+            ) {
+                throw new ApiError(
+                    StatusCodes.NOT_FOUND,
+                    'Failed to delete history for issued item.'
+                );
+            }
+        }
+    };
+
+    //cancel order handler
+    static handle_order_cancellation = async ({
+        order_details,
+        userDetails,
+        session,
+    }) => {
+        for (let items of order_details?.order_items_details) {
+            await this.available_for_stock_for_issued_order(
+                {
+                    order_id: items?.order_id?.toString(),
+                    order_item_id: items?._id?.toString(),
+                    order_category: order_details?.order_category,
+                    other_details: {
+                        order_no: order_details?.order_no,
+                        order_item_no: items?.item_no,
+                        userDetails: userDetails,
+                    },
+                },
+                session
+            );
+            await this.revert_issue_for_packing_items(
+                {
+                    order_id: items?.order_id?.toString(),
+                    order_item_id: items?._id?.toString(),
+                    order_category: order_details?.order_category,
+                    user: userDetails,
+                },
+                session
+            );
+        }
+        return true;
+    };
+    //cancel order item handler
+    static handle_order_item_cancellation = async ({
+        order_item_details,
+        userDetails,
+        session,
+    }) => {
+        await this.available_for_stock_for_issued_order(
+            {
+                order_id: order_item_details?.order_id?.toString(),
+                order_item_id: order_item_details?._id?.toString(),
+                order_category: order_item_details?.order_details?.order_category,
+                other_details: {
+                    order_no: order_item_details?.order_details?.order_no,
+                    order_item_no: order_item_details?.item_no,
+                    userDetails: userDetails?._id,
+                },
+            },
+            session
+        );
+        await this.revert_issue_for_packing_items(
+            {
+                order_id: order_item_details?.order_id?.toString(),
+                order_item_id: order_item_details?._id?.toString(),
+                order_category: order_item_details?.order_details?.order_category,
+                user: userDetails,
+            },
+            session
+        );
+
+        const remaining_open_items = await mongoose
+            .model(this.order_item_collections[order_item_details?.order_details?.order_category])
+            .find({
+                order_id: order_item_details?.order_id,
+                item_status: null,
+            })
+            .session(session);
+
+        if (remaining_open_items.length === 0) {
+            // All items cancelled (or single item order)
+            await OrderModel.findOneAndUpdate(
+                { _id: order_item_details?.order_id },
+                { $set: { order_status: order_status.cancelled } },
+                { session }
+            );
+        } else {
+            // Some items still open, keep order_status as null
+            await OrderModel.findOneAndUpdate(
+                { _id: order_item_details?.order_id },
+                { $set: { order_status: null } },
+                { session }
+            );
+        }
+        return true;
+    };
+
+    //send for approval for both order and order item cancellation
+    static handle_order_cancellation_approval = async ({
+        order_details,
+        order_item_details,
+        userDetails,
+        session,
+        approval_for,
+    }) => {
+        const { _id, createdAt, ...rest_order_details } = order_details;
+        const updated_approval_status = {
+            ...approval_status,
+            sendForApproval: {
+                status: true,
+                remark: 'Approval Pending',
+            },
+        };
+        const updated_approval_order_payload = {
+            ...rest_order_details,
+            order_no: order_details?.order_no,
+            order_id: _id,
+            product_category: rest_order_details?.product_category,
+            approval_status: updated_approval_status,
+            approval: {
+                editedBy: userDetails?._id,
+                approvalPerson: userDetails?.approver_id,
+            },
+            approval_for: approval_for,
+            created_by: order_details?.created_by,
+            updated_by: userDetails?._id,
+        };
+
+        const [add_approval_order_result] = await orders_approval_model.create(
+            [updated_approval_order_payload],
+            { session }
+        );
+
+        if (!add_approval_order_result) {
+            throw new ApiError(
+                'Failed to send order for approval',
+                StatusCodes.BAD_REQUEST
+            );
+        }
+
+        const update_order_status_result = await OrderModel.updateOne(
+            { _id: order_details?._id },
+            {
+                $set: { approval_status: updated_approval_status },
+            },
+            { session }
+        );
+
+        if (update_order_status_result?.matchedCount === 0) {
+            throw new ApiError(
+                'Order not found to update approval status',
+                StatusCodes.NOT_FOUND
+            );
+        }
+        if (
+            !update_order_status_result?.acknowledged ||
+            update_order_status_result?.modifiedCount === 0
+        ) {
+            throw new ApiError(
+                'Failed to update order approval status',
+                StatusCodes.BAD_REQUEST
+            );
+        }
+
+        const updated_item_details = order_item_details?.map((item) => {
+            const { _id, createdAt, updatedAt, ...rest_item_details } = item;
+            return {
+                ...rest_item_details,
+                series_product_item_id:
+                    order_details?.order_category === order_category?.series_product
+                        ? _id
+                        : null,
+                decorative_item_id:
+                    order_details?.order_category === order_category?.decorative
+                        ? _id
+                        : null,
+                order_id: add_approval_order_result?.order_id,
+                approval_order_id: add_approval_order_result?._id,
+                product_category: item?.product_category,
+                created_by: item.created_by ? item?.created_by : userDetails?._id,
+                // updated_by: item.updated_by ? item?.updated_by : userDetails?._id,
+                updated_by: userDetails?._id,
+                createdAt: createdAt ? createdAt : new Date(),
+            };
+        });
+
+        const add_approval_order_items_result = await this.approval_items_model_map[
+            order_details?.order_category
+        ].insertMany(updated_item_details, {
+            session,
+        });
+
+        if (
+            !add_approval_order_items_result ||
+            add_approval_order_items_result.length === 0
+        ) {
+            throw new ApiError(
+                'Failed to add approval order items',
+                StatusCodes.BAD_REQUEST
+            );
+        }
+        return true;
+    };
 
     static cancel_order = catchAsync(async (req, res, next) => {
         const session = await mongoose.startSession();
@@ -552,6 +764,9 @@ class DecorativeSeriesOrderCancelController {
         try {
             const userDetails = req.userDetails;
             const { order_id, order_category } = req.body;
+            const sendForApproval = req.sendForApproval;
+
+            // const sendForApproval = true
             this.validate_fields({ order_id, order_category }, 'order');
 
             const order_details = await this.fetch_order_details({
@@ -559,31 +774,34 @@ class DecorativeSeriesOrderCancelController {
                 order_category,
             });
 
-            for (let items of order_details?.order_items_details) {
-                await this.available_for_stock_for_issued_order(
-                    {
-                        order_id: items?.order_id?.toString(),
-                        order_item_id: items?._id?.toString(),
-                        order_category: order_details?.order_category,
-                        other_details: {
-                            order_no: order_details?.order_no,
-                            order_item_no: items?.item_no,
-                            userDetails: userDetails,
-                        },
-                    },
-                    session
+            if (sendForApproval) {
+                await this.handle_order_cancellation_approval({
+                    order_details,
+                    order_item_details: order_details?.order_items_details,
+                    userDetails,
+                    session,
+                    approval_for: approval_for_type?.order_cancellation,
+                });
+                await session.commitTransaction();
+                const response = new ApiResponse(
+                    StatusCodes.OK,
+                    'Order Sent for Approval Successfully.'
                 );
-                // await this.revert_issue_for_packing_items(
-                //     {
-                //         order_id: items?.order_id?.toString(),
-                //         order_item_id: items?._id?.toString(),
-                //         order_category: order_details?.order_category,
-                //         user: userDetails,
-                //     },
-                //     session
-                // );
+
+                return res.status(response.statusCode).json(response);
             }
 
+            const cancellation_result = await this.handle_order_cancellation({
+                order_details,
+                userDetails,
+                session,
+            });
+            if (!cancellation_result) {
+                throw new ApiError(
+                    `Failed to cancel order`,
+                    StatusCodes.INTERNAL_SERVER_ERROR
+                );
+            }
             const cancel_order_status = await OrderModel.updateOne(
                 { _id: order_id },
                 {
@@ -611,15 +829,11 @@ class DecorativeSeriesOrderCancelController {
                 );
             }
 
-            await session.commitTransaction();
             const response = new ApiResponse(
                 StatusCodes.OK,
-                'Order Cancelled Successfully.',
-                {
-                    order_details: order_details,
-                }
+                'Order Cancelled Successfully.'
             );
-
+            await session.commitTransaction();
             return res.status(response.statusCode).json(response);
         } catch (error) {
             await session?.abortTransaction();
@@ -635,6 +849,8 @@ class DecorativeSeriesOrderCancelController {
         try {
             const userDetails = req.userDetails;
             const { order_id, order_item_id, order_category } = req.body;
+            const sendForApproval = req.sendForApproval;
+
             this.validate_fields(
                 { order_id, order_item_id, order_category },
                 'order_item'
@@ -646,19 +862,35 @@ class DecorativeSeriesOrderCancelController {
                 order_category,
             });
 
-            await this.available_for_stock_for_issued_order(
-                {
-                    order_id: order_item_details?.order_id?.toString(),
-                    order_item_id: order_item_details?._id?.toString(),
-                    order_category: order_item_details?.order_details?.order_category,
-                    other_details: {
-                        order_no: order_item_details?.order_details?.order_no,
-                        order_item_no: order_item_details?.item_no,
-                        userDetails: userDetails?._id,
-                    },
-                },
-                session
-            );
+            if (sendForApproval) {
+                await this.handle_order_cancellation_approval({
+                    order_details: order_item_details?.order_details,
+                    order_item_details: [order_item_details],
+                    userDetails,
+                    session,
+                    approval_for: approval_for_type?.order_item_cancellation,
+                });
+                const response = new ApiResponse(
+                    StatusCodes.OK,
+                    'Order Item Sent for Approval Successfully.'
+                );
+                await session.commitTransaction();
+                return res.status(response.statusCode).json(response);
+            }
+
+            // await this.available_for_stock_for_issued_order(
+            //     {
+            //         order_id: order_item_details?.order_id?.toString(),
+            //         order_item_id: order_item_details?._id?.toString(),
+            //         order_category: order_item_details?.order_details?.order_category,
+            //         other_details: {
+            //             order_no: order_item_details?.order_details?.order_no,
+            //             order_item_no: order_item_details?.item_no,
+            //             userDetails: userDetails?._id,
+            //         },
+            //     },
+            //     session
+            // );
             // await this.revert_issue_for_packing_items(
             //     {
             //         order_id: order_item_details?.order_id?.toString(),
@@ -669,50 +901,35 @@ class DecorativeSeriesOrderCancelController {
             //     session
             // );
 
-            // const fetch_order_item_closed = await mongoose.model(this.order_item_collections[order_category]).find({
-            //     order_id: order_item_details?.order_id,
-            //     item_status: { $ne: null }
-            // });
+            // const remaining_open_items = await mongoose
+            //     .model(this.order_item_collections[order_category])
+            //     .find({
+            //         order_id: order_item_details?.order_id,
+            //         item_status: null,
+            //     })
+            //     .session(session);
 
-            // if (fetch_order_item_closed?.length <= 0) {
-            //     const order_closed = await OrderModel.findOneAndUpdate({
-            //         _id: order_item_details?.order_id
-            //     }, {
-            //         $set: {
-            //             order_status: order_status.cancelled
-            //         }
-            //     }, { new: true, session });
-
-            //     if (!order_closed) {
-            //         throw new ApiError(`Failed to update order status as closed`, StatusCodes.BAD_REQUEST);
-            //     }
-
+            // if (remaining_open_items.length === 0) {
+            //     // All items cancelled (or single item order)
+            //     await OrderModel.findOneAndUpdate(
+            //         { _id: order_item_details?.order_id },
+            //         { $set: { order_status: order_status.cancelled } },
+            //         { session }
+            //     );
+            // } else {
+            //     // Some items still open, keep order_status as null
+            //     await OrderModel.findOneAndUpdate(
+            //         { _id: order_item_details?.order_id },
+            //         { $set: { order_status: null } },
+            //         { session }
+            //     );
             // }
 
-            const remaining_open_items = await mongoose
-                .model(this.order_item_collections[order_category])
-                .find({
-                    order_id: order_item_details?.order_id,
-                    item_status: null,
-                })
-                .session(session);
-
-            if (remaining_open_items.length === 0) {
-                // All items cancelled (or single item order)
-                await OrderModel.findOneAndUpdate(
-                    { _id: order_item_details?.order_id },
-                    { $set: { order_status: order_status.cancelled } },
-                    { session }
-                );
-            } else {
-                // Some items still open, keep order_status as null
-                await OrderModel.findOneAndUpdate(
-                    { _id: order_item_details?.order_id },
-                    { $set: { order_status: null } },
-                    { session }
-                );
-            }
-
+            await this.handle_order_item_cancellation({
+                order_item_details,
+                userDetails,
+                session,
+            });
             await session.commitTransaction();
             const response = new ApiResponse(
                 StatusCodes.OK,
@@ -728,6 +945,342 @@ class DecorativeSeriesOrderCancelController {
             throw error;
         } finally {
             await session.endSession();
+        }
+    });
+    //approve order cancellation
+    static approve_order_cancellation = catchAsync(async (req, res) => {
+        const session = await mongoose.startSession();
+        session.startTransaction();
+        try {
+            const userDetails = req.userDetails;
+            const { approval_order_id } = req.params;
+
+            const updated_approval_status = {
+                ...approval_status,
+                approved: {
+                    status: true,
+                    remark: null,
+                },
+            };
+
+            const approve_order_result = await orders_approval_model.findOneAndUpdate(
+                {
+                    _id: approval_order_id,
+                    'approval_status.sendForApproval.status': true,
+                },
+                {
+                    $set: {
+                        approval_status: updated_approval_status,
+                        order_status: order_status.cancelled,
+                        updated_by: userDetails._id,
+                        'approval.approvalBy.user': userDetails?._id,
+                    },
+                },
+                { session, new: true, runValidators: true }
+            );
+            if (!approve_order_result) {
+                throw new ApiError(
+                    'No approval order found to approve',
+                    StatusCodes.NOT_FOUND
+                );
+            }
+            const order_details = await this.fetch_order_details({
+                order_id: approve_order_result?.order_id?.toString(),
+                order_category: approve_order_result?.order_category,
+            });
+
+            const cancellation_result = await this.handle_order_cancellation({
+                order_details,
+                userDetails,
+                session,
+            });
+            if (!cancellation_result) {
+                throw new ApiError(
+                    `Failed to cancel order`,
+                    StatusCodes.INTERNAL_SERVER_ERROR
+                );
+            }
+            const cancel_order_status = await OrderModel.updateOne(
+                { _id: approve_order_result?.order_id },
+                {
+                    $set: {
+                        order_status: order_status.cancelled,
+                        approval_status: updated_approval_status,
+                        updated_by: userDetails._id,
+                    },
+                },
+                { session }
+            );
+
+            if (cancel_order_status?.matchedCount <= 0) {
+                throw new ApiError(
+                    `No order found for ${order_id}`,
+                    StatusCodes.NOT_FOUND
+                );
+            }
+            if (
+                !cancel_order_status?.acknowledged ||
+                cancel_order_status?.modifiedCount <= 0
+            ) {
+                throw new ApiError(
+                    `Failed to cancel order ${order_id}`,
+                    StatusCodes.INTERNAL_SERVER_ERROR
+                );
+            }
+
+            const update_approval_order_items_status =
+                await this.approval_items_model_map[
+                    approve_order_result?.order_category
+                ].updateMany(
+                    {
+                        approval_order_id: approve_order_result?._id,
+                        order_id: approve_order_result?.order_id,
+                    },
+                    {
+                        $set: {
+                            item_status: order_item_status.cancelled,
+                            updated_by: userDetails._id,
+                        },
+                    },
+                    {
+                        session,
+                    }
+                );
+
+            console.log(
+                'update_approval_order_items_status => ',
+                update_approval_order_items_status
+            );
+
+            if (
+                !update_approval_order_items_status?.matchedCount ||
+                update_approval_order_items_status?.matchedCount === 0
+            ) {
+                throw new ApiError(
+                    `No approval order items found to cancel`,
+                    StatusCodes.NOT_FOUND
+                );
+            }
+            if (
+                !update_approval_order_items_status?.acknowledged ||
+                update_approval_order_items_status?.modifiedCount === 0
+            ) {
+                throw new ApiError(
+                    `Failed to cancel approval order items `,
+                    StatusCodes.INTERNAL_SERVER_ERROR
+                );
+            }
+            const response = new ApiResponse(
+                StatusCodes.OK,
+                'Order Approved Successfully.'
+            );
+            await session.commitTransaction();
+            return res.status(response.statusCode).json(response);
+        } catch (error) {
+            await session?.abortTransaction();
+            throw error;
+        } finally {
+            await session.endSession();
+        }
+    });
+
+    //approve order item cancellation
+    static approve_order_item_cancellation = catchAsync(async (req, res) => {
+        const session = await mongoose.startSession();
+        session.startTransaction();
+        try {
+            const userDetails = req.userDetails;
+            const { approval_order_id, approval_item_id } = req.params;
+            const updated_approval_status = {
+                ...approval_status,
+                approved: {
+                    status: true,
+                    remark: null,
+                },
+            };
+            const approve_order_result = await orders_approval_model.findOneAndUpdate(
+                {
+                    _id: approval_order_id,
+                    'approval_status.sendForApproval.status': true,
+                },
+                {
+                    $set: {
+                        approval_status: updated_approval_status,
+                        order_status: order_status.cancelled,
+                        updated_by: userDetails._id,
+                        'approval.approvalBy.user': userDetails?._id,
+                    },
+                },
+                { session, new: true, runValidators: true }
+            );
+            if (!approve_order_result) {
+                throw new ApiError(
+                    'No approval order found to approve',
+                    StatusCodes.NOT_FOUND
+                );
+            }
+
+            const update_approval_order_item_status =
+                await this.approval_items_model_map[
+                    approve_order_result?.order_category
+                ].findOneAndUpdate(
+                    {
+                        _id: approval_item_id,
+                        approval_order_id: approve_order_result?._id,
+                        order_id: approve_order_result?.order_id,
+                    },
+                    {
+                        $set: {
+                            item_status: order_item_status.cancelled,
+                            updated_by: userDetails._id,
+                        },
+                    },
+                    { session, new: true, runValidators: true }
+                );
+
+            if (!update_approval_order_item_status) {
+                throw new ApiError(
+                    `No approval order item found to cancel`,
+                    StatusCodes.NOT_FOUND
+                );
+            }
+            const cancel_order_status = await OrderModel.updateOne(
+                { _id: approve_order_result?.order_id },
+                {
+                    $set: {
+                        approval_status: updated_approval_status,
+                        updated_by: userDetails._id,
+                    },
+                },
+                { session }
+            );
+
+            if (cancel_order_status?.matchedCount <= 0) {
+                throw new ApiError(
+                    `No order found for ${order_id}`,
+                    StatusCodes.NOT_FOUND
+                );
+            }
+            if (
+                !cancel_order_status?.acknowledged ||
+                cancel_order_status?.modifiedCount <= 0
+            ) {
+                throw new ApiError(
+                    `Failed to cancel order ${order_id}`,
+                    StatusCodes.INTERNAL_SERVER_ERROR
+                );
+            }
+
+            const order_item_details = await this.fetch_order_item_details({
+                order_id: update_approval_order_item_status?.order_id?.toString(),
+                order_item_id:
+                    approve_order_result?.order_category === order_category?.decorative
+                        ? update_approval_order_item_status?.decorative_item_id?.toString()
+                        : update_approval_order_item_status?.series_product_item_id?.toString(),
+                order_category: approve_order_result?.order_category,
+            });
+            const cancellation_result = await this.handle_order_item_cancellation({
+                order_item_details,
+                userDetails,
+                session,
+            });
+            if (!cancellation_result) {
+                throw new ApiError(
+                    `Failed to cancel order item`,
+                    StatusCodes.INTERNAL_SERVER_ERROR
+                );
+            }
+            const response = new ApiResponse(
+                StatusCodes.OK,
+                'Order Item Approved Successfully.'
+            );
+            await session.commitTransaction();
+            return res.status(response.statusCode).json(response);
+        } catch (error) {
+            await session?.abortTransaction();
+            throw error;
+        } finally {
+            await session.endSession();
+        }
+    });
+
+    //reject order cancellation for both order and order item
+    static reject_order = catchAsync(async (req, res) => {
+        const { order_id } = req.params;
+        const user = req.userDetails;
+
+        if (!order_id) {
+            throw new ApiError('Order ID is required', StatusCodes.BAD_REQUEST);
+        }
+        if (!isValidObjectId(order_id)) {
+            throw new ApiError('Invalid Order ID', StatusCodes.BAD_REQUEST);
+        }
+        const session = await mongoose.startSession();
+        try {
+            await session.startTransaction();
+
+            const updated_approval_status = {
+                ...approval_status,
+                rejected: {
+                    status: true,
+                    remark: null,
+                },
+            };
+
+            const order_approval_status_result = await orders_approval_model
+                .findOneAndUpdate(
+                    {
+                        _id: order_id,
+                    },
+                    {
+                        $set: {
+                            approval_status: updated_approval_status,
+                            'approval.rejectedBy.user': user._id,
+                        },
+                    },
+                    { session, new: true, runValidators: true }
+                )
+                .lean();
+
+            if (!order_approval_status_result) {
+                throw new ApiError(
+                    'Failed to update order details',
+                    StatusCodes.BAD_REQUEST
+                );
+            }
+
+            const update_order_details_result = await OrderModel.updateOne(
+                { _id: order_approval_status_result?.order_id },
+                {
+                    $set: { approval_status: updated_approval_status },
+                },
+                { session }
+            ).lean();
+
+            if (update_order_details_result?.matchedCount === 0) {
+                throw new ApiError('Order details not found', StatusCodes.BAD_REQUEST);
+            }
+            if (
+                !update_order_details_result?.acknowledged ||
+                update_order_details_result?.modifiedCount === 0
+            ) {
+                throw new ApiError(
+                    'Failed to reject order details',
+                    StatusCodes.BAD_REQUEST
+                );
+            }
+            await session.commitTransaction();
+
+            const response = new ApiResponse(
+                StatusCodes.OK,
+                'Decorative Order Rejected successfully'
+            );
+            return res.status(StatusCodes.OK).json(response);
+        } catch (error) {
+            await session?.abortTransaction();
+            throw error;
+        } finally {
+            await session?.endSession();
         }
     });
 }

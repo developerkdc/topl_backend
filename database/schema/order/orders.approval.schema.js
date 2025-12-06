@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import {
+  approval_for_type,
   branding_type,
   order_category,
   order_status,
@@ -146,6 +147,16 @@ const order_approval_schema = new mongoose.Schema(
     isEditable: {
       type: Boolean,
       default: true,
+    },
+    approval_for: {
+      type: String,
+      uppercase: true,
+      trim: true,
+      enum: {
+        values: [approval_for_type.order_update, approval_for_type.order_cancellation, approval_for_type.order_item_cancellation],
+        message: '{VALUE} is not supported',
+      },
+      default: approval_for_type.order_update,
     },
     approval_status: approval_status,
 
