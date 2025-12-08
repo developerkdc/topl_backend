@@ -1,6 +1,6 @@
 import ApiResponse from '../../../utils/ApiResponse.js';
 import { StatusCodes } from '../../../utils/constants.js';
-import ApiError from '../../../utils/errors/ApiError.js';
+import ApiError from '../../../utils/errors/apiError.js';
 import catchAsync from '../../../utils/errors/catchAsync.js';
 import mongoose from 'mongoose';
 import issue_for_challan_model from '../../../database/schema/challan/issue_for_challan/issue_for_challan.schema.js';
@@ -362,9 +362,9 @@ export const listing_challan_done = catchAsync(async (req, res, next) => {
     $sort:
       sortBy === 'challan_no'
         ? {
-            challan_no_sort_key: sort === 'desc' ? -1 : 1,
-            challan_no: sort === 'desc' ? -1 : 1,
-          }
+          challan_no_sort_key: sort === 'desc' ? -1 : 1,
+          challan_no: sort === 'desc' ? -1 : 1,
+        }
         : { [sortBy]: sort === 'desc' ? -1 : 1 },
   };
   const aggSkip = {
@@ -834,12 +834,12 @@ export const generate_challan_ewaybill = catchAsync(async (req, res, next) => {
     fromTrdName: 'TURAKHIA OVERSEAS PVT. LTD.',
     fromAddr1:
       dispatch_from_address?.address &&
-      dispatch_from_address.address.length > 50
+        dispatch_from_address.address.length > 50
         ? dispatch_from_address.address.slice(0, 50)
         : dispatch_from_address?.address || '',
     fromAddr2:
       dispatch_from_address?.address &&
-      dispatch_from_address.address.length > 50
+        dispatch_from_address.address.length > 50
         ? dispatch_from_address.address.slice(50)
         : '',
     fromPlace: dispatch_from_address?.city || '',
@@ -887,9 +887,9 @@ export const generate_challan_ewaybill = catchAsync(async (req, res, next) => {
     transDocNo: challan_details?.transport_document_no,
     transDocDate: challan_details?.transport_document_date
       ? moment(challan_details.transport_document_date, [
-          'DD/MM/YYYY',
-          'YYYY-MM-DD',
-        ]).format('DD/MM/YYYY')
+        'DD/MM/YYYY',
+        'YYYY-MM-DD',
+      ]).format('DD/MM/YYYY')
       : '',
     vehicleNo: Array.isArray(vehicle_details)
       ? vehicle_details?.[0]?.vehicle_number
@@ -1115,7 +1115,7 @@ export const cancel_challan_ewaybill = catchAsync(async (req, res, next) => {
               // Sometimes there may be a trailing comma, split and clean
               errorCode = parsed.errorCodes.split(',')[0]?.trim();
             }
-          } catch (e) {}
+          } catch (e) { }
           // Provide specific error messages for known error codes
           // You can expand or modify this map as needed
           const errorCodeMap = {};
