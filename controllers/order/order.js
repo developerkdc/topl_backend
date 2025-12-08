@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { decorative_order_item_details_model } from '../../database/schema/order/decorative_order/decorative_order_item_details.schema.js';
+import issue_for_order_model from '../../database/schema/order/issue_for_order/issue_for_order.schema.js';
 import { OrderModel } from '../../database/schema/order/orders.schema.js';
 import { RawOrderItemDetailsModel } from '../../database/schema/order/raw_order/raw_order_item_details.schema.js';
 import series_product_order_item_details_model from '../../database/schema/order/series_product_order/series_product_order_item_details.schema.js';
@@ -13,8 +14,6 @@ import { StatusCodes } from '../../utils/constants.js';
 import ApiError from '../../utils/errors/apiError.js';
 import catchAsync from '../../utils/errors/catchAsync.js';
 import RevertOrderItem from './revert_issued_order_item/revert_issued_order_item.controller..js';
-import issue_for_order_model from '../../database/schema/order/issue_for_order/issue_for_order.schema.js';
-import path from 'path';
 
 const order_items_models = {
   [order_category.raw]: RawOrderItemDetailsModel,
