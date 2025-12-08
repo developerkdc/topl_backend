@@ -626,7 +626,11 @@ class DecorativeSeriesOrderCancelController {
         );
 
         const remaining_open_items = await mongoose
-            .model(this.order_item_collections[order_item_details?.order_details?.order_category])
+            .model(
+                this.order_item_collections[
+                order_item_details?.order_details?.order_category
+                ]
+            )
             .find({
                 order_id: order_item_details?.order_id,
                 item_status: null,
@@ -1046,11 +1050,6 @@ class DecorativeSeriesOrderCancelController {
                         session,
                     }
                 );
-
-            console.log(
-                'update_approval_order_items_status => ',
-                update_approval_order_items_status
-            );
 
             if (
                 !update_approval_order_items_status?.matchedCount ||
