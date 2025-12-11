@@ -660,34 +660,44 @@ export const listing_bunito_history = catchAsync(async (req, res) => {
     $limit: parseInt(limit),
   };
 
-  const orderItems = [
-    {
-      $lookup: {
-        from: 'series_product_order_item_details',
-        localField: 'order_item_id',
-        foreignField: '_id',
-        as: 'series_items',
-      },
+  const orderItems = [{
+    $lookup: {
+      from: 'orders',
+      localField: 'order_id',
+      // localField: 'issue_for_polishing_details.order_item_id',
+      foreignField: '_id',
+      as: 'order_details',
     },
-    {
-      $lookup: {
-        from: 'decorative_order_item_details',
-        localField: 'order_item_id',
-        foreignField: '_id',
-        as: 'decorative_items',
-      },
+  },
+
+  {
+    $lookup: {
+      from: 'series_product_order_item_details',
+      localField: 'order_item_id',
+      foreignField: '_id',
+      as: 'series_items',
     },
-    {
-      $addFields: {
-        order_item_details: {
-          $cond: {
-            if: { $gt: [{ $size: '$series_items' }, 0] },
-            then: { $arrayElemAt: ['$series_items', 0] },
-            else: { $arrayElemAt: ['$decorative_items', 0] },
-          },
+  },
+  {
+    $lookup: {
+      from: 'decorative_order_item_details',
+      localField: 'order_item_id',
+      foreignField: '_id',
+      as: 'decorative_items',
+    },
+  },
+  {
+    $addFields: {
+      order_item_details: {
+        $cond: {
+          if: { $gt: [{ $size: '$series_items' }, 0] },
+          then: { $arrayElemAt: ['$series_items', 0] },
+          else: { $arrayElemAt: ['$decorative_items', 0] },
         },
       },
+      order_details: { $arrayElemAt: ['$order_details', 0] }
     },
+  },
   ];
 
   const listAggregate = [

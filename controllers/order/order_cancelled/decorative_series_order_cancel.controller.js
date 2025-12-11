@@ -1105,7 +1105,7 @@ class DecorativeSeriesOrderCancelController {
                 {
                     $set: {
                         approval_status: updated_approval_status,
-                        order_status: order_status.cancelled,
+                        // order_status: order_status.cancelled,
                         updated_by: userDetails._id,
                         'approval.approvalBy.user': userDetails?._id,
                     },
