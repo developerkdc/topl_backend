@@ -222,53 +222,64 @@ export const load_packing_details = catchAsync(async (req, res, next) => {
       },
     },
   ];
-  
-  const aggGstandHsn = [
-  {
-    $lookup: {
-      from: "item_categories",
-      let: { ptype: "$product_type" },
-      pipeline: [
-        {
-          $match: {
-            $expr: {
-              $eq: [
-                "$category",
-                {
-                  $switch: {
-                    branches: [
-                      { case: { $eq: ["$$ptype", "DRESSING_FACTORY"] }, then: "VENEER" },
-                      { case: { $eq: ["$$ptype", "CROSSCUTTING"] }, then: "LOG" },
-                      { case: { $eq: ["$$ptype", "GROUPING_FACTORY"] }, then: "VENEER" },
-                      { case: { $eq: ["$$ptype", "FLITCHING_FACTORY"] }, then: "FLITCH" }
-                    ],
-                    default: "$$ptype" // fallback: match same as product_type
-                  }
-                }
-              ]
-            }
-          }
-        },
-        {
-          $project: {
-            gst_percentage: 1,
-            product_hsn_code: 1,
-            calculate_unit: 1,
-            category: 1
-          }
-        }
-      ],
-      as: "item_category_gst_details"
-    }
-  },
-  {
-    $unwind: {
-      path: "$item_category_gst_details",
-      preserveNullAndEmptyArrays: true
-    }
-  }
-];
 
+  const aggGstandHsn = [
+    {
+      $lookup: {
+        from: 'item_categories',
+        let: { ptype: '$product_type' },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $eq: [
+                  '$category',
+                  {
+                    $switch: {
+                      branches: [
+                        {
+                          case: { $eq: ['$$ptype', 'DRESSING_FACTORY'] },
+                          then: 'VENEER',
+                        },
+                        {
+                          case: { $eq: ['$$ptype', 'CROSSCUTTING'] },
+                          then: 'LOG',
+                        },
+                        {
+                          case: { $eq: ['$$ptype', 'GROUPING_FACTORY'] },
+                          then: 'VENEER',
+                        },
+                        {
+                          case: { $eq: ['$$ptype', 'FLITCHING_FACTORY'] },
+                          then: 'FLITCH',
+                        },
+                      ],
+                      default: '$$ptype', // fallback: match same as product_type
+                    },
+                  },
+                ],
+              },
+            },
+          },
+          {
+            $project: {
+              gst_percentage: 1,
+              product_hsn_code: 1,
+              calculate_unit: 1,
+              category: 1,
+            },
+          },
+        ],
+        as: 'item_category_gst_details',
+      },
+    },
+    {
+      $unwind: {
+        path: '$item_category_gst_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+  ];
 
   const fetch_packing_items_details = await packing_done_items_model.aggregate([
     aggMatchPackingDetails,
@@ -487,7 +498,7 @@ export const add_dispatch_details = catchAsync(async (req, res, next) => {
           $set: {
             is_dispatch_done: true,
             isEditable: false,
-            updated_by: userDetails?._id,
+            // updated_by: userDetails?._id,
           },
         },
         { session }
@@ -525,7 +536,7 @@ export const add_dispatch_details = catchAsync(async (req, res, next) => {
     await session.endSession();
   }
 });
- 
+
 export const edit_dispatch_details = catchAsync(async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -2883,7 +2894,7 @@ export const update_ewaybill_transporter = catchAsync(
 );
 export const update_ewaybill_partB = catchAsync(async (req, res, next) => {
   const bodyData = req.body;
-  
+
   const dispatch_id = req.params.id;
   const dispatch_details = await dispatchModel.findById(dispatch_id);
   // console.log(

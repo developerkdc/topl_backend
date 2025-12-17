@@ -110,7 +110,7 @@ export const order_items_dropdown = catchAsync(async (req, res, next) => {
     {
       order_id: 1,
       item_no: 1,
-      sales_item_name: 1
+      sales_item_name: 1,
     }
   );
 
@@ -118,6 +118,66 @@ export const order_items_dropdown = catchAsync(async (req, res, next) => {
     StatusCodes.OK,
     `Fetch ${category} Order Items Dropdown Successfully.`,
     order_items_data
+  );
+
+  return res.status(StatusCodes.OK).json(response);
+});
+
+export const order_details = catchAsync(async (req, res, next) => {
+  const { order_no, order_type, order_item_no } = req.query;
+
+  if (!order_no || !order_type || !order_item_no) {
+    throw new ApiError(
+      'Order No, Order Type and Order Item No are required',
+      StatusCodes.BAD_REQUEST
+    );
+  }
+
+  const fetch_order_details = await OrderModel.findOne(
+    { order_no: order_no, order_category: order_type },
+    {
+      _id: 1,
+      order_category: 1,
+    }
+  ).lean();
+
+  if (!fetch_order_details) {
+    throw new ApiError('Order not found', StatusCodes.NOT_FOUND);
+  }
+
+  const orderId = fetch_order_details?._id;
+  const category = fetch_order_details?.order_category;
+
+  const order_item_details = await order_items_models?.[category]
+    ?.findOne(
+      {
+        order_id: orderId,
+        item_no: order_item_no,
+      },
+      {
+        item_no: 1,
+        item_name: 1,
+        group_number: 1,
+        photo_number: 1,
+      }
+    )
+    .lean();
+
+  if (!order_item_details) {
+    throw new ApiError('Order Item not found', StatusCodes.NOT_FOUND);
+  }
+
+  const response_data = {
+    order_item_no: order_item_details?.item_no,
+    item_name: order_item_details?.item_name,
+    group_no: order_item_details?.group_number,
+    photo_no: order_item_details?.photo_number,
+  };
+
+  const response = new ApiResponse(
+    StatusCodes.OK,
+    'Fetch Order Item Details Successfully.',
+    response_data
   );
 
   return res.status(StatusCodes.OK).json(response);
@@ -253,8 +313,6 @@ export const fetch_decorative_and_series_product_order_items = catchAsync(
       series: 'series_product_order_item_details',
     };
 
-
-
     const pipeline = [
       {
         $match: {
@@ -284,35 +342,38 @@ export const fetch_decorative_and_series_product_order_items = catchAsync(
 
       {
         $lookup: {
-          from: "photos",
-          localField: "order_item_details.photo_number_id",
-          foreignField: "_id",
-          as: "photo_details"
-        }
+          from: 'photos',
+          localField: 'order_item_details.photo_number_id',
+          foreignField: '_id',
+          as: 'photo_details',
+        },
       },
       {
         $unwind: {
-          path: "$photo_details", preserveNullAndEmptyArrays: true
-        }
+          path: '$photo_details',
+          preserveNullAndEmptyArrays: true,
+        },
       },
       {
         $lookup: {
-          from: "grouping_done_items_details",
-          localField: "photo_details._id",
-          foreignField: "photo_no_id",
-          as: "grouping_done_items",
+          from: 'grouping_done_items_details',
+          localField: 'photo_details._id',
+          foreignField: 'photo_no_id',
+          as: 'grouping_done_items',
           pipeline: [
             {
               $project: {
                 group_no: 1,
-              }
-            }
-          ]
-        }
-      }, {
+              },
+            },
+          ],
+        },
+      },
+      {
         $unwind: {
-          path: "$grouping_done_items", preserveNullAndEmptyArrays: true
-        }
+          path: '$grouping_done_items',
+          preserveNullAndEmptyArrays: true,
+        },
       },
       {
         $lookup: {
@@ -353,7 +414,7 @@ export const fetch_decorative_and_series_product_order_items = catchAsync(
           },
           ItemName: '$order_item_details.item_name',
           SalesItemname: '$order_item_details.sales_item_name',
-          LogX: "$grouping_done_items.group_no",
+          LogX: '$grouping_done_items.group_no',
           Length: '$order_item_details.length',
           Width: '$order_item_details.width',
           'Sheets/PCS': '$order_item_details.no_of_sheets',
