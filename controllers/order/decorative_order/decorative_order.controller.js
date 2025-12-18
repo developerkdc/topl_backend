@@ -324,7 +324,7 @@ export const update_decorative_order = catchAsync(async (req, res) => {
           order_id: order_details_result?._id,
           product_category: `${order_details_result?.product_category} ${item.base_type}`,
           created_by: item.created_by ? item?.created_by : userDetails?._id,
-          updated_by: userDetails?._id,
+          updated_by: item.updated_by ? item?.updated_by : userDetails?._id,
           createdAt: item.createdAt ? item?.createdAt : new Date(),
           updatedAt: new Date(),
         });

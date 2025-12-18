@@ -489,7 +489,7 @@ export const add_dispatch_details = catchAsync(async (req, res, next) => {
           $set: {
             is_dispatch_done: true,
             isEditable: false,
-            updated_by: userDetails?._id,
+            // updated_by: userDetails?._id,
           },
         },
         { session }

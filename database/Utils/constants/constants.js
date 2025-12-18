@@ -191,7 +191,7 @@ export const dispatch_status = {
 
 
 export const approval_for_type = {
-  order_update: 'ORDER_UPDATE',
-  order_cancellation: 'ORDER_CANCELLATION',
-  order_item_cancellation: 'ORDER_ITEM_CANCELLATION',
+  order_update: 'ORDER UPDATE',
+  order_cancellation: 'ORDER CANCELLATION',
+  order_item_cancellation: 'ORDER ITEM CANCELLATION',
 };
