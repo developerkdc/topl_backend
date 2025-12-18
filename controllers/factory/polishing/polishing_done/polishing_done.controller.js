@@ -679,8 +679,22 @@ export const listing_polishing_history = catchAsync(async (req, res) => {
   const orderItems = [
     {
       $lookup: {
+        from: 'orders',
+        localField: 'order_id',
+        foreignField: '_id',
+        as: 'order_details',
+      },
+    },
+    {
+      $unwind: {
+        path: '$order_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $lookup: {
         from: 'series_product_order_item_details',
-        localField: 'issue_for_polishing_details.order_item_id',
+        localField: 'order_item_id',
         foreignField: '_id',
         as: 'series_items',
       },
@@ -688,7 +702,7 @@ export const listing_polishing_history = catchAsync(async (req, res) => {
     {
       $lookup: {
         from: 'decorative_order_item_details',
-        localField: 'issue_for_polishing_details.order_item_id',
+        localField: 'order_item_id',
         foreignField: '_id',
         as: 'decorative_items',
       },
@@ -702,6 +716,12 @@ export const listing_polishing_history = catchAsync(async (req, res) => {
             else: { $arrayElemAt: ['$decorative_items', 0] },
           },
         },
+      },
+    },
+    {
+      $project: {
+        series_product_item_details: 0,
+        decorative_product_item_details: 0,
       },
     },
   ];
