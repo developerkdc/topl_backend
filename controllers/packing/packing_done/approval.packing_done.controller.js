@@ -18,7 +18,7 @@ import ApiError from '../../../utils/errors/apiError.js';
 import catchAsync from '../../../utils/errors/catchAsync.js';
 import { create_packing_done_approval_report } from '../../../config/downloadExcel/packing/packing.approval_csv.js';
 
-export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
+export const fetch_all_packing_done_items = catchAsync(async (req, res, next) => {
   const {
     page = 1,
     limit = 10,
@@ -66,6 +66,8 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
     ...search_query,
     'approval.approvalPerson': _id,
   };
+
+
 
   const approval_user_details_pipeline = [
     {
@@ -236,33 +238,12 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
       ...match_query,
     },
   };
-
-  const aggComputeProductTypeSort = {
-    $addFields: {
-      __sort_product_type: {
-        $cond: [
-          { $eq: ['$order_category', 'RAW'] },
-          // if RAW -> use top-level product_type
-          '$product_type',
-          // else -> use packing_done_item_details[0].product_type if exists, otherwise top-level product_type
-          {
-            $ifNull: [
-              { $arrayElemAt: ['$packing_done_item_details.product_type', 0] },
-              '$product_type',
-            ],
-          },
-        ],
-      },
-    },
-  };
-
   const aggSort = {
     $sort: {
-      ...(sortBy === 'product_type'
-        ? { sort_product_type: sort === 'desc' ? -1 : 1 }
-        : { [sortBy]: sort === 'desc' ? -1 : 1 }),
+      [sortBy]: sort === 'desc' ? -1 : 1,
     },
   };
+
 
   const aggSkip = {
     $skip: (parseInt(page) - 1) * parseInt(limit),
@@ -273,6 +254,7 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
   };
 
   const listAggregate = [
+    aggMatch,
     aggregatePackingDoneItems,
     ...approval_user_details_pipeline,
     aggCreatedByLookup,
@@ -281,20 +263,18 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
     aggUpdatedByUnwind,
     aggCustomerDetailsLookup,
     aggCustomerDetailsUnwind,
-    // aggComputeProductTypeSort,
-    // aggMatch,
-    aggComputeProductTypeSort,
+
     aggSort,
-    aggSkip,
-    aggLimit,
+    ...(export_report === 'false' ? [aggSkip,
+      aggLimit] : [])
   ];
 
   const list_aggregate = [
-    aggMatch,
     {
       $facet: {
         data: listAggregate,
         totalCount: [
+          aggMatch,
           {
             $count: 'totalCount',
           },
@@ -305,12 +285,12 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
 
   const issue_for_raw_packing =
     await approval_packing_done_other_details_model.aggregate(list_aggregate);
-
   if (export_report === 'true') {
     await create_packing_done_approval_report(
       issue_for_raw_packing?.[0]?.data,
       req,
-      res
+      res,
+      next
     );
     return;
   }
@@ -381,21 +361,21 @@ export const fetch_all_packing_items_by_packing_done_other_details_id =
       },
       ...(is_approval_sent
         ? [
-            {
-              $lookup: {
-                from: 'packing_done_other_details',
-                foreignField: '_id',
-                localField: 'approval_packing_id',
-                as: 'previous_packing_done_other_details',
-              },
+          {
+            $lookup: {
+              from: 'packing_done_other_details',
+              foreignField: '_id',
+              localField: 'approval_packing_id',
+              as: 'previous_packing_done_other_details',
             },
-            {
-              $unwind: {
-                path: '$previous_packing_done_other_details',
-                preserveNullAndEmptyArrays: true,
-              },
+          },
+          {
+            $unwind: {
+              path: '$previous_packing_done_other_details',
+              preserveNullAndEmptyArrays: true,
             },
-          ]
+          },
+        ]
         : []),
 
       {
@@ -531,7 +511,7 @@ export const approve_packing_details = catchAsync(async (req, res) => {
         .lean();
 
     if (update_packing_done_details_result?.matchedCount === 0) {
-      throw new ApiError('Order details not found', StatusCodes.BAD_REQUEST);
+      throw new ApiError('Packing details not found', StatusCodes.BAD_REQUEST);
     }
 
     if (
@@ -574,7 +554,7 @@ export const approve_packing_details = catchAsync(async (req, res) => {
 
     const update_existing_packing_done_item_status = await (
       packing_done_other_details_approval_result?.order_category?.[0]?.toUpperCase() ===
-      order_category?.raw
+        order_category?.raw
         ? issue_for_order_model
         : finished_ready_for_packing_model
     ).updateMany(
@@ -621,7 +601,7 @@ export const approve_packing_details = catchAsync(async (req, res) => {
           packing_done_other_details_id:
             packing_done_other_details_approval_result?.approval_packing_id,
           created_by: item.created_by ? item?.created_by : user?._id,
-          updated_by: user._id,
+          updated_by: item?.updated_by ? item?.updated_by : user._id,
           createdAt: item.createdAt ? item?.createdAt : new Date(),
           updatedAt: new Date(),
         };
@@ -649,7 +629,7 @@ export const approve_packing_details = catchAsync(async (req, res) => {
     ];
     const update_issue_for_order_result = await (
       packing_done_other_details_approval_result?.order_category?.[0]?.toUpperCase() ===
-      order_category?.raw
+        order_category?.raw
         ? issue_for_order_model
         : finished_ready_for_packing_model
     ).updateMany(
@@ -674,11 +654,7 @@ export const approve_packing_details = catchAsync(async (req, res) => {
     }
     const response = new ApiResponse(
       StatusCodes.OK,
-      'Packing Details Approved Successfully',
-      {
-        other_details: update_packing_done_details_result,
-        item_details: create_packing_done_item_details_result,
-      }
+      'Packing Details Approved Successfully'
     );
     await session.commitTransaction();
     return res.status(response.statusCode).json(response);

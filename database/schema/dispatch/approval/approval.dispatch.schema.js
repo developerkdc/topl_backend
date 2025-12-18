@@ -3,8 +3,10 @@ import {
   dispatch_status,
   order_category,
   transaction_type,
-} from '../../Utils/constants/constants.js';
-import { approval_status } from '../../Utils/approvalStatus.schema.js';
+} from '../../../Utils/constants/constants.js';
+
+import approvalSchema from '../../../Utils/approval.schema.js';
+import { approval_status } from '../../../Utils/approvalStatus.schema.js';
 const transaction_type_values = Object.values(transaction_type);
 
 const address_schema = {
@@ -43,8 +45,12 @@ const address_schema = {
   },
 };
 
-const dispatchSchema = new mongoose.Schema(
+const approval_dispatch_schema = new mongoose.Schema(
   {
+    approval_dispatch_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, 'Approval Dispatch ID is required.'],
+    },
     invoice_no: {
       type: String,
       required: [true, 'Invoice number is required'],
@@ -151,7 +157,7 @@ const dispatchSchema = new mongoose.Schema(
           },
           packing_date: {
             type: Date,
-          }
+          },
         },
       ],
       default: [],
@@ -164,12 +170,9 @@ const dispatchSchema = new mongoose.Schema(
     dispatch_status: {
       type: String,
       enum: {
-        values: [
-          dispatch_status?.irn_generated,
-          dispatch_status?.cancelled
-        ],
+        values: [dispatch_status?.irn_generated, dispatch_status?.cancelled],
         message: `Invalid type {{VALUE}} it must be one of the ${[
-          dispatch_status?.cancelled
+          dispatch_status?.cancelled,
         ]?.join(', ')}`,
       },
       trim: true,
@@ -229,11 +232,11 @@ const dispatchSchema = new mongoose.Schema(
     },
     transporter_details: {
       type: Object,
-      required: [true, 'Transporter details are required']
+      required: [true, 'Transporter details are required'],
     },
     transport_mode: {
       type: Object,
-      required: [true, 'Transport mode is required']
+      required: [true, 'Transport mode is required'],
     },
     approx_distance: {
       type: Number,
@@ -245,7 +248,7 @@ const dispatchSchema = new mongoose.Schema(
     },
     vehicle_details: {
       type: Object,
-      required: [true, 'Vehicle details are required']
+      required: [true, 'Vehicle details are required'],
     },
     invoice_amount: {
       type: String,
@@ -276,16 +279,19 @@ const dispatchSchema = new mongoose.Schema(
       default: null,
     },
     qr_code_link: {
-      type: [{
-        name: {
-          type: String,
-          enum: {
-            values: ['irn_number', 'eway_bill'],
-            message: 'Invalid name {{VALUE}}. It must be "irn_number", "eway_bill"',
+      type: [
+        {
+          name: {
+            type: String,
+            enum: {
+              values: ['irn_number', 'eway_bill'],
+              message:
+                'Invalid name {{VALUE}}. It must be "irn_number", "eway_bill"',
+            },
           },
+          url: String,
         },
-        url: String,
-      }],
+      ],
       default: null,
     },
     total_no_of_sheets: {
@@ -379,7 +385,7 @@ const dispatchSchema = new mongoose.Schema(
       freight_amt_with_gst: {
         type: Number,
         default: 0,
-      }
+      },
     },
     other_amount_details: {
       other_amount: {
@@ -405,7 +411,7 @@ const dispatchSchema = new mongoose.Schema(
       other_amt_with_gst: {
         type: Number,
         default: 0,
-      }
+      },
     },
     expense_amount_with_gst: {
       type: Number,
@@ -438,13 +444,17 @@ const dispatchSchema = new mongoose.Schema(
       required: [true, 'Updated By is required'],
       trim: true,
     },
-  }, {
-  timestamps: true,
-});
-
-const dispatchModel = mongoose.model(
-  'dispatches',
-  dispatchSchema,
-  'dispatches'
+  },
+  {
+    timestamps: true,
+  }
 );
-export default dispatchModel;
+
+approval_dispatch_schema.add(approvalSchema);
+
+const approval_dispatch_model = mongoose.model(
+  'approval_dispatches',
+  approval_dispatch_schema,
+  'approval_dispatches'
+);
+export default approval_dispatch_model;

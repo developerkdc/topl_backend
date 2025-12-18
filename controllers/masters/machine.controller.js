@@ -194,8 +194,8 @@ export const DropdownMachineNameMaster = catchAsync(async (req, res) => {
 
   const searchQuery = type
     ? {
-        $or: [{ 'deptDetails.dept_name': { $regex: type, $options: 'i' } }],
-      }
+      $or: [{ 'deptDetails.dept_name': { $regex: type, $options: 'i' } }],
+    }
     : {};
 
   const list = await machineModel.aggregate([

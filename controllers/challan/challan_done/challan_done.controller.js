@@ -1,6 +1,6 @@
 import ApiResponse from '../../../utils/ApiResponse.js';
 import { StatusCodes } from '../../../utils/constants.js';
-import ApiError from '../../../utils/errors/ApiError.js';
+import ApiError from '../../../utils/errors/apiError.js';
 import catchAsync from '../../../utils/errors/catchAsync.js';
 import mongoose from 'mongoose';
 import issue_for_challan_model from '../../../database/schema/challan/issue_for_challan/issue_for_challan.schema.js';
@@ -8,9 +8,17 @@ import { dynamic_filter } from '../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import challan_done_model from '../../../database/schema/challan/challan_done/challan_done.schema.js';
 import { isValidObjectId } from 'mongoose';
-import { challan_status, transaction_type } from '../../../database/Utils/constants/constants.js';
+import {
+  challan_status,
+  transaction_type,
+} from '../../../database/Utils/constants/constants.js';
 import transporterModel from '../../../database/schema/masters/transporter.schema.js';
 import moment from 'moment';
+import { getStateCode } from '../../../utils/stateCode.js';
+import { EwayBillHeaderVariable } from '../../../middlewares/ewaybillAuth.middleware.js';
+import errorCodeMapForEwayBill from '../../dispatch/errorCodeMapForEwayBill.js';
+import axios from 'axios';
+// import errorCodeMapForEwayBill from './errorCodeMapForEwayBill.js';
 
 export const create_challan = catchAsync(async (req, res) => {
   const { challan_details } = req.body;
@@ -354,9 +362,9 @@ export const listing_challan_done = catchAsync(async (req, res, next) => {
     $sort:
       sortBy === 'challan_no'
         ? {
-            challan_no_sort_key: sort === 'desc' ? -1 : 1,
-            challan_no: sort === 'desc' ? -1 : 1,
-          }
+          challan_no_sort_key: sort === 'desc' ? -1 : 1,
+          challan_no: sort === 'desc' ? -1 : 1,
+        }
         : { [sortBy]: sort === 'desc' ? -1 : 1 },
   };
   const aggSkip = {
@@ -750,15 +758,25 @@ export const generate_challan_ewaybill = catchAsync(async (req, res, next) => {
     throw new ApiError('Challan details not found', StatusCodes.NOT_FOUND);
   }
   const challan_details = challanDetails[0];
-  const issue_for_challan_item_details = challan_details?.issue_for_challan_item_details;
+  const issue_for_challan_item_details =
+    challan_details?.issue_for_challan_item_details;
 
-  if (!issue_for_challan_item_details || issue_for_challan_item_details.length === 0) {
-    throw new ApiError('Issue for challan item details not found', StatusCodes.NOT_FOUND);
+  if (
+    !issue_for_challan_item_details ||
+    issue_for_challan_item_details.length === 0
+  ) {
+    throw new ApiError(
+      'Issue for challan item details not found',
+      StatusCodes.NOT_FOUND
+    );
   }
 
   console.log('challanDetails', challan_details, 'challanDetails');
-  console.log('issue_for_challan_item_details', issue_for_challan_item_details, 'issue_for_challan_item_details');
-
+  console.log(
+    'issue_for_challan_item_details',
+    issue_for_challan_item_details,
+    'issue_for_challan_item_details'
+  );
 
   // Optionally, eager load related entities (transporter, vehicle) if you need deeper metadata, like dispatch
   let transporter_details = challan_details.transporter_details;
@@ -812,16 +830,16 @@ export const generate_challan_ewaybill = catchAsync(async (req, res, next) => {
       ? moment(challan_details.challan_date).format('DD/MM/YYYY')
       : '',
     // Seller details
-    fromGstin: process.env.CHALLAN_FROM_GSTIN || '',
-    fromTrdName: process.env.CHALLAN_FROM_TRADE_NAME || '',
+    fromGstin: bill_from_address?.gst_number,
+    fromTrdName: 'TURAKHIA OVERSEAS PVT. LTD.',
     fromAddr1:
       dispatch_from_address?.address &&
-      dispatch_from_address.address.length > 50
+        dispatch_from_address.address.length > 50
         ? dispatch_from_address.address.slice(0, 50)
         : dispatch_from_address?.address || '',
     fromAddr2:
       dispatch_from_address?.address &&
-      dispatch_from_address.address.length > 50
+        dispatch_from_address.address.length > 50
         ? dispatch_from_address.address.slice(50)
         : '',
     fromPlace: dispatch_from_address?.city || '',
@@ -829,11 +847,14 @@ export const generate_challan_ewaybill = catchAsync(async (req, res, next) => {
     fromStateCode: getStateCode(dispatch_from_address?.state),
     actFromStateCode: getStateCode(dispatch_from_address?.state),
 
-    dispatchFromGSTIN: process.env.CHALLAN_FROM_GSTIN || '',
-    dispatchFromTradeName: process.env.CHALLAN_FROM_TRADE_NAME || '',
+    dispatchFromGSTIN: dispatch_from_address?.gst_number,
+    dispatchFromTradeName: 'TURAKHIA OVERSEAS PVT. LTD.',
 
     // Buyer details
-    toGstin: challan_details?.customer_details?.gst_number || '',
+    toGstin:
+      bill_to_address?.gst_number ||
+      challan_details?.customer_details?.gst_number ||
+      '',
     toTrdName:
       challan_details?.customer_details?.legal_name ||
       challan_details?.customer_details?.company_name ||
@@ -851,7 +872,7 @@ export const generate_challan_ewaybill = catchAsync(async (req, res, next) => {
     toStateCode: getStateCode(ship_to_address?.state),
     actToStateCode: getStateCode(ship_to_address?.state),
 
-    shipToGSTIN: challan_details?.customer_details?.gst_number || '',
+    shipToGSTIN: ship_to_address?.gst_number || challan_details?.customer_details?.gst_number || '',
     shipToTradeName:
       challan_details?.customer_details?.legal_name ||
       challan_details?.customer_details?.company_name ||
@@ -866,9 +887,9 @@ export const generate_challan_ewaybill = catchAsync(async (req, res, next) => {
     transDocNo: challan_details?.transport_document_no,
     transDocDate: challan_details?.transport_document_date
       ? moment(challan_details.transport_document_date, [
-          'DD/MM/YYYY',
-          'YYYY-MM-DD',
-        ]).format('DD/MM/YYYY')
+        'DD/MM/YYYY',
+        'YYYY-MM-DD',
+      ]).format('DD/MM/YYYY')
       : '',
     vehicleNo: Array.isArray(vehicle_details)
       ? vehicle_details?.[0]?.vehicle_number
@@ -876,7 +897,7 @@ export const generate_challan_ewaybill = catchAsync(async (req, res, next) => {
     vehicleType: 'R',
 
     // Items
-    itemList: (challan_items || []).map((item) => ({
+    itemList: (issue_for_challan_item_details || []).map((item) => ({
       // Pick fields in similar manner as dispatch
       hsnCode: item?.hsn_code || '',
       productName: item?.product_name || item?.product_category || '',
@@ -905,15 +926,15 @@ export const generate_challan_ewaybill = catchAsync(async (req, res, next) => {
       challan_details?.base_amount_without_gst ||
       0,
 
-    cgstValue: (challan_items || []).reduce(
+    cgstValue: (issue_for_challan_item_details || []).reduce(
       (sum, item) => sum + (item?.gst_details?.cgst_amount || 0),
       0
     ),
-    sgstValue: (challan_items || []).reduce(
+    sgstValue: (issue_for_challan_item_details || []).reduce(
       (sum, item) => sum + (item?.gst_details?.sgst_amount || 0),
       0
     ),
-    igstValue: (challan_items || []).reduce(
+    igstValue: (issue_for_challan_item_details || []).reduce(
       (sum, item) => sum + (item?.gst_details?.igst_amount || 0),
       0
     ),
@@ -1094,7 +1115,7 @@ export const cancel_challan_ewaybill = catchAsync(async (req, res, next) => {
               // Sometimes there may be a trailing comma, split and clean
               errorCode = parsed.errorCodes.split(',')[0]?.trim();
             }
-          } catch (e) {}
+          } catch (e) { }
           // Provide specific error messages for known error codes
           // You can expand or modify this map as needed
           const errorCodeMap = {};

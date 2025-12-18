@@ -34,7 +34,7 @@ const address_schema = {
     trim: true,
     required: [true, 'pincode is required'],
   },
-  gst_no: {
+  gst_number: {
     type: String,
     uppercase: true,
     trim: true,
