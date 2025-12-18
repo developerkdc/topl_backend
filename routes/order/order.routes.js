@@ -4,6 +4,7 @@ import {
   fetch_decorative_and_series_product_order_items,
   fetch_single_order_items,
   order_items_dropdown,
+  order_details,
   order_no_dropdown,
 } from '../../controllers/order/order.js';
 import DecorativeSeriesOrderCancelController from '../../controllers/order/order_cancelled/decorative_series_order_cancel.controller.js';
@@ -17,6 +18,7 @@ orderRouter.get(
   AuthMiddleware,
   order_items_dropdown
 );
+orderRouter.get('/fetch-order-details', AuthMiddleware, order_details);
 orderRouter.get(
   '/fetch-single-order-item/:order_id/:item_id',
   AuthMiddleware,
@@ -34,7 +36,10 @@ orderRouter.post(
   verifyApproval('order', 'cancel'),
   DecorativeSeriesOrderCancelController.cancel_order_item
 );
-orderRouter.post("/fetch-orders", fetch_decorative_and_series_product_order_items)
+orderRouter.post(
+  '/fetch-orders',
+  fetch_decorative_and_series_product_order_items
+);
 
 //approve cancelled order
 orderRouter.post(
