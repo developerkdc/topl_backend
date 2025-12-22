@@ -104,26 +104,36 @@ export const add_grouping_done = catchAsync(async (req, res, next) => {
     }
 
     // update photo details
-    if (fetch_issue_for_grouping_data?.item_subcategories_details?.type === sub_category.hybrid) {
+    if (
+      fetch_issue_for_grouping_data?.item_subcategories_details?.type ===
+      sub_category.hybrid
+    ) {
       for (let item of add_items_details_data) {
-        const add_group_photo_hybrid = await photoModel.updateOne({
-          _id: item?.photo_no_id,
-          photo_number: item?.photo_no,
-        }, {
-          $push: {
-            hybrid_group_no: {
-              _id: item?._id,
-              group_no: item?.group_no,
-            }
+        const add_group_photo_hybrid = await photoModel.updateOne(
+          {
+            _id: item?.photo_no_id,
+            photo_number: item?.photo_no,
           },
-          $inc: {
-            no_of_sheets: item?.no_of_sheets,
-            available_no_of_sheets: item?.available_details?.no_of_sheets
-          }
-        }, { session });
+          {
+            $push: {
+              hybrid_group_no: {
+                _id: item?._id,
+                group_no: item?.group_no,
+              },
+            },
+            $inc: {
+              no_of_sheets: item?.no_of_sheets,
+              available_no_of_sheets: item?.available_details?.no_of_sheets,
+            },
+          },
+          { session }
+        );
 
         if (!add_group_photo_hybrid.acknowledged) {
-          throw new ApiError("Failed to add group no to photo for hybrid", StatusCodes.BAD_REQUEST)
+          throw new ApiError(
+            'Failed to add group no to photo for hybrid',
+            StatusCodes.BAD_REQUEST
+          );
         }
       }
     }
@@ -214,7 +224,8 @@ export const edit_grouping_done = catchAsync(async (req, res, next) => {
               unique_identifier: mongoose.Types.ObjectId.createFromHexString(
                 fetch_other_details_data?.issue_for_grouping_unique_identifier?.toString()
               ),
-              pallet_number: fetch_other_details_data?.issue_for_grouping_pallet_number,
+              pallet_number:
+                fetch_other_details_data?.issue_for_grouping_pallet_number,
             },
           },
         },
@@ -246,31 +257,44 @@ export const edit_grouping_done = catchAsync(async (req, res, next) => {
     }
     const add_other_details_id = other_details_data?._id;
 
-    const grouping_done_item_details = await grouping_done_items_details_model.find({
-      grouping_done_other_details_id: add_other_details_id
-    }).session(session).lean();
+    const grouping_done_item_details = await grouping_done_items_details_model
+      .find({
+        grouping_done_other_details_id: add_other_details_id,
+      })
+      .session(session)
+      .lean();
 
     // revert photo details
-    if (fetch_issue_for_grouping_data?.item_subcategories_details?.type === sub_category.hybrid) {
+    if (
+      fetch_issue_for_grouping_data?.item_subcategories_details?.type ===
+      sub_category.hybrid
+    ) {
       for (let item of grouping_done_item_details) {
-        const revert_photo_details = await photoModel.updateOne({
-          _id: item?.photo_no_id,
-          photo_number: item?.photo_no,
-        }, {
-          $pull: {
-            hybrid_group_no: {
-              _id: item?._id,
-              group_no: item?.group_no,
-            }
+        const revert_photo_details = await photoModel.updateOne(
+          {
+            _id: item?.photo_no_id,
+            photo_number: item?.photo_no,
           },
-          $inc: {
-            no_of_sheets: -item?.no_of_sheets,
-            available_no_of_sheets: -item?.available_details?.no_of_sheets
-          }
-        }, { session });
+          {
+            $pull: {
+              hybrid_group_no: {
+                _id: item?._id,
+                group_no: item?.group_no,
+              },
+            },
+            $inc: {
+              no_of_sheets: -item?.no_of_sheets,
+              available_no_of_sheets: -item?.available_details?.no_of_sheets,
+            },
+          },
+          { session }
+        );
 
         if (!revert_photo_details.acknowledged) {
-          throw new ApiError("Failed to revert group no to photo for hybrid", StatusCodes.BAD_REQUEST)
+          throw new ApiError(
+            'Failed to revert group no to photo for hybrid',
+            StatusCodes.BAD_REQUEST
+          );
         }
       }
     }
@@ -312,29 +336,39 @@ export const edit_grouping_done = catchAsync(async (req, res, next) => {
       });
     if (add_items_details_data?.length <= 0) {
       throw new ApiError('Failed to add Items details', 400);
-    };
+    }
 
     // update photo details
-    if (fetch_issue_for_grouping_data?.item_subcategories_details?.type === sub_category.hybrid) {
+    if (
+      fetch_issue_for_grouping_data?.item_subcategories_details?.type ===
+      sub_category.hybrid
+    ) {
       for (let item of add_items_details_data) {
-        const add_group_photo_hybrid = await photoModel.updateOne({
-          _id: item?.photo_no_id,
-          photo_number: item?.photo_no,
-        }, {
-          $push: {
-            hybrid_group_no: {
-              _id: item?._id,
-              group_no: item?.group_no,
-            }
+        const add_group_photo_hybrid = await photoModel.updateOne(
+          {
+            _id: item?.photo_no_id,
+            photo_number: item?.photo_no,
           },
-          $inc: {
-            no_of_sheets: item?.no_of_sheets,
-            available_no_of_sheets: item?.available_details?.no_of_sheets
-          }
-        }, { session });
+          {
+            $push: {
+              hybrid_group_no: {
+                _id: item?._id,
+                group_no: item?.group_no,
+              },
+            },
+            $inc: {
+              no_of_sheets: item?.no_of_sheets,
+              available_no_of_sheets: item?.available_details?.no_of_sheets,
+            },
+          },
+          { session }
+        );
 
         if (!add_group_photo_hybrid.acknowledged) {
-          throw new ApiError("Failed to add group no to photo for hybrid", StatusCodes.BAD_REQUEST)
+          throw new ApiError(
+            'Failed to add group no to photo for hybrid',
+            StatusCodes.BAD_REQUEST
+          );
         }
       }
     }
@@ -622,19 +656,19 @@ export const fetch_all_details_by_grouping_done_item_id = catchAsync(
       },
       {
         $lookup: {
-          from: "item_subcategories",
-          localField: "item_sub_category_id",
-          foreignField: "_id",
+          from: 'item_subcategories',
+          localField: 'item_sub_category_id',
+          foreignField: '_id',
           pipeline: [
             {
               $project: {
                 name: 1,
-                type: 1
-              }
-            }
+                type: 1,
+              },
+            },
           ],
-          as: "item_subcategories_details"
-        }
+          as: 'item_subcategories_details',
+        },
       },
       {
         $unwind: {
@@ -757,7 +791,8 @@ export const revert_all_grouping_done = catchAsync(async (req, res, next) => {
               unique_identifier: mongoose.Types.ObjectId.createFromHexString(
                 grouping_done_other_details?.issue_for_grouping_unique_identifier?.toString()
               ),
-              pallet_number: grouping_done_other_details?.issue_for_grouping_pallet_number,
+              pallet_number:
+                grouping_done_other_details?.issue_for_grouping_pallet_number,
             },
           },
         },
@@ -768,31 +803,44 @@ export const revert_all_grouping_done = catchAsync(async (req, res, next) => {
       throw new ApiError('Issue for grouping data not found', 400);
     }
 
-    const grouping_done_item_details = await grouping_done_items_details_model.find({
-      grouping_done_other_details_id: grouping_done_other_details_id
-    }).session(session).lean();
+    const grouping_done_item_details = await grouping_done_items_details_model
+      .find({
+        grouping_done_other_details_id: grouping_done_other_details_id,
+      })
+      .session(session)
+      .lean();
 
     // revert photo details
-    if (fetch_issue_for_grouping_data?.item_subcategories_details?.type === sub_category.hybrid) {
+    if (
+      fetch_issue_for_grouping_data?.item_subcategories_details?.type ===
+      sub_category.hybrid
+    ) {
       for (let item of grouping_done_item_details) {
-        const revert_photo_details = await photoModel.updateOne({
-          _id: item?.photo_no_id,
-          photo_number: item?.photo_no,
-        }, {
-          $pull: {
-            hybrid_group_no: {
-              _id: item?._id,
-              group_no: item?.group_no,
-            }
+        const revert_photo_details = await photoModel.updateOne(
+          {
+            _id: item?.photo_no_id,
+            photo_number: item?.photo_no,
           },
-          $inc: {
-            no_of_sheets: -item?.no_of_sheets,
-            available_no_of_sheets: -item?.available_details?.no_of_sheets
-          }
-        }, { session });
+          {
+            $pull: {
+              hybrid_group_no: {
+                _id: item?._id,
+                group_no: item?.group_no,
+              },
+            },
+            $inc: {
+              no_of_sheets: -item?.no_of_sheets,
+              available_no_of_sheets: -item?.available_details?.no_of_sheets,
+            },
+          },
+          { session }
+        );
 
         if (!revert_photo_details.acknowledged) {
-          throw new ApiError("Failed to revert group no to photo for hybrid", StatusCodes.BAD_REQUEST)
+          throw new ApiError(
+            'Failed to revert group no to photo for hybrid',
+            StatusCodes.BAD_REQUEST
+          );
         }
       }
     }
@@ -869,16 +917,16 @@ export const revert_all_grouping_done = catchAsync(async (req, res, next) => {
 });
 
 export const group_no_dropdown = catchAsync(async (req, res, next) => {
-  const { photo_no_id , thickness } = req.query;
+  const { photo_no_id, thickness } = req.query;
   const matchQuery = {
     is_damaged: false,
-    "available_details.no_of_sheets": { $gt: 0 }
+    'available_details.no_of_sheets': { $gt: 0 },
   };
   if (photo_no_id) {
     matchQuery.photo_no_id = photo_no_id;
   }
-   if (thickness) {
-    matchQuery.thickness = { $lte: Number(thickness) }; 
+  if (thickness) {
+    matchQuery.thickness = { $lte: Number(thickness) };
     // Converts string to number since query params are strings
   }
   const fetch_group_no = await grouping_done_items_details_model.find(
@@ -1137,13 +1185,19 @@ export const fetch_all_grouping_history_details = catchAsync(
               branches: [
                 {
                   case: {
-                    $ne: [{ $type: '$decorative_order_item_details' }, 'missing'],
+                    $ne: [
+                      { $type: '$decorative_order_item_details' },
+                      'missing',
+                    ],
                   },
                   then: '$decorative_order_item_details',
                 },
                 {
                   case: {
-                    $ne: [{ $type: '$series_product_order_item_details' }, 'missing'],
+                    $ne: [
+                      { $type: '$series_product_order_item_details' },
+                      'missing',
+                    ],
                   },
                   then: '$series_product_order_item_details',
                 },
@@ -1420,15 +1474,6 @@ export const add_grouping_done_damaged = catchAsync(async (req, res, next) => {
 
     if (!grouping_done_item_details) {
       throw new ApiError('Not data found', 400);
-    }
-    if (
-      grouping_done_item_details?.no_of_sheets !==
-      grouping_done_item_details?.available_details?.no_of_sheets
-    ) {
-      throw new ApiError(
-        `Cannot add to damage because some of item sheets already issued`,
-        400
-      );
     }
 
     const grouping_done_item_id = grouping_done_item_details?._id;
@@ -1730,17 +1775,20 @@ export const group_no_dropdown_for_hybrid_photo_master = catchAsync(
 
     const matchQuery = {
       is_damaged: false,
-
     };
 
     const match_hybrid = {
-      "item_subcategories_details.type": sub_category.hybrid,
-      $or: [
-        { photo_no_id: null },
-      ]
-    }
+      'item_subcategories_details.type': sub_category.hybrid,
+      $or: [{ photo_no_id: null }],
+    };
     if (Array.isArray(hybrid_group) && hybrid_group.length > 0) {
-      match_hybrid.$or.push({ _id: { $in: hybrid_group?.map((e) => mongoose.Types.ObjectId.createFromHexString(e)) } });
+      match_hybrid.$or.push({
+        _id: {
+          $in: hybrid_group?.map((e) =>
+            mongoose.Types.ObjectId.createFromHexString(e)
+          ),
+        },
+      });
     }
     if (photo_no_id) {
       match_hybrid.$or.push({ photo_no_id: photo_no_id });
@@ -1750,28 +1798,28 @@ export const group_no_dropdown_for_hybrid_photo_master = catchAsync(
       {
         $match: {
           ...matchQuery,
-        }
+        },
       },
       {
         $lookup: {
-          from: "item_subcategories",
-          localField: "item_sub_category_id",
-          foreignField: "_id",
+          from: 'item_subcategories',
+          localField: 'item_sub_category_id',
+          foreignField: '_id',
           pipeline: [
             {
               $project: {
                 name: 1,
-                type: 1
-              }
-            }
+                type: 1,
+              },
+            },
           ],
-          as: "item_subcategories_details"
-        }
+          as: 'item_subcategories_details',
+        },
       },
       {
         $match: {
-          ...match_hybrid
-        }
+          ...match_hybrid,
+        },
       },
       {
         $project: {
@@ -1781,8 +1829,8 @@ export const group_no_dropdown_for_hybrid_photo_master = catchAsync(
           available_details: 1,
           no_of_sheets: 1,
           // item_subcategories_details: 1
-        }
-      }
+        },
+      },
     ]);
     const response = new ApiResponse(
       StatusCodes.OK,
