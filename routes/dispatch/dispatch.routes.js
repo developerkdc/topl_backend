@@ -4,6 +4,7 @@ import { dispatch_invoice_pdf } from '../../controllers/dispatch/dispatch_invoic
 import { verifyApproval } from '../../middlewares/approval.middleware.js';
 import EInvoiceAuthMiddleware from '../../middlewares/eInvoiceAuth.middleware.js';
 import AuthMiddleware from '../../middlewares/verifyToken.js';
+import { dispatch_ewaybill_pdf } from '../../controllers/dispatch/dispatch_ewaybill.controller.js';
 const dispatchRouter = express.Router();
 
 dispatchRouter.post("/create-dispatch-details", AuthMiddleware, add_dispatch_details);
@@ -31,7 +32,7 @@ dispatchRouter.post("/cancel-ewaybill/:id", AuthMiddleware, cancel_ewaybill);
 dispatchRouter.post("/get-ewaybill/:id", AuthMiddleware, get_ewaybill_details);
 dispatchRouter.post("/update-ewaybill-transporter/:id", AuthMiddleware, update_ewaybill_transporter);
 dispatchRouter.post("/update-ewaybill-partB/:id", AuthMiddleware, update_ewaybill_partB);
-
+dispatchRouter.get("/dispatch-ewaybill-pdf/:id", dispatch_ewaybill_pdf);
 
 //mobile api
 dispatchRouter.post("/fetch-invoice-details-by-invoice-no", fetch_dispatch_details_by_invoice_no);
