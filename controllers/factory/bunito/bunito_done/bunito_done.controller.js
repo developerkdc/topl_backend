@@ -699,7 +699,6 @@ export const listing_bunito_history = catchAsync(async (req, res) => {
     },
   },
   ];
-
   const listAggregate = [
     // aggCommonMatch,
     aggLookUpDoneDetails,

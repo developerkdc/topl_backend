@@ -706,6 +706,7 @@ export const listing_canvas_history = catchAsync(async (req, res) => {
         order_details: { $arrayElemAt: ['$order_details', 0] }
       },
     },
+
   ];
 
   const listAggregate = [

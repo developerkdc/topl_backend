@@ -497,7 +497,7 @@ export const dropdownCustomer = catchAsync(async (req, res, next) => {
 });
 
 export const verify_customer_gstin = catchAsync(async (req, res, next) => {
-  const { param1 } = req.body;
+  const { param1 } = req.query;
   const authToken = req.eInvoiceAuthToken;
 
   const irnResponse = await axios.get(
@@ -510,6 +510,7 @@ export const verify_customer_gstin = catchAsync(async (req, res, next) => {
       },
     }
   );
+  console.log(irnResponse);
   if (irnResponse?.data?.status_cd === '1') {
     return res.status(200).json({
       success: true,
