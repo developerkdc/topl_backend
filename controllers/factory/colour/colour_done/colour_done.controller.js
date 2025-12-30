@@ -665,14 +665,9 @@ export const listing_color_history = catchAsync(async (req, res) => {
       $lookup: {
         from: 'orders',
         localField: 'order_id',
+        // localField: 'issue_for_polishing_details.order_item_id',
         foreignField: '_id',
         as: 'order_details',
-      },
-    },
-    {
-      $unwind: {
-        path: '$order_details',
-        preserveNullAndEmptyArrays: true,
       },
     },
     {
@@ -700,12 +695,7 @@ export const listing_color_history = catchAsync(async (req, res) => {
             else: { $arrayElemAt: ['$decorative_items', 0] },
           },
         },
-      },
-    },
-    {
-      $project: {
-        series_product_item_details: 0,
-        decorative_product_item_details: 0,
+        order_details: { $arrayElemAt: ['$order_details', 0] }
       },
     },
   ];

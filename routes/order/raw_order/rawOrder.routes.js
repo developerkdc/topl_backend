@@ -38,11 +38,13 @@ rawOrderRouter.get(
 rawOrderRouter.post(
   '/cancel-order',
   AuthMiddleware,
+  verifyApproval('order', 'cancel'),
   RawOrderCancelController.cancel_order
 );
 rawOrderRouter.post(
   '/cancel-order-item',
   AuthMiddleware,
+  verifyApproval('order', 'cancel'),
   RawOrderCancelController.cancel_order_item
 );
 

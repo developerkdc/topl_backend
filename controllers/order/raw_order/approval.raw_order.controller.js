@@ -698,3 +698,356 @@ export const reject_raw_order = catchAsync(async (req, res) => {
     await session?.endSession();
   }
 });
+
+
+
+// static approve_order_cancellation = catchAsync(async (req, res) => {
+//   const session = await mongoose.startSession();
+//   session.startTransaction();
+//   try {
+//     const userDetails = req.userDetails;
+//     const { approval_order_id } = req.params;
+
+//     const updated_approval_status = {
+//       ...approval_status,
+//       approved: {
+//         status: true,
+//         remark: null,
+//       },
+//     };
+
+//     const approve_order_result = await orders_approval_model.findOneAndUpdate(
+//       {
+//         _id: approval_order_id,
+//         'approval_status.sendForApproval.status': true,
+//       },
+//       {
+//         $set: {
+//           approval_status: updated_approval_status,
+//           order_status: order_status.cancelled,
+//           updated_by: userDetails._id,
+//           'approval.approvalBy.user': userDetails?._id,
+//         },
+//       },
+//       { session, new: true, runValidators: true }
+//     );
+//     if (!approve_order_result) {
+//       throw new ApiError(
+//         'No approval order found to approve',
+//         StatusCodes.NOT_FOUND
+//       );
+//     }
+//     const order_details = await this.fetch_order_details({
+//       order_id: approve_order_result?.order_id?.toString(),
+//     });
+
+//     for (let item of order_details?.order_items_details) {
+//       await this.revert_items_issued_for_order(
+//         {
+//           order_id: item?.order_id?.toString(),
+//           order_item_id: item?._id?.toString(),
+//           other_details: {
+//             order_no: order_details?.order_no,
+//             order_item_no: item?.item_no,
+//             userDetails: userDetails,
+//           },
+//         },
+//         session
+//       );
+//     }
+
+
+//     const cancel_order_status = await OrderModel.updateOne(
+//       { _id: approve_order_result?.order_id },
+//       {
+//         $set: {
+//           order_status: order_status.cancelled,
+//           approval_status: updated_approval_status,
+//           updated_by: userDetails._id,
+//         },
+//       },
+//       { session }
+//     );
+
+//     if (cancel_order_status?.matchedCount <= 0) {
+//       throw new ApiError(
+//         `No order found for ${order_id}`,
+//         StatusCodes.NOT_FOUND
+//       );
+//     }
+//     if (
+//       !cancel_order_status?.acknowledged ||
+//       cancel_order_status?.modifiedCount <= 0
+//     ) {
+//       throw new ApiError(
+//         `Failed to cancel order ${order_id}`,
+//         StatusCodes.INTERNAL_SERVER_ERROR
+//       );
+//     }
+
+//     const update_approval_order_items_status =
+//       await approval_raw_order_item_details.updateMany(
+//         {
+//           approval_order_id: approve_order_result?._id,
+//           order_id: approve_order_result?.order_id,
+//         },
+//         {
+//           $set: {
+//             item_status: order_item_status.cancelled,
+//             updated_by: userDetails._id,
+//           },
+//         },
+//         {
+//           session,
+//         }
+//       );
+//     console.log("update_approval_order_items_status => ", update_approval_order_items_status)
+//     if (
+//       !update_approval_order_items_status?.matchedCount ||
+//       update_approval_order_items_status?.matchedCount === 0
+//     ) {
+//       throw new ApiError(
+//         `No approval order items found to cancel`,
+//         StatusCodes.NOT_FOUND
+//       );
+//     }
+//     if (
+//       !update_approval_order_items_status?.acknowledged ||
+//       update_approval_order_items_status?.modifiedCount === 0
+//     ) {
+//       throw new ApiError(
+//         `Failed to cancel approval order items `,
+//         StatusCodes.INTERNAL_SERVER_ERROR
+//       );
+//     }
+//     const response = new ApiResponse(
+//       StatusCodes.OK,
+//       'Order Approved Successfully.'
+//     );
+//     await session.commitTransaction();
+//     return res.status(response.statusCode).json(response);
+//   } catch (error) {
+//     await session?.abortTransaction();
+//     throw error;
+//   } finally {
+//     await session.endSession();
+//   }
+// });
+
+
+// static approve_order_item_cancellation = catchAsync(async (req, res) => {
+//   const session = await mongoose.startSession();
+//   session.startTransaction();
+//   try {
+//     const userDetails = req.userDetails;
+//     const { approval_order_id, approval_item_id } = req.params;
+//     const updated_approval_status = {
+//       ...approval_status,
+//       approved: {
+//         status: true,
+//         remark: null,
+//       },
+//     };
+//     const approve_order_result = await orders_approval_model.findOneAndUpdate(
+//       {
+//         _id: approval_order_id,
+//         'approval_status.sendForApproval.status': true,
+//       },
+//       {
+//         $set: {
+//           approval_status: updated_approval_status,
+//           // order_status: order_status.cancelled,
+//           updated_by: userDetails._id,
+//           'approval.approvalBy.user': userDetails?._id,
+//         },
+//       },
+//       { session, new: true, runValidators: true }
+//     );
+//     if (!approve_order_result) {
+//       throw new ApiError(
+//         'No approval order found to approve',
+//         StatusCodes.NOT_FOUND
+//       );
+//     }
+
+//     const update_approval_order_item_status =
+//       await approval_raw_order_item_details.findOneAndUpdate(
+//         {
+//           _id: approval_item_id,
+//           approval_order_id: approve_order_result?._id,
+//           order_id: approve_order_result?.order_id,
+//         },
+//         {
+//           $set: {
+//             item_status: order_item_status.cancelled,
+//             updated_by: userDetails._id,
+//           },
+//         },
+//         { session, new: true, runValidators: true }
+//       );
+
+//     if (!update_approval_order_item_status) {
+//       throw new ApiError(
+//         `No approval order item found to cancel`,
+//         StatusCodes.NOT_FOUND
+//       );
+//     }
+//     const cancel_order_status = await OrderModel.updateOne(
+//       { _id: approve_order_result?.order_id },
+//       {
+//         $set: {
+//           approval_status: updated_approval_status,
+//           updated_by: userDetails._id,
+//         },
+//       },
+//       { session }
+//     );
+
+//     if (cancel_order_status?.matchedCount <= 0) {
+//       throw new ApiError(
+//         `No order found for ${order_id}`,
+//         StatusCodes.NOT_FOUND
+//       );
+//     }
+//     if (
+//       !cancel_order_status?.acknowledged ||
+//       cancel_order_status?.modifiedCount <= 0
+//     ) {
+//       throw new ApiError(
+//         `Failed to cancel order ${order_id}`,
+//         StatusCodes.INTERNAL_SERVER_ERROR
+//       );
+//     }
+
+//     const order_item_details = await this.fetch_order_item_details({
+//       order_id: update_approval_order_item_status?.order_id?.toString(),
+//       order_item_id: update_approval_order_item_status?.raw_item_id?.toString(),
+//     });
+//     await this.revert_items_issued_for_order(
+//       {
+//         order_id: order_item_details?.order_id?.toString(),
+//         order_item_id: order_item_details?._id?.toString(),
+//         other_details: {
+//           order_no: order_item_details?.order_details?.order_no,
+//           order_item_no: order_item_details?.item_no,
+//           userDetails: userDetails,
+//         },
+//       },
+//       session
+//     );
+
+//     const remaining_open_items = await RawOrderItemDetailsModel.find({
+//       order_id: order_item_details?.order_id,
+//       item_status: null,
+//     }).session(session);
+
+//     if (remaining_open_items.length === 0) {
+//       // All items cancelled (or single item order)
+//       await OrderModel.findOneAndUpdate(
+//         { _id: order_item_details?.order_id },
+//         { $set: { order_status: order_status.cancelled } },
+//         { session }
+//       );
+//     } else {
+//       // Some items still open, keep order_status as null
+//       await OrderModel.findOneAndUpdate(
+//         { _id: order_item_details?.order_id },
+//         { $set: { order_status: null } },
+//         { session }
+//       );
+//     }
+
+//     await session.commitTransaction();
+//     const response = new ApiResponse(
+//       StatusCodes.OK,
+//       'Order Item Approved Successfully.'
+//     );
+
+//     return res.status(response.statusCode).json(response);
+//   } catch (error) {
+//     await session?.abortTransaction();
+//     throw error;
+//   } finally {
+//     await session.endSession();
+//   }
+// });
+
+
+// static reject_order = catchAsync(async (req, res) => {
+//   const { order_id } = req.params;
+//   const user = req.userDetails;
+
+//   if (!order_id) {
+//     throw new ApiError('Order ID is required', StatusCodes.BAD_REQUEST);
+//   }
+//   if (!isValidObjectId(order_id)) {
+//     throw new ApiError('Invalid Order ID', StatusCodes.BAD_REQUEST);
+//   }
+//   const session = await mongoose.startSession();
+//   try {
+//     await session.startTransaction();
+
+//     const updated_approval_status = {
+//       ...approval_status,
+//       rejected: {
+//         status: true,
+//         remark: null,
+//       },
+//     };
+
+//     const order_approval_status_result = await orders_approval_model
+//       .findOneAndUpdate(
+//         {
+//           _id: order_id,
+//         },
+//         {
+//           $set: {
+//             approval_status: updated_approval_status,
+//             'approval.rejectedBy.user': user._id,
+//           },
+//         },
+//         { session, new: true, runValidators: true }
+//       )
+//       .lean();
+
+//     if (!order_approval_status_result) {
+//       throw new ApiError(
+//         'Failed to update order details',
+//         StatusCodes.BAD_REQUEST
+//       );
+//     }
+
+//     const update_order_details_result = await OrderModel.updateOne(
+//       { _id: order_approval_status_result?.order_id },
+//       {
+//         $set: { approval_status: updated_approval_status },
+//       },
+//       { session }
+//     ).lean();
+
+//     if (update_order_details_result?.matchedCount === 0) {
+//       throw new ApiError('Order details not found', StatusCodes.BAD_REQUEST);
+//     }
+//     if (
+//       !update_order_details_result?.acknowledged ||
+//       update_order_details_result?.modifiedCount === 0
+//     ) {
+//       throw new ApiError(
+//         'Failed to reject order details',
+//         StatusCodes.BAD_REQUEST
+//       );
+//     }
+//     await session.commitTransaction();
+
+//     const response = new ApiResponse(
+//       StatusCodes.OK,
+//       'Decorative Order Rejected successfully'
+//     );
+//     return res.status(StatusCodes.OK).json(response);
+//   } catch (error) {
+//     await session?.abortTransaction();
+//     throw error;
+//   } finally {
+//     await session?.endSession();
+//   }
+// });
