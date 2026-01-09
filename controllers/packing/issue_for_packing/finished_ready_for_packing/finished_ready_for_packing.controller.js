@@ -171,7 +171,7 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
   }
 
   const issued_from_model = issued_from_map[issued_from];
-  console.log('issued_from_model => ', issued_from_model, issued_from);
+
 
   if (!issued_from_model) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid issued from type.');
@@ -291,8 +291,6 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
         },
       },
     ]);
-
-    console.log('pressing_done_details =>', pressing_done_details);
 
     if (!pressing_done_details) {
       throw new ApiError('Order details not found.', StatusCodes.NOT_FOUND);

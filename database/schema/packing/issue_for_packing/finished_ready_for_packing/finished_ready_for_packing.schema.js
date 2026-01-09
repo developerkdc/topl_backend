@@ -31,7 +31,8 @@ const finished_ready_for_packing_schema = new mongoose.Schema(
     },
     sales_item_name: {
       type: String,
-      required: [true, "Sales Item Name is required."]
+      // required: [true, "Sales Item Name is required."]
+      default: null,
     },
     order_number: {
       type: Number,

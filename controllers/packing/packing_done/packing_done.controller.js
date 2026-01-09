@@ -20,7 +20,10 @@ import {
 import path from 'path';
 import { fileURLToPath } from 'url';
 import moment from 'moment';
-import { approval_packing_done_items_model, approval_packing_done_other_details_model } from '../../../database/schema/packing/packing_done/approval.packing_done_schema.js';
+import {
+  approval_packing_done_items_model,
+  approval_packing_done_other_details_model,
+} from '../../../database/schema/packing/packing_done/approval.packing_done_schema.js';
 import Handlebars from 'handlebars';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -205,7 +208,7 @@ export const update_packing_details = catchAsync(async (req, res) => {
     }
   }
 
-  console.log("send_for_approval => ", send_for_approval)
+  console.log('send_for_approval => ',  send_for_approval);
 
   if (
     !Array.isArray(packing_done_item_details) ||
@@ -231,7 +234,10 @@ export const update_packing_details = catchAsync(async (req, res) => {
 
     if (!send_for_approval) {
       const old_packing_done_items = await packing_done_items_model
-        .find({ packing_done_other_details_id: id }, { issue_for_packing_id: 1 })
+        .find(
+          { packing_done_other_details_id: id },
+          { issue_for_packing_id: 1 }
+        )
         .session(session);
 
       const old_packing_done_item_ids = old_packing_done_items?.map(
@@ -389,10 +395,11 @@ export const update_packing_details = catchAsync(async (req, res) => {
       updated_by: user?._id,
     };
 
-    const [add_approval_packing_done_other_deatils_result] = await approval_packing_done_other_details_model.create(
-      [updated_approval_other_details_payload],
-      { session }
-    );
+    const [add_approval_packing_done_other_deatils_result] =
+      await approval_packing_done_other_details_model.create(
+        [updated_approval_other_details_payload],
+        { session }
+      );
 
     if (!add_approval_packing_done_other_deatils_result) {
       throw new ApiError(
@@ -401,13 +408,14 @@ export const update_packing_details = catchAsync(async (req, res) => {
       );
     }
 
-    const update_packing_done_other_details_status_result = await packing_done_other_details_model.updateOne(
-      { _id: packing_done_other_details?._id },
-      {
-        $set: { approval_status: updated_approval_status },
-      },
-      { session }
-    );
+    const update_packing_done_other_details_status_result =
+      await packing_done_other_details_model.updateOne(
+        { _id: packing_done_other_details?._id },
+        {
+          $set: { approval_status: updated_approval_status },
+        },
+        { session }
+      );
 
     if (update_packing_done_other_details_status_result?.matchedCount === 0) {
       throw new ApiError(
@@ -426,12 +434,24 @@ export const update_packing_details = catchAsync(async (req, res) => {
     }
 
     const updated_item_details = packing_done_item_details?.map((item) => {
-      const { _id, packing_item_id, createdAt, updatedAt, ...rest_item_details } = item;
+      const {
+        _id,
+        packing_item_id,
+        createdAt,
+        updatedAt,
+        ...rest_item_details
+      } = item;
+      console.log('item => ', item);
+      console.log('packing item => ', packing_item_id);
       return {
         ...rest_item_details,
-        approval_packing_done_other_details_id: add_approval_packing_done_other_deatils_result?._id,
-        packing_done_other_details_id: add_approval_packing_done_other_deatils_result?.approval_packing_id,
-        packing_item_id: packing_item_id ? packing_item_id : new mongoose.Types.ObjectId(),
+        approval_packing_done_other_details_id:
+          add_approval_packing_done_other_deatils_result?._id,
+        packing_done_other_details_id:
+          add_approval_packing_done_other_deatils_result?.approval_packing_id,
+        packing_item_id: packing_item_id
+          ? packing_item_id
+          : new mongoose.Types.ObjectId(),
         created_by: item.created_by ? item?.created_by : user?._id,
         updated_by: item.updated_by ? item?.updated_by : user?._id,
       };
@@ -460,7 +480,7 @@ export const update_packing_details = catchAsync(async (req, res) => {
         item_details: add_approval_packing_items_result,
       }
     );
-    await session.commitTransaction()
+    await session.commitTransaction();
     return res.status(StatusCodes.OK).json(response);
   } catch (error) {
     await session.abortTransaction();
@@ -473,7 +493,6 @@ export const update_packing_details = catchAsync(async (req, res) => {
 export const revert_packing_done_items = catchAsync(async (req, res) => {
   const { id } = req.params;
   const user = req.userDetails;
-
 
   if (!id) {
     throw new ApiError('Packing ID is required.', StatusCodes.BAD_REQUEST);
@@ -732,6 +751,60 @@ export const fetch_all_packing_done_items = catchAsync(async (req, res) => {
       ...match_query,
     },
   };
+
+  const aggComputeProductTypeSort = {
+    $addFields: {
+      __sort_product_type: {
+        $cond: [
+          { $eq: ['$order_category', 'RAW'] },
+          // if RAW -> use top-level product_type
+          '$product_type',
+          // else -> use packing_done_item_details[0].product_type if exists, otherwise top-level product_type
+          {
+            $ifNull: [
+              { $arrayElemAt: ['$packing_done_item_details.product_type', 0] },
+              '$product_type',
+            ],
+          },
+        ],
+      },
+    },
+  };
+  const aggFlattenProductType = {
+    $addFields: {
+      sort_product_type: {
+        $reduce: {
+          input: '$product_type',
+          initialValue: '',
+          in: {
+            $concat: [
+              '$$value',
+              { $cond: [{ $eq: ['$$value', ''] }, '', ', '] },
+              '$$this',
+            ],
+          },
+        },
+      },
+    },
+  };
+
+  // const aggSort = {
+  //   $sort: {
+  //     ...(sortBy === 'product_type'
+  //       ? { __sort_product_type: sort === 'desc' ? -1 : 1 }
+  //       : sortBy === 'customer_details.owner_name'
+  //         ? { 'customer_details.owner_name': sort === 'desc' ? -1 : 1 }
+  //         : sortBy === 'customer_details'
+  //           ? { 'customer_details.customer_details': sort === 'desc' ? -1 : 1 }
+  //           : { [sortBy]: sort === 'desc' ? -1 : 1 }),
+  //   },
+  // };
+
+  // const aggSort = {
+  //     $sort: {
+  //       [sortBy]: sort === 'desc' ? -1 : 1,
+  //     },
+  //   };
   const aggSort = {
     $sort: {
       [sortBy]: sort === 'desc' ? -1 : 1,
@@ -965,7 +1038,7 @@ export const generatePackingSlip = catchAsync(async (req, res) => {
       summaryMap[key] = {
         item_name:
           Array.isArray(otherDetails?.order_category) &&
-            otherDetails.order_category.includes('RAW')
+          otherDetails.order_category.includes('RAW')
             ? i.item_name || ' '
             : otherDetails.sales_item_name || i.item_name || ' ',
 
@@ -1120,7 +1193,7 @@ export const generatePackingPrintPDF = catchAsync(async (req, res) => {
       summaryMap[key] = {
         item_name:
           Array.isArray(otherDetails?.order_category) &&
-            otherDetails.order_category.includes('RAW')
+          otherDetails.order_category.includes('RAW')
             ? i.item_name || ' '
             : otherDetails.sales_item_name || i.item_name || ' ',
 

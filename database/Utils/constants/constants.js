@@ -188,3 +188,10 @@ export const dispatch_status = {
   irn_generated: 'IRN GENERATED',
   cancelled: 'CANCELLED',
 };
+
+
+export const approval_for_type = {
+  order_update: 'ORDER UPDATE',
+  order_cancellation: 'ORDER CANCELLATION',
+  order_item_cancellation: 'ORDER ITEM CANCELLATION',
+};

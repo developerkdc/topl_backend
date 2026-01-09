@@ -30,4 +30,20 @@ approval_raw_order_router.post(
 );
 
 
+// rawOrderRouter.post(
+//   '/approve-cancelled-raw-order/:approval_order_id',
+//   AuthMiddleware,
+//   RawOrderCancelController.approve_order_cancellation
+// );
+// rawOrderRouter.post(
+//   '/approve-cancelled-raw-order-item/:approval_order_id/:approval_item_id',
+//   AuthMiddleware,
+//   RawOrderCancelController.approve_order_item_cancellation
+// );
+// rawOrderRouter.post(
+//   '/reject-cancelled-raw-order/:order_id',
+//   AuthMiddleware,
+//   RawOrderCancelController.reject_order
+// );
+
 export default approval_raw_order_router;

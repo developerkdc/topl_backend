@@ -84,7 +84,7 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
             total_sheets: item.no_of_sheets || item.no_of_leaves || item.number_of_rolls || item.quantity,
             sqm: Number(item.sqm ?? item.cbm ?? item.cmt ?? 0).toFixed(3),
             rate: item.rate,
-            taxable_value: Number(item.discount_amount).toFixed(2),
+            taxable_value: Number(item.amount).toFixed(2),
         });
     });
 
@@ -154,7 +154,7 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
         qty_total: Number(0).toFixed(3),
         unit: "OTHER",
 
-        value: Number(0).toFixed(2),
+        value: Number(insurance.insurance_amount || 0).toFixed(2),
         discount: Number(0).toFixed(2),
 
         taxable_value: Number(insurance.insurance_amount || 0).toFixed(2),
@@ -173,7 +173,7 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
         qty_total: Number(0).toFixed(3),
         unit: "OTHER",
 
-        value: Number(0).toFixed(2),
+        value: Number(freight.freight_amount || 0).toFixed(2),
         discount: Number(0).toFixed(2),
 
         taxable_value: Number(freight.freight_amount || 0).toFixed(2),
@@ -192,7 +192,7 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
         qty_total: Number(0).toFixed(3),
         unit: "OTHER",
 
-        value: Number(0).toFixed(2),
+        value: Number(other.other_amount || 0).toFixed(2),
         discount: Number(0).toFixed(2),
 
         taxable_value: Number(other.other_amount || 0).toFixed(2),

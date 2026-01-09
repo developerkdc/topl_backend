@@ -671,6 +671,15 @@ export const listing_canvas_history = catchAsync(async (req, res) => {
   const orderItems = [
     {
       $lookup: {
+        from: 'orders',
+        localField: 'order_id',
+        // localField: 'issue_for_polishing_details.order_item_id',
+        foreignField: '_id',
+        as: 'order_details',
+      },
+    },
+    {
+      $lookup: {
         from: 'series_product_order_item_details',
         localField: 'order_item_id',
         foreignField: '_id',
@@ -694,14 +703,16 @@ export const listing_canvas_history = catchAsync(async (req, res) => {
             else: { $arrayElemAt: ['$decorative_items', 0] },
           },
         },
+        order_details: { $arrayElemAt: ['$order_details', 0] }
       },
     },
+
   ];
 
   const listAggregate = [
     // aggCommonMatch,
     aggLookUpDoneDetails,
-    aggDoneDetailsUnwind, 
+    aggDoneDetailsUnwind,
     aggLookUpIssuedDetails,
     aggIssuedCncDetailsUnwind,
     aggCreatedByLookup,
