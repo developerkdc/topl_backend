@@ -14,6 +14,7 @@ import { dynamic_filter } from '../../../utils/dymanicFilter.js';
 import {
   createFaceHistoryExcel,
   createFaceLogsExcel,
+  createFaceStockReportExcel,
 } from '../../../config/downloadExcel/Logs/Inventory/face/face.js';
 import {
   face_approval_inventory_invoice_model,
@@ -972,4 +973,221 @@ export const fetch_face_history = catchAsync(async (req, res, next) => {
   );
 
   return res.status(StatusCodes.OK).json(response);
+});
+
+export const faceStockReportCsv = catchAsync(async (req, res, next) => {
+  const { startDate, endDate, filter = {} } = req.body;
+
+  console.log('Face Stock Report Request - Start Date:', startDate);
+  console.log('Face Stock Report Request - End Date:', endDate);
+  console.log('Face Stock Report Request - Filter:', filter);
+
+  // Validate required parameters
+  if (!startDate || !endDate) {
+    return next(new ApiError('Start date and end date are required', 400));
+  }
+
+  // Parse dates
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    return next(new ApiError('Invalid date format. Use YYYY-MM-DD', 400));
+  }
+
+  if (start > end) {
+    return next(new ApiError('Start date cannot be after end date', 400));
+  }
+
+  // Build filter for item_name if provided
+  const itemFilter = {};
+  if (filter.item_name) {
+    itemFilter.item_name = filter.item_name;
+  }
+
+  try {
+    // Step 1: Get all unique item_name + thickness combinations
+    const uniqueCombinations = await face_inventory_items_details.aggregate([
+      {
+        $match: {
+          deleted_at: null,
+          ...itemFilter,
+        },
+      },
+      {
+        $group: {
+          _id: {
+            item_name: '$item_name',
+            thickness: '$thickness',
+          },
+        },
+      },
+    ]);
+
+    if (uniqueCombinations.length === 0) {
+      return res
+        .status(StatusCodes.NOT_FOUND)
+        .json(
+          new ApiResponse(
+            StatusCodes.NOT_FOUND,
+            'No stock data found for the selected period'
+          )
+        );
+    }
+
+    // Step 2: For each combination, calculate stock movements
+    const stockData = await Promise.all(
+      uniqueCombinations.map(async (combo) => {
+        const { item_name, thickness } = combo._id;
+
+        // Current available sqm from inventory
+        const currentInventorySqm = await face_inventory_items_details.aggregate([
+          {
+            $match: {
+              item_name,
+              thickness,
+              deleted_at: null,
+            },
+          },
+          {
+            $group: {
+              _id: null,
+              total_sqm: { $sum: '$available_sqm' },
+            },
+          },
+        ]);
+
+        const currentAvailableSqm = currentInventorySqm[0]?.total_sqm || 0;
+
+        // Received sqm (inventory inward during period)
+        const receivedSqm = await face_inventory_items_details.aggregate([
+          {
+            $match: {
+              item_name,
+              thickness,
+              deleted_at: null,
+            },
+          },
+          {
+            $lookup: {
+              from: 'face_inventory_invoice_details',
+              localField: 'invoice_id',
+              foreignField: '_id',
+              as: 'invoice',
+            },
+          },
+          {
+            $unwind: '$invoice',
+          },
+          {
+            $match: {
+              'invoice.inward_date': { $gte: start, $lte: end },
+            },
+          },
+          {
+            $group: {
+              _id: null,
+              total_sqm: { $sum: '$total_sq_meter' },
+            },
+          },
+        ]);
+
+        // Issued sqm (from face_history during period)
+        const issuedSqm = await face_history_model.aggregate([
+          {
+            $match: {
+              createdAt: { $gte: start, $lte: end },
+            },
+          },
+          {
+            $lookup: {
+              from: 'face_inventory_items_details',
+              localField: 'face_item_id',
+              foreignField: '_id',
+              as: 'face_item',
+            },
+          },
+          {
+            $unwind: '$face_item',
+          },
+          {
+            $match: {
+              'face_item.item_name': item_name,
+              'face_item.thickness': thickness,
+            },
+          },
+          {
+            $group: {
+              _id: null,
+              total_sqm: { $sum: '$issued_sqm' },
+            },
+          },
+        ]);
+
+        // Extract values
+        const receivedSqmValue = receivedSqm[0]?.total_sqm || 0;
+        const issuedSqmValue = issuedSqm[0]?.total_sqm || 0;
+
+        // Calculate opening balance
+        // Opening = Current Available + Issued - Received
+        const openingBalance = currentAvailableSqm + issuedSqmValue - receivedSqmValue;
+
+        // Calculate closing balance
+        // Closing = Opening + Received - Issued
+        const closingBalance = openingBalance + receivedSqmValue - issuedSqmValue;
+
+        return {
+          item_name,
+          thickness,
+          opening_balance: Math.max(0, openingBalance),
+          received_metres: receivedSqmValue,
+          issued_metres: issuedSqmValue,
+          closing_bal: Math.max(0, closingBalance),
+        };
+      })
+    );
+
+    // Filter out items with no activity (all zeros)
+    const activeStockData = stockData.filter(
+      (item) =>
+        item.opening_balance > 0 ||
+        item.received_metres > 0 ||
+        item.issued_metres > 0 ||
+        item.closing_bal > 0
+    );
+
+    if (activeStockData.length === 0) {
+      return res
+        .status(StatusCodes.NOT_FOUND)
+        .json(
+          new ApiResponse(
+            StatusCodes.NOT_FOUND,
+            'No stock data found for the selected period'
+          )
+        );
+    }
+
+    // Generate Excel report
+    const downloadLink = await createFaceStockReportExcel(
+      activeStockData,
+      startDate,
+      endDate,
+      filter
+    );
+
+    return res
+      .status(StatusCodes.OK)
+      .json(
+        new ApiResponse(
+          StatusCodes.OK,
+          'Stock report generated successfully',
+          downloadLink
+        )
+      );
+  } catch (error) {
+    console.error('Error generating face stock report:', error);
+    return next(
+      new ApiError('Failed to generate stock report: ' + error.message, 500)
+    );
+  }
 });

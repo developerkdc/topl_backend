@@ -12,6 +12,7 @@ import {
   item_sr_no_dropdown,
   fetch_plywood_history,
   plywoodHistoryLogsCsv,
+  plywoodStockReportCsv,
 } from '../../../controllers/inventory/plywood/plywood.controller.js';
 import AuthMiddleware from '../../../middlewares/verifyToken.js';
 import RolesPermissions from '../../../middlewares/permission.js';
@@ -95,6 +96,12 @@ router.post(
   AuthMiddleware,
   RolesPermissions('plywood_inventory', 'view'),
   plywoodHistoryLogsCsv
+);
+router.post(
+  '/download-stock-report-plywood',
+  // AuthMiddleware,
+  // RolesPermissions('plywood_inventory', 'view'),
+  plywoodStockReportCsv
 );
 
 router.get('/item-srno-dropdown', AuthMiddleware, item_sr_no_dropdown);

@@ -12,6 +12,7 @@ import {
   mdf_item_listing_by_invoice,
   mdfLogsCsv,
   mdfLogsCsvHistory,
+  mdfStockReportCsv,
 } from '../../../controllers/inventory/mdf/mdf.controller.js';
 import AuthMiddleware from '../../../middlewares/verifyToken.js';
 import RolesPermissions from '../../../middlewares/permission.js';
@@ -73,6 +74,13 @@ router.post(
   AuthMiddleware,
   RolesPermissions('mdf_inventory', 'view'),
   mdfLogsCsvHistory
+);
+
+router.post(
+  '/download-stock-report-mdf',
+  // AuthMiddleware,
+  // RolesPermissions('mdf_inventory', 'view'),
+  mdfStockReportCsv
 );
 
 router.get(

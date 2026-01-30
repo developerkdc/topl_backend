@@ -12,6 +12,7 @@ import {
   listing_face_inventory,
   fetch_face_history,
   faceHistoryLogsCsv,
+  faceStockReportCsv,
 } from '../../../controllers/inventory/face/face.controller.js';
 import {
   fetch_all_face_inward_sr_no_by_order_item_name,
@@ -80,6 +81,12 @@ router.post(
   AuthMiddleware,
   RolesPermissions('face_inventory', 'view'),
   faceHistoryLogsCsv
+);
+router.post(
+  '/download-stock-report-face',
+  // AuthMiddleware,
+  // RolesPermissions('face_inventory', 'view'),
+  faceStockReportCsv
 );
 //face history
 router.post(
