@@ -1,13 +1,18 @@
-import { GenerateLogDailyInwardReport } from '../../config/downloadExcel/reports2/logInward/logInward.js';
-import { log_inventory_items_view_model } from '../../database/schema/inventory/log/log.schema.js';
-import catchAsync from '../../utils/errors/catchAsync.js';
+import { GenerateLogDailyInwardReport } from '../../../config/downloadExcel/reports2/Log/logInward.js';
+import { log_inventory_items_view_model } from '../../../database/schema/inventory/log/log.schema.js';
+import catchAsync from '../../../utils/errors/catchAsync.js';
 
 export const LogInwardDailyReportExcel = catchAsync(
   async (req, res, next) => {
+    // Debug logging
+    console.log('Log Inward Report - Request Body:', JSON.stringify(req.body, null, 2));
+    console.log('Log Inward Report - Filters:', req.body?.filters);
+    
     const { reportDate, ...data } = req?.body?.filters || {};
 
     // Validate reportDate
     if (!reportDate) {
+      console.log('Log Inward Report - ERROR: No reportDate found');
       return res.status(400).json({
         statusCode: 400,
         status: 'error',

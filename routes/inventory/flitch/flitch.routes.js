@@ -12,8 +12,6 @@ import {
   listing_flitch_inventory,
   listing_flitch_history_inventory,
   flitchHistoryCsv,
-  flitchStockReportCsv,
-  inwardItemWiseStockReportCsv,
 } from '../../../controllers/inventory/flitch/flitch.controller.js';
 import RolesPermissions from '../../../middlewares/permission.js';
 import AuthMiddleware from '../../../middlewares/verifyToken.js';
@@ -71,18 +69,6 @@ flitch_router.post(
   AuthMiddleware,
   RolesPermissions('flitch_inventory', 'view'),
   flitchHistoryCsv
-);
-flitch_router.post(
-  '/download-stock-report-flitch',
-  // AuthMiddleware,
-  // RolesPermissions('flitch_inventory', 'view'),
-  flitchStockReportCsv
-);
-flitch_router.post(
-  '/download-inward-itemwise-stock-report',
-  // AuthMiddleware,
-  // RolesPermissions('flitch_inventory', 'view'),
-  inwardItemWiseStockReportCsv
 );
 flitch_router.get(
   '/flitch-item-listing-by-invoice/:invoice_id',
