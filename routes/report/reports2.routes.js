@@ -4,6 +4,7 @@ import flitchRoutes from './reports2/Flitch/flitch.routes.js';
 import slicingRoutes from './reports2/Slicing/slicing.route.js';
 import dressingRoutes from './reports2/Dressing/dressing.routes.js';
 import smokingDyingRoutes from './reports2/Smoking&Dying/smoking_dying.routes.js';
+import groupingSplicingRoutes from './reports2/Grouping_Splicing/grouping_splicing.routes.js';
 import express from 'express';
 
 const router = express.Router();
@@ -25,5 +26,8 @@ router.use(dressingRoutes);
 
 // Smoking&Dying routes (Dyeing Details Daily Report)
 router.use(smokingDyingRoutes);
+
+// Grouping_Splicing routes (Hand Splicing Daily Report)
+router.use(groupingSplicingRoutes);
 
 export default router;
