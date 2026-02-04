@@ -65,13 +65,14 @@ export const add_series_order = catchAsync(async (req, res) => {
     for (const item of item_details) {
       // 1. Validate and update photo if applicable
       if (item.photo_number && item.photo_number_id) {
+        const requiredSheets = item.pressing_instructions === "BOTH SIDE WITH SAME GROUP" ? item.no_of_sheets * 2 : item.no_of_sheets;
         const photoUpdate = await photoModel.findOneAndUpdate(
           {
             _id: item.photo_number_id,
             photo_number: item.photo_number,
-            available_no_of_sheets: { $gte: item.no_of_sheets },
+            available_no_of_sheets: { $gte: requiredSheets },
           },
-          { $inc: { available_no_of_sheets: -item.no_of_sheets } },
+          { $inc: { available_no_of_sheets: -requiredSheets } },
           { session, new: true }
         );
 

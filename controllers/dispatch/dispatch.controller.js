@@ -1013,7 +1013,7 @@ export const revert_dispatch_details = catchAsync(async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
-    const userDetailsDetails = req.userDetails;
+    const userDetails = req.userDetails;
     const { dispatch_id } = req.params;
     if (!dispatch_id || !mongoose.isValidObjectId(dispatch_id)) {
       throw new ApiError('Invalid Dispatch ID', StatusCodes.BAD_REQUEST);
