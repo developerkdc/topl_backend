@@ -27,11 +27,12 @@ import { EInvoiceHeaderVariable } from '../../middlewares/eInvoiceAuth.middlewar
 import moment from 'moment';
 import axios from 'axios';
 import transporterModel from '../../database/schema/masters/transporter.schema.js';
-import { getStateCode } from '../../utils/stateCode.js';
+import { getStateCode, getStateCodeAsString } from '../../utils/stateCode.js';
 import { EwayBillHeaderVariable } from '../../middlewares/ewaybillAuth.middleware.js';
 import errorCodeMapForEwayBill from './errorCodeMapForEwayBill.js';
 import approval_dispatch_model from '../../database/schema/dispatch/approval/approval.dispatch.schema.js';
 import approval_dispatch_items_model from '../../database/schema/dispatch/approval/approval.dispatch_items.schema.js';
+import { parseGovEwayDate } from '../../utils/date/govDateConverter.js';
 
 const order_items_models = {
   [order_category.raw]: RawOrderItemDetailsModel,
@@ -1013,7 +1014,7 @@ export const revert_dispatch_details = catchAsync(async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
-    const userDetailsDetails = req.userDetails;
+    const userDetails = req.userDetails;
     const { dispatch_id } = req.params;
     if (!dispatch_id || !mongoose.isValidObjectId(dispatch_id)) {
       throw new ApiError('Invalid Dispatch ID', StatusCodes.BAD_REQUEST);
@@ -1994,10 +1995,17 @@ export const generate_irn_no = catchAsync(async (req, res, next) => {
   const sellerDetails = {
     Gstin: bill_from_address?.gst_no,
     LglNm: 'TURAKHIA OVERSEAS PVT. LTD.',
-    Addr1: bill_from_address?.address,
+    ...(bill_from_address?.address && bill_from_address.address.length > 100
+      ? {
+        Addr1: bill_from_address.address.substring(0, 100),
+        Addr2: bill_from_address.address.substring(100),
+      }
+      : {
+        Addr1: bill_from_address?.address,
+      }),
     Loc: bill_from_address?.city,
     Pin: bill_from_address?.pincode,
-    Stcd: getStateCode(bill_from_address?.state) || '29',
+    Stcd: getStateCodeAsString(bill_from_address?.state),
     // Optionally, TrdNm, Ph, Em, etc.
   };
 
@@ -2006,29 +2014,51 @@ export const generate_irn_no = catchAsync(async (req, res, next) => {
   const buyerDetails = {
     Gstin: dispatch_details?.customer_details?.gst_number || '',
     LglNm: dispatch_details?.customer_details?.legal_name || '',
-    Pos: getStateCode(bill_to_address?.state) || '29', // Place of supply (state code as string)
-    Addr1: bill_to_address?.address || '',
+    Pos: getStateCodeAsString(bill_to_address?.state), // Place of supply (state code as string)
+    ...(bill_to_address?.address && bill_to_address.address.length > 100
+      ? {
+        Addr1: bill_to_address.address.substring(0, 100),
+        Addr2: bill_to_address.address.substring(100),
+      }
+      : {
+        Addr1: bill_to_address?.address,
+      }),
     Loc: bill_to_address?.city || '',
     Pin: bill_to_address?.pincode || '',
-    Stcd: getStateCode(bill_to_address?.state) || '29',
+    Stcd: getStateCodeAsString(bill_to_address?.state),
   };
 
   const DispatchDetails = {
     Nm: 'TURAKHIA OVERSEAS PVT. LTD.',
-    Addr1: dispatch_from_address?.address,
+    ...(dispatch_from_address?.address && dispatch_from_address.address.length > 100
+      ? {
+        Addr1: dispatch_from_address.address.substring(0, 100),
+        Addr2: dispatch_from_address.address.substring(100),
+      }
+      : {
+        Addr1: dispatch_from_address?.address,
+      }),
     // "Addr2": "kuvempu layout",
     Loc: dispatch_from_address?.city,
     Pin: dispatch_from_address?.pincode,
-    Stcd: getStateCode(dispatch_from_address?.state) || '37',
+    Stcd: getStateCodeAsString(dispatch_from_address?.state),
   };
 
   const ShipToDetails = {
     Nm: dispatch_details?.customer_details?.legal_name || '',
-    Addr1: ship_to_address?.address,
+    LglNm: dispatch_details?.customer_details?.legal_name || '',
+    ...(ship_to_address?.address && ship_to_address.address.length > 100
+      ? {
+        Addr1: ship_to_address.address.substring(0, 100),
+        Addr2: ship_to_address.address.substring(100),
+      }
+      : {
+        Addr1: ship_to_address?.address,
+      }),
     // "Addr2": "kuvempu layout",
     Loc: ship_to_address?.city,
     Pin: ship_to_address?.pincode,
-    Stcd: getStateCode(ship_to_address?.state) || '37',
+    Stcd: getStateCodeAsString(ship_to_address?.state),
   };
 
   // Document Details
@@ -2046,7 +2076,7 @@ export const generate_irn_no = catchAsync(async (req, res, next) => {
       SlNo: String(idx + 1),
       IsServc: 'N',
       PrdDesc: item?.product_category || item?.item_name,
-      HsnCd: item?.hsn_code || '',
+      HsnCd: `${item?.hsn_number}`,
       Qty: Number(item?.qty) || 0,
       Unit: item?.uom || 'NOS',
       UnitPrice: Number(item?.rate),
@@ -2055,11 +2085,11 @@ export const generate_irn_no = catchAsync(async (req, res, next) => {
       AssAmt: ass_amt,
 
       GstRt: Number(item?.gst_details?.gst_percentage || 0),
-      IgstAmt: Number(item?.gst_details?.igst_percentage || 0),
-      SgstAmt: Number(item?.gst_details?.sgst_percentage || 0),
-      CgstAmt: Number(item?.gst_details?.cgst_percentage || 0),
+      IgstAmt: Number(item?.gst_details?.igst_amount || 0),
+      SgstAmt: Number(item?.gst_details?.sgst_amount || 0),
+      CgstAmt: Number(item?.gst_details?.cgst_amount || 0),
 
-      TotItemVal: Number(item?.final_amount.toFixed(2)),
+      TotItemVal: Number(item?.final_row_amount.toFixed(2)),
     };
   });
 
@@ -2071,18 +2101,19 @@ export const generate_irn_no = catchAsync(async (req, res, next) => {
   const TotInvVal = itemsArr.reduce((acc, i) => acc + i.TotItemVal, 0);
 
   const irnBody = {
-    Version: '1.1',
-    TranDtls: {
-      TaxSch: 'GST',
-      SupTyp: dispatch_details?.supp_type,
+    'Version': '1.1',
+    'TranDtls': {
+      'TaxSch': 'GST',
+      'SupTyp': dispatch_details?.supp_type,
+      // EcmGstin:"24AAACT5636N1Z2"
     },
-    DocDtls: docDtls,
-    SellerDtls: sellerDetails,
-    BuyerDtls: buyerDetails,
-    DispDtls: DispatchDetails,
-    ShipDtls: ShipToDetails,
-    ItemList: itemsArr,
-    ValDtls: {
+    'DocDtls': docDtls,
+    'SellerDtls': sellerDetails,
+    'BuyerDtls': buyerDetails,
+    'DispDtls': DispatchDetails,
+    'ShipDtls': ShipToDetails,
+    'ItemList': itemsArr,
+    'ValDtls': {
       AssVal: Number(AssVal.toFixed(2)),
       CgstVal: Number(CgstVal.toFixed(2)),
       SgstVal: Number(SgstVal.toFixed(2)),
@@ -2091,31 +2122,168 @@ export const generate_irn_no = catchAsync(async (req, res, next) => {
     },
   };
 
-  const irnResponse = await axios.post(
-    `${process.env.E_INVOICE_BASE_URL}/einvoice/type/GENERATE/version/V1_03?email=${process.env.E_INVOICE_EMAIL_ID}`,
-    irnBody,
-    {
-      headers: {
-        ...EInvoiceHeaderVariable,
-        'auth-token': authToken,
-        'Content-Type': 'application/json',
-      },
-    }
-  );
+  //   const irnBody={
+  //     "Version": "1.1",
+  //     "TranDtls": {
+  //         // mandate
+  //         "TaxSch": "GST",
+  //         "SupTyp": "B2B" //supplier Type
+  //         // non-mandate
+  //         // "RegRev": "N",
+  //         // "EcmGstin": null,
+  //         // "IgstOnIntra": "N"
+  //     },
+  //     "DocDtls": {
+  //         "Typ": "INV", //INV for Invoice,CRN for credit note (Sales Reurn) and DBN for Debit note (Purchase Return)
+  //         "No": "NaturalVeneer/14", //Invoice Number
+  //         "Dt": "10/10/2025" //Invoice date
+  //     },
+  //     "SellerDtls": {  //Bill from
+  //         // mandate
+  //         "Gstin": "29AAGCB1286Q000", //GSTIN of supplier
+  //         "LglNm": "ABC company pvt ltd", //Legal Name
+  //         "Addr1": "5th block, kuvempu layout",
+  //         "Loc": "GANDHINAGAR",
+  //         "Pin": 560001,
+  //         "Stcd": "29"
+  //         // non-mandate
+  //         // "Addr2": "kuvempu layout",
+  //         // "TrdNm": "NIC Industries", //Trade Name
+  //         // "Ph": "9000000000",
+  //         // "Em": "abc@gmail.com"
+  //     },
+  //     "BuyerDtls": {  //bill to
+  //         "Gstin": "29AWGPV7107B1Z1",
+  //         "LglNm": "XYZ company pvt ltd",
+  //         "Pos": "37", //same as stcd
+  //         "Addr1": "7th block, kuvempu layout",
+  //         "Loc": "GANDHINAGAR",
+  //         "Pin": 560004,
+  //         "Stcd": "29"
+  //         // non-mandate
+  //         // "TrdNm": "XYZ Industries",
+  //         // "Addr2": "kuvempu layout",
+  //         // "Ph": "9000000000",
+  //         // "Em": "abc@gmail.com"
+  //     },
+  //     // non-mandate
+  //     "DispDtls": {
+  //         "Nm": "ABC company pvt ltd",
+  //         "Addr1": "7th block, kuvempu layout",
+  //         "Addr2": "kuvempu layout",
+  //         "Loc": "Banagalore",
+  //         "Pin": 518360,
+  //         "Stcd": "37"
+  //     },
+  //     // non-mandate
+  //     "ShipDtls": {
+  //         "Gstin": "29AWGPV7107B1Z1",
+  //         "LglNm": "CBE company pvt ltd",
+  //         "Addr1": "7th block, kuvempu layout",
+  //         "Loc": "Banagalore",
+  //         "Pin": 518360,
+  //         "Stcd": "37"
+
+  //         // non-mandate
+  //         // "TrdNm": "kuvempu layout",
+  //         // "Addr2": "kuvempu layout",
+  //     },
+  //     "ItemList": [
+  //         {
+  //             "SlNo": "1", //Serial No. of Item
+  //             "IsServc": "N", //Specify whether the supply is service or not. Specify Y-for Service
+  //             "PrdDesc": "Rice", //Product Description
+  //             "HsnCd": "1001", //HSN Code. Refer Master
+  //             "Qty": 100.345, //Quantity  SQM/CMT/CBM
+  //             "Unit": "NOS",  //gst code from unit master
+  //             "UnitPrice": 99.545,
+  //             "TotAmt": 9988.84, //Gross Amount (Unit Price * Quantity)
+  //             "Discount": 10, // non-mandate
+  //             "AssAmt": 9978.84, //Taxable Value (Total Amount -Discount)
+  //             "GstRt": 12, //The GST rate, represented as percentage that applies to the invoiced item. It will IGST rate only.
+  //             "SgstAmt": 0, //Amount of SGST payable
+  //             "IgstAmt": 1197.46, //Amount of IGST payable
+  //             "CgstAmt": 0, //Amount of CGST payable
+  //             "TotItemVal": 11176.30 //Total Item Value = Assessable Amount + CGST Amt + SGST Amt + Cess Amt + CesNonAdvlAmt + StateCesAmt + StateCesNonAdvlAmt+Otherchrg
+
+  //         }
+  //     ],
+  //     "ValDtls": {
+  //         "AssVal": 9978.84, //Total Assessable value of all items
+  //         "CgstVal": 0, //Total CGST value of all items
+  //         "SgstVal": 0, //Total SGST value of all items
+  //         "IgstVal": 1197.46, //Total IGST value of all items
+  //         "TotInvVal": 11176.30 //Final Invoice Value
+  //     }
+  // }
+  console.log('irnBody', irnBody, 'irnBody');
+  console.log('irnHeader', {
+    ...EInvoiceHeaderVariable,
+    'auth-token': authToken,
+    'Content-Type': 'application/json',
+  }, 'irnHeader');
+
+  let irnResponse;
+
+  try {
+    irnResponse = await axios.post(
+      `${process.env.E_INVOICE_BASE_URL}/einvoice/type/GENERATE/version/V1_03?email=${process.env.E_INVOICE_EMAIL_ID}`,
+      irnBody,
+      {
+        headers: {
+          ...EInvoiceHeaderVariable,
+          'auth-token': authToken,
+          'Content-Type': 'application/json',
+        },
+        timeout: 30000,
+      }
+    );
+
+    // console.log('RAW IRP RESPONSE:', irnResponse);
+    console.log('RAW IRP RESPONSE DATA:', irnResponse.data);
+
+  } catch (error) {
+    console.error('IRP ERROR STATUS:', error.response?.status);
+    console.error('IRP ERROR DATA:', error.response?.data);
+    console.error('IRP ERROR MESSAGE:', error.message);
+
+    throw new Error('IRN_GENERATION_FAILED');
+  }
 
   if (irnResponse?.data?.status_cd === '1') {
     // Update dispatch details with IRN number and IRP
-    dispatch_details.irn_number = irnResponse?.data?.data?.Irn;
-    dispatch_details.acknowledgement_number = irnResponse?.data?.data?.AckNo;
-    dispatch_details.acknowledgement_date = irnResponse?.data?.data?.AckDt;
-    dispatch_details.irp = irnResponse?.data?.irp;
-    dispatch_details.dispatch_status = dispatch_status?.irn_generated;
-    await dispatch_details.save();
+    // Create an object with IRN and acknowledgement details, and update dispatch
+    const updatedDispatchData = {
+      irn_number: irnResponse?.data?.data?.Irn,
+      acknowledgement_number: irnResponse?.data?.data?.AckNo,
+      acknowledgement_date: irnResponse?.data?.data?.AckDt,
+      irp: irnResponse?.data?.irp,
+      qr_code_link: (() => {
+        const existingLinks = dispatch_details?.qr_code_link || [];
+        const idx = existingLinks.findIndex(link => link?.name === 'irn_number');
+        if (idx !== -1) {
+          // If exists, update url for irn_number
+          return existingLinks.map((link, i) =>
+            i === idx
+              ? { ...link, url: irnResponse?.data?.data?.SignedQRCode }
+              : link
+          );
+        } else {
+          // Else, add new
+          return [...existingLinks, { name: 'irn_number', url: irnResponse?.data?.data?.SignedQRCode }];
+        }
+      })(),
+      irn_status: 'CREATED'
+    };
+    await dispatchModel.updateOne(
+      { _id: dispatch_details._id },
+      { $set: updatedDispatchData }
+    );
   } else {
     // Extracting error details from irnResponse and throwing an error
     let errorMessage = 'Unknown error occurred';
 
-    const statusDescArr = JSON.parse(irnResponse.data.status_desc);
+    const statusDescArr = irnResponse.data.status_desc ? JSON.parse(irnResponse.data.status_desc) : irnResponse.data.status_desc;
     if (Array.isArray(statusDescArr) && statusDescArr.length > 0) {
       errorMessage = statusDescArr[0]?.ErrorMessage || errorMessage;
     }
@@ -2125,7 +2293,7 @@ export const generate_irn_no = catchAsync(async (req, res, next) => {
       StatusCodes.BAD_REQUEST
     );
   }
-  console.log('Irn response', irnResponse, 'Irn response');
+  // console.log('Irn response', irnResponse, 'Irn response');
   // Optionally: req.body.irnBody = irnBody
 
   return res.status(200).json({
@@ -2165,20 +2333,41 @@ export const get_irn_by_doc = catchAsync(async (req, res, next) => {
       },
     }
   );
+  console.log('IRN RESPONSE:', irnResponse.data);
 
   if (irnResponse?.data?.status_cd === '1') {
     // Update dispatch details with IRN number and IRP
-    dispatch_details.irn_number = irnResponse?.data?.data?.Irn;
-    dispatch_details.acknowledgement_number = irnResponse?.data?.data?.AckNo;
-    dispatch_details.acknowledgement_date = irnResponse?.data?.data?.AckDt;
-    dispatch_details.irp = irnResponse?.data?.irp;
-    dispatch_details.dispatch_status = dispatch_status?.irn_generated;
-    await dispatch_details.save();
+    const updatedDispatchData = {
+      irn_number: irnResponse?.data?.data?.Irn,
+      acknowledgement_number: irnResponse?.data?.data?.AckNo,
+      acknowledgement_date: irnResponse?.data?.data?.AckDt,
+      irp: irnResponse?.data?.irp,
+      qr_code_link: (() => {
+        const existingLinks = dispatch_details?.qr_code_link || [];
+        const idx = existingLinks.findIndex(link => link?.name === 'irn_number');
+        if (idx !== -1) {
+          // If exists, update url for irn_number
+          return existingLinks.map((link, i) =>
+            i === idx
+              ? { ...link, url: irnResponse?.data?.data?.SignedQRCode }
+              : link
+          );
+        } else {
+          // Else, add new
+          return [...existingLinks, { name: 'irn_number', url: irnResponse?.data?.data?.SignedQRCode }];
+        }
+      })(),
+      irn_status: irnResponse?.data?.data?.Status === 'ACT' ? 'CREATED' : 'CANCELLED'
+    };
+    await dispatchModel.updateOne(
+      { _id: dispatch_details._id },
+      { $set: updatedDispatchData }
+    );
   } else {
     // Extracting error details from irnResponse and throwing an error
     let errorMessage = 'Unknown error occurred';
 
-    const statusDescArr = JSON.parse(irnResponse.data.status_desc);
+    const statusDescArr = irnResponse.data.status_desc ? JSON.parse(irnResponse.data.status_desc) : irnResponse.data.status_desc;
     if (Array.isArray(statusDescArr) && statusDescArr.length > 0) {
       errorMessage = statusDescArr[0]?.ErrorMessage || errorMessage;
     }
@@ -2246,13 +2435,18 @@ export const cancel_irn_no = catchAsync(async (req, res, next) => {
 
   if (irnResponse?.data?.status_cd === '1') {
     // Update dispatch details with IRN number and IRP
-    dispatch_details.dispatch_status = dispatch_status?.cancelled;
-    await dispatch_details.save();
+    const updatedDispatchData = {
+      irn_status: 'CANCELLED'
+    };
+    await dispatchModel.updateOne(
+      { _id: dispatch_details._id },
+      { $set: updatedDispatchData }
+    );
   } else {
     // Extracting error details from irnResponse and throwing an error
     let errorMessage = 'Unknown error occurred';
 
-    const statusDescArr = JSON.parse(irnResponse.data.status_desc);
+    const statusDescArr = irnResponse.data.status_desc ? JSON.parse(irnResponse.data.status_desc) : irnResponse.data.status_desc;
     if (Array.isArray(statusDescArr) && statusDescArr.length > 0) {
       errorMessage = statusDescArr[0]?.ErrorMessage || errorMessage;
     }
@@ -2262,7 +2456,7 @@ export const cancel_irn_no = catchAsync(async (req, res, next) => {
       StatusCodes.BAD_REQUEST
     );
   }
-  // console.log('Irn response', irnResponse, 'Irn response');
+  console.log('IRN RESPONSE:', irnResponse.data);
   // Optionally: req.body.irnBody = irnBody
 
   return res.status(200).json({
@@ -2324,9 +2518,11 @@ export const generate_ewaybill_using_irn_no = catchAsync(
       Irn: dispatch_details?.irn_number,
       Distance: Number(dispatch_details?.approx_distance),
       TransMode: dispatch_details?.transport_mode?.id,
-      TransId: transporter_details?.transport_id,
+      TransId: transporter_details?.transport_id || '12AWGPV7107B1Z1',
       TransName: dispatch_details?.transporter_details?.name,
-      TransDocDt: dispatch_details?.trans_doc_date,
+      TransDocDt: dispatch_details?.trans_doc_date
+        ? moment(dispatch_details.trans_doc_date).format('DD/MM/YYYY')
+        : '',
       TransDocNo: dispatch_details?.trans_doc_no,
       VehNo: dispatch_details?.vehicle_details?.[0]?.vehicle_number,
       VehType: 'R',
@@ -2344,7 +2540,7 @@ export const generate_ewaybill_using_irn_no = catchAsync(
           ...(Addr2 && { Addr2 }),
           Loc: ship_to_address?.city,
           Pin: ship_to_address?.pincode,
-          Stcd: getStateCode(ship_to_address?.state) || '29',
+          Stcd: getStateCodeAsString(ship_to_address?.state),
         };
       })(),
 
@@ -2362,7 +2558,7 @@ export const generate_ewaybill_using_irn_no = catchAsync(
           ...(Addr2 && { Addr2 }),
           Loc: dispatch_from_address?.city,
           Pin: dispatch_from_address?.pincode,
-          Stcd: getStateCode(dispatch_from_address?.state) || '29',
+          Stcd: getStateCodeAsString(dispatch_from_address?.state),
         };
       })(),
       // DispDtls: {
@@ -2374,6 +2570,7 @@ export const generate_ewaybill_using_irn_no = catchAsync(
       //   Stcd: '29',
       // },
     };
+    console.log('Eway Bill Body:', ewayBillBody, 'Eway Bill Body');
 
     const ewayBillResponse = await axios.post(
       `${process.env.E_INVOICE_BASE_URL}/einvoice/type/GENERATE_EWAYBILL/version/V1_03?email=${process.env.E_INVOICE_EMAIL_ID}&irp=${dispatch_details?.irp}`,
@@ -2386,17 +2583,24 @@ export const generate_ewaybill_using_irn_no = catchAsync(
         },
       }
     );
+    console.log('Eway Bill Response:', ewayBillResponse.data, 'Eway Bill Response');
 
     if (ewayBillResponse?.data?.status_cd === '1') {
       // Update dispatch details with IRN number and IRP
-      dispatch_details.eway_bill_no = ewayBillResponse?.data?.data?.EwbNo;
-      dispatch_details.eway_bill_date = ewayBillResponse?.data?.data?.EwbDt;
-      await dispatch_details.save();
+      const updatedDispatchData = {
+        eway_bill_no: ewayBillResponse?.data?.data?.EwbNo,
+        eway_bill_date: ewayBillResponse?.data?.data?.EwbDt,
+        eway_bill_status: 'CREATED'
+      };
+      await dispatchModel.updateOne(
+        { _id: dispatch_details._id },
+        { $set: updatedDispatchData }
+      );
     } else {
       // Extracting error details from ewayBillResponse and throwing an error
       let errorMessage = 'Unknown error occurred';
 
-      const statusDescArr = JSON.parse(ewayBillResponse.data.status_desc);
+      const statusDescArr = ewayBillResponse.data.status_desc ? JSON.parse(ewayBillResponse.data.status_desc) : ewayBillResponse.data.status_desc;
       if (Array.isArray(statusDescArr) && statusDescArr.length > 0) {
         errorMessage = statusDescArr[0]?.ErrorMessage || errorMessage;
       }
@@ -2820,8 +3024,7 @@ export const get_ewaybill_details = catchAsync(async (req, res, next) => {
   // console.log(ewayBillCancelBody, 'ewayBillCancelBody');
 
   const getEwayBillResponse = await axios.get(
-    `${process.env.E_INVOICE_BASE_URL}/ewaybillapi/v1.03/ewayapi/getewaybillgeneratedbyconsigner?email=${process.env.EWAY_BILL_EMAIL_ID}
-    &docType=${docType}&docNo=${docNo}`,
+    `${process.env.E_INVOICE_BASE_URL}/ewaybillapi/v1.03/ewayapi/getewaybillgeneratedbyconsigner?email=${process.env.EWAY_BILL_EMAIL_ID}&docType=${docType}&docNo=${docNo}`,
     {
       headers: {
         ...EwayBillHeaderVariable,
@@ -2831,68 +3034,32 @@ export const get_ewaybill_details = catchAsync(async (req, res, next) => {
     }
   );
 
-  // console.log(
-  //   'getEwayBillResponse',
-  //   getEwayBillResponse.data,
-  //   'getEwayBillResponse'
-  // );
+  console.log(
+    'getEwayBillRespodfghnse',
+    getEwayBillResponse.data,
+    'getEwayBillResponse'
+  );
 
   if (getEwayBillResponse?.data?.status_cd === '1') {
     // Update dispatch details with IRN number and IRP
-    dispatch_details.dispatch_status = dispatch_status?.cancelled;
-    await dispatch_details.save();
+    const updatedDispatchData = {
+      eway_bill_no: getEwayBillResponse?.data?.data?.ewayBillNo,
+      eway_bill_date: parseGovEwayDate(getEwayBillResponse?.data?.data?.ewayBillDate),
+      // eway_bill_status: getEwayBillResponse?.data?.data?.Status,
+    };
+    await dispatchModel.updateOne(
+      { _id: dispatch_details._id },
+      { $set: updatedDispatchData }
+    );
   } else {
-    // Extracting error details from getEwayBillResponse and throwing an error
+    // Extracting error details from irnResponse and throwing an error
     let errorMessage = 'Unknown error occurred';
 
-    if (getEwayBillResponse?.data?.error) {
-      if (
-        typeof getEwayBillResponse.data.error === 'object' &&
-        getEwayBillResponse.data.error.message
-      ) {
-        const message = getEwayBillResponse.data.error.message;
-
-        const arrayMatch = message.match(/\[(.*?)\]/);
-        if (arrayMatch && arrayMatch[1]) {
-          // Handle "required key" style error messages
-          const errors = arrayMatch[1].split(/, #\//);
-          if (errors.length > 0) {
-            let firstError = errors[0].trim();
-            if (firstError.startsWith('#/')) {
-              firstError = firstError.substring(2);
-            }
-            errorMessage = firstError;
-          } else {
-            errorMessage = message;
-          }
-        } else if (/^\{.*errorCodes.*\}$/.test(message)) {
-          // Handle JSON error style messages, e.g. '{"errorCodes":"312,"}'
-          let errorCode = null;
-          try {
-            const parsed = JSON.parse(message);
-            if (parsed?.errorCodes) {
-              // Sometimes there may be a trailing comma, split and clean
-              errorCode = parsed.errorCodes.split(',')[0]?.trim();
-            }
-          } catch (e) { }
-          // Provide specific error messages for known error codes
-          // You can expand or modify this map as needed
-          const errorCodeMap = {};
-          // Build a map from the imported array for fast lookup
-          for (const errorObj of errorCodeMapForEwayBill) {
-            errorCodeMap[errorObj.errorCode] = errorObj.errorDesc;
-          }
-          if (errorCode && errorCodeMap[errorCode]) {
-            errorMessage = errorCodeMap[errorCode];
-          } else if (errorCode) {
-            errorMessage = `Eway Bill API Error. Error Code: ${errorCode}`;
-          } else {
-            errorMessage = message;
-          }
-        } else {
-          errorMessage = message;
-        }
-      }
+    const statusDescArr = getEwayBillResponse.data.status_desc ?? JSON.parse(getEwayBillResponse.data.status_desc) ?? getEwayBillResponse.data.status_desc;
+    if (Array.isArray(statusDescArr) && statusDescArr.length > 0) {
+      errorMessage = statusDescArr[0]?.ErrorMessage || errorMessage;
+    } else {
+      errorMessage = getEwayBillResponse.data.status_desc;
     }
 
     throw new ApiError(
@@ -2900,6 +3067,65 @@ export const get_ewaybill_details = catchAsync(async (req, res, next) => {
       StatusCodes.BAD_REQUEST
     );
   }
+  //  else {
+  //   // Extracting error details from getEwayBillResponse and throwing an error
+  //   let errorMessage = 'Unknown error occurred';
+
+  //   if (getEwayBillResponse?.data?.error) {
+  //     if (
+  //       typeof getEwayBillResponse.data.error === 'object' &&
+  //       getEwayBillResponse.data.error.message
+  //     ) {
+  //       const message = getEwayBillResponse.data.error.message;
+
+  //       const arrayMatch = message.match(/\[(.*?)\]/);
+  //       if (arrayMatch && arrayMatch[1]) {
+  //         // Handle "required key" style error messages
+  //         const errors = arrayMatch[1].split(/, #\//);
+  //         if (errors.length > 0) {
+  //           let firstError = errors[0].trim();
+  //           if (firstError.startsWith('#/')) {
+  //             firstError = firstError.substring(2);
+  //           }
+  //           errorMessage = firstError;
+  //         } else {
+  //           errorMessage = message;
+  //         }
+  //       } else if (/^\{.*errorCodes.*\}$/.test(message)) {
+  //         // Handle JSON error style messages, e.g. '{"errorCodes":"312,"}'
+  //         let errorCode = null;
+  //         try {
+  //           const parsed = JSON.parse(message);
+  //           if (parsed?.errorCodes) {
+  //             // Sometimes there may be a trailing comma, split and clean
+  //             errorCode = parsed.errorCodes.split(',')[0]?.trim();
+  //           }
+  //         } catch (e) { }
+  //         // Provide specific error messages for known error codes
+  //         // You can expand or modify this map as needed
+  //         const errorCodeMap = {};
+  //         // Build a map from the imported array for fast lookup
+  //         for (const errorObj of errorCodeMapForEwayBill) {
+  //           errorCodeMap[errorObj.errorCode] = errorObj.errorDesc;
+  //         }
+  //         if (errorCode && errorCodeMap[errorCode]) {
+  //           errorMessage = errorCodeMap[errorCode];
+  //         } else if (errorCode) {
+  //           errorMessage = `Eway Bill API Error. Error Code: ${errorCode}`;
+  //         } else {
+  //           errorMessage = message;
+  //         }
+  //       } else {
+  //         errorMessage = message;
+  //       }
+  //     }
+  //   }
+
+  //   throw new ApiError(
+  //     `Eway Bill Details Fetch Failed. Error : ${errorMessage}`,
+  //     StatusCodes.BAD_REQUEST
+  //   );
+  // }
 
   return res.status(200).json({
     success: true,

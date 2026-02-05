@@ -18,6 +18,9 @@ import { getStateCode } from '../../../utils/stateCode.js';
 import { EwayBillHeaderVariable } from '../../../middlewares/ewaybillAuth.middleware.js';
 import errorCodeMapForEwayBill from '../../dispatch/errorCodeMapForEwayBill.js';
 import axios from 'axios';
+import { parseGovEwayDate } from '../../../utils/date/govDateConverter.js';
+import itemCategoryModel from '../../../database/schema/masters/item.category.schema.js';
+import UnitModel from '../../../database/schema/masters/unit.schema.js';
 // import errorCodeMapForEwayBill from './errorCodeMapForEwayBill.js';
 
 export const create_challan = catchAsync(async (req, res) => {
@@ -362,9 +365,9 @@ export const listing_challan_done = catchAsync(async (req, res, next) => {
     $sort:
       sortBy === 'challan_no'
         ? {
-          challan_no_sort_key: sort === 'desc' ? -1 : 1,
-          challan_no: sort === 'desc' ? -1 : 1,
-        }
+            challan_no_sort_key: sort === 'desc' ? -1 : 1,
+            challan_no: sort === 'desc' ? -1 : 1,
+          }
         : { [sortBy]: sort === 'desc' ? -1 : 1 },
   };
   const aggSkip = {
@@ -604,14 +607,14 @@ export const listing_single_challan = catchAsync(async (req, res, next) => {
       as: 'issue_for_challan_item_details',
     },
   };
-  // const aggCustomerDetailsLookup = {
-  //   $lookup: {
-  //     from: 'customers',
-  //     localField: 'customer_id',
-  //     foreignField: '_id',
-  //     as: 'customer_details',
-  //   },
-  // };
+  const aggCustomerDetailsLookup = {
+    $lookup: {
+      from: 'customers',
+      localField: 'customer_id',
+      foreignField: '_id',
+      as: 'customer_details',
+    },
+  };
 
   // const aggTransporterLookup = {
   //   $lookup: {
@@ -684,12 +687,12 @@ export const listing_single_challan = catchAsync(async (req, res, next) => {
   //     preserveNullAndEmptyArrays: true,
   //   },
   // };
-  // const aggCustomerDetailsUnwind = {
-  //   $unwind: {
-  //     path: '$customer_details',
-  //     preserveNullAndEmptyArrays: true,
-  //   },
-  // };
+  const aggCustomerDetailsUnwind = {
+    $unwind: {
+      path: '$customer_details',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
   // const aggTransporterDetailsUnwind = {
   //   $unwind: {
   //     path: '$transporter_details',
@@ -707,8 +710,8 @@ export const listing_single_challan = catchAsync(async (req, res, next) => {
     matchquery,
     aggIssuedChallanDetailsLookup,
     // aggIssueForChallanUnwind
-    // aggCustomerDetailsLookup,
-    // aggCustomerDetailsUnwind,
+    aggCustomerDetailsLookup,
+    aggCustomerDetailsUnwind,
     // aggTransporterLookup,
     // aggTransporterDetailsUnwind,
     // aggVehicleLookup,
@@ -778,6 +781,26 @@ export const generate_challan_ewaybill = catchAsync(async (req, res, next) => {
     'issue_for_challan_item_details'
   );
 
+  //get hsn code and unit form category for raw material
+  const itemCategory = await itemCategoryModel.findOne({
+    category: challan_details?.raw_material?.toUpperCase(),
+  });
+  if (!itemCategory) {
+    throw new ApiError('Item category not found', StatusCodes.NOT_FOUND);
+  }
+  const hsnCode = itemCategory?.product_hsn_code;
+  const unit = itemCategory?.calculate_unit;
+  //find this unit in unit master to get symbolic name
+  const unitDetails = await UnitModel.findOne({
+    unit_name: unit,
+  });
+  if (!unitDetails) {
+    throw new ApiError('Unit not found', StatusCodes.NOT_FOUND);
+  }
+  const unitSymbolicName = unitDetails?.unit_symbolic_name;
+  console.log('hsnCode', hsnCode, 'hsnCode');
+  console.log('unit', unit, 'unit');
+
   // Optionally, eager load related entities (transporter, vehicle) if you need deeper metadata, like dispatch
   let transporter_details = challan_details.transporter_details;
   if (!transporter_details && challan_details.transporter_id) {
@@ -785,9 +808,7 @@ export const generate_challan_ewaybill = catchAsync(async (req, res, next) => {
       _id: challan_details.transporter_id,
     });
   }
-
-  let vehicle_details = challan_details.vehicle_details;
-  // If vehicle_details is not populated, and vehicle_id exists, fetch info if needed
+  // console.log('transporter_details', transporter_details, 'transporter_details');
 
   const address = challan_details.address || {};
   const {
@@ -834,31 +855,28 @@ export const generate_challan_ewaybill = catchAsync(async (req, res, next) => {
     fromTrdName: 'TURAKHIA OVERSEAS PVT. LTD.',
     fromAddr1:
       dispatch_from_address?.address &&
-        dispatch_from_address.address.length > 50
+      dispatch_from_address.address.length > 50
         ? dispatch_from_address.address.slice(0, 50)
         : dispatch_from_address?.address || '',
     fromAddr2:
       dispatch_from_address?.address &&
-        dispatch_from_address.address.length > 50
+      dispatch_from_address.address.length > 50
         ? dispatch_from_address.address.slice(50)
         : '',
     fromPlace: dispatch_from_address?.city || '',
+    actFromStateCode: getStateCode(dispatch_from_address?.state),
     fromPincode: Number(dispatch_from_address?.pincode) || '',
     fromStateCode: getStateCode(dispatch_from_address?.state),
-    actFromStateCode: getStateCode(dispatch_from_address?.state),
 
-    dispatchFromGSTIN: dispatch_from_address?.gst_number,
-    dispatchFromTradeName: 'TURAKHIA OVERSEAS PVT. LTD.',
-
-    // Buyer details
     toGstin:
       bill_to_address?.gst_number ||
       challan_details?.customer_details?.gst_number ||
       '',
     toTrdName:
       challan_details?.customer_details?.legal_name ||
-      challan_details?.customer_details?.company_name ||
+      challan_details?.customer_name ||
       '',
+
     toAddr1:
       ship_to_address?.address && ship_to_address.address.length > 50
         ? ship_to_address.address.slice(0, 50)
@@ -869,78 +887,82 @@ export const generate_challan_ewaybill = catchAsync(async (req, res, next) => {
         : '',
     toPlace: ship_to_address?.city || '',
     toPincode: Number(ship_to_address?.pincode) || '',
-    toStateCode: getStateCode(ship_to_address?.state),
     actToStateCode: getStateCode(ship_to_address?.state),
+    toStateCode: getStateCode(ship_to_address?.state),
 
-    shipToGSTIN: ship_to_address?.gst_number || challan_details?.customer_details?.gst_number || '',
+    transactionType: transactionType,
+
+    dispatchFromGSTIN: dispatch_from_address?.gst_number,
+    dispatchFromTradeName: 'TURAKHIA OVERSEAS PVT. LTD.',
+
+    // Buyer details
+
+    shipToGSTIN:
+      ship_to_address?.gst_number ||
+      challan_details?.customer_details?.gst_number ||
+      '',
     shipToTradeName:
       challan_details?.customer_details?.legal_name ||
-      challan_details?.customer_details?.company_name ||
+      challan_details?.customer_name ||
       '',
-
-    // Transport details
-    transactionType,
-    transMode: challan_details?.transport_mode?.id,
-    transporterId: transporter_details?.transport_id,
-    transDistance: challan_details?.approx_distance?.toString() || '',
-    transporterName: transporter_details?.name,
-    transDocNo: challan_details?.transport_document_no,
-    transDocDate: challan_details?.transport_document_date
-      ? moment(challan_details.transport_document_date, [
-        'DD/MM/YYYY',
-        'YYYY-MM-DD',
-      ]).format('DD/MM/YYYY')
-      : '',
-    vehicleNo: Array.isArray(vehicle_details)
-      ? vehicle_details?.[0]?.vehicle_number
-      : vehicle_details?.vehicle_number,
-    vehicleType: 'R',
-
-    // Items
-    itemList: (issue_for_challan_item_details || []).map((item) => ({
-      // Pick fields in similar manner as dispatch
-      hsnCode: item?.hsn_code || '',
-      productName: item?.product_name || item?.product_category || '',
-      productDesc:
-        item?.product_desc ||
-        item?.sales_item_name ||
-        item?.product_category ||
-        '',
-      quantity:
-        item?.quantity ||
-        item?.new_sqm ||
-        item?.sqm ||
-        item?.cbm ||
-        item?.cmt ||
-        0,
-      qtyUnit: item?.unit || 'SQM',
-      cgstRate: item?.gst_details?.cgst_percentage || 0,
-      sgstRate: item?.gst_details?.sgst_percentage || 0,
-      igstRate: item?.gst_details?.igst_percentage || 0,
-      // cessRate: item?.cess_rate || 0,
-      taxableAmount: item?.discount_amount || item?.amount_after_discount || 0,
-    })),
 
     totalValue:
       challan_details?.base_amount ||
       challan_details?.base_amount_without_gst ||
       0,
 
-    cgstValue: (issue_for_challan_item_details || []).reduce(
-      (sum, item) => sum + (item?.gst_details?.cgst_amount || 0),
-      0
-    ),
-    sgstValue: (issue_for_challan_item_details || []).reduce(
-      (sum, item) => sum + (item?.gst_details?.sgst_amount || 0),
-      0
-    ),
-    igstValue: (issue_for_challan_item_details || []).reduce(
-      (sum, item) => sum + (item?.gst_details?.igst_amount || 0),
-      0
-    ),
+    cgstValue: challan_details?.cgst ? challan_details?.gst_amount / 2 : 0,
+    sgstValue: challan_details?.sgst ? challan_details?.gst_amount / 2 : 0,
+    igstValue: challan_details?.igst ? challan_details?.gst_amount : 0,
     // cessValue: challan_details?.cess_value || 0,
     totInvValue:
-      challan_details?.final_total_amount || challan_details?.total_amount || 0,
+      challan_details?.grand_total || challan_details?.total_amount || 0,
+
+    // Transport details
+    transMode: challan_details?.transport_mode?.id,
+    transDistance: challan_details?.approx_distance?.toString() || '',
+    transporterName: transporter_details?.name,
+    transporterId: transporter_details?.transport_id,
+    transDocNo: challan_details?.transport_document_no,
+    transDocDate: challan_details?.transport_document_date
+      ? moment(challan_details.transport_document_date, [
+          'DD/MM/YYYY',
+          'YYYY-MM-DD',
+        ]).format('DD/MM/YYYY')
+      : '',
+    vehicleNo: challan_details?.vehicle_name,
+    vehicleType: 'R',
+
+    // Items
+    itemList: (issue_for_challan_item_details || []).map((item) => ({
+      // Pick fields in similar manner as dispatch
+      productName:
+        item?.product_name ||
+        item?.product_category ||
+        item?.issued_item_details?.item_name ||
+        '',
+      productDesc:
+        item?.product_desc ||
+        item?.sales_item_name ||
+        item?.product_category ||
+        item?.issued_item_details?.item_name ||
+        '',
+      hsnCode: item?.hsn_code || hsnCode,
+      quantity:
+        item?.issued_item_details?.quantity ||
+        item?.issued_item_details?.new_sqm ||
+        item?.issued_item_details?.sqm ||
+        item?.issued_item_details?.cbm ||
+        item?.issued_item_details?.cmt ||
+        item?.issued_item_details?.physical_cmt ||
+        0,
+      qtyUnit: item?.issued_item_details?.unit || unitSymbolicName,
+      taxableAmount: item?.issued_item_details?.amount || 0,
+      sgstRate: challan_details?.sgst || 0,
+      cgstRate: challan_details?.cgst || 0,
+      igstRate: challan_details?.igst || 0,
+      // cessRate: item?.cess_rate || 0,
+    })),
   };
 
   console.log('Challan ewayBillBody', ewayBillBody, 'Challan ewayBillBody');
@@ -963,9 +985,19 @@ export const generate_challan_ewaybill = catchAsync(async (req, res, next) => {
   );
 
   if (ewayBillResponse?.data?.status_cd === '1') {
-    challan_details.eway_bill_no = ewayBillResponse?.data?.data?.EwbNo;
-    challan_details.eway_bill_date = ewayBillResponse?.data?.data?.EwbDt;
-    await challan_details.save();
+    const { ewayBillNo, ewayBillDate } = ewayBillResponse?.data?.data;
+    // Save the updated challan details in challan_done_model
+    await challan_done_model.updateOne(
+      { _id: challan_details._id },
+      {
+        $set: {
+          eway_bill_no: ewayBillNo,
+          eway_bill_date: parseGovEwayDate(ewayBillDate) || Date.now(),
+          eway_bill_status: 'ACTIVE',
+        },
+      }
+    );
+    // await challan_details.save();
   } else {
     let errorMessage = 'Unknown error occurred';
     const error = ewayBillResponse?.data?.error;
@@ -1036,6 +1068,168 @@ export const generate_challan_ewaybill = catchAsync(async (req, res, next) => {
   });
 });
 
+export const get_ewaybill_details = catchAsync(async (req, res, next) => {
+  const challan_id = req.params.id;
+  const matchQuery = {
+    $match: {
+      _id: mongoose.Types.ObjectId.createFromHexString(challan_id),
+    },
+  };
+  const aggIssuedChallanDetailsLookup = {
+    $lookup: {
+      from: 'issue_for_challan_details',
+      localField: 'raw_material_items',
+      foreignField: '_id',
+      as: 'issue_for_challan_item_details',
+    },
+  };
+  const listAggregate = [matchQuery, aggIssuedChallanDetailsLookup];
+
+  if (!challan_id) {
+    throw new ApiError('Challan ID is missing.', StatusCodes.NOT_FOUND);
+  }
+  if (!isValidObjectId(challan_id)) {
+    throw new ApiError('Invalid Challan ID', StatusCodes.BAD_REQUEST);
+  }
+
+  const challanDetails = await challan_done_model.aggregate(listAggregate);
+  if (!challanDetails || challanDetails.length === 0) {
+    throw new ApiError('Challan details not found', StatusCodes.NOT_FOUND);
+  }
+  const challan_details = challanDetails[0];
+  const issue_for_challan_item_details =
+    challan_details?.issue_for_challan_item_details;
+
+  if (
+    !issue_for_challan_item_details ||
+    issue_for_challan_item_details.length === 0
+  ) {
+    throw new ApiError(
+      'Issue for challan item details not found',
+      StatusCodes.NOT_FOUND
+    );
+  }
+
+  console.log('challanDetails', challan_details, 'challanDetails');
+  console.log(
+    'issue_for_challan_item_details',
+    issue_for_challan_item_details,
+    'issue_for_challan_item_details'
+  );
+
+  const ewayBillResponse = await axios.get(
+    challan_details?.eway_bill_no
+      ? `${process.env.E_INVOICE_BASE_URL}/ewaybillapi/v1.03/ewayapi/getewaybill?email=${process.env.EWAY_BILL_EMAIL_ID}&ewbNo=${challan_details?.eway_bill_no}`
+      : `${process.env.E_INVOICE_BASE_URL}/ewaybillapi/v1.03/ewayapi/getewaybillgeneratedbyconsigner?email=${process.env.EWAY_BILL_EMAIL_ID}&docType=CHL&docNo=${challan_details?.challan_no}`,
+    {
+      headers: {
+        ...EwayBillHeaderVariable,
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+
+  console.log(
+    'Challan ewayBillResponse',
+    ewayBillResponse.data,
+    'Challan ewayBillResponse'
+  );
+
+  if (ewayBillResponse?.data?.status_cd === '1') {
+    if (challan_details?.eway_bill_no) {
+      const { ewbNo, ewayBillDate, status } = ewayBillResponse?.data?.data;
+      await challan_done_model.updateOne(
+        { _id: challan_details._id },
+        {
+          $set: {
+            eway_bill_no: ewbNo,
+            eway_bill_date: parseGovEwayDate(ewayBillDate),
+            eway_bill_status: status === 'CNL' ? 'CANCELLED' : 'ACTIVE',
+          },
+        }
+      );
+    } else {
+      const { ewayBillNo, ewayBillDate } = ewayBillResponse?.data?.data;
+      await challan_done_model.updateOne(
+        { _id: challan_details._id },
+        {
+          $set: {
+            eway_bill_no: ewayBillNo,
+            eway_bill_date: parseGovEwayDate(ewayBillDate),
+          },
+        }
+      );
+    }
+  } else {
+    let errorMessage = 'Unknown error occurred';
+    const error = ewayBillResponse?.data?.error;
+
+    if (error && typeof error === 'object' && error.message) {
+      const message = error.message;
+
+      // Handle multiple validation errors: "[#/field1: error1, #/field2: error2]"
+      const arrayMatch = message.match(/\[(.*?)\]/);
+      if (arrayMatch?.[1]) {
+        const errors = arrayMatch[1].split(/, #\//);
+        if (errors.length > 0) {
+          let firstError = errors[0].trim();
+          if (firstError.startsWith('#/')) {
+            firstError = firstError.substring(2);
+          }
+          errorMessage = firstError;
+        } else {
+          errorMessage = message;
+        }
+      }
+      // Handle JSON error codes: '{"errorCodes":"100"}'
+      else {
+        try {
+          const parsedError = JSON.parse(message);
+          if (parsedError?.errorCodes) {
+            const errorCode = parsedError.errorCodes.split(',')[0]?.trim();
+            if (errorCode) {
+              // Build error code map for lookup
+              const errorCodeMap = {};
+              if (
+                errorCodeMapForEwayBill &&
+                Array.isArray(errorCodeMapForEwayBill)
+              ) {
+                for (const e of errorCodeMapForEwayBill) {
+                  errorCodeMap[e.errorCode] = e.errorDesc;
+                }
+              }
+              errorMessage =
+                errorCodeMap[errorCode] ||
+                `Eway Bill API Error. Error Code: ${errorCode}`;
+            } else {
+              errorMessage = message;
+            }
+          } else {
+            // Handle single validation error: "#/itemList/0/qtyUnit: expected minLength: 3, actual: 0"
+            const singleMatch = message.match(/#\/(.+)/);
+            errorMessage = singleMatch?.[1]?.trim() || message;
+          }
+        } catch {
+          // Handle single validation error if JSON parse fails: "#/itemList/0/qtyUnit: expected minLength: 3, actual: 0"
+          const singleMatch = message.match(/#\/(.+)/);
+          errorMessage = singleMatch?.[1]?.trim() || message;
+        }
+      }
+    }
+
+    throw new ApiError(
+      `Eway Bill Details Fetch Failed for Challan. Error : ${errorMessage}`,
+      StatusCodes.BAD_REQUEST
+    );
+  }
+
+  return res.status(200).json({
+    success: true,
+    message: 'Challan EWay Bill details fetched successfully.',
+    result: ewayBillResponse?.data,
+  });
+});
+
 export const cancel_challan_ewaybill = catchAsync(async (req, res, next) => {
   const { cancelRmrk, cancelRsnCode } = req.body;
 
@@ -1071,16 +1265,21 @@ export const cancel_challan_ewaybill = catchAsync(async (req, res, next) => {
     }
   );
 
-  // console.log(
-  //   'ewayBillCancelResponse',
-  //   ewayBillCancelResponse.data,
-  //   'ewayBillCancelResponse'
-  // );
+  console.log(
+    'ewayBillCancelResponse',
+    ewayBillCancelResponse.data,
+    'ewayBillCancelResponse'
+  );
 
   if (ewayBillCancelResponse?.data?.status_cd === '1') {
-    // Update dispatch details with IRN number and IRP
-    // dispatch_details.dispatch_status = dispatch_status?.cancelled;
-    // await dispatch_details.save();
+    await challan_done_model.updateOne(
+      { _id: challan_details._id },
+      {
+        $set: {
+          eway_bill_status: 'CANCELLED',
+        },
+      }
+    );
     console.log('Eway Bill Cancelled successfully.');
   } else {
     // Extracting error details from ewayBillCancelResponse and throwing an error
@@ -1115,7 +1314,7 @@ export const cancel_challan_ewaybill = catchAsync(async (req, res, next) => {
               // Sometimes there may be a trailing comma, split and clean
               errorCode = parsed.errorCodes.split(',')[0]?.trim();
             }
-          } catch (e) { }
+          } catch (e) {}
           // Provide specific error messages for known error codes
           // You can expand or modify this map as needed
           const errorCodeMap = {};
@@ -1146,5 +1345,299 @@ export const cancel_challan_ewaybill = catchAsync(async (req, res, next) => {
     success: true,
     message: 'Eway Bill Cancelled successfully.',
     result: ewayBillCancelResponse?.data,
+  });
+});
+export const update_ewaybill_transporter = catchAsync(
+  async (req, res, next) => {
+    const { transporter_id } = req.body;
+
+    const challan_id = req.params.id;
+    const challan_details = await challan_done_model.findById(challan_id);
+
+    if (!challan_details) {
+      throw new ApiError('Challan details not found', StatusCodes.NOT_FOUND);
+    }
+
+    if (!challan_details?.eway_bill_no) {
+      throw new ApiError(
+        'Eway bill number not found for this challan',
+        StatusCodes.BAD_REQUEST
+      );
+    }
+    const transporterDetails = await transporterModel.findById(transporter_id);
+    if (!transporterDetails) {
+      throw new ApiError(
+        'Transporter details not found',
+        StatusCodes.NOT_FOUND
+      );
+    }
+    console.log('transporterDetails', transporterDetails, 'transporterDetails');
+
+    const ewayBillUpdateTransporterBody = {
+      ewbNo: challan_details?.eway_bill_no,
+      transporterId: transporterDetails?.transport_id,
+    };
+    console.log(
+      'Challan ewayBillUpdateTransporterBody',
+      ewayBillUpdateTransporterBody,
+      'Challan ewayBillUpdateTransporterBody'
+    );
+
+    const ewayBillUpdateTransporterResponse = await axios.post(
+      `${process.env.E_INVOICE_BASE_URL}/ewaybillapi/v1.03/ewayapi/updatetransporter?email=${process.env.EWAY_BILL_EMAIL_ID}`,
+      ewayBillUpdateTransporterBody,
+      {
+        headers: {
+          ...EwayBillHeaderVariable,
+          // 'auth-token': authToken,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    console.log(
+      'ewayBillUpdateTransporterResponse',
+      ewayBillUpdateTransporterResponse.data,
+      'ewayBillUpdateTransporterResponse'
+    );
+
+    if (ewayBillUpdateTransporterResponse?.data?.status_cd === '1') {
+      await challan_done_model.updateOne(
+        { _id: challan_details._id },
+        {
+          $set: {
+            transporter_name: transporterDetails?.name,
+            transporter_details: transporterDetails,
+            transporter_id: transporterDetails?._id,
+          },
+        }
+      );
+    } else {
+      // Extracting error details from ewayBillCancelResponse and throwing an error
+      let errorMessage = 'Unknown error occurred';
+
+      if (ewayBillUpdateTransporterResponse?.data?.error) {
+        if (
+          typeof ewayBillUpdateTransporterResponse.data.error === 'object' &&
+          ewayBillUpdateTransporterResponse.data.error.message
+        ) {
+          const message = ewayBillUpdateTransporterResponse.data.error.message;
+
+          const arrayMatch = message.match(/\[(.*?)\]/);
+          if (arrayMatch && arrayMatch[1]) {
+            // Handle "required key" style error messages
+            const errors = arrayMatch[1].split(/, #\//);
+            if (errors.length > 0) {
+              let firstError = errors[0].trim();
+              if (firstError.startsWith('#/')) {
+                firstError = firstError.substring(2);
+              }
+              errorMessage = firstError;
+            } else {
+              errorMessage = message;
+            }
+          } else if (/^\{.*errorCodes.*\}$/.test(message)) {
+            // Handle JSON error style messages, e.g. '{"errorCodes":"312,"}'
+            let errorCode = null;
+            try {
+              const parsed = JSON.parse(message);
+              if (parsed?.errorCodes) {
+                // Sometimes there may be a trailing comma, split and clean
+                errorCode = parsed.errorCodes.split(',')[0]?.trim();
+              }
+            } catch (e) {}
+            // Provide specific error messages for known error codes
+            // You can expand or modify this map as needed
+            const errorCodeMap = {};
+            // Build a map from the imported array for fast lookup
+            for (const errorObj of errorCodeMapForEwayBill) {
+              errorCodeMap[errorObj.errorCode] = errorObj.errorDesc;
+            }
+            if (errorCode && errorCodeMap[errorCode]) {
+              errorMessage = errorCodeMap[errorCode];
+            } else if (errorCode) {
+              errorMessage = `Eway Bill API Error. Error Code: ${errorCode}`;
+            } else {
+              errorMessage = message;
+            }
+          } else {
+            errorMessage = message;
+          }
+        }
+      }
+
+      throw new ApiError(
+        `Eway Bill Update Transporter Failed. Error : ${errorMessage}`,
+        StatusCodes.BAD_REQUEST
+      );
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Eway Bill Update Transporter successfully.',
+      result: ewayBillUpdateTransporterResponse?.data,
+    });
+  }
+);
+export const update_ewaybill_partB = catchAsync(async (req, res, next) => {
+  const challan_id = req.params.id;
+  const {
+    vehicle_name,
+    address,
+    state,
+    reasonCode,
+    reasonRem,
+    transport_document_no,
+    transport_document_date,
+    transMode,
+    city,
+    pincode,
+  } = req.body;
+
+  if (
+    !vehicle_name ||
+    !address ||
+    !state ||
+    !reasonCode ||
+    !reasonRem ||
+    !transport_document_no ||
+    !transport_document_date ||
+    !transMode
+  ) {
+    throw new ApiError(
+      'All Part-B fields are required.',
+      StatusCodes.BAD_REQUEST
+    );
+  }
+
+  const challan_details = await challan_done_model.findById(challan_id);
+  if (!challan_details) {
+    throw new ApiError('Challan details not found', StatusCodes.NOT_FOUND);
+  }
+
+  if (!challan_details?.eway_bill_no) {
+    throw new ApiError(
+      'Eway bill number not found for this challan',
+      StatusCodes.BAD_REQUEST
+    );
+  }
+
+  // Prepare payload as per e-waybill API spec for updatetransporterdetails/partb
+  const ewayBillUpdatePartBBody = {
+    ewbNo: challan_details?.eway_bill_no,
+    vehicleNo: vehicle_name,
+    fromPlace: address,
+    fromState: getStateCode(state),
+    reasonCode: reasonCode,
+    reasonRem: reasonRem,
+    transDocNo: transport_document_no,
+    transDocDate:
+      moment(transport_document_date, ['DD/MM/YYYY', 'YYYY-MM-DD']).format(
+        'DD/MM/YYYY'
+      ) || '',
+    transMode: transMode?.id,
+  };
+
+  console.log(
+    'Challan ewayBillUpdatePartBBody',
+    ewayBillUpdatePartBBody,
+    'Challan ewayBillUpdatePartBBody'
+  );
+
+  const ewayBillUpdatePartBResponse = await axios.post(
+    `${process.env.E_INVOICE_BASE_URL}/ewaybillapi/v1.03/ewayapi/vehewb?email=${process.env.EWAY_BILL_EMAIL_ID}`,
+    ewayBillUpdatePartBBody,
+    {
+      headers: {
+        ...EwayBillHeaderVariable,
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+
+  console.log(
+    'ewayBillUpdatePartBResponse',
+    ewayBillUpdatePartBResponse.data,
+    'ewayBillUpdatePartBResponse'
+  );
+
+  if (ewayBillUpdatePartBResponse?.data?.status_cd === '1') {
+    // Update corresponding partB/transport details in challan_done_model
+    await challan_done_model.updateOne(
+      { _id: challan_details._id },
+      {
+        $set: {
+          vehicle_name: vehicle_name,
+          transport_document_no: transport_document_no,
+          transport_document_date: transport_document_date,
+          transport_mode: transMode,
+          // partb_last_updated: new Date(), // optional for tracking
+          'address.dispatch_from_address.address': address,
+          'address.dispatch_from_address.state': state,
+          'address.dispatch_from_address.city': city,
+          // reason_code: reasonCode,
+          // reason_remark: reasonRem,
+          'address.dispatch_from_address.pincode': pincode,
+        },
+      }
+    );
+  } else {
+    // Extracting error details
+    let errorMessage = 'Unknown error occurred';
+
+    if (ewayBillUpdatePartBResponse?.data?.error) {
+      if (
+        typeof ewayBillUpdatePartBResponse.data.error === 'object' &&
+        ewayBillUpdatePartBResponse.data.error.message
+      ) {
+        const message = ewayBillUpdatePartBResponse.data.error.message;
+
+        const arrayMatch = message.match(/\[(.*?)\]/);
+        if (arrayMatch && arrayMatch[1]) {
+          const errors = arrayMatch[1].split(/, #\//);
+          if (errors.length > 0) {
+            let firstError = errors[0].trim();
+            if (firstError.startsWith('#/')) {
+              firstError = firstError.substring(2);
+            }
+            errorMessage = firstError;
+          } else {
+            errorMessage = message;
+          }
+        } else if (/^\{.*errorCodes.*\}$/.test(message)) {
+          let errorCode = null;
+          try {
+            const parsed = JSON.parse(message);
+            if (parsed?.errorCodes) {
+              errorCode = parsed.errorCodes.split(',')[0]?.trim();
+            }
+          } catch (e) {}
+          const errorCodeMap = {};
+          for (const errorObj of errorCodeMapForEwayBill) {
+            errorCodeMap[errorObj.errorCode] = errorObj.errorDesc;
+          }
+          if (errorCode && errorCodeMap[errorCode]) {
+            errorMessage = errorCodeMap[errorCode];
+          } else if (errorCode) {
+            errorMessage = `Eway Bill API Error. Error Code: ${errorCode}`;
+          } else {
+            errorMessage = message;
+          }
+        } else {
+          errorMessage = message;
+        }
+      }
+    }
+
+    throw new ApiError(
+      `Eway Bill Update PartB Failed. Error : ${errorMessage}`,
+      StatusCodes.BAD_REQUEST
+    );
+  }
+
+  return res.status(200).json({
+    success: true,
+    message: 'Eway Bill Part-B updated successfully.',
+    result: ewayBillUpdatePartBResponse?.data,
   });
 });

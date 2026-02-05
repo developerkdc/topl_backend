@@ -4,7 +4,7 @@ dotenv.config();
 
 export const EwayBillHeaderVariable = {
   username: process.env.EWAY_BILL_USERNAME,
-  //   password: process.env.EWAY_BILL_PASSWORD,
+  password: process.env.EWAY_BILL_PASSWORD,
   ip_address: process.env.EWAY_BILL_IP_ADDRESS,
   client_id: process.env.EWAY_BILL_CLIENT_ID,
   client_secret: process.env.EWAY_BILL_CLIENT_SECRET,

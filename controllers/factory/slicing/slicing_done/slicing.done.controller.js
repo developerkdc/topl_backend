@@ -671,7 +671,7 @@ export const edit_slicing_done = catchAsync(async (req, res, next) => {
       other_details.final_amount = Number(
         (
           Number(other_details?.total_amount) +
-          Number(other_details?.wastage_consumed_total_amount)
+          Number(other_details?.wastage_consumed_total_amount || 0)
         )?.toFixed(2)
       );
     }
