@@ -55,3 +55,11 @@ export function getStateCode(stateName) {
 }
 
 export { STATE_CODES };
+
+export const getStateCodeAsString = (stateName) => {
+  const code = getStateCode(stateName);
+  if (code === null || code === undefined) {
+    return '29';
+  }
+  return String(code).padStart(2, '0');
+};
