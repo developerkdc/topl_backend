@@ -12,7 +12,6 @@ import {
   inward_sr_no_dropdown,
   item_sr_no_dropdown,
   listing_core_inventory,
-  coreStockReportCsv,
 } from '../../../controllers/inventory/core/core.controller.js';
 import AuthMiddleware from '../../../middlewares/verifyToken.js';
 import RolesPermissions from '../../../middlewares/permission.js';
@@ -82,12 +81,6 @@ router.post(
   AuthMiddleware,
   RolesPermissions('core_inventory', 'view'),
   coreHistoryLogsCsv
-);
-router.post(
-  '/download-stock-report-core',
-  // AuthMiddleware,
-  // RolesPermissions('core_inventory', 'view'),
-  coreStockReportCsv
 );
 
 //dropdown

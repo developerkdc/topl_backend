@@ -5,6 +5,8 @@ import slicingRoutes from './reports2/Slicing/slicing.route.js';
 import dressingRoutes from './reports2/Dressing/dressing.routes.js';
 import smokingDyingRoutes from './reports2/Smoking&Dying/smoking_dying.routes.js';
 import groupingSplicingRoutes from './reports2/Grouping_Splicing/grouping_splicing.routes.js';
+import faceRoutes from './reports2/Face/face.routes.js';
+import coreRoutes from './reports2/Core/core.routes.js';
 import express from 'express';
 
 const router = express.Router();
@@ -29,5 +31,11 @@ router.use(smokingDyingRoutes);
 
 // Grouping_Splicing routes (Hand Splicing Daily Report)
 router.use(groupingSplicingRoutes);
+
+// Face routes (Face Stock Report)
+router.use(faceRoutes);
+
+// Core routes (Core Stock Report)
+router.use(coreRoutes);
 
 export default router;
