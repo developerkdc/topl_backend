@@ -88,51 +88,61 @@ export const createLogLogsExcel = async (newData) => {
 
     newData?.forEach((data) => {
       let contactPersonData = [];
-      data?.supplier_details?.branch_detail?.contact_person?.forEach((cp) => {
-        contactPersonData.push({
-          contact_person_name: cp.name,
-          contact_person_email: cp.email,
-          contact_person_mobile_number: cp.mobile_number,
-          contact_person_designation: cp.designation,
-        });
-      });
+      data?.log_invoice_details?.supplier_details?.branch_detail?.contact_person?.forEach(
+        (cp) => {
+          contactPersonData.push({
+            contact_person_name: cp.name,
+            contact_person_email: cp.email,
+            contact_person_mobile_number: cp.mobile_number,
+            contact_person_designation: cp.designation,
+          });
+        }
+      );
 
       const rowData = {
-        inward_sr_no: data.log_invoice_details.inward_sr_no,
-        item_sr_no: data.item_sr_no,
-        item_name: data.item_name,
-        supplier_item_name: data.supplier_item_name,
-        log_no: data.log_no,
-        log_formula: data.log_formula,
-        invoice_length: data.invoice_length,
-        invoice_diameter: data.invoice_diameter,
-        invoice_cmt: data.invoice_cmt,
-        indian_cmt: data.indian_cmt,
-        physical_length: data.physical_length,
-        physical_diameter: data.physical_diameter,
-        physical_cmt: data.physical_cmt,
-        exchange_rate: data.exchange_rate,
-        rate_in_currency: data.rate_in_currency,
-        rate_in_inr: data.rate_in_inr,
+        inward_sr_no: data?.log_invoice_details?.inward_sr_no,
+        item_sr_no: data?.item_sr_no,
+        item_name: data?.item_name,
+        supplier_item_name: data?.supplier_item_name,
+        log_no: data?.log_no,
+        log_formula: data?.log_formula,
+        invoice_length: data?.invoice_length,
+        invoice_diameter: data?.invoice_diameter,
+        invoice_cmt: data?.invoice_cmt,
+        indian_cmt: data?.indian_cmt,
+        physical_length: data?.physical_length,
+        physical_diameter: data?.physical_diameter,
+        physical_cmt: data?.physical_cmt,
+        exchange_rate: data?.exchange_rate,
+        rate_in_currency: data?.rate_in_currency,
+        rate_in_inr: data?.rate_in_inr,
 
-        amount: data.amount,
-        remark: data.remark,
-        inward_date: new Date(
-          data.log_invoice_details.inward_date
-        ).toLocaleDateString(),
-        createdAt: new Date(
-          data?.log_invoice_details?.createdAt
-        ).toLocaleDateString(),
-        updatedAt: new Date(
-          data?.log_invoice_details.updatedAt
-        ).toLocaleDateString(),
-        currency: data.log_invoice_details.currency,
-        no_of_workers: data.log_invoice_details.workers_details.no_of_workers,
-        shift: data.log_invoice_details.workers_details.shift,
-        working_hours: data.log_invoice_details.workers_details.working_hours,
-        supplier_name: data.supplier_details.company_details.supplier_name,
-        supplier_type: data.supplier_details.company_details.supplier_type,
-        branch_name: data.supplier_details.branch_detail.branch_name,
+        amount: data?.amount,
+        remark: data?.remark,
+        inward_date: data?.log_invoice_details?.inward_date
+          ? new Date(data.log_invoice_details.inward_date).toLocaleDateString()
+          : '',
+        createdAt: data?.log_invoice_details?.createdAt
+          ? new Date(data.log_invoice_details.createdAt).toLocaleDateString()
+          : '',
+        updatedAt: data?.log_invoice_details?.updatedAt
+          ? new Date(data.log_invoice_details.updatedAt).toLocaleDateString()
+          : '',
+        currency: data?.log_invoice_details?.currency,
+        no_of_workers:
+          data?.log_invoice_details?.workers_details?.no_of_workers,
+        shift: data?.log_invoice_details?.workers_details?.shift,
+        working_hours:
+          data?.log_invoice_details?.workers_details?.working_hours,
+        supplier_name:
+          data?.log_invoice_details?.supplier_details?.company_details
+            ?.supplier_name,
+        supplier_type:
+          data?.log_invoice_details?.supplier_details?.company_details
+            ?.supplier_type,
+        branch_name:
+          data?.log_invoice_details?.supplier_details?.branch_detail
+            ?.branch_name,
         contact_person_name: contactPersonData
           .map((cp) => cp.contact_person_name)
           .join(', '),
@@ -145,26 +155,36 @@ export const createLogLogsExcel = async (newData) => {
         contact_person_designation: contactPersonData
           .map((cp) => cp.contact_person_designation)
           .join(', '),
-        address: data.supplier_details.branch_detail.address,
-        city: data.supplier_details.branch_detail.city,
-        state: data.supplier_details.branch_detail.state,
-        country: data.supplier_details.branch_detail.country,
-        pincode: data.supplier_details.branch_detail.pincode,
-        gst_number: data.supplier_details.branch_detail.gst_number,
-        web_url: data.supplier_details.branch_detail.web_url,
-        invoice_date: new Date(
-          data.log_invoice_details.invoice_Details.invoice_date
-        ).toLocaleDateString(),
-        invoice_no: data.log_invoice_details.invoice_Details.invoice_no,
+        address:
+          data?.log_invoice_details?.supplier_details?.branch_detail?.address,
+        city: data?.log_invoice_details?.supplier_details?.branch_detail?.city,
+        state:
+          data?.log_invoice_details?.supplier_details?.branch_detail?.state,
+        country:
+          data?.log_invoice_details?.supplier_details?.branch_detail?.country,
+        pincode:
+          data?.log_invoice_details?.supplier_details?.branch_detail?.pincode,
+        gst_number:
+          data?.log_invoice_details?.supplier_details?.branch_detail
+            ?.gst_number,
+        web_url:
+          data?.log_invoice_details?.supplier_details?.branch_detail?.web_url,
+        invoice_date: data?.log_invoice_details?.invoice_Details?.invoice_date
+          ? new Date(
+            data.log_invoice_details.invoice_Details.invoice_date
+          ).toLocaleDateString()
+          : '',
+        invoice_no: data?.log_invoice_details?.invoice_Details?.invoice_no,
         total_item_amount:
-          data.log_invoice_details.invoice_Details.total_item_amount,
+          data?.log_invoice_details?.invoice_Details?.total_item_amount,
         transporter_details:
-          data.log_invoice_details.invoice_Details.transporter_details,
-        gst_percentage: data.log_invoice_details.invoice_Details.gst_percentage,
+          data?.log_invoice_details?.invoice_Details?.transporter_details,
+        gst_percentage:
+          data?.log_invoice_details?.invoice_Details?.gst_percentage,
         gst_val: data?.log_invoice_details?.invoice_Details?.gst_value,
         invoice_value_with_gst:
-          data.log_invoice_details.invoice_Details.invoice_value_with_gst,
-        invoice_remark: data.log_invoice_details.invoice_Details.remark,
+          data?.log_invoice_details?.invoice_Details?.invoice_value_with_gst,
+        invoice_remark: data?.log_invoice_details?.invoice_Details?.remark,
       };
 
       worksheet.addRow(rowData);
