@@ -358,3 +358,4 @@ export const createFaceHistoryExcel = async (newData) => {
     throw new ApiError(500, error.message);
   }
 };
+
