@@ -255,6 +255,14 @@ const dispatchSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    irn_status: {
+      type: String,
+      enum: {
+        values: ['PENDING', 'CREATED', 'CANCELLED'],
+        message: 'Invalid status {{VALUE}}. It must be "PENDING" or "CREATED" or "CANCELLED"',
+      },
+      default: "PENDING",
+    },
     irp: {
       type: String,
       default: null,
@@ -275,6 +283,14 @@ const dispatchSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    eway_bill_status: {
+      type: String,
+      enum: {
+        values: ['PENDING', 'CREATED', 'CANCELLED', 'EXPIRED'],
+        message: 'Invalid Eway Bill Status -> {{VALUE}}. It must be one of the : ' + ['PENDING', 'CREATED', 'CANCELLED', 'EXPIRED']?.join(', '),
+      },
+      default: 'PENDING',
+    },
     qr_code_link: {
       type: [{
         name: {
@@ -284,7 +300,10 @@ const dispatchSchema = new mongoose.Schema(
             message: 'Invalid name {{VALUE}}. It must be "irn_number", "eway_bill"',
           },
         },
-        url: String,
+        url: {
+          type: String,
+          default: null,
+        },
       }],
       default: null,
     },

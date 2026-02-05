@@ -14,6 +14,7 @@ import catchAsync from '../../../utils/errors/catchAsync.js';
 import {
   createFleeceHistoryExcel,
   createFleeceLogsExcel,
+  createFleeceStockReportExcel,
 } from '../../../config/downloadExcel/Logs/Inventory/fleece/fleece.js';
 import {
   fleece_approval_inventory_invoice_model,
@@ -1154,4 +1155,247 @@ export const fetch_fleece_history = catchAsync(async (req, res, next) => {
   );
 
   return res.status(StatusCodes.OK).json(response);
+});
+
+// Fleece Stock Report with Opening, Receive, Consume, Sales, Closing
+export const fleeceStockReportCsv = catchAsync(async (req, res, next) => {
+  const { startDate, endDate } = req.body;
+  const filter = req.body?.filter || {};
+
+  console.log('Fleece Stock Report Request - Start Date:', startDate);
+  console.log('Fleece Stock Report Request - End Date:', endDate);
+  console.log('Fleece Stock Report Request - Filter:', filter);
+
+  // Validate date parameters
+  if (!startDate || !endDate) {
+    return next(new ApiError('Start date and end date are required', 400));
+  }
+
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    return next(new ApiError('Invalid date format', 400));
+  }
+
+  if (start > end) {
+    return next(new ApiError('Start date cannot be after end date', 400));
+  }
+
+  // Build filter for item sub category if provided
+  const itemFilter = {};
+  if (filter.item_sub_category_name) {
+    itemFilter.item_sub_category_name = filter.item_sub_category_name;
+  }
+
+  try {
+    // Step 1: Get all unique fleece items with their current available stock
+    const currentInventory = await fleece_inventory_items_view_modal.aggregate([
+      {
+        $match: {
+          deleted_at: null,
+          ...itemFilter,
+        },
+      },
+      {
+        $group: {
+          _id: {
+            item_sub_category_name: '$item_sub_category_name',
+            thickness: '$thickness',
+            length: '$length',
+            width: '$width',
+          },
+          current_rolls: { $sum: '$available_number_of_roll' },
+          current_sqm: { $sum: '$available_sqm' },
+          item_ids: { $push: '$_id' },
+        },
+      },
+    ]);
+
+    // Step 2: For each unique combination, calculate stock movements
+    const stockData = await Promise.all(
+      currentInventory.map(async (item) => {
+        const { item_sub_category_name, thickness, length, width } = item._id;
+        const itemIds = item.item_ids;
+
+        // Calculate receives during the period (new inward)
+        const receives = await fleece_inventory_items_modal.aggregate([
+          {
+            $match: {
+              item_sub_category_name,
+              thickness,
+              length,
+              width,
+              deleted_at: null,
+            },
+          },
+          {
+            $lookup: {
+              from: 'fleece_inventory_invoice_details',
+              localField: 'invoice_id',
+              foreignField: '_id',
+              as: 'invoice',
+            },
+          },
+          {
+            $unwind: '$invoice',
+          },
+          {
+            $match: {
+              'invoice.inward_date': { $gte: start, $lte: end },
+            },
+          },
+          {
+            $group: {
+              _id: null,
+              total_rolls: { $sum: '$number_of_roll' },
+              total_sqm: { $sum: '$total_sq_meter' },
+            },
+          },
+        ]);
+
+        // Calculate consumption (issues for order and pressing)
+        const consumption = await fleece_history_model.aggregate([
+          {
+            $match: {
+              fleece_item_id: { $in: itemIds },
+              issue_status: { $in: ['order', 'pressing'] },
+              createdAt: { $gte: start, $lte: end },
+            },
+          },
+          {
+            $group: {
+              _id: null,
+              total_rolls: { $sum: '$issued_number_of_roll' },
+              total_sqm: { $sum: '$issued_sqm' },
+            },
+          },
+        ]);
+
+        // Calculate sales (issues for challan)
+        const sales = await fleece_history_model.aggregate([
+          {
+            $match: {
+              fleece_item_id: { $in: itemIds },
+              issue_status: 'challan',
+              createdAt: { $gte: start, $lte: end },
+            },
+          },
+          {
+            $group: {
+              _id: null,
+              total_rolls: { $sum: '$issued_number_of_roll' },
+              total_sqm: { $sum: '$issued_sqm' },
+            },
+          },
+        ]);
+
+        // Calculate issues for recalibration (pressing only)
+        const issueRecal = await fleece_history_model.aggregate([
+          {
+            $match: {
+              fleece_item_id: { $in: itemIds },
+              issue_status: 'pressing',
+              createdAt: { $gte: start, $lte: end },
+            },
+          },
+          {
+            $group: {
+              _id: null,
+              total_rolls: { $sum: '$issued_number_of_roll' },
+              total_sqm: { $sum: '$issued_sqm' },
+            },
+          },
+        ]);
+
+        // Get receives from the result
+        const receiveRolls = receives[0]?.total_rolls || 0;
+        const receiveSqm = receives[0]?.total_sqm || 0;
+
+        // Get consumption from the result
+        const consumeRolls = consumption[0]?.total_rolls || 0;
+        const consumeSqm = consumption[0]?.total_sqm || 0;
+
+        // Get sales from the result
+        const salesRolls = sales[0]?.total_rolls || 0;
+        const salesSqm = sales[0]?.total_sqm || 0;
+
+        // Get issue recal from the result
+        const issueRecalRolls = issueRecal[0]?.total_rolls || 0;
+        const issueRecalSqm = issueRecal[0]?.total_sqm || 0;
+
+        // Current available stock
+        const currentRolls = item.current_rolls || 0;
+        const currentSqm = item.current_sqm || 0;
+
+        // Calculate opening stock
+        // Opening = Current + (Consume + Sales) - Receive
+        const openingRolls = currentRolls + consumeRolls + salesRolls - receiveRolls;
+        const openingSqm = currentSqm + consumeSqm + salesSqm - receiveSqm;
+
+        // Calculate closing stock
+        // Closing = Opening + Receive - Consume - Sales
+        const closingRolls = openingRolls + receiveRolls - consumeRolls - salesRolls;
+        const closingSqm = openingSqm + receiveSqm - consumeSqm - salesSqm;
+
+        return {
+          fleece_sub_type: item_sub_category_name,
+          thickness: thickness,
+          size: `${length} X ${width}`,
+          opening_rolls: Math.max(0, openingRolls),
+          opening_sqm: Math.max(0, openingSqm),
+          receive_rolls: receiveRolls,
+          receive_sqm: receiveSqm,
+          consume_rolls: consumeRolls,
+          consume_sqm: consumeSqm,
+          sales_rolls: salesRolls,
+          sales_sqm: salesSqm,
+          issue_recal_rolls: issueRecalRolls,
+          issue_recal_sqm: issueRecalSqm,
+          closing_rolls: Math.max(0, closingRolls),
+          closing_sqm: Math.max(0, closingSqm),
+        };
+      })
+    );
+
+    // Filter out items with no activity (all zeros)
+    const activeStockData = stockData.filter(
+      (item) =>
+        item.opening_rolls > 0 ||
+        item.receive_rolls > 0 ||
+        item.consume_rolls > 0 ||
+        item.sales_rolls > 0 ||
+        item.closing_rolls > 0
+    );
+
+    if (activeStockData.length === 0) {
+      return res
+        .status(StatusCodes.NOT_FOUND)
+        .json(
+          new ApiResponse(
+            StatusCodes.NOT_FOUND,
+            'No stock data found for the selected period'
+          )
+        );
+    }
+
+    // Generate Excel file
+    const excelLink = await createFleeceStockReportExcel(
+      activeStockData,
+      startDate,
+      endDate,
+      filter
+    );
+
+    return res.json(
+      new ApiResponse(
+        StatusCodes.OK,
+        'Stock report generated successfully',
+        excelLink
+      )
+    );
+  } catch (error) {
+    console.error('Error generating fleece stock report:', error);
+    return next(new ApiError(error.message || 'Failed to generate stock report', 500));
+  }
 });

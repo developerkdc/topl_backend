@@ -12,6 +12,7 @@ import {
   item_sr_no_dropdown,
   fetch_other_goods_history,
   otherGoodsLogsCsvHistory,
+  otherGoodsStockReportCsv,
   // otherGoodsLogsCsvHistory,
 } from '../../../controllers/inventory/otherGoods/otherGoods.js';
 import AuthMiddleware from '../../../middlewares/verifyToken.js';
@@ -79,6 +80,13 @@ router.post(
   AuthMiddleware,
   RolesPermissions('other_goods_inventory', 'view'),
   otherGoodsLogsCsvHistory
+);
+
+router.post(
+  '/download-stock-report-othergoods',
+  // AuthMiddleware,
+  // RolesPermissions('other_goods_inventory', 'view'),
+  otherGoodsStockReportCsv
 );
 
 router.get('/item-srno-dropdown', AuthMiddleware, item_sr_no_dropdown);

@@ -13,6 +13,7 @@ import { dynamic_filter } from '../../../utils/dymanicFilter.js';
 import {
   GenerateOtherGoodsLogs,
   GenerateOtherGoodsLogsHistory,
+  createOtherGoodsStockReportExcel,
 } from '../../../config/downloadExcel/Logs/Inventory/OtherGoods/otherGoods.js';
 import {
   otherGoods_approval_inventory_invoice_model,
@@ -1030,4 +1031,217 @@ export const otherGoodsLogsCsvHistory = catchAsync(async (req, res) => {
         excelLink
       )
     );
+});
+
+export const otherGoodsStockReportCsv = catchAsync(async (req, res, next) => {
+  const { startDate, endDate } = req.body;
+  const filter = req.body?.filter || {};
+
+  console.log('Stock Report Request - Start Date:', startDate);
+  console.log('Stock Report Request - End Date:', endDate);
+  console.log('Stock Report Request - Filter:', filter);
+
+  // Validate date parameters
+  if (!startDate || !endDate) {
+    return next(new ApiError('Start date and end date are required', 400));
+  }
+
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    return next(new ApiError('Invalid date format', 400));
+  }
+
+  if (start > end) {
+    return next(new ApiError('Start date cannot be after end date', 400));
+  }
+
+  // Build filter for item name if provided
+  const itemFilter = {};
+  if (filter.item_name) {
+    itemFilter.item_name = filter.item_name;
+  }
+
+  try {
+    // Step 1: Get all unique other goods items with their current available stock
+    const currentInventory = await othergoods_inventory_items_view_modal.aggregate([
+      {
+        $match: {
+          deleted_at: null,
+          ...itemFilter,
+        },
+      },
+      {
+        $group: {
+          _id: {
+            item_name: '$item_name',
+            item_sub_category_name: '$item_sub_category_name',
+          },
+          current_quantity: { $sum: '$available_quantity' },
+          current_amount: { $sum: '$available_amount' },
+          item_ids: { $push: '$_id' },
+        },
+      },
+    ]);
+
+    // Step 2: For each unique combination, calculate stock movements
+    const stockData = await Promise.all(
+      currentInventory.map(async (item) => {
+        const { item_name, item_sub_category_name } = item._id;
+        const itemIds = item.item_ids;
+
+        // Calculate receives during the period (new inward)
+        const receives = await othergoods_inventory_items_details.aggregate([
+          {
+            $match: {
+              item_name,
+              item_sub_category_name,
+              deleted_at: null,
+            },
+          },
+          {
+            $lookup: {
+              from: 'othergoods_inventory_invoice_details',
+              localField: 'invoice_id',
+              foreignField: '_id',
+              as: 'invoice',
+            },
+          },
+          {
+            $unwind: '$invoice',
+          },
+          {
+            $match: {
+              'invoice.inward_date': { $gte: start, $lte: end },
+            },
+          },
+          {
+            $group: {
+              _id: null,
+              total_quantity: { $sum: '$total_quantity' },
+              total_amount: { $sum: '$amount' },
+            },
+          },
+        ]);
+
+        // Calculate consumption (issues for order)
+        const consumption = await other_goods_history_model.aggregate([
+          {
+            $match: {
+              other_goods_item_id: { $in: itemIds },
+              issue_status: 'order',
+              createdAt: { $gte: start, $lte: end },
+            },
+          },
+          {
+            $group: {
+              _id: null,
+              total_quantity: { $sum: '$issued_quantity' },
+              total_amount: { $sum: '$issued_amount' },
+            },
+          },
+        ]);
+
+        // Calculate sales (issues for challan)
+        const sales = await other_goods_history_model.aggregate([
+          {
+            $match: {
+              other_goods_item_id: { $in: itemIds },
+              issue_status: 'challan',
+              createdAt: { $gte: start, $lte: end },
+            },
+          },
+          {
+            $group: {
+              _id: null,
+              total_quantity: { $sum: '$issued_quantity' },
+              total_amount: { $sum: '$issued_amount' },
+            },
+          },
+        ]);
+
+        // Get receives from the result
+        const receiveQuantity = receives[0]?.total_quantity || 0;
+        const receiveAmount = receives[0]?.total_amount || 0;
+
+        // Get consumption from the result
+        const consumeQuantity = consumption[0]?.total_quantity || 0;
+        const consumeAmount = consumption[0]?.total_amount || 0;
+
+        // Get sales from the result
+        const salesQuantity = sales[0]?.total_quantity || 0;
+        const salesAmount = sales[0]?.total_amount || 0;
+
+        // Current available stock
+        const currentQuantity = item.current_quantity || 0;
+        const currentAmount = item.current_amount || 0;
+
+        // Calculate opening stock
+        // Opening = Current + (Consume + Sales) - Receive
+        const openingQuantity = currentQuantity + consumeQuantity + salesQuantity - receiveQuantity;
+        const openingAmount = currentAmount + consumeAmount + salesAmount - receiveAmount;
+
+        // Calculate closing stock
+        // Closing = Opening + Receive - Consume - Sales
+        const closingQuantity = openingQuantity + receiveQuantity - consumeQuantity - salesQuantity;
+        const closingAmount = openingAmount + receiveAmount - consumeAmount - salesAmount;
+
+        return {
+          item_name: item_name,
+          item_sub_category_name: item_sub_category_name,
+          opening_quantity: Math.max(0, openingQuantity),
+          opening_amount: Math.max(0, openingAmount),
+          receive_quantity: receiveQuantity,
+          receive_amount: receiveAmount,
+          consume_quantity: consumeQuantity,
+          consume_amount: consumeAmount,
+          sales_quantity: salesQuantity,
+          sales_amount: salesAmount,
+          closing_quantity: Math.max(0, closingQuantity),
+          closing_amount: Math.max(0, closingAmount),
+        };
+      })
+    );
+
+    // Filter out items with no activity (all zeros)
+    const activeStockData = stockData.filter(
+      (item) =>
+        item.opening_quantity > 0 ||
+        item.receive_quantity > 0 ||
+        item.consume_quantity > 0 ||
+        item.sales_quantity > 0 ||
+        item.closing_quantity > 0
+    );
+
+    if (activeStockData.length === 0) {
+      return res
+        .status(StatusCodes.NOT_FOUND)
+        .json(
+          new ApiResponse(
+            StatusCodes.NOT_FOUND,
+            'No stock data found for the selected period'
+          )
+        );
+    }
+
+    // Generate Excel file
+    const excelLink = await createOtherGoodsStockReportExcel(
+      activeStockData,
+      startDate,
+      endDate,
+      filter
+    );
+
+    return res.json(
+      new ApiResponse(
+        StatusCodes.OK,
+        'Stock report generated successfully',
+        excelLink
+      )
+    );
+  } catch (error) {
+    console.error('Error generating stock report:', error);
+    return next(new ApiError(error.message || 'Failed to generate stock report', 500));
+  }
 });

@@ -8,7 +8,11 @@ import {
   listing_single_challan,
   generate_challan_ewaybill,
   cancel_challan_ewaybill,
+  get_ewaybill_details,
+  update_ewaybill_transporter,
+  update_ewaybill_partB,
 } from '../../../controllers/challan/challan_done/challan_done.controller.js';
+import EwayBillAuthMiddleware from '../../../middlewares/ewaybillAuth.middleware.js';
 const challan_done_router = Router();
 
 challan_done_router.post('/create', AuthMiddleware, create_challan);
@@ -26,9 +30,34 @@ challan_done_router.get(
 );
 
 // Ewaybill related apis
-challan_done_router.post("/generate-ewaybill/:id", AuthMiddleware, generate_challan_ewaybill);
-challan_done_router.post("/cancel-ewaybill/:id", AuthMiddleware, cancel_challan_ewaybill);
-// challan_done_router.post("/get-ewaybill/:id", AuthMiddleware, get_ewaybill_details);
-// challan_done_router.post("/update-ewaybill-transporter/:id", AuthMiddleware, update_ewaybill_transporter);
-// challan_done_router.post("/update-ewaybill-partB/:id", AuthMiddleware, update_ewaybill_partB);
+challan_done_router.post(
+  '/generate-ewaybill/:id',
+  AuthMiddleware,
+  EwayBillAuthMiddleware,
+  generate_challan_ewaybill
+);
+challan_done_router.post(
+  '/cancel-ewaybill/:id',
+  AuthMiddleware,
+  EwayBillAuthMiddleware,
+  cancel_challan_ewaybill
+);
+challan_done_router.post(
+  '/get-ewaybill/:id',
+  AuthMiddleware,
+  EwayBillAuthMiddleware,
+  get_ewaybill_details
+);
+challan_done_router.post(
+  '/update-ewaybill-transporter/:id',
+  AuthMiddleware,
+  EwayBillAuthMiddleware,
+  update_ewaybill_transporter
+);
+challan_done_router.post(
+  '/update-ewaybill-partB/:id',
+  AuthMiddleware,
+  EwayBillAuthMiddleware,
+  update_ewaybill_partB
+);
 export default challan_done_router;

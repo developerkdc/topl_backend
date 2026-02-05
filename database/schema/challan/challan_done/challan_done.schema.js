@@ -97,7 +97,8 @@ const cnc_done_schema = new mongoose.Schema(
     },
     vehicle_id: {
       type: mongoose.Schema.Types.ObjectId,
-      required: [true, 'Vehicle ID is required.'],
+      // required: [true, 'Vehicle ID is required.'],
+      default: null,
     },
     transaction_type: {
       type: String,
@@ -161,6 +162,14 @@ const cnc_done_schema = new mongoose.Schema(
       type: Date,
       // required: [true, 'EWAY bill date is required.'],
       default: null,
+    },
+    eway_bill_status: {
+      type: String,
+      enum: {
+        values: ['PENDING', 'ACTIVE', 'CANCELLED', 'EXPIRED'],
+        message: 'Invalid Eway Bill Status -> {{VALUE}}. It must be one of the : ' + ['PENDING', 'ACTIVE', 'CANCELLED', 'EXPIRED']?.join(', '),
+      },
+      default: 'PENDING',
     },
     raw_material: {
       type: String,

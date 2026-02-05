@@ -10,11 +10,22 @@ import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
 import ApiResponse from '../../../utils/ApiResponse.js';
 import { StatusCodes } from '../../../utils/constants.js';
-import { createFlitchLogsExcel } from '../../../config/downloadExcel/Logs/Inventory/flitch/flitchLogs.js';
+import {
+  createFlitchLogsExcel,
+} from '../../../config/downloadExcel/Logs/Inventory/flitch/flitchLogs.js';
 import {
   flitch_approval_inventory_invoice_model,
   flitch_approval_inventory_items_model,
 } from '../../../database/schema/inventory/Flitch/flitchApproval.schema.js';
+import { flitching_done_model } from '../../../database/schema/factory/flitching/flitching.schema.js';
+import {
+  log_inventory_invoice_model,
+  log_inventory_items_model,
+} from '../../../database/schema/inventory/log/log.schema.js';
+import { issues_for_crosscutting_model } from '../../../database/schema/factory/crossCutting/issuedForCutting.schema.js';
+import { crosscutting_done_model } from '../../../database/schema/factory/crossCutting/crosscutting.schema.js';
+import { issues_for_flitching_model } from '../../../database/schema/factory/flitching/issuedForFlitching.schema.js';
+import { issues_for_peeling_model } from '../../../database/schema/factory/peeling/issues_for_peeling/issues_for_peeling.schema.js';
 
 export const listing_flitch_inventory = catchAsync(async (req, res, next) => {
   const {
