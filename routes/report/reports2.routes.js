@@ -9,6 +9,9 @@ import faceRoutes from './reports2/Face/face.routes.js';
 import coreRoutes from './reports2/Core/core.routes.js';
 import tappingORClippingRoutes from './reports2/TappingORClipping/TappingORClipping.js';
 import pressingRoutes from './reports2/Pressing/pressing.routes.js';
+import peelingRoutes from './reports2/Peeling/peeling.routes.js';
+import plywoodRoutes from './reports2/Plywood/plywood.routes.js';
+import mdfRoutes from './reports2/MDF/mdf.routes.js';
 import express from 'express';
 
 const router = express.Router();
@@ -27,6 +30,15 @@ router.use(flitchRoutes);
 
 //slicing routes (Slicing Daily Report)
 router.use(slicingRoutes);
+
+// Peeling routes (Peeling Daily Report)
+router.use(peelingRoutes);
+
+// Plywood routes (Plywood Stock Report)
+router.use(plywoodRoutes);
+
+// MDF routes (MDF Stock Report)
+router.use(mdfRoutes);
 
 //dressing routes (Dressing Daily Report)
 router.use(dressingRoutes);
