@@ -8,6 +8,7 @@ import groupingSplicingRoutes from './reports2/Grouping_Splicing/grouping_splici
 import faceRoutes from './reports2/Face/face.routes.js';
 import coreRoutes from './reports2/Core/core.routes.js';
 import tappingORClippingRoutes from './reports2/TappingORClipping/TappingORClipping.js';
+import pressingRoutes from './reports2/Pressing/pressing.routes.js';
 import express from 'express';
 
 const router = express.Router();
@@ -41,5 +42,8 @@ router.use(faceRoutes);
 
 // Core routes (Core Stock Report)
 router.use(coreRoutes);
+
+// Pressing routes (Pressing Daily Report)
+router.use(pressingRoutes);
 
 export default router;
