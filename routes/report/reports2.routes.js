@@ -16,17 +16,17 @@ import express from 'express';
 
 const router = express.Router();
 
-// Crosscut routes (Crosscut Daily Report)
-router.use(crosscutRoutes);
-
-// Tapping/Clipping routes (Clipping Daily Report)
-router.use(tappingORClippingRoutes);
-
 //log routes (Log Inward & Item Wise Inward)
 router.use(logRoutes);
 
 //flitch routes (Flitch Daily Report)
 router.use(flitchRoutes);
+
+// Crosscut routes (Crosscut Daily Report)
+router.use(crosscutRoutes);
+
+// Tapping/Clipping routes (Clipping Daily Report)
+router.use(tappingORClippingRoutes);
 
 //slicing routes (Slicing Daily Report)
 router.use(slicingRoutes);
