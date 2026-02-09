@@ -207,22 +207,24 @@ export const update_decorative_order = catchAsync(async (req, res) => {
       // revert photo details
       const order_items_details = await decorative_order_item_details_model?.find(
         { order_id: order_details_result?._id },
-        { _id: 1, photo_number_id: 1, photo_number: 1, no_of_sheets: 1 },
+        { _id: 1, photo_number_id: 1, photo_number: 1, no_of_sheets: 1, pressing_instructions: 1 },
         { session }
       );
 
       const revert_photo_details = async function (
         photo_number_id,
         photo_number,
-        no_of_sheets
+        no_of_sheets,
+        pressing_instructions
       ) {
+        const revertSheets = pressing_instructions === "BOTH SIDE WITH SAME GROUP" ? no_of_sheets * 2 : no_of_sheets;
         const update_photo_sheets = await photoModel.updateOne(
           {
             _id: photo_number_id,
             photo_number: photo_number,
           },
           {
-            $inc: { available_no_of_sheets: no_of_sheets },
+            $inc: { available_no_of_sheets: revertSheets },
           },
           { session }
         );
@@ -240,7 +242,8 @@ export const update_decorative_order = catchAsync(async (req, res) => {
           await revert_photo_details(
             item.photo_number_id,
             item.photo_number,
-            item.no_of_sheets
+            item.no_of_sheets,
+            item.pressing_instructions
           );
         }
 
@@ -253,7 +256,8 @@ export const update_decorative_order = catchAsync(async (req, res) => {
           await revert_photo_details(
             item.different_group_photo_number_id,
             item.different_group_photo_number,
-            item.no_of_sheets
+            item.no_of_sheets,
+            item.pressing_instructions
           );
         }
       }

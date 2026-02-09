@@ -566,15 +566,17 @@ export const approve_order = catchAsync(async (req, res) => {
     const revert_photo_details = async function (
       photo_number_id,
       photo_number,
-      no_of_sheets
+      no_of_sheets,
+      pressing_instructions
     ) {
+      const revertSheets = pressing_instructions === "BOTH SIDE WITH SAME GROUP" ? no_of_sheets * 2 : no_of_sheets;
       const update_photo_sheets = await photoModel.updateOne(
         {
           _id: photo_number_id,
           photo_number: photo_number,
         },
         {
-          $inc: { available_no_of_sheets: no_of_sheets },
+          $inc: { available_no_of_sheets: revertSheets },
         },
         { session }
       );
@@ -592,7 +594,8 @@ export const approve_order = catchAsync(async (req, res) => {
         await revert_photo_details(
           item.photo_number_id,
           item.photo_number,
-          item.no_of_sheets
+          item.no_of_sheets,
+          item.pressing_instructions
         );
       }
 
@@ -605,7 +608,8 @@ export const approve_order = catchAsync(async (req, res) => {
         await revert_photo_details(
           item.different_group_photo_number_id,
           item.different_group_photo_number,
-          item.no_of_sheets
+          item.no_of_sheets,
+          item.pressing_instructions
         );
       }
     }
@@ -629,15 +633,17 @@ export const approve_order = catchAsync(async (req, res) => {
     const update_photo_details = async function (
       photo_number_id,
       photo_number,
-      no_of_sheets
+      no_of_sheets,
+      pressing_instructions
     ) {
+      const requiredSheets = pressing_instructions === "BOTH SIDE WITH SAME GROUP" ? no_of_sheets * 2 : no_of_sheets;
       const photoUpdate = await photoModel.findOneAndUpdate(
         {
           _id: photo_number_id,
           photo_number: photo_number,
-          available_no_of_sheets: { $gte: Number(no_of_sheets) },
+          available_no_of_sheets: { $gte: Number(requiredSheets) },
         },
-        { $inc: { available_no_of_sheets: -Number(no_of_sheets) } },
+        { $inc: { available_no_of_sheets: -Number(requiredSheets) } },
         { session: session, new: true }
       );
       if (!photoUpdate) {
@@ -655,7 +661,8 @@ export const approve_order = catchAsync(async (req, res) => {
         await update_photo_details(
           item.photo_number_id,
           item.photo_number,
-          item.no_of_sheets
+          item.no_of_sheets,
+          item.pressing_instructions
         );
       }
 
@@ -668,7 +675,8 @@ export const approve_order = catchAsync(async (req, res) => {
         await update_photo_details(
           item.different_group_photo_number_id,
           item.different_group_photo_number,
-          item.no_of_sheets
+          item.no_of_sheets,
+          item.pressing_instructions
         );
       }
 
