@@ -29,11 +29,11 @@ export function DispatchJSONtoXML(dispatch) {
         dispatch.customer_details?.company_name || "Cash"
     );
     const narration = escape(
-        dispatch.narration || `Invoice ${dispatch.invoice_no}`
+        dispatch.remark || `Invoice ${dispatch.invoice_no}`
     );
 
     const items = dispatch.dispatch_items_details || [];
-    console.log("items: ", items);
+    // console.log("items: ", items);
     // Calculate total safely
     const totalAmount = items.reduce(
         (sum, it) => sum + Number(it.amount || 0),
@@ -128,6 +128,6 @@ export function DispatchJSONtoXML(dispatch) {
     </ENVELOPE>
     `;
 
-    console.log(xml);
+    // console.log(xml);
     return xml;
 }

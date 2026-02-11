@@ -3691,7 +3691,7 @@ export const dispatch_tally = catchAsync(async (req, res, next) => {
       return res.status(500).json({ error: "XML generation failed" });
 
     const response = await sendToTally(xml);
-    console.log("Tally Response:", response);
+    // console.log("Tally Response:", response);
     res.status(200).json({
       success: true,
       message: "Invoice pushed to Tally",

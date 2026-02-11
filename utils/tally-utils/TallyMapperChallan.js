@@ -1,7 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 
-export function DispatchJSONtoXML(dispatch) {
-
+export function ChallanJSONtoXML(challan) {
     const guid = uuidv4();
     const remoteId = uuidv4() + "-00000001";
 
@@ -14,7 +13,7 @@ export function DispatchJSONtoXML(dispatch) {
             .replace(/'/g, "&apos;");
 
     const formatDate = (val) => {
-        if (!val) return "20250401"; // edu fallback
+        if (!val) return "20250401";
         const d = new Date(val);
         return (
             d.getFullYear().toString() +
@@ -23,111 +22,106 @@ export function DispatchJSONtoXML(dispatch) {
         );
     };
 
-    const date = formatDate(dispatch.invoice_date);
-    const voucherNo = escape(dispatch.invoice_no);
+    // const date = formatDate(challan.challan_date);
+    const date = "20250401";
+    const voucherNo = escape(challan.challan_no || "DN-001");
     const partyName = escape(
-        dispatch.customer_details?.company_name || "Cash"
+        challan.customer_details?.company_name || "Cash"
     );
-    const narration = escape(
-        dispatch.narration || `Invoice ${dispatch.invoice_no}`
-    );
+    const narration = escape(challan.remark || `Material delivered against order`);
+    const reference = escape(challan.reference || `Ref-001`);
 
-    const items = dispatch.dispatch_items_details || [];
-    console.log("items: ", items);
-    // Calculate total safely
-    const totalAmount = items.reduce(
-        (sum, it) => sum + Number(it.amount || 0),
-        0
-    );
+    const stockLedger = "Stock-in-Hand"; // Must exist in Tally
+    const godown = "Main Location";
 
+    const items = challan.issue_for_challan_item_details || [];
+    const qty = Number(challan.total_sqm || 0);
     const inventoryXML = items
         .map((it) => {
-            const name = escape(it.item_name);
-            const qty = Number(it.sqm || it.cbm || it.cmt || it.quantity || 0);
-            const rate = Number(it.rate || 0);
-            const amount = Number(it.amount || qty * rate);
-            const unit = escape(it.calculate_unit || "Nos");
+            const item = it.issued_item_details;
+            const name = escape(item.item_name);
+
+            const unit = "SqM"; // You can adjust to item.unit if available
+            const rate = Number(item.rate_in_inr || 0);
+            const amount = Number(item.amount || qty * rate);
 
             return `
 <ALLINVENTORYENTRIES.LIST>
-
   <STOCKITEMNAME>${name}</STOCKITEMNAME>
-
-  <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
-  <ISLASTDEEMEDPOSITIVE>No</ISLASTDEEMEDPOSITIVE>
-
+  <ISDEEMEDPOSITIVE>Yes</ISDEEMEDPOSITIVE>
+  <RATE>${rate}</RATE>
+  <AMOUNT>${amount}</AMOUNT>
   <ACTUALQTY>${qty} ${unit}</ACTUALQTY>
   <BILLEDQTY>${qty} ${unit}</BILLEDQTY>
-
-  <RATE>${rate.toFixed(2)}/${unit}</RATE>
-  <AMOUNT>${amount.toFixed(2)}</AMOUNT>
-
-  <ACCOUNTINGALLOCATIONS.LIST>
-    <LEDGERNAME>Sales</LEDGERNAME>
-    <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
-    <AMOUNT>${amount.toFixed(2)}</AMOUNT>
-  </ACCOUNTINGALLOCATIONS.LIST>
-
-</ALLINVENTORYENTRIES.LIST>
-`;
+  <STOCKLEDGERNAME>${stockLedger}</STOCKLEDGERNAME>
+  <LEDGERNAME>${stockLedger}</LEDGERNAME>
+  <BATCHALLOCATIONS.LIST>
+    <GODOWNNAME>${godown}</GODOWNNAME>
+    <BATCHNAME>${item.pallet_number || "Primary Batch"}</BATCHNAME>
+    <DESTINATIONGODOWNNAME>${godown}</DESTINATIONGODOWNNAME>
+                <INDENTNO></INDENTNO>
+                <ORDERNO></ORDERNO>
+                <AMOUNT>${amount}</AMOUNT>
+                <ACTUALQTY>${qty} ${unit}</ACTUALQTY>
+                <BILLEDQTY>${qty} ${unit}</BILLEDQTY>
+            </BATCHALLOCATIONS.LIST>
+            </ALLINVENTORYENTRIES.LIST>
+            `;
         })
         .join("");
 
     const xml = `
     <ENVELOPE>
     <HEADER>
-    <TALLYREQUEST>Import Data</TALLYREQUEST>
+        <TALLYREQUEST>Import Data</TALLYREQUEST>
     </HEADER>
-
     <BODY>
-    <IMPORTDATA>
+        <IMPORTDATA>
+        <REQUESTDESC>
+            <REPORTNAME>Vouchers</REPORTNAME>
+            <STATICVARIABLES>
+            <SVCURRENTCOMPANY>Natural Veneers</SVCURRENTCOMPANY>
+            </STATICVARIABLES>
+        </REQUESTDESC>
+        <REQUESTDATA>
+            <TALLYMESSAGE xmlns:UDF="TallyUDF">
+            <VOUCHER 
+                VCHTYPE="Delivery Note" 
+                ACTION="Create" 
+                OBJVIEW="Invoice Voucher View">
+                
+                <ISOPTIONAL>No</ISOPTIONAL>
+                <GUID>${guid}</GUID>
+                <REMOTEID>${remoteId}</REMOTEID>
+                
+                <DATE>${date}</DATE>
+                <EFFECTIVEDATE>${date}</EFFECTIVEDATE>
+                <VOUCHERTYPENAME>Delivery Note</VOUCHERTYPENAME>
+                <VOUCHERNUMBER>${voucherNo}</VOUCHERNUMBER>
+                
+                <PARTYLEDGERNAME>${partyName}</PARTYLEDGERNAME>
+                <REFERENCE>${reference}</REFERENCE>
+                <NARRATION>${narration}</NARRATION>
+                <ISINVOICE>No</ISINVOICE>
+                <PERSISTEDVIEW>Delivery Note Voucher View</PERSISTEDVIEW>
 
-    <REQUESTDESC>
-        <REPORTNAME>Vouchers</REPORTNAME>
-        <STATICVARIABLES>
-        <SVCURRENTCOMPANY>Natural Veneers</SVCURRENTCOMPANY>
-        </STATICVARIABLES>
-    </REQUESTDESC>
+                <!-- Party Ledger Entry -->
+                <LEDGERENTRIES.LIST>
+                <LEDGERNAME>${partyName}</LEDGERNAME>
+                <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
+                <AMOUNT>0</AMOUNT>
+                </LEDGERENTRIES.LIST>
 
-    <REQUESTDATA>
-        <TALLYMESSAGE>
+                <!-- Inventory Entries -->
+                ${inventoryXML}
 
-        <VOUCHER VCHTYPE="Sales" ACTION="Create">
-
-        <GUID>${guid}</GUID>
-        <REMOTEID>${remoteId}</REMOTEID>
-
-        <DATE>${date}</DATE>
-        <EFFECTIVEDATE>${date}</EFFECTIVEDATE>
-
-        <VOUCHERTYPENAME>Sales</VOUCHERTYPENAME>
-        <VOUCHERNUMBER>${voucherNo}</VOUCHERNUMBER>
-
-        <PARTYLEDGERNAME>${partyName}</PARTYLEDGERNAME>
-        <NARRATION>${narration}</NARRATION>
-
-        <ISINVOICE>Yes</ISINVOICE>
-        <PERSISTEDVIEW>Invoice Voucher View</PERSISTEDVIEW>
-
-        <!-- PARTY DEBIT -->
-        <LEDGERENTRIES.LIST>
-            <LEDGERNAME>${partyName}</LEDGERNAME>
-            <ISDEEMEDPOSITIVE>Yes</ISDEEMEDPOSITIVE>
-            <AMOUNT>-${totalAmount}</AMOUNT>
-        </LEDGERENTRIES.LIST>
-
-        ${inventoryXML}
-
-        </VOUCHER>
-
-        </TALLYMESSAGE>
-    </REQUESTDATA>
-
-    </IMPORTDATA>
+            </VOUCHER>
+            </TALLYMESSAGE>
+        </REQUESTDATA>
+        </IMPORTDATA>
     </BODY>
     </ENVELOPE>
-    `;
-
-    console.log(xml);
+`;
+    // console.log("tally xml: ", xml);
     return xml;
 }
