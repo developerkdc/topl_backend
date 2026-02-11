@@ -33,7 +33,7 @@ import errorCodeMapForEwayBill from './errorCodeMapForEwayBill.js';
 import approval_dispatch_model from '../../database/schema/dispatch/approval/approval.dispatch.schema.js';
 import approval_dispatch_items_model from '../../database/schema/dispatch/approval/approval.dispatch_items.schema.js';
 import { parseGovEwayDate } from '../../utils/date/govDateConverter.js';
-import { DispatchJSONtoXML } from '../../utils/tally-utils/TallyMapper.js';
+import { DispatchJSONtoXML } from '../../utils/tally-utils/TallyMapperSalesInvoice.js';
 import { sendToTally } from '../../utils/tally-utils/TallyService.js';
 
 const order_items_models = {
@@ -3660,7 +3660,7 @@ export const invoice_no_dropdown = catchAsync(async (req, res, next) => {
   }
 });
 
-// tally api
+// tally invoice api
 export const dispatch_tally = catchAsync(async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -3678,7 +3678,7 @@ export const dispatch_tally = catchAsync(async (req, res, next) => {
           from: 'dispatch_items',
           localField: '_id',
           foreignField: 'dispatch_id',
-          as: 'dispatch_items',
+          as: 'dispatch_items_details',
         }
       }
     ];
@@ -3686,12 +3686,6 @@ export const dispatch_tally = catchAsync(async (req, res, next) => {
     const dispatch = result[0];
     if (!dispatch) return res.status(404).json({ error: "Dispatch not found" });
     const xml = DispatchJSONtoXML(dispatch);
-
-    // Debug: Log complete XML payload
-    console.log("----------------------------------------");
-    console.log("GENERATED TALLY XML:");
-    console.log(xml);
-    console.log("----------------------------------------");
 
     if (!xml)
       return res.status(500).json({ error: "XML generation failed" });
