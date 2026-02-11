@@ -55,7 +55,7 @@ const GenerateLogDailyInwardReport = async (details, reportDate) => {
   // Row 1: Title
   worksheet.mergeCells(currentRow, 1, currentRow, 11);
   const titleCell = worksheet.getCell(currentRow, 1);
-  titleCell.value = `Inward Details Report Date: ${formattedDate}`;
+  titleCell.value = `Log Inward Daily Report Date: ${formattedDate}`;
   titleCell.font = { bold: true, size: 12 };
   titleCell.alignment = { horizontal: 'left', vertical: 'middle' };
   worksheet.getRow(currentRow).height = 20;

@@ -1,5 +1,5 @@
 import express from 'express';
-import { add_dispatch_details, cancel_dispatch_details, cancel_ewaybill, cancel_irn_no, edit_dispatch_details, fetch_all_details_by_dispatch_id, fetch_all_dispatch_details, fetch_all_dispatch_items_details, fetch_dispatch_details_by_invoice_no, fetch_invoices, fetch_packing_details_by_customer_id, fetch_purchase_history, fetch_single_dispatch_items, generate_ewaybill, generate_ewaybill_using_irn_no, generate_invoice_no, generate_irn_no, get_ewaybill_details, get_irn_by_doc, invoice_no_dropdown, load_packing_details, packing_done_dropdown, revert_dispatch_details, update_ewaybill_partB, update_ewaybill_transporter } from '../../controllers/dispatch/dispatch.controller.js';
+import { add_dispatch_details, cancel_dispatch_details, cancel_ewaybill, cancel_irn_no, dispatch_tally, edit_dispatch_details, fetch_all_details_by_dispatch_id, fetch_all_dispatch_details, fetch_all_dispatch_items_details, fetch_dispatch_details_by_invoice_no, fetch_invoices, fetch_packing_details_by_customer_id, fetch_purchase_history, fetch_single_dispatch_items, generate_ewaybill, generate_ewaybill_using_irn_no, generate_invoice_no, generate_irn_no, get_ewaybill_details, get_irn_by_doc, invoice_no_dropdown, load_packing_details, packing_done_dropdown, revert_dispatch_details, update_ewaybill_partB, update_ewaybill_transporter } from '../../controllers/dispatch/dispatch.controller.js';
 import { dispatch_invoice_pdf } from '../../controllers/dispatch/dispatch_invoice.controller.js';
 import { verifyApproval } from '../../middlewares/approval.middleware.js';
 import EInvoiceAuthMiddleware from '../../middlewares/eInvoiceAuth.middleware.js';
@@ -41,4 +41,7 @@ dispatchRouter.post('/fetch-purchase-history', fetch_purchase_history)
 dispatchRouter.post('/fetch-invoices', fetch_invoices)
 dispatchRouter.post('/fetch-packing-slips', fetch_packing_details_by_customer_id)
 dispatchRouter.get("/invoice-no-dropdown", AuthMiddleware, invoice_no_dropdown);
+
+//tally api
+dispatchRouter.post("/dispatch-tally/:id", AuthMiddleware, dispatch_tally);
 export default dispatchRouter;

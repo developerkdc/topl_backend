@@ -219,20 +219,21 @@ export const update_series_order = catchAsync(async (req, res) => {
       const order_items_details =
         await series_product_order_item_details_model?.find(
           { order_id: order_details_result?._id },
-          { _id: 1, photo_number_id: 1, photo_number: 1, no_of_sheets: 1 },
+          { _id: 1, photo_number_id: 1, photo_number: 1, no_of_sheets: 1, pressing_instructions: 1 },
           { session }
         );
 
       //revert photo sheets
       for (const item of order_items_details) {
         if (item.photo_number && item.photo_number_id) {
+          const revertSheets = item.pressing_instructions === "BOTH SIDE WITH SAME GROUP" ? item.no_of_sheets * 2 : item.no_of_sheets;
           const update_photo_sheets = await photoModel.updateOne(
             {
               _id: item.photo_number_id,
               photo_number: item.photo_number,
             },
             {
-              $inc: { available_no_of_sheets: item.no_of_sheets },
+              $inc: { available_no_of_sheets: revertSheets },
             },
             { session }
           );
@@ -304,13 +305,14 @@ export const update_series_order = catchAsync(async (req, res) => {
       for (const item of item_details) {
         // Validate photo availability - await properly in loop
         if (item.photo_number && item.photo_number_id) {
+          const requiredSheets = item.pressing_instructions === "BOTH SIDE WITH SAME GROUP" ? item.no_of_sheets * 2 : item.no_of_sheets;
           const photoUpdate = await photoModel.findOneAndUpdate(
             {
               _id: item.photo_number_id,
               photo_number: item.photo_number,
-              available_no_of_sheets: { $gte: item.no_of_sheets },
+              available_no_of_sheets: { $gte: requiredSheets },
             },
-            { $inc: { available_no_of_sheets: -item.no_of_sheets } },
+            { $inc: { available_no_of_sheets: -requiredSheets } },
             { session, new: true }
           );
 
