@@ -337,15 +337,17 @@ class DecorativeSeriesOrderCancelController {
             const update_photo_details = async function (
                 photo_number_id,
                 photo_number,
-                no_of_sheets
+                no_of_sheets,
+                pressing_instructions
             ) {
+                const requiredSheets = pressing_instructions === "BOTH SIDE WITH SAME GROUP" ? no_of_sheets * 2 : no_of_sheets;
                 const update_photo_sheets = await photoModel.updateOne(
                     {
                         _id: photo_number_id,
                         photo_number: photo_number,
                     },
                     {
-                        $inc: { available_no_of_sheets: no_of_sheets },
+                        $inc: { available_no_of_sheets: requiredSheets },
                     },
                     { session }
                 );
@@ -362,7 +364,8 @@ class DecorativeSeriesOrderCancelController {
                 await update_photo_details(
                     order_item_photo_id,
                     order_item_photo_number,
-                    order_no_of_sheets
+                    order_no_of_sheets,
+                    cancel_order_item_status?.pressing_instructions
                 );
             }
 
@@ -381,7 +384,8 @@ class DecorativeSeriesOrderCancelController {
                     await update_photo_details(
                         different_group_photo_number_id,
                         different_group_photo_number,
-                        order_no_of_sheets
+                        order_no_of_sheets,
+                        cancel_order_item_status?.pressing_instructions
                     );
                 }
             }
