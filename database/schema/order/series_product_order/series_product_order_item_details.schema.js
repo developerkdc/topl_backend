@@ -24,6 +24,12 @@ const series_product_order_item_details_schema = new mongoose.Schema(
       uppercase: true,
       trim: true,
     },
+     alternate_sales_item_name: {
+      type: String,
+      uppercase: true,
+      trim: true,
+      default: null,
+    },
     item_name: {
       type: String,
       trim: true,
