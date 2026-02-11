@@ -528,21 +528,67 @@ export const fetchSinglePhoto = catchAsync(async (req, res, next) => {
   return res.status(200).json(response);
 });
 
-export const dropdownSalesItemName = catchAsync(async (req, res, next) => {
+// export const dropdownSalesItemName = catchAsync(async (req, res, next) => {
+//   const matchQuery = {
+//     status: true,
+//   };
+
+//   const SalesItemNameList = await salesItemNameModel.aggregate([
+//     {
+//       $match: matchQuery,
+//     },
+//   ]);
+
+//   const response = new ApiResponse(
+//     200,
+//     'Sales Item Name Dropdown Fetched Successfully',
+//     SalesItemNameList
+//   );
+//   return res.status(200).json(response);
+// });
+
+export const dropdownSalesItemName = catchAsync(async (req, res) => {
+  const { item_name, process_name, process_color_name, length , pattern_name , thickness} = req.query;
+
   const matchQuery = {
     status: true,
   };
 
-  const SalesItemNameList = await salesItemNameModel.aggregate([
-    {
-      $match: matchQuery,
-    },
-  ]);
+  
+  if (item_name) matchQuery.item_name = item_name;
+  if (process_name) matchQuery.process_name = process_name;
+  if (process_color_name) matchQuery.process_color_name = process_color_name;
+  if (pattern_name) matchQuery.pattern_name = pattern_name;
 
-  const response = new ApiResponse(
-    200,
-    'Sales Item Name Dropdown Fetched Successfully',
-    SalesItemNameList
+  
+  if (length) {
+    const len = Number(length);
+
+    if (len < 2.44) {
+      matchQuery.length = { $lt: 2.44 };
+    } else if (len <= 3.05) {
+      matchQuery.length = { $gte: 2.44, $lte: 3.05 };
+    } else {
+      matchQuery.length = { $gt: 3.05 };
+    }
+  }
+
+   if(thickness){
+    const thk = Number(thickness);
+
+    if (thk < 0.51) {
+      matchQuery.thickness = { $lt: 0.51 };
+    } else {
+      matchQuery.thickness = { $gt: 0.51 };
+    }
+   }
+
+  const SalesItemNameList = await salesItemNameModel
+    .find(matchQuery)
+    .sort({ length: 1 }); // small first
+
+  return res.status(200).json(
+    new ApiResponse(200, "Filtered Successfully", SalesItemNameList)
   );
-  return res.status(200).json(response);
 });
+
