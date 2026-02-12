@@ -60,6 +60,10 @@ const series_product_order_item_details_schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Photo Id is required'],
     },
+    additional_photo_number: {
+      type: [],
+      default: [],
+    },
     dispatch_schedule: {
       type: String,
       trim: true,
