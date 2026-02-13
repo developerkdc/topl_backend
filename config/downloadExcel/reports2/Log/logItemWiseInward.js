@@ -247,6 +247,7 @@ export const createLogItemWiseInwardReportExcel = async (
       if (logs.length > 1) {
         const itemEndRow = worksheet.lastRow.number;
         worksheet.mergeCells(itemStartRow, 1, itemEndRow, 1);
+        worksheet.getRow(itemStartRow).alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
       }
 
       // Add item total row

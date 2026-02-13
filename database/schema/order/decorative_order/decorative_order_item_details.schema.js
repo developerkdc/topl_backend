@@ -31,6 +31,12 @@ const decorative_order_item_details_schema = new mongoose.Schema(
       uppercase: true,
       trim: true,
     },
+    alternate_sales_item_name: {
+      type: String,
+      default: null,
+      uppercase: true,
+      trim: true,
+    },
     item_name: {
       type: String,
       required: [true, 'Item Name is required'],
@@ -56,6 +62,10 @@ const decorative_order_item_details_schema = new mongoose.Schema(
       uppercase: true,
       trim: true,
       default: null,
+    },
+    additional_photo_number: {
+      type: [],
+      default: [],
     },
     photo_number_id: {
       type: mongoose.Schema.Types.ObjectId,
@@ -90,6 +100,16 @@ const decorative_order_item_details_schema = new mongoose.Schema(
     different_group_group_number_id: {
       type: mongoose.Schema.Types.ObjectId,
       default: null,
+    },
+    different_thickness_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
+    different_thickness: {
+      type: String,
+      default: null,
+      uppercase: true,
+      trim: true,
     },
     series_name: {
       type: String,

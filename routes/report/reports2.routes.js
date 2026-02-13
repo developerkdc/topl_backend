@@ -8,15 +8,13 @@ import groupingSplicingRoutes from './reports2/Grouping_Splicing/grouping_splici
 import faceRoutes from './reports2/Face/face.routes.js';
 import coreRoutes from './reports2/Core/core.routes.js';
 import tappingORClippingRoutes from './reports2/TappingORClipping/TappingORClipping.js';
+import pressingRoutes from './reports2/Pressing/pressing.routes.js';
+import peelingRoutes from './reports2/Peeling/peeling.routes.js';
+import plywoodRoutes from './reports2/Plywood/plywood.routes.js';
+import mdfRoutes from './reports2/MDF/mdf.routes.js';
 import express from 'express';
 
 const router = express.Router();
-
-// Crosscut routes (Crosscut Daily Report)
-router.use(crosscutRoutes);
-
-// Tapping/Clipping routes (Clipping Daily Report)
-router.use(tappingORClippingRoutes);
 
 //log routes (Log Inward & Item Wise Inward)
 router.use(logRoutes);
@@ -24,8 +22,23 @@ router.use(logRoutes);
 //flitch routes (Flitch Daily Report)
 router.use(flitchRoutes);
 
+// Crosscut routes (Crosscut Daily Report)
+router.use(crosscutRoutes);
+
+// Tapping/Clipping routes (Clipping Daily Report)
+router.use(tappingORClippingRoutes);
+
 //slicing routes (Slicing Daily Report)
 router.use(slicingRoutes);
+
+// Peeling routes (Peeling Daily Report)
+router.use(peelingRoutes);
+
+// Plywood routes (Plywood Stock Report)
+router.use(plywoodRoutes);
+
+// MDF routes (MDF Stock Report)
+router.use(mdfRoutes);
 
 //dressing routes (Dressing Daily Report)
 router.use(dressingRoutes);
@@ -41,5 +54,8 @@ router.use(faceRoutes);
 
 // Core routes (Core Stock Report)
 router.use(coreRoutes);
+
+// Pressing routes (Pressing Daily Report)
+router.use(pressingRoutes);
 
 export default router;

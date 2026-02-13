@@ -354,6 +354,7 @@ export const createLogItemFurtherProcessReportExcel = async (
       if (logs.length > 1) {
         const itemEndRow = worksheet.lastRow.number;
         worksheet.mergeCells(itemStartRow, 1, itemEndRow, 1);
+        worksheet.getRow(itemStartRow).alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
       }
 
       // Add item total row
@@ -465,6 +466,7 @@ export const createLogItemFurtherProcessReportExcel = async (
       splicing_total_stock: grandTotals.splicing_total_stock.toFixed(2),
       pressing_rece: grandTotals.pressing_rece.toFixed(2),
     });
+    
     grandTotalRow.eachCell((cell) => {
       cell.font = { bold: true };
       cell.fill = {

@@ -33,6 +33,8 @@ import errorCodeMapForEwayBill from './errorCodeMapForEwayBill.js';
 import approval_dispatch_model from '../../database/schema/dispatch/approval/approval.dispatch.schema.js';
 import approval_dispatch_items_model from '../../database/schema/dispatch/approval/approval.dispatch_items.schema.js';
 import { parseGovEwayDate } from '../../utils/date/govDateConverter.js';
+import { DispatchJSONtoXML } from '../../utils/tally-utils/TallyMapperSalesInvoice.js';
+import { sendToTally } from '../../utils/tally-utils/TallyService.js';
 
 const order_items_models = {
   [order_category.raw]: RawOrderItemDetailsModel,
@@ -3657,3 +3659,46 @@ export const invoice_no_dropdown = catchAsync(async (req, res, next) => {
     next(err);
   }
 });
+
+// tally invoice api
+export const dispatch_tally = catchAsync(async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ error: "Invalid ID" });
+    }
+    const pipeline = [
+      {
+        $match: {
+          _id: mongoose.Types.ObjectId.createFromHexString(id),
+        },
+      },
+      {
+        $lookup: {
+          from: 'dispatch_items',
+          localField: '_id',
+          foreignField: 'dispatch_id',
+          as: 'dispatch_items_details',
+        }
+      }
+    ];
+    const result = await dispatchModel.aggregate(pipeline);
+    const dispatch = result[0];
+    if (!dispatch) return res.status(404).json({ error: "Dispatch not found" });
+    const xml = DispatchJSONtoXML(dispatch);
+
+    if (!xml)
+      return res.status(500).json({ error: "XML generation failed" });
+
+    const response = await sendToTally(xml);
+    // console.log("Tally Response:", response);
+    res.status(200).json({
+      success: true,
+      message: "Invoice pushed to Tally",
+      response,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
