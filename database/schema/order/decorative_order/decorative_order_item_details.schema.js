@@ -101,6 +101,16 @@ const decorative_order_item_details_schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       default: null,
     },
+    different_thickness_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
+    different_thickness: {
+      type: String,
+      default: null,
+      uppercase: true,
+      trim: true,
+    },
     series_name: {
       type: String,
       uppercase: true,
