@@ -181,6 +181,7 @@ export const load_packing_details = catchAsync(async (req, res, next) => {
               rate: 1,
               rate_per_sqm: 1,
               sales_item_name: 1,
+              alternate_sales_item_name: 1,
             },
           },
         ],
