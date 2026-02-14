@@ -78,7 +78,7 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
         }
 
         groupedItems[groupName].items.push({
-            sales_item_name: item.sales_item_name || item.item_name,
+            sales_item_name: item.alternate_sales_item_name || item.sales_item_name || item.item_name,
             size: `${item.length || "-"}x${item.width || item.diameter || "-"}`,
             quantity_items: item.no_of_sheets || item.no_of_leaves || item.number_of_rolls || item.quantity,
             total_sheets: item.no_of_sheets || item.no_of_leaves || item.number_of_rolls || item.quantity,
