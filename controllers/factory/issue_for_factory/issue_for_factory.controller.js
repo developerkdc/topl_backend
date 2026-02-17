@@ -32,11 +32,12 @@ export const add_issue_for_factory_data = catchAsync(async (req, res) => {
       add_to_factory,
       issued_for
     );
-    await add_to_factory_handler?.add_issued_items_to_factory();
+    const result = await add_to_factory_handler?.add_issued_items_to_factory();
 
     const response = new ApiResponse(
       StatusCodes.OK,
-      'Item Issued Successfully'
+      'Item Issued Successfully',
+      result
     );
     await session.commitTransaction();
     return res.status(StatusCodes.OK).json(response);
