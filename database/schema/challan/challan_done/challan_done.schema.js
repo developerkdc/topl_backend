@@ -163,6 +163,10 @@ const cnc_done_schema = new mongoose.Schema(
       // required: [true, 'EWAY bill date is required.'],
       default: null,
     },
+    eway_bill_valid_upto: {
+      type: Date,
+      default: null,
+    },
     eway_bill_status: {
       type: String,
       enum: {

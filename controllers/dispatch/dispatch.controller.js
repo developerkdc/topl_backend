@@ -27,6 +27,7 @@ import { EInvoiceHeaderVariable } from '../../middlewares/eInvoiceAuth.middlewar
 import moment from 'moment';
 import axios from 'axios';
 import transporterModel from '../../database/schema/masters/transporter.schema.js';
+import vehicleModel from '../../database/schema/masters/vehicle.js';
 import { getStateCode, getStateCodeAsString } from '../../utils/stateCode.js';
 import { EwayBillHeaderVariable } from '../../middlewares/ewaybillAuth.middleware.js';
 import errorCodeMapForEwayBill from './errorCodeMapForEwayBill.js';
@@ -35,6 +36,9 @@ import approval_dispatch_items_model from '../../database/schema/dispatch/approv
 import { parseGovEwayDate } from '../../utils/date/govDateConverter.js';
 import { DispatchJSONtoXML } from '../../utils/tally-utils/TallyMapperSalesInvoice.js';
 import { sendToTally } from '../../utils/tally-utils/TallyService.js';
+import UnitModel from '../../database/schema/masters/unit.schema.js';
+
+const OTHER_HSN_CODE = "440139"; // wood hsn code(other)
 
 const order_items_models = {
   [order_category.raw]: RawOrderItemDetailsModel,
@@ -1996,7 +2000,7 @@ export const generate_irn_no = catchAsync(async (req, res, next) => {
 
   // Seller Details - consider these as sample/static; replace with actual company master data as per your prod logic
   const sellerDetails = {
-    Gstin: bill_from_address?.gst_no,
+    Gstin: bill_from_address?.gst_number,
     LglNm: 'TURAKHIA OVERSEAS PVT. LTD.',
     ...(bill_from_address?.address && bill_from_address.address.length > 100
       ? {
@@ -2071,30 +2075,112 @@ export const generate_irn_no = catchAsync(async (req, res, next) => {
     Dt: formatDateToDDMMYYYY(dispatch_details.invoice_date_time),
   };
 
+  // Unit Master
+  const all_units = await UnitModel.find({});
+  const unit_map = all_units.reduce((acc, unit) => {
+    acc[unit.unit_name] = unit.unit_symbolic_name;
+    return acc;
+  }, {});
+
   // Items Formatting
   const itemsArr = dispatch_items.map((item, idx) => {
-    const ass_amt = Number((item?.amount - item?.discount_value).toFixed(2)); // Handle IGST/CGST/SGST later
+    const ass_amt = Number((item?.amount - item?.discount_value).toFixed(2));
+    const igstAmt = Number(Number(item?.gst_details?.igst_amount || 0).toFixed(2));
+    const sgstAmt = Number(Number(item?.gst_details?.sgst_amount || 0).toFixed(2));
+    const cgstAmt = Number(Number(item?.gst_details?.cgst_amount || 0).toFixed(2));
+
+    const unit = item?.calculate_unit; 
+    //find this unit in unit master to get symbolic name
+    const unitSymbolicName = unit_map[unit] || 'OTH';
 
     return {
       SlNo: String(idx + 1),
       IsServc: 'N',
       PrdDesc: item?.product_category || item?.item_name,
       HsnCd: `${item?.hsn_number}`,
-      Qty: Number(item?.qty) || 0,
-      Unit: item?.uom || 'NOS',
-      UnitPrice: Number(item?.rate),
-      TotAmt: item?.amount || 0,
-      Discount: Number(item?.discount_value),
+      Qty: Number(item?.qty) || Number(item?.new_sqm || item?.sqm || item?.cbm || item?.cmt || 0),
+      Unit: unitSymbolicName,
+      UnitPrice: Number(Number(item?.rate || 0).toFixed(2)),
+      TotAmt: Number((item?.amount || 0).toFixed(2)),
+      Discount: Number(Number(item?.discount_value || 0).toFixed(2)),
       AssAmt: ass_amt,
 
       GstRt: Number(item?.gst_details?.gst_percentage || 0),
-      IgstAmt: Number(item?.gst_details?.igst_amount || 0),
-      SgstAmt: Number(item?.gst_details?.sgst_amount || 0),
-      CgstAmt: Number(item?.gst_details?.cgst_amount || 0),
+      IgstAmt: igstAmt,
+      SgstAmt: sgstAmt,
+      CgstAmt: cgstAmt,
 
-      TotItemVal: Number(item?.final_row_amount.toFixed(2)),
+      TotItemVal: Number(Number(item?.final_row_amount || 0).toFixed(2)),
     };
   });
+
+  // Append Insurance, Freight, Other as charge rows when present
+  const ins = dispatch_details?.insurance_details || {};
+  const frt = dispatch_details?.freight_details || {};
+  const oth = dispatch_details?.other_amount_details || {};
+
+  const pushChargeRow = (slNo, prdDesc, assAmt, gstRt, igst, cgst, sgst) => {
+    const ass = Number(Number(assAmt || 0).toFixed(2));
+    const igstR = Number(Number(igst || 0).toFixed(2));
+    const cgstR = Number(Number(cgst || 0).toFixed(2));
+    const sgstR = Number(Number(sgst || 0).toFixed(2));
+    const totItemVal = Number((ass + igstR + cgstR + sgstR).toFixed(2));
+    itemsArr.push({
+      SlNo: String(slNo),
+      IsServc: 'N',
+      PrdDesc: prdDesc,
+      HsnCd: OTHER_HSN_CODE, // wood hsn code(other)
+      Qty: 1,
+      Unit: 'OTH',
+      UnitPrice: ass,
+      TotAmt: ass,
+      Discount: 0,
+      AssAmt: ass,
+      GstRt: Number(gstRt || 0),
+      IgstAmt: igstR,
+      SgstAmt: sgstR,
+      CgstAmt: cgstR,
+      TotItemVal: totItemVal,
+    });
+  };
+
+  let sl = itemsArr.length;
+  if (Number(ins?.insurance_amount || 0) > 0) {
+    sl += 1;
+    pushChargeRow(
+      sl,
+      'Insurance',
+      ins.insurance_amount,
+      ins.insurance_gst_rate,
+      ins.insurance_igst_amt,
+      ins.insurance_cgst_amt,
+      ins.insurance_sgst_amt
+    );
+  }
+  if (Number(frt?.freight_amount || 0) > 0) {
+    sl += 1;
+    pushChargeRow(
+      sl,
+      'Freight',
+      frt.freight_amount,
+      frt.freight_gst_rate,
+      frt.freight_igst_amt,
+      frt.freight_cgst_amt,
+      frt.freight_sgst_amt
+    );
+  }
+  if (Number(oth?.other_amount || 0) > 0) {
+    sl += 1;
+    pushChargeRow(
+      sl,
+      'Other Charges',
+      oth.other_amount,
+      oth.other_gst_rate,
+      oth.other_igst_amt,
+      oth.other_cgst_amt,
+      oth.other_sgst_amt
+    );
+  }
 
   // Value summary for invoice
   const AssVal = itemsArr.reduce((acc, i) => acc + i.AssAmt, 0);
@@ -2396,11 +2482,6 @@ export const cancel_irn_no = catchAsync(async (req, res, next) => {
 
   const dispatch_id = req.params.id;
   const dispatch_details = await dispatchModel.findById(dispatch_id);
-  // console.log(
-  //   'start dispatch details',
-  //   dispatch_details,
-  //   'end dispatch details'
-  // );
   if (!dispatch_details) {
     throw new ApiError('Dispatch details not found', StatusCodes.NOT_FOUND);
   }
@@ -2436,16 +2517,7 @@ export const cancel_irn_no = catchAsync(async (req, res, next) => {
     }
   );
 
-  if (irnResponse?.data?.status_cd === '1') {
-    // Update dispatch details with IRN number and IRP
-    const updatedDispatchData = {
-      irn_status: 'CANCELLED'
-    };
-    await dispatchModel.updateOne(
-      { _id: dispatch_details._id },
-      { $set: updatedDispatchData }
-    );
-  } else {
+  if (irnResponse?.data?.status_cd !== '1') {
     // Extracting error details from irnResponse and throwing an error
     let errorMessage = 'Unknown error occurred';
 
@@ -2459,14 +2531,49 @@ export const cancel_irn_no = catchAsync(async (req, res, next) => {
       StatusCodes.BAD_REQUEST
     );
   }
-  console.log('IRN RESPONSE:', irnResponse.data);
-  // Optionally: req.body.irnBody = irnBody
 
-  return res.status(200).json({
-    success: true,
-    message: 'IRN Number Cancelled successfully.',
-    result: irnResponse?.data,
-  });
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const updatedDispatchData = {
+      irn_status: 'CANCELLED',
+    };
+    await dispatchModel.updateOne(
+      { _id: dispatch_details._id },
+      { $set: updatedDispatchData },
+      { session }
+    );
+
+    const packing_done_ids = dispatch_details?.packing_done_ids;
+    if (packing_done_ids?.length > 0) {
+      const packing_done_ids_data = packing_done_ids.map(
+        (item) => item?.packing_done_other_details_id
+      );
+      await packing_done_other_details_model.updateMany(
+        { _id: { $in: packing_done_ids_data } },
+        {
+          $set: {
+            is_dispatch_done: false,
+            isEditable: true,
+          },
+        },
+        { session }
+      );
+    }
+
+    await session.commitTransaction();
+
+    return res.status(200).json({
+      success: true,
+      message: 'IRN Number Cancelled successfully.',
+      result: irnResponse?.data,
+    });
+  } catch (error) {
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    await session.endSession();
+  }
 });
 
 export const generate_ewaybill_using_irn_no = catchAsync(
@@ -2521,7 +2628,7 @@ export const generate_ewaybill_using_irn_no = catchAsync(
       Irn: dispatch_details?.irn_number,
       Distance: Number(dispatch_details?.approx_distance),
       TransMode: dispatch_details?.transport_mode?.id,
-      TransId: transporter_details?.transport_id || '12AWGPV7107B1Z1',
+      TransId: transporter_details?.transport_id || '',
       TransName: dispatch_details?.transporter_details?.name,
       TransDocDt: dispatch_details?.trans_doc_date
         ? moment(dispatch_details.trans_doc_date).format('DD/MM/YYYY')
@@ -2593,6 +2700,7 @@ export const generate_ewaybill_using_irn_no = catchAsync(
       const updatedDispatchData = {
         eway_bill_no: ewayBillResponse?.data?.data?.EwbNo,
         eway_bill_date: ewayBillResponse?.data?.data?.EwbDt,
+        eway_bill_valid_upto: ewayBillResponse?.data?.data?.EwbValidUpto,
         eway_bill_status: 'CREATED'
       };
       await dispatchModel.updateOne(
@@ -2623,6 +2731,8 @@ export const generate_ewaybill_using_irn_no = catchAsync(
     });
   }
 );
+
+
 
 //===============EwayBill Apis=======================
 export const generate_ewaybill = catchAsync(async (req, res, next) => {
@@ -2688,6 +2798,12 @@ export const generate_ewaybill = catchAsync(async (req, res, next) => {
     ship_to_address,
   } = dispatch_details?.address;
 
+  const all_units = await UnitModel.find({});
+  const unit_map = all_units.reduce((acc, unit) => {
+    acc[unit.unit_name] = unit.unit_symbolic_name;
+    return acc;
+  }, {});
+
   const ewayBillBody = {
     supplyType: 'O', // Outward
     subSupplyType: '1', // Supply
@@ -2699,7 +2815,7 @@ export const generate_ewaybill = catchAsync(async (req, res, next) => {
       : '',
 
     //seller details
-    fromGstin: dispatch_from_address?.gst_no,
+    fromGstin: dispatch_from_address?.gst_number,
     fromTrdName: 'TURAKHIA OVERSEAS PVT. LTD.',
     fromAddr1:
       dispatch_from_address?.address &&
@@ -2716,7 +2832,7 @@ export const generate_ewaybill = catchAsync(async (req, res, next) => {
     fromStateCode: getStateCode(dispatch_from_address?.state),
     actFromStateCode: getStateCode(dispatch_from_address?.state),
 
-    dispatchFromGSTIN: dispatch_from_address?.gst_no,
+    dispatchFromGSTIN: dispatch_from_address?.gst_number,
     dispatchFromTradeName: 'TURAKHIA OVERSEAS PVT. LTD.',
 
     //buyer details
@@ -2771,37 +2887,114 @@ export const generate_ewaybill = catchAsync(async (req, res, next) => {
     // igstValue: 18,
     // totInvValue: 118,
 
-    //item list
-    itemList: (dispatch_items || []).map((item) => ({
-      hsnCode: 125463,
-      productName: item?.product_category || '',
-      productDesc: item?.sales_item_name || item?.product_category,
-      // hsnCode: item?.hsn_code || '',
-      quantity: item?.new_sqm || item?.sqm || item?.cbm || item?.cmt || 0,
-      qtyUnit: item?.unit || 'SQM',
-      cgstRate: item?.gst_details?.cgst_percentage,
-      sgstRate: item?.gst_details?.sgst_percentage,
-      igstRate: item?.gst_details?.igst_percentage,
-      // cessRate: item?.cess_rate || 0,
-      taxableAmount: item?.discount_amount, //item amount after discount
-    })),
+    //item list (product rows + Insurance, Freight, Other charge rows)
+    ...(function () {
+      const ins = dispatch_details?.insurance_details || {};
+      const frt = dispatch_details?.freight_details || {};
+      const oth = dispatch_details?.other_amount_details || {};
+      const itemList = (dispatch_items || []).map((item) => {
+        // const unit = item?.unit ? String(item.unit).slice(0, 3) : 'OTH';
+        const unit = item?.calculate_unit;
+        const unitSymbolicName = unit_map[unit] || 'OTH';
+        return {
+          hsnCode: Number(item?.hsn_number) || Number(OTHER_HSN_CODE),   // wood hsn code(other)
+          productName: item?.product_category || '',
+          productDesc: item?.sales_item_name || item?.product_category,
+          quantity: item?.new_sqm || item?.sqm || item?.cbm || item?.cmt || 0,
+          qtyUnit: unitSymbolicName,
+          cgstRate: item?.gst_details?.cgst_percentage,
+          sgstRate: item?.gst_details?.sgst_percentage,
+          igstRate: item?.gst_details?.igst_percentage,
+          taxableAmount: item?.discount_amount,
+        };
+      });
+      const pushCharge = (productName, taxableAmt, details) => {
+        const hasIgst = Number(details?.igst_amt || 0) > 0;
+        const gstRate = Number(details?.gst_rate || 0);
+        const cgstRate = hasIgst ? 0 : gstRate / 2;
+        const sgstRate = hasIgst ? 0 : gstRate / 2;
+        const igstRate = hasIgst ? gstRate : 0;
+        itemList.push({
+          hsnCode: Number(OTHER_HSN_CODE), // wood hsn code(other)
+          productName,
+          productDesc: productName,
+          quantity: 1,
+          qtyUnit: 'OTH',
+          cgstRate,
+          sgstRate,
+          igstRate,
+          taxableAmount: Number(taxableAmt || 0),
+        });
+      };
+      if (Number(ins?.insurance_amount || 0) > 0) {
+        pushCharge('Insurance', ins.insurance_amount, {
+          gst_rate: ins.insurance_gst_rate,
+          igst_amt: ins.insurance_igst_amt,
+        });
+      }
+      if (Number(frt?.freight_amount || 0) > 0) {
+        pushCharge('Freight', frt.freight_amount, {
+          gst_rate: frt.freight_gst_rate,
+          igst_amt: frt.freight_igst_amt,
+        });
+      }
+      if (Number(oth?.other_amount || 0) > 0) {
+        pushCharge('Other Charges', oth.other_amount, {
+          gst_rate: oth.other_gst_rate,
+          igst_amt: oth.other_igst_amt,
+        });
+      }
+      return { itemList };
+    })(),
 
-    totalValue: dispatch_details?.base_amount_without_gst || 0,
+    totalValue: Number(
+      (
+        Number(dispatch_details?.base_amount_without_gst || 0) +
+        Number(dispatch_details?.insurance_details?.insurance_amount || 0) +
+        Number(dispatch_details?.freight_details?.freight_amount || 0) +
+        Number(dispatch_details?.other_amount_details?.other_amount || 0)
+      ).toFixed(2)
+    ),
 
-    cgstValue: (dispatch_items || []).reduce(
-      (sum, item) => sum + (item?.gst_details?.cgst_amount || 0),
-      0
+    cgstValue: Number(
+      (
+        (dispatch_items || []).reduce(
+          (sum, item) => sum + (item?.gst_details?.cgst_amount || 0),
+          0
+        ) +
+        Number(dispatch_details?.insurance_details?.insurance_cgst_amt || 0) +
+        Number(dispatch_details?.freight_details?.freight_cgst_amt || 0) +
+        Number(dispatch_details?.other_amount_details?.other_cgst_amt || 0)
+      ).toFixed(2)
     ),
-    sgstValue: (dispatch_items || []).reduce(
-      (sum, item) => sum + (item?.gst_details?.sgst_amount || 0),
-      0
+
+    sgstValue: Number(
+      (
+        (dispatch_items || []).reduce(
+          (sum, item) => sum + (item?.gst_details?.sgst_amount || 0),
+          0
+        ) +
+        Number(dispatch_details?.insurance_details?.insurance_sgst_amt || 0) +
+        Number(dispatch_details?.freight_details?.freight_sgst_amt || 0) +
+        Number(dispatch_details?.other_amount_details?.other_sgst_amt || 0)
+      ).toFixed(2)
     ),
-    igstValue: (dispatch_items || []).reduce(
-      (sum, item) => sum + (item?.gst_details?.igst_amount || 0),
-      0
+
+    igstValue: Number(
+      (
+        (dispatch_items || []).reduce(
+          (sum, item) => sum + (item?.gst_details?.igst_amount || 0),
+          0
+        ) +
+        Number(dispatch_details?.insurance_details?.insurance_igst_amt || 0) +
+        Number(dispatch_details?.freight_details?.freight_igst_amt || 0) +
+        Number(dispatch_details?.other_amount_details?.other_igst_amt || 0)
+      ).toFixed(2)
     ),
-    // cessValue: dispatch_details?.cess_value || 0,
-    totInvValue: dispatch_details?.final_total_amount || 0,
+
+    totInvValue: Number(
+      Number(dispatch_details?.final_total_amount || 0).toFixed(2)
+    ),
   };
 
   console.log('ewayBillBody', ewayBillBody, 'ewayBillBody');
@@ -2820,10 +3013,24 @@ export const generate_ewaybill = catchAsync(async (req, res, next) => {
   console.log('ewayBillResponse', ewayBillResponse.data, 'ewayBillResponse');
 
   if (ewayBillResponse?.data?.status_cd === '1') {
-    // Update dispatch details with IRN number and IRP
-    // dispatch_details.dispatch_status = dispatch_status?.cancelled;
-    dispatch_details.eway_bill_no = ewayBillResponse?.data?.data?.EwbNo;
-    dispatch_details.eway_bill_date = ewayBillResponse?.data?.data?.EwbDt;
+    const resData = ewayBillResponse?.data?.data || ewayBillResponse?.data;
+    const ewbNo = resData?.EwbNo ?? resData?.ewayBillNo;
+    const ewbDt = resData?.EwbDt ?? resData?.ewayBillDate;
+    const ewbValidUpto = resData?.EwbValidUpto ?? resData?.ewayBillValidUpto;
+    dispatch_details.eway_bill_no = ewbNo != null ? String(ewbNo) : undefined;
+    dispatch_details.eway_bill_date =
+      ewbDt != null
+        ? typeof ewbDt === 'string'
+          ? parseGovEwayDate(ewbDt)
+          : ewbDt
+        : undefined;
+    dispatch_details.eway_bill_valid_upto =
+      ewbValidUpto != null
+        ? typeof ewbValidUpto === 'string'
+          ? parseGovEwayDate(ewbValidUpto)
+          : ewbValidUpto
+        : undefined;
+    dispatch_details.eway_bill_status = 'CREATED';
     await dispatch_details.save();
   } else {
     // Extract and format error message from ewayBillResponse
@@ -2893,7 +3100,7 @@ export const generate_ewaybill = catchAsync(async (req, res, next) => {
 
   return res.status(200).json({
     success: true,
-    message: 'IRN Number Cancelled successfully.',
+    message: 'Eway Bill Generated successfully.',
     result: ewayBillResponse?.data,
   });
 });
@@ -2916,7 +3123,7 @@ export const cancel_ewaybill = catchAsync(async (req, res, next) => {
   // }
 
   const ewayBillCancelBody = {
-    ewbNo: dispatch_details?.eway_bill_no,
+    ewbNo: Number(dispatch_details?.eway_bill_no),
     // ewbNo: 125643,
     cancelRmrk: cancelRmrk,
     cancelRsnCode: Number(cancelRsnCode),
@@ -2936,16 +3143,16 @@ export const cancel_ewaybill = catchAsync(async (req, res, next) => {
     }
   );
 
-  // console.log(
-  //   'ewayBillCancelResponse',
-  //   ewayBillCancelResponse.data,
-  //   'ewayBillCancelResponse'
-  // );
+  console.log(
+    'ewayBillCancelResponse',
+    ewayBillCancelResponse.data,
+    'ewayBillCancelResponse'
+  );
 
   if (ewayBillCancelResponse?.data?.status_cd === '1') {
     // Update dispatch details with IRN number and IRP
-    // dispatch_details.dispatch_status = dispatch_status?.cancelled;
-    // await dispatch_details.save();
+    dispatch_details.eway_bill_status = dispatch_status?.cancelled;
+    await dispatch_details.save();
     console.log('Eway Bill Cancelled successfully.');
   } else {
     // Extracting error details from ewayBillCancelResponse and throwing an error
@@ -2958,45 +3165,50 @@ export const cancel_ewaybill = catchAsync(async (req, res, next) => {
       ) {
         const message = ewayBillCancelResponse.data.error.message;
 
-        const arrayMatch = message.match(/\[(.*?)\]/);
-        if (arrayMatch && arrayMatch[1]) {
-          // Handle "required key" style error messages
-          const errors = arrayMatch[1].split(/, #\//);
-          if (errors.length > 0) {
-            let firstError = errors[0].trim();
-            if (firstError.startsWith('#/')) {
-              firstError = firstError.substring(2);
-            }
-            errorMessage = firstError;
-          } else {
-            errorMessage = message;
-          }
-        } else if (/^\{.*errorCodes.*\}$/.test(message)) {
-          // Handle JSON error style messages, e.g. '{"errorCodes":"312,"}'
-          let errorCode = null;
-          try {
-            const parsed = JSON.parse(message);
-            if (parsed?.errorCodes) {
-              // Sometimes there may be a trailing comma, split and clean
-              errorCode = parsed.errorCodes.split(',')[0]?.trim();
-            }
-          } catch (e) { }
-          // Provide specific error messages for known error codes
-          // You can expand or modify this map as needed
-          const errorCodeMap = {};
-          // Build a map from the imported array for fast lookup
-          for (const errorObj of errorCodeMapForEwayBill) {
-            errorCodeMap[errorObj.errorCode] = errorObj.errorDesc;
-          }
-          if (errorCode && errorCodeMap[errorCode]) {
-            errorMessage = errorCodeMap[errorCode];
-          } else if (errorCode) {
-            errorMessage = `Eway Bill API Error. Error Code: ${errorCode}`;
-          } else {
-            errorMessage = message;
-          }
+        // E-way bill not generated / nothing to cancel (check first so gateway parsing error is not used)
+        if (
+          /An error has occurred/i.test(message) ||
+          /Source:\s*\(String\)/i.test(message)
+        ) {
+          errorMessage =
+            'E-way bill was not generated for this dispatch. There is no e-way bill to cancel.';
         } else {
-          errorMessage = message;
+          const arrayMatch = message.match(/\[(.*?)\]/);
+          if (arrayMatch && arrayMatch[1]) {
+            // Handle "required key" style error messages
+            const errors = arrayMatch[1].split(/, #\//);
+            if (errors.length > 0) {
+              let firstError = errors[0].trim();
+              if (firstError.startsWith('#/')) {
+                firstError = firstError.substring(2);
+              }
+              errorMessage = firstError;
+            } else {
+              errorMessage = message;
+            }
+          } else if (/^\{.*errorCodes.*\}$/.test(message)) {
+            // Handle JSON error style messages, e.g. '{"errorCodes":"312,"}'
+            let errorCode = null;
+            try {
+              const parsed = JSON.parse(message);
+              if (parsed?.errorCodes) {
+                errorCode = parsed.errorCodes.split(',')[0]?.trim();
+              }
+            } catch (e) { }
+            const errorCodeMap = {};
+            for (const errorObj of errorCodeMapForEwayBill) {
+              errorCodeMap[errorObj.errorCode] = errorObj.errorDesc;
+            }
+            if (errorCode && errorCodeMap[errorCode]) {
+              errorMessage = errorCodeMap[errorCode];
+            } else if (errorCode) {
+              errorMessage = `Eway Bill API Error. Error Code: ${errorCode}`;
+            } else {
+              errorMessage = message;
+            }
+          } else {
+            errorMessage = message;
+          }
         }
       }
     }
@@ -3048,21 +3260,59 @@ export const get_ewaybill_details = catchAsync(async (req, res, next) => {
     const updatedDispatchData = {
       eway_bill_no: getEwayBillResponse?.data?.data?.ewayBillNo,
       eway_bill_date: parseGovEwayDate(getEwayBillResponse?.data?.data?.ewayBillDate),
-      // eway_bill_status: getEwayBillResponse?.data?.data?.Status,
+      eway_bill_valid_upto: parseGovEwayDate(getEwayBillResponse?.data?.data?.validUpto),
+      // eway_bill_status: 'CREATED'
     };
     await dispatchModel.updateOne(
       { _id: dispatch_details._id },
       { $set: updatedDispatchData }
     );
   } else {
-    // Extracting error details from irnResponse and throwing an error
+    // Extracting error details from getEwayBillResponse and throwing an error
     let errorMessage = 'Unknown error occurred';
 
-    const statusDescArr = getEwayBillResponse.data.status_desc ?? JSON.parse(getEwayBillResponse.data.status_desc) ?? getEwayBillResponse.data.status_desc;
-    if (Array.isArray(statusDescArr) && statusDescArr.length > 0) {
-      errorMessage = statusDescArr[0]?.ErrorMessage || errorMessage;
+    if (getEwayBillResponse?.data?.error?.message) {
+      const message =
+        typeof getEwayBillResponse.data.error.message === 'string'
+          ? getEwayBillResponse.data.error.message
+          : String(getEwayBillResponse.data.error.message);
+
+      if (/^\{.*errorCodes.*\}$/.test(message)) {
+        let errorCode = null;
+        try {
+          const parsed = JSON.parse(message);
+          if (parsed?.errorCodes) {
+            errorCode = String(parsed.errorCodes).split(',')[0]?.trim();
+          }
+        } catch (e) { }
+        const errorCodeMap = {};
+        for (const errorObj of errorCodeMapForEwayBill) {
+          errorCodeMap[errorObj.errorCode] = errorObj.errorDesc;
+        }
+        if (errorCode && errorCodeMap[errorCode]) {
+          errorMessage = errorCodeMap[errorCode];
+        } else if (errorCode) {
+          errorMessage = `Eway Bill API Error. Error Code: ${errorCode}`;
+        } else {
+          errorMessage = message;
+        }
+      } else {
+        errorMessage = message;
+      }
     } else {
-      errorMessage = getEwayBillResponse.data.status_desc;
+      try {
+        const statusDesc = getEwayBillResponse?.data?.status_desc;
+        if (statusDesc != null && typeof statusDesc === 'string') {
+          const statusDescArr = JSON.parse(statusDesc);
+          if (Array.isArray(statusDescArr) && statusDescArr.length > 0) {
+            errorMessage = statusDescArr[0]?.ErrorMessage || errorMessage;
+          } else {
+            errorMessage = statusDesc;
+          }
+        }
+      } catch {
+        // status_desc missing or invalid JSON; keep default errorMessage
+      }
     }
 
     throw new ApiError(
@@ -3160,6 +3410,13 @@ export const update_ewaybill_transporter = catchAsync(
       );
     }
 
+    if (dispatch_details?.eway_bill_status === 'CANCELLED') {
+      throw new ApiError(
+        'Cannot update transporter. E-way bill is cancelled.',
+        StatusCodes.BAD_REQUEST
+      );
+    }
+
     const transporterDetails = await transporterModel.findById(
       bodyData?.transporter_id
     );
@@ -3195,16 +3452,40 @@ export const update_ewaybill_transporter = catchAsync(
     } else {
       // Extracting error details from ewayBillUpdateTransporterResponse and throwing an error
       let errorMessage = 'Unknown error occurred';
+      const resData = ewayBillUpdateTransporterResponse?.data;
 
-      const statusDescArr = JSON.parse(
-        ewayBillUpdateTransporterResponse.data.status_desc
-      );
-      if (Array.isArray(statusDescArr) && statusDescArr.length > 0) {
-        errorMessage = statusDescArr[0]?.ErrorMessage || errorMessage;
+      if (resData?.error?.message) {
+        const message = typeof resData.error.message === 'string' ? resData.error.message : String(resData.error.message);
+        if (/^\{.*errorCodes.*\}$/.test(message)) {
+          let errorCode = null;
+          try {
+            const parsed = JSON.parse(message);
+            if (parsed?.errorCodes) errorCode = String(parsed.errorCodes).split(',')[0]?.trim();
+          } catch (e) { }
+          const errorCodeMap = {};
+          for (const errorObj of errorCodeMapForEwayBill) {
+            errorCodeMap[errorObj.errorCode] = errorObj.errorDesc;
+          }
+          if (errorCode && errorCodeMap[errorCode]) errorMessage = errorCodeMap[errorCode];
+          else if (errorCode) errorMessage = `Eway Bill API Error. Error Code: ${errorCode}`;
+          else errorMessage = message;
+        } else {
+          errorMessage = message;
+        }
+      } else {
+        try {
+          const statusDesc = resData?.status_desc;
+          if (statusDesc != null && typeof statusDesc === 'string') {
+            const statusDescArr = JSON.parse(statusDesc);
+            if (Array.isArray(statusDescArr) && statusDescArr.length > 0) {
+              errorMessage = statusDescArr[0]?.ErrorMessage || errorMessage;
+            }
+          }
+        } catch { }
       }
 
       throw new ApiError(
-        `IRN Cancellation Failed. Error : ${errorMessage}`,
+        `Eway Bill Transporter Update Failed. Error : ${errorMessage}`,
         StatusCodes.BAD_REQUEST
       );
     }
@@ -3218,8 +3499,11 @@ export const update_ewaybill_transporter = catchAsync(
     });
   }
 );
+
+
 export const update_ewaybill_partB = catchAsync(async (req, res, next) => {
   const bodyData = req.body;
+  console.log(bodyData, 'bodyData');
 
   const dispatch_id = req.params.id;
   const dispatch_details = await dispatchModel.findById(dispatch_id);
@@ -3239,6 +3523,13 @@ export const update_ewaybill_partB = catchAsync(async (req, res, next) => {
     );
   }
 
+  if (dispatch_details?.eway_bill_status === 'CANCELLED') {
+    throw new ApiError(
+      'Cannot update Part-B. E-way bill is cancelled.',
+      StatusCodes.BAD_REQUEST
+    );
+  }
+
   const updateEwaybillPartBBody = {
     fromPlace: bodyData?.fromPlace,
     fromState: getStateCode(bodyData?.fromState),
@@ -3248,7 +3539,9 @@ export const update_ewaybill_partB = catchAsync(async (req, res, next) => {
     ewbNo: Number(bodyData?.ewbNo),
     vehicleNo: bodyData?.vehicleNo,
     transDocNo: bodyData?.transDocNo,
-    transDocDate: bodyData?.transDocDate,
+    transDocDate: bodyData?.transDocDate
+      ? moment(bodyData.transDocDate).format('DD/MM/YYYY')
+      : bodyData?.transDocDate,
   };
 
   const updateEwaybillPartBResponse = await axios.post(
@@ -3263,31 +3556,127 @@ export const update_ewaybill_partB = catchAsync(async (req, res, next) => {
   );
 
   if (updateEwaybillPartBResponse?.data?.status_cd === '1') {
-    // Update dispatch details with IRN number and IRP
-    dispatch_details.dispatch_status = dispatch_status?.cancelled;
+    // Update dispatch details with Part-B payload
+    const TRANSPORT_MODE_MAP = { '1': 'Road', '2': 'Rail', '3': 'Air' };
+
+    if (bodyData?.transDocDate != null) {
+      dispatch_details.trans_doc_date = moment(bodyData.transDocDate).toDate();
+    }
+    if (bodyData?.transDocNo != null) {
+      dispatch_details.trans_doc_no = String(bodyData.transDocNo).trim().toUpperCase();
+    }
+    if (bodyData?.transMode != null) {
+      dispatch_details.transport_mode = {
+        id: String(bodyData.transMode),
+        value: TRANSPORT_MODE_MAP[bodyData.transMode] ?? String(bodyData.transMode),
+      };
+    }
+    if (bodyData?.fromPlace != null || bodyData?.fromState != null) {
+      const fromAddr = dispatch_details?.address?.dispatch_from_address
+        ? { ...(dispatch_details.address.dispatch_from_address.toObject?.() ?? dispatch_details.address.dispatch_from_address) }
+        : {};
+      if (bodyData.fromPlace != null) fromAddr.address = String(bodyData.fromPlace).toUpperCase();
+      if (bodyData.fromState != null) fromAddr.state = String(bodyData.fromState).trim();
+      dispatch_details.address = dispatch_details.address ?? {};
+      dispatch_details.address.dispatch_from_address = fromAddr;
+    }
+
+    const newVehicleNo = bodyData?.vehicleNo ? String(bodyData.vehicleNo).trim().toUpperCase() : null;
+    const currentVehicleNo = dispatch_details?.vehicle_details?.[0]?.vehicle_number
+      ? String(dispatch_details.vehicle_details[0].vehicle_number).toUpperCase()
+      : null;
+
+    if (newVehicleNo && newVehicleNo !== currentVehicleNo) {
+      const transporterId = dispatch_details.transporter_id;
+      let vehicleDoc = await vehicleModel.findOne({
+        vehicle_number: newVehicleNo,
+        transporter_id: transporterId,
+      });
+
+      if (!vehicleDoc) {
+        const oldVehicle = await vehicleModel.findById(dispatch_details.vehicle_id);
+        if (!oldVehicle) {
+          throw new ApiError(
+            'Existing vehicle not found. Cannot create new vehicle record.',
+            StatusCodes.BAD_REQUEST
+          );
+        }
+        const authUser = req.userDetails;
+        if (!authUser?._id) {
+          throw new ApiError(
+            'User context required to create vehicle.',
+            StatusCodes.BAD_REQUEST
+          );
+        }
+        const maxResult = await vehicleModel.aggregate([{ $group: { _id: null, max: { $max: '$sr_no' } } }]);
+        const maxSrNo = maxResult?.length > 0 ? maxResult[0].max + 1 : 1;
+        const oldPlain = oldVehicle.toObject();
+        delete oldPlain._id;
+        delete oldPlain.createdAt;
+        delete oldPlain.updatedAt;
+        const newVehicleData = {
+          ...oldPlain,
+          sr_no: maxSrNo,
+          vehicle_number: newVehicleNo,
+          created_by: authUser._id,
+          updated_by: authUser._id,
+        };
+        vehicleDoc = await vehicleModel.create(newVehicleData);
+      }
+
+      dispatch_details.vehicle_id = vehicleDoc._id;
+      dispatch_details.vehicle_details = [vehicleDoc.toObject?.() ?? vehicleDoc];
+    }
+
+    dispatch_details.is_part_b = true;
     await dispatch_details.save();
   } else {
     // Extracting error details from updateEwaybillPartBResponse and throwing an error
     let errorMessage = 'Unknown error occurred';
+    const resData = updateEwaybillPartBResponse?.data;
 
-    const statusDescArr = JSON.parse(
-      updateEwaybillPartBResponse.data.status_desc
-    );
-    if (Array.isArray(statusDescArr) && statusDescArr.length > 0) {
-      errorMessage = statusDescArr[0]?.ErrorMessage || errorMessage;
+    if (resData?.error?.message) {
+      const message = typeof resData.error.message === 'string' ? resData.error.message : String(resData.error.message);
+      if (/^\{.*errorCodes.*\}$/.test(message)) {
+        let errorCode = null;
+        try {
+          const parsed = JSON.parse(message);
+          if (parsed?.errorCodes) errorCode = String(parsed.errorCodes).split(',')[0]?.trim();
+        } catch (e) { }
+        const errorCodeMap = {};
+        for (const errorObj of errorCodeMapForEwayBill) {
+          errorCodeMap[errorObj.errorCode] = errorObj.errorDesc;
+        }
+        if (errorCode && errorCodeMap[errorCode]) errorMessage = errorCodeMap[errorCode];
+        else if (errorCode) errorMessage = `Eway Bill API Error. Error Code: ${errorCode}`;
+        else errorMessage = message;
+      } else {
+        errorMessage = message;
+      }
+    } else {
+      try {
+        const statusDesc = resData?.status_desc;
+        if (statusDesc != null && typeof statusDesc === 'string') {
+          const statusDescArr = JSON.parse(statusDesc);
+          if (Array.isArray(statusDescArr) && statusDescArr.length > 0) {
+            errorMessage = statusDescArr[0]?.ErrorMessage || errorMessage;
+          }
+        }
+      } catch { }
     }
 
+    console.log('Eway Bill Part-B Response', updateEwaybillPartBResponse, 'Eway Bill Part-B Response');
     throw new ApiError(
-      `IRN Cancellation Failed. Error : ${errorMessage}`,
+      `Eway Bill Part-B Update Failed. Error : ${errorMessage}`,
       StatusCodes.BAD_REQUEST
     );
   }
-  // console.log('Irn response', updateEwaybillPartBResponse, 'Irn response');
+  console.log('Eway Bill Part-B Response', updateEwaybillPartBResponse, 'Eway Bill Part-B Response');
   // Optionally: req.body.irnBody = irnBody
 
   return res.status(200).json({
     success: true,
-    message: 'IRN Number Cancelled successfully.',
+    message: 'Eway Bill Part-B Updated successfully.',
     result: updateEwaybillPartBResponse?.data,
   });
 });

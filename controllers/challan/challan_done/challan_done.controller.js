@@ -591,6 +591,23 @@ export const update_inward_challan_status_by_challan_id = catchAsync(
   }
 );
 
+export const challan_no_dropdown = catchAsync(async (req, res, next) => {
+  try {
+    const challanList = await challan_done_model
+      .find({}, { _id: 1, challan_no: 1 })
+      .sort({ createdAt: -1 });
+    res.status(200).json({
+      success: true,
+      result: challanList.map((c) => ({
+        _id: c._id,
+        challan_no: c.challan_no,
+      })),
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 export const listing_single_challan = catchAsync(async (req, res, next) => {
   const { id } = req.params;
 
@@ -985,7 +1002,7 @@ export const generate_challan_ewaybill = catchAsync(async (req, res, next) => {
   );
 
   if (ewayBillResponse?.data?.status_cd === '1') {
-    const { ewayBillNo, ewayBillDate } = ewayBillResponse?.data?.data;
+    const { ewayBillNo, ewayBillDate, validUpto } = ewayBillResponse?.data?.data;
     // Save the updated challan details in challan_done_model
     await challan_done_model.updateOne(
       { _id: challan_details._id },
@@ -993,6 +1010,7 @@ export const generate_challan_ewaybill = catchAsync(async (req, res, next) => {
         $set: {
           eway_bill_no: ewayBillNo,
           eway_bill_date: parseGovEwayDate(ewayBillDate) || Date.now(),
+          eway_bill_valid_upto: parseGovEwayDate(validUpto) || null,
           eway_bill_status: 'ACTIVE',
         },
       }
@@ -1137,25 +1155,27 @@ export const get_ewaybill_details = catchAsync(async (req, res, next) => {
 
   if (ewayBillResponse?.data?.status_cd === '1') {
     if (challan_details?.eway_bill_no) {
-      const { ewbNo, ewayBillDate, status } = ewayBillResponse?.data?.data;
+      const { ewbNo, ewayBillDate, status, validUpto } = ewayBillResponse?.data?.data;
       await challan_done_model.updateOne(
         { _id: challan_details._id },
         {
           $set: {
             eway_bill_no: ewbNo,
             eway_bill_date: parseGovEwayDate(ewayBillDate),
+            eway_bill_valid_upto: parseGovEwayDate(validUpto),
             eway_bill_status: status === 'CNL' ? 'CANCELLED' : 'ACTIVE',
           },
         }
       );
     } else {
-      const { ewayBillNo, ewayBillDate } = ewayBillResponse?.data?.data;
+      const { ewayBillNo, ewayBillDate, validUpto } = ewayBillResponse?.data?.data;
       await challan_done_model.updateOne(
         { _id: challan_details._id },
         {
           $set: {
             eway_bill_no: ewayBillNo,
             eway_bill_date: parseGovEwayDate(ewayBillDate),
+            eway_bill_valid_upto: parseGovEwayDate(validUpto),
           },
         }
       );

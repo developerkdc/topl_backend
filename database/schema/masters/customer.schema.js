@@ -60,6 +60,18 @@ const addressSchema = new mongoose.Schema({
     // required: [true, 'pincode is required'],
     default: null
   },
+  gst_number: {
+    type: String,
+    uppercase: true,
+    trim: true,
+    default: null,
+  },
+  gst_no: {
+    type: String,
+    uppercase: true,
+    trim: true,
+    default: null,
+  },
 });
 
 const customerSchema = new mongoose.Schema(
