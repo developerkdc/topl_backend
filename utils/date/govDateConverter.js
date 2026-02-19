@@ -1,5 +1,6 @@
 // utils/parseGovEwayDate.js
 export function parseGovEwayDate(dateStr) {
+    if (dateStr == null || typeof dateStr !== 'string') return null;
     // Expected format: DD/MM/YYYY hh:mm:ss AM|PM
     const [datePart, timePart, meridian] = dateStr.split(" ");
   

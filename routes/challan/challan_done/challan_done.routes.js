@@ -6,12 +6,14 @@ import {
   listing_challan_done,
   update_inward_challan_status_by_challan_id,
   listing_single_challan,
+  challan_no_dropdown,
   generate_challan_ewaybill,
   cancel_challan_ewaybill,
   get_ewaybill_details,
   update_ewaybill_transporter,
   update_ewaybill_partB,
 } from '../../../controllers/challan/challan_done/challan_done.controller.js';
+import { challan_ewaybill_pdf } from '../../../controllers/challan/challan_done/challan_ewaybill.controller.js';
 import EwayBillAuthMiddleware from '../../../middlewares/ewaybillAuth.middleware.js';
 const challan_done_router = Router();
 
@@ -28,6 +30,7 @@ challan_done_router.get(
   AuthMiddleware,
   listing_single_challan
 );
+challan_done_router.get('/challan-no-dropdown', AuthMiddleware, challan_no_dropdown);
 
 // Ewaybill related apis
 challan_done_router.post(
@@ -60,4 +63,6 @@ challan_done_router.post(
   EwayBillAuthMiddleware,
   update_ewaybill_partB
 );
+challan_done_router.get('/challan-ewaybill-pdf/:id', challan_ewaybill_pdf);
+
 export default challan_done_router;
