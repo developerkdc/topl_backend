@@ -76,6 +76,334 @@ const errorCodeMapForEwayBill = [
     errorDesc: 'Try after 5 minutes',
   },
   {
+    errorCode: '119',
+    errorDesc: 'User is Invalid - Please check and retry.',
+  },
+  {
+    errorCode: '120',
+    errorDesc: 'Authentication failure, Invalid Client Secret.',
+  },
+  {
+    errorCode: '121',
+    errorDesc: 'Gstin Not Activated.',
+  },
+  {
+    errorCode: '122',
+    errorDesc: 'Gstin Is Inactive.',
+  },
+  {
+    errorCode: '123',
+    errorDesc: 'Invalid Token/Expiry.',
+  },
+  {
+    errorCode: '124',
+    errorDesc: 'Ewaybill is not found.',
+  },
+  {
+    errorCode: '125',
+    errorDesc: 'Ewaybill is cancelled',
+  },
+  {
+    errorCode: '126',
+    errorDesc: 'Ewaybill is expired.',
+  },
+  {
+    errorCode: '127',
+    errorDesc: 'Ewaybill is valid.',
+  },
+  {
+    errorCode: '128',
+    errorDesc: 'Ewaybill is about to expire.',
+  },
+  {
+    errorCode: '129',
+    errorDesc: 'Ewaybill is generated successfully.',
+  },
+  {
+    errorCode: '130',
+    errorDesc: 'Ewaybill exists with the same number.',
+  },
+  {
+    errorCode: '131',
+    errorDesc: 'Invalid Ewaybill No.',
+  },
+  {
+    errorCode: '132',
+    errorDesc: 'Invalid ewaybill format.',
+  },
+  {
+    errorCode: '133',
+    errorDesc: 'Invalid ewaybill data.',
+  },
+  {
+    errorCode: '134',
+    errorDesc: 'Invalid ewaybill number.',
+  },
+  {
+    errorCode: '135',
+    errorDesc: 'Invalid ewaybill date.',
+  },
+  {
+    errorCode: '136',
+    errorDesc: 'Invalid ewaybill type.',
+  },
+  {
+    errorCode: '137',
+    errorDesc: 'Invalid ewaybill status.',
+  },
+  {
+    errorCode: '138',
+    errorDesc: 'Invalid ewaybill mode.',
+  },
+  {
+    errorCode: '139',
+    errorDesc: 'Invalid ewaybill transaction type.',
+  },
+  {
+    errorCode: '140',
+    errorDesc: 'Invalid ewaybill sub type.',
+  },
+  {
+    errorCode: '141',
+    errorDesc: 'Invalid document type.',
+  },
+  {
+    errorCode: '142',
+    errorDesc: 'Invalid document number.',
+  },
+  {
+    errorCode: '143',
+    errorDesc: 'Invalid document date.',
+  },
+  {
+    errorCode: '144',
+    errorDesc: 'Document date cannot be in future.',
+  },
+  {
+    errorCode: '145',
+    errorDesc: 'Document date cannot be more than 10 days old from current date.',
+  },
+  {
+    errorCode: '146',
+    errorDesc: 'Document date cannot be less than 10 days from current date.',
+  },
+  {
+    errorCode: '147',
+    errorDesc: 'Document date cannot be less than Ewaybill date.',
+  },
+  {
+    errorCode: '148',
+    errorDesc: 'Invalid supplier Gstin.',
+  },
+  {
+    errorCode: '149',
+    errorDesc: 'Invalid supplier legal name.',
+  },
+  {
+    errorCode: '150',
+    errorDesc: 'Invalid supplier trade name.',
+  },
+  {
+    errorCode: '151',
+    errorDesc: 'Invalid supplier address.',
+  },
+  {
+    errorCode: '152',
+    errorDesc: 'Invalid supplier place.',
+  },
+  {
+    errorCode: '153',
+    errorDesc: 'Invalid supplier pin code.',
+  },
+  {
+    errorCode: '154',
+    errorDesc: 'Invalid supplier state code.',
+  },
+  {
+    errorCode: '155',
+    errorDesc: 'Invalid recipient Gstin.',
+  },
+  {
+    errorCode: '156',
+    errorDesc: 'Invalid recipient legal name.',
+  },
+  {
+    errorCode: '157',
+    errorDesc: 'Invalid recipient trade name.',
+  },
+  {
+    errorCode: '158',
+    errorDesc: 'Invalid recipient address.',
+  },
+  {
+    errorCode: '159',
+    errorDesc: 'Invalid recipient place.',
+  },
+  {
+    errorCode: '160',
+    errorDesc: 'Invalid recipient pin code.',
+  },
+  {
+    errorCode: '161',
+    errorDesc: 'Invalid recipient state code.',
+  },
+  {
+    errorCode: '162',
+    errorDesc: 'Invalid dispatch from Gstin.',
+  },
+  {
+    errorCode: '163',
+    errorDesc: 'Invalid dispatch from legal name.',
+  },
+  {
+    errorCode: '164',
+    errorDesc: 'Invalid dispatch from trade name.',
+  },
+  {
+    errorCode: '165',
+    errorDesc: 'Invalid dispatch from address.',
+  },
+  {
+    errorCode: '166',
+    errorDesc: 'Invalid dispatch from place.',
+  },
+  {
+    errorCode: '167',
+    errorDesc: 'Invalid dispatch from pin code.',
+  },
+  {
+    errorCode: '168',
+    errorDesc: 'Invalid dispatch from state code.',
+  },
+  {
+    errorCode: '169',
+    errorDesc: 'Invalid ship to Gstin.',
+  },
+  {
+    errorCode: '170',
+    errorDesc: 'Invalid ship to legal name.',
+  },
+  {
+    errorCode: '171',
+    errorDesc: 'Invalid ship to trade name.',
+  },
+  {
+    errorCode: '172',
+    errorDesc: 'Invalid ship to address.',
+  },
+  {
+    errorCode: '173',
+    errorDesc: 'Invalid ship to place.',
+  },
+  {
+    errorCode: '174',
+    errorDesc: 'Invalid ship to pin code.',
+  },
+  {
+    errorCode: '175',
+    errorDesc: 'Invalid ship to state code.',
+  },
+  {
+    errorCode: '176',
+    errorDesc: 'Invalid total value of goods.',
+  },
+  {
+    errorCode: '177',
+    errorDesc: 'Invalid total cess value.',
+  },
+  {
+    errorCode: '178',
+    errorDesc: 'Invalid total taxable value.',
+  },
+  {
+    errorCode: '179',
+    errorDesc: 'Invalid total non taxable value.',
+  },
+  {
+    errorCode: '180',
+    errorDesc: 'Invalid total amount.',
+  },
+  {
+    errorCode: '181',
+    errorDesc: 'Invalid total quantity.',
+  },
+  {
+    errorCode: '182',
+    errorDesc: 'Invalid total invoice value.',
+  },
+  {
+    errorCode: '183',
+    errorDesc: 'Invalid total item value.',
+  },
+  {
+    errorCode: '184',
+    errorDesc: 'Invalid total tax amount.',
+  },
+  {
+    errorCode: '185',
+    errorDesc: 'Invalid total amount with tax.',
+  },
+  {
+    errorCode: '186',
+    errorDesc: 'Invalid HSN code.',
+  },
+  {
+    errorCode: '187',
+    errorDesc: 'Invalid HSN description.',
+  },
+  {
+    errorCode: '188',
+    errorDesc: 'Invalid HSN quantity.',
+  },
+  {
+    errorCode: '189',
+    errorDesc: 'Invalid HSN unit.',
+  },
+  {
+    errorCode: '190',
+    errorDesc: 'Invalid HSN taxable value.',
+  },
+  {
+    errorCode: '191',
+    errorDesc: 'Invalid HSN non taxable value.',
+  },
+  {
+    errorCode: '192',
+    errorDesc: 'Invalid HSN IGST rate.',
+  },
+  {
+    errorCode: '193',
+    errorDesc: 'Invalid HSN CGST rate.',
+  },
+  {
+    errorCode: '194',
+    errorDesc: 'Invalid HSN SGST rate.',
+  },
+  {
+    errorCode: '195',
+    errorDesc: 'Invalid HSN cess rate.',
+  },
+  {
+    errorCode: '196',
+    errorDesc: 'Invalid HSN cess non ad valorem rate.',
+  },
+  {
+    errorCode: '197',
+    errorDesc: 'Invalid HSN other value.',
+  },
+  {
+    errorCode: '198',
+    errorDesc: 'Invalid HSN total value.',
+  },
+  {
+    errorCode: '199',
+    errorDesc: 'Invalid transport mode.',
+  },
+  {
+    errorCode: '200',
+    errorDesc: 'Invalid vehicle type.',
+  },
+  {
     errorCode: '201',
     errorDesc: 'Invalid Supply Type',
   },
@@ -236,6 +564,10 @@ const errorCodeMapForEwayBill = [
     errorDesc: 'Could not generate eway bill, pls contact helpdesk',
   },
   {
+    errorCode: '241',
+    errorDesc: 'Ewaybill cannot be generated for an invalid HSN code.',
+  },
+  {
     errorCode: '242',
     errorDesc: 'Invalid State Code',
   },
@@ -264,8 +596,100 @@ const errorCodeMapForEwayBill = [
     errorDesc: 'Invalid CESS Rate',
   },
   {
+    errorCode: '256',
+    errorDesc: 'Ewaybill cannot be generated for an invalid recipient legal name.',
+  },
+  {
+    errorCode: '257',
+    errorDesc: 'Ewaybill cannot be generated for an invalid ship to legal name.',
+  },
+  {
+    errorCode: '258',
+    errorDesc: 'Ewaybill cannot be generated for an invalid supplier address.',
+  },
+  {
+    errorCode: '259',
+    errorDesc: 'Ewaybill cannot be generated for an invalid recipient address.',
+  },
+  {
+    errorCode: '260',
+    errorDesc: 'Ewaybill cannot be generated for an invalid dispatch from address.',
+  },
+  {
+    errorCode: '261',
+    errorDesc: 'Ewaybill cannot be generated for an invalid ship to address.',
+  },
+  {
+    errorCode: '262',
+    errorDesc: 'Ewaybill cannot be generated for an invalid supplier place.',
+  },
+  {
+    errorCode: '263',
+    errorDesc: 'Ewaybill cannot be generated for an invalid recipient place.',
+  },
+  {
+    errorCode: '264',
+    errorDesc: 'Ewaybill cannot be generated for an invalid dispatch from place.',
+  },
+  {
+    errorCode: '265',
+    errorDesc: 'Ewaybill cannot be generated for an invalid ship to place.',
+  },
+  {
+    errorCode: '266',
+    errorDesc: 'Ewaybill cannot be generated for an invalid supplier pin code.',
+  },
+  {
+    errorCode: '267',
+    errorDesc: 'Ewaybill cannot be generated for an invalid recipient pin code.',
+  },
+  {
+    errorCode: '268',
+    errorDesc: 'Ewaybill cannot be generated for an invalid dispatch from pin code.',
+  },
+  {
+    errorCode: '269',
+    errorDesc: 'Ewaybill cannot be generated for an invalid ship to pin code.',
+  },
+  {
+    errorCode: '270',
+    errorDesc: 'Ewaybill cannot be generated for an invalid supplier state code.',
+  },
+  {
+    errorCode: '271',
+    errorDesc: 'Ewaybill cannot be generated for an invalid recipient state code.',
+  },
+  {
+    errorCode: '272',
+    errorDesc: 'Ewaybill cannot be generated for an invalid dispatch from state code.',
+  },
+  {
+    errorCode: '273',
+    errorDesc: 'Ewaybill cannot be generated for an invalid ship to state code.',
+  },
+  {
+    errorCode: '274',
+    errorDesc: 'Ewaybill cannot be generated for an invalid total value of goods.',
+  },
+  {
+    errorCode: '275',
+    errorDesc: 'Ewaybill cannot be generated for an invalid total cess value.',
+  },
+  {
+    errorCode: '276',
+    errorDesc: 'Ewaybill cannot be generated for an invalid total taxable value.',
+  },
+  {
+    errorCode: '277',
+    errorDesc: 'Ewaybill cannot be generated for an invalid total non taxable value.',
+  },
+  {
     errorCode: '278',
     errorDesc: 'User Gstin does not match with Transporter Id',
+  },
+  {
+    errorCode: '279',
+    errorDesc: 'Ewaybill cannot be generated for an invalid total quantity.',
   },
   {
     errorCode: '280',
@@ -285,6 +709,74 @@ const errorCodeMapForEwayBill = [
     errorCode: '283',
     errorDesc:
       'At least 6 digit HSN code is mandatory for taxpayers with turnover 5Cr. and above',
+  },
+  {
+    errorCode: '284',
+    errorDesc: 'Ewaybill cannot be generated for an invalid HSN description.',
+  },
+  {
+    errorCode: '285',
+    errorDesc: 'Ewaybill cannot be generated for an invalid HSN quantity.',
+  },
+  {
+    errorCode: '286',
+    errorDesc: 'Ewaybill cannot be generated for an invalid HSN unit.',
+  },
+  {
+    errorCode: '287',
+    errorDesc: 'Ewaybill cannot be generated for an invalid HSN taxable value.',
+  },
+  {
+    errorCode: '288',
+    errorDesc: 'Ewaybill cannot be generated for an invalid HSN non taxable value.',
+  },
+  {
+    errorCode: '289',
+    errorDesc: 'Ewaybill cannot be generated for an invalid HSN IGST rate.',
+  },
+  {
+    errorCode: '290',
+    errorDesc: 'Ewaybill cannot be generated for an invalid HSN CGST rate.',
+  },
+  {
+    errorCode: '291',
+    errorDesc: 'Ewaybill cannot be generated for an invalid HSN SGST rate.',
+  },
+  {
+    errorCode: '292',
+    errorDesc: 'Ewaybill cannot be generated for an invalid HSN cess rate.',
+  },
+  {
+    errorCode: '293',
+    errorDesc: 'Ewaybill cannot be generated for an invalid HSN cess non ad valorem rate.',
+  },
+  {
+    errorCode: '294',
+    errorDesc: 'Ewaybill cannot be generated for an invalid HSN other value.',
+  },
+  {
+    errorCode: '295',
+    errorDesc: 'Ewaybill cannot be generated for an invalid HSN total value.',
+  },
+  {
+    errorCode: '296',
+    errorDesc: 'Ewaybill cannot be updated with invalid vehicle number.',
+  },
+  {
+    errorCode: '297',
+    errorDesc: 'Ewaybill cannot be updated with invalid vehicle current state.',
+  },
+  {
+    errorCode: '298',
+    errorDesc: 'Ewaybill cannot be updated with invalid vehicle previous state.',
+  },
+  {
+    errorCode: '299',
+    errorDesc: 'Ewaybill cannot be updated with invalid transporter ID.',
+  },
+  {
+    errorCode: '300',
+    errorDesc: 'Ewaybill cannot be updated with invalid transporter name.',
   },
   {
     errorCode: '301',
@@ -323,12 +815,24 @@ const errorCodeMapForEwayBill = [
     errorDesc: 'Could not update vehicle details, pl contact helpdesk',
   },
   {
+    errorCode: '310',
+    errorDesc: 'Ewaybill cannot be updated with invalid reason remarks for rejection.',
+  },
+  {
     errorCode: '311',
     errorDesc: 'Validity period lapsed, you cannot update vehicle details',
   },
   {
     errorCode: '312',
     errorDesc: 'This eway bill is either not generated by you or cancelled',
+  },
+  {
+    errorCode: '313',
+    errorDesc: 'Ewaybill cannot be updated with invalid reason code for consolidation.',
+  },
+  {
+    errorCode: '314',
+    errorDesc: 'Ewaybill cannot be updated with invalid reason remarks for consolidation.',
   },
   {
     errorCode: '315',
@@ -343,6 +847,14 @@ const errorCodeMapForEwayBill = [
     errorDesc: 'Could not cancel eway bill, please contact helpdesk',
   },
   {
+    errorCode: '318',
+    errorDesc: 'Ewaybill cannot be updated with invalid vehicle details.',
+  },
+  {
+    errorCode: '319',
+    errorDesc: 'Ewaybill cannot be updated with invalid transporter details.',
+  },
+  {
     errorCode: '320',
     errorDesc: 'Invalid state to',
   },
@@ -353,6 +865,14 @@ const errorCodeMapForEwayBill = [
   {
     errorCode: '322',
     errorDesc: 'Could not generate consolidated eway bill',
+  },
+  {
+    errorCode: '323',
+    errorDesc: 'Ewaybill cannot be rejected after verification.',
+  },
+  {
+    errorCode: '324',
+    errorDesc: 'Ewaybill cannot be accepted after verification.',
   },
   {
     errorCode: '325',
@@ -383,8 +903,20 @@ const errorCodeMapForEwayBill = [
     errorDesc: 'Could not retrieve Error code',
   },
   {
+    errorCode: '332',
+    errorDesc: 'Ewaybill cannot be updated with details after verification.',
+  },
+  {
+    errorCode: '333',
+    errorDesc: 'Ewaybill cannot be rejected by generator.',
+  },
+  {
     errorCode: '334',
     errorDesc: 'Could not retrieve user details by userid ',
+  },
+  {
+    errorCode: '335',
+    errorDesc: 'Ewaybill cannot be assigned to transporter by generator.',
   },
   {
     errorCode: '336',
@@ -435,6 +967,14 @@ const errorCodeMapForEwayBill = [
     errorCode: '347',
     errorDesc:
       'Validation of eway bill number failed, while rejecting ewaybill',
+  },
+  {
+    errorCode: '348',
+    errorDesc: 'Ewaybill cannot be cancelled by transporter.',
+  },
+  {
+    errorCode: '349',
+    errorDesc: 'Ewaybill cannot be updated with part B by transporter.',
   },
   {
     errorCode: '350',
@@ -675,6 +1215,10 @@ const errorCodeMapForEwayBill = [
     errorDesc: 'Error in multi vehicle details',
   },
   {
+    errorCode: '404',
+    errorDesc: 'Invalid Part A Details.',
+  },
+  {
     errorCode: '405',
     errorDesc:
       'No record found for multi vehicle update with specified ewbNo groupNo and old vehicleNo/transDocNo with status as ACT',
@@ -712,6 +1256,10 @@ const errorCodeMapForEwayBill = [
   {
     errorCode: '413',
     errorDesc: 'Unit Code is not matching with unit code of first initiaton',
+  },
+  {
+    errorCode: '414',
+    errorDesc: 'Invalid Ewaybill Get Details Request.',
   },
   {
     errorCode: '415',
@@ -754,6 +1302,34 @@ const errorCodeMapForEwayBill = [
     errorDesc: 'Invalid PAN number',
   },
   {
+    errorCode: '425',
+    errorDesc: 'Invalid Ewaybill Details Update Request.',
+  },
+  {
+    errorCode: '426',
+    errorDesc: 'Invalid Consolidated Ewaybill Details Update Request.',
+  },
+  {
+    errorCode: '427',
+    errorDesc: 'Invalid Extension Details Update Request.',
+  },
+  {
+    errorCode: '428',
+    errorDesc: 'Invalid Rejection Details Update Request.',
+  },
+  {
+    errorCode: '429',
+    errorDesc: 'Invalid Acceptance Details Update Request.',
+  },
+  {
+    errorCode: '430',
+    errorDesc: 'Invalid Cancellation Details Update Request.',
+  },
+  {
+    errorCode: '431',
+    errorDesc: 'Invalid Assign Transporter Details Update Request.',
+  },
+  {
     errorCode: '432',
     errorDesc: 'invalid vehicle released value',
   },
@@ -772,6 +1348,26 @@ const errorCodeMapForEwayBill = [
   {
     errorCode: '436',
     errorDesc: 'Invalid email id',
+  },
+  {
+    errorCode: '437',
+    errorDesc: 'Invalid Consolidated Ewaybill Assign Transporter Request.',
+  },
+  {
+    errorCode: '438',
+    errorDesc: 'Invalid Consolidated Ewaybill Extend Validity Request.',
+  },
+  {
+    errorCode: '439',
+    errorDesc: 'Invalid Consolidated Ewaybill Get Consolidated Details Request.',
+  },
+  {
+    errorCode: '440',
+    errorDesc: 'Invalid Consolidated Ewaybill Get Consolidated List Request.',
+  },
+  {
+    errorCode: '441',
+    errorDesc: 'Invalid Consolidated Ewaybill Consolidated Details Update Request.',
   },
   {
     errorCode: '442',
@@ -1105,8 +1701,52 @@ const errorCodeMapForEwayBill = [
     errorDesc: 'Error in fetching WatchList Data',
   },
   {
+    errorCode: '685',
+    errorDesc: 'Exception in fetching dashboard data',
+  },
+  {
     errorCode: '700',
     errorDesc: 'You are not assigned to extend e-waybill',
+  },
+  {
+    errorCode: '701',
+    errorDesc: 'Invalid Vehicle Direction',
+  },
+  {
+    errorCode: '702',
+    errorDesc: 'The distance between the pincodes given is too high',
+  },
+  {
+    errorCode: '703',
+    errorDesc: 'Since the consignor is Composite Taxpayer, inter state transactions are not allowed',
+  },
+  {
+    errorCode: '704',
+    errorDesc: 'Since the consignor is Composite Taxpayer, Tax rates should be zero',
+  },
+  {
+    errorCode: '705',
+    errorDesc: 'Invalid transit type',
+  },
+  {
+    errorCode: '706',
+    errorDesc: 'Address Line1 is mandatory',
+  },
+  {
+    errorCode: '707',
+    errorDesc: 'Address Line2 is mandatory',
+  },
+  {
+    errorCode: '708',
+    errorDesc: 'Address Line3 is mandatory',
+  },
+  {
+    errorCode: '709',
+    errorDesc: 'Pin to pin distance is not available for the given pin codes',
+  },
+  {
+    errorCode: '710',
+    errorDesc: 'Invalid state code for the given pincode',
   },
   {
     errorCode: '711',
@@ -1150,6 +1790,40 @@ const errorCodeMapForEwayBill = [
     errorCode: '719',
     errorDesc:
       'The Transporter GSTIN is blocked from Transporter Updation as Return is not filed for past 2 months',
+  },
+  {
+    errorCode: '720',
+    errorDesc:
+      'E Way Bill should be generated as part of IRN generation or with reference to IRN in E Invoice System, Since Supplier is enabled for E Invoi',
+  },
+  {
+    errorCode: '721',
+    errorDesc:
+      'The distance between the given pincodes are not available in the system. Please provide distance.',
+  },
+  {
+    errorCode: '722',
+    errorDesc: 'Consignee GSTIN is cancelled and document date is later than the De-Registration date',
+  },
+  {
+    errorCode: '724',
+    errorDesc: 'HSN code of at least one item should be of goods to generate e-Way Bill',
+  },
+  {
+    errorCode: '726',
+    errorDesc: 'Vehicle type can not be regular when transportation mode is ship',
+  },
+  {
+    errorCode: '727',
+    errorDesc: 'For Ship Transport, either vehicle number or transport document number is required',
+  },
+  {
+    errorCode: '728',
+    errorDesc: 'You can cancel the ewaybill within 24 hours from Part B entry',
+  },
+  {
+    errorCode: '729',
+    errorDesc: 'TransDoc date is required for transport mode Ship as the transport document number is provided',
   },
   {
     errorCode: '800',
@@ -1222,7 +1896,7 @@ const errorCodeMapForEwayBill = [
   },
   {
     errorCode: '817',
-    errorDesc: 'Vehicle No is not required for ewaybill for gold',
+    errorDesc: 'MultiVehicle Movement cannot be initiated. Eway Bill is not in Active State',
   },
   {
     errorCode: '818',
