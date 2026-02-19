@@ -1248,8 +1248,8 @@ export const fetch_pressing_done_consumed_item_details = catchAsync(
         },
       },
       // Uncomment if needed:
-      
-        {
+
+      {
         $unwind: {
           path: '$group_details',
           preserveNullAndEmptyArrays: true

@@ -29,16 +29,27 @@ export function DispatchJSONtoXML(dispatch) {
         dispatch.customer_details?.company_name || "Cash"
     );
     const narration = escape(
-        dispatch.remark || `Invoice ${dispatch.invoice_no}`
+        `Invoice ${dispatch.invoice_no}`
     );
 
+    const freight_charges = Number(dispatch.freight_details.freight_amount || 0);
+    const other_charges = Number(dispatch.other_amount_details.other_charges || 0);
+    const insurance_charges = Number(dispatch.insurance_details.insurance_amount || 0);
+    const gst_charges = Number(dispatch.total_gst_amt || 0);
+    const cgst_charges = Number(dispatch.total_cgst_amt || 0);
+    const sgst_charges = Number(dispatch.total_sgst_amt || 0);
+    const igst_charges = Number(dispatch.total_igst_amt || 0);
     const items = dispatch.dispatch_items_details || [];
     // console.log("items: ", items);
     // Calculate total safely
-    const totalAmount = items.reduce(
-        (sum, it) => sum + Number(it.amount || 0),
-        0
-    );
+    const totalAmount = items.reduce((sum, it) => {
+        const qty = Number(it.sqm || it.cbm || it.cmt || it.quantity || 0);
+        const rate = Number(it.rate || 0);
+
+        const amount = Number((it.amount ?? (qty * rate)).toFixed(2));
+
+        return sum + amount;
+    }, 0);
 
     const inventoryXML = items
         .map((it) => {
@@ -72,6 +83,97 @@ export function DispatchJSONtoXML(dispatch) {
 `;
         })
         .join("");
+
+    const ledgerEntries = [];
+
+    // FREIGHT
+    if (freight_charges)
+        ledgerEntries.push(`
+        <LEDGERENTRIES.LIST>
+        <LEDGERNAME>Freight Outward Exp-Sales</LEDGERNAME>
+        <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
+        <AMOUNT>${freight_charges.toFixed(2)}</AMOUNT>
+        </LEDGERENTRIES.LIST>`);
+
+    // INSURANCE
+    if (insurance_charges)
+        ledgerEntries.push(`
+        <LEDGERENTRIES.LIST>
+        <LEDGERNAME>Insurance Exp.-Sales Tcs</LEDGERNAME>
+        <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
+        <AMOUNT>${insurance_charges.toFixed(2)}</AMOUNT>
+        </LEDGERENTRIES.LIST>`);
+
+    // OTHER / PACKING
+    if (other_charges)
+        ledgerEntries.push(`
+        <LEDGERENTRIES.LIST>
+        <LEDGERNAME>Packing Exps-Sales</LEDGERNAME>
+        <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
+        <AMOUNT>${other_charges.toFixed(2)}</AMOUNT>
+        </LEDGERENTRIES.LIST>`);
+
+    // GST LOGIC
+    if (igst_charges) {
+
+        ledgerEntries.push(`
+        <LEDGERENTRIES.LIST>
+        <LEDGERNAME>IGST-Output</LEDGERNAME>
+        <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
+        <AMOUNT>${igst_charges.toFixed(2)}</AMOUNT>
+        </LEDGERENTRIES.LIST>`);
+
+    } else {
+
+        if (cgst_charges)
+            ledgerEntries.push(`
+        <LEDGERENTRIES.LIST>
+        <LEDGERNAME>CGST-Output</LEDGERNAME>
+        <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
+        <AMOUNT>${cgst_charges.toFixed(2)}</AMOUNT>
+        </LEDGERENTRIES.LIST>`);
+
+        if (sgst_charges)
+            ledgerEntries.push(`
+        <LEDGERENTRIES.LIST>
+        <LEDGERNAME>SGST-Output</LEDGERNAME>
+        <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
+        <AMOUNT>${sgst_charges.toFixed(2)}</AMOUNT>
+        </LEDGERENTRIES.LIST>`);
+    }
+
+    const finalTotal = Number(dispatch.final_total_amount || 0);
+    const calculatedTotal =
+        Number((
+            totalAmount +
+            freight_charges +
+            insurance_charges +
+            other_charges +
+            cgst_charges +
+            sgst_charges +
+            igst_charges
+        ).toFixed(2));
+
+    const rounding = finalTotal - calculatedTotal;
+
+    const partyAmount = Number(dispatch.final_total_amount);
+    if (Math.abs(rounding) >= 0.01) {
+        ledgerEntries.push(`
+    <LEDGERENTRIES.LIST>
+        <LEDGERNAME>Invoice Rounding</LEDGERNAME>
+        <ISDEEMEDPOSITIVE>${rounding < 0 ? "Yes" : "No"}</ISDEEMEDPOSITIVE>
+        <AMOUNT>${rounding.toFixed(2)}</AMOUNT>
+    </LEDGERENTRIES.LIST>
+    `);
+    }
+
+    // console.log("====== TALLY CHECK ======");
+    // console.log("Inventory Total:", totalAmount);
+    // console.log("Calculated Total:", calculatedTotal);
+    // console.log("Final Total:", finalTotal);
+    // console.log("Rounding:", rounding);
+    // console.log("==========================");
+
 
     const xml = `
     <ENVELOPE>
@@ -109,14 +211,16 @@ export function DispatchJSONtoXML(dispatch) {
         <ISINVOICE>Yes</ISINVOICE>
         <PERSISTEDVIEW>Invoice Voucher View</PERSISTEDVIEW>
 
-        <!-- PARTY DEBIT -->
+        <!-- PARTY -->
         <LEDGERENTRIES.LIST>
-            <LEDGERNAME>${partyName}</LEDGERNAME>
-            <ISDEEMEDPOSITIVE>Yes</ISDEEMEDPOSITIVE>
-            <AMOUNT>-${totalAmount}</AMOUNT>
+        <LEDGERNAME>${partyName}</LEDGERNAME>
+        <ISDEEMEDPOSITIVE>Yes</ISDEEMEDPOSITIVE>
+        <AMOUNT>-${partyAmount.toFixed(2)}</AMOUNT>
         </LEDGERENTRIES.LIST>
 
         ${inventoryXML}
+
+        ${ledgerEntries.join("")}
 
         </VOUCHER>
 

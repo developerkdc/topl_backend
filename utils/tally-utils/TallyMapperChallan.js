@@ -35,37 +35,51 @@ export function ChallanJSONtoXML(challan) {
     const godown = "Main Location";
 
     const items = challan.issue_for_challan_item_details || [];
+    console.log("Raw Items Array:", items);
     const qty = Number(challan.total_sqm || 0);
-    const inventoryXML = items
-        .map((it) => {
-            const item = it.issued_item_details;
+    const inventoryXML = challan.issue_for_challan_item_details
+        .map((row) => {
+
+            const item = row.issued_item_details;
+
             const name = escape(item.item_name);
 
-            const unit = "SqM"; // You can adjust to item.unit if available
+            const qty = Number(item.total_sq_meter || 0);
             const rate = Number(item.rate_in_inr || 0);
             const amount = Number(item.amount || qty * rate);
 
+            const unit = "Nos";
+            const batch = escape(item.pallet_number || "Primary Batch");
+            console.log("Raw Item Object:", item);
+
+            console.log("Mapped Values:");
+            console.log("Name   ->", name);
+            console.log("Qty    ->", qty);
+            console.log("Rate   ->", rate);
+            console.log("Amount ->", amount);
+            console.log("Unit   ->", unit);
+            console.log("Batch  ->", batch);
+
+            console.log("Sanity Check:");
+            console.log("Qty * Rate =", qty * rate);
+            console.log("Matches Amount?", qty * rate === amount);
+
             return `
-<ALLINVENTORYENTRIES.LIST>
-  <STOCKITEMNAME>${name}</STOCKITEMNAME>
-  <ISDEEMEDPOSITIVE>Yes</ISDEEMEDPOSITIVE>
-  <RATE>${rate}</RATE>
-  <AMOUNT>${amount}</AMOUNT>
-  <ACTUALQTY>${qty} ${unit}</ACTUALQTY>
-  <BILLEDQTY>${qty} ${unit}</BILLEDQTY>
-  <STOCKLEDGERNAME>${stockLedger}</STOCKLEDGERNAME>
-  <LEDGERNAME>${stockLedger}</LEDGERNAME>
-  <BATCHALLOCATIONS.LIST>
-    <GODOWNNAME>${godown}</GODOWNNAME>
-    <BATCHNAME>${item.pallet_number || "Primary Batch"}</BATCHNAME>
-    <DESTINATIONGODOWNNAME>${godown}</DESTINATIONGODOWNNAME>
-                <INDENTNO></INDENTNO>
-                <ORDERNO></ORDERNO>
-                <AMOUNT>${amount}</AMOUNT>
-                <ACTUALQTY>${qty} ${unit}</ACTUALQTY>
-                <BILLEDQTY>${qty} ${unit}</BILLEDQTY>
-            </BATCHALLOCATIONS.LIST>
-            </ALLINVENTORYENTRIES.LIST>
+            <ALLINVENTORYENTRIES.LIST>
+
+    <STOCKITEMNAME>${name}</STOCKITEMNAME>
+
+    <ISDEEMEDPOSITIVE>YES</ISDEEMEDPOSITIVE>
+    <ISLASTDEEMEDPOSITIVE>YES</ISLASTDEEMEDPOSITIVE>
+    <ISINVOICEITEM>NO</ISINVOICEITEM>
+
+    <ACTUALQTY>${qty} Nos</ACTUALQTY>
+    <BILLEDQTY>${qty} Nos</BILLEDQTY>
+
+    <RATE>${rate}/Nos</RATE>
+    <AMOUNT>-${amount}</AMOUNT>
+
+</ALLINVENTORYENTRIES.LIST>
             `;
         })
         .join("");
@@ -85,15 +99,13 @@ export function ChallanJSONtoXML(challan) {
         </REQUESTDESC>
         <REQUESTDATA>
             <TALLYMESSAGE xmlns:UDF="TallyUDF">
-            <VOUCHER 
+            <VOUCHER
                 VCHTYPE="Delivery Note" 
                 ACTION="Create" 
                 OBJVIEW="Invoice Voucher View">
-                
-                <ISOPTIONAL>No</ISOPTIONAL>
+                <ISOPTIONAL>NO</ISOPTIONAL>
                 <GUID>${guid}</GUID>
                 <REMOTEID>${remoteId}</REMOTEID>
-                
                 <DATE>${date}</DATE>
                 <EFFECTIVEDATE>${date}</EFFECTIVEDATE>
                 <VOUCHERTYPENAME>Delivery Note</VOUCHERTYPENAME>
@@ -102,19 +114,17 @@ export function ChallanJSONtoXML(challan) {
                 <PARTYLEDGERNAME>${partyName}</PARTYLEDGERNAME>
                 <REFERENCE>${reference}</REFERENCE>
                 <NARRATION>${narration}</NARRATION>
-                <ISINVOICE>No</ISINVOICE>
+                <ISINVOICE>NO</ISINVOICE>
                 <PERSISTEDVIEW>Delivery Note Voucher View</PERSISTEDVIEW>
-
-                <!-- Party Ledger Entry -->
-                <LEDGERENTRIES.LIST>
-                <LEDGERNAME>${partyName}</LEDGERNAME>
-                <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
-                <AMOUNT>0</AMOUNT>
-                </LEDGERENTRIES.LIST>
 
                 <!-- Inventory Entries -->
                 ${inventoryXML}
-
+                <ISINVENTORYVOUCHER>YES</ISINVENTORYVOUCHER>
+                <LEDGERENTRIES.LIST>
+                    <LEDGERNAME>${partyName}</LEDGERNAME>
+                    <ISDEEMEDPOSITIVE>NO</ISDEEMEDPOSITIVE>
+                    <AMOUNT>0</AMOUNT>
+                </LEDGERENTRIES.LIST>
             </VOUCHER>
             </TALLYMESSAGE>
         </REQUESTDATA>
