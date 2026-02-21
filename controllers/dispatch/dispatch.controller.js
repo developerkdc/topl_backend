@@ -2462,7 +2462,7 @@ export const get_irn_by_doc = catchAsync(async (req, res, next) => {
     }
 
     throw new ApiError(
-      `IRN Cancellation Failed. Error : ${errorMessage}`,
+      `IRN Fetch Failed. Error : ${errorMessage}`,
       StatusCodes.BAD_REQUEST
     );
   }
@@ -2471,7 +2471,7 @@ export const get_irn_by_doc = catchAsync(async (req, res, next) => {
 
   return res.status(200).json({
     success: true,
-    message: 'IRN Number Cancelled successfully.',
+    message: 'IRN Number Fetched successfully.',
     result: irnResponse?.data,
   });
 });
