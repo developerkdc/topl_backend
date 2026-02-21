@@ -820,12 +820,12 @@ export const generate_challan_ewaybill = catchAsync(async (req, res, next) => {
 
   // Optionally, eager load related entities (transporter, vehicle) if you need deeper metadata, like dispatch
   let transporter_details = challan_details.transporter_details;
-  if (!transporter_details && challan_details.transporter_id) {
+  if (challan_details.transporter_id) {
     transporter_details = await transporterModel.findOne({
       _id: challan_details.transporter_id,
     });
   }
-  // console.log('transporter_details', transporter_details, 'transporter_details');
+  console.log('transporter_details', transporter_details, 'transporter_details');
 
   const address = challan_details.address || {};
   const {
@@ -940,6 +940,7 @@ export const generate_challan_ewaybill = catchAsync(async (req, res, next) => {
     transDistance: challan_details?.approx_distance?.toString() || '',
     transporterName: transporter_details?.name,
     transporterId: transporter_details?.transport_id,
+    // transporterId: "23AACFA2856L1ZJ",
     transDocNo: challan_details?.transport_document_no,
     transDocDate: challan_details?.transport_document_date
       ? moment(challan_details.transport_document_date, [

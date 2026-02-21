@@ -7,6 +7,37 @@ import puppeteer from 'puppeteer';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Shared browser instance (launch once, reuse for all PDFs)
+const BROWSER_LAUNCH_OPTS = {
+  args: ['--no-sandbox', '--disable-setuid-sandbox'],
+};
+
+let sharedBrowser = null;
+
+async function getBrowser() {
+  if (sharedBrowser && sharedBrowser.connected) {
+    return sharedBrowser;
+  }
+  if (sharedBrowser) {
+    try {
+      sharedBrowser.close();
+    } catch (_) {}
+    sharedBrowser = null;
+  }
+  sharedBrowser = await puppeteer.launch(BROWSER_LAUNCH_OPTS);
+  return sharedBrowser;
+}
+
+/** Call to close the shared browser (e.g. on app shutdown). */
+export async function closePDFBrowser() {
+  if (sharedBrowser) {
+    try {
+      await sharedBrowser.close();
+    } catch (_) {}
+    sharedBrowser = null;
+  }
+}
+
 export default async function generatePDFBuffer({ templateName, data }) {
   const templatePath = path.join(
     __dirname,
@@ -32,19 +63,16 @@ export default async function generatePDFBuffer({ templateName, data }) {
   const template = Handlebars.compile(templateContent);
   const html = template({ ...data, logoUrl: logoBase64 });
 
-  const browser = await puppeteer.launch({
-    // executablePath: '/home/ubuntu/chrome/linux-141.0.7390.76/chrome-linux64/chrome',
-    // headless: true, have to check if works on server
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
-  });
+  const browser = await getBrowser();
   const page = await browser.newPage();
-  await page.setContent(html, { waitUntil: 'networkidle0' });
-  // Adjust zoom / scale before generating the PDF
-  await page.emulateMediaType('screen');
+  try {
+    await page.setContent(html, { waitUntil: 'networkidle0' });
+    // Adjust zoom / scale before generating the PDF
+    await page.emulateMediaType('screen');
 
-  // Force consistent font rendering scale
-  await page.addStyleTag({
-    content: `
+    // Force consistent font rendering scale
+    await page.addStyleTag({
+      content: `
     html, body {
       font-size: 16px !important;
       zoom: 1;
@@ -54,22 +82,23 @@ export default async function generatePDFBuffer({ templateName, data }) {
       margin: 0 auto;
     }
   `
-  });
+    });
 
-  const pdfBuffer = await page.pdf({
-    format: 'A4',
-    printBackground: true,
-    preferCSSPageSize: true,  
-    margin: {
-      top: '30px',
-      bottom: '30px',
-      left: '10px',
-      right: '10px',
-    },
-  });
-
-  await browser.close();
-  return pdfBuffer;
+    const pdfBuffer = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      preferCSSPageSize: true,
+      margin: {
+        top: '30px',
+        bottom: '30px',
+        left: '10px',
+        right: '10px',
+      },
+    });
+    return pdfBuffer;
+  } finally {
+    await page.close();
+  }
 }
 
 export async function generatePDF({ templateName, templatePath, data }) {
@@ -89,27 +118,25 @@ export async function generatePDF({ templateName, templatePath, data }) {
   const template = Handlebars.compile(templateContent);
   const html = template({ ...data, logoUrl: logoBase64, headerUrl: headerBase64, footerUrl: footerBase64 });
 
-  const browser = await puppeteer.launch({
-    // executablePath: '/home/ubuntu/chrome/linux-141.0.7390.76/chrome-linux64/chrome',
-    // headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
-  });
+  const browser = await getBrowser();
   const page = await browser.newPage();
-  await page.setContent(html, { waitUntil: 'networkidle0' });
+  try {
+    await page.setContent(html, { waitUntil: 'networkidle0' });
 
-  const pdfBuffer = await page.pdf({
-    format: 'A4',
-    printBackground: true,
-    margin: {
-      top: '50px',
-      bottom: '50px',
-      left: '20px',
-      right: '20px',
-    },
-  });
-
-  await browser.close();
-  return pdfBuffer;
+    const pdfBuffer = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: {
+        top: '50px',
+        bottom: '50px',
+        left: '20px',
+        right: '20px',
+      },
+    });
+    return pdfBuffer;
+  } finally {
+    await page.close();
+  }
 }
 
 export async function generatePDF_packing({ templateName, templatePath, data }) {
@@ -129,27 +156,25 @@ export async function generatePDF_packing({ templateName, templatePath, data }) 
   const template = Handlebars.compile(templateContent);
   const html = template({ ...data, logoUrl: logoBase64, headerUrl: headerBase64, footerUrl: footerBase64 });
 
-  const browser = await puppeteer.launch({
-    // executablePath: '/home/ubuntu/chrome/linux-141.0.7390.76/chrome-linux64/chrome',
-    // headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
-  });
+  const browser = await getBrowser();
   const page = await browser.newPage();
-  await page.setContent(html, { waitUntil: 'networkidle0' });
+  try {
+    await page.setContent(html, { waitUntil: 'networkidle0' });
 
-  const pdfBuffer = await page.pdf({
-    format: 'A4',
-    printBackground: true,
-    // margin: {
-    //   top: '50px',
-    //   bottom: '50px',
-    //   left: '20px',
-    //   right: '20px',
-    // },
-  });
-
-  await browser.close();
-  return pdfBuffer;
+    const pdfBuffer = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      // margin: {
+      //   top: '50px',
+      //   bottom: '50px',
+      //   left: '20px',
+      //   right: '20px',
+      // },
+    });
+    return pdfBuffer;
+  } finally {
+    await page.close();
+  }
 }
 
 export async function generatePackingPDF({ templateName, templatePath, data }) {
@@ -179,38 +204,36 @@ export async function generatePackingPDF({ templateName, templatePath, data }) {
     footerUrl: footerBase64,
   });
 
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
-  });
-
+  const browser = await getBrowser();
   const page = await browser.newPage();
-  await page.setContent(html, { waitUntil: 'networkidle0' });
+  try {
+    await page.setContent(html, { waitUntil: 'networkidle0' });
 
-  const pdfBuffer = await page.pdf({
-    format: 'A4',
-    printBackground: true,
-    displayHeaderFooter: true,
-    margin: {
-      top: '160px',
-      bottom: '80px',
-      left: '10px',
-      right: '30px',
-    },
-    headerTemplate: `
+    const pdfBuffer = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      displayHeaderFooter: true,
+      margin: {
+        top: '160px',
+        bottom: '80px',
+        left: '10px',
+        right: '30px',
+      },
+      headerTemplate: `
       <div style="width:100%; text-align:center; font-size:0; margin-top:-10px;">
         <img src="${headerBase64}" style="width:100%; height:auto;" />
       </div>
     `,
-    footerTemplate: `
+      footerTemplate: `
       <div style="width:100%; text-align:center; font-size:0; margin-bottom:-10px;">
         <img src="${footerBase64}" style="width:100%; height:auto;" />
       </div>
     `,
-  });
-
-  await browser.close();
-  return pdfBuffer;
+    });
+    return pdfBuffer;
+  } finally {
+    await page.close();
+  }
 }
 
 export async function generatePrintPDF({ templateName, templatePath, data }) {
@@ -232,35 +255,33 @@ export async function generatePrintPDF({ templateName, templatePath, data }) {
     // Removed headerUrl & footerUrl
   });
 
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
-  });
-
+  const browser = await getBrowser();
   const page = await browser.newPage();
-  await page.setContent(html, { waitUntil: 'networkidle0' });
+  try {
+    await page.setContent(html, { waitUntil: 'networkidle0' });
 
-  const pdfBuffer = await page.pdf({
-    format: 'A4',
-    printBackground: true,
-    displayHeaderFooter: true,
-    margin: {
-      top: '160px',
-      bottom: '80px',
-      left: '10px',
-      right: '30px',
-    },
-    // Empty header & footer (no images)
-    headerTemplate: `
+    const pdfBuffer = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      displayHeaderFooter: true,
+      margin: {
+        top: '160px',
+        bottom: '80px',
+        left: '10px',
+        right: '30px',
+      },
+      // Empty header & footer (no images)
+      headerTemplate: `
       <div style="width:100%; text-align:center; font-size:10px;">
       </div>
     `,
-    footerTemplate: `
+      footerTemplate: `
       <div style="width:100%; text-align:center; font-size:10px;">
       </div>
     `,
-  });
-
-  await browser.close();
-  return pdfBuffer;
+    });
+    return pdfBuffer;
+  } finally {
+    await page.close();
+  }
 }
