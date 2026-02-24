@@ -93,6 +93,12 @@ const issue_for_polishing_schema = new mongoose.Schema(
       },
       required: [true, 'Item Issued for is required.'],
     },
+    product_type: {
+      type: String,
+    },
+    series_code: {
+      type: String,
+    },
     remark: {
       type: String,
       default: null,
@@ -147,19 +153,19 @@ export const issue_for_polishing_view_model = mongoose.model(
         },
       },
       {
-    $lookup: {
-      from: "grouping_done_items_details",
-      localField: "pressing_details.group_no",
-      foreignField: "group_no",
-      as: "grouping_details"
-    }
-  },
-   {
-    $unwind: {
-      path: "$grouping_details",
-      preserveNullAndEmptyArrays: true
-    }
-  },
+        $lookup: {
+          from: "grouping_done_items_details",
+          localField: "pressing_details.group_no",
+          foreignField: "group_no",
+          as: "grouping_details"
+        }
+      },
+      {
+        $unwind: {
+          path: "$grouping_details",
+          preserveNullAndEmptyArrays: true
+        }
+      },
       {
         $unwind: {
           path: '$pressing_details',

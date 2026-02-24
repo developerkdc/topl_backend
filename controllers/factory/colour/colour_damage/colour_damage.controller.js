@@ -284,6 +284,8 @@ export const add_color_damage = catchAsync(async (req, res) => {
           no_of_sheets: damage_sheets,
           order_item_id: color_done_details?.order_item_id,
           sqm: damage_sqm,
+          series_code: color_done_details?.series_code,
+          product_type: color_done_details?.product_type,
           amount: damage_amount,
           sr_no: maxSrNo ? maxSrNo?.max_sr_no + 1 : 1,
           created_by: userDetails?._id,
