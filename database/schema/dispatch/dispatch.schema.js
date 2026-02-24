@@ -41,6 +41,12 @@ const address_schema = {
     trim: true,
     default: null,
   },
+  gst_number: {
+    type: String,
+    uppercase: true,
+    trim: true,
+    default: null,
+  },
 };
 
 const dispatchSchema = new mongoose.Schema(
@@ -280,6 +286,10 @@ const dispatchSchema = new mongoose.Schema(
       default: null,
     },
     eway_bill_date: {
+      type: Date,
+      default: null,
+    },
+    eway_bill_valid_upto: {
       type: Date,
       default: null,
     },

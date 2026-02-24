@@ -77,6 +77,13 @@ export const updateDispatchAddress = catchAsync(async (req, res, next) => {
     return next(new ApiError('Invalid Params Id', 400));
   }
 
+  if (status === false) {
+    const existing = await dispatchAddressModel.findById(id).select('is_primary').lean();
+    if (existing?.is_primary) {
+      return next(new ApiError('Cannot deactivate primary dispatch address', 400));
+    }
+  }
+
   const dispatchAddressData = {
     address: address,
     country: country,
@@ -355,6 +362,50 @@ export const fetchSingleDispatchAddress = catchAsync(async (req, res, next) => {
     200,
     'Dispatch Address Data Fetched Successfully',
     dispatchAddressData?.[0]
+  );
+  return res.status(200).json(response);
+});
+
+export const setPrimaryDispatchAddress = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+  const authUserDetail = req.userDetails;
+
+  if (!id || !mongoose.isValidObjectId(id)) {
+    return next(new ApiError('Invalid Params Id', 400));
+  }
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const updateResult = await dispatchAddressModel.updateOne(
+      { _id: id },
+      { $set: { is_primary: true, updated_by: authUserDetail?._id } },
+      { session }
+    );
+
+    if (updateResult.matchedCount <= 0) {
+      await session.abortTransaction();
+      return next(new ApiError('Document not found', 404));
+    }
+
+    await dispatchAddressModel.updateMany(
+      { _id: { $ne: id } },
+      { $set: { is_primary: false, updated_by: authUserDetail?._id } },
+      { session }
+    );
+
+    await session.commitTransaction();
+  } catch (err) {
+    await session.abortTransaction();
+    throw err;
+  } finally {
+    session.endSession();
+  }
+
+  const response = new ApiResponse(
+    200,
+    'Primary dispatch address updated successfully',
+    null
   );
   return res.status(200).json(response);
 });

@@ -447,7 +447,7 @@
       line-height:1.2;
     ">
 
-      <!-- LEFT COLUMN: QR -->
+      <!-- LEFT COLUMN: IRN QR (generated from qr_code_link) or placeholder -->
       <div style="
         width:22%;
         border-right:1px solid #000;
@@ -456,7 +456,11 @@
         justify-content:center;
         align-items:center;
       ">
-        <img src="{{footerUrl}}" alt="QR Code" width="90" height="90" />
+        {{#if irnQrImageUrl}}
+        <img src="{{irnQrImageUrl}}" alt="IRN QR Code" width="90" height="90" />
+        {{else}}
+        {{!-- <img src="{{footerUrl}}" alt="QR Placeholder" width="90" height="90" /> --}}
+        {{/if}}
       </div>
 
       <!-- MIDDLE COLUMN: IRN + ACK + EWAY -->
@@ -467,9 +471,11 @@
         font-size:8px;
         line-height:1.3;
       ">
-        <div>IRN NO: {{irn}}</div>
-        <div>ACK NO & DATE: {{ack_no}} & {{ack_date}}</div>
-        <div>EWAY BILL NO & DATE: {{eway_bill_no}} & {{eway_bill_date}}</div>
+        <div style="margin-top: 0;">IRN NO: {{irn}}</div>
+        <div style="margin-top: 5px;">ACK NO: {{ack_no}}</div>
+        <div style="margin-top: 5px;">ACK DATE: {{ack_date}}</div>
+        <div style="margin-top: 5px;">EWAY BILL NO: {{eway_bill_no}}</div>
+        <div style="margin-top: 5px;">EWAY BILL DATE: {{eway_bill_date}}</div>
       </div>
 
       <!-- RIGHT COLUMN: BANK DETAILS -->

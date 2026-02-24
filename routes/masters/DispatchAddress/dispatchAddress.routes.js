@@ -5,6 +5,7 @@ import {
   dropdownDispatchAddress,
   fetchDispatchAddressList,
   fetchSingleDispatchAddress,
+  setPrimaryDispatchAddress,
   updateDispatchAddress,
 } from '../../../controllers/masters/DispatchAddress/dispatchAddress.controller.js';
 
@@ -19,6 +20,11 @@ dispatchAddressRouter.patch(
   '/update-dispatchAddress/:id',
   AuthMiddleware,
   updateDispatchAddress
+);
+dispatchAddressRouter.patch(
+  '/set-primary-dispatchAddress/:id',
+  AuthMiddleware,
+  setPrimaryDispatchAddress
 );
 
 dispatchAddressRouter.get(

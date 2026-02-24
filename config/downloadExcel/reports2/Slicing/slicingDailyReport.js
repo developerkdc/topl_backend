@@ -117,7 +117,7 @@ const GenerateSlicingDailyReport = async (rows, reportDate) => {
     'Leaves',
     'Sq Mtr',
   ];
-  const rejHeaders = ['Rej. Hight', 'Rej. Width', 'Rej. CMT', 'Remarks'];
+  const rejHeaders = ['Rej. Height', 'Rej. Width', 'Rej. CMT', 'Remarks'];
   const mainColCount = mainHeaders.length;
   const rejStartCol = mainColCount + 1;
 
