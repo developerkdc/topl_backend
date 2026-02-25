@@ -250,6 +250,16 @@ const grouping_done_items_details_schema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    cut_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
+    cut_name: {
+      type: String,
+      uppercase: true,
+      trim: true,
+      default: null,
+    },
     remark: {
       type: String,
       default: null,
