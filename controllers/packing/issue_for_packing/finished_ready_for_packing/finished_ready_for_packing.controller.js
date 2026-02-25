@@ -139,6 +139,7 @@ export const packing_customer_name_list = catchAsync(async (req, res, next) => {
 export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
   const {
     issued_sheets,
+    product_type,
     issued_amount,
     issued_sqm,
     issued_from_id,
@@ -344,6 +345,7 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
         pressing_done_details?.order_details?.order_category ||
         order_category,
       product_type:
+        product_type ||
         pressing_done_details?.product_type ||
         pressing_done_details?.pressing_details?.product_type,
       no_of_sheets: issued_sheets,
@@ -454,6 +456,7 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
       sqm: issued_sqm,
       amount: issued_amount,
       product_type:
+        product_type ||
         pressing_done_details?.product_type ||
         pressing_done_details?.pressing_details?.product_type,
       order_category:
