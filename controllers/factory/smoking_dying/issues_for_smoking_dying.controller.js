@@ -86,6 +86,8 @@ export const add_issue_for_smoking_dying_from_veneer_inventory = catchAsync(
             color_name: item?.color?.color_name,
             process_name: item?.process_name,
             process_id: item?.process_id,
+            cut_id: item?.cut_id,
+            cut_name: item?.cut_name,
             character_id: item?.character_id,
             character_name: item?.character_name,
             pattern_id: item?.pattern_id,

@@ -282,6 +282,8 @@ export const issue_for_grouping_from_smoking_dying_done = catchAsync(
             grade_id: e?.grade_id,
             grade_name: e?.grade_name,
             amount: e?.amount,
+            cut_id: e?.cut_id,
+            cut_name: e?.cut_name,
             issued_from: issues_for_status?.smoking_dying,
             remark: e?.remark,
             created_by: userDetails?._id,
