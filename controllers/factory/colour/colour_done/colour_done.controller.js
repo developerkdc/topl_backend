@@ -58,6 +58,8 @@ export const create_color = catchAsync(async (req, res) => {
       order_item_id: issue_for_color_details?.order_item_id,
       sr_no: max_sr_no ? max_sr_no?.max_sr_no + 1 : 1,
       pressing_details_id: issue_for_color_details?.pressing_details_id,
+      product_type: color_done_details?.product_type || issue_for_color_details?.product_type || null,
+      series_code: color_done_details?.series_code || issue_for_color_details?.series_code || null,
       created_by: userDetails?._id,
       updated_by: userDetails?._id,
     };

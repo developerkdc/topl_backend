@@ -25,6 +25,12 @@ export const issue_for_color_schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Issued From ID is required.'],
     },
+    product_type: {
+      type: String,
+    },
+    series_code: {
+      type: String,
+    },
     pressing_details_id: {
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Pressing Details ID is required'],
@@ -152,19 +158,19 @@ export const issue_for_colour_view_model = mongoose.model(
         },
       },
       {
-    $lookup: {
-      from: "grouping_done_items_details",
-      localField: "pressing_details.group_no",
-      foreignField: "group_no",
-      as: "grouping_details"
-    }
-  },
-   {
-    $unwind: {
-      path: "$grouping_details",
-      preserveNullAndEmptyArrays: true
-    }
-  },
+        $lookup: {
+          from: "grouping_done_items_details",
+          localField: "pressing_details.group_no",
+          foreignField: "group_no",
+          as: "grouping_details"
+        }
+      },
+      {
+        $unwind: {
+          path: "$grouping_details",
+          preserveNullAndEmptyArrays: true
+        }
+      },
       {
         $lookup: {
           from: 'pressing_done_consumed_items_details',

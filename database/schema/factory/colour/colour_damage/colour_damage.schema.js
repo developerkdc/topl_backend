@@ -18,6 +18,12 @@ const color_damage_schema = new mongoose.Schema(
     order_item_id: {
       type: mongoose.Schema.Types.ObjectId,
     },
+    product_type: {
+      type: String,
+    },
+    series_code: {
+      type: String,
+    },
     sqm: {
       type: Number,
       required: [true, 'SQM is required.'],

@@ -19,6 +19,7 @@ import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import ApiError from '../../../utils/errors/apiError.js';
 import catchAsync from '../../../utils/errors/catchAsync.js';
 import { veneer_inventory_items_model } from '../../../database/schema/inventory/venner/venner.schema.js';
+import { flitch_inventory_items_model } from '../../../database/schema/inventory/Flitch/flitch.schema.js';
 
 export const listing_log_inventory = catchAsync(async (req, res, next) => {
   const {
@@ -957,8 +958,8 @@ export const check_already_existing_log_no = catchAsync(
         StatusCodes.BAD_REQUEST
       );
     }
-    const isExistInFlitch = await log_inventory_items_model.findOne({
-      log_no_code: log_no,
+    const isExistInFlitch = await flitch_inventory_items_model.findOne({
+      log_no: log_no,
       ...(item_id &&
         item_id !== 'undefined' && {
         _id: { $ne: new mongoose.Types.ObjectId(item_id) },

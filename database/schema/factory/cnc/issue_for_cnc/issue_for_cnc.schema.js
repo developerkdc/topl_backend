@@ -33,6 +33,12 @@ const issue_for_cnc_schema = new mongoose.Schema(
       type: Number,
       required: [true, 'Issued Sheets are required.'],
     },
+    product_type: {
+      type: String,
+    },
+    series_code: {
+      type: String,
+    },
     issued_sqm: {
       type: Number,
       required: [true, 'Issued SQM is required.'],
@@ -158,19 +164,19 @@ export const issue_for_cnc_view_model = mongoose.model(
         },
       },
       {
-    $lookup: {
-      from: "grouping_done_items_details",
-      localField: "pressing_details.group_no",
-      foreignField: "group_no",
-      as: "grouping_details"
-    }
-  },
-   {
-    $unwind: {
-      path: "$grouping_details",
-      preserveNullAndEmptyArrays: true
-    }
-  },
+        $lookup: {
+          from: "grouping_done_items_details",
+          localField: "pressing_details.group_no",
+          foreignField: "group_no",
+          as: "grouping_details"
+        }
+      },
+      {
+        $unwind: {
+          path: "$grouping_details",
+          preserveNullAndEmptyArrays: true
+        }
+      },
       {
         $lookup: {
           from: 'pressing_done_consumed_items_details',

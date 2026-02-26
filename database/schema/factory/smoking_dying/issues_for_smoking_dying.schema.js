@@ -176,6 +176,16 @@ const issues_for_smoking_dying_schema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    cut_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
+    cut_name: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      default: null,
+    },
     issued_from: {
       type: String,
       enum: {

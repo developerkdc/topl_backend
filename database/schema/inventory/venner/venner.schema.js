@@ -87,9 +87,21 @@ export const veneer_item_details_schema = new mongoose.Schema(
       type: Number,
       required: [true, 'Number of leaves   is required'],
     },
+    available_number_of_leaves: {
+      type: Number,
+      default: function () {
+        return this.number_of_leaves;
+      },
+    },
     total_sq_meter: {
       type: Number,
       required: [true, 'total square meter is required'],
+    },
+    available_sqm: {
+      type: Number,
+      default: function () {
+        return this.total_sq_meter;
+      },
     },
     issue_status: {
       type: String,
@@ -188,6 +200,12 @@ export const veneer_item_details_schema = new mongoose.Schema(
     amount: {
       type: Number,
       required: [true, 'Amount is required'],
+    },
+    available_amount: {
+      type: Number,
+      default: function () {
+        return this.amount;
+      },
     },
     amount_factor: {
       type: Number,

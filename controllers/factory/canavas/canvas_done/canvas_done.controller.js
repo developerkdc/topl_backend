@@ -57,6 +57,8 @@ export const create_canvas = catchAsync(async (req, res) => {
       ...canvas_done_details,
       sr_no: max_sr_no ? max_sr_no?.max_sr_no + 1 : 1,
       pressing_details_id: issue_for_canvas_details?.pressing_details_id,
+      product_type: canvas_done_details?.product_type || issue_for_canvas_details?.product_type || null,
+      series_code: canvas_done_details?.series_code || issue_for_canvas_details?.series_code || null,
       created_by: userDetails?._id,
       updated_by: userDetails?._id,
     };

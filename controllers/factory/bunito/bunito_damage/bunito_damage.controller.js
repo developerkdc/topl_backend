@@ -285,6 +285,8 @@ export const add_bunito_damage = catchAsync(async (req, res) => {
           no_of_sheets: damage_sheets,
           sqm: damage_sqm,
           amount: damage_amount,
+          series_code: bunito_done_details?.series_code,
+          product_type: bunito_done_details?.product_type,
           sr_no: maxSrNo ? maxSrNo?.max_sr_no + 1 : 1,
           created_by: userDetails?._id,
           updated_by: userDetails?._id,

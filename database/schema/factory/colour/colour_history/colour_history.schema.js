@@ -82,6 +82,12 @@ const color_history_schema = new mongoose.Schema(
       type: Number,
       required: [true, 'Issued Amount is required.'],
     },
+    product_type: {
+      type: String,
+    },
+    series_code: {
+      type: String,
+    },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Created By is required.'],
