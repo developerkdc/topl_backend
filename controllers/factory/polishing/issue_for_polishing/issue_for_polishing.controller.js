@@ -71,6 +71,8 @@ export const add_issue_for_polishing_from_pressing = catchAsync(
               issued_amount: issued_amount,
               issued_sheets: issued_sheets,
               issued_sqm: issued_sqm,
+              product_type: pressing_item_details?.product_type,
+              series_code: pressing_item_details?.series_code,
               created_by: userDetails?._id,
               updated_by: userDetails?._id,
             },

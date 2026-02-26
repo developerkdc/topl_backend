@@ -48,6 +48,12 @@ const color_done_details_schema = new mongoose.Schema(
     order_item_id: {
       type: mongoose.Schema.Types.ObjectId,
     },
+    product_type: {
+      type: String,
+    },
+    series_code: {
+      type: String,
+    },
     available_details: {
       no_of_sheets: {
         type: Number,

@@ -259,6 +259,8 @@ export const add_polishing_damage = catchAsync(async (req, res) => {
           sqm: damage_sqm,
           amount: damage_amount,
           sr_no: maxSrNo ? maxSrNo?.max_sr_no + 1 : 1,
+          product_type: polishing_done_details?.product_type,
+          series_code: polishing_done_details?.series_code,
           created_by: userDetails?._id,
           updated_by: userDetails?._id,
         },

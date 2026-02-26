@@ -60,6 +60,8 @@ export const create_polishing = catchAsync(async (req, res) => {
       ...polishing_done_details,
       sr_no: max_sr_no ? max_sr_no?.max_sr_no + 1 : 1,
       pressing_details_id: issue_for_polishing_details?.pressing_details_id,
+      product_type: polishing_done_details?.product_type || issue_for_polishing_details?.product_type || null,
+      series_code: polishing_done_details?.series_code || issue_for_polishing_details?.series_code || null,
       created_by: userDetails?._id,
       updated_by: userDetails?._id,
     };
