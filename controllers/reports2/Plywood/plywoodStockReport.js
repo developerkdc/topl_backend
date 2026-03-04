@@ -10,6 +10,7 @@ import { StatusCodes } from '../../../utils/constants.js';
 import {
   GeneratePlywoodStockReportExcel,
   GeneratePlywoodItemWiseStockReportExcel,
+  GeneratePlywoodStockReportByPelletExcel,
 } from '../../../config/downloadExcel/reports2/Plywood/plywoodStockReport.js';
 
 /**
@@ -485,6 +486,230 @@ export const plywoodItemWiseStockReportCsv = catchAsync(async (req, res, next) =
     );
   } catch (error) {
     console.error('Error generating plywood item-wise stock report:', error);
+    return next(new ApiError(error.message || 'Failed to generate stock report', 500));
+  }
+});
+
+/**
+ * Plywood Stock Report – By Pellet No. Each row = one pellet (pallet_number).
+ * Same columns as stock report with Pellet No. as first column; grouped by Plywood Sub Category.
+ *
+ * @route POST /report/download-stock-report-plywood-by-pellet
+ * @access Private
+ */
+export const plywoodStockReportByPelletCsv = catchAsync(async (req, res, next) => {
+  const { startDate, endDate } = req.body;
+  const filter = req.body?.filter || {};
+
+  if (!startDate || !endDate) {
+    return next(new ApiError('Start date and end date are required', 400));
+  }
+
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    return next(new ApiError('Invalid date format', 400));
+  }
+
+  if (start > end) {
+    return next(new ApiError('Start date cannot be after end date', 400));
+  }
+
+  const itemFilter = {};
+  if (filter.item_sub_category_name) {
+    itemFilter.item_sub_category_name = filter.item_sub_category_name;
+  }
+
+  try {
+    const allItems = await plywood_inventory_items_details.aggregate([
+      { $match: { deleted_at: null, ...itemFilter } },
+      {
+        $lookup: {
+          from: 'plywood_inventory_invoice_details',
+          localField: 'invoice_id',
+          foreignField: '_id',
+          as: 'invoice',
+        },
+      },
+      { $unwind: { path: '$invoice', preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          _id: 1,
+          pallet_number: 1,
+          item_sub_category_name: 1,
+          thickness: 1,
+          length: 1,
+          width: 1,
+          sheets: 1,
+          total_sq_meter: 1,
+          available_sheets: 1,
+          available_sqm: 1,
+          inward_date: '$invoice.inward_date',
+        },
+      },
+    ]);
+
+    const stockData = await Promise.all(
+      allItems.map(async (item) => {
+        const itemId = item._id;
+        const inwardDate = item.inward_date;
+
+        const receiveSheets =
+          inwardDate && inwardDate >= start && inwardDate <= end ? (item.sheets || 0) : 0;
+        const receiveSqm =
+          inwardDate && inwardDate >= start && inwardDate <= end
+            ? (item.total_sq_meter || 0)
+            : 0;
+
+        const [consumption, sales, issuePlyResizing, issuePressing] = await Promise.all([
+          plywood_history_model.aggregate([
+            {
+              $match: {
+                plywood_item_id: itemId,
+                issue_status: { $in: ['order', 'pressing', 'plywood_resizing'] },
+                createdAt: { $gte: start, $lte: end },
+              },
+            },
+            {
+              $group: {
+                _id: null,
+                total_sheets: { $sum: '$issued_sheets' },
+                total_sqm: { $sum: '$issued_sqm' },
+              },
+            },
+          ]),
+          plywood_history_model.aggregate([
+            {
+              $match: {
+                plywood_item_id: itemId,
+                issue_status: 'challan',
+                createdAt: { $gte: start, $lte: end },
+              },
+            },
+            {
+              $group: {
+                _id: null,
+                total_sheets: { $sum: '$issued_sheets' },
+                total_sqm: { $sum: '$issued_sqm' },
+              },
+            },
+          ]),
+          plywood_history_model.aggregate([
+            {
+              $match: {
+                plywood_item_id: itemId,
+                issue_status: 'plywood_resizing',
+                createdAt: { $gte: start, $lte: end },
+              },
+            },
+            {
+              $group: {
+                _id: null,
+                total_sheets: { $sum: '$issued_sheets' },
+                total_sqm: { $sum: '$issued_sqm' },
+              },
+            },
+          ]),
+          plywood_history_model.aggregate([
+            {
+              $match: {
+                plywood_item_id: itemId,
+                issue_status: 'pressing',
+                createdAt: { $gte: start, $lte: end },
+              },
+            },
+            {
+              $group: {
+                _id: null,
+                total_sheets: { $sum: '$issued_sheets' },
+                total_sqm: { $sum: '$issued_sqm' },
+              },
+            },
+          ]),
+        ]);
+
+        const consumeSheets = consumption[0]?.total_sheets || 0;
+        const consumeSqm = consumption[0]?.total_sqm || 0;
+        const salesSheets = sales[0]?.total_sheets || 0;
+        const salesSqm = sales[0]?.total_sqm || 0;
+        const issuePlyResizingSheets = issuePlyResizing[0]?.total_sheets || 0;
+        const issuePlyResizingSqm = issuePlyResizing[0]?.total_sqm || 0;
+        const issuePressingSheets = issuePressing[0]?.total_sheets || 0;
+        const issuePressingSqm = issuePressing[0]?.total_sqm || 0;
+        const currentSheets = item.available_sheets ?? item.sheets ?? 0;
+        const currentSqm = item.available_sqm ?? item.total_sq_meter ?? 0;
+
+        const openingSheets = currentSheets + consumeSheets + salesSheets - receiveSheets;
+        const openingSqm = currentSqm + consumeSqm + salesSqm - receiveSqm;
+        const closingSheets = openingSheets + receiveSheets - consumeSheets - salesSheets;
+        const closingSqm = openingSqm + receiveSqm - consumeSqm - salesSqm;
+
+        return {
+          pellet_no: item.pallet_number,
+          plywood_sub_type: item.item_sub_category_name,
+          thickness: item.thickness,
+          size: `${item.length} X ${item.width}`,
+          opening_sheets: Math.max(0, openingSheets),
+          opening_sqm: Math.max(0, openingSqm),
+          receive_sheets: receiveSheets,
+          receive_sqm: receiveSqm,
+          consume_sheets: consumeSheets,
+          consume_sqm: consumeSqm,
+          sales_sheets: salesSheets,
+          sales_sqm: salesSqm,
+          issue_for_ply_resizing_sheets: issuePlyResizingSheets,
+          issue_for_ply_resizing_sqm: issuePlyResizingSqm,
+          issue_for_pressing_sheets: issuePressingSheets,
+          issue_for_pressing_sqm: issuePressingSqm,
+          closing_sheets: Math.max(0, closingSheets),
+          closing_sqm: Math.max(0, closingSqm),
+        };
+      })
+    );
+
+    const activeStockData = stockData
+      .filter(
+        (item) =>
+          item.opening_sheets > 0 ||
+          item.receive_sheets > 0 ||
+          item.consume_sheets > 0 ||
+          item.sales_sheets > 0 ||
+          item.closing_sheets > 0
+      )
+      .sort((a, b) => {
+        const subCmp = (a.plywood_sub_type || '').localeCompare(b.plywood_sub_type || '');
+        if (subCmp !== 0) return subCmp;
+        return (a.pellet_no || 0) - (b.pellet_no || 0);
+      });
+
+    if (activeStockData.length === 0) {
+      return res
+        .status(StatusCodes.NOT_FOUND)
+        .json(
+          new ApiResponse(
+            StatusCodes.NOT_FOUND,
+            'No stock data found for the selected period'
+          )
+        );
+    }
+
+    const excelLink = await GeneratePlywoodStockReportByPelletExcel(
+      activeStockData,
+      startDate,
+      endDate,
+      filter
+    );
+
+    return res.json(
+      new ApiResponse(
+        StatusCodes.OK,
+        'Stock report by pellet generated successfully',
+        excelLink
+      )
+    );
+  } catch (error) {
+    console.error('Error generating plywood stock report by pellet:', error);
     return next(new ApiError(error.message || 'Failed to generate stock report', 500));
   }
 });
