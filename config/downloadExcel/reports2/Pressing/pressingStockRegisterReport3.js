@@ -68,7 +68,7 @@ export const GeneratePressingStockRegisterReport3Excel = async (
 
     const headers = [
       'Item Name',
-      'Slaes item Name',
+      'Sales Item Name',
       'Thickness',
       'Size',
       'Opening SqMtr',

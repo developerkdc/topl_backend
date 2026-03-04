@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Slicing Daily Report API generates an Excel report for a specific date showing slicing production details: main slicing table (item, flitch no, dimensions, CMT, leaves), rejection details (rej. height, width, CMT, remarks), item-wise summary (Flitch CMT, Rej. CMT, Slice CMT, Leaves), and slicing session details (slicing id, shift, work hours, worker).
+The Slicing Daily Report API generates an Excel report for a specific date showing slicing production details: main slicing table (item, flitch no, dimensions, CMT, leaves), rejection details (rej. height, width, CMT, remarks), and an item-wise summary (Flitch CMT, Rej. CMT, Slice CMT, Leaves).
 
 ## Endpoint
 
@@ -96,7 +96,7 @@ Slicing Details Report Date: 02/04/2025
 
 **Rejection table columns (to the right of main table):**
 
-1. **Rej. Hight** – Rejection height
+1. **Rej. Height** – Rejection height
 2. **Rej. Width** – Rejection width
 3. **Rej. CMT** – Rejection CMT
 4. **Remarks** – e.g. COMPLETE or wastage remark
@@ -114,19 +114,12 @@ Slicing Details Report Date: 02/04/2025
 
 - **Slice CMT** = Flitch CMT − Rej. CMT
 
-### Slicing Session Details
-
-| Slicing Id | Shift | Work Hours | Worker      |
-|------------|-------|------------|-------------|
-| 22821      |       | 7          | RANJAN BHARTI |
-
 ## Report Features
 
 - **Single date filtering**: Report for one specific day only.
 - **Item grouping**: Rows grouped by item name with per-item totals.
 - **Main + rejection layout**: Main slicing details and rejection details side by side.
 - **Summary**: Item-wise Flitch CMT, Rej. CMT, Slice CMT, Leaves and grand total.
-- **Session info**: Slicing Id, Shift, Work Hours, Worker per session.
 - **Numeric formatting**: CMT to 3 decimals (0.000); dimensions to 2 decimals (0.00).
 - **Header styling**: Gray background, bold headers and total rows.
 
@@ -135,7 +128,7 @@ Slicing Details Report Date: 02/04/2025
 ### Database Collections Used
 
 1. **slicing_done_other_details** – Slicing session header
-   - Fields: `slicing_date`, `shift`, `no_of_working_hours`, `issue_for_slicing_id`, `created_by`
+   - Fields: `slicing_date`
    - Filter: `slicing_date` within report date (start of day to end of day)
 
 2. **slicing_done_items** – Per-flitch slicing output
@@ -143,23 +136,19 @@ Slicing Details Report Date: 02/04/2025
    - Linked via `slicing_done_other_details_id`
 
 3. **issued_for_slicings** – Flitch dimensions and CMT (source of sliced flitch)
-   - Fields: `length`, `width1`, `width2`, `width3`, `height`, `cmt`
+   - Fields: `length`, `width1`, `height`, `cmt`
    - Linked via `slicing_done_other_details.issue_for_slicing_id`
 
 4. **issue_for_slicing_wastage** – Rejection/wastage
-   - Fields: `height` (Rej. Hight), `width` (Rej. Width), `cmt` (Rej. CMT), `remark` (Remarks)
+   - Fields: `height` (Rej. Height), `width` (Rej. Width), `cmt` (Rej. CMT), `remark` (Remarks)
    - Linked via `issue_for_slicing_id`
-
-5. **users** – Worker name
-   - Linked via `slicing_done_other_details.created_by`
-   - Display: `first_name` + `last_name`
 
 ### Data Relationships
 
 - One **slicing_done_other_details** (session) has one **issue_for_slicing_id** → one **issued_for_slicing** (flitch dimensions, CMT).
 - One session has one **issue_for_slicing_wastage** (if any).
 - One session has many **slicing_done_items** (one row per flitch/item line).
-- Report uses **width1** from issued_for_slicing for the single “Width” column.
+- Report uses **width1** from issued_for_slicing for the single "Width" column.
 
 ## Calculation Logic
 
@@ -173,10 +162,10 @@ Match records where:
 
 ### Summary
 
-- **Flitch CMT**: Sum of `issued_for_slicing.cmt` per item (from each row).
-- **Rej. CMT**: Sum of `issue_for_slicing_wastage.cmt` per item.
+- **Flitch CMT**: Sum of `issued_for_slicing.cmt` per item, counted **once per unique session** (deduplicated by `slicing_id`). This prevents over-counting when one session produces multiple `slicing_done_items` rows that share the same flitch CMT.
+- **Rej. CMT**: Sum of `issue_for_slicing_wastage.cmt` per item, likewise deduplicated per session.
 - **Slice CMT**: Flitch CMT − Rej. CMT per item.
-- **Leaves**: Sum of `slicing_done_items.no_of_leaves` per item.
+- **Leaves**: Sum of `slicing_done_items.no_of_leaves` per item (one leaf count per item row — not deduplicated).
 
 ## Example Usage
 
@@ -229,7 +218,7 @@ const generateSlicingReport = async () => {
 - CMT: 3 decimal places; dimensions: 2 decimal places.
 - Excel filenames are timestamped to avoid overwrites.
 - Files are stored in: `public/reports/Slicing/`.
-- If no wastage record exists, Remarks can show “COMPLETE”.
+- If no wastage record exists, Remarks defaults to "COMPLETE".
 - Sq Mtr is output as 0.00 (not computed in current implementation).
 
 ## File Storage
@@ -245,18 +234,15 @@ const generateSlicingReport = async () => {
 ```
 Slicing Details Report Date: 02/04/2025
 
-Item Name | Flitch No | Thickness | Length | Width | Height | CMT   | Leaves | Sq Mtr | Rej. Hight | Rej. Width | Rej. CMT | Remarks
-SAPELI    | D252A1A   | 0.40      | 3.15   | 0.68  | 0.40   | 0.721 | 1660   | 0.00   | 0.40       | 0.02       | 0.025    | COMPLETE
-          | D252A2A   | 0.40      | 3.15   | 0.60  | 0.44   | 0.669 | 1470   | 0.00   | 0.44       | 0.02       | 0.028    | COMPLETE
-          | ...       |           |        |       |        |       |        |        |            |            |          |
-          | Total     |           |        |       |        | 3.650 | 7610   | 0.00   |            |            | 0.143    |
+Item Name | Flitch No | Thickness | Length | Width | Height | CMT   | Leaves | Sq Mtr | Rej. Height | Rej. Width | Rej. CMT | Remarks
+SAPELI    | D252A1A   | 0.40      | 3.15   | 0.68  | 0.40   | 0.721 | 1660   | 0.00   | 0.40        | 0.02       | 0.025    | COMPLETE
+          | D252A2A   | 0.40      | 3.15   | 0.60  | 0.44   | 0.669 | 1470   | 0.00   | 0.44        | 0.02       | 0.028    | COMPLETE
+          | ...       |           |        |       |        |       |        |        |             |            |          |
+          | Total     |           |        |       |        | 3.650 | 7610   | 0.00   |             |            | 0.143    |
 
 Item name | Flitch CMT | Rej. CMT | Slice CMT | Leaves
 SAPELI    | 3.650      | 0.143    | 3.507     | 7610
 Total     | 3.650      | 0.143    | 3.507     | 7610
-
-Slicing Id | Shift | Work Hours | Worker
-22821      |       | 7          | RANJAN BHARTI
 ```
 
 ## Troubleshooting
@@ -271,13 +257,16 @@ If you get 404:
 
 ### Wrong or missing dimensions
 
-- Length, Width, Height, CMT come from **issued_for_slicings** via the session’s `issue_for_slicing_id`. If a session has multiple items, they share the same issued flitch dimensions.
+- Length, Width, Height, CMT come from **issued_for_slicings** via the session's `issue_for_slicing_id`. If a session has multiple items, they share the same issued flitch dimensions.
 - Width in the report is `width1` from issued_for_slicing.
 
-### Missing rejection or worker
+### Summary CMT totals look wrong
 
-- Rejection: requires an **issue_for_slicing_wastage** row for that session’s `issue_for_slicing_id`; otherwise Rej. columns can be empty and Remarks may default to “COMPLETE”.
-- Worker: comes from **users** via `slicing_done_other_details.created_by` (first_name + last_name).
+- If `flitch_cmt` appears inflated, it is likely because the session has multiple `slicing_done_items` rows. The implementation deduplicates CMT accumulation per `slicing_id` to prevent over-counting.
+
+### Missing rejection data
+
+- Rejection: requires an **issue_for_slicing_wastage** row for that session's `issue_for_slicing_id`; otherwise Rej. columns will be empty and Remarks defaults to "COMPLETE".
 
 ## Technical Implementation
 
@@ -305,7 +294,6 @@ topl_backend/routes/report/reports2/Slicing/slicing.route.js
 - Lookup **issued_for_slicings** (length, width1, height, cmt).
 - Lookup **issue_for_slicing_wastage** (rej. height, width, cmt, remark).
 - Lookup **slicing_done_items** (item_name, log_no, thickness, no_of_leaves).
-- Lookup **users** (worker name from created_by).
 - Unwind items so each document is one row; project fields for Excel.
 - Sort by item name and flitch no.
 
@@ -319,4 +307,4 @@ topl_backend/routes/report/reports2/Slicing/slicing.route.js
 5. Peeling/Dressing → Further processing
 ```
 
-This report covers the **slicing** stage: flitches issued for slicing, their dimensions and CMT, rejection/wastage, and session (shift, hours, worker).
+This report covers the **slicing** stage: flitches issued for slicing, their dimensions and CMT, rejection/wastage, and item-wise summary.

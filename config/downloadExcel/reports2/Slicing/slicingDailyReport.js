@@ -17,11 +17,15 @@ const formatDate = (dateString) => {
 };
 
 /**
- * Group rows by item_name for main table and summary; collect session info.
+ * Group rows by item_name for main table and summary.
+ * Flitch CMT and Rej. CMT are accumulated once per unique slicing session per item
+ * to avoid over-counting when one session produces multiple slicing_done_items rows.
  */
 const groupRows = (rows) => {
   const byItem = {};
-  const sessions = [];
+  // Tracks which session IDs have already contributed CMT/rej_cmt to an item group.
+  // Key format: `${itemName}__${slicing_id}`
+  const seenSessionCmt = {};
 
   rows.forEach((r) => {
     const itemName = r.item_name || 'UNKNOWN';
@@ -36,6 +40,7 @@ const groupRows = (rows) => {
     const cmt = Number(r.cmt) || 0;
     const rejCmt = Number(r.rej_cmt) || 0;
     const leaves = Number(r.leaves) || 0;
+
     byItem[itemName].rows.push({
       item_name: itemName,
       flitch_no: r.flitch_no,
@@ -51,21 +56,19 @@ const groupRows = (rows) => {
       rej_cmt: rejCmt,
       remarks: r.remarks || 'COMPLETE',
     });
-    byItem[itemName].flitch_cmt += cmt;
-    byItem[itemName].rej_cmt += rejCmt;
     byItem[itemName].leaves += leaves;
 
-    if (r.slicing_id && !sessions.find((s) => s.slicing_id?.toString() === r.slicing_id?.toString())) {
-      sessions.push({
-        slicing_id: r.slicing_id,
-        shift: r.shift || '',
-        work_hours: r.no_of_working_hours ?? '',
-        worker: (r.worker || '').trim(),
-      });
+    // Only count flitch_cmt and rej_cmt once per session to prevent N-times
+    // over-counting when a session has N slicing_done_items rows.
+    const sessionKey = `${itemName}__${r.slicing_id}`;
+    if (!seenSessionCmt[sessionKey]) {
+      seenSessionCmt[sessionKey] = true;
+      byItem[itemName].flitch_cmt += cmt;
+      byItem[itemName].rej_cmt += rejCmt;
     }
   });
 
-  return { byItem, sessions };
+  return { byItem };
 };
 
 const setCellStyle = (cell, bold = false) => {
@@ -81,16 +84,15 @@ const setCellStyle = (cell, bold = false) => {
 /**
  * Generate Slicing Daily Report matching the provided layout:
  * - Main Slicing Details (Item Name, Flitch No, Thickness, Length, Width, Height, CMT, Leaves, Sq Mtr) + Total
- * - Rejection Details (Rej. Hight, Rej. Width, Rej. CMT, Remarks) + Total Rej. CMT
+ * - Rejection Details (Rej. Height, Rej. Width, Rej. CMT, Remarks) + Total Rej. CMT
  * - Summary (Item name, Flitch CMT, Rej. CMT, Slice CMT, Leaves) + Total
- * - Slicing Session Details (Slicing Id, Shift, Work Hours, Worker)
  */
 const GenerateSlicingDailyReport = async (rows, reportDate) => {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Slicing Details Report');
 
   const formattedDate = formatDate(reportDate);
-  const { byItem, sessions } = groupRows(rows);
+  const { byItem } = groupRows(rows);
 
   const itemNames = Object.keys(byItem).sort();
   let currentRow = 1;
@@ -245,29 +247,6 @@ const GenerateSlicingDailyReport = async (rows, reportDate) => {
   [2, 3, 4].forEach((col) => {
     const c = summaryTotalRow.getCell(col);
     if (typeof c.value === 'number') c.numFmt = '0.000';
-  });
-  currentRow += 2;
-
-  // Slicing Session Details
-  const sessionHeaders = ['Slicing Id', 'Shift', 'Work Hours', 'Worker'];
-  const sessionHeaderRow = worksheet.getRow(currentRow);
-  sessionHeaders.forEach((h, i) => {
-    const cell = sessionHeaderRow.getCell(i + 1);
-    cell.value = h;
-    cell.font = { bold: true };
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD3D3D3' } };
-    cell.alignment = { horizontal: 'center', vertical: 'middle' };
-    setCellStyle(cell);
-  });
-  currentRow++;
-
-  sessions.forEach((s) => {
-    const row = worksheet.getRow(currentRow);
-    row.getCell(1).value = s.slicing_id?.toString?.() ?? s.slicing_id;
-    row.getCell(2).value = s.shift;
-    row.getCell(3).value = s.work_hours;
-    row.getCell(4).value = s.worker;
-    currentRow++;
   });
 
   worksheet.columns = [
