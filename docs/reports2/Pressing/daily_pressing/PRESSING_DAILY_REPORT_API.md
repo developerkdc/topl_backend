@@ -1,7 +1,7 @@
 # Pressing Daily Report API
 
 ## Overview
-The Pressing Daily Report API generates Excel reports showing pressing production details for a specific date. The report has five sections: (1) **Pressing Details** — item-wise table with Item Code, Sub-code/Type, Date/Batch, dimensions, Quantity, Area/Metric, Notes, with per-item totals and grand total; (2) **Ply Details** — Category, Base, Thick., Side, Size, Sheets, Sq Mtr; (3) **Core - Face Consumption Sq.Mtr.** — Item Name, Thick., Size, Sheets, Sq Mtr; (4) **Plywood Consumption Sq.Mtr.** — Item Name, Thick., Size, Sheets, Sq Mtr; (5) **Pressing Operation** — Pressing Id, Shift, Work Hours, Worker, Machine Id. Data is sourced from pressing_done_details, pressing_done_consumed_items_details, and users (worker name).
+The Pressing Daily Report API generates Excel reports showing pressing production details for a specific date. The report has three sections: (1) **Pressing Details** — Category, Base, Item Name, Thick., Side, Size, Sheets, Sq Mtr (from base_details) with per-category totals and grand total; (2) **Core - Face Consumption Sq.Mtr.** — Item Name, Thick., Size, Sheets, Sq Mtr; (3) **Plywood Consumption Sq.Mtr.** — Item Name, Thick., Size, Sheets, Sq Mtr. Data is sourced from pressing_done_details and pressing_done_consumed_items_details.
 
 ## Endpoint
 ```
@@ -68,33 +68,22 @@ Pressing Details Report Date: DD/MM/YYYY
 
 **Table columns:**
 
-| # | Column         | Description                                    |
-|---|----------------|------------------------------------------------|
-| 1 | Item Code      | Product/item name (from group_details or product_type) |
-| 2 | Sub-code/Type  | Log/batch code (e.g. log_no_code)             |
-| 3 | Date/Batch     | Pressing Id (e.g. D2/5/1)                     |
-| 4 | Dimension 1    | Length (meters)                               |
-| 5 | Dimension 2    | Width (meters)                                |
-| 6 | Quantity       | Number of sheets                              |
-| 7 | Area/Metric    | Square meters                                 |
-| 8 | Notes          | Character/flow_process or remark              |
+| # | Column    | Description                                    |
+|---|-----------|------------------------------------------------|
+| 1 | Category  | Derived from base_type (Decorative Mdf, Decorative Plywood, Fleece Back Veneer) |
+| 2 | Base      | MDF, PLYWOOD, or PAPER                        |
+| 3 | Item Name | base_details.item_name                        |
+| 4 | Thick.    | Thickness                                     |
+| 5 | Side      | Not in schema; blank or placeholder           |
+| 6 | Size      | Raw length×width (no conversion), e.g. "75 X 72" |
+| 7 | Sheets    | Number of sheets                              |
+| 8 | Sq Mtr    | Square meters (from DB or calculated when missing) |
 
-- Data is grouped by **Item Code**; each item group has a **Total** row (Quantity and Area/Metric summed).
-- After all items, a **Grand Total** row sums total Quantity and total Area/Metric.
+- Data is grouped by **Category**; each category has a **Total** row (Sheets and Sq Mtr summed).
+- After all categories, a **Grand Total** row sums total Sheets and total Sq Mtr.
+- **Sq Mtr** is used from DB when present and > 0; otherwise calculated as (length × width) / 10000.
 
-### Section 2: Ply Details
-
-**Section header:** `Ply Details`
-
-**Table columns:** Category | Base | Thick. | Side | Size | Sheets | Sq Mtr
-
-- **Category** is derived from base_type: MDF → "Decorative Mdf", PLYWOOD → "Decorative Plywood", FLEECE_PAPER → "Fleece Back Veneer".
-- **Base**: MDF, PLYWOOD, or PAPER.
-- **Size**: Length and width in meters converted to feet (e.g. "10 X 4", "8 X 4").
-- **Side**: Not in schema; column present, value blank or placeholder.
-- Each category has a **Total** row; section ends with an overall **Total** row.
-
-### Section 3: Core - Face Consumption Sq.Mtr.
+### Section 2: Core - Face Consumption Sq.Mtr.
 
 **Section header:** `Core - Face Consumption Sq.Mtr.`
 
@@ -103,7 +92,7 @@ Pressing Details Report Date: DD/MM/YYYY
 - Data from consumed **face_details**; grouped by item name and size.
 - Section ends with a **Total** row (Sheets, Sq Mtr).
 
-### Section 4: Plywood Consumption Sq.Mtr.
+### Section 3: Plywood Consumption Sq.Mtr.
 
 **Section header:** `Plywood Consumption Sq.Mtr.`
 
@@ -111,22 +100,16 @@ Pressing Details Report Date: DD/MM/YYYY
 
 - Data from consumed **base_details** (item_name, thickness, size, sheets, sqm).
 - Section ends with a **Total** row.
-
-### Section 5: Pressing Operation
-
-**Table columns:** Pressing Id | Shift | Work Hours | Worker | Machine Id
-
-- One row per pressing_done record.
-- **Worker** is resolved from users (first_name + " " + last_name) via created_by.
+- **Sq Mtr** is used from DB when present and > 0; otherwise calculated as (length × width) / 10000.
 
 ## Report Features
 
 - **Single date filtering**: Report for one specific day only.
-- **Five-section layout**: Pressing Details, Ply Details, Core - Face Consumption, Plywood Consumption, Pressing Operation.
-- **Item-wise grouping in section 1**: Per-item totals and grand total for Quantity and Area/Metric.
+- **Three-section layout**: Pressing Details, Core - Face Consumption, Plywood Consumption.
+- **Category grouping in section 1**: Per-category totals and grand total for Sheets and Sq Mtr.
 - **Category mapping**: base_type → Decorative Mdf / Decorative Plywood / Fleece Back Veneer.
-- **Size formatting**: Length/width (meters) → feet string (e.g. "10 X 4").
-- **Worker tracking**: Shift, work hours, worker name, machine id in the last section.
+- **Size formatting**: Raw length×width (no conversion), e.g. "75 X 72".
+- **Sq Mtr fallback**: Calculated as (length × width) / 10000 when sqm is missing or zero.
 - **Bold formatting**: Section headers and total rows are bold.
 - **Header styling**: Column header rows have gray background.
 - **Numeric formatting**: Dimensions and Sq Mtr use 2 decimal places (0.00).
@@ -138,11 +121,9 @@ When the API returns **200 OK**:
 1. **`result`** is a full URL (e.g. `http://localhost:5000/public/upload/reports/reports2/Pressing/pressing_daily_report_1738234567890.xlsx`). The client can use this URL to download the generated Excel file (GET request or open in browser).
 
 2. **The Excel file** contains:
-   - **Section 1**: Title "Pressing Details Report Date: DD/MM/YYYY", then a table (8 columns) built from group_details (or pressing_done when no group_details). Rows grouped by item with Total per item and Grand Total.
-   - **Section 2**: Header "Ply Details", then table (Category, Base, Thick., Side, Size, Sheets, Sq Mtr) from base_details, with category and section totals.
-   - **Section 3**: Header "Core - Face Consumption Sq.Mtr.", then table from face_details with total row.
-   - **Section 4**: Header "Plywood Consumption Sq.Mtr.", then table from base_details by item name with total row.
-   - **Section 5**: Pressing Id, Shift, Work Hours, Worker, Machine Id — one row per pressing_done.
+   - **Section 1**: Title "Pressing Details Report Date: DD/MM/YYYY", then a table (8 columns: Category, Base, Item Name, Thick., Side, Size, Sheets, Sq Mtr) built from base_details. Rows grouped by category with Total per category and Grand Total.
+   - **Section 2**: Header "Core - Face Consumption Sq.Mtr.", then table from face_details with total row.
+   - **Section 3**: Header "Plywood Consumption Sq.Mtr.", then table from base_details by item name with total row.
 
 3. **Where each value comes from** is documented in **Field Mapping** and **How Data Is Brought Together** below.
 
@@ -183,11 +164,9 @@ We **start from pressing_done_details** and **attach consumed items and worker n
 ### Step 2: Excel Generation (Config)
 
 - **Input**: The aggregated array and `reportDate`.
-- **Section 1**: Title "Pressing Details Report Date: " + reportDate (DD/MM/YYYY). Flatten: for each doc, for each `consumed.group_details[]` (or one row from doc if no group_details), emit a row (item name, sub-code, pressing_id, length, width, sheets, sqm, notes). Group rows by item name; write table with per-item Total and Grand Total.
-- **Section 2**: From all docs, collect `consumed.base_details[]`; map base_type to Category and Base; format Size from length/width; group by category then by thick/side/size; write Ply Details table with category and section totals.
-- **Section 3**: From all docs, collect `consumed.face_details[]`; group by item name and size; write Core - Face Consumption table with total row.
-- **Section 4**: From all docs, collect `consumed.base_details[]` again; group by item_name and size; write Plywood Consumption table with total row.
-- **Section 5**: One row per aggregated doc: pressing_id, shift, no_of_working_hours, workerName, machine_name.
+- **Section 1**: Title "Pressing Details Report Date: " + reportDate (DD/MM/YYYY). From all docs, collect `consumed.base_details[]`; map base_type to Category and Base; Size = raw length×width; Sq Mtr = sqm or (length×width/10000) when missing; group by category then by thick/side/size/itemName; write Pressing Details table with category and section totals.
+- **Section 2**: From all docs, collect `consumed.face_details[]`; group by item name and size; write Core - Face Consumption table with total row.
+- **Section 3**: From all docs, collect `consumed.base_details[]`; group by item_name and size; write Plywood Consumption table with total row.
 
 ---
 
@@ -195,30 +174,18 @@ We **start from pressing_done_details** and **attach consumed items and worker n
 
 ### Section 1: Pressing Details
 
-| # | Report column   | Source (config)                    | DB collection/field                          | Notes |
-|---|-----------------|------------------------------------|----------------------------------------------|--------|
-| 1 | Item Code       | group_details.item_name or product_type | pressing_done_consumed_items_details.group_details[].item_name; pressing_done_details.product_type | |
-| 2 | Sub-code/Type   | group_details.log_no_code          | pressing_done_consumed_items_details.group_details[].log_no_code | |
-| 3 | Date/Batch      | pressing_id                        | pressing_done_details.pressing_id            | |
-| 4 | Dimension 1     | group_details.length or length     | group_details[].length; pressing_done_details.length | |
-| 5 | Dimension 2     | group_details.width or width       | group_details[].width; pressing_done_details.width | |
-| 6 | Quantity        | group_details.no_of_sheets or no_of_sheets | group_details[].no_of_sheets; pressing_done_details.no_of_sheets | Total = SUM per item; Grand Total = SUM all |
-| 7 | Area/Metric     | group_details.sqm or sqm           | group_details[].sqm; pressing_done_details.sqm | Total = SUM per item; Grand Total = SUM all |
-| 8 | Notes           | flow_process[0] or remark         | pressing_done_details.flow_process, remark   | |
-
-### Section 2: Ply Details
-
 | Report column | Source (config)           | DB field                          | Notes |
 |---------------|---------------------------|-----------------------------------|--------|
 | Category      | base_type → map           | base_details[].base_type          | MDF→Decorative Mdf, PLYWOOD→Decorative Plywood, FLEECE_PAPER→Fleece Back Veneer |
 | Base          | base_type → label         | base_details[].base_type         | MDF, PLYWOOD, PAPER |
-| Thick.        | base_details.thickness    | base_details[].thickness         | |
+| Item Name     | base_details.item_name   | base_details[].item_name         | |
+| Thick.        | base_details.thickness   | base_details[].thickness         | |
 | Side          | (placeholder)             | —                                 | Not in schema |
-| Size          | formatSize(length, width) | base_details[].length, width     | Meters → feet e.g. "10 X 4" |
+| Size          | formatSize(length, width) | base_details[].length, width     | Raw "L X W" (no conversion) |
 | Sheets        | base_details.no_of_sheets | base_details[].no_of_sheets      | |
-| Sq Mtr        | base_details.sqm          | base_details[].sqm               | |
+| Sq Mtr        | getSqm(sqm, length, width)| base_details[].sqm or calculated | (length×width)/10000 when sqm missing or 0 |
 
-### Section 3: Core - Face Consumption
+### Section 2: Core - Face Consumption
 
 | Report column | Source (config)      | DB field                    |
 |---------------|----------------------|-----------------------------|
@@ -226,21 +193,11 @@ We **start from pressing_done_details** and **attach consumed items and worker n
 | Thick.        | face_details.thickness | face_details[].thickness  |
 | Size          | formatSize(length, width) | face_details[].length, width |
 | Sheets        | face_details.no_of_sheets | face_details[].no_of_sheets |
-| Sq Mtr        | face_details.sqm    | face_details[].sqm          |
+| Sq Mtr        | getSqm(sqm, length, width)| face_details[].sqm or calculated |
 
-### Section 4: Plywood Consumption
+### Section 3: Plywood Consumption
 
-Same as Section 3 but sourced from **base_details** (item_name, thickness, size, no_of_sheets, sqm).
-
-### Section 5: Pressing Operation
-
-| Report column | Source (after aggregation) | DB collection | DB field | Notes |
-|----------------|-----------------------------|---------------|----------|--------|
-| Pressing Id    | pressing_id                 | pressing_done_details | pressing_id | |
-| Shift          | shift                      | pressing_done_details | shift | |
-| Work Hours     | no_of_working_hours        | pressing_done_details | no_of_working_hours | |
-| Worker         | workerName                 | users         | first_name + " " + last_name | Via pressing_done_details.created_by → users._id |
-| Machine Id     | machine_name               | pressing_done_details | machine_name | |
+Same column structure as Section 2 but sourced from **base_details** (item_name, thickness, size, no_of_sheets, sqm). Sq Mtr uses getSqm when missing or 0.
 
 ---
 
@@ -248,23 +205,13 @@ Same as Section 3 but sourced from **base_details** (item_name, thickness, size,
 
 ### Section 1 (Pressing Details)
 
-- **Data rows**: Item Code, Sub-code, Date/Batch, Dimension 1, Dimension 2, Quantity, Area/Metric, Notes = pass-through from group_details (or pressing_done when no group_details).
-- **Per-item Total row**: Quantity = SUM(quantity) for that item; Area/Metric = SUM(area) for that item.
-- **Grand Total row**: Quantity = SUM(all quantities); Area/Metric = SUM(all areas), rounded to 2 decimals.
+- **Data rows**: Category, Base, Item Name, Thick., Side, Size, Sheets, Sq Mtr = from base_details; Category/Base derived from base_type; Size = raw length×width; Sq Mtr = sqm or (length×width)/10000 when missing.
+- **Per-category Total row**: Sheets = SUM(sheets) for that category; Sq Mtr = SUM(sqm) for that category.
+- **Grand Total row**: Sheets = SUM(all sheets); Sq Mtr = SUM(all sqm), rounded to 2 decimals.
 
-### Section 2 (Ply Details)
-
-- **Category**: base_type → "Decorative Mdf" | "Decorative Plywood" | "Fleece Back Veneer".
-- **Size**: length, width in meters → `round(length*3.28084) + " X " + round(width*3.28084)` (feet).
-- **Category total / Section total**: SUM(Sheets), SUM(Sq Mtr) over the relevant rows.
-
-### Section 3 & 4
+### Section 2 & 3 (Core-Face, Plywood Consumption)
 
 - Totals: SUM(Sheets), SUM(Sq Mtr) over section rows; Sq Mtr rounded to 2 decimals.
-
-### Worker name (Section 5)
-
-- Computed in aggregation: `workerName = trim(concat(users.first_name, " ", users.last_name))` with nulls as empty string.
 
 ---
 
@@ -278,22 +225,15 @@ Same as Section 3 but sourced from **base_details** (item_name, thickness, size,
 
 2. **pressing_done_consumed_items_details** (consumed items per pressing)
    - One document per pressing run; linked by `pressing_done_details_id` = `pressing_done_details._id`.
-   - **group_details[]**: item_name, log_no_code, length, width, no_of_sheets, sqm (→ Section 1).
-   - **base_details[]**: base_type, item_name, length, width, thickness, no_of_sheets, sqm (→ Section 2 and 4).
-   - **face_details[]**: item_name, length, width, thickness, no_of_sheets, sqm (→ Section 3).
-
-3. **users**
-   - Used only to resolve worker name.
-   - Join: `pressing_done_details.created_by` = `users._id`.
-   - Fields used: `first_name`, `last_name` (concatenated for **Worker**).
+   - **base_details[]**: base_type, item_name, length, width, thickness, no_of_sheets, sqm (→ Section 1 and 3).
+   - **face_details[]**: item_name, length, width, thickness, no_of_sheets, sqm (→ Section 2).
 
 ### Join Diagram (conceptual)
 
 ```
 pressing_done_details (1)
     │ _id
-    ├── pressing_done_consumed_items_details (1)  via pressing_done_details_id  →  group_details, base_details, face_details
-    └── users (1)                                  via created_by  →  worker name
+    └── pressing_done_consumed_items_details (1)  via pressing_done_details_id  →  base_details, face_details
 ```
 
 ---
@@ -344,8 +284,8 @@ const generatePressingReport = async () => {
 ## Notes
 
 - Report includes all pressing runs for the given date.
-- **Side** in Ply Details is not in the schema; column is present and left blank (or placeholder).
-- Worker name is resolved from `users` via `created_by`; if user is missing, Worker cell is empty.
+- **Side** in Pressing Details is not in the schema; column is present and left blank (or placeholder).
+- **Sq Mtr** is calculated as (length × width) / 10000 when sqm is missing or zero in the database.
 - Excel files are timestamped; stored in `public/upload/reports/reports2/Pressing/`.
 
 ## File Storage
@@ -361,37 +301,24 @@ const generatePressingReport = async () => {
 ```
 Pressing Details Report Date: 02/04/2025
 
-Item Code   | Sub-code/Type | Date/Batch | Dimension 1 | Dimension 2 | Quantity | Area/Metric | Notes
-R3001       | CX-3232-A     | D2/5/1     | 2.44        | 1.22        | 1        | 2.98        | Flowery
-R3001       | ...           | ...        | ...         | ...         | ...      | ...         | ...
-            | Total         |            |             |             | 3        | 8.94        |
-Total       |               |            |             |             | 191      | 682.36      |
-
-Ply Details
-
-Category           | Base    | Thick. | Side | Size   | Sheets | Sq Mtr
-Decorative Mdf     | MDF     | 8      |      | 10 X 4 | 2      | 7.44
-                   | Total   |        |      |        | 2      | 7.44
-Decorative Plywood | PLYWOOD | 3.2    |      | 8X4    | 10     | 29.77
-...
-Total              |         |        |      |        | 191    | 682.36
+Category           | Base    | Item Name | Thick. | Side | Size   | Sheets | Sq Mtr
+Decorative Plywood | PLYWOOD |           | 0.00   |      | 75 X 72| 1      | 0.00
+                   | Total   |           |        |      |        | 1      | 0.00
+Total              |         |           |        |      |        | 1      | 0.00
 
 Core - Face Consumption Sq.Mtr.
 
-Item Name  | Thick. | Size   | Sheets | Sq Mtr
-GURJAN     | 0.3    | 10 X 4 | 10     | 37.20
+Item Name  | Thick. | Size    | Sheets | Sq Mtr
+RED-OAK    | 0.5    | 31 X 10 | 1      | 0.00
 ...
-Total      |        |        | 119    | 435.33
+Total      |        |         | 1      | 0.00
 
 Plywood Consumption Sq.Mtr.
 
-Item Name  | Thick. | Size   | Sheets | Sq Mtr
+Item Name  | Thick. | Size    | Sheets | Sq Mtr
+ASH VENEER | 2      | 75 X 72 | 1      | 0.00
 ...
-Total      |        |        | 191    | 684.64
-
-Pressing Id | Shift | Work Hours | Worker | Machine Id
-15806       |       |            | SAMPLE |
-15801       |       |            |        |
+Total      |        |         | 1      | 0.00
 ```
 
 ## Troubleshooting
@@ -403,9 +330,6 @@ If you receive a 404 error, verify:
 
 ### Incorrect Date Format
 Date should be in ISO format: `"YYYY-MM-DD"` (e.g. `"2025-02-04"`).
-
-### Missing Worker Details
-Worker name is resolved from `users` via `pressing_done_details.created_by`. If worker names are missing, ensure `created_by` references valid user IDs and the users collection has `first_name` and `last_name`.
 
 ## Technical Implementation
 
@@ -507,4 +431,4 @@ Order for the report:
 }
 ```
 
-**Result**: Array of documents. Each document has pressing_done fields plus `consumed` (group_details, base_details, face_details) and `workerName`. This array is passed to `GeneratePressingDailyReportExcel(pressingData, reportDate)` in the Excel config; the config builds each of the five sections from these documents and their nested arrays.
+**Result**: Array of documents. Each document has pressing_done fields plus `consumed` (base_details, face_details). This array is passed to `GeneratePressingDailyReportExcel(pressingData, reportDate)` in the Excel config; the config builds each of the three sections from these documents and their nested arrays.
