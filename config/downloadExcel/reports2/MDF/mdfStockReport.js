@@ -83,21 +83,21 @@ export const GenerateMdfStockReportExcel = async (
     worksheet.addRow([]);
 
     const headerRow = worksheet.addRow([
-      'MDF Sub Type',
+      'MDF Sub Category',
       'Thickness',
       'Size',
-      'Opening',
-      'Op Metres',
-      'Receive',
-      'Rec Mtrs',
-      'Consume',
-      'Cons Mtrs',
-      'Sales',
+      'Opening Sheets',
+      'Opening Metres',
+      'Received Sheets',
+      'Received Mtrs',
+      'Consumed Sheets',
+      'Consumed Mtrs',
+      'Sales Sheets',
       'Sales Mtrs',
       'Issue For Pressing',
       'Issue For Pressing Sq Met',
-      'Closing',
-      'Cl Metres',
+      'Closing sheets',
+      'Closing Metres',
     ]);
     headerRow.font = { bold: true };
     headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
@@ -304,21 +304,21 @@ export const GenerateMdfItemWiseStockReportExcel = async (
 
     const headerRow = worksheet.addRow([
       'Item Name',
-      'MDF Sub Type',
+      'MDF Sub Category',
       'Thickness',
       'Size',
-      'Opening',
-      'Op Metres',
-      'Receive',
-      'Rec Mtrs',
-      'Consume',
-      'Cons Mtrs',
-      'Sales',
+      'Opening Sheets',
+      'Opening Metres',
+      'Received Sheets',
+      'Received Mtrs',
+      'Consumed Sheets',
+      'Consumed Mtrs',
+      'Sales Sheets',
       'Sales Mtrs',
       'Issue For Pressing',
       'Issue For Pressing Sq Met',
-      'Closing',
-      'Cl Metres',
+      'Closing sheets',
+      'Closing Metres',
     ]);
     headerRow.font = { bold: true };
     headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
@@ -475,6 +475,223 @@ export const GenerateMdfItemWiseStockReportExcel = async (
     return `${process.env.APP_URL}${filePath}`;
   } catch (error) {
     console.error('Error creating MDF item-wise stock report:', error);
+    throw new ApiError(500, error.message, error);
+  }
+};
+
+/**
+ * Generate MDF Stock Report Excel – By Pellet No. Pellet No. as first column; grouped by MDF Sub Category.
+ *
+ * @param {Array} aggregatedData - Stock data per pellet (pallet_number)
+ * @param {String} startDate - Start date (YYYY-MM-DD)
+ * @param {String} endDate - End date (YYYY-MM-DD)
+ * @param {Object} filters - Optional filters (e.g. item_sub_category_name)
+ * @returns {String} Download link for the generated Excel file
+ */
+export const GenerateMdfStockReportByPelletExcel = async (
+  aggregatedData,
+  startDate,
+  endDate,
+  filters = {}
+) => {
+  try {
+    const folderPath = 'public/upload/reports/reports2/MDF';
+    try {
+      await fs.access(folderPath);
+    } catch (error) {
+      await fs.mkdir(folderPath, { recursive: true });
+    }
+
+    const workbook = new exceljs.Workbook();
+    const worksheet = workbook.addWorksheet('MDF Stock Report (By Pellet No.)');
+
+    const formatDate = (dateStr) => {
+      try {
+        if (!dateStr) return 'N/A';
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) return dateStr;
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
+      } catch (error) {
+        return dateStr || 'N/A';
+      }
+    };
+
+    let title = 'MDF Type';
+    if (filters && filters.item_sub_category_name) {
+      title += ` [ ${filters.item_sub_category_name} ]`;
+    } else {
+      title += ' [ ALL ]';
+    }
+    const formattedStartDate = formatDate(startDate);
+    const formattedEndDate = formatDate(endDate);
+    title += `   stock  in the period  ${formattedStartDate} and ${formattedEndDate}`;
+
+    const columnDefinitions = [
+      { key: 'pellet_no', width: 12 },
+      { key: 'mdf_sub_type', width: 20 },
+      { key: 'thickness', width: 12 },
+      { key: 'size', width: 15 },
+      { key: 'opening_sheets', width: 12 },
+      { key: 'opening_sqm', width: 12 },
+      { key: 'receive_sheets', width: 12 },
+      { key: 'receive_sqm', width: 12 },
+      { key: 'consume_sheets', width: 12 },
+      { key: 'consume_sqm', width: 12 },
+      { key: 'sales_sheets', width: 12 },
+      { key: 'sales_sqm', width: 12 },
+      { key: 'issue_pressing_sheets', width: 20 },
+      { key: 'issue_pressing_sqm', width: 20 },
+      { key: 'closing_sheets', width: 12 },
+      { key: 'closing_sqm', width: 12 },
+    ];
+
+    worksheet.columns = columnDefinitions;
+
+    const filterRow = worksheet.addRow([title]);
+    filterRow.font = { bold: true, size: 12 };
+    filterRow.alignment = { vertical: 'middle', horizontal: 'left', wrapText: false };
+    filterRow.height = 20;
+    worksheet.mergeCells(1, 1, 1, 16);
+
+    worksheet.addRow([]);
+
+    const headerRow = worksheet.addRow([
+      'Pellet No.',
+      'MDF Sub Category',
+      'Thickness',
+      'Size',
+      'Opening Sheets',
+      'Opening Metres',
+      'Received Sheets',
+      'Received Mtrs',
+      'Consumed Sheets',
+      'Consumed Mtrs',
+      'Sales Sheets',
+      'Sales Mtrs',
+      'Issue For Pressing',
+      'Issue For Pressing Sq Met',
+      'Closing sheets',
+      'Closing Metres',
+    ]);
+    headerRow.font = { bold: true };
+    headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFD3D3D3' },
+    };
+
+    const groupedBySubCategory = {};
+    aggregatedData.forEach((item) => {
+      const subType = item.mdf_sub_type || 'OTHER';
+      if (!groupedBySubCategory[subType]) {
+        groupedBySubCategory[subType] = [];
+      }
+      groupedBySubCategory[subType].push(item);
+    });
+
+    const grandTotals = {
+      opening_sheets: 0,
+      opening_sqm: 0,
+      receive_sheets: 0,
+      receive_sqm: 0,
+      consume_sheets: 0,
+      consume_sqm: 0,
+      sales_sheets: 0,
+      sales_sqm: 0,
+      issue_pressing_sheets: 0,
+      issue_pressing_sqm: 0,
+      closing_sheets: 0,
+      closing_sqm: 0,
+    };
+
+    Object.keys(groupedBySubCategory)
+      .sort()
+      .forEach((subType) => {
+        const items = groupedBySubCategory[subType];
+        const categoryTotals = {
+          opening_sheets: 0,
+          opening_sqm: 0,
+          receive_sheets: 0,
+          receive_sqm: 0,
+          consume_sheets: 0,
+          consume_sqm: 0,
+          sales_sheets: 0,
+          sales_sqm: 0,
+          issue_pressing_sheets: 0,
+          issue_pressing_sqm: 0,
+          closing_sheets: 0,
+          closing_sqm: 0,
+        };
+
+        items.forEach((item) => {
+          const rowData = {
+            pellet_no: item.pellet_no ?? '',
+            mdf_sub_type: item.mdf_sub_type ?? '',
+            thickness: item.thickness ?? 0,
+            size: item.size ?? '',
+            opening_sheets: item.opening_sheets ?? 0,
+            opening_sqm: item.opening_sqm ?? 0,
+            receive_sheets: item.receive_sheets ?? 0,
+            receive_sqm: item.receive_sqm ?? 0,
+            consume_sheets: item.consume_sheets ?? 0,
+            consume_sqm: item.consume_sqm ?? 0,
+            sales_sheets: item.sales_sheets ?? 0,
+            sales_sqm: item.sales_sqm ?? 0,
+            issue_pressing_sheets: item.issue_pressing_sheets ?? 0,
+            issue_pressing_sqm: item.issue_pressing_sqm ?? 0,
+            closing_sheets: item.closing_sheets ?? 0,
+            closing_sqm: item.closing_sqm ?? 0,
+          };
+          worksheet.addRow(rowData);
+          Object.keys(categoryTotals).forEach((key) => {
+            categoryTotals[key] += rowData[key] ?? 0;
+          });
+        });
+
+        const categoryTotalRow = worksheet.addRow({
+          pellet_no: '',
+          mdf_sub_type: '',
+          thickness: '',
+          size: 'Total',
+          ...categoryTotals,
+        });
+        categoryTotalRow.eachCell((cell) => {
+          cell.font = { bold: true };
+        });
+
+        Object.keys(grandTotals).forEach((key) => {
+          grandTotals[key] += categoryTotals[key];
+        });
+      });
+
+    const grandTotalRow = worksheet.addRow({
+      pellet_no: '',
+      mdf_sub_type: 'Total',
+      thickness: '',
+      size: '',
+      ...grandTotals,
+    });
+    grandTotalRow.eachCell((cell) => {
+      cell.font = { bold: true };
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE0E0E0' },
+      };
+    });
+
+    const timeStamp = new Date().getTime();
+    const fileName = `MDF-Stock-Report-ByPellet-${timeStamp}.xlsx`;
+    const filePath = `${folderPath}/${fileName}`;
+    await workbook.xlsx.writeFile(filePath);
+
+    return `${process.env.APP_URL}${filePath}`;
+  } catch (error) {
+    console.error('Error creating MDF stock report by pellet:', error);
     throw new ApiError(500, error.message, error);
   }
 };
