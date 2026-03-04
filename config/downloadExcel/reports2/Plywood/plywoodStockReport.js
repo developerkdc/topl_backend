@@ -5,7 +5,7 @@ import ApiError from '../../../../utils/errors/apiError.js';
 /**
  * Generate Plywood Stock Report Excel for reports2.
  * Title: Plywood Type [ filter ] stock in the period DD/MM/YYYY and DD/MM/YYYY
- * Columns: Plywood Sub Type, Thickness, Size, Opening, Receive, Consume, Sales, Issue For Rec, Closing (sheets + sqm).
+ * Columns: Plywood Sub Category, Thickness, Size, Opening, Received, Consumed, Sales, Issue For Ply Resizing, Issue For Pressing, Closing (sheets + sqm).
  *
  * @param {Array} aggregatedData - Aggregated stock data per (plywood_sub_type, thickness, size)
  * @param {String} startDate - Start date (YYYY-MM-DD)
@@ -66,8 +66,10 @@ export const GeneratePlywoodStockReportExcel = async (
       { key: 'consume_sqm', width: 12 },
       { key: 'sales_sheets', width: 12 },
       { key: 'sales_sqm', width: 12 },
-      { key: 'issue_recal_sheets', width: 20 },
-      { key: 'issue_recal_sqm', width: 20 },
+      { key: 'issue_for_ply_resizing_sheets', width: 22 },
+      { key: 'issue_for_ply_resizing_sqm', width: 22 },
+      { key: 'issue_for_pressing_sheets', width: 18 },
+      { key: 'issue_for_pressing_sqm', width: 20 },
       { key: 'closing_sheets', width: 12 },
       { key: 'closing_sqm', width: 12 },
     ];
@@ -78,26 +80,28 @@ export const GeneratePlywoodStockReportExcel = async (
     filterRow.font = { bold: true, size: 12 };
     filterRow.alignment = { vertical: 'middle', horizontal: 'left', wrapText: false };
     filterRow.height = 20;
-    worksheet.mergeCells(1, 1, 1, 15);
+    worksheet.mergeCells(1, 1, 1, 17);
 
     worksheet.addRow([]);
 
     const headerRow = worksheet.addRow([
-      'Plywood Sub Type',
+      'Plywood Sub Category',
       'Thickness',
       'Size',
-      'Opening',
-      'Op Metres',
-      'Receive',
-      'Rec Mtrs',
-      'Consume',
-      'Cons Mtrs',
-      'Sales',
+      'Opening Sheets',
+      'Opening Metres',
+      'Received Sheets',
+      'Received Mtrs',
+      'Consumed Sheets',
+      'Consumed Mtrs',
+      'Sales Sheets',
       'Sales Mtrs',
-      'Issue For Rec Ply/Cal Sheet',
-      'Issue For Rec Ply/Cal Sq Met',
-      'Closing',
-      'Cl Metres',
+      'Issue For Ply Resizing Sheet',
+      'Issue For Ply Resizing Sq Met',
+      'Issue For Pressing',
+      'Issue For Pressing Sq Met',
+      'Closing sheets',
+      'Closing Metres',
     ]);
     headerRow.font = { bold: true };
     headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
@@ -129,8 +133,10 @@ export const GeneratePlywoodStockReportExcel = async (
       consume_sqm: 0,
       sales_sheets: 0,
       sales_sqm: 0,
-      issue_recal_sheets: 0,
-      issue_recal_sqm: 0,
+      issue_for_ply_resizing_sheets: 0,
+      issue_for_ply_resizing_sqm: 0,
+      issue_for_pressing_sheets: 0,
+      issue_for_pressing_sqm: 0,
       closing_sheets: 0,
       closing_sqm: 0,
     };
@@ -152,8 +158,10 @@ export const GeneratePlywoodStockReportExcel = async (
               consume_sqm: 0,
               sales_sheets: 0,
               sales_sqm: 0,
-              issue_recal_sheets: 0,
-              issue_recal_sqm: 0,
+              issue_for_ply_resizing_sheets: 0,
+              issue_for_ply_resizing_sqm: 0,
+              issue_for_pressing_sheets: 0,
+              issue_for_pressing_sqm: 0,
               closing_sheets: 0,
               closing_sqm: 0,
             };
@@ -171,8 +179,10 @@ export const GeneratePlywoodStockReportExcel = async (
                 consume_sqm: item.consume_sqm || 0,
                 sales_sheets: item.sales_sheets || 0,
                 sales_sqm: item.sales_sqm || 0,
-                issue_recal_sheets: item.issue_recal_sheets || 0,
-                issue_recal_sqm: item.issue_recal_sqm || 0,
+                issue_for_ply_resizing_sheets: item.issue_for_ply_resizing_sheets || 0,
+                issue_for_ply_resizing_sqm: item.issue_for_ply_resizing_sqm || 0,
+                issue_for_pressing_sheets: item.issue_for_pressing_sheets || 0,
+                issue_for_pressing_sqm: item.issue_for_pressing_sqm || 0,
                 closing_sheets: item.closing_sheets || 0,
                 closing_sqm: item.closing_sqm || 0,
               };
@@ -286,8 +296,10 @@ export const GeneratePlywoodItemWiseStockReportExcel = async (
       { key: 'consume_sqm', width: 12 },
       { key: 'sales_sheets', width: 12 },
       { key: 'sales_sqm', width: 12 },
-      { key: 'issue_recal_sheets', width: 20 },
-      { key: 'issue_recal_sqm', width: 20 },
+      { key: 'issue_for_ply_resizing_sheets', width: 22 },
+      { key: 'issue_for_ply_resizing_sqm', width: 22 },
+      { key: 'issue_for_pressing_sheets', width: 18 },
+      { key: 'issue_for_pressing_sqm', width: 20 },
       { key: 'closing_sheets', width: 12 },
       { key: 'closing_sqm', width: 12 },
     ];
@@ -298,27 +310,29 @@ export const GeneratePlywoodItemWiseStockReportExcel = async (
     filterRow.font = { bold: true, size: 12 };
     filterRow.alignment = { vertical: 'middle', horizontal: 'left', wrapText: false };
     filterRow.height = 20;
-    worksheet.mergeCells(1, 1, 1, 16);
+    worksheet.mergeCells(1, 1, 1, 18);
 
     worksheet.addRow([]);
 
     const headerRow = worksheet.addRow([
       'Item Name',
-      'Plywood Sub Type',
+      'Plywood Sub Category',
       'Thickness',
       'Size',
-      'Opening',
-      'Op Metres',
-      'Receive',
-      'Rec Mtrs',
-      'Consume',
-      'Cons Mtrs',
-      'Sales',
+      'Opening Sheets',
+      'Opening Metres',
+      'Received Sheets',
+      'Received Mtrs',
+      'Consumed Sheets',
+      'Consumed Mtrs',
+      'Sales Sheets',
       'Sales Mtrs',
-      'Issue For Rec Ply/Cal Sheet',
-      'Issue For Rec Ply/Cal Sq Met',
-      'Closing',
-      'Cl Metres',
+      'Issue For Ply Resizing Sheet',
+      'Issue For Ply Resizing Sq Met',
+      'Issue For Pressing',
+      'Issue For Pressing Sq Met',
+      'Closing sheets',
+      'Closing Metres',
     ]);
     headerRow.font = { bold: true };
     headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
@@ -350,8 +364,10 @@ export const GeneratePlywoodItemWiseStockReportExcel = async (
       consume_sqm: 0,
       sales_sheets: 0,
       sales_sqm: 0,
-      issue_recal_sheets: 0,
-      issue_recal_sqm: 0,
+      issue_for_ply_resizing_sheets: 0,
+      issue_for_ply_resizing_sqm: 0,
+      issue_for_pressing_sheets: 0,
+      issue_for_pressing_sqm: 0,
       closing_sheets: 0,
       closing_sqm: 0,
     };
@@ -369,8 +385,10 @@ export const GeneratePlywoodItemWiseStockReportExcel = async (
           consume_sqm: 0,
           sales_sheets: 0,
           sales_sqm: 0,
-          issue_recal_sheets: 0,
-          issue_recal_sqm: 0,
+          issue_for_ply_resizing_sheets: 0,
+          issue_for_ply_resizing_sqm: 0,
+          issue_for_pressing_sheets: 0,
+          issue_for_pressing_sqm: 0,
           closing_sheets: 0,
           closing_sqm: 0,
         };
@@ -388,8 +406,10 @@ export const GeneratePlywoodItemWiseStockReportExcel = async (
               consume_sqm: 0,
               sales_sheets: 0,
               sales_sqm: 0,
-              issue_recal_sheets: 0,
-              issue_recal_sqm: 0,
+              issue_for_ply_resizing_sheets: 0,
+              issue_for_ply_resizing_sqm: 0,
+              issue_for_pressing_sheets: 0,
+              issue_for_pressing_sqm: 0,
               closing_sheets: 0,
               closing_sqm: 0,
             };
@@ -408,8 +428,10 @@ export const GeneratePlywoodItemWiseStockReportExcel = async (
                 consume_sqm: item.consume_sqm ?? 0,
                 sales_sheets: item.sales_sheets ?? 0,
                 sales_sqm: item.sales_sqm ?? 0,
-                issue_recal_sheets: item.issue_recal_sheets ?? 0,
-                issue_recal_sqm: item.issue_recal_sqm ?? 0,
+                issue_for_ply_resizing_sheets: item.issue_for_ply_resizing_sheets ?? 0,
+                issue_for_ply_resizing_sqm: item.issue_for_ply_resizing_sqm ?? 0,
+                issue_for_pressing_sheets: item.issue_for_pressing_sheets ?? 0,
+                issue_for_pressing_sqm: item.issue_for_pressing_sqm ?? 0,
                 closing_sheets: item.closing_sheets ?? 0,
                 closing_sqm: item.closing_sqm ?? 0,
               };

@@ -15,7 +15,7 @@ import {
 /**
  * Plywood Stock Report – Excel download.
  * Uses startDate, endDate and optional filter (item_sub_category_name).
- * Returns opening, receive, consume, sales, issue for recal, closing (sheets + sqm).
+ * Returns opening, receive, consume, sales, issue for ply resizing, issue for pressing, closing (sheets + sqm).
  *
  * @route POST /report/download-stock-report-plywood
  * @access Private
@@ -139,21 +139,39 @@ export const plywoodStockReportCsv = catchAsync(async (req, res, next) => {
           },
         ]);
 
-        const issueRecal = await plywood_history_model.aggregate([
-          {
-            $match: {
-              plywood_item_id: { $in: itemIds },
-              issue_status: { $in: ['plywood_resizing', 'pressing'] },
-              createdAt: { $gte: start, $lte: end },
+        const [issuePlyResizing, issuePressing] = await Promise.all([
+          plywood_history_model.aggregate([
+            {
+              $match: {
+                plywood_item_id: { $in: itemIds },
+                issue_status: 'plywood_resizing',
+                createdAt: { $gte: start, $lte: end },
+              },
             },
-          },
-          {
-            $group: {
-              _id: null,
-              total_sheets: { $sum: '$issued_sheets' },
-              total_sqm: { $sum: '$issued_sqm' },
+            {
+              $group: {
+                _id: null,
+                total_sheets: { $sum: '$issued_sheets' },
+                total_sqm: { $sum: '$issued_sqm' },
+              },
             },
-          },
+          ]),
+          plywood_history_model.aggregate([
+            {
+              $match: {
+                plywood_item_id: { $in: itemIds },
+                issue_status: 'pressing',
+                createdAt: { $gte: start, $lte: end },
+              },
+            },
+            {
+              $group: {
+                _id: null,
+                total_sheets: { $sum: '$issued_sheets' },
+                total_sqm: { $sum: '$issued_sqm' },
+              },
+            },
+          ]),
         ]);
 
         const receiveSheets = receives[0]?.total_sheets || 0;
@@ -162,8 +180,10 @@ export const plywoodStockReportCsv = catchAsync(async (req, res, next) => {
         const consumeSqm = consumption[0]?.total_sqm || 0;
         const salesSheets = sales[0]?.total_sheets || 0;
         const salesSqm = sales[0]?.total_sqm || 0;
-        const issueRecalSheets = issueRecal[0]?.total_sheets || 0;
-        const issueRecalSqm = issueRecal[0]?.total_sqm || 0;
+        const issuePlyResizingSheets = issuePlyResizing[0]?.total_sheets || 0;
+        const issuePlyResizingSqm = issuePlyResizing[0]?.total_sqm || 0;
+        const issuePressingSheets = issuePressing[0]?.total_sheets || 0;
+        const issuePressingSqm = issuePressing[0]?.total_sqm || 0;
         const currentSheets = item.current_sheets || 0;
         const currentSqm = item.current_sqm || 0;
 
@@ -184,8 +204,10 @@ export const plywoodStockReportCsv = catchAsync(async (req, res, next) => {
           consume_sqm: consumeSqm,
           sales_sheets: salesSheets,
           sales_sqm: salesSqm,
-          issue_recal_sheets: issueRecalSheets,
-          issue_recal_sqm: issueRecalSqm,
+          issue_for_ply_resizing_sheets: issuePlyResizingSheets,
+          issue_for_ply_resizing_sqm: issuePlyResizingSqm,
+          issue_for_pressing_sheets: issuePressingSheets,
+          issue_for_pressing_sqm: issuePressingSqm,
           closing_sheets: Math.max(0, closingSheets),
           closing_sqm: Math.max(0, closingSqm),
         };
@@ -351,21 +373,39 @@ export const plywoodItemWiseStockReportCsv = catchAsync(async (req, res, next) =
           },
         ]);
 
-        const issueRecal = await plywood_history_model.aggregate([
-          {
-            $match: {
-              plywood_item_id: { $in: itemIds },
-              issue_status: { $in: ['plywood_resizing', 'pressing'] },
-              createdAt: { $gte: start, $lte: end },
+        const [issuePlyResizing, issuePressing] = await Promise.all([
+          plywood_history_model.aggregate([
+            {
+              $match: {
+                plywood_item_id: { $in: itemIds },
+                issue_status: 'plywood_resizing',
+                createdAt: { $gte: start, $lte: end },
+              },
             },
-          },
-          {
-            $group: {
-              _id: null,
-              total_sheets: { $sum: '$issued_sheets' },
-              total_sqm: { $sum: '$issued_sqm' },
+            {
+              $group: {
+                _id: null,
+                total_sheets: { $sum: '$issued_sheets' },
+                total_sqm: { $sum: '$issued_sqm' },
+              },
             },
-          },
+          ]),
+          plywood_history_model.aggregate([
+            {
+              $match: {
+                plywood_item_id: { $in: itemIds },
+                issue_status: 'pressing',
+                createdAt: { $gte: start, $lte: end },
+              },
+            },
+            {
+              $group: {
+                _id: null,
+                total_sheets: { $sum: '$issued_sheets' },
+                total_sqm: { $sum: '$issued_sqm' },
+              },
+            },
+          ]),
         ]);
 
         const receiveSheets = receives[0]?.total_sheets || 0;
@@ -374,8 +414,10 @@ export const plywoodItemWiseStockReportCsv = catchAsync(async (req, res, next) =
         const consumeSqm = consumption[0]?.total_sqm || 0;
         const salesSheets = sales[0]?.total_sheets || 0;
         const salesSqm = sales[0]?.total_sqm || 0;
-        const issueRecalSheets = issueRecal[0]?.total_sheets || 0;
-        const issueRecalSqm = issueRecal[0]?.total_sqm || 0;
+        const issuePlyResizingSheets = issuePlyResizing[0]?.total_sheets || 0;
+        const issuePlyResizingSqm = issuePlyResizing[0]?.total_sqm || 0;
+        const issuePressingSheets = issuePressing[0]?.total_sheets || 0;
+        const issuePressingSqm = issuePressing[0]?.total_sqm || 0;
         const currentSheets = item.current_sheets || 0;
         const currentSqm = item.current_sqm || 0;
 
@@ -397,8 +439,10 @@ export const plywoodItemWiseStockReportCsv = catchAsync(async (req, res, next) =
           consume_sqm: consumeSqm,
           sales_sheets: salesSheets,
           sales_sqm: salesSqm,
-          issue_recal_sheets: issueRecalSheets,
-          issue_recal_sqm: issueRecalSqm,
+          issue_for_ply_resizing_sheets: issuePlyResizingSheets,
+          issue_for_ply_resizing_sqm: issuePlyResizingSqm,
+          issue_for_pressing_sheets: issuePressingSheets,
+          issue_for_pressing_sqm: issuePressingSqm,
           closing_sheets: Math.max(0, closingSheets),
           closing_sqm: Math.max(0, closingSqm),
         };

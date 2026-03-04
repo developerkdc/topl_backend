@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Plywood Stock Report API (reports2) generates a dynamic inventory report with opening stock, receives, consumption, sales, issue for recalibration, and closing stock for a given date range. Data is grouped by **plywood sub-type**, **thickness**, and **size**.
+The Plywood Stock Report API (reports2) generates a dynamic inventory report with opening stock, receives, consumption, sales, issue for ply resizing, issue for pressing, and closing stock for a given date range. Data is grouped by **plywood sub-category**, **thickness**, and **size**.
 
 ## Endpoint
 
@@ -141,25 +141,27 @@ Plywood Type [ CATEGORY ]   stock  in the period  DD/MM/YYYY and DD/MM/YYYY
 
 **Row 3 onwards – Data table columns:**
 
-| #  | Column header               | Description                              |
-|----|-----------------------------|------------------------------------------|
-| 1  | Plywood Sub Type           | Category (e.g. GURJAN, MALAYSIAN)         |
-| 2  | Thickness                  | Thickness (mm)                            |
-| 3  | Size                       | Dimensions (e.g. "2.44 X 1.22")           |
-| 4  | Opening                    | Opening stock (sheets)                   |
-| 5  | Op Metres                  | Opening stock (sq m)                     |
-| 6  | Receive                    | Received in period (sheets)              |
-| 7  | Rec Mtrs                   | Received (sq m)                           |
-| 8  | Consume                    | Consumed in period (sheets)              |
-| 9  | Cons Mtrs                  | Consumed (sq m)                           |
-| 10 | Sales                      | Sold in period (sheets)                  |
-| 11 | Sales Mtrs                 | Sold (sq m)                               |
-| 12 | Issue For Rec Ply/Cal Sheet| Issued for recal (sheets)                 |
-| 13 | Issue For Rec Ply/Cal Sq Met | Issued for recal (sq m)                 |
-| 14 | Closing                    | Closing stock (sheets)                   |
-| 15 | Cl Metres                  | Closing stock (sq m)                      |
+| #  | Column header                  | Description                              |
+|----|--------------------------------|------------------------------------------|
+| 1  | Plywood Sub Category          | Category (e.g. GURJAN, MALAYSIAN)        |
+| 2  | Thickness                      | Thickness (mm)                           |
+| 3  | Size                           | Dimensions (e.g. "2.44 X 1.22")          |
+| 4  | Opening Sheets                 | Opening stock (sheets)                   |
+| 5  | Opening Metres                 | Opening stock (sq m)                     |
+| 6  | Received Sheets                | Received in period (sheets)               |
+| 7  | Received Mtrs                   | Received (sq m)                          |
+| 8  | Consumed Sheets                | Consumed in period (sheets)              |
+| 9  | Consumed Mtrs                  | Consumed (sq m)                          |
+| 10 | Sales Sheets                   | Sold in period (sheets)                   |
+| 11 | Sales Mtrs                     | Sold (sq m)                              |
+| 12 | Issue For Ply Resizing Sheet   | Issued for ply resizing (sheets)        |
+| 13 | Issue For Ply Resizing Sq Met  | Issued for ply resizing (sq m)          |
+| 14 | Issue For Pressing             | Issued for pressing (sheets)             |
+| 15 | Issue For Pressing Sq Met      | Issued for pressing (sq m)              |
+| 16 | Closing sheets                 | Closing stock (sheets)                   |
+| 17 | Closing Metres                 | Closing stock (sq m)                     |
 
-- Data grouped by **Plywood Sub Type → Thickness → Size**; subtotal row after each thickness; grand total at the end.
+- Data grouped by **Plywood Sub Category → Thickness → Size**; subtotal row after each thickness; grand total at the end.
 
 ## Stock Calculation Logic
 
@@ -174,7 +176,8 @@ All values are computed in **sheets** and **square meters**.
 - **Receives:** From inventory item details joined to invoice details where `inward_date` is between startDate and endDate; sum `sheets` and `total_sq_meter`.
 - **Consumption:** From plywood history where `issue_status` in `['order', 'pressing', 'plywood_resizing']` and `createdAt` in period; sum `issued_sheets` and `issued_sqm`.
 - **Sales:** From plywood history where `issue_status = 'challan'` and `createdAt` in period; sum `issued_sheets` and `issued_sqm`.
-- **Issue for recal:** From plywood history where `issue_status` in `['plywood_resizing', 'pressing']` and `createdAt` in period; sum `issued_sheets` and `issued_sqm`.
+- **Issue for ply resizing:** From plywood history where `issue_status = 'plywood_resizing'` and `createdAt` in period; sum `issued_sheets` and `issued_sqm`.
+- **Issue for pressing:** From plywood history where `issue_status = 'pressing'` and `createdAt` in period; sum `issued_sheets` and `issued_sqm`.
 - **Closing:**  
   `Closing = Opening + Receive - Consume - Sales` (in both sheets and sq m).
 
