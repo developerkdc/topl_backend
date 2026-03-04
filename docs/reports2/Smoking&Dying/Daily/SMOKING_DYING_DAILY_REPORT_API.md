@@ -1,7 +1,7 @@
-# Smoking&Dying (Dyeing) Daily Report API
+# Smoking Daily Report API
 
 ## Overview
-The Smoking&Dying Daily Report API generates Excel reports showing dyeing (smoking & dying) production details for a specific date. The report includes a main table with Item Name, New Item Name, and LogX (merged vertically per log group), then Bundle No, Sq Mtr, Colour Code, and Remarks per bundle; a Total row for bundle count and total Sq Mtr; and a session metadata table at the end (Dyeing Id, Shift, Work Hours, Worker, Machine Id).
+The Smoking Daily Report API generates Excel reports showing smoking/dyeing production details for a specific date. The report includes a main table with Item Name, LogX (merged vertically per log group), Bundle No, ThickneSS, Length, Width, Leaves, Sq Mtr, PROCESS, Process color, Character, Pattern, Series, and Remarks per bundle; subtotal rows per item (label "TOTAL"); a Grand Total row; and a Summary section (ITEM NAME, RECEIVED MTR., PROCESS NAME, LEAVE, PRODUCTION SQ. MTR).
 
 ## Endpoint
 ```
@@ -85,12 +85,12 @@ Displays the report date in a merged cell.
 
 **Format:**
 ```
-Dyeing Details Report Date: DD/MM/YYYY
+Smoking Details Report Date: DD/MM/YYYY
 ```
 
 **Example:**
 ```
-Dyeing Details Report Date: 05/11/2025
+Smoking Details Report Date: 05/11/2025
 ```
 
 ### Row 2: Empty (spacing)
@@ -99,52 +99,58 @@ Dyeing Details Report Date: 05/11/2025
 
 All columns in one header row:
 
-| # | Column        | Description                                      |
-|---|---------------|--------------------------------------------------|
-| 1 | Item Name     | Original item name (e.g., RED OAK)              |
-| 2 | New Item Name | Item after process (e.g., TAN OAK)               |
-| 3 | LogX          | Log identifier code (e.g., D25A1A, D3A1A)       |
-| 4 | Bundle No     | Bundle number                                   |
-| 5 | Sq Mtr        | Square meters                                   |
-| 6 | Colour Code   | Colour name (if any)                            |
-| 7 | Remarks       | Remarks                                         |
+| # | Column       | Description                                      |
+|---|--------------|--------------------------------------------------|
+| 1 | Item Name    | Original item name (e.g., IVORY CROWN)           |
+| 2 | LogX         | Log identifier code (e.g., L24PDA, X1PDR)       |
+| 3 | Bundle No    | Bundle number                                   |
+| 4 | ThickneSS    | Thickness                                       |
+| 5 | Length       | Length                                          |
+| 6 | Width        | Width                                           |
+| 7 | Leaves       | Number of leaves                                 |
+| 8 | Sq Mtr       | Square meters                                   |
+| 9 | PROCESS      | Process name                                    |
+| 10| Process color| Color name                                      |
+| 11| Character    | Character name                                  |
+| 12| Pattern      | Pattern name                                    |
+| 13| Series       | Series name                                     |
+| 14| Remarks      | Remarks                                         |
 
 ### Data Rows
 - One row per bundle; all sessions for the date (or the single session when `smokingDyingId` is provided) are listed in one table.
-- **Left block (columns 1–3):** Item Name, New Item Name, and LogX are **merged vertically** for each contiguous group of rows that share the same LogX (within the same session). So multiple bundle rows for the same log show one merged cell for Item Name, one for New Item Name, and one for LogX.
-- **Right block (columns 4–7):** Bundle No, Sq Mtr, Colour Code, and Remarks vary per row (one value per bundle).
+- **Columns 1–2:** Item Name and LogX are **merged vertically** for each contiguous group of rows that share the same log (same process_done_id + same log_no_code).
+- **Columns 3–14:** Bundle No, ThickneSS, Length, Width, Leaves, Sq Mtr, PROCESS, Process color, Character, Pattern, Series, and Remarks vary per row.
 
-### Total Row
-- Immediately after the last data row.
+### Subtotal Rows
+- After each item group, a row with label **TOTAL** and sum of Leaves (column 7) and Sq Mtr (column 8) for that item.
+
+### Grand Total Row
+- Immediately after the last subtotal row.
 - First column: label **Total**.
-- Column 4 (Bundle No): total number of bundles (row count).
-- Column 5 (Sq Mtr): sum of all Sq Mtr.
-- Other columns blank in the total row.
+- Column 7 (Leaves): total leaves across all bundles.
+- Column 8 (Sq Mtr): sum of all Sq Mtr.
 
-### Session Details Section (at the end)
+### Summary Section (SUMMERY)
 
-Placed after the main table and Total row.
+Placed after the main table and Grand Total row.
 
-**Headers:** Dyeing Id | Shift | Work Hours | Worker | Machine Id
+**Headers:** ITEM NAME | RECEIVED MTR. | PROCESS NAME | LEAVE | PRODUCTION SQ. MTR
 
-**Data:** One row per smoking/dying session (unique `process_done_id`). Machine Id is not in the schema and is left blank.
+**Data:** One row per unique item name, with aggregated LEAVE and PRODUCTION SQ. MTR. RECEIVED MTR. is left blank. PROCESS NAME from first occurrence per item.
 
-**Example:**
-| Dyeing Id      | Shift | Work Hours | Worker   | Machine Id |
-|----------------|-------|------------|----------|------------|
-| 690aed51c7445... | DAY   | 2          | SUPER ADM|            |
-| 690b0a526e762... | DAY   | 1          | SUPER ADM|            |
+**TOTAL row:** Overall sum of LEAVE and PRODUCTION SQ. MTR.
 
 ## Report Features
 
 - **Single date filtering**: Report for one specific day only.
 - **Optional session filter**: `smokingDyingId` to restrict to one smoking/dying session.
-- **Merged left block**: Item Name, New Item Name, and LogX are merged vertically per log group for clearer grouping.
-- **Session details at end**: All session metadata (Dyeing Id, Shift, Work Hours, Worker, Machine Id) at the end of the report.
-- **Automatic totals**: One Total row for bundle count and total Sq Mtr.
-- **Bold formatting**: Headers and total row are bold.
+- **Merged columns**: Item Name and LogX merge vertically per log group for clearer grouping.
+- **Subtotal rows**: Per-item subtotals (label "TOTAL") with Leaves and Sq Mtr sums.
+- **Summary section**: SUMMERY table with ITEM NAME, RECEIVED MTR., PROCESS NAME, LEAVE, PRODUCTION SQ. MTR.
+- **Automatic totals**: Grand Total row and Summary TOTAL row.
+- **Bold formatting**: Headers and total rows are bold.
 - **Visual styling**: Header row has gray background.
-- **Numeric formatting**: Sq Mtr formatted to 2 decimal places (0.00).
+- **Numeric formatting**: Numeric columns formatted to 2 decimal places (0.00).
 
 ## Understanding the API Response
 
@@ -153,10 +159,11 @@ When the API returns **200 OK**:
 1. **`result`** is a full URL (e.g. `http://localhost:5000/public/reports/SmokingDying/smoking_dying_daily_report_1738234567890.xlsx`). The client can use this URL to download the generated Excel file (GET request or open in browser).
 
 2. **The Excel file** contains:
-   - **Title row**: "Dyeing Details Report Date: DD/MM/YYYY" (date from request `reportDate`, formatted as DD/MM/YYYY).
-   - **One main table**: 7 columns (see Field Mapping below). Each data row is one bundle; rows are ordered by LogX, then Bundle No. Columns 1–3 are merged per log group.
-   - **One Total row**: Bundle count (number of rows) and sum of Sq Mtr; other columns blank.
-   - **Session details section** (at the end): One header row and one data row per session. Each session row shows Dyeing Id, Shift, Work Hours, Worker name, and Machine Id (blank).
+   - **Title row**: "Smoking Details Report Date: DD/MM/YYYY" (date from request `reportDate`, formatted as DD/MM/YYYY).
+   - **One main table**: 14 columns (see Field Mapping below). Each data row is one bundle; rows are ordered by Item Name, LogX, Bundle No. Columns 1–2 (Item Name, LogX) are merged per log group.
+   - **Subtotal rows**: Per item, a "TOTAL" row with Leaves and Sq Mtr sums.
+   - **Grand Total row**: Overall Leaves and Sq Mtr.
+   - **Summary section** (at the end): SUMMERY table with ITEM NAME, RECEIVED MTR., PROCESS NAME, LEAVE, PRODUCTION SQ. MTR; one row per unique item; TOTAL row.
 
 3. **Where each value comes from** is documented in **Field Mapping** and **How Data Is Brought Together** below.
 
@@ -168,7 +175,7 @@ The report is built in two steps: **aggregation** (backend) and **Excel generati
 
 ### Step 1: Aggregation (Controller)
 
-We **start from sessions** and **attach items and worker name**:
+We **start from sessions** and **attach items**:
 
 1. **Source collection**: `process_done_details` (one document per smoking/dying session).
 
@@ -182,40 +189,26 @@ We **start from sessions** and **attach items and worker name**:
    - Result: each session document gets an `items` array (all items for that session).
 
 4. **One row per item** (`$unwind` on `items`):
-   - Each session document becomes one document per bundle (session fields repeat for each item).
+   - Each session document becomes one document per bundle.
    - Documents with no items are dropped (`preserveNullAndEmptyArrays: false`).
 
-5. **Attach worker name** (`$lookup` on `users`):
-   - From: `users`
-   - Join: `process_done_details.created_by` = `users._id`
-   - We only pull `first_name` and `last_name`.
-   - Result: each document gets a `worker` object (or empty if no user).
+5. **Sort** (`$sort`):
+   - By `items.item_name` (asc), then `items.log_no_code` (asc), then `items.bundle_number` (asc).
 
-6. **Flatten worker** (`$unwind` on `worker`):
-   - `preserveNullAndEmptyArrays: true` so sessions without a matching user still appear.
+6. **Project to flat shape** (`$project`):
+   - Session: `process_done_id` = `_id`.
+   - Item: `item_name`, `log_no_code`, `bundle_number`, `thickness`, `length`, `width`, `no_of_leaves`, `sqm`, `process_name`, `color_name`, `character_name`, `pattern_name`, `series_name`, `remark`.
 
-7. **Sort** (`$sort`):
-   - By `items.log_no_code` (asc), then `items.bundle_number` (asc).
-
-8. **Project to flat shape** (`$project`):
-   - Session: `process_done_id` = `_id`, `shift`, `no_of_working_hours`, `no_of_workers`, `worker` = `first_name + " " + last_name`.
-   - Item: `item_name`, `item_sub_category_name`, `log_no_code`, `bundle_number`, `sqm`, `color_name`, `remark`.
-
-**Result of aggregation**: An array of flat objects. Each object = one bundle row with its session metadata and worker name. Order: by log_no_code, bundle_number.
+**Result of aggregation**: An array of flat objects. Each object = one bundle row. Order: by item_name, log_no_code, bundle_number.
 
 ### Step 2: Excel Generation (Config)
 
 - **Input**: The aggregated array and `reportDate`.
-- **Title**: "Dyeing Details Report Date: " + `reportDate` formatted as DD/MM/YYYY.
-- **Main table**: One header row (all 7 column names), then one data row per aggregated object. When iterating rows, detect log-group boundaries (same `process_done_id` + same `log_no_code`); for each such block, merge cells in columns 1, 2, and 3 from the first row to the last row of that block.
-- **Totals**:
-  - Total bundle count = number of aggregated rows.
-  - Total Sq Mtr = sum of `sqm` over all aggregated rows.
-  Written in the Total row in columns 4 and 5.
-- **Session details**:
-  - Scan aggregated rows and collect **unique** `process_done_id` (order preserved).
-  - For each unique `process_done_id`, take `shift`, `no_of_working_hours`, and `worker` from any row with that `process_done_id`.
-  - Write one header row (Dyeing Id, Shift, Work Hours, Worker, Machine Id) then one data row per session. Machine Id is left blank.
+- **Title**: "Smoking Details Report Date: " + `reportDate` formatted as DD/MM/YYYY.
+- **Main table**: One header row (14 column names), then one data row per aggregated object. When iterating rows, detect log-group boundaries (same `process_done_id` + same `log_no_code`); for each such block, merge cells in columns 1 and 2 (Item Name, LogX).
+- **Subtotal rows**: After each item group, insert a row with label "TOTAL" and sum of Leaves and Sq Mtr.
+- **Grand Total**: One row with overall Leaves and Sq Mtr.
+- **Summary section**: Group by item_name; compute sum of no_of_leaves and sqm per item; write SUMMERY table with ITEM NAME, RECEIVED MTR. (blank), PROCESS NAME, LEAVE, PRODUCTION SQ. MTR; add TOTAL row.
 
 ---
 
@@ -226,65 +219,65 @@ Every value in the Excel comes from the aggregated rows or from the above calcul
 | # | Report column   | Source (after aggregation)   | DB collection                    | DB field                | Notes |
 |---|-----------------|------------------------------|----------------------------------|-------------------------|--------|
 | 1 | Item Name       | `item_name`                  | process_done_items_details       | item_name               | Direct; merged per log group |
-| 2 | New Item Name   | `item_sub_category_name`     | process_done_items_details       | item_sub_category_name  | Direct; merged per log group |
-| 3 | LogX            | `log_no_code`                | process_done_items_details       | log_no_code             | Direct; merged per log group |
-| 4 | Bundle No       | `bundle_number`              | process_done_items_details       | bundle_number           | Direct |
-| 5 | Sq Mtr          | `sqm`                        | process_done_items_details       | sqm                     | Direct in data rows; **Total row** = SUM(sqm) |
-| 6 | Colour Code     | `color_name`                 | process_done_items_details       | color_name              | Direct |
-| 7 | Remarks         | `remark`                     | process_done_items_details       | remark                  | Direct |
+| 2 | LogX            | `log_no_code`                | process_done_items_details       | log_no_code             | Direct; merged per log group |
+| 3 | Bundle No       | `bundle_number`              | process_done_items_details       | bundle_number           | Direct |
+| 4 | ThickneSS       | `thickness`                  | process_done_items_details       | thickness               | Direct |
+| 5 | Length          | `length`                     | process_done_items_details       | length                  | Direct |
+| 6 | Width           | `width`                     | process_done_items_details       | width                   | Direct |
+| 7 | Leaves          | `no_of_leaves`               | process_done_items_details       | no_of_leaves            | Direct |
+| 8 | Sq Mtr          | `sqm`                        | process_done_items_details       | sqm                     | Direct; subtotal/Grand Total = SUM(sqm) |
+| 9 | PROCESS         | `process_name`               | process_done_items_details       | process_name            | Direct |
+| 10| Process color   | `color_name`                 | process_done_items_details       | color_name              | Direct |
+| 11| Character       | `character_name`             | process_done_items_details       | character_name          | Direct |
+| 12| Pattern         | `pattern_name`               | process_done_items_details       | pattern_name            | Direct |
+| 13| Series          | `series_name`                | process_done_items_details       | series_name             | Direct |
+| 14| Remarks         | `remark`                     | process_done_items_details       | remark                  | Direct |
 
-**Total row:** Column 4 = row count (bundle count); Column 5 = sum of `sqm`.
+**Subtotal row:** Label "TOTAL"; Leaves = sum per item; Sq Mtr = sum per item.
 
-**Session details section (at end of report):**
+**Grand Total row:** Label "Total"; Leaves = sum over all; Sq Mtr = sum over all.
 
-| Report column | Source (after aggregation) | DB collection          | DB field              | Notes |
-|---------------|----------------------------|------------------------|------------------------|--------|
-| Dyeing Id     | `process_done_id`          | process_done_details   | _id                   | One row per unique process_done_id |
-| Shift         | `shift`                    | process_done_details   | shift                 | |
-| Work Hours    | `no_of_working_hours`      | process_done_details   | no_of_working_hours   | |
-| Worker        | `worker`                   | users                  | first_name + " " + last_name | Resolved via process_done_details.created_by → users._id |
-| Machine Id    | —                          | —                      | —                     | Not in schema; always blank |
+**Summary section (SUMMERY):**
+
+| Report column      | Source (after aggregation) | DB collection            | Notes |
+|--------------------|----------------------------|--------------------------|-------|
+| ITEM NAME          | `item_name`               | process_done_items_details | One row per unique item_name |
+| RECEIVED MTR.      | —                         | —                        | Left blank |
+| PROCESS NAME       | `process_name`            | process_done_items_details | First occurrence per item |
+| LEAVE              | SUM(`no_of_leaves`)       | process_done_items_details | Per item |
+| PRODUCTION SQ. MTR | SUM(`sqm`)               | process_done_items_details | Per item |
 
 ---
 
 ## Calculations
 
-All numeric values in **data rows** are **pass-through** from the database (no formulas). Only the **Total row** and **Worker** are derived.
+All numeric values in **data rows** are **pass-through** from the database (no formulas). Subtotal rows, Grand Total, and Summary section are derived.
 
 ### Data rows (main table)
 
-- **Item Name, New Item Name, LogX, Bundle No, Sq Mtr, Colour Code, Remarks**
-  = same-named field from the aggregated row (which comes from `process_done_items_details` or session metadata as in the Field Mapping table).
-- No calculation; value is whatever is stored in the DB for that bundle.
-- Columns 1–3 are merged per log group in the Excel (same value repeated for each row in the group).
+- All 14 columns = same-named field from the aggregated row (from `process_done_items_details`).
+- Columns 1–2 (Item Name, LogX) are merged per log group in the Excel.
 
-### Total row (main table)
+### Subtotal rows (per item)
+
+- **Column 1 (label)**: Literal `"TOTAL"`.
+- **Column 7 (Leaves)**: SUM(no_of_leaves) over the item group.
+- **Column 8 (Sq Mtr)**: SUM(sqm) over the item group.
+
+### Grand Total row
 
 - **Column 1 (label)**: Literal `"Total"`.
-- **Column 4 (Bundle No)**:
-  ```
-  Total bundles = number of aggregated rows
-  ```
-- **Column 5 (Sq Mtr)**:
-  ```
-  Total Sq Mtr = SUM(sqm) over all aggregated rows
-  ```
-- **Columns 2–3, 6–7**: Left blank in the Total row.
+- **Column 7 (Leaves)**: SUM(no_of_leaves) over all aggregated rows.
+- **Column 8 (Sq Mtr)**: SUM(sqm) over all aggregated rows.
 
-### Worker name (session details section)
+### Summary section (SUMMERY)
 
-- Computed in the aggregation pipeline (not in Excel):
-  ```
-  worker = users.first_name + " " + users.last_name
-  ```
-  (with nulls as empty string).
-- Same value is repeated for every aggregated row that belongs to that session; the Excel generator uses the first occurrence per `process_done_id` for the session details block.
-
-### Session details section (one row per session)
-
-- **Dyeing Id**: Unique `process_done_id` from aggregated rows (order preserved).
-- **Shift, Work Hours, Worker**: Taken from any aggregated row that has that `process_done_id` (same for all rows of that session).
-- **Machine Id**: Not stored anywhere; cell is blank.
+- **ITEM NAME**: Unique item_name from aggregated rows.
+- **RECEIVED MTR.**: Left blank.
+- **PROCESS NAME**: First process_name per item.
+- **LEAVE**: SUM(no_of_leaves) per item.
+- **PRODUCTION SQ. MTR**: SUM(sqm) per item.
+- **TOTAL row**: Sum of LEAVE and PRODUCTION SQ. MTR across all items.
 
 ---
 
@@ -379,10 +372,9 @@ const generateSmokingDyingReport = async () => {
 ## Notes
 
 - Report includes all smoking/dying sessions for the given date unless `smokingDyingId` is specified.
-- Session details appear only at the end of the report; one row per unique session.
-- Machine Id is not stored in the current schema; column is present but blank.
+- Summary section (SUMMERY) appears at the end; one row per unique item name.
+- RECEIVED MTR. is left blank (no data source in current schema).
 - Excel files are timestamped; stored in `public/reports/SmokingDying/`.
-- Item Name and New Item Name correspond to `item_name` and `item_sub_category_name` in `process_done_items_details`.
 
 ## File Storage
 
@@ -395,18 +387,21 @@ const generateSmokingDyingReport = async () => {
 ## Report Example Structure
 
 ```
-Dyeing Details Report Date: 05/11/2025
+Smoking Details Report Date: 05/11/2025
 
-Item Name  | New Item Name | LogX   | Bundle No | Sq Mtr   | Colour Code | Remarks
-RED OAK    | TAN OAK       | D25A1A  | 2         | 9.54     |             |
-           |               |         | 3         | 10.15    |             |
-           |               |         | 4         | 10.29    |             |
-           |               |         | ...       | ...      |             |
-RED OAK    | TAN OAK       | D3A1A   | 1         | 9.02     |             |
-Total      |               |         | 51        | 559.55   |             |
+Item Name   | LogX   | Bundle No | ThickneSS | Length | Width | Leaves | Sq Mtr | PROCESS | Process color | Character | Pattern | Series | Remarks
+IVORY CROWN | L24PDA | 1         | 0.00      | 0.00   | 0.00 | 1      | 3.00   | FLARE   |               | NATURAL   | TEST   | AC     |
+            |        | 11        | 0.00      | 0.00   | 0.00 | 1      | 3.00   |         |               |           |        |        |
+TOTAL       |        |           |           |        |      | 3      | 9.00   |         |               |           |        |        |
+WHITE OAK   | X1PDR  | 12        | 0.00      | 0.00   | 0.00 | 1      | 3.00   | LAST DEMO|              | TESTING   | AC     | AC     |
+TOTAL       |        |           |           |        |      | 3      | 9.00   |         |               |           |        |        |
+Total       |        |           |           |        |      | 6      | 18.00  |         |               |           |        |        |
 
-Dyeing Id       | Shift | Work Hours | Worker   | Machine Id
-690aed51c7445... | DAY   | 2          | SUPER ADM|
+SUMMERY
+ITEM NAME   | RECEIVED MTR. | PROCESS NAME | LEAVE | PRODUCTION SQ. MTR
+IVORY CROWN |              | FLARE        | 3     | 9.00
+WHITE OAK   |              | LAST DEMO    | 3     | 9.00
+TOTAL       |              |              | 6     | 18.00
 ```
 
 ## Troubleshooting
@@ -420,8 +415,6 @@ If you receive a 404 error, verify:
 ### Incorrect Date Format
 Date should be in ISO format: `"YYYY-MM-DD"` (e.g. `"2025-11-05"`).
 
-### Missing Worker Details
-Worker name is resolved from `users` via `process_done_details.created_by`. If worker names are missing, ensure `created_by` references valid user IDs and the users collection has `first_name` and `last_name`.
 
 ## Technical Implementation
 
@@ -485,71 +478,42 @@ One document per item; drop sessions with no items:
 }
 ```
 
-**Stage 4 – $lookup (users)**
-Attach worker name for each document:
-
-```javascript
-{
-  $lookup: {
-    from: 'users',
-    localField: 'created_by',
-    foreignField: '_id',
-    as: 'worker',
-    pipeline: [{ $project: { first_name: 1, last_name: 1 } }]
-  }
-}
-```
-
-**Stage 5 – $unwind (worker)**
-Flatten worker; keep documents even if no user match:
-
-```javascript
-{
-  $unwind: {
-    path: '$worker',
-    preserveNullAndEmptyArrays: true
-  }
-}
-```
-
-**Stage 6 – $sort**
-Order for the report (and for stable session-details order):
+**Stage 4 – $sort**
+Order for the report:
 
 ```javascript
 {
   $sort: {
+    'items.item_name': 1,
     'items.log_no_code': 1,
     'items.bundle_number': 1
   }
 }
 ```
 
-**Stage 7 – $project**
+**Stage 5 – $project**
 Flatten to one object per row (names used by Excel generator):
 
 ```javascript
 {
   $project: {
     process_done_id: '$_id',
-    shift: 1,
-    no_of_working_hours: 1,
-    no_of_workers: 1,
-    worker: {
-      $concat: [
-        { $ifNull: ['$worker.first_name', ''] },
-        ' ',
-        { $ifNull: ['$worker.last_name', ''] }
-      ]
-    },
     item_name: '$items.item_name',
-    item_sub_category_name: '$items.item_sub_category_name',
     log_no_code: '$items.log_no_code',
     bundle_number: '$items.bundle_number',
+    thickness: '$items.thickness',
+    length: '$items.length',
+    width: '$items.width',
+    no_of_leaves: '$items.no_of_leaves',
     sqm: '$items.sqm',
+    process_name: '$items.process_name',
     color_name: '$items.color_name',
+    character_name: '$items.character_name',
+    pattern_name: '$items.pattern_name',
+    series_name: '$items.series_name',
     remark: '$items.remark'
   }
 }
 ```
 
-**Result**: Array of flat objects. Each object has one bundle plus session fields (`process_done_id`, `shift`, `no_of_working_hours`, `worker`). This array is passed to `GenerateSmokingDyingDailyReport(rows, reportDate)` in the Excel config; the config writes the main table (one row per object, with merged cells for columns 1–3 per log group), computes Total bundle count and Total Sq Mtr from row count and `sqm`, and builds the session details section from unique `process_done_id` with their `shift`, `no_of_working_hours`, and `worker`.
+**Result**: Array of flat objects. Each object has one bundle. This array is passed to `GenerateSmokingDyingDailyReport(rows, reportDate)` in the Excel config; the config writes the main table (one row per object, with merged cells for columns 1–2 per log group), inserts subtotal rows per item, Grand Total row, and Summary section (SUMMERY).
