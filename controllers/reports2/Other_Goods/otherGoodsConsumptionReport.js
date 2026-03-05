@@ -1,0 +1,142 @@
+import { createOtherGoodsConsumptionReportExcel } from '../../../config/downloadExcel/reports2/Other_Goods/otherGoodsConsumption.js';
+import other_goods_history_model from '../../../database/schema/inventory/otherGoods/otherGoods.history.schema.js';
+import catchAsync from '../../../utils/errors/catchAsync.js';
+
+export const otherGoodsConsumptionReportExcel = catchAsync(
+  async (req, res, next) => {
+    const { startDate, endDate, to, from, reportDate, ...data } = req?.body?.filters || {};
+
+    let targetStart = startDate || from || reportDate;
+    let targetEnd = endDate || to || reportDate;
+
+    if (!targetStart || !targetEnd) {
+      return res.status(400).json({
+        statusCode: 400,
+        status: 'error',
+        message: 'Start date and End date are required',
+      });
+    }
+
+    const start = new Date(targetStart);
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date(targetEnd);
+    end.setHours(23, 59, 59, 999);
+
+    const consumptionData = await other_goods_history_model.aggregate([
+      // 1. Join with item details
+      {
+        $lookup: {
+          from: 'othergoods_inventory_items_details',
+          localField: 'other_goods_item_id',
+          foreignField: '_id',
+          as: 'item_details',
+        },
+      },
+      {
+        $unwind: {
+          path: '$item_details',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      // 2. Join with invoice details to get inward_date
+      {
+        $lookup: {
+          from: 'othergoods_inventory_invoice_details',
+          localField: 'item_details.invoice_id',
+          foreignField: '_id',
+          as: 'invoice_details',
+        },
+      },
+      {
+        $unwind: {
+          path: '$invoice_details',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      // 3. Match based on inward_date from invoice
+      {
+        $match: {
+          'invoice_details.inward_date': {
+            $gte: start,
+            $lte: end,
+          },
+        },
+      },
+      // 4. Join with item_names to get category for units
+      {
+        $lookup: {
+          from: 'item_names',
+          localField: 'item_details.item_name',
+          foreignField: 'item_name',
+          as: 'item_name_info',
+        },
+      },
+      {
+        $unwind: {
+          path: '$item_name_info',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      // 5. Join with item_categories to get calculate_unit
+      {
+        $lookup: {
+          from: 'item_categories',
+          localField: 'item_name_info.category',
+          foreignField: '_id',
+          as: 'category_info',
+        },
+      },
+      {
+        $unwind: {
+          path: '$category_info',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      // 6. Map fields to what the Excel generator expects
+      {
+        $addFields: {
+          department_name: '$item_details.department_name',
+          machine_name: '$item_details.machine_name',
+          item_name: '$item_details.item_name',
+          total_quantity: '$issued_quantity',
+          amount: '$issued_amount',
+          unit: {
+            $ifNull: [
+              '$category_info.calculate_unit',
+              { $ifNull: ['$units', ''] },
+            ],
+          },
+        },
+      },
+      {
+        $sort: {
+          department_name: 1,
+          machine_name: 1,
+          item_name: 1,
+        },
+      },
+    ]);
+
+    if (!consumptionData || consumptionData.length === 0) {
+      return res.status(404).json({
+        statusCode: 404,
+        status: 'error',
+        message: 'No consumption data found for the selected date range',
+      });
+    }
+
+    const excelLink = await createOtherGoodsConsumptionReportExcel(
+      consumptionData,
+      targetStart,
+      targetEnd
+    );
+
+    return res.status(200).json({
+      result: excelLink,
+      statusCode: 200,
+      status: 'success',
+      message: 'Other goods consumption report generated successfully',
+    });
+  }
+);
