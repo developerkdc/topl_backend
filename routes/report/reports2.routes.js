@@ -9,6 +9,7 @@ import groupingRoutes from './reports2/Grouping/grouping.routes.js';
 import faceRoutes from './reports2/Face/face.routes.js';
 import coreRoutes from './reports2/Core/core.routes.js';
 import tappingORClippingRoutes from './reports2/TappingORClipping/TappingORClipping.js';
+import tappingRoutes from './reports2/Tapping/tapping.routes.js';
 import pressingRoutes from './reports2/Pressing/pressing.routes.js';
 import peelingRoutes from './reports2/Peeling/peeling.routes.js';
 import plywoodRoutes from './reports2/Plywood/plywood.routes.js';
@@ -29,6 +30,9 @@ router.use(crosscutRoutes);
 
 // Tapping/Clipping routes (Clipping Daily Report)
 router.use(tappingORClippingRoutes);
+
+// Tapping routes (Splicing Daily Report)
+router.use(tappingRoutes);
 
 //slicing routes (Slicing Daily Report)
 router.use(slicingRoutes);
