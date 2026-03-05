@@ -7,7 +7,7 @@ import catchAsync from '../../../utils/errors/catchAsync.js';
 /**
  * Slicing Daily Report – Excel download.
  * Uses reportDate from req.body.filters to fetch slicing_done_other_details for that day,
- * joins issued_for_slicing (length, width, height, cmt), wastage, slicing_done_items, and worker.
+ * joins issued_for_slicing (length, width, height, cmt), wastage, and slicing_done_items.
  */
 export const SlicingDailyReportExcel = catchAsync(
   async (req, res, next) => {
@@ -75,49 +75,16 @@ export const SlicingDailyReportExcel = catchAsync(
         },
       },
       {
-        $lookup: {
-          from: 'users',
-          localField: 'created_by',
-          foreignField: '_id',
-          as: 'worker',
-          pipeline: [
-            {
-              $project: {
-                first_name: 1,
-                last_name: 1,
-              },
-            },
-          ],
-        },
-      },
-      {
-        $unwind: {
-          path: '$worker',
-          preserveNullAndEmptyArrays: true,
-        },
-      },
-      {
         $sort: { 'items.item_name': 1, 'items.log_no': 1 },
       },
       {
         $project: {
           slicing_id: '$_id',
-          shift: 1,
-          no_of_working_hours: 1,
-          worker: {
-            $concat: [
-              { $ifNull: ['$worker.first_name', ''] },
-              ' ',
-              { $ifNull: ['$worker.last_name', ''] },
-            ],
-          },
           item_name: '$items.item_name',
           flitch_no: '$items.log_no',
           thickness: '$items.thickness',
           length: '$issued_for_slicing.length',
           width1: '$issued_for_slicing.width1',
-          width2: '$issued_for_slicing.width2',
-          width3: '$issued_for_slicing.width3',
           height: '$issued_for_slicing.height',
           cmt: '$issued_for_slicing.cmt',
           leaves: '$items.no_of_leaves',
