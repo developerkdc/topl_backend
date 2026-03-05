@@ -59,55 +59,67 @@ export const createItemWiseInwardReportExcel = async (
 
     console.log('Generated item wise inward report title:', title);
 
-    // Define columns (15 columns)
+    // Define columns (21 columns) matching screenshot order
     const columnDefinitions = [
-      { key: 'item_name', width: 25 },          // 1. ItemName
-      { key: 'opening_stock_cmt', width: 15 },  // 2. Opening Stock CMT
-      { key: 'invoice_cmt', width: 12 },        // 3. Invoice (ROUND LOG)
-      { key: 'indian_cmt', width: 12 },         // 4. Indian (ROUND LOG)
-      { key: 'actual_cmt', width: 12 },         // 5. Actual (ROUND LOG)
-      { key: 'issue_for_cc', width: 15 },       // 6. Issue for CC
-      { key: 'cc_received', width: 15 },        // 7. CC Received
-      { key: 'diff', width: 12 },               // 8. Diff
-      { key: 'flitching', width: 12 },          // 9. Flitching
-      { key: 'sawing', width: 12 },             // 10. Sawing (placeholder)
-      { key: 'wooden_tile', width: 15 },        // 11. Wooden Tile (placeholder)
-      { key: 'unedge', width: 12 },             // 12. UnEdge (placeholder)
-      { key: 'peel', width: 12 },               // 13. Peel
-      { key: 'sales', width: 12 },              // 14. Sales
-      { key: 'closing_stock_cmt', width: 15 },  // 15. Closing Stock CMT
+      { key: 'item_name', width: 25 },            // 1. ItemName
+      { key: 'opening_stock_cmt', width: 15 },    // 2. Opening Stock CMT
+      { key: 'invoice_cmt', width: 12 },          // 3. Invoice
+      { key: 'indian_cmt', width: 12 },           // 4. Indian
+      { key: 'actual_cmt', width: 12 },           // 5. Actual
+      { key: 'recover_from_rejected', width: 15 },// 6. Recover From rejected (empty)
+      { key: 'issue_for_cc', width: 15 },         // 7. Issue for CC
+      { key: 'cc_received', width: 15 },          // 8. CC Received
+      { key: 'cc_issued', width: 15 },            // 9. CC Issue
+      { key: 'cc_diff', width: 12 },              // 10. CC Diff
+      { key: 'issue_for_flitch', width: 15 },     // 11. Issue for Flitch
+      { key: 'flitch_received', width: 15 },      // 12. Flitch Received
+      { key: 'flitch_diff', width: 12 },          // 13. Flitch Diff
+      { key: 'issue_for_sqedge', width: 15 },     // 14. Issue for Sq.Edge (empty)
+      { key: 'peeling_issued', width: 15 },       // 15. Issue for Peeling
+      { key: 'peeling_received', width: 15 },     // 16. Peeling Received
+      { key: 'peeling_diff', width: 12 },         // 17. Peeling Diff
+      { key: 'sales', width: 12 },                // 18. Round log + Cross Cut Sales
+      { key: 'job_work_challan', width: 15 },     // 19. Job Work Challan (empty)
+      { key: 'rejected', width: 12 },             // 20. (Cc+Flitch+Peeling) Rejected
+      { key: 'closing_stock_cmt', width: 15 },    // 21. Closing Stock CMT
     ];
 
     // Set columns
     worksheet.columns = columnDefinitions;
 
-    // Row 1: Title row (merged across all 15 columns)
+    // Row 1: Title row (merged across all columns)
     const titleRow = worksheet.addRow([title]);
     titleRow.font = { bold: true, size: 12 };
     titleRow.alignment = { vertical: 'middle', horizontal: 'left', wrapText: false };
     titleRow.height = 20;
-    worksheet.mergeCells(1, 1, 1, 15);
+    worksheet.mergeCells(1, 1, 1, 21);
 
     // Row 2: Empty row for spacing
     worksheet.addRow([]);
 
     // Row 3: Group headers (merged cells for grouped columns)
     const groupHeaderRow = worksheet.addRow([
-      '', // ItemName - no group
-      '', // Opening Stock CMT - no group
-      'ROUND LOG DETAIL CMT', // Columns 3-5
-      '', // (part of ROUND LOG)
-      '', // (part of ROUND LOG)
-      'Cross Cut Details CMT', // Columns 6-8
-      '', // (part of Cross Cut)
-      '', // (part of Cross Cut)
-      '', // Flitching - no group
-      '', // Sawing - no group
-      'CrossCut Log Issue For CMT', // Columns 11-14
-      '', // (part of CrossCut Log Issue)
-      '', // (part of CrossCut Log Issue)
-      '', // (part of CrossCut Log Issue)
-      '', // Closing Stock CMT - no group
+      '', // ItemName
+      '', // Opening Stock
+      'ROUND LOG DETAIL CMT', // Invoice/Indian/Actual
+      '',
+      '', // Recover from rejected (standalone)
+      '', // Issue for CC
+      'Cross Cut Details CMT', // CC Received/CC Issue/CC Diff
+      '',
+      '',
+      '', // Issue for Flitch
+      'Flitch Details CMT', // Flitch Received/Flitch Diff
+      '',
+      '',
+      '', // Issue for Sq.Edge
+      'Peeling Details CMT', // Issue for Peeling/Peeling Received/Peeling Diff
+      '',
+      '',
+      '', // Sales
+      '', // Job Work Challan
+      '', // Rejected
+      '', // Closing Stock
     ]);
     groupHeaderRow.font = { bold: true };
     groupHeaderRow.alignment = { vertical: 'middle', horizontal: 'center' };
@@ -119,8 +131,13 @@ export const createItemWiseInwardReportExcel = async (
 
     // Merge group headers
     worksheet.mergeCells(3, 3, 3, 5);   // ROUND LOG DETAIL CMT (cols 3-5)
-    worksheet.mergeCells(3, 6, 3, 8);   // Cross Cut Details CMT (cols 6-8)
-    worksheet.mergeCells(3, 11, 3, 14); // CrossCut Log Issue For CMT (cols 11-14)
+    // recover_from_rejected is single column
+    // issue_for_cc single
+    worksheet.mergeCells(3, 7, 3, 10);   // Cross Cut Details CMT (cols 7-9)
+    worksheet.mergeCells(3, 11, 3, 12); // Flitch Details CMT (cols 11-12)
+    // issue_for_sqedge single
+    worksheet.mergeCells(3, 15, 3, 17); // Peeling Details CMT (cols 15-17)
+    // remaining columns standalone (sales, job work challan, rejected, closing)
 
     // Row 4: Column headers
     const headerRow = worksheet.addRow([
@@ -129,15 +146,21 @@ export const createItemWiseInwardReportExcel = async (
       'Invoice',
       'Indian',
       'Actual',
+      'Recover From rejected',
       'Issue for CC',
       'CC Received',
-      'Diff',
-      'Flitching',
-      'Sawing',
-      'Wooden Tile',
-      'UnEdge',
-      'Peel',
+      'CC Issue',
+      'CC Diff',
+      'Issue for Flitch',
+      'Flitch Received',
+      'Flitch Diff',
+      'Issue for Sq.Edge',
+      'Issue for Peeling',
+      'Peeling Received',
+      'Peeling Diff',
       'Sales',
+      'Job Work Challan',
+      'Rejected',
       'Closing Stock CMT',
     ]);
     headerRow.font = { bold: true };
@@ -154,15 +177,21 @@ export const createItemWiseInwardReportExcel = async (
       invoice_cmt: 0,
       indian_cmt: 0,
       actual_cmt: 0,
+      recover_from_rejected: 0,
       issue_for_cc: 0,
       cc_received: 0,
-      diff: 0,
-      flitching: 0,
-      sawing: 0,
-      wooden_tile: 0,
-      unedge: 0,
-      peel: 0,
+      cc_issued: 0,
+      cc_diff: 0,
+      issue_for_flitch: 0,
+      flitch_received: 0,
+      flitch_diff: 0,
+      issue_for_sqedge: 0,
+      peeling_issued: 0,
+      peeling_received: 0,
+      peeling_diff: 0,
       sales: 0,
+      job_work_challan: 0,
+      rejected: 0,
       closing_stock_cmt: 0,
     };
 
@@ -181,15 +210,21 @@ export const createItemWiseInwardReportExcel = async (
         invoice_cmt: parseFloat(item.invoice_cmt || 0).toFixed(3),
         indian_cmt: parseFloat(item.indian_cmt || 0).toFixed(3),
         actual_cmt: parseFloat(item.actual_cmt || 0).toFixed(3),
+        recover_from_rejected: parseFloat(item.recover_from_rejected || 0).toFixed(3),
         issue_for_cc: parseFloat(item.issue_for_cc || 0).toFixed(3),
         cc_received: parseFloat(item.cc_received || 0).toFixed(3),
-        diff: parseFloat(item.diff || 0).toFixed(3),
-        flitching: parseFloat(item.flitching || 0).toFixed(3),
-        sawing: parseFloat(item.sawing || 0).toFixed(3),
-        wooden_tile: parseFloat(item.wooden_tile || 0).toFixed(3),
-        unedge: parseFloat(item.unedge || 0).toFixed(3),
-        peel: parseFloat(item.peel || 0).toFixed(3),
+        cc_issued: parseFloat(item.cc_issued || 0).toFixed(3),
+        cc_diff: parseFloat(item.cc_diff || 0).toFixed(3),
+        issue_for_flitch: parseFloat(item.issue_for_flitch || 0).toFixed(3),
+        flitch_received: parseFloat(item.flitch_received || 0).toFixed(3),
+        flitch_diff: parseFloat(item.flitch_diff || 0).toFixed(3),
+        issue_for_sqedge: parseFloat(item.issue_for_sqedge || 0).toFixed(3),
+        peeling_issued: parseFloat(item.peeling_issued || 0).toFixed(3),
+        peeling_received: parseFloat(item.peeling_received || 0).toFixed(3),
+        peeling_diff: parseFloat(item.peeling_diff || 0).toFixed(3),
         sales: parseFloat(item.sales || 0).toFixed(3),
+        job_work_challan: parseFloat(item.job_work_challan || 0).toFixed(3),
+        rejected: parseFloat(item.rejected || 0).toFixed(3),
         closing_stock_cmt: parseFloat(item.closing_stock_cmt || 0).toFixed(3),
       };
 
@@ -200,15 +235,21 @@ export const createItemWiseInwardReportExcel = async (
       grandTotals.invoice_cmt += parseFloat(item.invoice_cmt || 0);
       grandTotals.indian_cmt += parseFloat(item.indian_cmt || 0);
       grandTotals.actual_cmt += parseFloat(item.actual_cmt || 0);
+      grandTotals.recover_from_rejected += parseFloat(item.recover_from_rejected || 0);
       grandTotals.issue_for_cc += parseFloat(item.issue_for_cc || 0);
       grandTotals.cc_received += parseFloat(item.cc_received || 0);
-      grandTotals.diff += parseFloat(item.diff || 0);
-      grandTotals.flitching += parseFloat(item.flitching || 0);
-      grandTotals.sawing += parseFloat(item.sawing || 0);
-      grandTotals.wooden_tile += parseFloat(item.wooden_tile || 0);
-      grandTotals.unedge += parseFloat(item.unedge || 0);
-      grandTotals.peel += parseFloat(item.peel || 0);
+      grandTotals.cc_issued += parseFloat(item.cc_issued || 0);
+      grandTotals.cc_diff += parseFloat(item.cc_diff || 0);
+      grandTotals.issue_for_flitch += parseFloat(item.issue_for_flitch || 0);
+      grandTotals.flitch_received += parseFloat(item.flitch_received || 0);
+      grandTotals.flitch_diff += parseFloat(item.flitch_diff || 0);
+      grandTotals.issue_for_sqedge += parseFloat(item.issue_for_sqedge || 0);
+      grandTotals.peeling_issued += parseFloat(item.peeling_issued || 0);
+      grandTotals.peeling_received += parseFloat(item.peeling_received || 0);
+      grandTotals.peeling_diff += parseFloat(item.peeling_diff || 0);
       grandTotals.sales += parseFloat(item.sales || 0);
+      grandTotals.job_work_challan += parseFloat(item.job_work_challan || 0);
+      grandTotals.rejected += parseFloat(item.rejected || 0);
       grandTotals.closing_stock_cmt += parseFloat(item.closing_stock_cmt || 0);
     });
 
@@ -219,15 +260,21 @@ export const createItemWiseInwardReportExcel = async (
       invoice_cmt: grandTotals.invoice_cmt.toFixed(3),
       indian_cmt: grandTotals.indian_cmt.toFixed(3),
       actual_cmt: grandTotals.actual_cmt.toFixed(3),
+      recover_from_rejected: grandTotals.recover_from_rejected.toFixed(3),
       issue_for_cc: grandTotals.issue_for_cc.toFixed(3),
       cc_received: grandTotals.cc_received.toFixed(3),
-      diff: grandTotals.diff.toFixed(3),
-      flitching: grandTotals.flitching.toFixed(3),
-      sawing: grandTotals.sawing.toFixed(3),
-      wooden_tile: grandTotals.wooden_tile.toFixed(3),
-      unedge: grandTotals.unedge.toFixed(3),
-      peel: grandTotals.peel.toFixed(3),
+      cc_issued: grandTotals.cc_issued.toFixed(3),
+      cc_diff: grandTotals.cc_diff.toFixed(3),
+      issue_for_flitch: grandTotals.issue_for_flitch.toFixed(3),
+      flitch_received: grandTotals.flitch_received.toFixed(3),
+      flitch_diff: grandTotals.flitch_diff.toFixed(3),
+      issue_for_sqedge: grandTotals.issue_for_sqedge.toFixed(3),
+      peeling_issued: grandTotals.peeling_issued.toFixed(3),
+      peeling_received: grandTotals.peeling_received.toFixed(3),
+      peeling_diff: grandTotals.peeling_diff.toFixed(3),
       sales: grandTotals.sales.toFixed(3),
+      job_work_challan: grandTotals.job_work_challan.toFixed(3),
+      rejected: grandTotals.rejected.toFixed(3),
       closing_stock_cmt: grandTotals.closing_stock_cmt.toFixed(3),
     });
     totalRow.eachCell((cell) => {
