@@ -11,11 +11,12 @@ The report is built as a modular component within the `reports2` framework, cons
 ### Key Logic & Aggregation
 
 - **Item Discovery:** Distinct `item_name` from current inventory.
-- **Dynamic Opening Stock:** Calculated by aggregating all historical inward/outward transactions prior to the selected `startDate`.
+- **Dynamic Opening Stock:** Calculated by aggregating historical inward (invoices) vs outward (issues & dispatches) prior to the `startDate`.
 - **Period Movements:**
-  - **Inwards (Purchase):** Filtered by `inward_date`.
-  - **Outwards (Issue/Sales):** Filtered by transaction timestamp.
-- **Quantity Focus:** The report intentionally excludes monetary value to provide a clean operational overview.
+  - **Inwards (Purchase):** From `othergoods_inventory_items_details` filtered by invoice date.
+  - **Outwards (Issue):** Internal consumption from history.
+  - **Sales (Dispatch):** External sales pulled directly from `dispatch_items`.
+- **Performance:** Implements batch-level aggregation (bulk fetching) and in-memory `Map` indexing to minimize database roundtrips.
 
 ## Implementation Files
 
@@ -38,14 +39,13 @@ The report is built as a modular component within the `reports2` framework, cons
 **Internal Workings:**
 
 - Validates date inputs.
-- For each item, performs parallel aggregation calls:
-  - Total inward before start.
-  - Total outward before start.
-  - Purchases in period.
-  - Issues (Internal) in period.
-  - Sales (Challan) in period.
-- Calculates final `Opening` and `Closing` values.
-- Filters out items with no activity and zero opening stock to keep the report relevant.
+- Performs **Batch Aggregations** to fetch data for all items in a few queries:
+  - `purchaseMap`: Purchases in period.
+  - `issueMap`: Internal issues in period.
+  - `salesMap`: Dispatches (Sales) in period.
+  - `inBeforeMap`/`outBeforeMap`: Opening balance components.
+- Calculates final `Opening` and `Closing` values in memory for efficiency.
+- Filters out items with no activity and zero opening stock.
 
 ### 3. Route Registration
 
@@ -59,8 +59,8 @@ router.post('/download-excel-other-item-report', OtherItemReportExcel);
 
 ## Formulas
 
-- **OpeningQty:** $\sum Inward(<start) - \sum Outward(<start)$
-- **ClosingQty:** $Opening + Purchase - Issue - Sales - Damage$
+- **OpeningQty:** $\sum Inward(<start) - (\sum InternalIssue(<start) + \sum Dispatched(<start))$
+- **ClosingQty:** $Opening + Purchase - (Issue + Sales + Damage)$
 
 ## Documentation
 

@@ -101,11 +101,10 @@ POST /report/download-excel-machine-wise-report
 
 ### Unit Retrieval
 
-The unit for each item is dynamically fetched:
-
 1. Join `othergoods_inventory_items_details` with `item_subcategory` via `item_sub_category_id`.
-2. Join `item_subcategory` with `item_category` via the category ID.
-3. Use `calculate_unit` from the category as the display unit.
+2. Perform a bulk join with `item_category` to retrieve all associated categories.
+3. Select the **first** available category (to prevent row duplication if an item maps to multiple categories).
+4. Use `calculate_unit` from this primary category as the display unit.
 
 ### Data Aggregation
 

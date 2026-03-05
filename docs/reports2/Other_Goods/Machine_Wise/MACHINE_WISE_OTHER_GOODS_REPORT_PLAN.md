@@ -17,6 +17,7 @@ The report follows the standard `reports2` pattern:
 - **Period:** User-supplied `startDate` and `endDate`.
 - **Data Source:** `othergoods_inventory_items_details` (assignments) joined with `invoice_details`.
 - **Unit Logic:** Navigate from Item -> Subcategory -> Category -> `calculate_unit`.
+- **Bug Fix (Duplication)**: Replaced `$unwind` on category array with a bulk lookup and `$arrayElemAt` to prevent row multiplication when a subcategory maps to multiple categories.
 - **Columns:**
   1. Machine
   2. Item
@@ -49,9 +50,10 @@ The report follows the standard `reports2` pattern:
 1. Match items between `startDate` and `endDate` based on `invoice.inward_date`.
 2. Apply optional `machine_id` filter.
 3. `$lookup` with `item_subcategories` (converting `item_sub_category_id` string to ObjectId).
-4. `$lookup` with `item_categories` to retrieve `calculate_unit`.
-5. Project fields: machine (from `machine_name`), item (from `item_name`), qty, unit, and amt.
-6. Sort by machine and item.
+4. `$lookup` with `item_categories` to retrieve all associated category data.
+5. `$addFields` with `$arrayElemAt` to select the primary category, preventing row duplication when multiple categories exist for a subcategory.
+6. Project final fields: machine (from `machine_name`), item (from `item_name`), qty, unit, and amt.
+7. Sort by machine and item.
 
 ### 3. Route
 
@@ -66,14 +68,11 @@ router.post(
 );
 ```
 
-## Formulas & Logic
-
-- **Quantity:** Taken directly from `total_quantity`.
-- **Amount:** Taken directly from `amount`.
 - **Unit Join Path:**
-  - `othergoods_inventory_items_details.item_sub_category_id` -> `item_subcategory._id`
-  - `item_subcategory.category` -> `item_category._id`
-  - Result: `item_category.calculate_unit`
+  - `othergoods_inventory_items_details.item_sub_category_id` (String -> ObjectId)
+  - `item_subcategory.category` (Array of ObjectIds)
+  - Primary category selection via `$arrayElemAt` from `$lookup` results.
+  - Final: `category_data.calculate_unit`
 
 ## Documentation
 

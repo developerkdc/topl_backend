@@ -78,23 +78,17 @@ export const OtherGoodsMachineWiseReportExcel = catchAsync(async (req, res, next
             {
                 // Join with item_category to get calculate_unit
                 // Note: subcategory.category is an array [ObjectId]
-                $unwind: {
-                    path: '$subcategory.category',
-                    preserveNullAndEmptyArrays: true
-                }
-            },
-            {
                 $lookup: {
                     from: 'item_categories',
                     localField: 'subcategory.category',
                     foreignField: '_id',
-                    as: 'category_data'
+                    as: 'category_list'
                 }
             },
             {
-                $unwind: {
-                    path: '$category_data',
-                    preserveNullAndEmptyArrays: true
+                // Use the first category found as the primary source for the unit
+                $addFields: {
+                    category_data: { $arrayElemAt: ['$category_list', 0] }
                 }
             },
             {
