@@ -15,6 +15,7 @@ import peelingRoutes from './reports2/Peeling/peeling.routes.js';
 import plywoodRoutes from './reports2/Plywood/plywood.routes.js';
 import mdfRoutes from './reports2/MDF/mdf.routes.js';
 import fleeceRoutes from './reports2/Fleece/fleece.routes.js';
+import otherGoodsRoutes from './reports2/Other_Goods/otherGoods.routes.js';
 import express from 'express';
 
 const router = express.Router();
@@ -69,5 +70,8 @@ router.use(coreRoutes);
 
 // Pressing routes (Pressing Daily Report)
 router.use(pressingRoutes);
+
+// Other goods routes (Other Goods Stock Report)
+router.use(otherGoodsRoutes);
 
 export default router;
