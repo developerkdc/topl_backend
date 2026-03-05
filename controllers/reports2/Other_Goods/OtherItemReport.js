@@ -2,6 +2,7 @@ import {
     othergoods_inventory_items_details,
 } from '../../../database/schema/inventory/otherGoods/otherGoodsNew.schema.js';
 import other_goods_history_model from '../../../database/schema/inventory/otherGoods/otherGoods.history.schema.js';
+import dispatchItemsModel from '../../../database/schema/dispatch/dispatch_items.schema.js';
 import catchAsync from '../../../utils/errors/catchAsync.js';
 import ApiError from '../../../utils/errors/apiError.js';
 import ApiResponse from '../../../utils/ApiResponse.js';
@@ -27,147 +28,137 @@ export const OtherItemReportExcel = catchAsync(async (req, res, next) => {
     }
 
     try {
-        // 1. Get all unique items that had any activity or have current stock
-        // We'll group by item_name to get a consolidated list
+        // 1. Get all unique item names
         const items = await othergoods_inventory_items_details.distinct('item_name', { deleted_at: null });
 
-        const reportData = await Promise.all(items.map(async (itemName) => {
-            // --- PURCHASE (Inward between start and end) ---
-            const purchases = await othergoods_inventory_items_details.aggregate([
-                {
-                    $match: {
-                        item_name: itemName,
-                        deleted_at: null
-                    }
-                },
-                {
-                    $lookup: {
-                        from: 'othergoods_inventory_invoice_details',
-                        localField: 'invoice_id',
-                        foreignField: '_id',
-                        as: 'invoice'
-                    }
-                },
-                { $unwind: '$invoice' },
-                {
-                    $match: {
-                        'invoice.inward_date': { $gte: start, $lte: end }
-                    }
-                },
-                {
-                    $group: {
-                        _id: null,
-                        qty: { $sum: '$total_quantity' }
+        // 2. Fetch all movements in bulk for the period
+
+        // --- PURCHASES Map ---
+        const purchasesRaw = await othergoods_inventory_items_details.aggregate([
+            { $match: { deleted_at: null } },
+            {
+                $lookup: {
+                    from: 'othergoods_inventory_invoice_details',
+                    localField: 'invoice_id',
+                    foreignField: '_id',
+                    as: 'invoice'
+                }
+            },
+            { $unwind: '$invoice' },
+            { $match: { 'invoice.inward_date': { $gte: start, $lte: end } } },
+            { $group: { _id: '$item_name', qty: { $sum: '$total_quantity' } } }
+        ]);
+        const purchaseMap = new Map(purchasesRaw.map(p => [p._id, p.qty]));
+
+        // --- ISSUES Map ---
+        const issuesRaw = await other_goods_history_model.aggregate([
+            {
+                $lookup: {
+                    from: 'othergoods_inventory_items_details',
+                    localField: 'other_goods_item_id',
+                    foreignField: '_id',
+                    as: 'item'
+                }
+            },
+            { $unwind: '$item' },
+            {
+                $match: {
+                    issue_status: 'order',
+                    createdAt: { $gte: start, $lte: end }
+                }
+            },
+            { $group: { _id: '$item.item_name', qty: { $sum: '$issued_quantity' } } }
+        ]);
+        const issueMap = new Map(issuesRaw.map(i => [i._id, i.qty]));
+
+        // --- SALES Map (Dispatch) ---
+        const salesRaw = await dispatchItemsModel.aggregate([
+            { $match: { createdAt: { $gte: start, $lte: end } } },
+            {
+                $group: {
+                    _id: '$item_name',
+                    qty: {
+                        $sum: {
+                            $add: [
+                                { $ifNull: ['$quantity', 0] },
+                                { $ifNull: ['$no_of_sheets', 0] },
+                                { $ifNull: ['$no_of_leaves', 0] },
+                                { $ifNull: ['$number_of_rolls', 0] }
+                            ]
+                        }
                     }
                 }
-            ]);
+            }
+        ]);
+        const salesMap = new Map(salesRaw.map(s => [s._id, s.qty]));
 
-            // --- ISSUED FOR ORDER (Consumption between start and end) ---
-            const issues = await other_goods_history_model.aggregate([
-                {
-                    $lookup: {
-                        from: 'othergoods_inventory_items_details',
-                        localField: 'other_goods_item_id',
-                        foreignField: '_id',
-                        as: 'item'
-                    }
-                },
-                { $unwind: '$item' },
-                {
-                    $match: {
-                        'item.item_name': itemName,
-                        issue_status: 'order',
-                        createdAt: { $gte: start, $lte: end }
-                    }
-                },
-                {
-                    $group: {
-                        _id: null,
-                        qty: { $sum: '$issued_quantity' }
+        // --- OPENING BALANCES ---
+        const inBeforeRaw = await othergoods_inventory_items_details.aggregate([
+            { $match: { deleted_at: null } },
+            {
+                $lookup: {
+                    from: 'othergoods_inventory_invoice_details',
+                    localField: 'invoice_id',
+                    foreignField: '_id',
+                    as: 'invoice'
+                }
+            },
+            { $unwind: '$invoice' },
+            { $match: { 'invoice.inward_date': { $lt: start } } },
+            { $group: { _id: '$item_name', qty: { $sum: '$total_quantity' } } }
+        ]);
+        const inBeforeMap = new Map(inBeforeRaw.map(i => [i._id, i.qty]));
+
+        const issuedBeforeRaw = await other_goods_history_model.aggregate([
+            {
+                $lookup: {
+                    from: 'othergoods_inventory_items_details',
+                    localField: 'other_goods_item_id',
+                    foreignField: '_id',
+                    as: 'item'
+                }
+            },
+            { $unwind: '$item' },
+            {
+                $match: {
+                    issue_status: 'order',
+                    createdAt: { $lt: start }
+                }
+            },
+            { $group: { _id: '$item.item_name', qty: { $sum: '$issued_quantity' } } }
+        ]);
+        const issuedBeforeMap = new Map(issuedBeforeRaw.map(i => [i._id, i.qty]));
+
+        const dispatchedBeforeRaw = await dispatchItemsModel.aggregate([
+            { $match: { createdAt: { $lt: start } } },
+            {
+                $group: {
+                    _id: '$item_name',
+                    qty: {
+                        $sum: {
+                            $add: [
+                                { $ifNull: ['$quantity', 0] },
+                                { $ifNull: ['$no_of_sheets', 0] },
+                                { $ifNull: ['$no_of_leaves', 0] },
+                                { $ifNull: ['$number_of_rolls', 0] }
+                            ]
+                        }
                     }
                 }
-            ]);
+            }
+        ]);
+        const dispatchedBeforeMap = new Map(dispatchedBeforeRaw.map(d => [d._id, d.qty]));
 
-            // --- SALES (Challan between start and end) ---
-            const sales = await other_goods_history_model.aggregate([
-                {
-                    $lookup: {
-                        from: 'othergoods_inventory_items_details',
-                        localField: 'other_goods_item_id',
-                        foreignField: '_id',
-                        as: 'item'
-                    }
-                },
-                { $unwind: '$item' },
-                {
-                    $match: {
-                        'item.item_name': itemName,
-                        issue_status: 'challan',
-                        createdAt: { $gte: start, $lte: end }
-                    }
-                },
-                {
-                    $group: {
-                        _id: null,
-                        qty: { $sum: '$issued_quantity' }
-                    }
-                }
-            ]);
+        // 3. Construct Final Data
+        const reportData = items.map(itemName => {
+            const openingIn = inBeforeMap.get(itemName) || 0;
+            const openingOut = (issuedBeforeMap.get(itemName) || 0) + (dispatchedBeforeMap.get(itemName) || 0);
+            const openingQty = Math.max(0, openingIn - openingOut);
 
-            // --- OPENING STOCK (Total Inward before start - Total Outward before start) ---
-            const totalInwardBefore = await othergoods_inventory_items_details.aggregate([
-                { $match: { item_name: itemName, deleted_at: null } },
-                {
-                    $lookup: {
-                        from: 'othergoods_inventory_invoice_details',
-                        localField: 'invoice_id',
-                        foreignField: '_id',
-                        as: 'invoice'
-                    }
-                },
-                { $unwind: '$invoice' },
-                { $match: { 'invoice.inward_date': { $lt: start } } },
-                {
-                    $group: {
-                        _id: null,
-                        qty: { $sum: '$total_quantity' }
-                    }
-                }
-            ]);
-
-            const totalOutwardBefore = await other_goods_history_model.aggregate([
-                {
-                    $lookup: {
-                        from: 'othergoods_inventory_items_details',
-                        localField: 'other_goods_item_id',
-                        foreignField: '_id',
-                        as: 'item'
-                    }
-                },
-                { $unwind: '$item' },
-                {
-                    $match: {
-                        'item.item_name': itemName,
-                        createdAt: { $lt: start }
-                    }
-                },
-                {
-                    $group: {
-                        _id: null,
-                        qty: { $sum: '$issued_quantity' }
-                    }
-                }
-            ]);
-
-            const inBeforeQty = totalInwardBefore[0]?.qty || 0;
-            const outBeforeQty = totalOutwardBefore[0]?.qty || 0;
-
-            const openingQty = Math.max(0, inBeforeQty - outBeforeQty);
-
-            const purchaseQty = purchases[0]?.qty || 0;
-            const issueQty = issues[0]?.qty || 0;
-            const salesQty = sales[0]?.qty || 0;
-            const damageQty = 0; // Placeholder
+            const purchaseQty = purchaseMap.get(itemName) || 0;
+            const issueQty = issueMap.get(itemName) || 0;
+            const salesQty = salesMap.get(itemName) || 0;
+            const damageQty = 0;
 
             const closingQty = openingQty + purchaseQty - (issueQty + salesQty + damageQty);
 
@@ -180,7 +171,7 @@ export const OtherItemReportExcel = catchAsync(async (req, res, next) => {
                 damage_qty: damageQty,
                 closing_qty: Math.max(0, closingQty)
             };
-        }));
+        });
 
         // Filter out items with no activity in the period and no opening stock
         const filteredReportData = reportData.filter(item =>

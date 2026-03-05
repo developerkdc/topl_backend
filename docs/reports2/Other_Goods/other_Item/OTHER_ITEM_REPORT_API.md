@@ -76,23 +76,23 @@ POST /report/download-excel-other-item-report
 | Opening  | Stock at the start of the period             |
 | Purchase | Total inward quantity during the period      |
 | Issue    | Internal consumption (issue_status: 'order') |
-| Sales    | External dispatch (issue_status: 'challan')  |
+| Sales    | Finalized dispatches from `dispatch_items`   |
 | Damage   | Recorded damage quantity (Currently 0)       |
-| Closing  | Final stock (Opening + Purchase - Outward)   |
+| Closing  | Final stock (Opening + Purchase - Outbound)  |
 
 ### Layout
 
 - **Row 1:** Report title (merged across 7 columns)
 - **Row 2:** Column headers with gray fill and borders
-- **Data:** List of items with movements in the period
+- **Data:** List of items with movements in the period (Aggregated by logical item name)
 - **Formatting:** Numeric columns are centered; no "Grand Total" row as per simplified requirements.
 
 ## Inventory Calculation Logic
 
-- **Opening Stock:** (Total Inward before `startDate`) - (Total Outward before `startDate`).
-- **Purchase:** Sum of `total_quantity` where `inward_date` is between `startDate` and `endDate`.
+- **Opening Stock:** (Total Inward before `startDate`) - (Total Issued + Total Dispatched before `startDate`).
+- **Purchase:** Sum of `total_quantity` from `othergoods_inventory_items_details` where `inward_date` is between `startDate` and `endDate`.
 - **Issue:** Sum of history `issued_quantity` where `issue_status` is 'order' in the period.
-- **Sales:** Sum of history `issued_quantity` where `issue_status` is 'challan' in the period.
+- **Sales:** Sum of quantities from `dispatch_items` (combining `quantity`, `no_of_sheets`, `no_of_leaves`, and `number_of_rolls`) in the period.
 - **Closing Stock:** `Opening + Purchase - (Issue + Sales + Damage)`.
 
 All values are non-negative (`Math.max(0, value)`).
@@ -100,8 +100,9 @@ All values are non-negative (`Math.max(0, value)`).
 ## Database Collections Used
 
 1. **othergoods_inventory_items_details** – Item stock and inward records
-2. **other_goods_history_model** – Transaction history (Issues/Sales/Dispatches)
-3. **othergoods_inventory_invoice_details** – Invoice and inward date tracking
+2. **other_goods_history_model** – Internal movement history (Issues)
+3. **dispatch_items** – External dispatch records (Sales)
+4. **othergoods_inventory_invoice_details** – Invoice and inward date tracking
 
 ## File Storage
 
