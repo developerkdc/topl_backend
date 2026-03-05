@@ -5,6 +5,7 @@ import slicingRoutes from './reports2/Slicing/slicing.route.js';
 import dressingRoutes from './reports2/Dressing/dressing.routes.js';
 import smokingDyingRoutes from './reports2/Smoking&Dying/smoking_dying.routes.js';
 import groupingSplicingRoutes from './reports2/Grouping_Splicing/grouping_splicing.routes.js';
+import groupingRoutes from './reports2/Grouping/grouping.routes.js';
 import faceRoutes from './reports2/Face/face.routes.js';
 import coreRoutes from './reports2/Core/core.routes.js';
 import tappingORClippingRoutes from './reports2/TappingORClipping/TappingORClipping.js';
@@ -52,6 +53,9 @@ router.use(smokingDyingRoutes);
 
 // Grouping_Splicing routes (Hand Splicing Daily Report)
 router.use(groupingSplicingRoutes);
+
+// Grouping routes (Grouping Daily Report)
+router.use(groupingRoutes);
 
 // Face routes (Face Stock Report)
 router.use(faceRoutes);
