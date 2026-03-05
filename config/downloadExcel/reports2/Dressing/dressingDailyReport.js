@@ -33,24 +33,49 @@ const grayFill = {
 };
 
 /**
- * Collect unique session metadata (for worker details at end). One entry per dressing_id.
+ * Compute Veneer Summary: group by item_name, sum leaves and sqm.
  */
-const collectSessionsMeta = (rows) => {
-  const seen = new Set();
-  const sessions = [];
+const computeVeneerSummary = (rows) => {
+  const byItem = {};
   rows.forEach((r) => {
-    const id = r.dressing_id?.toString?.() ?? r.dressing_id;
-    if (id && !seen.has(id)) {
-      seen.add(id);
-      sessions.push({
-        dressing_id: r.dressing_id,
-        shift: r.shift,
-        no_of_working_hours: r.no_of_working_hours,
-        worker: (r.worker || '').trim(),
-      });
+    const key = r.item_name ?? 'UNKNOWN';
+    if (!byItem[key]) {
+      byItem[key] = { item_name: key, leaves: 0, sqm: 0 };
     }
+    byItem[key].leaves += Number(r.no_of_leaves) || 0;
+    byItem[key].sqm += Number(r.sqm) || 0;
   });
-  return sessions;
+  return Object.values(byItem).sort((a, b) =>
+    (a.item_name || '').localeCompare(b.item_name || '')
+  );
+};
+
+/**
+ * Compute Log Summary: group by (log_no_code, item_name), sum volume (CMT), leaves, sqm.
+ */
+const computeLogSummary = (rows) => {
+  const byLog = {};
+  rows.forEach((r) => {
+    const logKey = r.log_no_code ?? '';
+    const itemKey = r.item_name ?? 'UNKNOWN';
+    const key = `${logKey}|${itemKey}`;
+    if (!byLog[key]) {
+      byLog[key] = {
+        log_no_code: logKey,
+        item_name: itemKey,
+        cmt: 0,
+        leaves: 0,
+        sqm: 0,
+      };
+    }
+    byLog[key].cmt += Number(r.volume) || 0;
+    byLog[key].leaves += Number(r.no_of_leaves) || 0;
+    byLog[key].sqm += Number(r.sqm) || 0;
+  });
+  return Object.values(byLog).sort((a, b) => {
+    const c = (a.log_no_code || '').localeCompare(b.log_no_code || '');
+    return c !== 0 ? c : (a.item_name || '').localeCompare(b.item_name || '');
+  });
 };
 
 /**
@@ -58,14 +83,16 @@ const collectSessionsMeta = (rows) => {
  * - Title: Dressing Details Report Date: DD/MM/YYYY
  * - Single table: one header row, all columns in one line (Item Name, LogX, Bundle No, ThickneSS, Length, Width, Leaves, Sq Mtr, Character, Pattern, Series, Remarks)
  * - All data rows in one continuous table, then one Total row (Leaves, Sq Mtr)
- * - Worker details at the very end: Dressing Id, Shift, Work Hours, Worker, Machine Id (one row per session)
+ * - Veneer Summary: ITEM NAME, LEAVE, SQ. MTR (grouped by item) + Total
+ * - Log Summary: LOG NO, ITEM NAME, CMT, LEAVES, SQ. MTR (grouped by log+item) + Total
  */
 const GenerateDressingDailyReport = async (rows, reportDate) => {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Dressing Details Report');
 
   const formattedDate = formatDate(reportDate);
-  const sessionsMeta = collectSessionsMeta(rows);
+  const veneerSummary = computeVeneerSummary(rows);
+  const logSummary = computeLogSummary(rows);
 
   const detailsHeaders = [
     'Item Name',
@@ -150,12 +177,17 @@ const GenerateDressingDailyReport = async (rows, reportDate) => {
   }
   currentRow += 2;
 
-  // Worker details at the end of the report (once)
-  const metaLabels = ['Dressing Id', 'Shift', 'Work Hours', 'Worker', 'Machine Id'];
-  const metaHeaderRow = worksheet.getRow(currentRow);
-  metaLabels.forEach((label, i) => {
-    const cell = metaHeaderRow.getCell(i + 1);
-    cell.value = label;
+  // Veneer Summary section
+  const veneerHeaders = ['ITEM NAME', 'LEAVE', 'SQ. MTR'];
+  const veneerTitleCell = worksheet.getCell(currentRow, 1);
+  veneerTitleCell.value = 'VENEER SUMMARY';
+  veneerTitleCell.font = { bold: true, size: 11 };
+  currentRow++;
+
+  const veneerHeaderRow = worksheet.getRow(currentRow);
+  veneerHeaders.forEach((h, i) => {
+    const cell = veneerHeaderRow.getCell(i + 1);
+    cell.value = h;
     cell.font = { bold: true };
     cell.fill = grayFill;
     cell.alignment = { horizontal: 'center', vertical: 'middle' };
@@ -163,22 +195,82 @@ const GenerateDressingDailyReport = async (rows, reportDate) => {
   });
   currentRow++;
 
-  sessionsMeta.forEach((session) => {
-    const metaValueRow = worksheet.getRow(currentRow);
-    const metaValues = [
-      session.dressing_id?.toString?.() ?? session.dressing_id ?? '',
-      session.shift ?? '',
-      session.no_of_working_hours ?? '',
-      session.worker ?? '',
-      '', // Machine Id not in schema
-    ];
-    metaValues.forEach((val, i) => {
-      const cell = metaValueRow.getCell(i + 1);
-      cell.value = val;
-      setCellStyle(cell);
-    });
+  let veneerTotalLeaves = 0;
+  let veneerTotalSqm = 0;
+  veneerSummary.forEach((v) => {
+    const row = worksheet.getRow(currentRow);
+    row.getCell(1).value = v.item_name ?? '';
+    row.getCell(2).value = v.leaves;
+    row.getCell(3).value = v.sqm;
+    row.getCell(3).numFmt = '0.00';
+    [1, 2, 3].forEach((col) => setCellStyle(row.getCell(col)));
+    veneerTotalLeaves += v.leaves;
+    veneerTotalSqm += v.sqm;
     currentRow++;
   });
+
+  const veneerTotalRow = worksheet.getRow(currentRow);
+  veneerTotalRow.getCell(1).value = 'TOTAL';
+  veneerTotalRow.getCell(1).font = { bold: true };
+  veneerTotalRow.getCell(2).value = veneerTotalLeaves;
+  veneerTotalRow.getCell(2).font = { bold: true };
+  veneerTotalRow.getCell(3).value = veneerTotalSqm;
+  veneerTotalRow.getCell(3).font = { bold: true };
+  veneerTotalRow.getCell(3).numFmt = '0.00';
+  [1, 2, 3].forEach((col) => setCellStyle(veneerTotalRow.getCell(col), col > 1));
+  currentRow += 2;
+
+  // Log Summary section
+  const logHeaders = ['LOG NO', 'ITEM NAME', 'CMT', 'LEAVES', 'SQ. MTR'];
+  const logTitleCell = worksheet.getCell(currentRow, 1);
+  logTitleCell.value = 'LOG SUMMARY';
+  logTitleCell.font = { bold: true, size: 11 };
+  currentRow++;
+
+  const logHeaderRow = worksheet.getRow(currentRow);
+  logHeaders.forEach((h, i) => {
+    const cell = logHeaderRow.getCell(i + 1);
+    cell.value = h;
+    cell.font = { bold: true };
+    cell.fill = grayFill;
+    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+    setCellStyle(cell);
+  });
+  currentRow++;
+
+  let logTotalCmt = 0;
+  let logTotalLeaves = 0;
+  let logTotalSqm = 0;
+  logSummary.forEach((l) => {
+    const row = worksheet.getRow(currentRow);
+    row.getCell(1).value = l.log_no_code ?? '';
+    row.getCell(2).value = l.item_name ?? '';
+    row.getCell(3).value = l.cmt;
+    row.getCell(3).numFmt = '0.00';
+    row.getCell(4).value = l.leaves;
+    row.getCell(5).value = l.sqm;
+    row.getCell(5).numFmt = '0.00';
+    [1, 2, 3, 4, 5].forEach((col) => setCellStyle(row.getCell(col)));
+    logTotalCmt += l.cmt;
+    logTotalLeaves += l.leaves;
+    logTotalSqm += l.sqm;
+    currentRow++;
+  });
+
+  const logTotalRow = worksheet.getRow(currentRow);
+  logTotalRow.getCell(1).value = 'TOTAL';
+  logTotalRow.getCell(1).font = { bold: true };
+  logTotalRow.getCell(2).value = '';
+  logTotalRow.getCell(3).value = logTotalCmt;
+  logTotalRow.getCell(3).font = { bold: true };
+  logTotalRow.getCell(3).numFmt = '0.00';
+  logTotalRow.getCell(4).value = logTotalLeaves;
+  logTotalRow.getCell(4).font = { bold: true };
+  logTotalRow.getCell(5).value = logTotalSqm;
+  logTotalRow.getCell(5).font = { bold: true };
+  logTotalRow.getCell(5).numFmt = '0.00';
+  [1, 2, 3, 4, 5].forEach((col) => setCellStyle(logTotalRow.getCell(col), col > 2));
+  currentRow++;
 
   worksheet.columns = [
     { width: 14 },
