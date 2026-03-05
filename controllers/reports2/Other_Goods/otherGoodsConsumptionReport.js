@@ -4,10 +4,10 @@ import catchAsync from '../../../utils/errors/catchAsync.js';
 
 export const otherGoodsConsumptionReportExcel = catchAsync(
   async (req, res, next) => {
-    const { startDate, endDate, to, from, reportDate, ...data } = req?.body?.filters || {};
+    const { startDate, endDate, ...data } = req?.body || {};
 
-    let targetStart = startDate || from || reportDate;
-    let targetEnd = endDate || to || reportDate;
+    let targetStart = startDate;
+    let targetEnd = endDate;
 
     if (!targetStart || !targetEnd) {
       return res.status(400).json({
@@ -80,9 +80,15 @@ export const otherGoodsConsumptionReportExcel = catchAsync(
       },
       // 5. Join with item_categories to get calculate_unit
       {
+        $addFields: {
+          first_category_id: { $arrayElemAt: ['$item_name_info.category', 0] },
+        },
+      },
+      // 6. Join with item_categories to get calculate_unit
+      {
         $lookup: {
           from: 'item_categories',
-          localField: 'item_name_info.category',
+          localField: 'first_category_id',
           foreignField: '_id',
           as: 'category_info',
         },

@@ -73,9 +73,14 @@ export const otherGoodsDailyReportExcel = catchAsync(
                 },
             },
             {
+                $addFields: {
+                    first_category_id: { $arrayElemAt: ['$subcategory_info.category', 0] },
+                },
+            },
+            {
                 $lookup: {
                     from: 'item_categories',
-                    localField: 'subcategory_info.category',
+                    localField: 'first_category_id',
                     foreignField: '_id',
                     as: 'category_info',
                 },

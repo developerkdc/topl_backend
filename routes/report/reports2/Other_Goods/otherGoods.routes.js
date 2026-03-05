@@ -14,6 +14,7 @@ router.post('/download-other-goods-daily-report', otherGoodsDailyReportExcel);
 router.post('/download-other-goods-consumption-report', otherGoodsConsumptionReportExcel);
 router.post('/download-excel-machine-wise-report', OtherGoodsMachineWiseReportExcel);
 router.post('/download-excel-other-item-report', OtherItemReportExcel);
+
 // Inward Report
 router.post('/download-other-goods-inward-report', otherGoodsInwardReportExcel);
 

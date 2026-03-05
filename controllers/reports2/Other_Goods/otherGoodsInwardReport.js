@@ -13,11 +13,11 @@ export const otherGoodsInwardReportExcel = catchAsync(
     async (req, res, next) => {
         // Debug logging
         // console.log('otherGoods Inward Report - Request Body:', JSON.stringify(req.body, null, 2));
-        // console.log('otherGoods Inward Report - Filters:', req.body?.filters);
+        // console.log('otherGoods Inward Report - Filters:', req.body);
 
-        const { startDate, endDate, to, from, reportDate, ...data } = req?.body?.filters || {};
-        let targetStart = startDate || from || reportDate;
-        let targetEnd = endDate || to || reportDate;
+        const { startDate, endDate, ...data } = req?.body || {};
+        let targetStart = startDate;
+        let targetEnd = endDate;
 
         if (!targetStart || !targetEnd) {
             return res.status(400).json({
@@ -66,9 +66,14 @@ export const otherGoodsInwardReportExcel = catchAsync(
                 },
             },
             {
+                $addFields: {
+                    first_category_id: { $arrayElemAt: ['$subcategory_info.category', 0] },
+                },
+            },
+            {
                 $lookup: {
                     from: 'item_categories',
-                    localField: 'subcategory_info.category',
+                    localField: 'first_category_id',
                     foreignField: '_id',
                     as: 'category_info',
                 },
