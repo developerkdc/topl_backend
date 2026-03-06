@@ -9,10 +9,19 @@ The Log Item Wise Inward Daily Report API generates an Excel report that tracks 
 - **Round log details** (Invoice, Indian, Actual) come from the log at inward; the report includes only logs whose **inward_date** (from invoice) falls within the selected date range.
 - **Issue for CC** = round log CMT issued for crosscutting during the period (`issue_status === 'crosscutting'` and `updatedAt` in period).
 - **CC Received** = crosscut output for that log during the period (`crosscutting_done.createdAt` in period; sum of `crosscut_cmt`).
-- **Flitching / Peel** = crosscut pieces from this log issued for flitching/peeling during the period (`crosscutting_done.issue_status` and `updatedAt` in period).
-- **Sales** = log direct sales + crosscut sales + flitch sales for this log during the period (order/challan issue_status and updatedAt in period).
-- **Opening Balance** = 0 for logs received in the period (this report is for logs inward in the period).
-- **Closing Stock CMT** = Opening + Actual − Issue for CC + CC Received − Flitching − Sawing − Wooden Tile − UnEdge − Peel − Sales (non-negative).
+- **CC Issued** = crosscut pieces forwarded ahead (from `crosscutting_done` where `issue_status` is not null, `createdAt` in period).
+- **CC Diff** = Issue for CC − CC Received.
+- **Issue for Flitch** = crosscut pieces issued for flitching during the period (`crosscutting_done.issue_status: 'flitching'`, `updatedAt` in period).
+- **Flitch Received** = flitch output (`flitching_done.createdAt` in period; sum of `flitch_cmt`).
+- **Flitch Diff** = Issue for Flitch − Flitch Received.
+- **Issue for SqEdge** = placeholder (0) awaiting data source clarification.
+- **Peeling Issued** = crosscut pieces issued for peeling during the period (`crosscutting_done.issue_status: 'peeling'`, `updatedAt` in period).
+- **Peeling Received** = same value as Peeling Issued (pending actual peeling_done aggregation).
+- **Peeling Diff** = 0 (placeholder).
+- **Sales** = log direct sales + crosscut sales + flitch sales for this log during the period (order/challan issue_status, `updatedAt` in period).
+- **Rejected** = rejected CMT across crosscutting + flitching + peeling stages.
+- **Opening Balance** = 0 for logs received in the period.
+- **Closing Stock CMT** = Opening + Actual − Issue for CC + CC Received − Issue for Flitch − Issue for SqEdge − Peeling Issued − Sales (non-negative).
 
 ## Endpoint
 
@@ -129,7 +138,7 @@ POST /api/V1/report/download-excel-log-item-wise-inward-daily-report
 
 ### Row 1: Report Title
 
-Merged across all 16 columns.
+Merged across all columns.
 
 **Format:**
 
@@ -149,30 +158,39 @@ Inward Item and Log Wise Stock Details Between 01/03/2025 and 31/03/2025
 
 Grouped column headers (merged cells):
 
-- **ROUND LOG DETAIL CMT** (columns 4–6: Invoice, Indian, Actual)
-- **Cross Cut Details CMT** (columns 7–9: Issue For CC, CC Received, DIFF)
-- **CrossCut Log Issue For CMT** (columns 10–14: Flitch, Sawing, Wooden Tile, UnEdge, Peel)
+- **ROUND LOG DETAIL CMT** (Invoice, Indian, Actual)
+- **Cross Cut Details CMT** (Issue For CC, CC Received, CC Issued, CC Diff)
+- **Flitch Details CMT** (Issue For Flitch, Flitch Received, Flitch Diff)
+- **CrossCut Log Issue For CMT** (Issue For SqEdge, Peeling Issued, Peeling Received, Peeling Diff)
 
 ### Row 4: Column Headers
 
-| # | Column             | Description                                    |
-|---|--------------------|------------------------------------------------|
-| 1 | ItemName           | Item name (grouped; merged vertically per item)|
-| 2 | Log No             | Log number                                    |
-| 3 | Opening Bal. CMT   | Opening balance (0 for logs inward in period)  |
-| 4 | Invoice            | ROUND LOG – Invoice CMT                       |
-| 5 | Indian             | ROUND LOG – Indian CMT                        |
-| 6 | Actual             | ROUND LOG – Physical/Actual CMT               |
-| 7 | Issue For CC       | Round log issued for crosscutting              |
-| 8 | CC Received        | Crosscut output for this log                   |
-| 9 | DIFF               | Issue For CC − CC Received                     |
-|10 | Flitch             | Crosscut issued for flitching                 |
-|11 | Sawing             | Placeholder (0.000)                            |
-|12 | Wooden Tile        | Placeholder (0.000)                            |
-|13 | UnEdge             | Placeholder (0.000)                            |
-|14 | Peel               | Crosscut issued for peeling                   |
-|15 | Sales              | Log + crosscut + flitch sales                  |
-|16 | Closing Stock CMT  | Calculated closing balance                     |
+| #  | Column               | Description                                              |
+|----|----------------------|----------------------------------------------------------|
+| 1  | ItemName             | Item name (grouped; merged vertically per item)          |
+| 2  | Log No               | Log number                                               |
+| 3  | Inward Date          | Date the log was received (from invoice)                 |
+| 4  | Status               | Current issue status of the log                          |
+| 5  | Opening Bal. CMT     | Opening balance (0 for logs inward in period)            |
+| 6  | Invoice              | ROUND LOG – Invoice CMT                                  |
+| 7  | Indian               | ROUND LOG – Indian CMT                                   |
+| 8  | Actual               | ROUND LOG – Physical/Actual CMT                          |
+| 9  | Recover From Rejected| Placeholder (0.000)                                      |
+| 10 | Issue For CC         | Round log issued for crosscutting                        |
+| 11 | CC Received          | Crosscut output for this log                             |
+| 12 | CC Issued            | Crosscut pieces forwarded to next stage                  |
+| 13 | CC Diff              | Issue For CC − CC Received                               |
+| 14 | Issue For Flitch     | Crosscut issued for flitching                            |
+| 15 | Flitch Received      | Flitch output from flitching_done                        |
+| 16 | Flitch Diff          | Issue For Flitch − Flitch Received                       |
+| 17 | Issue For SqEdge     | Placeholder (0.000)                                      |
+| 18 | Peeling Issued       | Crosscut issued for peeling                              |
+| 19 | Peeling Received     | Peeling output (currently same as Peeling Issued)        |
+| 20 | Peeling Diff         | Placeholder (0.000)                                      |
+| 21 | Sales                | Log + crosscut + flitch sales                            |
+| 22 | Job Work Challan     | Placeholder (0.000)                                      |
+| 23 | Rejected             | Rejected CMT across all stages                           |
+| 24 | Closing Stock CMT    | Calculated closing balance                               |
 
 ### Data Rows
 
@@ -190,11 +208,11 @@ The report is built in two steps: **data aggregation** (controller) and **Excel 
 
 1. **Source**: MongoDB view **`log_inventory_items_view`** (view on `log_inventory_items_details` with `$lookup` to `log_inventory_invoice_details` as `log_invoice_details`).
 
-2. **Match logs in period**  
-   - `log_invoice_details.inward_date` between start and end of date range (start 00:00:00, end 23:59:59.999).  
+2. **Match logs in period**
+   - `log_invoice_details.inward_date` between start and end of date range (start 00:00:00, end 23:59:59.999).
    - If `filter.item_name` is provided: `item_name` must equal that value.
 
-3. **Sort**  
+3. **Sort**
    - By `item_name` (asc), then `log_no` (asc).
 
 4. **For each log**, the controller computes (with parallel `Promise.all`):
@@ -202,26 +220,37 @@ The report is built in two steps: **data aggregation** (controller) and **Excel 
    - **Current log status**: `log_inventory_items_view_model.findOne({ log_no })` for latest `issue_status` and `updatedAt`.
    - **Issue for CC**: If `issue_status === 'crosscutting'` and `updatedAt` in period → `actualCmt`, else 0.
    - **CC Received**: `crosscutting_done_model.aggregate` — match `log_no`, `createdAt` in period; `$sum` of `crosscut_cmt`.
-   - **Diff**: Issue for CC − CC Received.
-   - **Flitching**: `crosscutting_done_model.aggregate` — match `log_no`, `issue_status: 'flitching'`, `updatedAt` in period; `$sum` of `crosscut_cmt`.
-   - **Sawing / Wooden Tile / UnEdge**: Placeholder 0 (data source TBD).
-   - **Peel**: `crosscutting_done_model.aggregate` — match `log_no`, `issue_status: 'peeling'`, `updatedAt` in period; `$sum` of `crosscut_cmt`.
-   - **Sales**:  
-     - Log direct: if `issue_status` in ['order','challan'] and `updatedAt` in period → `actualCmt`, else 0.  
-     - Crosscut sales: `crosscutting_done_model` — `log_no`, `issue_status` in ['order','challan'], `updatedAt` in period; sum `crosscut_cmt`.  
-     - Flitch sales: `flitching_done_model` — `log_no`, `deleted_at: null`, `issue_status` in ['order','challan'], `updatedAt` in period; sum `flitch_cmt`.  
-     - Total sales = log + crosscut sales + flitch sales.
+   - **CC Issued**: `crosscutting_done_model.aggregate` — match `log_no`, `createdAt` in period, `issue_status` not null; `$sum` of `crosscut_cmt`.
+   - **CC Diff**: Issue for CC − CC Received.
+   - **Issue for Flitch**: `crosscutting_done_model.aggregate` — match `log_no`, `issue_status: 'flitching'`, `updatedAt` in period; `$sum` of `crosscut_cmt`.
+   - **Flitch Received**: `flitching_done_model.aggregate` — match `log_no`, `deleted_at: null`, `createdAt` in period; `$sum` of `flitch_cmt`.
+   - **Flitch Diff**: Issue for Flitch − Flitch Received.
+   - **Issue for SqEdge**: Placeholder 0.
+   - **Peeling Issued**: `crosscutting_done_model.aggregate` — match `log_no`, `issue_status: 'peeling'`, `updatedAt` in period; `$sum` of `crosscut_cmt`.
+   - **Peeling Received**: Same value as Peeling Issued (pending actual peeling_done implementation).
+   - **Peeling Diff**: 0 (placeholder).
+   - **Sales**:
+     - Log direct: if `issue_status` in ['order','challan'] and `updatedAt` in period → `actualCmt`, else 0.
+     - Crosscut sales: `crosscutting_done_model` — `log_no`, `issue_status` in ['order','challan'], `updatedAt` in period; sum `crosscut_cmt`.
+     - Flitch sales: `flitching_done_model` — `log_no`, `deleted_at: null`, `issue_status` in ['order','challan'], `updatedAt` in period; sum `flitch_cmt`.
+     - Total sales = log + crosscut + flitch.
+   - **Rejected**:
+     - Crosscut rejected: `crosscutting_done_model` — `log_no`, `createdAt` in period, `is_rejected: true`; sum `crosscut_cmt`.
+     - Flitch rejected: `flitching_done_model` — `log_no`, `deleted_at: null`, `createdAt` in period, `is_rejected: true`; sum `flitch_cmt`.
+     - Peeling rejected: `crosscutting_done_model` — `log_no`, `issue_status: 'peeling'`, `is_rejected: true`, `updatedAt` in period; sum `crosscut_cmt`.
+   - **Recover from Rejected**: Placeholder 0.
+   - **Job Work Challan**: Placeholder 0.
    - **Opening balance**: 0 (logs received in period).
-   - **Closing balance**: Opening + Actual − Issue for CC + CC Received − Flitching − Sawing − Wooden Tile − UnEdge − Peel − Sales; then `Math.max(0, value)`.
+   - **Closing balance**: Opening + Actual − Issue for CC + CC Received − Issue for Flitch − Issue for SqEdge − Peeling Issued − Sales; then `Math.max(0, value)`.
 
-5. **Output**: Array of objects, one per log, with keys: `item_name`, `log_no`, `opening_balance_cmt`, `invoice_cmt`, `indian_cmt`, `actual_cmt`, `issue_for_cc`, `cc_received`, `diff`, `flitching`, `sawing`, `wooden_tile`, `unedge`, `peel`, `sales`, `closing_stock_cmt`. This array is passed to the Excel generator.
+5. **Output**: Array of objects, one per log, with keys: `item_name`, `log_no`, `inward_date`, `status`, `opening_balance_cmt`, `invoice_cmt`, `indian_cmt`, `actual_cmt`, `recover_from_rejected`, `issue_for_cc`, `cc_received`, `cc_issued`, `cc_diff`, `issue_for_flitch`, `flitch_received`, `flitch_diff`, `issue_for_sqedge`, `peeling_issued`, `peeling_received`, `peeling_diff`, `sales`, `job_work_challan`, `rejected`, `closing_stock_cmt`. This array is passed to the Excel generator.
 
 ### Step 2: Excel Generation (Config)
 
 - **Input**: Aggregated array, `startDate`, `endDate`, `filter`.
 - **Title**: "Inward Item and Log Wise Stock Details Between " + formatted start + " and " + formatted end.
-- **Group headers**: Row 3 with merged cells (ROUND LOG DETAIL CMT, Cross Cut Details CMT, CrossCut Log Issue For CMT).
-- **Column headers**: Row 4 (ItemName, Log No, Opening Bal. CMT, Invoice, Indian, Actual, Issue For CC, CC Received, DIFF, Flitch, Sawing, Wooden Tile, UnEdge, Peel, Sales, Closing Stock CMT).
+- **Group headers**: Row 3 with merged cells (ROUND LOG DETAIL CMT, Cross Cut Details CMT, Flitch Details CMT, CrossCut Log Issue For CMT).
+- **Column headers**: Row 4 (24 columns as listed above).
 - **Data**: Group by `item_name`; for each item, one row per log (item name only on first row of group, then merged vertically). Each numeric field from aggregated object, formatted to 3 decimal places.
 - **Item total row**: After each item group; "Total" in Log No column; sums of all numeric columns for that item.
 - **Grand total row**: Last row; "Total" in ItemName; sums of all numeric columns.
@@ -231,24 +260,32 @@ The report is built in two steps: **data aggregation** (controller) and **Excel 
 
 ## Field Mapping (Excel Column → Source)
 
-| # | Report column      | Source (controller output) | DB / view / model | Field / logic | Notes |
-|---|--------------------|-----------------------------|--------------------|----------------|--------|
-| 1 | ItemName           | `item_name`                 | log_inventory_items_view | item_name | From view (log_inventory_items_details) |
-| 2 | Log No             | `log_no`                    | log_inventory_items_view | log_no | From view |
-| 3 | Opening Bal. CMT   | `opening_balance_cmt`       | Calculated         | 0 for logs inward in period | |
-| 4 | Invoice            | `invoice_cmt`               | log_inventory_items_view | invoice_cmt | Round log |
-| 5 | Indian             | `indian_cmt`                | log_inventory_items_view | indian_cmt | Round log |
-| 6 | Actual             | `actual_cmt`                | log_inventory_items_view | physical_cmt | Round log (actualCmt in code) |
-| 7 | Issue For CC       | `issue_for_cc`              | log_inventory_items_view + period | issue_status, updatedAt, physical_cmt | If issue_status === 'crosscutting' and updatedAt in period |
-| 8 | CC Received        | `cc_received`               | crosscutting_done  | crosscut_cmt, createdAt in period | Sum by log_no |
-| 9 | DIFF               | `diff`                      | Calculated         | issue_for_cc − cc_received | |
-|10 | Flitch             | `flitching`                 | crosscutting_done  | crosscut_cmt, issue_status: 'flitching', updatedAt in period | Sum by log_no |
-|11 | Sawing             | `sawing`                    | —                  | — | Placeholder 0; data source TBD |
-|12 | Wooden Tile        | `wooden_tile`               | —                  | — | Placeholder 0; data source TBD |
-|13 | UnEdge             | `unedge`                    | —                  | — | Placeholder 0; data source TBD |
-|14 | Peel               | `peel`                      | crosscutting_done  | crosscut_cmt, issue_status: 'peeling', updatedAt in period | Sum by log_no |
-|15 | Sales              | `sales`                     | log view + crosscutting_done + flitching_done | order/challan issue_status, updatedAt in period | Log CMT + crosscut_cmt + flitch_cmt |
-|16 | Closing Stock CMT  | `closing_stock_cmt`         | Calculated         | Opening + Actual − Issue for CC + CC Received − Flitching − Sawing − Wooden Tile − UnEdge − Peel − Sales | Math.max(0, value) |
+| #  | Report column        | Source (controller output)  | DB / view / model       | Field / logic                                                  | Notes                                          |
+|----|----------------------|-----------------------------|-------------------------|----------------------------------------------------------------|------------------------------------------------|
+| 1  | ItemName             | `item_name`                 | log_inventory_items_view | item_name                                                     |                                                |
+| 2  | Log No               | `log_no`                    | log_inventory_items_view | log_no                                                        |                                                |
+| 3  | Inward Date          | `inward_date`               | log_inventory_items_view | log_invoice_details.inward_date                               |                                                |
+| 4  | Status               | `status`                    | log_inventory_items_view | issue_status                                                  |                                                |
+| 5  | Opening Bal. CMT     | `opening_balance_cmt`       | Calculated              | 0 for logs inward in period                                    |                                                |
+| 6  | Invoice              | `invoice_cmt`               | log_inventory_items_view | invoice_cmt                                                   | Round log                                      |
+| 7  | Indian               | `indian_cmt`                | log_inventory_items_view | indian_cmt                                                    | Round log                                      |
+| 8  | Actual               | `actual_cmt`                | log_inventory_items_view | physical_cmt                                                  | Round log                                      |
+| 9  | Recover From Rejected| `recover_from_rejected`     | —                       | —                                                              | Placeholder 0; data source TBD                |
+| 10 | Issue For CC         | `issue_for_cc`              | log_inventory_items_view | issue_status === 'crosscutting' and updatedAt in period       |                                                |
+| 11 | CC Received          | `cc_received`               | crosscutting_done       | crosscut_cmt, createdAt in period                              | Sum by log_no                                  |
+| 12 | CC Issued            | `cc_issued`                 | crosscutting_done       | crosscut_cmt, issue_status != null, createdAt in period        | Pieces forwarded ahead from crosscutting stage |
+| 13 | CC Diff              | `cc_diff`                   | Calculated              | issue_for_cc − cc_received                                     |                                                |
+| 14 | Issue For Flitch     | `issue_for_flitch`          | crosscutting_done       | crosscut_cmt, issue_status: 'flitching', updatedAt in period   | Sum by log_no                                  |
+| 15 | Flitch Received      | `flitch_received`           | flitching_done          | flitch_cmt, deleted_at: null, createdAt in period              | Sum by log_no                                  |
+| 16 | Flitch Diff          | `flitch_diff`               | Calculated              | issue_for_flitch − flitch_received                             |                                                |
+| 17 | Issue For SqEdge     | `issue_for_sqedge`          | —                       | —                                                              | Placeholder 0; data source TBD                |
+| 18 | Peeling Issued       | `peeling_issued`            | crosscutting_done       | crosscut_cmt, issue_status: 'peeling', updatedAt in period     | Sum by log_no                                  |
+| 19 | Peeling Received     | `peeling_received`          | —                       | Currently same value as peeling_issued                         | Pending actual peeling_done implementation     |
+| 20 | Peeling Diff         | `peeling_diff`              | Calculated              | 0 (placeholder)                                                |                                                |
+| 21 | Sales                | `sales`                     | log view + crosscutting_done + flitching_done | order/challan issue_status, updatedAt in period | Log CMT + crosscut_cmt + flitch_cmt |
+| 22 | Job Work Challan     | `job_work_challan`          | —                       | —                                                              | Placeholder 0; data source TBD                |
+| 23 | Rejected             | `rejected`                  | crosscutting_done + flitching_done | is_rejected: true, createdAt in period           | Sum of crosscut + flitch + peeling rejections  |
+| 24 | Closing Stock CMT    | `closing_stock_cmt`         | Calculated              | Opening + Actual − Issue for CC + CC Received − Issue for Flitch − Issue for SqEdge − Peeling Issued − Sales | Math.max(0, value) |
 
 ---
 
@@ -267,15 +304,15 @@ The report is built in two steps: **data aggregation** (controller) and **Excel 
 
 3. **log_inventory_invoice_details**
    - **Relationship**: Joined to log items via `invoice_id` in the view pipeline.
-   - **Key field**: `inward_date` — used to select logs “inward” in the report period.
+   - **Key field**: `inward_date` — used to select logs "inward" in the report period.
 
 4. **crosscutting_done**
-   - **Key fields**: `log_no`, `crosscut_cmt`, `issue_status`, `createdAt`, `updatedAt`.
-   - **Usage**: CC Received (createdAt in period), Flitching (issue_status 'flitching', updatedAt in period), Peel (issue_status 'peeling', updatedAt in period), Sales from crosscut (issue_status order/challan, updatedAt in period).
+   - **Key fields**: `log_no`, `crosscut_cmt`, `issue_status`, `is_rejected`, `createdAt`, `updatedAt`.
+   - **Usage**: CC Received (createdAt in period), CC Issued (issue_status not null, createdAt in period), Issue for Flitch (issue_status 'flitching', updatedAt in period), Issue for SqEdge (placeholder), Peeling Issued (issue_status 'peeling', updatedAt in period), Sales from crosscut (issue_status order/challan, updatedAt in period), Rejected crosscut (is_rejected true, createdAt in period).
 
 5. **flitching_done**
-   - **Key fields**: `log_no`, `flitch_cmt`, `issue_status`, `deleted_at`, `updatedAt`.
-   - **Usage**: Sales from flitch (issue_status order/challan, deleted_at null, updatedAt in period).
+   - **Key fields**: `log_no`, `flitch_cmt`, `issue_status`, `deleted_at`, `is_rejected`, `updatedAt`, `createdAt`.
+   - **Usage**: Flitch Received (deleted_at null, createdAt in period), Sales from flitch (issue_status order/challan, deleted_at null, updatedAt in period), Rejected flitch (is_rejected true, deleted_at null, createdAt in period).
 
 ### Join / flow (conceptual)
 
@@ -288,8 +325,8 @@ log_inventory_items_view (view)
 
 For each log:
     → log_inventory_items_view (current status)
-    → crosscutting_done (by log_no): CC Received, Flitching, Peel, Crosscut Sales
-    → flitching_done (by log_no): Flitch Sales
+    → crosscutting_done (by log_no): CC Received, CC Issued, Issue for Flitch, Peeling Issued, Crosscut Sales, Rejected
+    → flitching_done (by log_no): Flitch Received, Flitch Sales, Rejected flitch
 ```
 
 ---
@@ -297,15 +334,22 @@ For each log:
 ## Calculations
 
 - **Opening balance**: 0 for all rows (only logs received in the selected period).
-- **Issue for CC**: From log’s `issue_status` and `updatedAt` in period; value = `physical_cmt` or 0.
+- **Issue for CC**: From log's `issue_status` and `updatedAt` in period; value = `physical_cmt` or 0.
 - **CC Received**: Sum of `crosscut_cmt` in `crosscutting_done` for that `log_no` where `createdAt` in period.
-- **DIFF**: Issue for CC − CC Received.
-- **Flitching**: Sum of `crosscut_cmt` in `crosscutting_done` for that `log_no` where `issue_status === 'flitching'` and `updatedAt` in period.
-- **Sawing, Wooden Tile, UnEdge**: 0 (placeholders).
-- **Peel**: Sum of `crosscut_cmt` in `crosscutting_done` for that `log_no` where `issue_status === 'peeling'` and `updatedAt` in period.
+- **CC Issued**: Sum of `crosscut_cmt` in `crosscutting_done` for that `log_no` where `issue_status` is not null and `createdAt` in period.
+- **CC Diff**: Issue for CC − CC Received.
+- **Issue for Flitch**: Sum of `crosscut_cmt` in `crosscutting_done` for that `log_no` where `issue_status === 'flitching'` and `updatedAt` in period.
+- **Flitch Received**: Sum of `flitch_cmt` in `flitching_done` for that `log_no` where `deleted_at` is null and `createdAt` in period.
+- **Flitch Diff**: Issue for Flitch − Flitch Received.
+- **Issue for SqEdge**: 0 (placeholder).
+- **Peeling Issued**: Sum of `crosscut_cmt` in `crosscutting_done` for that `log_no` where `issue_status === 'peeling'` and `updatedAt` in period.
+- **Peeling Received**: Same as Peeling Issued (pending proper peeling_done aggregation).
+- **Peeling Diff**: 0 (placeholder).
 - **Sales**: Log direct (if issue_status order/challan and updatedAt in period) + crosscut sales (same from `crosscutting_done`) + flitch sales (from `flitching_done`, `deleted_at` null).
-- **Closing Stock CMT**:  
-  `Opening + Actual − Issue for CC + CC Received − Flitching − Sawing − Wooden Tile − UnEdge − Peel − Sales`  
+- **Job Work Challan**: 0 (placeholder).
+- **Rejected**: Rejected CMT from crosscutting_done (is_rejected, createdAt in period) + flitching_done (is_rejected, deleted_at null, createdAt in period) + crosscutting_done peeling (is_rejected, issue_status 'peeling', updatedAt in period).
+- **Closing Stock CMT**:
+  `Opening + Actual − Issue for CC + CC Received − Issue for Flitch − Issue for SqEdge − Peeling Issued − Sales`
   then `Math.max(0, value)`.
 
 ---
@@ -359,9 +403,16 @@ window.open(downloadUrl, '_blank');
 
 - Only logs whose **inward_date** (from invoice) falls within the date range are included.
 - Opening balance is always 0 for this report (logs inward in period).
-- Sawing, Wooden Tile, and UnEdge are placeholders (0) until data sources are defined.
 - All CMT values are formatted to 3 decimal places and closing balance is non-negative.
 - Excel files are timestamped; directory: `public/upload/reports/reports2/Log/`.
+
+### Placeholder Columns (currently 0.000)
+
+1. **Recover From Rejected** – Data source and business meaning TBD.
+2. **Issue For SqEdge** – Data source and business rules TBD (replaces previous Sawing/Wooden Tile/UnEdge).
+3. **Peeling Received** – Currently echoes Peeling Issued; actual `peeling_done` model aggregation pending.
+4. **Peeling Diff** – Will be meaningful once Peeling Received is properly implemented.
+5. **Job Work Challan** – Data source TBD.
 
 ---
 
@@ -388,11 +439,3 @@ window.open(downloadUrl, '_blank');
 - `crosscutting_done_model` from `database/schema/factory/crossCutting/crosscutting.schema.js`
 - `flitching_done_model` from `database/schema/factory/flitching/flitching.schema.js`
 - `createLogItemWiseInwardReportExcel` from `config/downloadExcel/reports2/Log/logItemWiseInward.js`
-
----
-
-## Pending Clarifications
-
-1. **Sawing** – Data source and business meaning.
-2. **Wooden Tile** – Data source (sub-category, output, or issue destination).
-3. **UnEdge** – Data source (sub-category, output, or issue destination).

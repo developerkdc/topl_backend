@@ -2,13 +2,14 @@
 
 ## Overview
 The Item Wise Flitch Report API generates an Excel report tracking inventory movements by item
-name over a specified date range. The report uses a **16-column layout** matching the client
-reference image, with grouped sections for Flitch Detail, Flitch processing, Peeling processing,
-and Sales/Rejected.
+name over a specified date range. The report uses a **20-column layout** with grouped sections:
+Round Log Detail CMT (Invoice, Indian, Actual), Cross Cut Details CMT (Issue for CC, CC Received,
+CC Issue, CC Diff), Flitch Details CMT, Peeling Details CMT, Round log + Cross Cut (Sales),
+(Cc+Flitch+Peeling) (Rejected), and Closing Stock CMT.
 
 ## Endpoint
 ```
-POST /api/V1/reports2/flitch/download-excel-item-wise-flitch-report
+POST /api/V1/report/download-excel-item-wise-flitch-report
 ```
 
 ## Authentication
@@ -44,7 +45,7 @@ POST /api/V1/reports2/flitch/download-excel-item-wise-flitch-report
   "statusCode": 200,
   "status": "success",
   "message": "Item wise flitch report generated successfully",
-  "result": "http://localhost:5000/public/upload/reports/reports2/Flitch/Item-Wise-Flitch-Report-1738234567890.xlsx"
+  "result": "http://localhost:5000/public/upload/reports/reports2/Flitch/Item-Wise-Flitch-Report-<timestamp>.xlsx"
 }
 ```
 
@@ -91,17 +92,11 @@ POST /api/V1/reports2/flitch/download-excel-item-wise-flitch-report
 ## Report Structure
 
 ### Row 1: Report Title
-Merged across all 16 columns.
+Merged across all 20 columns.
 
-**Format:**
-```
-Inward Item Wise Report From DD/MM/YYYY to DD/MM/YYYY
-```
+**Format:** `Inward Item Wise Report From DD/MM/YYYY to DD/MM/YYYY`
 
-**With item filter:**
-```
-Inward Item Wise Report [ RED OAK ] From 01/03/2025 to 31/03/2025
-```
+**With item filter:** `Inward Item Wise Report [ RED OAK ] From 01/03/2025 to 31/03/2025`
 
 ### Row 2: Empty (spacing)
 
@@ -109,45 +104,51 @@ Inward Item Wise Report [ RED OAK ] From 01/03/2025 to 31/03/2025
 
 | Columns | Group Label |
 |---------|-------------|
-| 4 – 6   | Flitch Detail CMT |
-| 7 – 9   | Flitch Details CMT |
-| 10 – 12 | Peeling Details CMT |
-| 14 – 15 | Round log +Cross Cut (Cc+Flitch+Peeling) |
-| 1, 2, 3, 13, 16 | (no label – standalone columns) |
+| 3 – 5   | Round Log Detail CMT (Invoice, Indian, Actual) |
+| 7 – 10  | Cross Cut Details CMT (Issue for CC, CC Received, CC Issue, CC Diff) |
+| 11 – 13 | Flitch Details CMT (Issue for Flitch, Flitch Received, Flitch Diff) |
+| 14 – 16 | Peeling Details CMT (Issue for Peeling, Peeling Received, Peeling Diff) |
+| 18      | Round log +Cross Cut (Sales) |
+| 19      | (Cc+Flitch+Peeling) (Rejected) |
+| 1, 2, 6, 17, 20 | Standalone (ItemName, Opening Stock, Recover From rejected, Issue for Sq.Edge, Closing Stock CMT) |
 
-### Row 4: Column Headers (16 columns)
+### Row 4: Column Headers (20 columns)
 
 | # | Column | Description |
 |---|--------|-------------|
 | 1 | ItemName | Wood species name |
-| 2 | Opening Stock CMT | Physical CMT of logs received in the period |
+| 2 | Opening Stock CMT | Physical CMT of logs (inward in period) |
 | 3 | Invoice | Invoice CMT of logs received in the period |
 | 4 | Indian | Indian CMT of logs received in the period |
 | 5 | Actual | Actual (physical) CMT of logs received in the period |
 | 6 | Recover From rejected | Placeholder – 0 (data source TBD) |
-| 7 | Issue for Flitch | Records from `issues_for_flitching` (createdAt in period) |
-| 8 | Flitch Received | Flitching completions (createdAt in period, deleted_at null) |
-| 9 | Flitch Diff | Issue for Flitch − Flitch Received |
-| 10 | Issue for Peeling | Records from `issues_for_peeling` (createdAt in period) |
-| 11 | Peeling Received | Peeling completions via `peeling_done_items` (createdAt in period) |
-| 12 | Peeling Diff | Issue for Peeling − Peeling Received |
-| 13 | Issue for Sq.Edge | Placeholder – 0 (data source TBD) |
-| 14 | Sales | Log + Crosscut + Flitch items with issue_status order/challan (createdAt in period) |
-| 15 | Rejected | Crosscut + Flitch + Peeling with is_rejected=true (createdAt in period) |
-| 16 | Closing Stock CMT | Logs in period with issue_status != null, minus Opening Stock |
+| 7 | Issue for CC | Log items issued for crosscutting (createdAt in period, issue_status crosscutting) |
+| 8 | CC Received | Crosscut completions (createdAt in period) |
+| 9 | CC Issue | Crosscut pieces issued forward (createdAt in period, issue_status not null) |
+| 10 | CC Diff | Issue for CC − CC Received |
+| 11 | Issue for Flitch | Records from `issues_for_flitching` (createdAt in period) |
+| 12 | Flitch Received | Flitching completions (createdAt in period, deleted_at null) |
+| 13 | Flitch Diff | Issue for Flitch − Flitch Received |
+| 14 | Issue for Peeling | Records from `issues_for_peeling` (createdAt in period) |
+| 15 | Peeling Received | Peeling completions via `peeling_done_items` (createdAt in period) |
+| 16 | Peeling Diff | Issue for Peeling − Peeling Received |
+| 17 | Issue for Sq.Edge | Placeholder – 0 (data source TBD) |
+| 18 | Sales | Log + Crosscut + Flitch with issue_status order/challan (createdAt in period) |
+| 19 | Rejected | Crosscut + Flitch + Peeling with is_rejected=true (createdAt in period) |
+| 20 | Closing Stock CMT | Logs in period with issue_status != null, minus Opening Stock |
 
 ### Rows 5+: Data rows (one per item, sorted alphabetically)
 
-### Last Row: Grand Total (bold, light gray background #FFE0E0E0)
+### Last Row: Grand Total (bold, light gray background)
 
 ---
 
 ## Report Features
 
-- **16 columns** with grouped header row (merged cells per group matching client image)
+- **20 columns** with grouped header row (Round Log Detail CMT, Cross Cut Details CMT, Flitch Details CMT, Peeling Details CMT, Sales, Rejected, Closing Stock)
 - **Sorted data**: items sorted alphabetically by name
-- **Grand Total row**: sums all 15 numeric columns, bold with gray background
-- **Gray background**: both group header row and column header row (#FFD3D3D3)
+- **Grand Total row**: sums numeric columns, bold with gray background
+- **Gray background**: group header and column header rows (#FFD3D3D3)
 - **3 decimal precision**: all CMT values formatted to 3 decimal places
 - **Item filter**: optional `filter.item_name` narrows the report to one species
 - **Activity filter**: items with all-zero values are excluded
@@ -166,6 +167,29 @@ WHERE log_inventory_invoice_details.inward_date IN [startDate, endDate]
 
 ### Invoice / Indian / Actual CMT
 Same log + invoice lookup as Opening Stock; sums `invoice_cmt`, `indian_cmt`, `physical_cmt` respectively.
+
+### Issue for CC (Cross Cut)
+```
+Sum of physical_cmt from log_inventory_items
+WHERE createdAt IN [startDate, endDate] AND issue_status = 'crosscutting'
+```
+
+### CC Received
+```
+Sum of crosscut_cmt from crosscutting_done
+WHERE createdAt IN [startDate, endDate]
+```
+
+### CC Issued
+```
+Sum of crosscut_cmt from crosscutting_done
+WHERE createdAt IN [startDate, endDate] AND issue_status IS NOT NULL
+```
+
+### CC Diff
+```
+CC Diff = Issue for CC − CC Received
+```
 
 ### Issue for Flitch
 ```
@@ -273,7 +297,7 @@ flowchart LR
 
 ### cURL
 ```bash
-curl -X POST http://localhost:5000/api/V1/reports2/flitch/download-excel-item-wise-flitch-report \
+curl -X POST http://localhost:5000/api/V1/report/download-excel-item-wise-flitch-report \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -d '{
@@ -284,7 +308,7 @@ curl -X POST http://localhost:5000/api/V1/reports2/flitch/download-excel-item-wi
 
 ### With Item Filter
 ```bash
-curl -X POST http://localhost:5000/api/V1/reports2/flitch/download-excel-item-wise-flitch-report \
+curl -X POST http://localhost:5000/api/V1/report/download-excel-item-wise-flitch-report \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -d '{
@@ -324,7 +348,7 @@ public/upload/reports/reports2/Flitch/
 | Excel Generator | `topl_backend/config/downloadExcel/reports2/Flitch/itemWiseFlitch.js` |
 | Route | `topl_backend/routes/report/reports2/Flitch/flitch.routes.js` |
 
-**Route:** `POST /download-excel-item-wise-flitch-report`
+**Route:** `POST /api/V1/report/download-excel-item-wise-flitch-report`
 
 ---
 
@@ -338,7 +362,7 @@ public/upload/reports/reports2/Flitch/
 6. **Sorting:** Results sorted alphabetically by item name.
 7. **Placeholder columns:** Recover From rejected and Issue for Sq.Edge always output 0 until a data source is defined by the client.
 8. **Item universe:** Unique `item_name` values from `flitching_done` (deleted_at null).
-9. **Cross Cut columns removed:** Issue for CC, CC Received, CC Issue, CC Diff are not included (not shown in client image); crosscutting data is still used indirectly for Sales and Rejected aggregations.
+9. **Cross Cut section:** Issue for CC, CC Received, CC Issue, CC Diff are included (columns 7–10); data from `log_inventory_items` (issue_status crosscutting) and `crosscutting_done`.
 
 ---
 
@@ -348,7 +372,7 @@ public/upload/reports/reports2/Flitch/
 |---------|------|---------|
 | 1.0.0 | 2025-02-03 | Initial implementation (7 columns) |
 | 2.0.0 | 2026-03-06 | Expanded to 21 columns matching full Inward Item Wise layout |
-| 3.0.0 | 2026-03-06 | Aligned to client reference image: reduced to 16 columns; removed Cross Cut section and Job Work Challan; updated group headers to Flitch Detail CMT / Flitch Details CMT / Peeling Details CMT / Round log+Cross Cut; updated title to "Inward Item Wise Report From…to…" |
+| 3.0.0 | 2026-03-06 | 20 columns with Round Log Detail CMT, Cross Cut Details CMT, Flitch Details CMT, Peeling Details CMT, Sales, Rejected, Closing Stock; title "Inward Item Wise Report From…to…" |
 
 ---
 
