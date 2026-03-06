@@ -5,15 +5,33 @@ import dotenv from 'dotenv/config';
 
 /**
  * Create Log Wise Flitch Report Excel
- * Generates comprehensive flitch inventory report tracking complete journey of individual flitch logs
- * from inward receipt through crosscutting, slicing, peeling, and sales
- * Shows one row per log with item grouping
- * 
- * @param {Array} logData - Array of flitch log data with calculated metrics
- * @param {String} startDate - Start date (YYYY-MM-DD)
- * @param {String} endDate - End date (YYYY-MM-DD)
- * @param {Object} filter - Optional filters applied
- * @returns {String} Download link for the generated Excel file
+ * Generates the "Inward Item & Log Wise Report" matching the client's required layout.
+ *
+ * 19 columns across 4 header rows:
+ *   Row 1 – Title (merged)
+ *   Row 2 – Empty spacer
+ *   Row 3 – Group headers (Received Flitch Detail CMT, Flitch Details CMT,
+ *            Peeling Details CMT, Round log + Cross Cu merged across sub-columns)
+ *   Row 4 – Sub-column headers
+ *
+ * Column layout:
+ *   1–6   Item Name, Flitch Log No., Inward Date, Status, Opening Stock CMT, Recovered From rejected
+ *   ── Received Flitch Detail CMT (cols 7–9) ──
+ *   7  Invoice, 8 Indian, 9 Actual
+ *   ── Flitch Details CMT (cols 10–12) ──
+ *   10 Issue for Flitch, 11 Flitch Received, 12 Flitch Diff
+ *   ── Peeling Details CMT (cols 13–15) ──
+ *   13 Issue for Peeling, 14 Peeling Received, 15 Peeling Diff
+ *   16 Issue for Sq.Edge (standalone)
+ *   17 Round log +Cross Cut → Sales
+ *   18 (Cc+Flitch+Peeling) → Rejected
+ *   19 Closing Stock CMT (standalone)
+ *
+ * @param {Array}  logData   – Array of log objects from the controller
+ * @param {String} startDate – YYYY-MM-DD
+ * @param {String} endDate   – YYYY-MM-DD
+ * @param {Object} filter    – Optional filters
+ * @returns {String} Download URL
  */
 export const createLogWiseFlitchReportExcel = async (
   logData,
@@ -23,11 +41,9 @@ export const createLogWiseFlitchReportExcel = async (
 ) => {
   try {
     const folderPath = 'public/upload/reports/reports2/Flitch';
-
-    // Ensure folder exists
     try {
       await fs.access(folderPath);
-    } catch (error) {
+    } catch {
       await fs.mkdir(folderPath, { recursive: true });
       console.log('Folder created:', folderPath);
     }
@@ -35,215 +51,286 @@ export const createLogWiseFlitchReportExcel = async (
     const workbook = new exceljs.Workbook();
     const worksheet = workbook.addWorksheet('Log Wise Flitch Report');
 
-    // Format dates for title
-    const formatDate = (dateStr) => {
+    const TOTAL_COLS = 19;
+
+    // ── Date formatters ──────────────────────────────────────────────────────
+    const fmt = (dateStr) => {
+      if (!dateStr) return '';
+      try {
+        const d = new Date(dateStr);
+        const dd = String(d.getDate()).padStart(2, '0');
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const yy = String(d.getFullYear()).slice(-2);
+        return `${dd}/${mm}/${yy}`;
+      } catch {
+        return '';
+      }
+    };
+
+    const fmtFull = (dateStr) => {
       if (!dateStr) return 'N/A';
       try {
-        const date = new Date(dateStr);
-        const day = String(date.getDate()).padStart(2, '0');
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const year = date.getFullYear();
-        return `${day}/${month}/${year}`;
-      } catch (err) {
+        const d = new Date(dateStr);
+        const dd = String(d.getDate()).padStart(2, '0');
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        return `${dd}/${mm}/${d.getFullYear()}`;
+      } catch {
         return 'N/A';
       }
     };
 
-    const formattedStartDate = formatDate(startDate);
-    const formattedEndDate = formatDate(endDate);
-
-    // Build title
-    const title = `Logwise Flitch between ${formattedStartDate} and ${formattedEndDate}`;
-
-    console.log('Generated log wise flitch report title:', title);
-
-    // Define columns (11 columns)
-    const columnDefinitions = [
-      { key: 'item_name', width: 25 },       // 1. Item Name
-      { key: 'log_no', width: 15 },          // 2. Log No
-      { key: 'physical_cmt', width: 15 },    // 3. Physical CMT
-      { key: 'cc_received', width: 15 },     // 4. CC Received
-      { key: 'op_bal', width: 15 },          // 5. Op Bal
-      { key: 'flitch_received', width: 15 }, // 6. Flitch Received
-      { key: 'fl_issued', width: 15 },       // 7. FLIssued
-      { key: 'fl_closing', width: 15 },      // 8. FLClosing
-      { key: 'sq_received', width: 15 },     // 9. SQ Received
-      { key: 'un_received', width: 15 },     // 10. UN Received
-      { key: 'peel_received', width: 15 },   // 11. Peel Received
+    // ── Column definitions ───────────────────────────────────────────────────
+    worksheet.columns = [
+      { key: 'item_name',             width: 22 }, // 1
+      { key: 'log_no',                width: 14 }, // 2
+      { key: 'inward_date',           width: 13 }, // 3
+      { key: 'status',                width: 20 }, // 4
+      { key: 'op_bal',                width: 16 }, // 5
+      { key: 'recover_from_rejected', width: 22 }, // 6
+      { key: 'invoice_ref',           width: 10 }, // 7
+      { key: 'indian_cmt',            width: 12 }, // 8
+      { key: 'actual_cmt',            width: 12 }, // 9
+      { key: 'issue_for_flitch',      width: 16 }, // 10
+      { key: 'flitch_received',       width: 16 }, // 11
+      { key: 'flitch_diff',           width: 13 }, // 12
+      { key: 'issue_for_peeling',     width: 16 }, // 13
+      { key: 'peel_received',         width: 16 }, // 14
+      { key: 'peeling_diff',          width: 13 }, // 15
+      { key: 'issue_for_sqedge',      width: 16 }, // 16
+      { key: 'sales',                 width: 12 }, // 17
+      { key: 'rejected',              width: 12 }, // 18
+      { key: 'fl_closing',            width: 16 }, // 19
     ];
 
-    // Set columns
-    worksheet.columns = columnDefinitions;
+    // ── Helper: apply thin border to a single cell ───────────────────────────
+    const applyBorder = (cell) => {
+      cell.border = {
+        top:    { style: 'thin' },
+        left:   { style: 'thin' },
+        bottom: { style: 'thin' },
+        right:  { style: 'thin' },
+      };
+    };
 
-    // Row 1: Title row (merged across all 11 columns)
+    // ── Helper: apply border to all cells in a row by column range ───────────
+    const applyRowBorders = (row, fromCol = 1, toCol = TOTAL_COLS) => {
+      for (let c = fromCol; c <= toCol; c++) {
+        applyBorder(row.getCell(c));
+      }
+    };
+
+    // ── ROW 1: Title ─────────────────────────────────────────────────────────
+    const title =
+      `Inward Item & Log Wise Report From ${fmtFull(startDate)} To ${fmtFull(endDate)}`;
     const titleRow = worksheet.addRow([title]);
     titleRow.font = { bold: true, size: 12 };
-    titleRow.alignment = { vertical: 'middle', horizontal: 'left', wrapText: false };
-    titleRow.height = 20;
-    worksheet.mergeCells(1, 1, 1, 11);
+    titleRow.alignment = { vertical: 'middle', horizontal: 'left' };
+    titleRow.height = 22;
+    worksheet.mergeCells(1, 1, 1, TOTAL_COLS);
 
-    // Row 2: Empty row for spacing
+    // ── ROW 2: Spacer ────────────────────────────────────────────────────────
     worksheet.addRow([]);
 
-    // Row 3: Column headers
-    const headerRow = worksheet.addRow([
-      'Item Name',
-      'Log No',
-      'Physical CMT',
-      'CC Received',
-      'Op Bal',
-      'Flitch Received',
-      'FLIssued',
-      'FLClosing',
-      'SQ Received',
-      'UN Received',
-      'Peel Received',
+    // ── ROW 3: Group header row ──────────────────────────────────────────────
+    // Received Flitch Detail CMT (7–9), Flitch Details CMT (10–12), Peeling Details CMT (13–15),
+    // col 16 empty, Round log +Cross Cut (17), (Cc+Flitch+Peeling) (18), col 19 empty
+    const groupHeaderRow = worksheet.addRow([
+      '', '', '', '', '', '',                           // cols 1–6: no group label
+      'Received Flitch Detail CMT', '', '',             // cols 7–9 (Invoice, Indian, Actual)
+      'Flitch Details CMT', '', '',                     // cols 10–12
+      'Peeling Details CMT', '', '',                    // cols 13–15
+      '',                                               // col 16: Issue for Sq.Edge standalone
+      'Round log +Cross Cut',                           // col 17: Sales
+      '(Cc+Flitch+Peeling)',                             // col 18: Rejected
+      '',                                               // col 19: Closing Stock standalone
     ]);
-    headerRow.font = { bold: true };
-    headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
-    headerRow.fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FFD3D3D3' },
+    groupHeaderRow.font = { bold: true };
+    groupHeaderRow.height = 18;
+    groupHeaderRow.alignment = { vertical: 'middle', horizontal: 'center' };
+
+    // Merge only the 3-column groups; 17 and 18 are single-cell labels
+    worksheet.mergeCells(3, 7, 3, 9);   // Received Flitch Detail CMT (Invoice, Indian, Actual)
+    worksheet.mergeCells(3, 10, 3, 12); // Flitch Details CMT
+    worksheet.mergeCells(3, 13, 3, 15); // Peeling Details CMT
+
+    // Style + border every cell in group header row (including inside merged ranges)
+    const groupFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD3D3D3' } };
+    for (let c = 1; c <= TOTAL_COLS; c++) {
+      const cell = groupHeaderRow.getCell(c);
+      cell.fill = groupFill;
+      cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+      applyBorder(cell);
+    }
+
+    // ── ROW 4: Sub-column headers ────────────────────────────────────────────
+    const subHeaderRow = worksheet.addRow([
+      'Item Name',
+      'Flitch Log No.',
+      'Inward Date',
+      'Status',
+      'Opening Stock CMT',
+      'Recovered From rejected',
+      'Invoice',
+      'Indian',
+      'Actual',
+      'Issue for Flitch',
+      'Flitch Received',
+      'Flitch Diff',
+      'Issue for Peeling',
+      'Peeling Received',
+      'Peeling Diff',
+      'Issue for Sq.Edge',
+      'Sales',
+      'Rejected',
+      'Closing Stock CMT',
+    ]);
+    subHeaderRow.font = { bold: true };
+    subHeaderRow.height = 32;
+    for (let c = 1; c <= TOTAL_COLS; c++) {
+      const cell = subHeaderRow.getCell(c);
+      cell.fill = groupFill;
+      cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+      applyBorder(cell);
+    }
+
+    // ── Grand-total accumulators ─────────────────────────────────────────────
+    const grand = {
+      op_bal: 0,
+      recover_from_rejected: 0,
+      indian_cmt: 0,
+      actual_cmt: 0,
+      issue_for_flitch: 0,
+      flitch_received: 0,
+      flitch_diff: 0,
+      issue_for_peeling: 0,
+      peel_received: 0,
+      peeling_diff: 0,
+      issue_for_sqedge: 0,
+      sales: 0,
+      rejected: 0,
+      fl_closing: 0,
     };
 
-    // Apply borders to header row
-    headerRow.eachCell((cell) => {
-      cell.border = {
-        top: { style: 'thin' },
-        left: { style: 'thin' },
-        bottom: { style: 'thin' },
-        right: { style: 'thin' },
-      };
-    });
-
-    // Group data by item_name
+    // ── Group data by item_name ──────────────────────────────────────────────
     const groupedData = {};
     logData.forEach((log) => {
-      const itemName = log.item_name || 'UNKNOWN';
-      if (!groupedData[itemName]) {
-        groupedData[itemName] = [];
-      }
-      groupedData[itemName].push(log);
+      const key = log.item_name || 'UNKNOWN';
+      if (!groupedData[key]) groupedData[key] = [];
+      groupedData[key].push(log);
     });
 
-    // Initialize grand totals
-    const grandTotals = {
-      physical_cmt: 0,
-      cc_received: 0,
-      op_bal: 0,
-      flitch_received: 0,
-      fl_issued: 0,
-      fl_closing: 0,
-      sq_received: 0,
-      un_received: 0,
-      peel_received: 0,
-    };
+    const sortedItems = Object.keys(groupedData).sort();
 
-    // Sort items alphabetically
-    const sortedItemNames = Object.keys(groupedData).sort();
-
-    // Add data rows grouped by item
-    sortedItemNames.forEach((itemName) => {
+    // ── DATA ROWS ────────────────────────────────────────────────────────────
+    sortedItems.forEach((itemName) => {
       const logs = groupedData[itemName];
       const itemStartRow = worksheet.lastRow.number + 1;
 
-      // Add each log for this item
-      logs.forEach((log, index) => {
-        const rowData = {
-          item_name: index === 0 ? itemName : '', // Only show item name on first log
-          log_no: log.log_no || '',
-          physical_cmt: parseFloat(log.physical_cmt || 0).toFixed(3),
-          cc_received: parseFloat(log.cc_received || 0).toFixed(3),
-          op_bal: parseFloat(log.op_bal || 0).toFixed(3),
-          flitch_received: parseFloat(log.flitch_received || 0).toFixed(3),
-          fl_issued: parseFloat(log.fl_issued || 0).toFixed(3),
-          fl_closing: parseFloat(log.fl_closing || 0).toFixed(3),
-          sq_received: parseFloat(log.sq_received || 0).toFixed(3),
-          un_received: parseFloat(log.un_received || 0).toFixed(3),
-          peel_received: parseFloat(log.peel_received || 0).toFixed(3),
-        };
+      logs.forEach((log, idx) => {
+        const n = (v) => parseFloat(v || 0).toFixed(3);
 
-        const dataRow = worksheet.addRow(rowData);
-
-        // Apply borders to data row
-        dataRow.eachCell((cell) => {
-          cell.border = {
-            top: { style: 'thin' },
-            left: { style: 'thin' },
-            bottom: { style: 'thin' },
-            right: { style: 'thin' },
-          };
+        const dataRow = worksheet.addRow({
+          item_name:             idx === 0 ? itemName : '',
+          log_no:                log.log_no || '',
+          inward_date:           fmt(log.inward_date),
+          status:                log.status || '',
+          op_bal:                n(log.op_bal),
+          recover_from_rejected: n(log.recover_from_rejected),
+          invoice_ref:           log.invoice_ref != null ? log.invoice_ref : '',
+          indian_cmt:            n(log.indian_cmt),
+          actual_cmt:            n(log.actual_cmt),
+          issue_for_flitch:      n(log.issue_for_flitch),
+          flitch_received:       n(log.flitch_received),
+          flitch_diff:           n(log.flitch_diff),
+          issue_for_peeling:     n(log.issue_for_peeling),
+          peel_received:         n(log.peel_received),
+          peeling_diff:          n(log.peeling_diff),
+          issue_for_sqedge:      n(log.issue_for_sqedge),
+          sales:                 n(log.sales),
+          rejected:              n(log.rejected),
+          fl_closing:            n(log.fl_closing),
         });
 
+        // Apply border + default center alignment to every cell
+        for (let c = 1; c <= TOTAL_COLS; c++) {
+          const cell = dataRow.getCell(c);
+          applyBorder(cell);
+          cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        }
+        // Left-align text columns
+        dataRow.getCell(1).alignment = { vertical: 'middle', horizontal: 'left' };
+        dataRow.getCell(2).alignment = { vertical: 'middle', horizontal: 'left' };
+        dataRow.getCell(4).alignment = { vertical: 'middle', horizontal: 'left' };
+
         // Accumulate grand totals
-        grandTotals.physical_cmt += parseFloat(log.physical_cmt || 0);
-        grandTotals.cc_received += parseFloat(log.cc_received || 0);
-        grandTotals.op_bal += parseFloat(log.op_bal || 0);
-        grandTotals.flitch_received += parseFloat(log.flitch_received || 0);
-        grandTotals.fl_issued += parseFloat(log.fl_issued || 0);
-        grandTotals.fl_closing += parseFloat(log.fl_closing || 0);
-        grandTotals.sq_received += parseFloat(log.sq_received || 0);
-        grandTotals.un_received += parseFloat(log.un_received || 0);
-        grandTotals.peel_received += parseFloat(log.peel_received || 0);
+        grand.op_bal             += parseFloat(log.op_bal             || 0);
+        grand.recover_from_rejected += parseFloat(log.recover_from_rejected || 0);
+        grand.indian_cmt         += parseFloat(log.indian_cmt         || 0);
+        grand.actual_cmt         += parseFloat(log.actual_cmt         || 0);
+        grand.issue_for_flitch   += parseFloat(log.issue_for_flitch   || 0);
+        grand.flitch_received    += parseFloat(log.flitch_received    || 0);
+        grand.flitch_diff        += parseFloat(log.flitch_diff        || 0);
+        grand.issue_for_peeling  += parseFloat(log.issue_for_peeling  || 0);
+        grand.peel_received      += parseFloat(log.peel_received      || 0);
+        grand.peeling_diff       += parseFloat(log.peeling_diff       || 0);
+        grand.issue_for_sqedge   += parseFloat(log.issue_for_sqedge   || 0);
+        grand.sales              += parseFloat(log.sales              || 0);
+        grand.rejected           += parseFloat(log.rejected           || 0);
+        grand.fl_closing         += parseFloat(log.fl_closing         || 0);
       });
 
-      // Merge item_name cells vertically for this item
+      // Merge item_name cells vertically for this item group
       if (logs.length > 1) {
         const itemEndRow = worksheet.lastRow.number;
         worksheet.mergeCells(itemStartRow, 1, itemEndRow, 1);
-        
-        // Center align the merged item name cell
         const mergedCell = worksheet.getCell(itemStartRow, 1);
-        mergedCell.alignment = { 
-          vertical: 'middle', 
-          horizontal: 'left',
-          wrapText: true 
-        };
+        mergedCell.alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
       }
     });
 
-    // Add grand total row
+    // ── GRAND TOTAL ROW ──────────────────────────────────────────────────────
+    const g = (v) => v.toFixed(3);
     const grandTotalRow = worksheet.addRow({
-      item_name: 'Total',
-      log_no: '',
-      physical_cmt: grandTotals.physical_cmt.toFixed(3),
-      cc_received: grandTotals.cc_received.toFixed(3),
-      op_bal: grandTotals.op_bal.toFixed(3),
-      flitch_received: grandTotals.flitch_received.toFixed(3),
-      fl_issued: grandTotals.fl_issued.toFixed(3),
-      fl_closing: grandTotals.fl_closing.toFixed(3),
-      sq_received: grandTotals.sq_received.toFixed(3),
-      un_received: grandTotals.un_received.toFixed(3),
-      peel_received: grandTotals.peel_received.toFixed(3),
+      item_name:             'Total',
+      log_no:                '',
+      inward_date:           '',
+      status:                '',
+      op_bal:                g(grand.op_bal),
+      recover_from_rejected: g(grand.recover_from_rejected),
+      invoice_ref:           '',
+      indian_cmt:            g(grand.indian_cmt),
+      actual_cmt:            g(grand.actual_cmt),
+      issue_for_flitch:      g(grand.issue_for_flitch),
+      flitch_received:       g(grand.flitch_received),
+      flitch_diff:           g(grand.flitch_diff),
+      issue_for_peeling:     g(grand.issue_for_peeling),
+      peel_received:         g(grand.peel_received),
+      peeling_diff:          g(grand.peeling_diff),
+      issue_for_sqedge:      g(grand.issue_for_sqedge),
+      sales:                 g(grand.sales),
+      rejected:              g(grand.rejected),
+      fl_closing:            g(grand.fl_closing),
     });
 
-    // Style grand total row
-    grandTotalRow.eachCell((cell) => {
+    const yellowFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFCC00' } };
+    for (let c = 1; c <= TOTAL_COLS; c++) {
+      const cell = grandTotalRow.getCell(c);
       cell.font = { bold: true };
-      cell.fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: 'FFFFCC00' }, // Yellow background for total
-      };
-      cell.border = {
-        top: { style: 'thin' },
-        left: { style: 'thin' },
-        bottom: { style: 'thin' },
-        right: { style: 'thin' },
-      };
-    });
+      cell.fill = yellowFill;
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+      applyBorder(cell);
+    }
+    grandTotalRow.getCell(1).alignment = { vertical: 'middle', horizontal: 'left' };
 
-    // Save file
-    const timeStamp = new Date().getTime();
-    const fileName = `LogWiseFlitch_${timeStamp}.xlsx`;
-    const filePath = `${folderPath}/${fileName}`;
+    // ── Save & return download URL ────────────────────────────────────────────
+    const timeStamp = Date.now();
+    const fileName  = `LogWiseFlitch_${timeStamp}.xlsx`;
+    const filePath  = `${folderPath}/${fileName}`;
 
     await workbook.xlsx.writeFile(filePath);
 
     const downloadLink = `${process.env.APP_URL}/${filePath}`;
-    console.log('Log wise flitch report generated => ', downloadLink);
-
+    console.log('Log wise flitch report generated =>', downloadLink);
     return downloadLink;
   } catch (error) {
     console.error('Error creating log wise flitch report:', error);

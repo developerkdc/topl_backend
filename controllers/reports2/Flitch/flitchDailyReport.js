@@ -1,5 +1,6 @@
 import { GenerateFlitchDailyReport } from '../../../config/downloadExcel/reports2/Flitch/flitchDailyReport.js';
 import { flitching_done_model } from '../../../database/schema/factory/flitching/flitching.schema.js';
+import { flitch_inventory_items_view_model } from '../../../database/schema/inventory/Flitch/flitch.schema.js';
 import catchAsync from '../../../utils/errors/catchAsync.js';
 
 export const FlitchDailyReportExcel = catchAsync(
@@ -33,7 +34,7 @@ export const FlitchDailyReportExcel = catchAsync(
 
     // Build match query
     const matchQuery = {
-      'worker_details.flitching_date': {
+      'flitch_invoice_details.inward_date': {
         $gte: startOfDay,
         $lte: endOfDay,
       },
@@ -41,34 +42,46 @@ export const FlitchDailyReportExcel = catchAsync(
     };
 
     // Build aggregation pipeline
-    const flitchingData = await flitching_done_model.aggregate([
-      {
+    // const flitchingData = await flitching_done_model.aggregate([
+    //   {
+    //     $match: matchQuery,
+    //   },
+    //   {
+    //     $lookup: {
+    //       from: 'crosscutting_dones',
+    //       localField: 'crosscut_done_id',
+    //       foreignField: '_id',
+    //       as: 'crosscut_source',
+    //     },
+    //   },
+    //   {
+    //     $unwind: {
+    //       path: '$crosscut_source',
+    //       preserveNullAndEmptyArrays: true,
+    //     },
+    //   },
+    //   {
+    //     $sort: {
+    //       item_name: 1,
+    //       log_no: 1,
+    //       flitch_code: 1,
+    //     },
+    //   },
+    // ]);
+
+    const flitchingData = await flitch_inventory_items_view_model.aggregate([
+       {
         $match: matchQuery,
-      },
-      {
-        $lookup: {
-          from: 'crosscutting_dones',
-          localField: 'crosscut_done_id',
-          foreignField: '_id',
-          as: 'crosscut_source',
-        },
-      },
-      {
-        $unwind: {
-          path: '$crosscut_source',
-          preserveNullAndEmptyArrays: true,
-        },
       },
       {
         $sort: {
           item_name: 1,
           log_no: 1,
-          flitch_code: 1,
         },
       },
     ]);
-
-    console.log('Flitch Daily Report - Records found:', flitchingData.length);
+  
+    console.log('Flitch Daily Report - Records found:', flitchingData);
 
     // Check if data exists
     if (!flitchingData || flitchingData.length === 0) {

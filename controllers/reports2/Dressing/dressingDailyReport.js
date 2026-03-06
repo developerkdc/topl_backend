@@ -8,7 +8,7 @@ import mongoose from 'mongoose';
 /**
  * Dressing Daily Report – Excel download.
  * Uses reportDate from req.body.filters; optional dressingId to restrict to one session.
- * Joins dressing_done_items and users (worker name).
+ * Joins dressing_done_items for main table, Veneer Summary, and Log Summary.
  */
 export const DressingDailyReportExcel = catchAsync(
   async (req, res, next) => {
@@ -59,28 +59,6 @@ export const DressingDailyReportExcel = catchAsync(
         },
       },
       {
-        $lookup: {
-          from: 'users',
-          localField: 'created_by',
-          foreignField: '_id',
-          as: 'worker',
-          pipeline: [
-            {
-              $project: {
-                first_name: 1,
-                last_name: 1,
-              },
-            },
-          ],
-        },
-      },
-      {
-        $unwind: {
-          path: '$worker',
-          preserveNullAndEmptyArrays: true,
-        },
-      },
-      {
         $sort: {
           'items.item_name': 1,
           'items.log_no_code': 1,
@@ -89,17 +67,6 @@ export const DressingDailyReportExcel = catchAsync(
       },
       {
         $project: {
-          dressing_id: '$_id',
-          shift: 1,
-          no_of_working_hours: 1,
-          no_of_workers: 1,
-          worker: {
-            $concat: [
-              { $ifNull: ['$worker.first_name', ''] },
-              ' ',
-              { $ifNull: ['$worker.last_name', ''] },
-            ],
-          },
           item_name: '$items.item_name',
           log_no_code: '$items.log_no_code',
           bundle_number: '$items.bundle_number',
@@ -108,6 +75,7 @@ export const DressingDailyReportExcel = catchAsync(
           width: '$items.width',
           no_of_leaves: '$items.no_of_leaves',
           sqm: '$items.sqm',
+          volume: '$items.volume',
           character_name: '$items.character_name',
           pattern_name: '$items.pattern_name',
           series_name: '$items.series_name',
