@@ -17,6 +17,19 @@ const formatDate = (dateString) => {
 };
 
 /**
+ * Apply grey background fill to a row from startCol to totalCols (inclusive)
+ */
+const applyGreyBackground = (row, totalCols, startCol = 1) => {
+  for (let col = startCol; col <= totalCols; col++) {
+    row.getCell(col).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFD3D3D3' },
+    };
+  }
+};
+
+/**
  * Group data by inward id, then item name (no CC grouping)
  */
 const groupData = (data) => {
@@ -189,6 +202,7 @@ const GenerateFlitchDailyReport = async (details, reportDate) => {
 
           // Item total row
           const itemTotalRow = worksheet.getRow(currentRow);
+          applyGreyBackground(itemTotalRow, 10, 3);
           itemTotalRow.getCell(3).value = 'Total';
           itemTotalRow.getCell(3).font = { bold: true };
           itemTotalRow.getCell(10).value = itemFlitchTotal;
@@ -202,6 +216,7 @@ const GenerateFlitchDailyReport = async (details, reportDate) => {
 
       // Inward total row
       const inwardTotalRow = worksheet.getRow(currentRow);
+      applyGreyBackground(inwardTotalRow, 10);
       inwardTotalRow.getCell(1).value = `TOTAL ${inward}`;
       inwardTotalRow.getCell(1).font = { bold: true };
       inwardTotalRow.getCell(10).value = inwardTotal;
@@ -287,6 +302,7 @@ const GenerateFlitchDailyReport = async (details, reportDate) => {
 
       // Item total
       const itemTotalRow = worksheet.getRow(currentRow);
+      applyGreyBackground(itemTotalRow, 3);
       itemTotalRow.getCell(2).value = 'Total';
       itemTotalRow.getCell(2).font = { bold: true };
       itemTotalRow.getCell(3).value = itemFlitchTotal;
@@ -298,6 +314,7 @@ const GenerateFlitchDailyReport = async (details, reportDate) => {
 
   // Summary grand total
   const grandRow = worksheet.getRow(currentRow);
+  applyGreyBackground(grandRow, 3);
   grandRow.getCell(2).value = 'Grand Total';
   grandRow.getCell(2).font = { bold: true };
   grandRow.getCell(3).value = grandFlitch;

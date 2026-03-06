@@ -64,10 +64,10 @@ export const createLogItemWiseInwardReportExcel = async (
       { key: 'inward_date', width: 15 },          // 3. Inward Date
       { key: 'status', width: 12 },               // 4. Status
       { key: 'opening_balance_cmt', width: 15 },  // 5. Opening Bal. CMT
-      { key: 'invoice_cmt', width: 12 },          // 6. Invoice
-      { key: 'indian_cmt', width: 12 },           // 7. Indian
-      { key: 'actual_cmt', width: 12 },           // 8. Actual
-      { key: 'recover_from_rejected', width: 15 },// 9. Recover From rejected
+      { key: 'recover_from_rejected', width: 15 },// 6. Recover From rejected
+      { key: 'invoice_cmt', width: 12 },          // 7. Invoice
+      { key: 'indian_cmt', width: 12 },           // 8. Indian
+      { key: 'actual_cmt', width: 12 },           // 9. Actual
       { key: 'issue_for_cc', width: 15 },         // 10. Issue for CC
       { key: 'cc_received', width: 15 },          // 11. CC Received
       { key: 'cc_issued', width: 15 },            // 12. CC Issue
@@ -75,10 +75,10 @@ export const createLogItemWiseInwardReportExcel = async (
       { key: 'issue_for_flitch', width: 15 },     // 14. Issue for Flitch
       { key: 'flitch_received', width: 15 },      // 15. Flitch Received
       { key: 'flitch_diff', width: 12 },          // 16. Flitch Diff
-      { key: 'issue_for_sqedge', width: 15 },     // 17. Issue for Sq.Edge
-      { key: 'peeling_issued', width: 15 },       // 18. Issue for Peeling
-      { key: 'peeling_received', width: 15 },     // 19. Peeling Received
-      { key: 'peeling_diff', width: 12 },         // 20. Peeling Diff
+      { key: 'peeling_issued', width: 15 },       // 17. Issue for Peeling
+      { key: 'peeling_received', width: 15 },     // 18. Peeling Received
+      { key: 'peeling_diff', width: 12 },         // 19. Peeling Diff
+      { key: 'issue_for_sqedge', width: 15 },     // 20. Issue for Sq.Edge
       { key: 'sales', width: 12 },                // 21. Sales
       { key: 'job_work_challan', width: 15 },     // 22. Job Work Challan
       { key: 'rejected', width: 12 },             // 23. Rejected
@@ -100,30 +100,30 @@ export const createLogItemWiseInwardReportExcel = async (
 
     // Row 3: Group headers (merged cells for grouped columns)
     const groupHeaderRow = worksheet.addRow([
-      '', // 1. ItemName
-      '', // 2. Log No
-      '', // 3. Inward Date
-      '', // 4. Status
-      '', // 5. Opening Bal
-      'ROUND LOG DETAIL CMT', // 6. label for cols 6-8
-      '', // 7. (invoice/indian)
-      '', // 8. (actual)
-      '', // 9. Recover from rejected (standalone)
-      'Cross Cut Details CMT', // 10. label for cols 10-12
-      '', // 11. (issue for cc)
-      '', // 12. (cc received)
-      '', // 13. CC Diff (standalone)
-      'Flitch Details CMT', // 14. label for cols 14-16
-      '', // 15. (issue for flitch)
-      '', // 16. (flitch received)
-      '', // 17. Issue for Sq.Edge (standalone)
-      'Peeling Details CMT', // 18. label for cols 18-20
-      '', // 19. (peeling issued)
-      '', // 20. (peeling received)
-      '', // 21. Sales (standalone)
-      '', // 22. Job Work Challan
-      '', // 23. Rejected
-      '', // 24. Closing Stock
+      '', // col 1: ItemName
+      '', // col 2: Log No
+      '', // col 3: Inward Date
+      '', // col 4: Status
+      '', // col 5: Opening Bal. CMT
+      '', // col 6: Recover From rejected (standalone)
+      'ROUND LOG DETAIL CMT', // col 7: Invoice (merged 7-9)
+      '', // col 8: Indian (inside merge)
+      '', // col 9: Actual (inside merge)
+      'Cross Cut Details CMT', // col 10: Issue for CC (merged 10-13)
+      '', // col 11: CC Received (inside merge)
+      '', // col 12: CC Issue (inside merge)
+      '', // col 13: CC Diff (inside merge)
+      'Flitch Details CMT', // col 14: Issue for Flitch (merged 14-16)
+      '', // col 15: Flitch Received (inside merge)
+      '', // col 16: Flitch Diff (inside merge)
+      'Peeling Details CMT', // col 17: Issue for Peeling (merged 17-19)
+      '', // col 18: Peeling Received (inside merge)
+      '', // col 19: Peeling Diff (inside merge)
+      '', // col 20: Issue for Sq.Edge (standalone)
+      'Round log +Cross Cut', // col 21: Sales
+      '', // col 22: Job Work Challan
+      '(Cc+Flitch+Peeling)', // col 23: Rejected
+      '', // col 24: Closing Stock CMT
     ]);
     groupHeaderRow.font = { bold: true };
     groupHeaderRow.alignment = { vertical: 'middle', horizontal: 'center' };
@@ -134,10 +134,15 @@ export const createLogItemWiseInwardReportExcel = async (
     };
 
     // Merge group headers
-    worksheet.mergeCells(3, 6, 3, 8);   // ROUND LOG DETAIL CMT (cols 6-8: invoice/indian/actual)
-    worksheet.mergeCells(3, 10, 3, 13); // Cross Cut Details CMT (cols 10-13: issue/received/issue)
-    worksheet.mergeCells(3, 14, 3, 16); // Flitch Details CMT (cols 14-16)
-    worksheet.mergeCells(3, 18, 3, 20); // Peeling Details CMT (cols 18-20)
+    worksheet.mergeCells(3, 7, 3, 9);   // ROUND LOG DETAIL CMT (cols 7-9: Invoice, Indian, Actual)
+    worksheet.mergeCells(3, 10, 3, 13); // Cross Cut Details CMT (cols 10-13: Issue for CC, CC Received, CC Issue, CC Diff)
+    worksheet.mergeCells(3, 14, 3, 16); // Flitch Details CMT (cols 14-16: Issue for Flitch, Flitch Received, Flitch Diff)
+    worksheet.mergeCells(3, 17, 3, 19); // Peeling Details CMT (cols 17-19: Issue for Peeling, Peeling Received, Peeling Diff)
+    // col 20: Issue for Sq.Edge (standalone)
+    // col 21: Round log +Cross Cut / Sales (standalone label)
+    // col 22: Job Work Challan (standalone)
+    // col 23: (Cc+Flitch+Peeling) / Rejected (standalone label)
+    // col 24: Closing Stock CMT (standalone)
 
     // Row 4: Column headers
     const headerRow = worksheet.addRow([
@@ -146,10 +151,10 @@ export const createLogItemWiseInwardReportExcel = async (
       'Inward Date',
       'Status',
       'Opening Bal. CMT',
+      'Recover From rejected',
       'Invoice',
       'Indian',
       'Actual',
-      'Recover From rejected',
       'Issue For CC',
       'CC Received',
       'CC Issue',
@@ -157,10 +162,10 @@ export const createLogItemWiseInwardReportExcel = async (
       'Issue for Flitch',
       'Flitch Received',
       'Flitch Diff',
-      'Issue for Sq.Edge',
       'Issue for Peeling',
       'Peeling Received',
       'Peeling Diff',
+      'Issue for Sq.Edge',
       'Sales',
       'Job Work Challan',
       'Rejected',

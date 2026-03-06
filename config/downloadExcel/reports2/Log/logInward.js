@@ -22,11 +22,11 @@ const formatDate = (dateString) => {
 const applyGreyBackground = (row, totalCols = 13, startCol = 1) => {
   for (let col = startCol; col <= totalCols; col++) {
     const cell = row.getCell(col);
-    // cell.fill = {
-    //   type: 'pattern',
-    //   pattern: 'solid',
-    //   fgColor: { argb: 'FFD3D3D3' },
-    // };
+    cell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFD3D3D3' },
+    };
   }
 };
 

@@ -74,13 +74,13 @@ export const createItemWiseInwardReportExcel = async (
       { key: 'issue_for_flitch', width: 15 },     // 11. Issue for Flitch
       { key: 'flitch_received', width: 15 },      // 12. Flitch Received
       { key: 'flitch_diff', width: 12 },          // 13. Flitch Diff
-      { key: 'issue_for_sqedge', width: 15 },     // 14. Issue for Sq.Edge (empty)
-      { key: 'peeling_issued', width: 15 },       // 15. Issue for Peeling
-      { key: 'peeling_received', width: 15 },     // 16. Peeling Received
-      { key: 'peeling_diff', width: 12 },         // 17. Peeling Diff
-      { key: 'sales', width: 12 },                // 18. Round log + Cross Cut Sales
-      { key: 'job_work_challan', width: 15 },     // 19. Job Work Challan (empty)
-      { key: 'rejected', width: 12 },             // 20. (Cc+Flitch+Peeling) Rejected
+      { key: 'peeling_issued', width: 15 },       // 14. Issue for Peeling
+      { key: 'peeling_received', width: 15 },     // 15. Peeling Received
+      { key: 'peeling_diff', width: 12 },         // 16. Peeling Diff
+      { key: 'issue_for_sqedge', width: 15 },     // 17. Issue for Sq.Edge
+      { key: 'sales', width: 12 },                // 18. Sales (Round log + Cross Cut)
+      { key: 'job_work_challan', width: 15 },     // 19. Job Work Challan
+      { key: 'rejected', width: 12 },             // 20. Rejected (Cc+Flitch+Peeling)
       { key: 'closing_stock_cmt', width: 15 },    // 21. Closing Stock CMT
     ];
 
@@ -99,27 +99,27 @@ export const createItemWiseInwardReportExcel = async (
 
     // Row 3: Group headers (merged cells for grouped columns)
     const groupHeaderRow = worksheet.addRow([
-      '', // ItemName
-      '', // Opening Stock
-      'ROUND LOG DETAIL CMT', // Invoice/Indian/Actual
-      '',
-      '', // Recover from rejected (standalone)
-      '', // Issue for CC
-      'Cross Cut Details CMT', // CC Received/CC Issue/CC Diff
-      '',
-      '',
-      '', // Issue for Flitch
-      'Flitch Details CMT', // Flitch Received/Flitch Diff
-      '',
-      '',
-      '', // Issue for Sq.Edge
-      'Peeling Details CMT', // Issue for Peeling/Peeling Received/Peeling Diff
-      '',
-      '',
-      '', // Sales
-      '', // Job Work Challan
-      '', // Rejected
-      '', // Closing Stock
+      '', // col 1: ItemName
+      '', // col 2: Opening Stock CMT
+      'ROUND LOG DETAIL CMT', // col 3: Invoice (merged 3-5)
+      '', // col 4: Indian (inside merge)
+      '', // col 5: Actual (inside merge)
+      '', // col 6: Recover From rejected
+      'Cross Cut Details CMT', // col 7: Issue for CC (merged 7-10)
+      '', // col 8: CC Received (inside merge)
+      '', // col 9: CC Issue (inside merge)
+      '', // col 10: CC Diff (inside merge)
+      'Flitch Details CMT', // col 11: Issue for Flitch (merged 11-13)
+      '', // col 12: Flitch Received (inside merge)
+      '', // col 13: Flitch Diff (inside merge)
+      'Peeling Details CMT', // col 14: Issue for Peeling (merged 14-16)
+      '', // col 15: Peeling Received (inside merge)
+      '', // col 16: Peeling Diff (inside merge)
+      '', // col 17: Issue for Sq.Edge
+      'Round log +Cross Cut', // col 18: Sales
+      '', // col 19: Job Work Challan
+      '(Cc+Flitch+Peeling)', // col 20: Rejected
+      '', // col 21: Closing Stock CMT
     ]);
     groupHeaderRow.font = { bold: true };
     groupHeaderRow.alignment = { vertical: 'middle', horizontal: 'center' };
@@ -130,14 +130,15 @@ export const createItemWiseInwardReportExcel = async (
     };
 
     // Merge group headers
-    worksheet.mergeCells(3, 3, 3, 5);   // ROUND LOG DETAIL CMT (cols 3-5)
-    // recover_from_rejected is single column
-    // issue_for_cc single
-    worksheet.mergeCells(3, 7, 3, 10);   // Cross Cut Details CMT (cols 7-9)
-    worksheet.mergeCells(3, 11, 3, 12); // Flitch Details CMT (cols 11-12)
-    // issue_for_sqedge single
-    worksheet.mergeCells(3, 15, 3, 17); // Peeling Details CMT (cols 15-17)
-    // remaining columns standalone (sales, job work challan, rejected, closing)
+    worksheet.mergeCells(3, 3, 3, 5);   // ROUND LOG DETAIL CMT (cols 3-5: Invoice, Indian, Actual)
+    worksheet.mergeCells(3, 7, 3, 10);  // Cross Cut Details CMT (cols 7-10: Issue for CC, CC Received, CC Issue, CC Diff)
+    worksheet.mergeCells(3, 11, 3, 13); // Flitch Details CMT (cols 11-13: Issue for Flitch, Flitch Received, Flitch Diff)
+    worksheet.mergeCells(3, 14, 3, 16); // Peeling Details CMT (cols 14-16: Issue for Peeling, Peeling Received, Peeling Diff)
+    // col 17: Issue for Sq.Edge (standalone)
+    // col 18: Round log +Cross Cut / Sales (standalone label)
+    // col 19: Job Work Challan (standalone)
+    // col 20: (Cc+Flitch+Peeling) / Rejected (standalone label)
+    // col 21: Closing Stock CMT (standalone)
 
     // Row 4: Column headers
     const headerRow = worksheet.addRow([
@@ -154,10 +155,10 @@ export const createItemWiseInwardReportExcel = async (
       'Issue for Flitch',
       'Flitch Received',
       'Flitch Diff',
-      'Issue for Sq.Edge',
       'Issue for Peeling',
       'Peeling Received',
       'Peeling Diff',
+      'Issue for Sq.Edge',
       'Sales',
       'Job Work Challan',
       'Rejected',
