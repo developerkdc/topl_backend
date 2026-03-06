@@ -79,8 +79,10 @@ export const LogItemWiseInwardDailyReportExcel = catchAsync(async (req, res, nex
       logsInPeriod.map(async (log) => {
         const logNo = log.log_no;
         const itemName = log.item_name;
+        const inwardDate = log.log_invoice_details?.inward_date || null;
+        const status = log.issue_status || '';
 
-        // Get current status of the log
+        // Get current status of the log (for opening calc if needed)
         const currentLogStatus = await log_inventory_items_view_model.findOne({
           log_no: logNo,
         });
@@ -89,6 +91,11 @@ export const LogItemWiseInwardDailyReportExcel = catchAsync(async (req, res, nex
         const invoiceCmt = log.invoice_cmt || 0;
         const indianCmt = log.indian_cmt || 0;
         const actualCmt = log.physical_cmt || 0;
+
+        // placeholders for extra columns
+        let recoverFromRejected = 0;
+        let issueForSqedge = 0;
+        let jobWorkChallan = 0;
 
         // CROSS CUT DETAILS - Check if this log was issued for crosscutting during period
         const issueForCc = (log.issue_status === 'crosscutting' && 
@@ -113,6 +120,19 @@ export const LogItemWiseInwardDailyReportExcel = catchAsync(async (req, res, nex
         const ccReceivedCmt = ccReceivedData[0]?.total_cmt || 0;
         const diffCmt = issueForCc - ccReceivedCmt;
 
+        // Crosscut issued ahead (for cc_issued)
+        const ccIssuedData = await crosscutting_done_model.aggregate([
+          {
+            $match: {
+              log_no: logNo,
+              createdAt: { $gte: start, $lte: end },
+              issue_status: { $ne: null },
+            },
+          },
+          { $group: { _id: null, total_cmt: { $sum: '$crosscut_cmt' } } },
+        ]);
+        const ccIssuedCmt = ccIssuedData[0]?.total_cmt || 0;
+
         // FLITCHING - Check if crosscut items from this log were issued for flitching
         const flitchingData = await crosscutting_done_model.aggregate([
           {
@@ -130,6 +150,19 @@ export const LogItemWiseInwardDailyReportExcel = catchAsync(async (req, res, nex
           },
         ]);
         const flitchingCmt = flitchingData[0]?.total_cmt || 0;
+
+        // Flitch received from flitching_done
+        const flitchReceivedData = await flitching_done_model.aggregate([
+          {
+            $match: {
+              log_no: logNo,
+              deleted_at: null,
+              createdAt: { $gte: start, $lte: end },
+            },
+          },
+          { $group: { _id: null, total_cmt: { $sum: '$flitch_cmt' } } },
+        ]);
+        const flitchReceivedCmt = flitchReceivedData[0]?.total_cmt || 0;
 
         // SAWING - Placeholder (awaiting clarification on data source)
         const sawingCmt = 0;
@@ -203,6 +236,45 @@ export const LogItemWiseInwardDailyReportExcel = catchAsync(async (req, res, nex
 
         const salesCmt = logSales + crosscutSales + flitchSales;
 
+        // REJECTED quantity across stages
+        const rejectedCrosscutData = await crosscutting_done_model.aggregate([
+          {
+            $match: {
+              log_no: logNo,
+              createdAt: { $gte: start, $lte: end },
+              is_rejected: true,
+            },
+          },
+          { $group: { _id: null, total_cmt: { $sum: '$crosscut_cmt' } } },
+        ]);
+        const rejectedFlitchData = await flitching_done_model.aggregate([
+          {
+            $match: {
+              log_no: logNo,
+              deleted_at: null,
+              createdAt: { $gte: start, $lte: end },
+              is_rejected: true,
+            },
+          },
+          { $group: { _id: null, total_cmt: { $sum: '$flitch_cmt' } } },
+        ]);
+        const rejectedPeelData = await crosscutting_done_model.aggregate([
+          // peeling done stored in crosscutting_done with issue_status 'peeling'
+          {
+            $match: {
+              log_no: logNo,
+              updatedAt: { $gte: start, $lte: end },
+              issue_status: 'peeling',
+              is_rejected: true,
+            },
+          },
+          { $group: { _id: null, total_cmt: { $sum: '$crosscut_cmt' } } },
+        ]);
+        const rejected =
+          (rejectedCrosscutData[0]?.total_cmt || 0) +
+          (rejectedFlitchData[0]?.total_cmt || 0) +
+          (rejectedPeelData[0]?.total_cmt || 0);
+
         // OPENING BALANCE CALCULATION
         // Calculate total issued before period start
         const totalIssuedBeforeStart = 
@@ -219,19 +291,27 @@ export const LogItemWiseInwardDailyReportExcel = catchAsync(async (req, res, nex
         return {
           item_name: itemName,
           log_no: logNo,
+          inward_date: inwardDate,
+          status,
           opening_balance_cmt: Math.max(0, openingBalanceCmt),
           invoice_cmt: invoiceCmt,
           indian_cmt: indianCmt,
           actual_cmt: actualCmt,
+          recover_from_rejected: recoverFromRejected,
           issue_for_cc: issueForCc,
           cc_received: ccReceivedCmt,
-          diff: diffCmt,
-          flitching: flitchingCmt,
-          sawing: sawingCmt,
-          wooden_tile: woodenTileCmt,
-          unedge: unedgeCmt,
-          peel: peelCmt,
+          cc_issued: ccIssuedCmt,
+          cc_diff: issueForCc - ccReceivedCmt,
+          issue_for_flitch: flitchingCmt,
+          flitch_received: flitchReceivedCmt,
+          flitch_diff: flitchingCmt - flitchReceivedCmt,
+          issue_for_sqedge: issueForSqedge,
+          peeling_issued: peelCmt,
+          peeling_received: peelCmt,
+          peeling_diff: 0,
           sales: salesCmt,
+          job_work_challan: jobWorkChallan,
+          rejected,
           closing_stock_cmt: Math.max(0, closingBalanceCmt),
         };
       })

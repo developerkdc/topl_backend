@@ -5,13 +5,17 @@ import slicingRoutes from './reports2/Slicing/slicing.route.js';
 import dressingRoutes from './reports2/Dressing/dressing.routes.js';
 import smokingDyingRoutes from './reports2/Smoking&Dying/smoking_dying.routes.js';
 import groupingSplicingRoutes from './reports2/Grouping_Splicing/grouping_splicing.routes.js';
+import groupingRoutes from './reports2/Grouping/grouping.routes.js';
 import faceRoutes from './reports2/Face/face.routes.js';
 import coreRoutes from './reports2/Core/core.routes.js';
 import tappingORClippingRoutes from './reports2/TappingORClipping/TappingORClipping.js';
+import tappingRoutes from './reports2/Tapping/tapping.routes.js';
 import pressingRoutes from './reports2/Pressing/pressing.routes.js';
 import peelingRoutes from './reports2/Peeling/peeling.routes.js';
 import plywoodRoutes from './reports2/Plywood/plywood.routes.js';
 import mdfRoutes from './reports2/MDF/mdf.routes.js';
+import fleeceRoutes from './reports2/Fleece/fleece.routes.js';
+import otherGoodsRoutes from './reports2/Other_Goods/otherGoods.routes.js';
 import express from 'express';
 
 const router = express.Router();
@@ -28,6 +32,9 @@ router.use(crosscutRoutes);
 // Tapping/Clipping routes (Clipping Daily Report)
 router.use(tappingORClippingRoutes);
 
+// Tapping routes (Splicing Daily Report)
+router.use(tappingRoutes);
+
 //slicing routes (Slicing Daily Report)
 router.use(slicingRoutes);
 
@@ -40,6 +47,9 @@ router.use(plywoodRoutes);
 // MDF routes (MDF Stock Report)
 router.use(mdfRoutes);
 
+// Fleece routes (Fleece Stock Report)
+router.use(fleeceRoutes);
+
 //dressing routes (Dressing Daily Report)
 router.use(dressingRoutes);
 
@@ -49,6 +59,9 @@ router.use(smokingDyingRoutes);
 // Grouping_Splicing routes (Hand Splicing Daily Report)
 router.use(groupingSplicingRoutes);
 
+// Grouping routes (Grouping Daily Report)
+router.use(groupingRoutes);
+
 // Face routes (Face Stock Report)
 router.use(faceRoutes);
 
@@ -57,5 +70,8 @@ router.use(coreRoutes);
 
 // Pressing routes (Pressing Daily Report)
 router.use(pressingRoutes);
+
+// Other goods routes (Other Goods Stock Report)
+router.use(otherGoodsRoutes);
 
 export default router;

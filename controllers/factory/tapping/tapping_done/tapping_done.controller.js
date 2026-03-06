@@ -155,7 +155,7 @@ export const add_tapping_details = catchAsync(async (req, res, next) => {
     await session.commitTransaction();
     const response = new ApiResponse(
       StatusCodes.CREATED,
-      'tapping Done Successfully',
+      'Tapping Done Successfully',
       {
         other_details: other_details_data,
         items_details: add_items_details_data,

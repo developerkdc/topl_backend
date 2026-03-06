@@ -1,13 +1,13 @@
 import path from "path";
 import catchAsync from "../../utils/errors/catchAsync.js";
 import { generatePDF } from "../../utils/generatePDF/generatePDFBuffer.js";
-import fs from 'fs/promises';
 import { fileURLToPath } from 'url';
 import { StatusCodes } from "../../utils/constants.js";
 import mongoose from "mongoose";
 import ApiError from "../../utils/errors/apiError.js";
 import dispatchModel from "../../database/schema/dispatch/dispatch.schema.js";
 import moment from "moment";
+import { getIrnQrDataUrl } from "../../utils/qrcode/getIrnQrDataUrl.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -42,13 +42,34 @@ export const dispatch_ewaybill_pdf = catchAsync(async (req, res, next) => {
         throw new ApiError("Dispatch not found", StatusCodes.NOT_FOUND);
     }
 
+    // Only generate PDF when e-way bill has been generated
+    if (!dispatchDetails.eway_bill_no) {
+        throw new ApiError("E-way bill has not been generated for this dispatch", StatusCodes.BAD_REQUEST);
+    }
+
     const removalDateTime = dispatchDetails.removal_of_good_date_time;
     const removalDate = removalDateTime ? moment(removalDateTime).format("DD/MM/YYYY") : "-";
     const removalTime = removalDateTime ? moment(removalDateTime).format("h:mm:ss A") : "";
 
     const ewayBillDate = dispatchDetails.eway_bill_date ? moment(dispatchDetails.eway_bill_date).format("DD/MM/YYYY h:mm:ss A") : "-";
+    const ewayBillValidUpto = dispatchDetails.eway_bill_valid_upto ? moment(dispatchDetails.eway_bill_valid_upto).format("DD/MM/YYYY h:mm:ss A") : "-";
     const ackDate = dispatchDetails.acknowledgement_date ? moment(dispatchDetails.acknowledgement_date).format("DD/MM/YYYY h:mm:ss A") : "-";
     const docDate = dispatchDetails.invoice_date_time ? moment(dispatchDetails.invoice_date_time).format("DD/MM/YYYY") : "-";
+
+    // IRN QR: same as invoice_bill – use irn_number entry from qr_code_link
+    const irnQrLink = dispatchDetails.qr_code_link?.find((l) => l?.name === 'irn_number');
+    const irnQrContent = irnQrLink?.url && dispatchDetails.irn_number ? irnQrLink.url : null;
+    const irnQrImageUrl = getIrnQrDataUrl(irnQrContent) || undefined;
+
+    // Reason for transportation (e.g. "Outward - Supply")
+    const reasonForTransport = dispatchDetails.supp_type || "Outward - Supply";
+    // Transporter display: name and GST if available (match image format)
+    const transporterDisplay = [dispatchDetails.transporter_details?.name, dispatchDetails.transporter_details?.gst_no].filter(Boolean).join(' ').trim() || (dispatchDetails.transporter_details?.name || '-');
+
+    // Transaction type display (e.g. "REGULAR" -> "Regular")
+    const transactionTypeDisplay = dispatchDetails.transaction_type
+        ? dispatchDetails.transaction_type.charAt(0).toUpperCase() + dispatchDetails.transaction_type.slice(1).toLowerCase()
+        : '-';
 
     // Combine data
     const data = {
@@ -58,6 +79,11 @@ export const dispatch_ewaybill_pdf = catchAsync(async (req, res, next) => {
         formatted_eway_bill_date: ewayBillDate,
         formatted_ack_date: ackDate,
         formatted_doc_date: docDate,
+        formatted_eway_bill_valid_upto: ewayBillValidUpto,
+        irnQrImageUrl,
+        reason_for_transport: reasonForTransport,
+        transporter_display: transporterDisplay,
+        transaction_type_display: transactionTypeDisplay,
     };
 
     const templatePath = path.join(__dirname, "../../views/dispatch/eway.hbs");

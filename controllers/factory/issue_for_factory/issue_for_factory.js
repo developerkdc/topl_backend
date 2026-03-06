@@ -54,6 +54,7 @@ const add_to_factory_history_map = {
   [item_issued_from?.polishing_factory]: polishing_history_model,
   [item_issued_from?.color_factory]: color_history_model,
 };
+
 class Issue_For_Factory {
   constructor(
     session,
@@ -61,7 +62,7 @@ class Issue_For_Factory {
     issued_from,
     issue_details,
     add_to_factory,
-    issued_for
+    issued_for,
   ) {
     if (!isValidObjectId(issue_details?.issued_from_id)) {
       throw new ApiError('Invalid Issued from ID', StatusCodes?.BAD_REQUEST);
@@ -93,6 +94,53 @@ class Issue_For_Factory {
     return issued_from_data;
   }
 
+  async get_completed_processes() {
+    const completed = [this.issued_from];
+
+    if (this.issued_from === item_issued_from.pressing_factory) {
+      return completed;
+    }
+
+    let current_done_details = this.issued_from_details;
+    let current_factory = this.issued_from;
+
+    while (current_factory !== item_issued_from.pressing_factory) {
+      const factory_key = current_factory?.toLowerCase();
+      const issue_field_key = `issue_for_${factory_key}_id`;
+      const issue_for_id = current_done_details?.[issue_field_key];
+
+      if (!issue_for_id) break;
+
+      const issue_for_model = add_to_factory_map[current_factory];
+      if (!issue_for_model) break;
+
+      const issue_for_record = await issue_for_model
+        .findById(issue_for_id)
+        .session(this.session);
+
+      if (!issue_for_record?.issued_from) break;
+
+      const parent_factory = issue_for_record.issued_from;
+      completed.push(parent_factory);
+
+      if (parent_factory === item_issued_from.pressing_factory) break;
+
+      const parent_done_model = issued_from_factory_model_map[parent_factory];
+      if (!parent_done_model) break;
+
+      const parent_done = await parent_done_model
+        .findById(issue_for_record.issued_from_id)
+        .session(this.session);
+
+      if (!parent_done) break;
+
+      current_done_details = parent_done;
+      current_factory = parent_factory;
+    }
+
+    return completed;
+  }
+
   async add_issued_items_to_factory() {
     try {
       await this.fetch_issue_from_data();
@@ -100,6 +148,14 @@ class Issue_For_Factory {
       const add_to_factory_model = add_to_factory_map[this.add_to_factory];
       if (!add_to_factory_model) {
         throw new ApiError('Invalid Factory Name.', StatusCodes.BAD_REQUEST);
+      }
+
+      this.completed_processes = await this.get_completed_processes();
+      if (this.completed_processes.includes(this.add_to_factory)) {
+        throw new ApiError(
+          `Cannot issue to ${this.add_to_factory} — this process has already been completed for this item.`,
+          StatusCodes.BAD_REQUEST
+        );
       }
 
       const [max_sr_no] = await add_to_factory_model
@@ -114,7 +170,7 @@ class Issue_For_Factory {
           },
         ])
         .session(this.session);
-        console.log("this.issued_from_details => ",this.issued_from_details)
+      // console.log("this.issued_from_details => ", this.issued_from_details)
       const new_sr_no = max_sr_no ? max_sr_no?.max_sr_no + 1 : 1;
       //add issue data to the factory
       const [add_data_to_factory_result] = await add_to_factory_model.create(
@@ -142,6 +198,8 @@ class Issue_For_Factory {
             created_by: this.userDetails?._id,
             updated_by: this.userDetails?._id,
             remark: this.issued_from_details?.remark,
+            product_type: this.issued_from_details?.product_type || null,
+            series_code: this.issued_from_details?.series_code || null,
           },
         ],
         { session: this.session }
@@ -158,15 +216,15 @@ class Issue_For_Factory {
         { _id: this.issued_from_details?._id },
         {
           $inc: {
-            'available_details.no_of_sheets': Number(
-              -this.issue_details?.issued_sheets
-            )?.toFixed(2),
-            'available_details.amount': Number(
-              -this.issue_details?.issued_amount
-            )?.toFixed(2),
-            'available_details.sqm': Number(
-              -this.issue_details?.issued_sqm
-            )?.toFixed(3),
+            'available_details.no_of_sheets': -Number(
+              this.issue_details?.issued_sheets || 0
+            ),
+            'available_details.amount': -Number(
+              this.issue_details?.issued_amount || 0
+            ),
+            'available_details.sqm': -Number(
+              this.issue_details?.issued_sqm || 0
+            ),
           },
           $set: {
             isEditable: false,
@@ -235,6 +293,9 @@ class Issue_For_Factory {
         issue_status: this.add_to_factory,
         order_id: this.issue_details?.order_id,
         order_item_id: this.issue_details?.order_item_id,
+        product_type: this.issued_from_details?.product_type || null,
+        series_code: this.issued_from_details?.series_code || null,
+
         // order_category,
       };
 

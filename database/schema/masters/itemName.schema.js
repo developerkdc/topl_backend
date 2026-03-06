@@ -6,7 +6,7 @@ const alternateItemNameObjectSchema = {
     type: String,
     uppercase: true,
     trim: true,
-    unique: [true, 'Process Name already exists.'],
+    // unique: [true, 'Process Name already exists.'],
     required: [true, 'Process Name is required.'],
   },
   alternate_item_name: {

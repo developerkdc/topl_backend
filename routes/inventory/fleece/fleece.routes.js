@@ -11,7 +11,6 @@ import {
   fleeceCsv,
   fleeceHistoryLogsCsv,
   fleeceLogsCsv,
-  fleeceStockReportCsv,
   inward_sr_no_dropdown,
   item_sr_no_dropdown,
   listing_fleece_inventory,
@@ -82,12 +81,6 @@ fleece_router.post(
   AuthMiddleware,
   RolesPermissions('fleece_paper_inventory', 'view'),
   fleeceHistoryLogsCsv
-);
-fleece_router.post(
-  '/download-stock-report-fleece',
-  // AuthMiddleware,
-  // RolesPermissions('fleece_paper_inventory', 'view'),
-  fleeceStockReportCsv
 );
 
 //dropdown

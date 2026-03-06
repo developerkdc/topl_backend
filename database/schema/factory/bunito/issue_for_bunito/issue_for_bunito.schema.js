@@ -93,6 +93,12 @@ const issue_for_bunito_schema = new mongoose.Schema(
       },
       required: [true, 'Item Issued for is required.'],
     },
+    product_type: {
+      type: String,
+    },
+    series_code: {
+      type: String,
+    },
     remark: {
       type: String,
       default: null,

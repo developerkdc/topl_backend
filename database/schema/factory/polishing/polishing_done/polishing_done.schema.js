@@ -45,6 +45,12 @@ const polishing_done_details_schema = new mongoose.Schema(
       type: Number,
       required: [true, 'Amount is required.'],
     },
+    product_type: {
+      type: String,
+    },
+    series_code: {
+      type: String,
+    },
     available_details: {
       no_of_sheets: {
         type: Number,

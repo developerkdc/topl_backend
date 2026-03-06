@@ -22,7 +22,7 @@ const itemSubCategorySchema = new mongoose.Schema(
     type: {
       type: String,
       enum: {
-        values: [sub_category.natural, sub_category.hybrid],
+        values: [sub_category.natural, sub_category.hybrid, sub_category.others],
         message: `Sub-category type {{VALUE}}, must be one of ${[sub_category.natural, sub_category.hybrid].join(",")}`
       },
       required: [true, 'Subcategory type is required'],

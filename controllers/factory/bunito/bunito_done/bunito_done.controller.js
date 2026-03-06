@@ -56,6 +56,8 @@ export const create_bunito = catchAsync(async (req, res) => {
       ...bunito_done_details,
       sr_no: max_sr_no ? max_sr_no?.max_sr_no + 1 : 1,
       pressing_details_id: issue_for_bunito_details?.pressing_details_id,
+      product_type: bunito_done_details?.product_type || issue_for_bunito_details?.product_type || null,
+      series_code: bunito_done_details?.series_code || issue_for_bunito_details?.series_code || null,
       created_by: userDetails?._id,
       updated_by: userDetails?._id,
     };

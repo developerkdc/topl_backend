@@ -6,10 +6,10 @@ import catchAsync from '../../../utils/errors/catchAsync.js';
 import mongoose from 'mongoose';
 
 /**
- * Smoking&Dying (Dyeing) Daily Report – Excel download.
+ * Smoking Daily Report – Excel download.
  * Uses reportDate from req.body.filters; optional smokingDyingId to restrict to one session.
- * Joins process_done_details, process_done_items_details, and users (worker name).
- * Report layout: Item Name | New Item Name | LogX (merged per log) | Bundle No | Sq Mtr | Colour Code | Remarks; Total row; Dyeing Id table at end.
+ * Joins process_done_details and process_done_items_details.
+ * Report layout: Item Name | LogX (merged per log) | Bundle No | ThickneSS | Length | Width | Leaves | Sq Mtr | PROCESS | Process color | Character | Pattern | Series | Remarks; subtotal rows per item; Grand Total; Summary section.
  */
 export const SmokingDyingDailyReportExcel = catchAsync(
   async (req, res, next) => {
@@ -60,29 +60,8 @@ export const SmokingDyingDailyReportExcel = catchAsync(
         },
       },
       {
-        $lookup: {
-          from: 'users',
-          localField: 'created_by',
-          foreignField: '_id',
-          as: 'worker',
-          pipeline: [
-            {
-              $project: {
-                first_name: 1,
-                last_name: 1,
-              },
-            },
-          ],
-        },
-      },
-      {
-        $unwind: {
-          path: '$worker',
-          preserveNullAndEmptyArrays: true,
-        },
-      },
-      {
         $sort: {
+          'items.item_name': 1,
           'items.log_no_code': 1,
           'items.bundle_number': 1,
         },
@@ -90,22 +69,19 @@ export const SmokingDyingDailyReportExcel = catchAsync(
       {
         $project: {
           process_done_id: '$_id',
-          shift: 1,
-          no_of_working_hours: 1,
-          no_of_workers: 1,
-          worker: {
-            $concat: [
-              { $ifNull: ['$worker.first_name', ''] },
-              ' ',
-              { $ifNull: ['$worker.last_name', ''] },
-            ],
-          },
           item_name: '$items.item_name',
-          item_sub_category_name: '$items.item_sub_category_name',
           log_no_code: '$items.log_no_code',
           bundle_number: '$items.bundle_number',
+          thickness: '$items.thickness',
+          length: '$items.length',
+          width: '$items.width',
+          no_of_leaves: '$items.no_of_leaves',
           sqm: '$items.sqm',
+          process_name: '$items.process_name',
           color_name: '$items.color_name',
+          character_name: '$items.character_name',
+          pattern_name: '$items.pattern_name',
+          series_name: '$items.series_name',
           remark: '$items.remark',
         },
       },

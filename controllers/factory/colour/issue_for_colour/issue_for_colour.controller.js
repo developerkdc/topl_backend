@@ -67,6 +67,10 @@ export const add_issue_for_color_from_pressing = catchAsync(
           {
             sr_no: max_sr_no,
             pressing_details_id: pressing_item_details?._id,
+            product_type: pressing_item_details?.product_type,
+            series_code: pressing_item_details?.series_product_code,
+            order_id: pressing_item_details?.order_id,
+            order_item_id: pressing_item_details?.order_item_id,
             issued_amount: issued_amount,
             issued_sheets: issued_sheets,
             issued_sqm: issued_sqm,

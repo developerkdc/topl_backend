@@ -30,7 +30,8 @@ export const issues_for_status = {
 
 export const sub_category = {
   natural: "NATURAL",
-  hybrid: "HYBRID"
+  hybrid: "HYBRID",
+  others: "OTHERS",
 }
 
 export const inward_type = {

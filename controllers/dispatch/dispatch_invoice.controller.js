@@ -1,14 +1,13 @@
 import path from "path";
 import catchAsync from "../../utils/errors/catchAsync.js";
 import { generatePDF } from "../../utils/generatePDF/generatePDFBuffer.js";
-import fs from 'fs/promises';
 import { fileURLToPath } from 'url';
 import { StatusCodes } from "../../utils/constants.js";
 import mongoose from "mongoose";
-
 import ApiError from "../../utils/errors/apiError.js";
 import dispatchModel from "../../database/schema/dispatch/dispatch.schema.js";
 import moment from "moment";
+import { getIrnQrDataUrl } from "../../utils/qrcode/getIrnQrDataUrl.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -221,10 +220,16 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
     };
 
 
+    // IRN QR: generate from dispatch qr_code_link (irn_number) or leave undefined for placeholder
+    const irnQrLink = dispatchDetails.qr_code_link?.find((l) => l?.name === 'irn_number');
+    const irnQrContent = irnQrLink?.url && dispatchDetails.irn_number ? irnQrLink.url : null;
+    const irnQrImageUrl = getIrnQrDataUrl(irnQrContent);
+
     const pdfData = {
         headerUrl: "https://example.com/header.png", // your logo/header
-        footerUrl: "https://example.com/footer.png", // QR code or footer image
+        footerUrl: "https://example.com/footer.png", // placeholder when IRN QR not generated
         logoUrl: "https://example.com/topl_logo.png",
+        irnQrImageUrl: irnQrImageUrl || undefined,
         transaction_is_regular: dispatchDetails.transaction_type === "REGULAR",
         customer_details: dispatchDetails.customer_details,
         dispatch_from: dispatchDetails.address,
@@ -264,13 +269,16 @@ export const dispatch_invoice_pdf = catchAsync(async (req, res, next) => {
         grand_total: dispatchDetails.final_total_amount,
         bank_details: dispatchDetails.bank_details || "",
         irn: dispatchDetails.irn_number || "",
+        // Template uses ack_no & ack_date (invoice_bill.hbs / invoice_bill_print.hbs footer)
+        ack_no: dispatchDetails.acknowledgement_number || "",
+        ack_date: dispatchDetails.acknowledgement_date ? moment(dispatchDetails.acknowledgement_date).format("DD-MM-YYYY") : "",
         additional_remarks: dispatchDetails.remark || "",
         msme_number: dispatchDetails.customer_details?.msme_number || "",
         msme_type: dispatchDetails.customer_details?.msme_type || "",
         packing_id: dispatchDetails.packing_done_ids?.map(p => p.packing_done_id) || [],
         packing_date: Array.isArray(dispatchDetails.packing_done_ids) ? dispatchDetails.packing_done_ids.map(p => p.packing_date ? moment(p.packing_date).format("DD-MM-YYYY") : "") : [],
-        eway_bill_no: dispatchDetails.eway_bill_no,
-        eway_bill_date: dispatchDetails.eway_bill_date,
+        eway_bill_no: dispatchDetails.eway_bill_no || "",
+        eway_bill_date: dispatchDetails.eway_bill_date ? moment(dispatchDetails.eway_bill_date).format("DD-MM-YYYY") : "",
     };
 
 
