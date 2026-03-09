@@ -6,7 +6,7 @@ The Log Wise Flitch Report generates the **"Inward Item & Log Wise Report"** as 
 
 ## API Endpoint
 
-**POST** `/api/V1/reports2/flitch/download-excel-log-wise-flitch-report`
+**POST** `/api/V1/report/download-excel-log-wise-flitch-report`
 
 ## Request Body
 
@@ -219,7 +219,7 @@ Total    │       │    │       │ 0.000   │  0.000 │   │ 0.000 │ 0
 |------|---------|
 | `topl_backend/controllers/reports2/Flitch/logWiseFlitch.js` | Data aggregation and business logic |
 | `topl_backend/config/downloadExcel/reports2/Flitch/logWiseFlitch.js` | Excel generation (19-col multi-level headers) |
-| `topl_backend/routes/report/reports2/Flitch/flitch.routes.js` | Route: `POST /download-excel-log-wise-flitch-report` |
+| `topl_backend/routes/report/reports2/Flitch/flitch.routes.js` | Route: `POST /api/V1/report/download-excel-log-wise-flitch-report` |
 
 ---
 

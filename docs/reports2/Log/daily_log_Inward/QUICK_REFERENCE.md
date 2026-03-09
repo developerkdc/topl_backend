@@ -2,12 +2,12 @@
 
 ## API Endpoint
 ```
-POST /reports2/download-excel-log-inward-daily-report
+POST /api/V1/report/download-excel-log-inward-daily-report
 ```
 
 ## Quick Test
 ```bash
-curl -X POST http://localhost:5000/reports2/download-excel-log-inward-daily-report \
+curl -X POST http://localhost:5000/api/V1/report/download-excel-log-inward-daily-report \
   -H "Content-Type: application/json" \
   -d '{"filters":{"reportDate":"2025-02-24"}}'
 ```
@@ -54,10 +54,10 @@ curl -X POST http://localhost:5000/reports2/download-excel-log-inward-daily-repo
 - ✅ Length/Diameter: 2 decimals
 
 ## Files Created
-- **Controller**: `controllers/reports2/logInward.js`
-- **Excel Generator**: `config/downloadExcel/reports2/logInward/logInward.js`
-- **Route**: `routes/report/reports2.routes.js` (modified)
-- **Docs**: `docs/reports2/logInward/*.md`
+- **Controller**: `controllers/reports2/Log/logInward.js`
+- **Excel Generator**: `config/downloadExcel/reports2/Log/logInward.js`
+- **Route**: `routes/report/reports2/Log/log.routes.js`
+- **Docs**: `docs/reports2/Log/daily_log_Inward/`
 
 ## Error Codes
 - **400**: Missing reportDate
@@ -115,6 +115,6 @@ Log inward report generated: http://localhost:5000/public/reports/LogInward/...
 - [ ] Verify worker section appears
 
 ## Documentation
-- **API Docs**: [`docs/reports2/logInward/LOG_INWARD_DAILY_REPORT_API.md`](LOG_INWARD_DAILY_REPORT_API.md)
-- **Implementation**: [`docs/reports2/logInward/LOG_INWARD_DAILY_REPORT_IMPLEMENTATION_PLAN.md`](LOG_INWARD_DAILY_REPORT_IMPLEMENTATION_PLAN.md)
-- **Testing**: [`docs/reports2/logInward/LOG_INWARD_DAILY_REPORT_TESTING.md`](LOG_INWARD_DAILY_REPORT_TESTING.md)
+- **API Docs**: [`docs/reports2/Log/daily_log_Inward/LOG_INWARD_DAILY_REPORT_API.md`](LOG_INWARD_DAILY_REPORT_API.md)
+- **Implementation**: [`docs/reports2/Log/daily_log_Inward/LOG_INWARD_DAILY_REPORT_IMPLEMENTATION_PLAN.md`](LOG_INWARD_DAILY_REPORT_IMPLEMENTATION_PLAN.md)
+- **Testing**: [`docs/reports2/Log/daily_log_Inward/LOG_INWARD_DAILY_REPORT_TESTING.md`](LOG_INWARD_DAILY_REPORT_TESTING.md)

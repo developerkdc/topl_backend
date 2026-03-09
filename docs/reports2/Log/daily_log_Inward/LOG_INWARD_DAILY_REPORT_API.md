@@ -5,7 +5,7 @@ The Log Daily Inward Report API generates a daily report of all logs received on
 
 ## Endpoint
 ```
-POST /reports2/download-excel-log-inward-daily-report
+POST /api/V1/report/download-excel-log-inward-daily-report
 ```
 
 ## Request Body
@@ -158,7 +158,7 @@ Overall totals across all items:
 
 ### Using cURL
 ```bash
-curl -X POST http://localhost:5000/reports2/download-excel-log-inward-daily-report \
+curl -X POST http://localhost:5000/api/V1/report/download-excel-log-inward-daily-report \
   -H "Content-Type: application/json" \
   -d '{
     "filters": {
@@ -174,7 +174,7 @@ import axios from 'axios';
 const generateLogInwardReport = async () => {
   try {
     const response = await axios.post(
-      '/reports2/download-excel-log-inward-daily-report',
+      '/api/V1/report/download-excel-log-inward-daily-report',
       {
         filters: {
           reportDate: '2025-02-24'
@@ -210,6 +210,6 @@ public/reports/LogInward/log_inward_daily_report_{timestamp}.xlsx
 
 ## Implementation Files
 
-- **Route**: `topl_backend/routes/report/reports2.routes.js`
-- **Controller**: `topl_backend/controllers/reports2/logInward.js`
-- **Excel Generator**: `topl_backend/config/downloadExcel/reports2/logInward/logInward.js`
+- **Route**: `topl_backend/routes/report/reports2/Log/log.routes.js`
+- **Controller**: `topl_backend/controllers/reports2/Log/logInward.js`
+- **Excel Generator**: `topl_backend/config/downloadExcel/reports2/Log/logInward.js`
