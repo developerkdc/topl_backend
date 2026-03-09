@@ -5,10 +5,15 @@ import dotenv from 'dotenv/config';
 
 /**
  * Create Item Wise Flitch Report Excel
- * Generates comprehensive flitch inventory report tracking movements
- * including opening balance, crosscut received, flitch received, issued, and closing balance
- * 
- * @param {Array} aggregatedData - Aggregated stock data by item_name
+ * 20 columns with group headers:
+ *   Round Log Detail CMT (Invoice, Indian, Actual)
+ *   Cross Cut Details CMT (Issue for CC, CC Received, CC Issue, CC Diff)
+ *   Flitch Details CMT (Issue for Flitch, Flitch Received, Flitch Diff)
+ *   Peeling Details CMT (Issue for Peeling, Peeling Received, Peeling Diff)
+ *   Round log +Cross Cut (Sales)
+ *   (Cc+Flitch+Peeling) (Rejected)
+ *
+ * @param {Array} aggregatedData - 20-field stock data by item_name
  * @param {String} startDate - Start date (YYYY-MM-DD)
  * @param {String} endDate - End date (YYYY-MM-DD)
  * @param {Object} filter - Optional filters applied
@@ -23,10 +28,9 @@ export const createItemWiseFlitchReportExcel = async (
   try {
     const folderPath = 'public/upload/reports/reports2/Flitch';
 
-    // Ensure folder exists
     try {
       await fs.access(folderPath);
-    } catch (error) {
+    } catch {
       await fs.mkdir(folderPath, { recursive: true });
       console.log('Folder created:', folderPath);
     }
@@ -34,7 +38,6 @@ export const createItemWiseFlitchReportExcel = async (
     const workbook = new exceljs.Workbook();
     const worksheet = workbook.addWorksheet('Item Wise Flitch Report');
 
-    // Format dates for title
     const formatDate = (dateStr) => {
       if (!dateStr) return 'N/A';
       try {
@@ -43,7 +46,7 @@ export const createItemWiseFlitchReportExcel = async (
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const year = date.getFullYear();
         return `${day}/${month}/${year}`;
-      } catch (err) {
+      } catch {
         return 'N/A';
       }
     };
@@ -51,47 +54,111 @@ export const createItemWiseFlitchReportExcel = async (
     const formattedStartDate = formatDate(startDate);
     const formattedEndDate = formatDate(endDate);
 
-    // Build title
-    let title = `Itemwise Flitch between ${formattedStartDate} and ${formattedEndDate}`;
+    let title = `Inward Item Wise Report From ${formattedStartDate} to ${formattedEndDate}`;
     if (filter?.item_name) {
-      title = `Itemwise Flitch [ ${filter.item_name} ] between ${formattedStartDate} and ${formattedEndDate}`;
+      title = `Inward Item Wise Report [ ${filter.item_name} ] From ${formattedStartDate} to ${formattedEndDate}`;
     }
 
     console.log('Generated item wise flitch report title:', title);
 
-    // Define columns (7 columns)
+    // 20 columns
     const columnDefinitions = [
-      { key: 'item_name', width: 25 },          // 1. Item Name
-      { key: 'physical_gmt', width: 15 },       // 2. Physical GMT
-      { key: 'cc_received', width: 15 },        // 3. CC Received
-      { key: 'opening_balance', width: 15 },    // 4. Op Bal
-      { key: 'flitch_received', width: 15 },    // 5. Flitch Received
-      { key: 'flitch_issued', width: 15 },      // 6. FL Issued
-      { key: 'closing_balance', width: 15 },    // 7. FL Closing
+      { key: 'item_name',             width: 25 }, // 1.  ItemName
+      { key: 'opening_stock_cmt',     width: 16 }, // 2.  Opening Stock CMT
+      { key: 'invoice_cmt',           width: 12 }, // 3.  Invoice    ┐ Round Log Detail CMT
+      { key: 'indian_cmt',            width: 12 }, // 4.  Indian     │
+      { key: 'actual_cmt',            width: 12 }, // 5.  Actual     ┘
+      { key: 'recover_from_rejected', width: 18 }, // 6.  Recover From rejected (standalone)
+      { key: 'issue_for_cc',         width: 14 }, // 7.  Issue for CC   ┐ Cross Cut Details CMT
+      { key: 'cc_received',           width: 14 }, // 8.  CC Received   │
+      { key: 'cc_issued',             width: 12 }, // 9.  CC Issue      │
+      { key: 'cc_diff',               width: 12 }, // 10. CC Diff       ┘
+      { key: 'issue_for_flitch',     width: 15 }, // 11. Issue for Flitch ┐ Flitch Details CMT
+      { key: 'flitch_received',       width: 15 }, // 12. Flitch Received │
+      { key: 'flitch_diff',           width: 12 }, // 13. Flitch Diff     ┘
+      { key: 'issue_for_peeling',    width: 16 }, // 14. Issue for Peeling ┐ Peeling Details CMT
+      { key: 'peeling_received',      width: 16 }, // 15. Peeling Received  │
+      { key: 'peeling_diff',         width: 12 }, // 16. Peeling Diff     ┘
+      { key: 'issue_for_sqedge',     width: 16 }, // 17. Issue for Sq.Edge (standalone)
+      { key: 'sales',                 width: 12 }, // 18. Sales (Round log +Cross Cut)
+      { key: 'rejected',              width: 12 }, // 19. Rejected ((Cc+Flitch+Peeling))
+      { key: 'closing_stock_cmt',     width: 16 }, // 20. Closing Stock CMT
     ];
 
-    // Set columns
     worksheet.columns = columnDefinitions;
 
-    // Row 1: Title row (merged across all 7 columns)
+    const TOTAL_COLS = 20;
+
+    // Row 1: Title merged across all 20 columns
     const titleRow = worksheet.addRow([title]);
     titleRow.font = { bold: true, size: 12 };
     titleRow.alignment = { vertical: 'middle', horizontal: 'left', wrapText: false };
     titleRow.height = 20;
-    worksheet.mergeCells(1, 1, 1, 7);
+    worksheet.mergeCells(1, 1, 1, TOTAL_COLS);
 
-    // Row 2: Empty row for spacing
+    // Row 2: Empty spacing
     worksheet.addRow([]);
 
-    // Row 3: Column headers
+    // Row 3: Group header row – Round Log Detail CMT, Cross Cut Details CMT, Flitch Details CMT, Peeling Details CMT, Round log +Cross Cut (Sales), (Cc+Flitch+Peeling) (Rejected)
+    const groupHeaderRow = worksheet.addRow([
+      '',                      // 1:  ItemName (standalone)
+      '',                      // 2:  Opening Stock CMT (standalone)
+      'Round Log Detail CMT',  // 3:  → merged 3–5 (Invoice, Indian, Actual)
+      '',                      // 4
+      '',                      // 5
+      '',                      // 6:  Recover From rejected (standalone)
+      'Cross Cut Details CMT', // 7:  → merged 7–10 (Issue for CC, CC Received, CC Issue, CC Diff)
+      '',                      // 8
+      '',                      // 9
+      '',                      // 10
+      'Flitch Details CMT',    // 11: → merged 11–13
+      '',                      // 12
+      '',                      // 13
+      'Peeling Details CMT',   // 14: → merged 14–16
+      '',                      // 15
+      '',                      // 16
+      '',                      // 17: Issue for Sq.Edge (standalone)
+      'Round log +Cross Cut',  // 18: Sales (standalone group label)
+      '(Cc+Flitch+Peeling)',   // 19: Rejected (standalone group label)
+      '',                      // 20: Closing Stock CMT (standalone)
+    ]);
+    groupHeaderRow.font = { bold: true };
+    groupHeaderRow.alignment = { vertical: 'middle', horizontal: 'center' };
+    groupHeaderRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFD3D3D3' },
+    };
+
+    // Merge group header cells (row 3)
+    worksheet.mergeCells(3, 3, 3, 5);   // Round Log Detail CMT
+    worksheet.mergeCells(3, 7, 3, 10);  // Cross Cut Details CMT
+    worksheet.mergeCells(3, 11, 3, 13);  // Flitch Details CMT
+    worksheet.mergeCells(3, 14, 3, 16);  // Peeling Details CMT
+    // Cols 18 and 19 are single-cell labels (no merge)
+
+    // Row 4: Column headers
     const headerRow = worksheet.addRow([
-      'Item Name',
-      'Physical GMT',
+      'ItemName',
+      'Opening Stock CMT',
+      'Invoice',
+      'Indian',
+      'Actual',
+      'Recover From rejected',
+      'Issue for CC',
       'CC Received',
-      'Op Bal',
+      'CC Issue',
+      'CC Diff',
+      'Issue for Flitch',
       'Flitch Received',
-      'FL Issued',
-      'FL Closing',
+      'Flitch Diff',
+      'Issue for Peeling',
+      'Peeling Received',
+      'Peeling Diff',
+      'Issue for Sq.Edge',
+      'Sales',
+      'Rejected',
+      'Closing Stock CMT',
     ]);
     headerRow.font = { bold: true };
     headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
@@ -101,55 +168,99 @@ export const createItemWiseFlitchReportExcel = async (
       fgColor: { argb: 'FFD3D3D3' },
     };
 
-    // Initialize grand totals
+    // Grand totals accumulator
     const grandTotals = {
-      physical_gmt: 0,
-      cc_received: 0,
-      opening_balance: 0,
-      flitch_received: 0,
-      flitch_issued: 0,
-      closing_balance: 0,
+      opening_stock_cmt:     0,
+      invoice_cmt:           0,
+      indian_cmt:            0,
+      actual_cmt:            0,
+      recover_from_rejected: 0,
+      issue_for_cc:          0,
+      cc_received:           0,
+      cc_issued:             0,
+      cc_diff:               0,
+      issue_for_flitch:      0,
+      flitch_received:       0,
+      flitch_diff:           0,
+      issue_for_peeling:     0,
+      peeling_received:      0,
+      peeling_diff:          0,
+      issue_for_sqedge:      0,
+      sales:                 0,
+      rejected:              0,
+      closing_stock_cmt:     0,
     };
 
-    // Sort data by item_name
-    const sortedData = [...aggregatedData].sort((a, b) => {
-      const nameA = a.item_name || '';
-      const nameB = b.item_name || '';
-      return nameA.localeCompare(nameB);
-    });
+    const sortedData = [...aggregatedData].sort((a, b) =>
+      (a.item_name || '').localeCompare(b.item_name || '')
+    );
 
-    // Add data rows
     sortedData.forEach((item) => {
-      const rowData = {
-        item_name: item.item_name || '',
-        physical_gmt: parseFloat(item.physical_gmt || 0).toFixed(3),
-        cc_received: parseFloat(item.cc_received || 0).toFixed(3),
-        opening_balance: parseFloat(item.opening_balance || 0).toFixed(3),
-        flitch_received: parseFloat(item.flitch_received || 0).toFixed(3),
-        flitch_issued: parseFloat(item.flitch_issued || 0).toFixed(3),
-        closing_balance: parseFloat(item.closing_balance || 0).toFixed(3),
-      };
+      worksheet.addRow({
+        item_name:             item.item_name || '',
+        opening_stock_cmt:     parseFloat(item.opening_stock_cmt     || 0).toFixed(3),
+        invoice_cmt:           parseFloat(item.invoice_cmt           || 0).toFixed(3),
+        indian_cmt:            parseFloat(item.indian_cmt            || 0).toFixed(3),
+        actual_cmt:            parseFloat(item.actual_cmt            || 0).toFixed(3),
+        recover_from_rejected: parseFloat(item.recover_from_rejected || 0).toFixed(3),
+        issue_for_cc:          parseFloat(item.issue_for_cc          || 0).toFixed(3),
+        cc_received:           parseFloat(item.cc_received           || 0).toFixed(3),
+        cc_issued:             parseFloat(item.cc_issued             || 0).toFixed(3),
+        cc_diff:               parseFloat(item.cc_diff               || 0).toFixed(3),
+        issue_for_flitch:      parseFloat(item.issue_for_flitch      || 0).toFixed(3),
+        flitch_received:       parseFloat(item.flitch_received       || 0).toFixed(3),
+        flitch_diff:           parseFloat(item.flitch_diff           || 0).toFixed(3),
+        issue_for_peeling:     parseFloat(item.issue_for_peeling     || 0).toFixed(3),
+        peeling_received:      parseFloat(item.peeling_received      || 0).toFixed(3),
+        peeling_diff:          parseFloat(item.peeling_diff          || 0).toFixed(3),
+        issue_for_sqedge:      parseFloat(item.issue_for_sqedge      || 0).toFixed(3),
+        sales:                 parseFloat(item.sales                 || 0).toFixed(3),
+        rejected:              parseFloat(item.rejected              || 0).toFixed(3),
+        closing_stock_cmt:     parseFloat(item.closing_stock_cmt     || 0).toFixed(3),
+      });
 
-      worksheet.addRow(rowData);
-
-      // Accumulate grand totals
-      grandTotals.physical_gmt += parseFloat(item.physical_gmt || 0);
-      grandTotals.cc_received += parseFloat(item.cc_received || 0);
-      grandTotals.opening_balance += parseFloat(item.opening_balance || 0);
-      grandTotals.flitch_received += parseFloat(item.flitch_received || 0);
-      grandTotals.flitch_issued += parseFloat(item.flitch_issued || 0);
-      grandTotals.closing_balance += parseFloat(item.closing_balance || 0);
+      grandTotals.opening_stock_cmt     += parseFloat(item.opening_stock_cmt     || 0);
+      grandTotals.invoice_cmt           += parseFloat(item.invoice_cmt           || 0);
+      grandTotals.indian_cmt            += parseFloat(item.indian_cmt            || 0);
+      grandTotals.actual_cmt            += parseFloat(item.actual_cmt            || 0);
+      grandTotals.recover_from_rejected += parseFloat(item.recover_from_rejected || 0);
+      grandTotals.issue_for_cc          += parseFloat(item.issue_for_cc          || 0);
+      grandTotals.cc_received           += parseFloat(item.cc_received           || 0);
+      grandTotals.cc_issued             += parseFloat(item.cc_issued             || 0);
+      grandTotals.cc_diff               += parseFloat(item.cc_diff               || 0);
+      grandTotals.issue_for_flitch      += parseFloat(item.issue_for_flitch      || 0);
+      grandTotals.flitch_received       += parseFloat(item.flitch_received       || 0);
+      grandTotals.flitch_diff           += parseFloat(item.flitch_diff           || 0);
+      grandTotals.issue_for_peeling     += parseFloat(item.issue_for_peeling     || 0);
+      grandTotals.peeling_received      += parseFloat(item.peeling_received      || 0);
+      grandTotals.peeling_diff          += parseFloat(item.peeling_diff          || 0);
+      grandTotals.issue_for_sqedge      += parseFloat(item.issue_for_sqedge      || 0);
+      grandTotals.sales                 += parseFloat(item.sales                 || 0);
+      grandTotals.rejected              += parseFloat(item.rejected              || 0);
+      grandTotals.closing_stock_cmt     += parseFloat(item.closing_stock_cmt     || 0);
     });
 
-    // Add grand total row
     const totalRow = worksheet.addRow({
-      item_name: 'Total',
-      physical_gmt: grandTotals.physical_gmt.toFixed(3),
-      cc_received: grandTotals.cc_received.toFixed(3),
-      opening_balance: grandTotals.opening_balance.toFixed(3),
-      flitch_received: grandTotals.flitch_received.toFixed(3),
-      flitch_issued: grandTotals.flitch_issued.toFixed(3),
-      closing_balance: grandTotals.closing_balance.toFixed(3),
+      item_name:             'Total',
+      opening_stock_cmt:     grandTotals.opening_stock_cmt.toFixed(3),
+      invoice_cmt:           grandTotals.invoice_cmt.toFixed(3),
+      indian_cmt:            grandTotals.indian_cmt.toFixed(3),
+      actual_cmt:            grandTotals.actual_cmt.toFixed(3),
+      recover_from_rejected: grandTotals.recover_from_rejected.toFixed(3),
+      issue_for_cc:          grandTotals.issue_for_cc.toFixed(3),
+      cc_received:           grandTotals.cc_received.toFixed(3),
+      cc_issued:             grandTotals.cc_issued.toFixed(3),
+      cc_diff:               grandTotals.cc_diff.toFixed(3),
+      issue_for_flitch:      grandTotals.issue_for_flitch.toFixed(3),
+      flitch_received:       grandTotals.flitch_received.toFixed(3),
+      flitch_diff:           grandTotals.flitch_diff.toFixed(3),
+      issue_for_peeling:     grandTotals.issue_for_peeling.toFixed(3),
+      peeling_received:      grandTotals.peeling_received.toFixed(3),
+      peeling_diff:          grandTotals.peeling_diff.toFixed(3),
+      issue_for_sqedge:      grandTotals.issue_for_sqedge.toFixed(3),
+      sales:                 grandTotals.sales.toFixed(3),
+      rejected:              grandTotals.rejected.toFixed(3),
+      closing_stock_cmt:     grandTotals.closing_stock_cmt.toFixed(3),
     });
     totalRow.eachCell((cell) => {
       cell.font = { bold: true };
@@ -160,7 +271,6 @@ export const createItemWiseFlitchReportExcel = async (
       };
     });
 
-    // Save file
     const timeStamp = new Date().getTime();
     const fileName = `Item-Wise-Flitch-Report-${timeStamp}.xlsx`;
     const filePath = `${folderPath}/${fileName}`;

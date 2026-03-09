@@ -52,7 +52,7 @@ export const LogInwardDailyReportExcel = catchAsync(
       },
     ]);
 
-    console.log('Log Inward Report - Records found:', logInwardData.length);
+    console.log('Log Inward Report - Records found:', logInwardData);
 
     // Check if data exists
     if (!logInwardData || logInwardData.length === 0) {

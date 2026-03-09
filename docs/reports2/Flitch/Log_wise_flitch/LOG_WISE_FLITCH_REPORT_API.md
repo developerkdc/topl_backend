@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Log Wise Flitch Report API generates a comprehensive Excel report that tracks the complete journey of individual flitch logs from inward receipt through crosscutting, slicing, peeling, and sales. The report displays one row per log number with grouping by item name, showing movements and balances for a specified date range.
+The Log Wise Flitch Report generates the **"Inward Item & Log Wise Report"** as an Excel file, tracking the complete journey of individual flitch logs across inward, stock, flitching, peeling, sales, and rejection stages. The layout uses multi-level column headers matching the client's required format.
 
 ## API Endpoint
 
@@ -12,25 +12,25 @@ The Log Wise Flitch Report API generates a comprehensive Excel report that track
 
 ```json
 {
-  "startDate": "2025-02-28",
-  "endDate": "2025-05-29",
+  "startDate": "2025-04-01",
+  "endDate":   "2025-07-15",
   "filter": {
-    "item_name": "AMERICAN WALNUT"  // Optional
+    "item_name": "RED OAK"
   }
 }
 ```
 
 ### Parameters
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `startDate` | String | Yes | Start date in YYYY-MM-DD format |
-| `endDate` | String | Yes | End date in YYYY-MM-DD format |
-| `filter.item_name` | String | No | Filter by specific item name (uppercase) |
+| Parameter        | Type   | Required | Description                                      |
+|------------------|--------|----------|--------------------------------------------------|
+| `startDate`      | String | Yes      | Start date in YYYY-MM-DD format                  |
+| `endDate`        | String | Yes      | End date in YYYY-MM-DD format                    |
+| `filter.item_name` | String | No   | Filter by specific item name (uppercase)         |
 
 ## Response
 
-### Success Response (200 OK)
+### Success (200 OK)
 
 ```json
 {
@@ -43,292 +43,189 @@ The Log Wise Flitch Report API generates a comprehensive Excel report that track
 
 ### Error Responses
 
-#### 400 Bad Request - Missing Required Parameters
+| Code | Message |
+|------|---------|
+| 400  | Start date and end date are required |
+| 400  | Invalid date format. Use YYYY-MM-DD |
+| 400  | Start date cannot be after end date |
+| 404  | No flitch data found for the selected period |
+| 500  | Failed to generate report |
 
-```json
-{
-  "statusCode": 400,
-  "status": "error",
-  "message": "Start date and end date are required"
-}
+---
+
+## Excel Report Structure
+
+### File
+- **Name**: `LogWiseFlitch_[timestamp].xlsx`
+- **Sheet**: "Log Wise Flitch Report"
+- **Header rows**: 4 rows (Title → Spacer → Group headers → Sub-column headers)
+
+### Column Layout (19 columns)
+
+```
+Row 3 (group headers):
+  ┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+  │col 1│col 2│col 3│col 4│col 5│col 6│col 7│  Received Flitch  │   Flitch Details CMT   │ Peeling Details CMT │Round log+CrossCu│col19│
+  │     │     │     │     │     │     │     │   Detail CMT (8-9) │       (10–12)           │      (13–15)        │ (Cc+Fl+Pe)(16-18)│     │
+  └──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+Row 4 (sub-headers):
+  Item Name | Flitch Log No. | Inward Date | Status | Opening Stock CMT | Recovered From rejected | Invoice |
+  Indian | Actual |
+  Issue for Flitch | Flitch Received | Flitch Diff |
+  Issue for Peeling | Peeling Received | Peeling Diff |
+  Issue for Sq.Edge | Sales | Rejected |
+  Closing Stock CMT
 ```
 
-#### 400 Bad Request - Invalid Date Format
+### Column Definitions
 
-```json
-{
-  "statusCode": 400,
-  "status": "error",
-  "message": "Invalid date format. Use YYYY-MM-DD"
-}
-```
+| # | Key | Header | Description |
+|---|-----|--------|-------------|
+| 1  | `item_name`             | Item Name               | Species/item (vertically merged per group) |
+| 2  | `log_no`                | Flitch Log No.          | Individual flitch log number |
+| 3  | `inward_date`           | Inward Date             | Earliest invoice inward date (DD/MM/YY) |
+| 4  | `status`                | Status                  | Derived: Stock / Flitch / Peeling / Sales / Rejected |
+| 5  | `op_bal`                | Opening Stock CMT       | Opening balance (CMT) |
+| 6  | `recover_from_rejected` | Recovered From rejected | Placeholder – 0.000 (data source TBD) |
+| 7  | `invoice_ref`           | Invoice                 | Inward SR number from inventory invoice |
+| 8  | `indian_cmt`            | Indian                  | Placeholder – 0.000 (no Indian CMT in flitch schema) |
+| 9  | `actual_cmt`            | Actual                  | Total flitch received (inventory + CC) in period |
+| 10 | `issue_for_flitch`      | Issue for Flitch        | Total CMT issued from flitch stock in period |
+| 11 | `flitch_received`       | Flitch Received         | Total flitch CMT received in period (= Actual) |
+| 12 | `flitch_diff`           | Flitch Diff             | Issue for Flitch − Flitch Received |
+| 13 | `issue_for_peeling`     | Issue for Peeling       | CMT issued with `slicing_peeling` status in period |
+| 14 | `peel_received`         | Peeling Received        | Peeling output (face + core) CMT in period |
+| 15 | `peeling_diff`          | Peeling Diff            | Issue for Peeling − Peeling Received |
+| 16 | `issue_for_sqedge`      | Issue for Sq.Edge       | Placeholder – 0.000 (data source TBD) |
+| 17 | `sales`                 | Sales                   | CMT issued for order/challan in period |
+| 18 | `rejected`              | Rejected                | CMT with `is_rejected = true` in period |
+| 19 | `fl_closing`            | Closing Stock CMT       | Closing balance (CMT) |
 
-#### 400 Bad Request - Invalid Date Range
-
-```json
-{
-  "statusCode": 400,
-  "status": "error",
-  "message": "Start date cannot be after end date"
-}
-```
-
-#### 404 Not Found - No Data
-
-```json
-{
-  "statusCode": 404,
-  "status": "error",
-  "message": "No flitch data found for the selected period"
-}
-```
-
-#### 500 Internal Server Error
-
-```json
-{
-  "statusCode": 500,
-  "status": "error",
-  "message": "Failed to generate report"
-}
-```
-
-## Report Structure
-
-### Excel File Format
-
-- **File Name**: `LogWiseFlitch_[timestamp].xlsx`
-- **Sheet Name**: "Log Wise Flitch Report"
-
-### Report Columns (11 columns)
-
-| Column # | Column Name | Description | Data Type |
-|----------|-------------|-------------|-----------|
-| 1 | Item Name | Item name (grouped with vertical cell merging) | String |
-| 2 | Log No | Individual flitch log number | String |
-| 3 | Physical CMT | Physical CMT (same as FLClosing) | Decimal (3 places) |
-| 4 | CC Received | Flitch received from crosscutting operations | Decimal (3 places) |
-| 5 | Op Bal | Opening balance | Decimal (3 places) |
-| 6 | Flitch Received | Flitch received from direct inventory purchases | Decimal (3 places) |
-| 7 | FLIssued | Flitch issued for orders/challan/slicing/peeling | Decimal (3 places) |
-| 8 | FLClosing | Closing balance | Decimal (3 places) |
-| 9 | SQ Received | Slicing received (in SQM) | Decimal (3 places) |
-| 10 | UN Received | UnEdge received (placeholder - always 0.000) | Decimal (3 places) |
-| 11 | Peel Received | Peeling received (in CMT) | Decimal (3 places) |
-
-### Report Layout
-
-1. **Title Row**: "Logwise Flitch between [DD/MM/YYYY] and [DD/MM/YYYY]"
-2. **Empty Row**: Spacing
-3. **Header Row**: Column names with gray background
-4. **Data Rows**: Grouped by item name
-   - Item name cells are vertically merged across all logs for that item
-   - Logs sorted alphabetically within each item group
-5. **Total Row**: Grand totals with yellow background and bold text
+---
 
 ## Data Sources
 
-### Primary Models
+| Collection | Model | Fields used |
+|------------|-------|-------------|
+| `flitch_inventory_items_details` | `flitch_inventory_items_model` | `log_no`, `item_name`, `flitch_cmt`, `issue_status`, `is_rejected`, `invoice_id`, `updatedAt` |
+| `flitch_inventory_invoice_details` | (via `$lookup`) | `inward_date`, `inward_sr_no` |
+| `flitchings` | `flitching_done_model` | `log_no`, `item_name`, `flitch_cmt`, `issue_status`, `is_rejected`, `worker_details.flitching_date`, `deleted_at`, `updatedAt` |
+| `peeling_done_items` | `peeling_done_items_model` | `log_no`, `output_type`, `cmt`, `peeling_done_other_details_id` |
+| `peeling_done_other_details` | (via `$lookup`) | `peeling_date` |
 
-1. **Flitch Inventory Items** (`flitch_inventory_items_model`)
-   - Direct supplier purchases
-   - Collection: `flitch_inventory_items_details`
-
-2. **Flitching Done** (`flitching_done_model`)
-   - Factory production (crosscut → flitch)
-   - Collection: `flitchings`
-
-3. **Slicing Done Items** (`slicing_done_items_model`)
-   - Slicing output from flitch
-   - Collection: `slicing_done_items`
-
-4. **Peeling Done Items** (`peeling_done_items_model`)
-   - Peeling output from flitch
-   - Collection: `peeling_done_items`
+---
 
 ## Calculation Logic
 
-### Current Available CMT
-Sum of `flitch_cmt` from both inventory and factory where `issue_status` is null
+### Inward Date
+- Earliest `invoice.inward_date` from inventory invoices for that log.
+- Falls back to earliest `worker_details.flitching_date` for factory-only logs.
 
-### Flitch Received (Period)
-Sum of `flitch_cmt` from `flitch_inventory_items_model` where `invoice.inward_date` is between startDate and endDate
+### Invoice Reference
+- `inward_sr_no` from the first matched inventory invoice.
+- Empty for factory-only logs.
 
-### CC Received (Period)
-Sum of `flitch_cmt` from `flitching_done_model` where `worker_details.flitching_date` is between startDate and endDate
+### Status (derived)
+Checks the most recently updated flitch item for this log:
 
-### FLIssued (Period)
-Sum of `flitch_cmt` from both inventory and factory where:
-- `issue_status` IN ['order', 'challan', 'slicing', 'slicing_peeling']
-- `updatedAt` is between startDate and endDate
+| Condition | Status |
+|-----------|--------|
+| `is_rejected = true` on factory item | Rejected |
+| `issue_status = 'slicing_peeling'` | Peeling |
+| `issue_status = 'slicing'` | Flitch |
+| `issue_status IN ['order','challan']` | Sales |
+| Otherwise | Stock |
 
-### SQ Received (Period)
-Sum of `natural_sqm` from `slicing_done_items_model` where:
-- `log_no` matches the flitch log number
-- `slicing_details.slicing_date` is between startDate and endDate
+### Actual CMT (col 9) = Flitch Received (col 11)
+Sum of `flitch_cmt` from:
+- `flitch_inventory_items_model` where `invoice.inward_date` in period (inventory)
+- `flitching_done_model` where `worker_details.flitching_date` in period (CC/factory)
 
-### Peel Received (Period)
-Sum of `cmt` from `peeling_done_items_model` where:
-- `log_no` matches the flitch log number
-- `output_type` IN ['face', 'core']
-- `peeling_details.peeling_date` is between startDate and endDate
+### Issue for Flitch (col 10)
+Sum of `flitch_cmt` from both sources where `issue_status IN ['order','challan','slicing','slicing_peeling']` and `updatedAt` in period.
 
-### Opening Balance
+### Flitch Diff (col 12)
 ```
-Opening Balance = Current Available CMT + Total Issued - Total Received in Period
-```
-
-### FLClosing (Closing Balance)
-```
-Closing Balance = Opening Balance + Total Received - Total Issued
+Flitch Diff = Issue for Flitch − Flitch Received
 ```
 
-### Physical CMT
+### Issue for Peeling (col 13)
+Sum of `flitch_cmt` from both sources where `issue_status = 'slicing_peeling'` and `updatedAt` in period.
+
+### Peeling Received (col 14)
+Sum of `cmt` from `peeling_done_items` where `output_type IN ['face','core']` and `peeling_details.peeling_date` in period.
+
+### Peeling Diff (col 15)
 ```
-Physical CMT = FLClosing (same value)
-```
-
-## Business Logic
-
-### Date Filtering
-- **Flitch Received**: Filtered by `invoice.inward_date`
-- **CC Received**: Filtered by `worker_details.flitching_date`
-- **FLIssued**: Filtered by `updatedAt` when `issue_status` changes
-- **SQ Received**: Filtered by `slicing_date` from slicing_done_other_details
-- **Peel Received**: Filtered by `peeling_date` from peeling_done_other_details
-
-### Grouping and Sorting
-1. Data is sorted by `item_name` (alphabetically)
-2. Within each item, sorted by `log_no`
-3. Item name cells are vertically merged across all logs for that item
-4. Only grand totals are shown (no item-level subtotals)
-
-### Active Logs Filter
-Logs are included in the report if they have:
-- Opening balance > 0, OR
-- Flitch received > 0, OR
-- CC received > 0, OR
-- FL issued > 0, OR
-- FL closing > 0, OR
-- SQ received > 0, OR
-- Peel received > 0
-
-### Special Considerations
-
-1. **UN Received Column**: Currently a placeholder showing 0.000 for all rows as UnEdge operations are not implemented in the system
-
-2. **Multiple Sources**: Flitch data comes from both:
-   - Direct inventory purchases (flitch_inventory_items_model)
-   - Factory production from crosscutting (flitching_done_model)
-
-3. **Issue Status Types**: 
-   - 'order' - Issued for customer orders
-   - 'challan' - Issued via challan
-   - 'slicing' - Issued for slicing operations
-   - 'slicing_peeling' - Issued for combined slicing and peeling
-
-4. **Deleted Records**: Factory flitching done records with `deleted_at != null` are excluded from calculations
-
-## Example Usage
-
-### Request with Date Range Only
-
-```bash
-curl -X POST http://localhost:8765/api/V1/reports2/flitch/download-excel-log-wise-flitch-report \
-  -H "Content-Type: application/json" \
-  -d '{
-    "startDate": "2025-02-28",
-    "endDate": "2025-05-29"
-  }'
+Peeling Diff = Issue for Peeling − Peeling Received
 ```
 
-### Request with Item Filter
+### Sales (col 17)
+Sum of `flitch_cmt` from both sources where `issue_status IN ['order','challan']` and `updatedAt` in period.
 
-```bash
-curl -X POST http://localhost:8765/api/V1/reports2/flitch/download-excel-log-wise-flitch-report \
-  -H "Content-Type: application/json" \
-  -d '{
-    "startDate": "2025-02-28",
-    "endDate": "2025-05-29",
-    "filter": {
-      "item_name": "AMERICAN WALNUT"
-    }
-  }'
+### Rejected (col 18)
+Sum of `flitch_cmt` from both sources where `is_rejected = true` and `updatedAt` in period.
+
+### Opening Balance (col 5)
 ```
+Opening = Current Available CMT + Total Issued (period) − Total Received (period)
+```
+Where *Current Available* = CMT with `issue_status = null` across both sources (all-time).
+
+### Closing Stock CMT (col 19)
+```
+Closing = Opening + Received − Issued  (= Current Available CMT)
+```
+
+---
+
+## Placeholder Columns
+
+| Column | Reason | Future source |
+|--------|--------|---------------|
+| Recovered From rejected (col 6) | No "recovered" flag in flitch/peeling schema | TBD by client |
+| Indian (col 8) | No `indian_cmt` field in flitch inventory schema | Schema change required |
+| Issue for Sq.Edge (col 16) | No square-edge tracking in factory module | TBD by client |
+
+---
+
+## Active Log Filter
+
+A log is included in the report only if at least one of the following is non-zero:
+- Opening balance, Flitch Received, Issue for Flitch, Closing Stock CMT, Peeling Received, Sales, Rejected
+
+---
 
 ## Sample Report Output
 
 ```
-Logwise Flitch between 28/02/2025 and 29/05/2025
+Inward Item & Log Wise Report From 01/04/2025 To 15/07/2025
 
-Item Name       | Log No    | Physical CMT | CC Received | Op Bal | Flitch Received | FLIssued | FLClosing | SQ Received | UN Received | Peel Received
-----------------|-----------|--------------|-------------|--------|-----------------|----------|-----------|-------------|-------------|---------------
-AMERICAN WALNUT | F242ARF1  | 0.357       | 0.337       | 0.000  | 0.000           | 0.000    | 0.357     | 0.000       | 0.000       | 0.000
-                | F246ARF1  | 0.395       | 0.351       | 0.000  | 0.000           | 0.000    | 0.395     | 0.000       | 0.000       | 0.000
-                | F248ARF1  | 0.270       | 0.320       | 0.000  | 0.000           | 0.000    | 0.270     | 0.000       | 0.000       | 0.000
-                | ...       | ...         | ...         | ...    | ...             | ...      | ...       | ...         | ...         | ...
-----------------|-----------|--------------|-------------|--------|-----------------|----------|-----------|-------------|-------------|---------------
-Total           |           | 125.456     | 98.234      | 27.222 | 15.000          | 10.000   | 125.456   | 45.678      | 0.000       | 12.345
+                    │         │ Received Flitch   │      Flitch Details CMT      │    Peeling Details CMT     │ Round log+Cross Cu │
+Item Name│Log No.│Date│Status │ Op.Stock│RecovRej│Inv│ Indian│ Actual │IssFlitch│FlRecvd│FlDiff │IssePeel│PeelRecvd│PeelDiff│IssSqEdge│Sales│Rej│ClStock
+─────────┼───────┼────┼───────┼─────────┼────────┼───┼───────┼────────┼─────────┼───────┼───────┼────────┼─────────┼────────┼─────────┼─────┼───┼───────
+Red Oak  │ L1    │... │ Stock │  0.000  │  0.000 │ 1 │ 0.000 │ 0.357  │  0.000  │ 0.357 │-0.357 │  0.000 │  0.000  │  0.000 │  0.000  │0.000│0.0│ 0.357
+         │ L2    │... │ Peeling│ 0.000  │  0.000 │ 1 │ 0.000 │ 0.270  │  0.270  │ 0.270 │ 0.000 │  0.270 │  0.230  │  0.040 │  0.000  │0.000│0.0│ 0.000
+─────────┼───────┼────┼───────┼─────────┼────────┼───┼───────┼────────┼─────────┼───────┼───────┼────────┼─────────┼────────┼─────────┼─────┼───┼───────
+Total    │       │    │       │ 0.000   │  0.000 │   │ 0.000 │ 0.627  │  0.270  │ 0.627 │-0.357 │  0.270 │  0.230  │  0.040 │  0.000  │0.000│0.0│ 0.357
 ```
 
-## Files Modified
+---
 
-### Controller
-- **Path**: `topl_backend/controllers/reports2/Flitch/logWiseFlitch.js`
-- **Export**: `LogWiseFlitchReportExcel`
-- **Purpose**: Handles data aggregation and business logic
+## Files
 
-### Excel Config
-- **Path**: `topl_backend/config/downloadExcel/reports2/Flitch/logWiseFlitch.js`
-- **Export**: `createLogWiseFlitchReportExcel`
-- **Purpose**: Generates Excel file with proper formatting
+| File | Purpose |
+|------|---------|
+| `topl_backend/controllers/reports2/Flitch/logWiseFlitch.js` | Data aggregation and business logic |
+| `topl_backend/config/downloadExcel/reports2/Flitch/logWiseFlitch.js` | Excel generation (19-col multi-level headers) |
+| `topl_backend/routes/report/reports2/Flitch/flitch.routes.js` | Route: `POST /download-excel-log-wise-flitch-report` |
 
-### Routes
-- **Path**: `topl_backend/routes/report/reports2/Flitch/flitch.routes.js`
-- **Route**: `POST /download-excel-log-wise-flitch-report`
-- **Connected via**: `topl_backend/routes/report/reports2.routes.js`
-
-## Performance Considerations
-
-### Database Indexes
-The following indexes should exist for optimal performance:
-- `item_name` (on both flitch_inventory_items and flitching_done)
-- `log_no` (on all related collections)
-- `issue_status` (on both flitch_inventory_items and flitching_done)
-- `invoice.inward_date` (on flitch_inventory_invoice_details)
-- `worker_details.flitching_date` (on flitching_done)
-- `slicing_details.slicing_date` (on slicing_done_other_details)
-- `peeling_details.peeling_date` (on peeling_done_other_details)
-
-### MongoDB Aggregation
-- Uses aggregation pipelines for efficient data retrieval
-- Lookups are performed to join related collections
-- Grouping operations minimize data transfer
-
-## Testing Checklist
-
-- [x] Verify correct log grouping by item name
-- [x] Validate all calculations match expected business logic
-- [x] Test date range filtering for all data sources
-- [x] Confirm totals row calculations are accurate
-- [x] Test with no data (returns 404 with appropriate message)
-- [x] Test with single item vs multiple items
-- [x] Verify Excel formatting (merged cells, decimal places, borders)
-- [x] Test optional `filter.item_name` parameter
-- [x] Verify no linter errors in all files
-
-## Related APIs
-
-- [Flitch Daily Report API](../Daily_Flitch/FLITCH_DAILY_REPORT_API.md)
-- [Item Wise Flitch Report API](../Item_wise_flitch/ITEM_WISE_FLITCH_REPORT_API.md)
-- **Log Item Wise Inward Report**: `/download-excel-log-item-wise-inward-daily-report`
+---
 
 ## Version History
 
-| Version | Date | Author | Changes |
-|---------|------|--------|---------|
-| 1.0.0 | 2025-02-03 | System | Initial implementation |
-
-## Support
-
-For issues or questions about this API, please contact the development team.
+| Version | Date       | Changes |
+|---------|------------|---------|
+| 1.0.0   | 2025-02-03 | Initial implementation (11 flat columns) |
+| 2.0.0   | 2026-03-06 | Restructured to 19-column multi-level layout matching client image. Added Inward Date, Status, Invoice, Indian/Actual, Issue/Diff for Flitch and Peeling, Sales, Rejected columns. |
