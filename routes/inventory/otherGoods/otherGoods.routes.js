@@ -2,6 +2,7 @@ import express from 'express';
 import {
   add_otherGoods_inventory,
   add_single_otherGoods_item_inventory,
+  consume_other_goods_item,
   edit_otherGoods_invoice_inventory,
   edit_otherGoods_item_inventory,
   edit_othergoods_item_invoice_inventory,
@@ -116,5 +117,12 @@ router.post(
   AuthMiddleware,
   RolesPermissions('other_goods_inventory', 'view'),
   fetch_other_goods_history
+);
+
+router.post(
+  '/consume',
+  AuthMiddleware,
+  RolesPermissions('other_goods_inventory', 'edit'),
+  consume_other_goods_item
 );
 export default router;

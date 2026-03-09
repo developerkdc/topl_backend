@@ -1,5 +1,6 @@
 import { createOtherGoodsConsumptionReportExcel } from '../../../config/downloadExcel/reports2/Other_Goods/otherGoodsConsumption.js';
 import other_goods_history_model from '../../../database/schema/inventory/otherGoods/otherGoods.history.schema.js';
+import { issues_for_status } from '../../../database/Utils/constants/constants.js';
 import catchAsync from '../../../utils/errors/catchAsync.js';
 
 export const otherGoodsConsumptionReportExcel = catchAsync(
@@ -24,7 +25,23 @@ export const otherGoodsConsumptionReportExcel = catchAsync(
     end.setHours(23, 59, 59, 999);
 
     const consumptionData = await other_goods_history_model.aggregate([
-      // 1. Join with item details
+      // 1. Only consume (direct consumption) records
+      {
+        $match: {
+          issue_status: issues_for_status.consume,
+        },
+      },
+      // 2. Only records where consumption occurred in the selected date range
+      {
+        $match: {
+          issue_date: {
+            $exists: true,
+            $gte: start,
+            $lte: end,
+          },
+        },
+      },
+      // 3. Join with item details
       {
         $lookup: {
           from: 'othergoods_inventory_items_details',
@@ -39,7 +56,7 @@ export const otherGoodsConsumptionReportExcel = catchAsync(
           preserveNullAndEmptyArrays: true,
         },
       },
-      // 2. Join with invoice details to get inward_date
+      // 4. Join with invoice details (for item context; no date filter)
       {
         $lookup: {
           from: 'othergoods_inventory_invoice_details',
@@ -54,16 +71,7 @@ export const otherGoodsConsumptionReportExcel = catchAsync(
           preserveNullAndEmptyArrays: true,
         },
       },
-      // 3. Match based on inward_date from invoice
-      {
-        $match: {
-          'invoice_details.inward_date': {
-            $gte: start,
-            $lte: end,
-          },
-        },
-      },
-      // 4. Join with item_names to get category for units
+      // 5. Join with item_names to get category for units
       {
         $lookup: {
           from: 'item_names',
@@ -78,13 +86,13 @@ export const otherGoodsConsumptionReportExcel = catchAsync(
           preserveNullAndEmptyArrays: true,
         },
       },
-      // 5. Join with item_categories to get calculate_unit
+      // 6. Join with item_categories to get calculate_unit
       {
         $addFields: {
           first_category_id: { $arrayElemAt: ['$item_name_info.category', 0] },
         },
       },
-      // 6. Join with item_categories to get calculate_unit
+      // 7. Lookup item_categories
       {
         $lookup: {
           from: 'item_categories',
@@ -99,7 +107,7 @@ export const otherGoodsConsumptionReportExcel = catchAsync(
           preserveNullAndEmptyArrays: true,
         },
       },
-      // 6. Map fields to what the Excel generator expects
+      // 8. Map fields to what the Excel generator expects
       {
         $addFields: {
           department_name: '$item_details.department_name',
