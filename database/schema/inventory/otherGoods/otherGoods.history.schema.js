@@ -15,11 +15,19 @@ const other_goods_history_schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       // required: [true, 'Issued for order ID is required.'],
     },
+    department_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'department',
+    },
+    machine_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'machine',
+    },
     issue_status: {
       type: String,
       enum: {
-        values: [issues_for_status?.order, issues_for_status?.challan],
-        message: `Invalid Issue status -> {{VALUE}} it must be one of the ${issues_for_status?.order}, ${issues_for_status?.challan}`,
+        values: [issues_for_status?.order, issues_for_status?.challan, issues_for_status?.consume],
+        message: `Invalid Issue status -> {{VALUE}} it must be one of the ${issues_for_status?.order}, ${issues_for_status?.challan}, ${issues_for_status?.consume}`,
       },
       default: issues_for_status?.order,
     },
@@ -30,6 +38,9 @@ const other_goods_history_schema = new mongoose.Schema(
     issued_amount: {
       type: Number,
       required: [true, 'Issued Amount is required.'],
+    },
+    issue_date: {
+      type: Date,
     },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,

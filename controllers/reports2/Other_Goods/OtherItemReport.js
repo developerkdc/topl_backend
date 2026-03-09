@@ -63,7 +63,7 @@ export const OtherItemReportExcel = catchAsync(async (req, res, next) => {
             { $unwind: '$item' },
             {
                 $match: {
-                    issue_status: 'order',
+                    issue_status: { $in: ['order', 'consume'] },
                     createdAt: { $gte: start, $lte: end }
                 }
             },
@@ -121,7 +121,7 @@ export const OtherItemReportExcel = catchAsync(async (req, res, next) => {
             { $unwind: '$item' },
             {
                 $match: {
-                    issue_status: 'order',
+                    issue_status: { $in: ['order', 'consume'] },
                     createdAt: { $lt: start }
                 }
             },
