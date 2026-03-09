@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Other Goods Consumption Report API generates an Excel report listing item consumption details for a specified date range. It fetches issued quantity and issued amount, groupings items by department.
+The Other Goods Consumption Report API generates an Excel report listing **direct consumption** (store consume) details for a specified date range. It includes only history records where `issue_status` is `'consume'` (from the Consume modal), not order issues or challan issues. It fetches issued quantity and issued amount, grouping items by department.
 
 ## Endpoint
 
@@ -126,15 +126,16 @@ POST /report/download-other-goods-consumption-report
 
 ## Data Calculation Logic
 
-- **Date Filtering:** Fetched within `[startDate, endDate]` using `invoice_details.inward_date`.
-- **Joins:** History data is joined with item details, invoice details (for date), item names, and categories (for unit).
+- **Consume-only:** Only records with `issue_status: 'consume'` are included (direct consumption from the Consume modal).
+- **Date Filtering:** Records are filtered by `issue_date` (when consumption occurred) within `[startDate, endDate]`. Records without `issue_date` are excluded.
+- **Joins:** History data is joined with item details, invoice details (for item context; no date filter), item names, and categories (for unit).
 - **Sorting:** Sorted by `department_name`, `machine_name`, and `item_name`.
 
 ## Database Collections Used
 
-1. **other_goods_history** – Consumption/Issue data (`issued_quantity`, `issued_amount`)
+1. **other_goods_history_details** – Filtered by `issue_status: 'consume'` and `issue_date` in range; provides `issued_quantity`, `issued_amount`, `issue_date`
 2. **othergoods_inventory_items_details** – Item linking (`department_name`, `machine_name`, `item_name`)
-3. **othergoods_inventory_invoice_details** – Invoice mapping for `inward_date`
+3. **othergoods_inventory_invoice_details** – Invoice mapping (item context; not used for date filtering)
 4. **item_names** – Used to lookup correct category
 5. **item_categories** – Used for `calculate_unit`
 
@@ -175,6 +176,7 @@ const downloadUrl = response.data.result;
 
 ## Notes
 
-- Only records with valid issuance history are included.
+- Only **consumed** data is included: history records with `issue_status: 'consume'` and `issue_date` within the selected range. Order and challan issues are excluded.
+- Records without `issue_date` are excluded from the report.
 - Excel files are timestamped to avoid overwrites.
 - Date format: YYYY-MM-DD.
