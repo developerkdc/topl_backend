@@ -21,7 +21,10 @@ export const OtherItemReportExcel = catchAsync(async (req, res, next) => {
     }
 
     const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0);
+
     const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
 
     if (isNaN(start.getTime()) || isNaN(end.getTime())) {
         return next(new ApiError('Invalid date format', StatusCodes.BAD_REQUEST));
@@ -173,9 +176,10 @@ export const OtherItemReportExcel = catchAsync(async (req, res, next) => {
             };
         });
 
-        // Filter out items with no activity in the period and no opening stock
+        // Filter out items with no activity (movement) in the selected period.
+        // An item must have at least one purchase, issue, or sale to appear in the report.
+        // Items with only opening stock but no movement are excluded.
         const filteredReportData = reportData.filter(item =>
-            item.opening_qty > 0 ||
             item.purchase_qty > 0 ||
             item.issue_qty > 0 ||
             item.sales_qty > 0
