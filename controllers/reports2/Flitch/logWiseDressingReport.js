@@ -70,6 +70,7 @@ export const LogWiseDressingReportExcel = catchAsync(async (req, res, next) => {
           fallback_dressing_date: { $max: '$details.dressing_date' },
         },
       },
+      { $match: { dressing_date_in_period: { $ne: null } } },
       {
         $project: {
           log_no_code: '$_id',

@@ -1,5 +1,6 @@
 import logRoutes from './reports2/Log/log.routes.js';
 import crosscutRoutes from './reports2/Crosscut/crosscut.routes.js';
+import veneerRoutes from './reports2/Veneer/veneer.routes.js';
 import flitchRoutes from './reports2/Flitch/flitch.routes.js';
 import slicingRoutes from './reports2/Slicing/slicing.route.js';
 import dressingRoutes from './reports2/Dressing/dressing.routes.js';
@@ -28,6 +29,9 @@ router.use(flitchRoutes);
 
 // Crosscut routes (Crosscut Daily Report)
 router.use(crosscutRoutes);
+
+// Veneer routes (Veneer Inward Report)
+router.use(veneerRoutes);
 
 // Tapping/Clipping routes (Clipping Daily Report)
 router.use(tappingORClippingRoutes);
