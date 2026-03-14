@@ -193,13 +193,13 @@ export const fleeceStockReportCsv = catchAsync(async (req, res, next) => {
       })
     );
 
+    // Only include rows that had at least one movement in the period (receive, consume, sales, or issue for pressing).
     const activeStockData = stockData.filter(
       (item) =>
-        item.opening_rolls > 0 ||
         item.receive_rolls > 0 ||
         item.consume_rolls > 0 ||
         item.sales_rolls > 0 ||
-        item.closing_rolls > 0
+        item.issue_pressing_rolls > 0
     );
 
     if (activeStockData.length === 0) {
@@ -406,13 +406,13 @@ export const fleeceItemWiseStockReportCsv = catchAsync(async (req, res, next) =>
       })
     );
 
+    // Only include rows that had at least one movement in the period (receive, consume, sales, or issue for pressing).
     const activeStockData = stockData.filter(
       (row) =>
-        row.opening_rolls > 0 ||
         row.receive_rolls > 0 ||
         row.consume_rolls > 0 ||
         row.sales_rolls > 0 ||
-        row.closing_rolls > 0
+        row.issue_pressing_rolls > 0
     );
 
     if (activeStockData.length === 0) {
@@ -604,14 +604,14 @@ export const fleeceStockReportByRollCsv = catchAsync(async (req, res, next) => {
       })
     );
 
+    // Only include rows that had at least one movement in the period (receive, consume, sales, or issue for pressing).
     const activeStockData = stockData
       .filter(
         (item) =>
-          item.opening_rolls > 0 ||
           item.receive_rolls > 0 ||
           item.consume_rolls > 0 ||
           item.sales_rolls > 0 ||
-          item.closing_rolls > 0
+          item.issue_pressing_rolls > 0
       )
       .sort((a, b) => {
         const subCmp = (a.fleece_sub_type || '').localeCompare(b.fleece_sub_type || '');

@@ -178,7 +178,7 @@ All values are computed in **rolls** and **square meters**.
 - **Closing:**  
   `Closing = Opening + Receive - Consume - Sales` (in both rolls and sq m).
 
-Only rows with at least one non-zero value among opening, receive, consume, sales, or closing are included. All stock values are output as non-negative (`Math.max(0, value)`).
+Only rows that had **at least one movement in the period** (receive, consume, sales, or issue for pressing) are included. If there was no such activity in the date range, no rows are shown and the API returns 404. All stock values are output as non-negative (`Math.max(0, value)`).
 
 ## Database Collections Used
 
@@ -212,7 +212,7 @@ window.open(downloadUrl, '_blank');
 
 ## Notes
 
-- Report includes only rows with activity in the period (non-zero opening, receive, consume, sales, or closing).
+- Report includes only rows that had at least one movement in the period (receive, consume, sales, or issue for pressing). If the date range has no such activity, the report returns 404 with "No stock data found for the selected period".
 - Fleece uses rolls (not sheets); all quantity columns use rolls.
 - Excel files are timestamped to avoid overwriting.
 - Files are stored under `public/upload/reports/reports2/Fleece/`.

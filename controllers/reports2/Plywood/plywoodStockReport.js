@@ -215,13 +215,14 @@ export const plywoodStockReportCsv = catchAsync(async (req, res, next) => {
       })
     );
 
+    // Only include rows that had at least one movement in the period (receive, consume, sales, ply resizing, or pressing).
     const activeStockData = stockData.filter(
       (item) =>
-        item.opening_sheets > 0 ||
         item.receive_sheets > 0 ||
         item.consume_sheets > 0 ||
         item.sales_sheets > 0 ||
-        item.closing_sheets > 0
+        item.issue_for_ply_resizing_sheets > 0 ||
+        item.issue_for_pressing_sheets > 0
     );
 
     if (activeStockData.length === 0) {
@@ -450,13 +451,14 @@ export const plywoodItemWiseStockReportCsv = catchAsync(async (req, res, next) =
       })
     );
 
+    // Only include rows that had at least one movement in the period (receive, consume, sales, ply resizing, or pressing).
     const activeStockData = stockData.filter(
       (row) =>
-        row.opening_sheets > 0 ||
         row.receive_sheets > 0 ||
         row.consume_sheets > 0 ||
         row.sales_sheets > 0 ||
-        row.closing_sheets > 0
+        row.issue_for_ply_resizing_sheets > 0 ||
+        row.issue_for_pressing_sheets > 0
     );
 
     if (activeStockData.length === 0) {
@@ -668,14 +670,15 @@ export const plywoodStockReportByPelletCsv = catchAsync(async (req, res, next) =
       })
     );
 
+    // Only include rows that had at least one movement in the period (receive, consume, sales, ply resizing, or pressing).
     const activeStockData = stockData
       .filter(
         (item) =>
-          item.opening_sheets > 0 ||
           item.receive_sheets > 0 ||
           item.consume_sheets > 0 ||
           item.sales_sheets > 0 ||
-          item.closing_sheets > 0
+          item.issue_for_ply_resizing_sheets > 0 ||
+          item.issue_for_pressing_sheets > 0
       )
       .sort((a, b) => {
         const subCmp = (a.plywood_sub_type || '').localeCompare(b.plywood_sub_type || '');

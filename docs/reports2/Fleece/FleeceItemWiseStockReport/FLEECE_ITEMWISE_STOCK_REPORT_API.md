@@ -86,7 +86,7 @@ Same as Fleece Stock Report (400, 404, 500).
 
 ## Stock Calculation Logic
 
-Same as the Fleece Stock Report: all values in **rolls** and **square meters**. Opening = current + consume + sales - receive; Closing = opening + receive - consume - sales. Receives from invoice inward date in period; consumption from `issue_status` in `['order', 'pressing']`; sales from `issue_status = 'challan'`; issue for pressing from `issue_status = 'pressing'`. Only rows with activity are included; values are non-negative.
+Same as the Fleece Stock Report: all values in **rolls** and **square meters**. Opening = current + consume + sales - receive; Closing = opening + receive - consume - sales. Receives from invoice inward date in period; consumption from `issue_status` in `['order', 'pressing']`; sales from `issue_status = 'challan'`; issue for pressing from `issue_status = 'pressing'`. Only rows that had at least one movement in the period (receive, consume, sales, or issue for pressing) are included; if there was no such activity, the API returns 404. Values are non-negative.
 
 ## Database Collections Used
 
@@ -97,6 +97,6 @@ Same as the Fleece Stock Report: all values in **rolls** and **square meters**. 
 
 ## Notes
 
-- Report includes only rows with activity in the period.
+- Report includes only rows that had at least one movement in the period (receive, consume, sales, or issue for pressing). If the date range has no such activity, the report returns 404 with "No stock data found for the selected period".
 - Excel files are timestamped to avoid overwriting.
 - Files are stored under `public/upload/reports/reports2/Fleece/`.
