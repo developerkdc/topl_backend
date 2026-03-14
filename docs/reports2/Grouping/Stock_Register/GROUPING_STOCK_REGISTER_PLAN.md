@@ -1,25 +1,25 @@
 # Grouping Stock Register API — Implementation Plan
 
-**Overview:** Add a Grouping Stock Register API under reports2 > Grouping > Stock_Register that produces a date-wise Excel stock register in sheets (no_of_sheets). One row per unique (item_sub_category_name, item_name, grouping_done_date, log_no_code, thickness). Columns: Item Group Name, Sales Item Name, Grouping Date, Log X, Thickness, Opening Balance, Grouping Done, Issue for tapping, Issue for Challan, Issue Sales, Damage, Closing Balance. Total row at bottom with yellow fill.
+**Overview:** Add a Grouping Stock Register API under reports2 > Grouping > Stock_Register that produces a date-wise Excel stock register in **sheets and SQM**. One row per unique (item_sub_category_name, item_name, grouping_done_date, log_no_code, thickness). Each quantity is shown in two columns: **(Sheets)** and **(SQM)** (Option A pair layout). Total row at bottom.
 
 ---
 
 ## Report layout
 
 - **Title:** `Grouping Item Stock Register Date wise between DD/MM/YYYY and DD/MM/YYYY`
-- **12 columns (single header row):** Item Group Name | Sales Item Name | Grouping Date | Log X | Thickness | Opening Balance | Grouping Done | Issue for tapping | Issue for Challan | Issue Sales | Damage | Closing Balance
-- **Header styling:** Gray fill, bold.
-- **Total row:** Yellow fill, bold; sums all numeric columns.
+- **19 columns, two-level header:** Row 1 (super-header): Item Group Name | Sales Item Name | Grouping Date | Log X | Thickness | Opening Balance (merged 2 cols) | Grouping Done (merged) | Issue for tapping (merged) | Issue for Challan (merged) | Issue Sales (merged) | Damage (merged) | Closing Balance (merged). Row 2 (sub-header): cols 1–5 blank; cols 6–19 = "Sheets" | "SQM" repeated for each quantity.
+- **Header styling:** Gray fill, bold; both header rows.
+- **Total row:** Gray fill, bold; sums all numeric columns (cols 6–19).
 
 ## Data source (schema)
 
 - **grouping_done_details** (`grouping_done_date`, `_id`)
   — Provides the grouping date. Filtered to [startDate, endDate].
 
-- **grouping_done_items_details** (`grouping_done_other_details_id`, `item_sub_category_name`, `item_name`, `log_no_code`, `thickness`, `no_of_sheets`, `available_details.no_of_sheets`, `is_damaged`, `updatedAt`)
+- **grouping_done_items_details** (`grouping_done_other_details_id`, `item_sub_category_name`, `item_name`, `log_no_code`, `thickness`, `no_of_sheets`, `sqm`, `available_details.no_of_sheets`, `available_details.sqm`, `is_damaged`, `updatedAt`)
   — Primary item data. Joined via `grouping_done_other_details_id` → `grouping_done_details._id`.
 
-- **grouping_done_history** (`grouping_done_item_id`, `issue_status`, `no_of_sheets`)
+- **grouping_done_history** (`grouping_done_item_id`, `issue_status`, `no_of_sheets`, `sqm`)
   — Issue records. Joined via `grouping_done_item_id` → `grouping_done_items_details._id`.
   - `issue_status = 'tapping'` → Issue for tapping
   - `issue_status = 'challan'` → Issue for Challan
@@ -51,18 +51,19 @@
   2. `$lookup`: join `grouping_done_items_details` via `_id` → `grouping_done_other_details_id`
   3. `$unwind`: items
   4. `$lookup`: join `grouping_done_history` via `items._id` → `grouping_done_item_id`
-  5. `$addFields`: compute `item_issue_tapping`, `item_issue_challan`, `item_issue_sales` using `$filter` + `$sum` over history array.
+  5. `$addFields`: compute `item_issue_tapping`, `item_issue_challan`, `item_issue_sales` (sheets) and `item_issue_tapping_sqm`, `item_issue_challan_sqm`, `item_issue_sales_sqm` (SQM) using `$filter` + `$sum` over history array.
   6. `$group` by `(items.item_sub_category_name, items.item_name, grouping_done_date, items.log_no_code, items.thickness)`:
-     - `grouping_done`: `$sum items.no_of_sheets`
-     - `current_available`: `$sum items.available_details.no_of_sheets`
-     - `damage`: `$sum` of `items.no_of_sheets` where `items.is_damaged = true`
-     - `issue_tapping`, `issue_challan`, `issue_sales`: sums of addField values
+     - Sheets: `grouping_done`, `current_available`, `damage`, `issue_tapping`, `issue_challan`, `issue_sales`
+     - SQM: `grouping_done_sqm`, `current_available_sqm`, `damage_sqm`, `issue_tapping_sqm`, `issue_challan_sqm`, `issue_sales_sqm`
   7. `$sort`: item_sub_category_name, item_name, grouping_done_date, log_no_code
-- Compute balances in JavaScript after aggregation:
+- Compute balances in JavaScript after aggregation (sheets and SQM):
   ```
   issued_in_period = issue_tapping + issue_challan + issue_sales
+  issued_in_period_sqm = issue_tapping_sqm + issue_challan_sqm + issue_sales_sqm
   opening_balance  = current_available + issued_in_period − grouping_done
+  opening_balance_sqm = current_available_sqm + issued_in_period_sqm − grouping_done_sqm
   closing_balance  = opening_balance + grouping_done − issue_tapping − issue_challan − issue_sales − damage
+  closing_balance_sqm = opening_balance_sqm + grouping_done_sqm − issue_tapping_sqm − issue_challan_sqm − issue_sales_sqm − damage_sqm
   ```
 - If no rows: 404. Otherwise call Excel generator; return 200 with link.
 
@@ -70,11 +71,11 @@
 
 - Export `GenerateGroupingStockRegisterExcel(rows, startDate, endDate)`.
 - Use ExcelJS.
-- **Title row:** merged across 12 cols; `Grouping Item Stock Register Date wise between <start> and <end>`.
+- **Title row:** merged across 19 cols; `Grouping Item Stock Register Date wise between <start> and <end>`.
 - **Blank row** after title.
-- **Header row:** 12 columns; gray fill (`FFD3D3D3`); bold; centered; thin border.
-- **Data rows:** one per entry in `rows`; Grouping Date formatted DD/MM/YYYY; numeric cols (5–12) formatted `0.00`; all cells bordered.
-- **Total row:** yellow fill (`FFFFD700`); bold; sums cols 6–12; cols 2–5 blank; all cells bordered.
+- **Two-level header:** (1) Super-header row: 5 key labels + 7 quantity names, each quantity name merged over 2 columns (cols 6–7, 8–9, …, 18–19); (2) Sub-header row: cols 1–5 blank, then "Sheets" | "SQM" under each quantity. Gray fill (`FFD3D3D3`); bold; centered; thin border.
+- **Data rows:** one per entry in `rows`; Grouping Date formatted DD/MM/YYYY; numeric cols (5–19) formatted `0.00`; all cells bordered.
+- **Total row:** gray fill, bold; sums cols 6–19 (Sheets + SQM); cols 2–5 blank; all cells bordered.
 - Output to `public/reports/Grouping/grouping_stock_register_{timestamp}.xlsx`.
 
 ### 3. Routes — `routes/report/reports2/Grouping/grouping.routes.js` (existing file)
@@ -128,7 +129,7 @@ sequenceDiagram
 
 ## Notes
 
-- **Units:** All quantities are in **sheets (no_of_sheets)**, not SQM. This differs from the Grouping_Splicing stock register which uses SQM.
+- **Units:** Quantities are shown in **both sheets (no_of_sheets) and SQM**, in paired columns (Sheets then SQM for each quantity). Headers use "(Sheets)" and "(SQM)" suffixes.
 - **Row granularity:** Per (item_sub_category_name, item_name, grouping_done_date, log_no_code, thickness) — "date wise" detail vs. the Grouping_Splicing register which aggregates per (item_sub_category_name, item_name) only.
 - **No filter option:** Unlike the Grouping_Splicing stock register, no optional `filter.item_name` or `filter.item_group_name` is implemented (can be added in future if required).
 - **History matching:** History records are matched to items via `grouping_done_item_id` (= `grouping_done_items_details._id`). This is a direct item-level link, more precise than the name-based match used in the Grouping_Splicing stock register.

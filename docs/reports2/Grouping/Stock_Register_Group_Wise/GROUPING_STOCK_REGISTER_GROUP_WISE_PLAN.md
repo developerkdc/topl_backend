@@ -2,14 +2,14 @@
 
 ## Overview
 
-Add a new **Grouping Stock Register Group Wise** API to the existing `Grouping` folder. This is the fourth and most consolidated Grouping stock register, grouping by **(item_sub_category_name, thickness)** only — 2 group keys, 9 output columns.
+Add a new **Grouping Stock Register Group Wise** API to the existing `Grouping` folder. This is the fourth and most consolidated Grouping stock register, grouping by **(item_sub_category_name, thickness)** only — 2 group keys, 16 output columns (each quantity in Sheets and SQM). A **Total** row appears at the bottom.
 
 ---
 
 ## Objectives
 
-1. Create the controller with a 2-key MongoDB aggregation pipeline.
-2. Create the Excel generator for the 9-column layout.
+1. Create the controller with a 2-key MongoDB aggregation pipeline (sheets + SQM).
+2. Create the Excel generator for the 16-column layout with two-level (Sheets/SQM) header.
 3. Register the route in the existing `grouping.routes.js`.
 4. Create API reference and plan documentation.
 
@@ -47,23 +47,13 @@ Request body:
 
 **Title:** `Grouping Item Stock Register between DD/MM/YYYY and DD/MM/YYYY`
 
-**9 Columns:**
+**16 columns, two-level header:** Row 1 (super-header): Item Group Name | Thickness | Opening Balance (merged 2 cols) | Grouping Done (merged) | Issue for tapping (merged) | Issue for Challan (merged) | Issue Sales (merged) | Damage (merged) | Closing Balance (merged). Row 2 (sub-header): cols 1–2 blank; cols 3–16 = "Sheets" and "SQM" repeated for each quantity.
 
-| # | Column Name        | Notes                                  |
-|---|--------------------|----------------------------------------|
-| 1 | Item Group Name    | `item_sub_category_name`               |
-| 2 | Thickness          | numeric `0.00`                         |
-| 3 | Opening Balance    | computed, `0.00`                       |
-| 4 | Grouping Done      | sum of `no_of_sheets`, `0.00`          |
-| 5 | Issue for tapping  | from history, `0.00`                   |
-| 6 | Issue for Challan  | from history, `0.00`                   |
-| 7 | Issue Sales        | from history, `0.00`                   |
-| 8 | Damage             | `is_damaged` items, `0.00`             |
-| 9 | Closing Balance    | computed, `0.00`                       |
+**Column mapping:** 1–2 = Item Group Name, Thickness; 3–4 = Opening Balance (Sheets, SQM); 5–6 = Grouping Done (Sheets, SQM); 7–8 = Issue for tapping (Sheets, SQM); 9–10 = Issue for Challan (Sheets, SQM); 11–12 = Issue Sales (Sheets, SQM); 13–14 = Damage (Sheets, SQM); 15–16 = Closing Balance (Sheets, SQM).
 
 **vs. thickness-wise:** "Sales Item Name" column removed.
 
-**Total row** — yellow fill (`FFFFD700`), bold.
+**Total row** — gray fill, bold.
 
 ---
 
@@ -79,10 +69,10 @@ Join `grouping_done_items_details` via `grouping_done_other_details_id`.
 Join `grouping_done_history` via `grouping_done_item_id`.
 
 ### Stage 4 — `$addFields`
-Compute per-item issue totals using `$filter` + `$sum`:
-- `item_issue_tapping` — history records with `issue_status = 'tapping'`
-- `item_issue_challan` — history records with `issue_status = 'challan'`
-- `item_issue_sales`   — history records with `issue_status = 'order'`
+Compute per-item issue totals (sheets + SQM) using `$filter` + `$sum`:
+- `item_issue_tapping`, `item_issue_tapping_sqm` — history with `issue_status = 'tapping'` (no_of_sheets, sqm)
+- `item_issue_challan`, `item_issue_challan_sqm` — history with `issue_status = 'challan'`
+- `item_issue_sales`, `item_issue_sales_sqm`   — history with `issue_status = 'order'`
 
 ### Stage 5 — `$group` (2-key)
 ```javascript
@@ -91,13 +81,13 @@ _id: {
   thickness: '$items.thickness',
 }
 ```
-Accumulate:
-- `grouping_done`    — `$sum: '$items.no_of_sheets'`
-- `current_available` — `$sum: '$items.available_details.no_of_sheets'`
-- `damage`          — `$sum: $cond(is_damaged, no_of_sheets, 0)`
-- `issue_tapping`   — `$sum: '$item_issue_tapping'`
-- `issue_challan`   — `$sum: '$item_issue_challan'`
-- `issue_sales`     — `$sum: '$item_issue_sales'`
+Accumulate (sheets + SQM):
+- `grouping_done`, `grouping_done_sqm` — `$sum: '$items.no_of_sheets'`, `$sum: '$items.sqm'`
+- `current_available`, `current_available_sqm` — `$sum: '$items.available_details.no_of_sheets'`, `$sum: '$items.available_details.sqm'`
+- `damage`, `damage_sqm` — `$cond(is_damaged, no_of_sheets, 0)`, `$cond(is_damaged, sqm, 0)`
+- `issue_tapping`, `issue_tapping_sqm` — `$sum: '$item_issue_tapping'`, `$sum: '$item_issue_tapping_sqm'`
+- `issue_challan`, `issue_challan_sqm` — `$sum: '$item_issue_challan'`, `$sum: '$item_issue_challan_sqm'`
+- `issue_sales`, `issue_sales_sqm` — `$sum: '$item_issue_sales'`, `$sum: '$item_issue_sales_sqm'`
 
 ### Stage 6 — `$sort`
 ```javascript
@@ -108,10 +98,18 @@ Accumulate:
 
 ## Balance Formulas (JavaScript post-aggregation)
 
+**Sheets:**
 ```
 issued_in_period = issue_tapping + issue_challan + issue_sales
 opening_balance  = current_available + issued_in_period − grouping_done
 closing_balance  = opening_balance + grouping_done − issue_tapping − issue_challan − issue_sales − damage
+```
+
+**SQM:**
+```
+issued_in_period_sqm = issue_tapping_sqm + issue_challan_sqm + issue_sales_sqm
+opening_balance_sqm  = current_available_sqm + issued_in_period_sqm − grouping_done_sqm
+closing_balance_sqm  = opening_balance_sqm + grouping_done_sqm − issue_tapping_sqm − issue_challan_sqm − issue_sales_sqm − damage_sqm
 ```
 
 Balances may be negative.
@@ -131,16 +129,16 @@ Balances may be negative.
 
 | Register         | Cols | Group Keys                            |
 |------------------|------|---------------------------------------|
-| Date-wise        | 12   | group, name, date, log, thickness     |
+| Date-wise        | 19   | group, name, date, log, thickness     |
 | Thickness-wise   | 10   | group, name, thickness                |
-| **Group-wise**   | **9**| **group, thickness**                  |
+| **Group-wise**   | **16**| **group, thickness**                  |
 
 ---
 
 ## Checklist
 
 - [x] Controller created with 2-key `$group` aggregation
-- [x] Excel generator created with 9-column layout and yellow Total row
+- [x] Excel generator created with 16-column layout, two-level (Sheets/SQM) header, and gray Total row
 - [x] Route added to `grouping.routes.js`
 - [x] API documentation created
 - [x] Plan documentation created

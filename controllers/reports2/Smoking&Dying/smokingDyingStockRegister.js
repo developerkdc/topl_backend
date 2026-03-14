@@ -1,4 +1,4 @@
-import { GenerateSmokingDyingStockRegisterExcel } from '../../../config/downloadExcel/reports2/Smoking&Dying/smokingDyingStockRegister.js';
+  import { GenerateSmokingDyingStockRegisterExcel } from '../../../config/downloadExcel/reports2/Smoking&Dying/smokingDyingStockRegister.js';
 import { process_done_details_model } from '../../../database/schema/factory/smoking_dying/smoking_dying_done.schema.js';
 import catchAsync from '../../../utils/errors/catchAsync.js';
 

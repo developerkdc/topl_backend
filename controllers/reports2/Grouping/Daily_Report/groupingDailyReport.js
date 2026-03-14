@@ -117,7 +117,7 @@ export const GroupingDailyReportExcel = catchAsync(
           series_name: '$items.series_name',
           remark: '$items.remark',
           damaged_sheets: {
-            $cond: [{ $eq: ['$items.is_damaged', true] }, 1, 0],
+            $cond: [{ $eq: ['$items.is_damaged', true] }, '$items.no_of_sheets', 0],
           },
           issue_sheets: '$items.available_details.no_of_sheets',
           issue_sqm: '$items.available_details.sqm',

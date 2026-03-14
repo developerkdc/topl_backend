@@ -6,17 +6,17 @@ import { GenerateGroupingStockRegisterExcel } from '../../../../config/downloadE
 
 /**
  * Grouping Stock Register Report – Excel download.
- * Generates a date-wise stock register in sheets (no_of_sheets) showing:
+ * Generates a date-wise stock register in sheets and SQM showing:
  *   Item Group Name, Sales Item Name, Grouping Date, Log X, Thickness,
- *   Opening Balance, Grouping Done, Issue for tapping, Issue for Challan,
- *   Issue Sales, Damage, Closing Balance.
+ *   then for each quantity (Opening Balance, Grouping Done, Issue for tapping,
+ *   Issue for Challan, Issue Sales, Damage, Closing Balance): (Sheets) and (SQM) columns.
  *
  * One row per unique (item_sub_category_name, item_name, grouping_done_date, log_no_code, thickness).
  * Balances may be negative.
  *
  * Collections used:
  *   grouping_done_details        – grouping session date
- *   grouping_done_items_details  – items, available sheets, damage
+ *   grouping_done_items_details  – items, available sheets/sqm, damage
  *   grouping_done_history        – issue records by issue_status
  *
  * @route POST /report/download-excel-grouping-stock-register
@@ -85,7 +85,7 @@ export const GroupingStockRegisterExcel = catchAsync(
         },
       },
 
-      // Stage 4 – compute per-item issue totals from history
+      // Stage 4 – compute per-item issue totals from history (sheets + SQM)
       {
         $addFields: {
           item_issue_tapping: {
@@ -98,6 +98,19 @@ export const GroupingStockRegisterExcel = catchAsync(
                   },
                 },
                 in: '$$this.no_of_sheets',
+              },
+            },
+          },
+          item_issue_tapping_sqm: {
+            $sum: {
+              $map: {
+                input: {
+                  $filter: {
+                    input: '$item_history',
+                    cond: { $eq: ['$$this.issue_status', 'tapping'] },
+                  },
+                },
+                in: '$$this.sqm',
               },
             },
           },
@@ -114,6 +127,19 @@ export const GroupingStockRegisterExcel = catchAsync(
               },
             },
           },
+          item_issue_challan_sqm: {
+            $sum: {
+              $map: {
+                input: {
+                  $filter: {
+                    input: '$item_history',
+                    cond: { $eq: ['$$this.issue_status', 'challan'] },
+                  },
+                },
+                in: '$$this.sqm',
+              },
+            },
+          },
           item_issue_sales: {
             $sum: {
               $map: {
@@ -124,6 +150,19 @@ export const GroupingStockRegisterExcel = catchAsync(
                   },
                 },
                 in: '$$this.no_of_sheets',
+              },
+            },
+          },
+          item_issue_sales_sqm: {
+            $sum: {
+              $map: {
+                input: {
+                  $filter: {
+                    input: '$item_history',
+                    cond: { $eq: ['$$this.issue_status', 'order'] },
+                  },
+                },
+                in: '$$this.sqm',
               },
             },
           },
@@ -141,13 +180,21 @@ export const GroupingStockRegisterExcel = catchAsync(
             thickness: '$items.thickness',
           },
           grouping_done: { $sum: '$items.no_of_sheets' },
+          grouping_done_sqm: { $sum: '$items.sqm' },
           current_available: { $sum: '$items.available_details.no_of_sheets' },
+          current_available_sqm: { $sum: '$items.available_details.sqm' },
           damage: {
             $sum: { $cond: ['$items.is_damaged', '$items.no_of_sheets', 0] },
           },
+          damage_sqm: {
+            $sum: { $cond: ['$items.is_damaged', '$items.sqm', 0] },
+          },
           issue_tapping: { $sum: '$item_issue_tapping' },
+          issue_tapping_sqm: { $sum: '$item_issue_tapping_sqm' },
           issue_challan: { $sum: '$item_issue_challan' },
+          issue_challan_sqm: { $sum: '$item_issue_challan_sqm' },
           issue_sales: { $sum: '$item_issue_sales' },
+          issue_sales_sqm: { $sum: '$item_issue_sales_sqm' },
         },
       },
 
@@ -170,13 +217,21 @@ export const GroupingStockRegisterExcel = catchAsync(
       );
     }
 
-    // Compute opening and closing balances
+    // Compute opening and closing balances (sheets + SQM)
     const rows = rawRows.map((r) => {
       const issued_in_period =
         (r.issue_tapping || 0) + (r.issue_challan || 0) + (r.issue_sales || 0);
+      const issued_in_period_sqm =
+        (r.issue_tapping_sqm || 0) +
+        (r.issue_challan_sqm || 0) +
+        (r.issue_sales_sqm || 0);
 
       const opening_balance =
         (r.current_available || 0) + issued_in_period - (r.grouping_done || 0);
+      const opening_balance_sqm =
+        (r.current_available_sqm || 0) +
+        issued_in_period_sqm -
+        (r.grouping_done_sqm || 0);
 
       const closing_balance =
         opening_balance +
@@ -185,6 +240,13 @@ export const GroupingStockRegisterExcel = catchAsync(
         (r.issue_challan || 0) -
         (r.issue_sales || 0) -
         (r.damage || 0);
+      const closing_balance_sqm =
+        opening_balance_sqm +
+        (r.grouping_done_sqm || 0) -
+        (r.issue_tapping_sqm || 0) -
+        (r.issue_challan_sqm || 0) -
+        (r.issue_sales_sqm || 0) -
+        (r.damage_sqm || 0);
 
       return {
         item_group_name: r._id.item_sub_category_name,
@@ -193,12 +255,19 @@ export const GroupingStockRegisterExcel = catchAsync(
         log_no_code: r._id.log_no_code,
         thickness: r._id.thickness,
         opening_balance,
+        opening_balance_sqm,
         grouping_done: r.grouping_done || 0,
+        grouping_done_sqm: r.grouping_done_sqm || 0,
         issue_tapping: r.issue_tapping || 0,
+        issue_tapping_sqm: r.issue_tapping_sqm || 0,
         issue_challan: r.issue_challan || 0,
+        issue_challan_sqm: r.issue_challan_sqm || 0,
         issue_sales: r.issue_sales || 0,
+        issue_sales_sqm: r.issue_sales_sqm || 0,
         damage: r.damage || 0,
+        damage_sqm: r.damage_sqm || 0,
         closing_balance,
+        closing_balance_sqm,
       };
     });
 
