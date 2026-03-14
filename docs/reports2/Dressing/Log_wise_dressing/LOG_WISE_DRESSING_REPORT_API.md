@@ -8,8 +8,8 @@ The Log Wise Dressing Report API generates an Excel report **Dressing Stock Regi
 
 - **Receipt** = dressing output: when a bundle is “dressing done”, its `sqm` is added to stock. The date used is **dressing_date** from the session (`dressing_done_other_details`).
 - **Issue** = when that same bundle is later issued (e.g. for grouping, order, or smoking_dying). The date used is **updatedAt** on `dressing_done_items` (when `issue_status` is set).
-- **Opening balance** = stock for that log at the **start** of the report period (receipts before start − issues before start).
-- **Closing balance** = stock at the **end** of the period (opening + receipt in period − issue in period).
+- **Opening balance** = **closing balance at end of the day before** the date range. Computed day-by-day: for each day up to (startDate − 1), closing = max(0, previous day’s closing + receipt that day − issue that day); opening is that closing after the last day.
+- **Closing balance** = stock at the **end** of the period: max(0, opening + receipt in period − issue in period).
 - All quantities are in **SQM** (square metres).
 
 ## API Endpoint
@@ -123,9 +123,9 @@ The Log Wise Dressing Report API generates an Excel report **Dressing Stock Regi
 | 6 | Purchase | Purchase in period (placeholder, always 0) | Decimal (2 places) |
 | 7 | Receipt | Dressing done (receipt) in period (SQM) | Decimal (2 places) |
 | 8 | Issue Sq Mtr | Issued for grouping/order/smoking_dying in period (SQM) | Decimal (2 places) |
-| 9 | Clipping | Clipping in period (placeholder, always 0) | Decimal (2 places) |
-| 10 | Dyeing | Dyeing in period (placeholder, always 0) | Decimal (2 places) |
-| 11 | Mixmatch | Mixmatch in period (placeholder, always 0) | Decimal (2 places) |
+| 9 | Clipping | Issue to Grouping in period (SQM) | Decimal (2 places) |
+| 10 | Dyeing | Issue to Smoking/Dyeing in period (SQM) | Decimal (2 places) |
+| 11 | Mixmatch | Dressing mismatch in period (SQM) from `dressing_miss_match_data` | Decimal (2 places) |
 | 12 | Edgebanding | Edgebanding in period (placeholder, always 0) | Decimal (2 places) |
 | 13 | Lipping | Lipping in period (placeholder, always 0) | Decimal (2 places) |
 | 14 | Redressing | Redressing in period (placeholder, always 0) | Decimal (2 places) |
@@ -158,6 +158,10 @@ The Log Wise Dressing Report API generates an Excel report **Dressing Stock Regi
    - Collection: `dressing_done_other_details`
    - Fields used: `dressing_date`, `_id` (for join)
 
+3. **Dressing Miss Match Data** (`dressing_miss_match_data_model`)
+   - Collection: `dressing_miss_match_data`
+   - Fields used: `log_no_code`, `item_name`, `item_sub_category_name`, `sqm`, `dressing_date` (for **Mixmatch** column)
+
 ### Issue Status Values
 
 - `grouping` – Issued for grouping
@@ -169,7 +173,7 @@ The Log Wise Dressing Report API generates an Excel report **Dressing Stock Regi
 
 ## How the Report Data Is Brought Together
 
-A new developer should understand: we do **not** compute the report in one query. We run **six separate aggregations** on the same collections, then **combine the results per log** using in-memory maps. The report is built from these combined values.
+A new developer should understand: we do **not** compute the report in one query. We run **eight separate aggregations** on the same collections, then **combine the results per log** using in-memory maps. The report is built from these combined values.
 
 ### Step 1: List of logs (and metadata)
 
@@ -225,6 +229,42 @@ A new developer should understand: we do **not** compute the report in one query
 
 ---
 
+### Step 3b: Clipping (issue to Grouping) in period (by log)
+
+**Goal:** For each `log_no_code`, sum the **sqm** issued for **grouping** during the report period (`issue_status === 'grouping'`, **updatedAt** in range).
+
+**Source:** `dressing_done_items` only.
+
+**Pipeline:** Same as Step 3 but **$match** includes `issue_status: 'grouping'` (and same date range on `updatedAt`). **$group** by `log_no_code`, `$sum: '$sqm'`.
+
+**Result:** Array → **groupingIssueMap**. This is the **Clipping** column.
+
+---
+
+### Step 3c: Dyeing (issue to Smoking/Dyeing) in period (by log)
+
+**Goal:** For each `log_no_code`, sum the **sqm** issued for **smoking/dyeing** during the report period (`issue_status === 'smoking_dying'`, **updatedAt** in range).
+
+**Source:** `dressing_done_items` only.
+
+**Pipeline:** Same as Step 3 but **$match** includes `issue_status: 'smoking_dying'` (and same date range on `updatedAt`). **$group** by `log_no_code`, `$sum: '$sqm'`.
+
+**Result:** Array → **smokingDyingIssueMap**. This is the **Dyeing** column.
+
+---
+
+### Step 3d: Mixmatch (dressing mismatch) in period (by log)
+
+**Goal:** For each `log_no_code`, sum the **sqm** from dressing mismatch records during the report period.
+
+**Source:** `dressing_miss_match_data` only.
+
+**Pipeline:** **$match** item filters (if any) and `dressing_date` in `[start, end]`. **$group** by `_id: '$log_no_code'`, `total: { $sum: '$sqm' }`.
+
+**Result:** Array → **mixmatchMap**. This is the **Mixmatch** column.
+
+---
+
 ### Step 4: Sale in period (by log)
 
 **Goal:** Same as Issue in period, but only rows where `issue_status === 'order'`.
@@ -237,25 +277,27 @@ A new developer should understand: we do **not** compute the report in one query
 
 ---
 
-### Step 5: Receipt before period (by log)
+### Step 5: Receipt and issue before period (by log, by day)
 
-**Goal:** For each log, sum **sqm** that was dressing done **before** the report start. Used for opening balance.
+**Goal:** For each log and each **day** before the report start, get receipt and issue totals. Used to compute **opening balance** as the **closing balance at end of (startDate − 1)**.
 
-**Source:** Same as Step 2 (items + lookup to other_details).
+**Source:** Same as Step 2 for receipts (items + lookup, `details.dressing_date < start`); same as Step 3 for issues (`updatedAt < start`).
 
-**Pipeline:** Same structure as Step 2, but **$match** uses `details.dressing_date < start` (no upper bound).
+**Pipeline (receipts):** Lookup other_details, unwind, match item filters and `details.dressing_date < start`. **$group** by `{ log_no_code, day }` where `day = $dateToString(details.dressing_date, '%Y-%m-%d')`, `total: { $sum: '$sqm' }`.
 
-**Result:** Array → **receiptBeforeMap**.
+**Pipeline (issues):** Match item filters, `issue_status` in grouping/order/smoking_dying, `updatedAt < start`. **$group** by `{ log_no_code, day }` where `day = $dateToString(updatedAt, '%Y-%m-%d')`, `total: { $sum: '$sqm' }`.
+
+**Result:** Two arrays → **receiptBeforeByDay**, **issueBeforeByDay**. In memory: for each log, sort days ascending up to (startDate − 1), then **running_closing = max(0, running_closing + receipt_day − issue_day)**. Opening balance = **running_closing** after the last day. Stored in **openingBalanceMap**.
 
 ---
 
-### Step 6: Issue before period (by log)
+### Step 6: Issue before period (by log, total)
 
-**Goal:** For each log, sum **sqm** that was issued **before** the report start. Used for opening balance.
+**Goal:** For each log, sum **sqm** that was issued **before** the report start. Used for **Issue From Old Balance** column only (not for opening balance).
 
 **Source:** `dressing_done_items` only.
 
-**Pipeline:** Same as Step 3 but **$match** uses `updatedAt < start` (no lower bound). Same `issue_status` in `['grouping','order','smoking_dying']`.
+**Pipeline:** Same as Step 3 but **$match** uses `updatedAt < start`. Same `issue_status` in `['grouping','order','smoking_dying']`. **$group** by `log_no_code`, `total: { $sum: '$sqm' }`.
 
 **Result:** Array → **issueBeforeMap**. This is the **Issue From Old Balance** column.
 
@@ -265,13 +307,16 @@ A new developer should understand: we do **not** compute the report in one query
 
 For **each** document from **Step 1** (each `log_no_code`):
 
+- **Opening balance** = `openingBalanceMap.get(log_no_code) ?? 0` (closing at end of day before date range; see Step 5).
 - **Receipt** = `receiptMap.get(log_no_code) ?? 0`
 - **Issue** = `issueMap.get(log_no_code) ?? 0`
 - **Sale** = `saleMap.get(log_no_code) ?? 0`
-- **Receipt before** = `receiptBeforeMap.get(log_no_code) ?? 0`
-- **Issue before** = `issueBeforeMap.get(log_no_code) ?? 0`
+- **Clipping** = `groupingIssueMap.get(log_no_code) ?? 0`
+- **Dyeing** = `smokingDyingIssueMap.get(log_no_code) ?? 0`
+- **Mixmatch** = `mixmatchMap.get(log_no_code) ?? 0` (from `dressing_miss_match_data`).
+- **Issue before** = `issueBeforeMap.get(log_no_code) ?? 0` (for Issue From Old Balance).
 
-Then apply the formulas below to get Opening Balance, Closing Balance, and the “Old/New” columns. Item Group Name = `item_sub_category_name` or `item_name`; Dressing Date = formatted from Step 1’s `dressing_date`. Placeholder columns (Purchase, Clipping, Dyeing, etc.) are set to **0**.
+Then apply the formulas below to get Opening Balance, Closing Balance, and the “Old/New” columns. Item Group Name = `item_sub_category_name` or `item_name`; Dressing Date = formatted from Step 1’s `dressing_date`. Placeholder columns (Purchase, Edgebanding, Lipping, Redressing) are set to **0**.
 
 **Sort:** Rows are sorted by `item_group_name`, then `item_name`, then `log_x` (string sort).
 
@@ -289,7 +334,7 @@ All of the following use the **per-log** values from the maps (Step 7). Dates: `
 
 | Column | Formula / source |
 |--------|-------------------|
-| **Opening Balance** | `max(0, receipt_before − issue_before)` |
+| **Opening Balance** | Closing balance at end of (startDate − 1). Day-by-day: sort all days before start; for each day, closing = max(0, prev_closing + receipt_that_day − issue_that_day). Opening = closing after last day. |
 | **Receipt** | From **receiptMap**: sum of `sqm` where `dressing_date ∈ [start, end]` (via join). |
 | **Issue Sq Mtr** | From **issueMap**: sum of `sqm` where `issue_status ∈ ['grouping','order','smoking_dying']` and `updatedAt ∈ [start, end]`. |
 | **Sale** | From **saleMap**: same as Issue but only `issue_status === 'order'`. |
@@ -298,12 +343,15 @@ All of the following use the **per-log** values from the maps (Step 7). Dates: `
 | **Closing Balance Old** | Same value as **Opening Balance**. |
 | **Issue From New Balance** | Same value as **Issue Sq Mtr**. |
 | **Closing Balance New** | Same value as **Closing Balance**. |
-| **Purchase, Clipping, Dyeing, Mixmatch, Edgebanding, Lipping, Redressing** | **0** (no source in schema). |
+| **Clipping** | From **groupingIssueMap**: sum of `sqm` where `issue_status === 'grouping'` and `updatedAt ∈ [start, end]`. |
+| **Dyeing** | From **smokingDyingIssueMap**: sum of `sqm` where `issue_status === 'smoking_dying'` and `updatedAt ∈ [start, end]`. |
+| **Mixmatch** | From **mixmatchMap** (collection `dressing_miss_match_data`): sum of `sqm` where `dressing_date ∈ [start, end]`, grouped by `log_no_code`. |
+| **Purchase, Edgebanding, Lipping, Redressing** | **0** (no source in schema). |
 
 **Summary equation:**
 
 ```
-Opening Balance  = max(0, Receipt before start − Issue before start)
+Opening Balance  = closing balance at end of (startDate − 1), computed day-by-day with cap each day
 Closing Balance  = max(0, Opening Balance + Receipt in period − Issue in period)
 ```
 
@@ -316,6 +364,9 @@ Closing Balance  = max(0, Opening Balance + Receipt in period − Issue in perio
 | Issue (period) | dressing_done_items | updatedAt | `issue_status` in grouping/order/smoking_dying and `updatedAt` between start and end |
 | Issue (before) | dressing_done_items | updatedAt | `issue_status` set and `updatedAt` &lt; start |
 | Sale (period) | dressing_done_items | updatedAt | `issue_status === 'order'` and `updatedAt` between start and end |
+| Clipping (period) | dressing_done_items | updatedAt | `issue_status === 'grouping'` and `updatedAt` between start and end |
+| Dyeing (period) | dressing_done_items | updatedAt | `issue_status === 'smoking_dying'` and `updatedAt` between start and end |
+| Mixmatch (period) | dressing_miss_match_data | dressing_date | `dressing_date` between start and end |
 
 All aggregations are **grouped by** `log_no_code` and **sum** the field `sqm`.
 

@@ -66,6 +66,98 @@ export const DressingStockRegisterExcel = catchAsync(async (req, res, next) => {
         );
     }
 
+    // Receipt before period (per item pair, per day) – for day-by-day closing → opening balance
+    const receiptBeforeByDay = await dressing_done_items_model.aggregate([
+      { $match: itemFilter },
+      {
+        $lookup: {
+          from: 'dressing_done_other_details',
+          localField: 'dressing_done_other_details_id',
+          foreignField: '_id',
+          as: 'details',
+        },
+      },
+      { $unwind: '$details' },
+      {
+        $match: {
+          'details.dressing_date': { $lt: start },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            item_sub_category_name: '$item_sub_category_name',
+            item_name: '$item_name',
+            day: {
+              $dateToString: { format: '%Y-%m-%d', date: '$details.dressing_date' },
+            },
+          },
+          total: { $sum: '$sqm' },
+        },
+      },
+    ]);
+
+    // Issue before period (per item pair, per day) – for day-by-day closing → opening balance
+    const issueBeforeByDay = await dressing_done_items_model.aggregate([
+      {
+        $match: {
+          ...itemFilter,
+          issue_status: { $in: ['grouping', 'order', 'smoking_dying'] },
+          updatedAt: { $lt: start },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            item_sub_category_name: '$item_sub_category_name',
+            item_name: '$item_name',
+            day: {
+              $dateToString: { format: '%Y-%m-%d', date: '$updatedAt' },
+            },
+          },
+          total: { $sum: '$sqm' },
+        },
+      },
+    ]);
+
+    const dayBeforeStart = new Date(start);
+    dayBeforeStart.setDate(dayBeforeStart.getDate() - 1);
+    const dayBeforeStartStr = dayBeforeStart.toISOString().slice(0, 10);
+
+    const pairKey = (a, b) => `${a}|${b}`;
+    const receiptByPairDay = new Map();
+    const issueByPairDay = new Map();
+    for (const r of receiptBeforeByDay) {
+      const key = pairKey(r._id.item_sub_category_name, r._id.item_name);
+      if (!receiptByPairDay.has(key)) receiptByPairDay.set(key, new Map());
+      receiptByPairDay.get(key).set(r._id.day, r.total);
+    }
+    for (const i of issueBeforeByDay) {
+      const key = pairKey(i._id.item_sub_category_name, i._id.item_name);
+      if (!issueByPairDay.has(key)) issueByPairDay.set(key, new Map());
+      issueByPairDay.get(key).set(i._id.day, i.total);
+    }
+
+    const openingBalanceByPair = new Map();
+    for (const { item_sub_category_name, item_name } of pairs) {
+      const key = pairKey(item_sub_category_name, item_name);
+      const receiptDays = receiptByPairDay.get(key);
+      const issueDays = issueByPairDay.get(key);
+      const allDays = new Set(
+        [
+          ...(receiptDays ? receiptDays.keys() : []),
+          ...(issueDays ? issueDays.keys() : []),
+        ].filter((d) => d <= dayBeforeStartStr)
+      );
+      let runningClosing = 0;
+      for (const day of [...allDays].sort()) {
+        const receipt = receiptDays?.get(day) ?? 0;
+        const issue = issueDays?.get(day) ?? 0;
+        runningClosing = Math.max(0, runningClosing + receipt - issue);
+      }
+      openingBalanceByPair.set(key, runningClosing);
+    }
+
     const stockData = await Promise.all(
       pairs.map(
         async ({ item_sub_category_name, item_name }) => {
@@ -74,20 +166,11 @@ export const DressingStockRegisterExcel = catchAsync(async (req, res, next) => {
             item_name,
           };
 
-          // Current available SQM (issue_status null/not set)
-          const currentResult = await dressing_done_items_model.aggregate([
-            {
-              $match: {
-                ...matchItem,
-                $or: [
-                  { issue_status: null },
-                  { issue_status: { $exists: false } },
-                ],
-              },
-            },
-            { $group: { _id: null, total: { $sum: '$sqm' } } },
-          ]);
-          const currentAvailable = currentResult[0]?.total ?? 0;
+          // Opening = closing balance at end of day before date range (from precomputed map)
+          const openingBalance =
+            openingBalanceByPair.get(
+              pairKey(item_sub_category_name, item_name)
+            ) ?? 0;
 
           // Receipt in period: join with dressing_done_other_details, dressing_date in range
           const receiptResult = await dressing_done_items_model.aggregate([
@@ -146,7 +229,7 @@ export const DressingStockRegisterExcel = catchAsync(async (req, res, next) => {
             (issuedOrderResult[0]?.total ?? 0) +
             (issuedGroupingResult[0]?.total ?? 0);
           const dyeing = issuedDyeingResult[0]?.total ?? 0;
-          const issuedInPeriod = issue_sq_mtr + dyeing;
+          const clipping = issuedGroupingResult[0]?.total ?? 0; // Clipping = issue to Grouping
 
           // Mixmatch in period: dressing_miss_match_data
           const mixmatchResult = await dressing_miss_match_data_model.aggregate([
@@ -161,17 +244,11 @@ export const DressingStockRegisterExcel = catchAsync(async (req, res, next) => {
           const mixmatch = mixmatchResult[0]?.total ?? 0;
 
           const purchase = 0;
-          const clipping = 0;
           const edgebanding = 0;
           const lipping = 0;
           const redressing = 0;
           const sale = 0;
 
-          // Opening = current available + issued in period - receipt in period
-          const openingBalance = Math.max(
-            0,
-            currentAvailable + issuedInPeriod - receipt
-          );
           // Closing = opening + purchase + receipt - all issues
           const totalIssues =
             issue_sq_mtr +

@@ -2,7 +2,9 @@ import catchAsync from '../../../utils/errors/catchAsync.js';
 import ApiError from '../../../utils/errors/apiError.js';
 import ApiResponse from '../../../utils/ApiResponse.js';
 import { dressing_done_items_model } from '../../../database/schema/factory/dressing/dressing_done/dressing.done.schema.js';
+import dressing_miss_match_data_model from '../../../database/schema/factory/dressing/dressing_done/dressing.machine.mismatch.data.schema.js';
 import { createLogWiseDressingReportExcel } from '../../../config/downloadExcel/reports2/Flitch/logWiseDressingReport.js';
+import { issues_for_status } from '../../../database/Utils/constants/constants.js';
 
 /**
  * Log Wise Dressing Report Export
@@ -113,7 +115,7 @@ export const LogWiseDressingReportExcel = catchAsync(async (req, res, next) => {
       {
         $match: {
           ...itemFilter,
-          issue_status: { $in: ['grouping', 'order', 'smoking_dying'] },
+          issue_status: { $in: [issues_for_status.grouping, issues_for_status.order, issues_for_status.smoking_dying] },
           updatedAt: { $gte: start, $lte: end },
         },
       },
@@ -126,7 +128,7 @@ export const LogWiseDressingReportExcel = catchAsync(async (req, res, next) => {
       {
         $match: {
           ...itemFilter,
-          issue_status: 'order',
+          issue_status: issues_for_status.order,
           updatedAt: { $gte: start, $lte: end },
         },
       },
@@ -134,8 +136,46 @@ export const LogWiseDressingReportExcel = catchAsync(async (req, res, next) => {
     ]);
     const saleMap = new Map(saleInPeriod.map((s) => [s._id, s.total]));
 
-    // Receipt before period
-    const receiptBefore = await dressing_done_items_model.aggregate([
+    // Clipping (issue to Grouping) in period: issue_status === 'grouping'
+    const groupingIssueInPeriod = await dressing_done_items_model.aggregate([
+      {
+        $match: {
+          ...itemFilter,
+          issue_status: issues_for_status.grouping,
+          updatedAt: { $gte: start, $lte: end },
+        },
+      },
+      { $group: { _id: '$log_no_code', total: { $sum: '$sqm' } } },
+    ]);
+    const groupingIssueMap = new Map(groupingIssueInPeriod.map((g) => [g._id, g.total]));
+
+    // Dyeing (issue to Smoking/Dyeing) in period: issue_status === 'smoking_dying'
+    const smokingDyingIssueInPeriod = await dressing_done_items_model.aggregate([
+      {
+        $match: {
+          ...itemFilter,
+          issue_status: issues_for_status.smoking_dying,
+          updatedAt: { $gte: start, $lte: end },
+        },
+      },
+      { $group: { _id: '$log_no_code', total: { $sum: '$sqm' } } },
+    ]);
+    const smokingDyingIssueMap = new Map(smokingDyingIssueInPeriod.map((s) => [s._id, s.total]));
+
+    // Mixmatch (dressing mismatch) in period: dressing_miss_match_data by log
+    const mixmatchInPeriod = await dressing_miss_match_data_model.aggregate([
+      {
+        $match: {
+          ...itemFilter,
+          dressing_date: { $gte: start, $lte: end },
+        },
+      },
+      { $group: { _id: '$log_no_code', total: { $sum: '$sqm' } } },
+    ]);
+    const mixmatchMap = new Map(mixmatchInPeriod.map((m) => [m._id, m.total]));
+
+    // Receipt before period (per log, per day) – for day-by-day closing → opening balance
+    const receiptBeforeByDay = await dressing_done_items_model.aggregate([
       {
         $lookup: {
           from: 'dressing_done_other_details',
@@ -151,16 +191,84 @@ export const LogWiseDressingReportExcel = catchAsync(async (req, res, next) => {
           'details.dressing_date': { $lt: start },
         },
       },
-      { $group: { _id: '$log_no_code', total: { $sum: '$sqm' } } },
+      {
+        $group: {
+          _id: {
+            log_no_code: '$log_no_code',
+            day: { $dateToString: { format: '%Y-%m-%d', date: '$details.dressing_date' } },
+          },
+          total: { $sum: '$sqm' },
+        },
+      },
     ]);
-    const receiptBeforeMap = new Map(receiptBefore.map((r) => [r._id, r.total]));
+    // Issue before period (per log, per day) – for day-by-day closing → opening balance
+    const issueBeforeByDay = await dressing_done_items_model.aggregate([
+      {
+        $match: {
+          ...itemFilter,
+          issue_status: {
+            $in: [issues_for_status.grouping, issues_for_status.order, issues_for_status.smoking_dying],
+          },
+          updatedAt: { $lt: start },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            log_no_code: '$log_no_code',
+            day: { $dateToString: { format: '%Y-%m-%d', date: '$updatedAt' } },
+          },
+          total: { $sum: '$sqm' },
+        },
+      },
+    ]);
 
-    // Issue before period
+    // Build per-log-per-day maps and compute opening = closing balance at end of (startDate - 1)
+    const dayBeforeStart = new Date(start);
+    dayBeforeStart.setDate(dayBeforeStart.getDate() - 1);
+    const dayBeforeStartStr = dayBeforeStart.toISOString().slice(0, 10);
+
+    const receiptByLogDay = new Map(); // logNo -> Map(day -> sqm)
+    const issueByLogDay = new Map();
+    for (const r of receiptBeforeByDay) {
+      const logNo = r._id.log_no_code;
+      const day = r._id.day;
+      if (!receiptByLogDay.has(logNo)) receiptByLogDay.set(logNo, new Map());
+      receiptByLogDay.get(logNo).set(day, r.total);
+    }
+    for (const i of issueBeforeByDay) {
+      const logNo = i._id.log_no_code;
+      const day = i._id.day;
+      if (!issueByLogDay.has(logNo)) issueByLogDay.set(logNo, new Map());
+      issueByLogDay.get(logNo).set(day, i.total);
+    }
+
+    const openingBalanceMap = new Map();
+    for (const log of logsWithDetails) {
+      const logNo = log.log_no_code;
+      const receiptDays = receiptByLogDay.get(logNo);
+      const issueDays = issueByLogDay.get(logNo);
+      const allDays = new Set([
+        ...(receiptDays ? receiptDays.keys() : []),
+        ...(issueDays ? issueDays.keys() : []),
+      ].filter((d) => d <= dayBeforeStartStr));
+      let runningClosing = 0;
+      for (const day of [...allDays].sort()) {
+        const receipt = receiptDays?.get(day) ?? 0;
+        const issue = issueDays?.get(day) ?? 0;
+        runningClosing = Math.max(0, runningClosing + receipt - issue);
+      }
+      openingBalanceMap.set(logNo, runningClosing);
+    }
+
+    // Issue before period (total) – for "Issue From Old Balance" column
     const issueBefore = await dressing_done_items_model.aggregate([
       {
         $match: {
           ...itemFilter,
-          issue_status: { $in: ['grouping', 'order', 'smoking_dying'] },
+          issue_status: {
+            $in: [issues_for_status.grouping, issues_for_status.order, issues_for_status.smoking_dying],
+          },
           updatedAt: { $lt: start },
         },
       },
@@ -182,10 +290,12 @@ export const LogWiseDressingReportExcel = catchAsync(async (req, res, next) => {
       const receipt = receiptMap.get(logNo) || 0;
       const issue = issueMap.get(logNo) || 0;
       const sale = saleMap.get(logNo) || 0;
-      const receiptBeforeVal = receiptBeforeMap.get(logNo) || 0;
+      const clipping = groupingIssueMap.get(logNo) || 0;
+      const dyeing = smokingDyingIssueMap.get(logNo) || 0;
+      const mixmatch = mixmatchMap.get(logNo) || 0;
+      const openingBalance = openingBalanceMap.get(logNo) ?? 0; // closing balance at end of day before date range
       const issueBeforeVal = issueBeforeMap.get(logNo) || 0;
 
-      const openingBalance = Math.max(0, receiptBeforeVal - issueBeforeVal);
       const closingBalance = Math.max(0, openingBalance + receipt - issue);
       const issueFromOldBalance = issueBeforeVal;
       const closingBalanceOld = openingBalance;
@@ -203,9 +313,9 @@ export const LogWiseDressingReportExcel = catchAsync(async (req, res, next) => {
         purchase: 0,
         receipt,
         issue_sq_mtr: issue,
-        clipping: 0,
-        dyeing: 0,
-        mixmatch: 0,
+        clipping,
+        dyeing,
+        mixmatch,
         edgebanding: 0,
         lipping: 0,
         redressing: 0,
