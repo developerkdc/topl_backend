@@ -33,7 +33,8 @@ export const VeneerInwardReportExcel = catchAsync(async (req, res, next) => {
 
   const start = new Date(startDate);
   const end = new Date(endDate);
-  end.setHours(23, 59, 59, 999);
+  start.setUTCHours(0, 0, 0, 0);
+  end.setUTCHours(23, 59, 59, 999);
 
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     return next(new ApiError('Invalid date format. Use YYYY-MM-DD', 400));
@@ -46,19 +47,20 @@ export const VeneerInwardReportExcel = catchAsync(async (req, res, next) => {
   const itemFilter = filter.item_name ? { item_name: filter.item_name } : {};
 
   try {
-    // Distinct item_name from veneer inventory (via invoice), smoking (veneer), grouping (veneer)
+    // Distinct item_name only from activity in date range: inward in [start,end], or issue-to-smoke/group in [start,end]
     const fromVeneerItems = await veneer_inventory_items_model.aggregate([
       { $match: { deleted_at: null, ...itemFilter } },
       { $lookup: { from: 'veneer_inventory_invoice_details', localField: 'invoice_id', foreignField: '_id', as: 'inv' } },
-      { $unwind: { path: '$inv', preserveNullAndEmptyArrays: true } },
+      { $unwind: { path: '$inv', preserveNullAndEmptyArrays: false } },
+      { $match: { 'inv.inward_date': { $gte: start, $lte: end } } },
       { $group: { _id: '$item_name' } },
     ]);
     const fromSmoking = await issues_for_smoking_dying_model.aggregate([
-      { $match: { issued_from: issues_for_status.veneer, ...itemFilter } },
+      { $match: { issued_from: issues_for_status.veneer, createdAt: { $gte: start, $lte: end }, ...itemFilter } },
       { $group: { _id: '$item_name' } },
     ]);
     const fromGrouping = await issues_for_grouping_model.aggregate([
-      { $match: { issued_from: issues_for_status.veneer, ...itemFilter } },
+      { $match: { issued_from: issues_for_status.veneer, createdAt: { $gte: start, $lte: end }, ...itemFilter } },
       { $group: { _id: '$item_name' } },
     ]);
 
@@ -92,7 +94,7 @@ export const VeneerInwardReportExcel = catchAsync(async (req, res, next) => {
 
     // Purchase: all inward types (inventory, job_work, challan), inward_date in [start, end]
     const purchaseAgg = await veneer_inventory_items_model.aggregate([
-      { $match: {} },
+      { $match: { deleted_at: null } },
       { $lookup: { from: 'veneer_inventory_invoice_details', localField: 'invoice_id', foreignField: '_id', as: 'inv' } },
       { $unwind: '$inv' },
       {
