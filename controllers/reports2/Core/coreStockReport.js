@@ -23,7 +23,9 @@ export const CoreStockReportExcel = catchAsync(async (req, res, next) => {
   }
 
   const start = new Date(startDate);
+  start.setUTCHours(0, 0, 0, 0);
   const end = new Date(endDate);
+  end.setUTCHours(23, 59, 59, 999);
 
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     return next(new ApiError('Invalid date format. Use YYYY-MM-DD', 400));
@@ -39,11 +41,26 @@ export const CoreStockReportExcel = catchAsync(async (req, res, next) => {
   }
 
   try {
+    // Only include (item_name, thickness) that have at least one inward in the date range
     const uniqueCombinations = await core_inventory_items_details.aggregate([
       {
         $match: {
           deleted_at: null,
           ...itemFilter,
+        },
+      },
+      {
+        $lookup: {
+          from: 'core_inventory_invoice_details',
+          localField: 'invoice_id',
+          foreignField: '_id',
+          as: 'invoice',
+        },
+      },
+      { $unwind: '$invoice' },
+      {
+        $match: {
+          'invoice.inward_date': { $gte: start, $lte: end },
         },
       },
       {
@@ -89,7 +106,7 @@ export const CoreStockReportExcel = catchAsync(async (req, res, next) => {
 
         const currentAvailableSqm = currentInventorySqm[0]?.total_sqm || 0;
 
-        const receivedSqm = await core_inventory_items_details.aggregate([
+        const receivedByDate = await core_inventory_items_details.aggregate([
           {
             $match: {
               item_name,
@@ -105,9 +122,7 @@ export const CoreStockReportExcel = catchAsync(async (req, res, next) => {
               as: 'invoice',
             },
           },
-          {
-            $unwind: '$invoice',
-          },
+          { $unwind: '$invoice' },
           {
             $match: {
               'invoice.inward_date': { $gte: start, $lte: end },
@@ -115,10 +130,11 @@ export const CoreStockReportExcel = catchAsync(async (req, res, next) => {
           },
           {
             $group: {
-              _id: null,
+              _id: '$invoice.inward_date',
               total_sqm: { $sum: '$total_sq_meter' },
             },
           },
+          { $sort: { _id: 1 } },
         ]);
 
         const issuedSqm = await core_history_model.aggregate([
@@ -152,24 +168,42 @@ export const CoreStockReportExcel = catchAsync(async (req, res, next) => {
           },
         ]);
 
-        const receivedSqmValue = receivedSqm[0]?.total_sqm || 0;
         const issuedSqmValue = issuedSqm[0]?.total_sqm || 0;
+        const totalReceived = receivedByDate.reduce((sum, r) => sum + (r.total_sqm || 0), 0);
+        const openingBalance = Math.max(
+          0,
+          currentAvailableSqm + issuedSqmValue - totalReceived
+        );
 
-        const openingBalance = currentAvailableSqm + issuedSqmValue - receivedSqmValue;
-        const closingBalance = openingBalance + receivedSqmValue - issuedSqmValue;
+        const rows = [];
+        let runningOpen = openingBalance;
+        for (let i = 0; i < receivedByDate.length; i++) {
+          const rec = receivedByDate[i];
+          const receivedThisDate = rec.total_sqm || 0;
+          const isLast = i === receivedByDate.length - 1;
+          const issuedThisRow = isLast ? issuedSqmValue : 0;
+          const closingBal = Math.max(
+            0,
+            runningOpen + receivedThisDate - issuedThisRow
+          );
+          rows.push({
+            item_name,
+            thickness,
+            inward_date: rec._id,
+            opening_balance: runningOpen,
+            received_metres: receivedThisDate,
+            issued_metres: issuedThisRow,
+            closing_bal: closingBal,
+          });
+          runningOpen = closingBal;
+        }
 
-        return {
-          item_name,
-          thickness,
-          opening_balance: Math.max(0, openingBalance),
-          received_metres: receivedSqmValue,
-          issued_metres: issuedSqmValue,
-          closing_bal: Math.max(0, closingBalance),
-        };
+        return rows;
       })
     );
 
-    const activeStockData = stockData.filter(
+    const flatStockData = stockData.flat();
+    const activeStockData = flatStockData.filter(
       (item) =>
         item.opening_balance > 0 ||
         item.received_metres > 0 ||

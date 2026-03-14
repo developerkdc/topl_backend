@@ -5,7 +5,7 @@ import ApiError from '../../../../utils/errors/apiError.js';
 /**
  * Generate Core Stock Report Excel
  * Title: Core Stock Report - DD/MM/YYYY-DD/MM/YYYY
- * Columns: Item name, Thickness, Opening Balance, Received Metres, Issued Metres, Closing Bal.
+ * Columns: Item name, Thickness, Inward Date, Opening Balance, Received Metres, Issued Metres, Closing Bal.
  * Total row at bottom.
  *
  * @param {Array} aggregatedData - Aggregated stock data per (item_name, thickness)
@@ -59,6 +59,7 @@ export const GenerateCoreStockReportExcel = async (
     const columnDefinitions = [
       { key: 'item_name', width: 30 },
       { key: 'thickness', width: 15 },
+      { key: 'inward_date', width: 22 },
       { key: 'opening_balance', width: 18 },
       { key: 'received_metres', width: 18 },
       { key: 'issued_metres', width: 18 },
@@ -71,13 +72,14 @@ export const GenerateCoreStockReportExcel = async (
     titleRow.font = { bold: true, size: 12 };
     titleRow.alignment = { vertical: 'middle', horizontal: 'left', wrapText: false };
     titleRow.height = 20;
-    worksheet.mergeCells(1, 1, 1, 6);
+    worksheet.mergeCells(1, 1, 1, 7);
 
     worksheet.addRow([]);
 
     const headerRow = worksheet.addRow([
       'Item name',
       'Thickness',
+      'Inward Date',
       'Opening Balance',
       'Received Metres',
       'Issued Metres',
@@ -99,12 +101,12 @@ export const GenerateCoreStockReportExcel = async (
     };
 
     const groupedData = {};
-    aggregatedData.forEach((item) => {
-      const itemName = item.item_name || 'UNKNOWN';
+    aggregatedData.forEach((row) => {
+      const itemName = row.item_name || 'UNKNOWN';
       if (!groupedData[itemName]) {
         groupedData[itemName] = [];
       }
-      groupedData[itemName].push(item);
+      groupedData[itemName].push(row);
     });
 
     const sortedItemNames = Object.keys(groupedData).sort();
@@ -112,9 +114,18 @@ export const GenerateCoreStockReportExcel = async (
     sortedItemNames.forEach((itemName) => {
       const items = groupedData[itemName];
 
-      items.sort((a, b) => (a.thickness || 0) - (b.thickness || 0));
+      items.sort(
+        (a, b) =>
+          (a.thickness || 0) - (b.thickness || 0) ||
+          new Date(a.inward_date) - new Date(b.inward_date)
+      );
 
-      const subtotals = {
+      let itemFirstOpening = null;
+      let itemLastClosing = 0;
+      let itemReceived = 0;
+      let itemIssued = 0;
+      let currentThickness = null;
+      let thicknessSub = {
         opening_balance: 0,
         received_metres: 0,
         issued_metres: 0,
@@ -122,49 +133,104 @@ export const GenerateCoreStockReportExcel = async (
       };
 
       items.forEach((item) => {
+        if (item.thickness !== currentThickness) {
+          if (currentThickness !== null) {
+            const thicknessTotalRow = worksheet.addRow({
+              item_name: '',
+              thickness: 'Total',
+              inward_date: '',
+              opening_balance: thicknessSub.opening_balance.toFixed(2),
+              received_metres: thicknessSub.received_metres.toFixed(2),
+              issued_metres: thicknessSub.issued_metres.toFixed(2),
+              closing_bal: thicknessSub.closing_bal.toFixed(2),
+            });
+            thicknessTotalRow.eachCell((cell) => {
+              cell.font = { bold: true };
+              cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFF0F0F0' },
+              };
+            });
+          }
+          currentThickness = item.thickness;
+          thicknessSub = {
+            opening_balance: parseFloat(item.opening_balance || 0),
+            received_metres: 0,
+            issued_metres: 0,
+            closing_bal: 0,
+          };
+        }
+
+        if (itemFirstOpening === null) itemFirstOpening = parseFloat(item.opening_balance || 0);
+        itemLastClosing = parseFloat(item.closing_bal || 0);
+        itemReceived += parseFloat(item.received_metres || 0);
+        itemIssued += parseFloat(item.issued_metres || 0);
+
+        thicknessSub.received_metres += parseFloat(item.received_metres || 0);
+        thicknessSub.issued_metres += parseFloat(item.issued_metres || 0);
+        thicknessSub.closing_bal = parseFloat(item.closing_bal || 0);
+
         const rowData = {
           item_name: itemName,
           thickness: parseFloat(item.thickness || 0).toFixed(2),
+          inward_date: formatDate(item.inward_date),
           opening_balance: parseFloat(item.opening_balance || 0).toFixed(2),
           received_metres: parseFloat(item.received_metres || 0).toFixed(2),
           issued_metres: parseFloat(item.issued_metres || 0).toFixed(2),
           closing_bal: parseFloat(item.closing_bal || 0).toFixed(2),
         };
-
         worksheet.addRow(rowData);
-
-        subtotals.opening_balance += parseFloat(item.opening_balance || 0);
-        subtotals.received_metres += parseFloat(item.received_metres || 0);
-        subtotals.issued_metres += parseFloat(item.issued_metres || 0);
-        subtotals.closing_bal += parseFloat(item.closing_bal || 0);
       });
 
-      const subtotalRow = worksheet.addRow({
+      if (currentThickness !== null) {
+        const thicknessTotalRow = worksheet.addRow({
+          item_name: '',
+          thickness: 'Total',
+          inward_date: '',
+          opening_balance: thicknessSub.opening_balance.toFixed(2),
+          received_metres: thicknessSub.received_metres.toFixed(2),
+          issued_metres: thicknessSub.issued_metres.toFixed(2),
+          closing_bal: thicknessSub.closing_bal.toFixed(2),
+        });
+        thicknessTotalRow.eachCell((cell) => {
+          cell.font = { bold: true };
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFF0F0F0' },
+          };
+        });
+      }
+
+      const itemTotalRow = worksheet.addRow({
         item_name: '',
         thickness: 'Total',
-        opening_balance: subtotals.opening_balance.toFixed(2),
-        received_metres: subtotals.received_metres.toFixed(2),
-        issued_metres: subtotals.issued_metres.toFixed(2),
-        closing_bal: subtotals.closing_bal.toFixed(2),
+        inward_date: '',
+        opening_balance: (itemFirstOpening ?? 0).toFixed(2),
+        received_metres: itemReceived.toFixed(2),
+        issued_metres: itemIssued.toFixed(2),
+        closing_bal: itemLastClosing.toFixed(2),
       });
-      subtotalRow.eachCell((cell) => {
+      itemTotalRow.eachCell((cell) => {
         cell.font = { bold: true };
         cell.fill = {
           type: 'pattern',
           pattern: 'solid',
-          fgColor: { argb: 'FFF0F0F0' },
+          fgColor: { argb: 'FFE8E8E8' },
         };
       });
 
-      grandTotals.opening_balance += subtotals.opening_balance;
-      grandTotals.received_metres += subtotals.received_metres;
-      grandTotals.issued_metres += subtotals.issued_metres;
-      grandTotals.closing_bal += subtotals.closing_bal;
+      grandTotals.opening_balance += itemFirstOpening ?? 0;
+      grandTotals.received_metres += itemReceived;
+      grandTotals.issued_metres += itemIssued;
+      grandTotals.closing_bal += itemLastClosing;
     });
 
     const totalRow = worksheet.addRow({
       item_name: '',
       thickness: 'Total',
+      inward_date: '',
       opening_balance: grandTotals.opening_balance.toFixed(2),
       received_metres: grandTotals.received_metres.toFixed(2),
       issued_metres: grandTotals.issued_metres.toFixed(2),
