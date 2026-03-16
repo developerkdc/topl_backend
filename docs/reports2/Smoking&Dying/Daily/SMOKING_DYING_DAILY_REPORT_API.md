@@ -136,9 +136,9 @@ Placed after the main table and Grand Total row.
 
 **Headers:** ITEM NAME | RECEIVED MTR. | PROCESS NAME | LEAVE | PRODUCTION SQ. MTR
 
-**Data:** One row per unique item name, with aggregated LEAVE and PRODUCTION SQ. MTR. RECEIVED MTR. is left blank. PROCESS NAME from first occurrence per item.
+**Data:** One row per unique item name, with aggregated LEAVE and PRODUCTION SQ. MTR. RECEIVED MTR. equals PRODUCTION SQ. MTR (same value per item). PROCESS NAME from first occurrence per item.
 
-**TOTAL row:** Overall sum of LEAVE and PRODUCTION SQ. MTR.
+**TOTAL row:** Overall sum of LEAVE and PRODUCTION SQ. MTR; RECEIVED MTR. equals total PRODUCTION SQ. MTR.
 
 ## Report Features
 
@@ -208,7 +208,7 @@ We **start from sessions** and **attach items**:
 - **Main table**: One header row (14 column names), then one data row per aggregated object. When iterating rows, detect log-group boundaries (same `process_done_id` + same `log_no_code`); for each such block, merge cells in columns 1 and 2 (Item Name, LogX).
 - **Subtotal rows**: After each item group, insert a row with label "TOTAL" and sum of Leaves and Sq Mtr.
 - **Grand Total**: One row with overall Leaves and Sq Mtr.
-- **Summary section**: Group by item_name; compute sum of no_of_leaves and sqm per item; write SUMMERY table with ITEM NAME, RECEIVED MTR. (blank), PROCESS NAME, LEAVE, PRODUCTION SQ. MTR; add TOTAL row.
+- **Summary section**: Group by item_name; compute sum of no_of_leaves and sqm per item; write SUMMERY table with ITEM NAME, RECEIVED MTR. (= PRODUCTION SQ. MTR), PROCESS NAME, LEAVE, PRODUCTION SQ. MTR; add TOTAL row.
 
 ---
 
@@ -242,7 +242,7 @@ Every value in the Excel comes from the aggregated rows or from the above calcul
 | Report column      | Source (after aggregation) | DB collection            | Notes |
 |--------------------|----------------------------|--------------------------|-------|
 | ITEM NAME          | `item_name`               | process_done_items_details | One row per unique item_name |
-| RECEIVED MTR.      | —                         | —                        | Left blank |
+| RECEIVED MTR.      | Same as PRODUCTION SQ. MTR | process_done_items_details | SUM(sqm) per item; equals PRODUCTION SQ. MTR |
 | PROCESS NAME       | `process_name`            | process_done_items_details | First occurrence per item |
 | LEAVE              | SUM(`no_of_leaves`)       | process_done_items_details | Per item |
 | PRODUCTION SQ. MTR | SUM(`sqm`)               | process_done_items_details | Per item |
@@ -273,11 +273,11 @@ All numeric values in **data rows** are **pass-through** from the database (no f
 ### Summary section (SUMMERY)
 
 - **ITEM NAME**: Unique item_name from aggregated rows.
-- **RECEIVED MTR.**: Left blank.
+- **RECEIVED MTR.**: Same as PRODUCTION SQ. MTR (SUM(sqm) per item).
 - **PROCESS NAME**: First process_name per item.
 - **LEAVE**: SUM(no_of_leaves) per item.
 - **PRODUCTION SQ. MTR**: SUM(sqm) per item.
-- **TOTAL row**: Sum of LEAVE and PRODUCTION SQ. MTR across all items.
+- **TOTAL row**: Sum of LEAVE and PRODUCTION SQ. MTR across all items; RECEIVED MTR. = total PRODUCTION SQ. MTR.
 
 ---
 
@@ -373,7 +373,7 @@ const generateSmokingDyingReport = async () => {
 
 - Report includes all smoking/dying sessions for the given date unless `smokingDyingId` is specified.
 - Summary section (SUMMERY) appears at the end; one row per unique item name.
-- RECEIVED MTR. is left blank (no data source in current schema).
+- RECEIVED MTR. equals PRODUCTION SQ. MTR (same value per item and in TOTAL row).
 - Excel files are timestamped; stored in `public/reports/SmokingDying/`.
 
 ## File Storage
@@ -399,9 +399,9 @@ Total       |        |           |           |        |      | 6      | 18.00  |
 
 SUMMERY
 ITEM NAME   | RECEIVED MTR. | PROCESS NAME | LEAVE | PRODUCTION SQ. MTR
-IVORY CROWN |              | FLARE        | 3     | 9.00
-WHITE OAK   |              | LAST DEMO    | 3     | 9.00
-TOTAL       |              |              | 6     | 18.00
+IVORY CROWN | 9.00         | FLARE        | 3     | 9.00
+WHITE OAK   | 9.00         | LAST DEMO    | 3     | 9.00
+TOTAL       | 18.00        |              | 6     | 18.00
 ```
 
 ## Troubleshooting

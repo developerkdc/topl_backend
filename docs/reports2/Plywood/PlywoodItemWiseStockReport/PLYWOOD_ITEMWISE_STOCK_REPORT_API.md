@@ -165,7 +165,7 @@ Plywood Type (Item Wise) [ CATEGORY ] [ Item: ITEM_NAME ]   stock  in the period
 
 ## Stock Calculation Logic
 
-Same as the Plywood Stock Report: all values in **sheets** and **square meters**. Opening = current + consume + sales - receive; Closing = opening + receive - consume - sales. Receives from invoice inward date in period; consumption from `issue_status` in `['order', 'pressing', 'plywood_resizing']`; sales from `issue_status = 'challan'`; issue for recal from `['plywood_resizing', 'pressing']`. Only rows with activity are included; values are non-negative.
+Same as the Plywood Stock Report: all values in **sheets** and **square meters**. Opening = current + consume + sales - receive; Closing = opening + receive - consume - sales. Receives from invoice inward date in period; consumption from `issue_status` in `['order', 'pressing', 'plywood_resizing']`; sales from `issue_status = 'challan'`; issue for recal from `['plywood_resizing', 'pressing']`. Only rows that had at least one movement in the period (receive, consume, sales, ply resizing, or pressing) are included; if there was no such activity, the API returns 404. Values are non-negative.
 
 ## Database Collections Used
 
@@ -199,6 +199,6 @@ window.open(downloadUrl, '_blank');
 
 ## Notes
 
-- Report includes only rows with activity in the period (non-zero opening, receive, consume, sales, or closing).
+- Report includes only rows that had at least one movement in the period (receive, consume, sales, issue for ply resizing, or issue for pressing). If the date range has no such activity, the report returns 404 with "No stock data found for the selected period".
 - Excel files are timestamped to avoid overwriting.
 - Files are stored under `public/upload/reports/reports2/Plywood/`.

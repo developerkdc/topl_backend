@@ -246,7 +246,8 @@ const GenerateSmokingDyingDailyReport = async (rows, reportDate) => {
   itemSummary.forEach((item) => {
     const summaryRow = worksheet.getRow(currentRow);
     summaryRow.getCell(1).value = item.item_name ?? '';
-    summaryRow.getCell(2).value = ''; // RECEIVED MTR. - blank
+    summaryRow.getCell(2).value = item.sqm ?? 0; // RECEIVED MTR. = PRODUCTION SQ. MTR
+    summaryRow.getCell(2).numFmt = '0.00';
     summaryRow.getCell(3).value = item.process_name ?? '';
     summaryRow.getCell(4).value = item.leaves ?? 0;
     summaryRow.getCell(5).value = item.sqm ?? 0;
@@ -263,7 +264,9 @@ const GenerateSmokingDyingDailyReport = async (rows, reportDate) => {
   const summaryTotalRow = worksheet.getRow(currentRow);
   summaryTotalRow.getCell(1).value = 'TOTAL';
   summaryTotalRow.getCell(1).font = { bold: true };
-  summaryTotalRow.getCell(2).value = '';
+  summaryTotalRow.getCell(2).value = summaryTotalSqm; // RECEIVED MTR. = PRODUCTION SQ. MTR total
+  summaryTotalRow.getCell(2).font = { bold: true };
+  summaryTotalRow.getCell(2).numFmt = '0.00';
   summaryTotalRow.getCell(3).value = '';
   summaryTotalRow.getCell(4).value = summaryTotalLeaves;
   summaryTotalRow.getCell(4).font = { bold: true };
@@ -271,7 +274,7 @@ const GenerateSmokingDyingDailyReport = async (rows, reportDate) => {
   summaryTotalRow.getCell(5).font = { bold: true };
   summaryTotalRow.getCell(5).numFmt = '0.00';
   for (let col = 1; col <= 5; col++) {
-    setCellStyle(summaryTotalRow.getCell(col), col === 1 || col === 4 || col === 5);
+    setCellStyle(summaryTotalRow.getCell(col), col === 1 || col === 2 || col === 4 || col === 5);
   }
 
   worksheet.columns = [

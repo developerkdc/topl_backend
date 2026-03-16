@@ -38,20 +38,25 @@ Implement the **Fleece Stock Report by Roll No.** API under reports2 that genera
 
 ## Schema Reference
 
-| Collection / model                  | Key fields |
-|-------------------------------------|------------|
-| fleece_inventory_items_details       | _id, item_sr_no, item_sub_category_name, thickness, length, width, number_of_roll, total_sq_meter, available_number_of_roll, available_sqm, invoice_id, deleted_at |
-| fleece_inventory_invoice_details     | _id, inward_date |
-| fleece_history_details (fleece_history_model) | fleece_item_id, issue_status, issued_number_of_roll, issued_sqm, createdAt |
+
+| Collection / model                            | Key fields                                                                                                                                                         |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| fleece_inventory_items_details                | _id, item_sr_no, item_sub_category_name, thickness, length, width, number_of_roll, total_sq_meter, available_number_of_roll, available_sqm, invoice_id, deleted_at |
+| fleece_inventory_invoice_details              | _id, inward_date                                                                                                                                                   |
+| fleece_history_details (fleece_history_model) | fleece_item_id, issue_status, issued_number_of_roll, issued_sqm, createdAt                                                                                         |
+
 
 ## API Contract Summary
 
-| Aspect | Value |
-|--------|-------|
-| Method | POST |
-| Path   | `/report/download-stock-report-fleece-by-roll` |
-| Body   | startDate, endDate, optional filter (item_sub_category_name) |
-| 200    | `{ data: "<download URL>", message: "Stock report by roll generated successfully" }` |
-| 400    | Missing/invalid dates or start > end |
-| 404    | No stock data for period |
-| 500    | Error generating report |
+
+| Aspect | Value                                                                                      |
+| ------ | ------------------------------------------------------------------------------------------ |
+| Method | POST                                                                                       |
+| Path   | `/report/download-stock-report-fleece-by-roll`                                             |
+| Body   | startDate, endDate, optional filter (item_sub_category_name)                               |
+| 200    | `{ data: "<download URL>", message: "Stock report by roll generated successfully" }`       |
+| 400    | Missing/invalid dates or start > end                                                       |
+| 404    | No stock data for period (no receive, consume, sales, or issue for pressing in date range) |
+| 500    | Error generating report                                                                    |
+
+

@@ -54,5 +54,5 @@ Implement the **Fleece Stock Report** API under reports2 that generates an Excel
 | Body   | startDate, endDate, optional filter (item_sub_category_name) |
 | 200    | `{ data: "<download URL>", message: "Stock report generated successfully" }` |
 | 400    | Missing/invalid dates or start > end |
-| 404    | No stock data for period |
+| 404    | No stock data for period (no receive, consume, sales, or issue for pressing in date range) |
 | 500    | Error generating report |

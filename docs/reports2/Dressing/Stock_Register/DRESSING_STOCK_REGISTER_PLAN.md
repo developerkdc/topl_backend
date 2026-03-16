@@ -23,11 +23,11 @@ Implement a **Dressing Stock Register** report that matches the provided image: 
 | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Item Group Name | `item_sub_category_name`                                                                                                                                    |
 | Item Name       | `item_name`                                                                                                                                                 |
-| Opening Balance | Same logic as itemWiseFlitch: current available SQM + issued in period − receipt in period |
+| Opening Balance | Closing balance at end of day before date range. Receipt and issue before start aggregated by (item_sub_category_name, item_name, day); then day-by-day closing = max(0, prev + receipt_day − issue_day). Opening = closing after last day. |
 | Purchase        | **No schema** → use **0** (or later: purchase/inward of dressing if such collection exists)                                                                 |
 | Receipt         | Sum of `sqm` where `dressing_done_other_details.dressing_date` in [startDate, endDate]                                                                      |
-| Issue Sq Mtr    | Sum of `sqm` where `issue_status === 'order'` and issue happened in period (e.g. `updatedAt` in range)                                                      |
-| Clipping        | **No schema** → use **0**                                                                                                                                   |
+| Issue Sq Mtr    | Sum of `sqm` where `issue_status === 'order'` + `issue_status === 'grouping'` and issue happened in period (`updatedAt` in range)                           |
+| Clipping        | Issue to Grouping: sum of `sqm` where `issue_status === 'grouping'` and issue in period (`updatedAt` in range)                                            |
 | Dyeing          | Sum of `sqm` where `issue_status === 'smoking_dying'` and issue in period                                                                                   |
 | Mixmatch        | Sum of `sqm` from **dressing_miss_match_data** where `dressing_date` in [startDate, endDate], grouped by (item_sub_category_name, item_name)                |
 | Edgebanding     | **No schema** → use **0**                                                                                                                                   |
@@ -40,9 +40,8 @@ Implement a **Dressing Stock Register** report that matches the provided image: 
 
 - **Receipt in period**: Join `dressing_done_items` → `dressing_done_other_details`, filter `dressing_date` in [start, end], sum `sqm` by (item_sub_category_name, item_name).
 - **Mixmatch in period**: From `dressing_miss_match_data`, filter `dressing_date` in [start, end], sum `sqm` by (item_sub_category_name, item_name).
-- **Issued in period**: Filter `dressing_done_items` by `updatedAt` in [start, end] and `issue_status` in ['order','grouping','smoking_dying'], sum `sqm` by (item_sub_category_name, item_name) and by issue type for the breakdown.
-- **Current available**: Sum `sqm` where `issue_status` is null/not set (same idea as Flitch "current available").
-- **Opening** = current available + issued in period − receipt in period.
+- **Issued in period**: Filter `dressing_done_items` by `updatedAt` in [start, end] and `issue_status` in ['order','grouping','smoking_dying'], sum `sqm` by (item_sub_category_name, item_name) and by issue type (order + grouping → Issue Sq Mtr, grouping → Clipping, smoking_dying → Dyeing).
+- **Opening**: Closing balance at end of (startDate − 1). Aggregate receipt and issue **per (item_sub_category_name, item_name) per day** before start; for each pair sort days and compute running closing = max(0, running_closing + receipt_day − issue_day). Opening = running closing after last day.
 - **Closing** = opening + receipt − all issues (or equivalently opening + purchase + receipt − all issue columns − sale).
 
 ## File and route layout
@@ -68,13 +67,14 @@ Reference patterns:
    - Validate `startDate` and `endDate` (required, valid format, start ≤ end).
    - Optional filter by `item_name` and/or `item_group_name` (match `item_sub_category_name`).
    - Get distinct (item_sub_category_name, item_name) from `dressing_done_items` (with optional filter).
+   - **Opening balance**: Aggregate receipt and issue before start **by (item_sub_category_name, item_name, day)**; for each pair compute day-by-day closing up to (startDate − 1); opening = that closing. Store in map keyed by pair.
    - For each pair:
-     - Current available SQM (issue_status null/not set).
+     - Opening = from precomputed opening map (closing of day before date range).
      - Receipt in period: join to `dressing_done_other_details`, filter by `dressing_date` in range, sum `sqm`.
-     - Issued in period: filter by `updatedAt` in range, split by `issue_status`: order → Issue Sq Mtr, smoking_dying → Dyeing, grouping → e.g. include in Issue Sq Mtr or separate column (recommend: map grouping to "Issue Sq Mtr" so all issued SQM is accounted in existing columns; else add "Grouping" column if product wants it).
+     - Issued in period: filter by `updatedAt` in range, split by `issue_status`: order + grouping → Issue Sq Mtr, grouping → Clipping, smoking_dying → Dyeing.
      - Mixmatch in period: aggregate `dressing_miss_match_data` by (item_sub_category_name, item_name), `dressing_date` in range, sum `sqm`.
-     - Set Purchase, Clipping, Edgebanding, Lipping, Redressing, Sale = 0.
-     - Compute Opening and Closing as above.
+     - Set Purchase, Edgebanding, Lipping, Redressing, Sale = 0.
+     - Compute Closing = opening + purchase + receipt − all issue columns.
    - Filter out rows where all numeric columns are 0 (optional, to avoid empty-looking report).
    - Call `GenerateDressingStockRegisterExcel(rows, startDate, endDate, filter)` and return download link.
 2. **Excel config** (`dressingStockRegister.js`)
@@ -90,8 +90,8 @@ Reference patterns:
 
 ## Clarifications and assumptions
 
-- **Placeholder columns**: Purchase, Clipping, Edgebanding, Lipping, Redressing, Sale are not present in current dressing/veneer schemas; they will be 0 until you add sources. **Mixmatch** is sourced from `dressing_miss_match_data` (dressing mismatch).
-- **Grouping**: `issue_status === 'grouping'` is mapped into "Issue Sq Mtr" for total issues; if you prefer a separate "Grouping" column, the Excel and controller can add it and the formula for closing balance can include it.
+- **Placeholder columns**: Purchase, Edgebanding, Lipping, Redressing, Sale are not present in current dressing/veneer schemas; they will be 0 until you add sources. **Mixmatch** is sourced from `dressing_miss_match_data` (dressing mismatch). **Clipping** is sourced from issue to Grouping (`issue_status === 'grouping'`).
+- **Opening balance**: Closing balance at end of (startDate − 1), computed day-by-day per (item_sub_category_name, item_name). **Grouping**: `issue_status === 'grouping'` is included in Issue Sq Mtr and also shown in the Clipping column.
 - **Location**: All new/updated code is under **reports2/Dressing** (controller, config, routes); nothing under Flitch folder.
 
 ## Optional later enhancements

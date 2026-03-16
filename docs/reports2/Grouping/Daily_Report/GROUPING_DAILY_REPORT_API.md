@@ -101,7 +101,7 @@ Grouping Details Report Date: DD/MM/YYYY
 | 5 | Width          | Width (meters)                                       |
 | 6 | Thickness      | Thickness (grouping_done_items_details)               |
 | 7 | Sheets         | Number of sheets                                     |
-| 8 | Damaged Sheets | 1 if item is_damaged else 0                          |
+| 8 | Damaged Sheets | no_of_sheets (total sheets) if item is_damaged else 0 |
 | 9 | Sq Mtr         | Square meters                                        |
 |10 | Character      | Character name                                       |
 |11 | Pattern        | Pattern name                                         |
@@ -133,7 +133,7 @@ Two-level header layout with 10 columns:
 | 6 | SQ Mtr           | Issue sqm (available_details.sqm)                         |
 | 7 | Group Sheets     | Grouped production sheets (no_of_sheets)                  |
 | 8 | Group Sq. Mtr.   | Grouped production sqm (sqm)                              |
-| 9 | Damaged Sheets   | Count of damaged sheets (is_damaged = true → 1, else 0)   |
+| 9 | Damaged Sheets   | Total sheets when damaged (no_of_sheets if is_damaged = true, else 0) |
 |10 | Damaged Sq. Mtr. | Sqm of damaged items (sqm where is_damaged = true)        |
 
 - **Data rows:** One row per unique (Item Name, Length, Width, Thickness) combination with aggregated values.
@@ -146,7 +146,7 @@ Two-level header layout with 10 columns:
 - **Two-section layout:** Main details with per–Item Name totals and grand total; Issue/Production summary.
 - **Photo No:** From `grouping_done_items_details.photo_no` (optional; blank if not set).
 - **Thickness:** From `grouping_done_items_details.thickness` (required field).
-- **Damaged Sheets:** 1 if `is_damaged = true` else 0.
+- **Damaged Sheets:** no_of_sheets (total sheets) if `is_damaged = true` else 0.
 - **Damaged Sq. Mtr.:** `sqm` where `is_damaged = true` else 0.
 - **Issue Sheets/SQ Mtr:** From `available_details.no_of_sheets` / `available_details.sqm` (original available stock).
 - **Bold formatting:** Headers and total rows are bold.
@@ -168,7 +168,7 @@ Two-level header layout with 10 columns:
 7. **Project (flat shape):**
    - Session: `grouping_id`, `shift`, `no_of_working_hours`, `worker`
    - Item: `item_name`, `log_no_code`, `photo_no`, `length`, `width`, `thickness`, `no_of_sheets`, `sqm`, `character_name`, `pattern_name`, `series_name`, `remark`
-   - Computed: `damaged_sheets` (1/0), `issue_sheets` (available_details.no_of_sheets), `issue_sqm` (available_details.sqm), `damaged_sqm` (sqm if is_damaged else 0)
+   - Computed: `damaged_sheets` (no_of_sheets if is_damaged else 0), `issue_sheets` (available_details.no_of_sheets), `issue_sqm` (available_details.sqm), `damaged_sqm` (sqm if is_damaged else 0)
 
 ### Step 2: Excel Generation (Config)
 
@@ -190,7 +190,7 @@ Two-level header layout with 10 columns:
 | 5 | Width          | `width`                     | grouping_done_items_details      | 0.00 format |
 | 6 | Thickness      | `thickness`                 | grouping_done_items_details      | 0.00 format |
 | 7 | Sheets         | `no_of_sheets`              | grouping_done_items_details      | Total per group / grand |
-| 8 | Damaged Sheets | `damaged_sheets`            | grouping_done_items_details      | 1 if is_damaged else 0 |
+| 8 | Damaged Sheets | `damaged_sheets`            | grouping_done_items_details      | no_of_sheets if is_damaged else 0 |
 | 9 | Sq Mtr         | `sqm`                       | grouping_done_items_details      | Total per group / grand |
 |10 | Character      | `character_name`            | grouping_done_items_details      | Direct |
 |11 | Pattern        | `pattern_name`              | grouping_done_items_details      | Direct |
@@ -325,7 +325,7 @@ topl_backend/routes/report/reports2/Grouping/grouping.routes.js
 
 **Stage 6 – $sort:** `items.item_name`, `items.log_no_code`, `items.length`, `items.width`, `items.thickness`.
 
-**Stage 7 – $project:** Flat output including `photo_no`, `thickness`, `issue_sheets` (`available_details.no_of_sheets`), `issue_sqm` (`available_details.sqm`), `damaged_sqm` (`$cond` on `is_damaged`).
+**Stage 7 – $project:** Flat output including `photo_no`, `thickness`, `issue_sheets` (`available_details.no_of_sheets`), `issue_sqm` (`available_details.sqm`), `damaged_sheets` (`$cond`: no_of_sheets if is_damaged else 0), `damaged_sqm` (`$cond` on `is_damaged`).
 
 ## File Storage
 

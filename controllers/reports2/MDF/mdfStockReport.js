@@ -193,13 +193,14 @@ export const mdfStockReportCsv = catchAsync(async (req, res, next) => {
       })
     );
 
+    // Only include rows that had at least one movement in the period (receive, consume, sales, or issue for pressing).
+    // This avoids showing rows when date range is e.g. "today" but there was no inward/activity today.
     const activeStockData = stockData.filter(
       (item) =>
-        item.opening_sheets > 0 ||
         item.receive_sheets > 0 ||
         item.consume_sheets > 0 ||
         item.sales_sheets > 0 ||
-        item.closing_sheets > 0
+        item.issue_pressing_sheets > 0
     );
 
     if (activeStockData.length === 0) {
@@ -406,13 +407,13 @@ export const mdfItemWiseStockReportCsv = catchAsync(async (req, res, next) => {
       })
     );
 
+    // Only include rows that had at least one movement in the period (receive, consume, sales, or issue for pressing).
     const activeStockData = stockData.filter(
       (row) =>
-        row.opening_sheets > 0 ||
         row.receive_sheets > 0 ||
         row.consume_sheets > 0 ||
         row.sales_sheets > 0 ||
-        row.closing_sheets > 0
+        row.issue_pressing_sheets > 0
     );
 
     if (activeStockData.length === 0) {
@@ -604,14 +605,14 @@ export const mdfStockReportByPelletCsv = catchAsync(async (req, res, next) => {
       })
     );
 
+    // Only include rows that had at least one movement in the period (receive, consume, sales, or issue for pressing).
     const activeStockData = stockData
       .filter(
         (item) =>
-          item.opening_sheets > 0 ||
           item.receive_sheets > 0 ||
           item.consume_sheets > 0 ||
           item.sales_sheets > 0 ||
-          item.closing_sheets > 0
+          item.issue_pressing_sheets > 0
       )
       .sort((a, b) => {
         const subCmp = (a.mdf_sub_type || '').localeCompare(b.mdf_sub_type || '');

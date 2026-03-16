@@ -2,9 +2,9 @@
 
 ## Overview
 
-The Smoking&Dying Stock Register API generates an Excel report that shows smoking/dyeing stock movements by **Item Group Name** and **Item Name** over a date range. The report includes Opening Balance, Direct Dye, DR Dyed, Issue Sq Mtr, Clipping, Mixmatch, Edgebanding, Lipping, Sale, and Closing Balance, with a **Total** row at the bottom.
+The Smoking&Dying Stock Register API generates an Excel report with the **same layout as the Smoking&Dying Daily Report**: main table (Item Name, LogX merged per log group, Bundle No, ThickneSS, Length, Width, Leaves, Sq Mtr, PROCESS, Process color, Character, Pattern, Series, Remarks); subtotal rows per item; Grand Total row; and Summary section (ITEM NAME, RECEIVED MTR., PROCESS NAME, LEAVE, PRODUCTION SQ. MTR). The only difference is that the Stock Register is filtered by a **date range** (startDate–endDate) instead of a single date.
 
-Data is sourced from `process_done_items_details` and `process_done_details` (smoking/dying done sessions). Receipt in period is split by `process_name` into **Direct Dye** and **DR Dyed** columns.
+The report uses its own route, controller, and Excel generator; it does not call the Daily report.
 
 ## Endpoint
 
@@ -16,6 +16,19 @@ POST /api/V1/report/download-excel-smoking-dying-stock-register
 
 ### Required Parameters
 
+Request body can use either `filters` (recommended) or top-level dates:
+
+```json
+{
+  "filters": {
+    "startDate": "2025-01-01",
+    "endDate": "2025-01-31"
+  }
+}
+```
+
+Alternatively (supported for backward compatibility):
+
 ```json
 {
   "startDate": "2025-01-01",
@@ -23,25 +36,10 @@ POST /api/V1/report/download-excel-smoking-dying-stock-register
 }
 ```
 
-### Optional Parameters
-
-```json
-{
-  "startDate": "2025-01-01",
-  "endDate": "2025-01-31",
-  "filter": {
-    "item_name": "ASH",
-    "item_group_name": "ASH"
-  }
-}
-```
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `startDate` | String | Yes | Start date in YYYY-MM-DD format |
-| `endDate` | String | Yes | End date in YYYY-MM-DD format |
-| `filter.item_name` | String | No | Filter by item name |
-| `filter.item_group_name` | String | No | Filter by item group (maps to item sub-category name) |
+| Parameter   | Type   | Required | Description                          |
+|------------|--------|----------|--------------------------------------|
+| startDate  | String | Yes      | Start date in YYYY-MM-DD format      |
+| endDate    | String | Yes      | End date in YYYY-MM-DD format        |
 
 ## Response
 
@@ -49,187 +47,153 @@ POST /api/V1/report/download-excel-smoking-dying-stock-register
 
 ```json
 {
+  "result": "http://localhost:5000/public/reports/SmokingDying/smoking_dying_stock_register_1738234567890.xlsx",
   "statusCode": 200,
-  "success": true,
-  "message": "Smoking & dying stock register generated successfully",
-  "result": "http://localhost:5000/public/upload/reports/reports2/Smoking&Dying/Smoking-Dying-Stock-Register-1738234567890.xlsx"
+  "status": "success",
+  "message": "Smoking & dying stock register generated successfully"
 }
 ```
 
 ### Error Responses
 
-#### 400 Bad Request - Missing Parameters
+#### 400 Bad Request – Missing Parameters
 
 ```json
 {
   "statusCode": 400,
-  "success": false,
+  "status": "error",
   "message": "Start date and end date are required"
 }
 ```
 
-#### 400 Bad Request - Invalid Date Format
+#### 400 Bad Request – Invalid Date Format
 
 ```json
 {
   "statusCode": 400,
-  "success": false,
+  "status": "error",
   "message": "Invalid date format. Use YYYY-MM-DD"
 }
 ```
 
-#### 400 Bad Request - Invalid Date Range
+#### 400 Bad Request – Invalid Date Range
 
 ```json
 {
   "statusCode": 400,
-  "success": false,
+  "status": "error",
   "message": "Start date cannot be after end date"
 }
 ```
 
-#### 404 Not Found - No Data
+#### 404 Not Found
 
 ```json
 {
   "statusCode": 404,
-  "success": false,
+  "status": "error",
   "message": "No smoking & dying data found for the selected period"
 }
 ```
-
-or when all rows are filtered out:
-
-```json
-{
-  "statusCode": 404,
-  "success": false,
-  "message": "No smoking & dying stock data found for the selected period"
-}
-```
-
----
-
-## How the data is brought together
-
-A new developer should be able to understand the report from this section without reading the controller code.
-
-### 1. Report period
-
-- **start**: `new Date(startDate)` at 00:00:00.000  
-- **end**: `new Date(endDate)` at 23:59:59.999  
-- All “in period” logic uses this inclusive range.
-
-### 2. Which rows appear in the report
-
-- We take **distinct (item_sub_category_name, item_name)** from the collection **process_done_items_details** (optionally filtered by `filter.item_name` and `filter.item_group_name` → `item_sub_category_name`).
-- There is **exactly one report row per** such pair. If an item has no activity in the period, it still appears if it exists in process_done_items_details, unless it is dropped in step 6 below.
-
-### 3. Collections and fields used
-
-| Collection | Role | Key fields |
-|------------|------|------------|
-| **process_done_items_details** | Line items (receipt when done; issues when status/updatedAt set) | `process_done_id`, `item_name`, `item_sub_category_name`, `sqm`, `process_name`, `issue_status`, `updatedAt` |
-| **process_done_details** | Session header; provides **process_done_date** and **process_name** for “receipt in period” and Direct Dye / DR Dyed split | `_id`, `process_done_date`, `process_name` |
-
-- **Join**: `process_done_items_details.process_done_id` → `process_done_details._id` (used to get `process_done_date` and `process_name` for receipt in period).
-
-### 4. Per-row aggregates (for each item_sub_category_name + item_name)
-
-All of the following are **sums of `sqm`** (or 0 if no rows), scoped to that pair.
-
-| Quantity | Collection(s) | Filter | Meaning |
-|----------|---------------|--------|---------|
-| **Current available** | process_done_items_details | `issue_status` is `null` or not present | Stock still “on hand” (not yet issued to grouping). |
-| **Receipt in period (Direct Dye)** | process_done_items_details + process_done_details | Join by `process_done_id` → `_id`; then `process_done_date` ∈ [start, end]; then `process_name` maps to “Direct Dye” (e.g. DIRECT DYE, DIRECT DYEING) | SQM received in period via Direct Dye process. |
-| **Receipt in period (DR Dyed)** | process_done_items_details + process_done_details | Same join and date filter; then `process_name` maps to “DR Dyed” (e.g. DR DYED, DR DYE) | SQM received in period via DR Dyed process. |
-| **Issue Sq Mtr** | process_done_items_details | `issue_status === 'grouping'` and `updatedAt` ∈ [start, end] | SQM issued for grouping in the period. |
-
-- **Receipt in period** (internal) = Direct Dye + DR Dyed (used in opening balance formula).
-- **Issued in period** (internal) = Issue Sq Mtr (used in opening balance formula).
-
-Placeholder columns (no schema yet): **Clipping**, **Mixmatch**, **Edgebanding**, **Lipping**, **Sale** → all **0**.
-
-### 5. Formulas (calculations)
-
-For each (item_sub_category_name, item_name):
-
-```
-Opening Balance = max(0,  Current available  +  Issued in period  −  Receipt in period  )
-
-Closing Balance = max(0,  Opening Balance  +  Direct Dye  +  DR Dyed  −  Total issues  )
-
-where:
-  Receipt in period = Direct Dye + DR Dyed   (from process_done_items_details + process_done_details, in period)
-  Issued in period  = Issue Sq Mtr            (from process_done_items_details only, in period)
-  Total issues      = Issue Sq Mtr + Clipping + Mixmatch + Edgebanding + Lipping + Sale
-```
-
-So:
-
-- **Opening** = what would have been “current” at start of period if we reverse the period’s receipts and add back the period’s issues.  
-- **Closing** = opening + Direct Dye + DR Dyed − all outflows (Issue Sq Mtr, Clipping, Mixmatch, Edgebanding, Lipping, Sale).  
-- Both are floored at 0.
-
-### 6. Which rows are returned in the Excel
-
-- After computing the above for every distinct (item_sub_category_name, item_name), we **drop rows where every numeric column is 0** (opening_balance, direct_dye, dr_dyed, issue_sq_mtr, clipping, mixmatch, edgebanding, lipping, sale, closing_balance).  
-- If no rows remain, the API responds with **404** and message `"No smoking & dying stock data found for the selected period"`.  
-- The Excel is built from the remaining rows only.
-
-### 7. Understanding the API response
-
-- **200**: The report was generated. **result** is a **URL** to the Excel file (e.g. `http://localhost:5000/public/upload/reports/reports2/Smoking&Dying/Smoking-Dying-Stock-Register-<timestamp>.xlsx`). The client can GET this URL to download the file.  
-- The Excel contains one sheet: title row with date range, one header row (column names), one data row per (Item Group Name, Item Name) that passed the non-zero filter, then one **Total** row (sum of each numeric column).  
-- **400**: Invalid request (missing/invalid dates or start &gt; end).  
-- **404**: No distinct (item_sub_category_name, item_name) in process_done_items_details, or all rows were dropped as all-zero.
 
 ---
 
 ## Report Structure
 
-The generated Excel file has the following layout.
+The generated Excel has the **same structure as the Daily report**, with the title showing the date range.
 
-### Title Row
+### Row 1: Report Title
 
+**Format:**
 ```
-Smoking&Dying Stock Register - DD/MM/YYYY-DD/MM/YYYY
+Smoking Details Report Date: DD/MM/YYYY - DD/MM/YYYY
 ```
 
-Example: `Smoking&Dying Stock Register - 01/03/2025-31/03/2025`
+**Example:**
+```
+Smoking Details Report Date: 01/01/2025 - 31/01/2025
+```
 
-### Column Headers
+### Row 2: Empty (spacing)
 
-| Column | Description |
-|--------|-------------|
-| Item Group Name | Item sub-category name |
-| Item Name | Item name |
-| Opening Balance | Stock at start of period (SQM) |
-| Direct Dye | Receipt in period via Direct Dye process (SQM) |
-| DR Dyed | Receipt in period via DR Dyed process (SQM) |
-| Issue Sq Mtr | Issued for grouping in period (SQM) |
-| Clipping | Clipping in period (currently 0) |
-| Mixmatch | Mixmatch in period (currently 0) |
-| Edgebanding | Edgebanding in period (currently 0) |
-| Lipping | Lipping in period (currently 0) |
-| Sale | Sale in period (currently 0) |
-| Closing Balance | Opening + Direct Dye + DR Dyed − all issue columns (SQM) |
+### Row 3: Main Data Headers (single line)
+
+| # | Column        | Description                                      |
+|---|---------------|--------------------------------------------------|
+| 1 | Item Name     | Original item name                               |
+| 2 | LogX          | Log identifier code (merged per log group)       |
+| 3 | Bundle No     | Bundle number                                    |
+| 4 | ThickneSS     | Thickness                                        |
+| 5 | Length        | Length                                           |
+| 6 | Width         | Width                                            |
+| 7 | Leaves        | Number of leaves                                 |
+| 8 | Sq Mtr        | Square meters                                    |
+| 9 | PROCESS       | Process name                                     |
+|10 | Process color | Color name                                       |
+|11 | Character     | Character name                                   |
+|12 | Pattern       | Pattern name                                     |
+|13 | Series        | Series name                                      |
+|14 | Remarks       | Remarks                                          |
 
 ### Data Rows
 
-- One row per distinct **(Item Group Name, Item Name)** from process done items details.
-- Sorted by Item Group Name, then Item Name.
-- Numeric columns use two decimal places.
+- One row per bundle; all sessions with `process_done_date` in the selected date range are listed.
+- **Columns 1–2:** Item Name and LogX are **merged vertically** for each contiguous group that share the same log (same process_done_id + same log_no_code).
+- **Columns 3–14:** Bundle No through Remarks vary per row.
 
-### Total Row
+### Subtotal Rows
 
-- Last row is **Total**, with sums of all numeric columns (Opening Balance through Closing Balance).
+- After each item group, a row with label **TOTAL** and sum of Leaves (column 7) and Sq Mtr (column 8) for that item.
+
+### Grand Total Row
+
+- Label **TOTAL**; Column 7 = total leaves; Column 8 = sum of all Sq Mtr.
+
+### Summary Section (SUMMERY)
+
+**Headers:** ITEM NAME | RECEIVED MTR. | PROCESS NAME | LEAVE | PRODUCTION SQ. MTR
+
+**Data:** One row per unique item name. RECEIVED MTR. equals PRODUCTION SQ. MTR (same value per item). PROCESS NAME from first occurrence per item.
+
+**TOTAL row:** Overall sum of LEAVE and PRODUCTION SQ. MTR; RECEIVED MTR. equals total PRODUCTION SQ. MTR.
+
+---
+
+## How Data Is Brought Together
+
+### Step 1: Aggregation (Controller)
+
+1. **Source collection:** `process_done_details`.
+2. **Filter ($match):** `process_done_date` between start of `startDate` (00:00:00.000) and end of `endDate` (23:59:59.999).
+3. **Attach items ($lookup):** From `process_done_items_details` on `process_done_id` = `_id`.
+4. **One row per bundle ($unwind** on `items`, **preserveNullAndEmptyArrays: false**).
+5. **Sort:** By `items.item_name`, `items.log_no_code`, `items.bundle_number`.
+6. **Project:** Flat shape (process_done_id, item_name, log_no_code, bundle_number, thickness, length, width, no_of_leaves, sqm, process_name, color_name, character_name, pattern_name, series_name, remark).
+
+**Result:** Array of flat objects, one per bundle, ordered by item_name, log_no_code, bundle_number.
+
+### Step 2: Excel Generation (Config)
+
+- **Input:** Aggregated rows, `startDate`, `endDate`.
+- **Title:** "Smoking Details Report Date: " + formatted startDate + " - " + formatted endDate (DD/MM/YYYY).
+- **Main table, subtotals, Grand Total, Summary section:** Same logic as the Daily report (merge columns 1–2 per log group; RECEIVED MTR. = PRODUCTION SQ. MTR).
+
+---
 
 ## Implementation References
 
-- **Controller**: `topl_backend/controllers/reports2/Smoking&Dying/smokingDyingStockRegister.js`
-- **Excel config**: `topl_backend/config/downloadExcel/reports2/Smoking&Dying/smokingDyingStockRegister.js`
-- **Routes**: `topl_backend/routes/report/reports2/Smoking&Dying/smoking_dying.routes.js`
-- **Plan** (design and implementation steps): [SMOKING_DYING_STOCK_REGISTER_PLAN.md](./SMOKING_DYING_STOCK_REGISTER_PLAN.md) in this folder.
+- **Controller:** `topl_backend/controllers/reports2/Smoking&Dying/smokingDyingStockRegister.js`
+- **Excel config:** `topl_backend/config/downloadExcel/reports2/Smoking&Dying/smokingDyingStockRegister.js`
+- **Routes:** `topl_backend/routes/report/reports2/Smoking&Dying/smoking_dying.routes.js`
+- **Plan:** [SMOKING_DYING_STOCK_REGISTER_PLAN.md](./SMOKING_DYING_STOCK_REGISTER_PLAN.md)
 
-For how data is gathered, which collections/fields are used, and the exact formulas, see **[How the data is brought together](#how-the-data-is-brought-together)** above.
+## File Storage
+
+**Directory:** `public/reports/SmokingDying/`
+
+**Filename pattern:** `smoking_dying_stock_register_{timestamp}.xlsx`
+
+## Notes
+
+- Report layout is identical to the Smoking&Dying Daily Report; only the date filter (range vs single date) and title format differ.
+- This report does not use the Daily report’s route, controller, or Excel generator.

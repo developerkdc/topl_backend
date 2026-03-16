@@ -42,5 +42,5 @@ Implement the **Fleece Item-Wise Stock Report** API under reports2 that generate
 | Body   | startDate, endDate, optional filter (item_sub_category_name, item_name) |
 | 200    | `{ data: "<download URL>", message: "Item-wise stock report generated successfully" }` |
 | 400    | Missing/invalid dates or start > end |
-| 404    | No stock data for period |
+| 404    | No stock data for period (no receive, consume, sales, or issue for pressing in date range) |
 | 500    | Error generating report |
