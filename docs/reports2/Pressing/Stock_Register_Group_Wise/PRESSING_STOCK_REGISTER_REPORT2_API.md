@@ -179,7 +179,7 @@ Closing SqMtr       = Opening + issued_for_pressing − pressing_received − al
 ### 7. Understanding the API response
 
 - **200**: The report was generated. **result** is a URL to the Excel file. The client can GET this URL to download the file.
-- The Excel contains: title row, one header row, data rows grouped by Item Name with merged Item Name cells, a **Total** row after each Item Name group (subtotal), and one **Total** row at the end (grand total).
+- The Excel contains: title row, one header row, data rows grouped by Item Name with merged Item Name cells, a **Total** row after each Item Name group (subtotal, **separate** from item details), and one **Total** row at the end (grand total, **separate** from item details).
 - **400**: Invalid request (missing/invalid dates or start > end).
 - **404**: No distinct groups in `issues_for_pressing`, or all rows were dropped as all-zero.
 
@@ -217,18 +217,18 @@ Example: `Pressing Item Stock Register between group no wise 01/03/2025 and 31/0
 
 - One row per distinct **(group_no, item_name)** that has any non-zero metric.
 - Sorted by Item Name (asc), then Group no (asc).
-- **Merged cells**: Item Name column (col 1) is merged for consecutive rows of the same Item Name (including the following Total row for that group).
+- **Merged cells**: Item Name column (col 1) is merged for consecutive **detail rows** of the same Item Name only. The Total row is **not** merged with item details.
 - Numeric columns use two decimal places.
 
 ### Item Name Total Rows
 
 - After each Item Name's detail rows, a **Total** row sums Opening SqMtr, Issued for pressing SqMtr, Pressing received Sqmtr, Pressing Waste SqMtr, Closing SqMtr for that group only.
-- Col 1 shows the Item Name (part of merged cell); Col 2 shows **Total**; cols 3–6 are blank.
+- **The Total row is separate from item details** — it is not merged with the Item Name cell. Col 1 shows **Total**; Col 2 shows **Total**; cols 3–6 are blank.
 
 ### Grand Total Row
 
 - Last row is **Total**, with sums of all numeric columns across the entire report.
-- Col 1: **Total**; cols 2–6 blank.
+- **The Grand Total row is separate from item details and subtotal rows.** Col 1: **Total**; cols 2–6 blank.
 
 ---
 

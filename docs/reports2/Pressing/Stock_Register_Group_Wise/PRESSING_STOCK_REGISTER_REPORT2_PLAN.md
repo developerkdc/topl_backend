@@ -1,4 +1,5 @@
 # Pressing Stock Register Report 2 — Plan
+
 ## Group No Wise
 
 **Overview:** Add a Pressing Item Stock Register (Report 2) API under reports2 > Pressing that produces an Excel report at transaction (group) level — one row per distinct `(group_no, item_name)`, grouped and subtotalled by Item Name. Columns include Group no, Photo No, Order No, Thickness, Size, Opening SqMtr, Issued for pressing SqMtr, Pressing received Sqmtr, Pressing Waste SqMtr, and Closing SqMtr. Data is sourced from `issues_for_pressing`, `pressing_done_details`, `pressing_damage`, and `photos`.
@@ -37,37 +38,36 @@ Closing SqMtr      = current_available
   - **Distinct rows:** Group by `(group_no, item_name)` all time, keep `$first` of thickness, length, width. Sort by item_name asc, group_no asc.
   - **Issued in period:** sum(sqm) where createdAt ∈ [start, end], per `(group_no, item_name)`.
   - **Current available:** sum(available_details.sqm) where is_pressing_done = false, per `(group_no, item_name)`.
-
 - **pressing_done_details** (`topl_backend/database/schema/factory/pressing/pressing_done/pressing_done.schema.js`)
   - One document per pressing run.
   - Key fields: `_id`, `group_no`, `pressing_id`, `sqm`, `pressing_date`.
   - **Order No (pressing_id):** Fetch all docs where group_no ∈ all group_nos; build `Map<group_no → pressing_id>` (first match wins).
   - **Pressing received:** sum(sqm) per group_no where pressing_date ∈ [start, end].
   - **Bridge for waste:** fetch `_id` + `group_no` for docs with pressing_date in range.
-
 - **pressing_damage** (`topl_backend/database/schema/factory/pressing/pressing_damage/pressing_damage.schema.js`)
   - Key fields: `pressing_done_details_id`, `sqm`.
   - **Pressing Waste:** sum(sqm) per pressing_done_details_id; map back to group_no via bridge.
-
 - **photos** (`topl_backend/database/schema/masters/photo.schema.js`)
   - Key fields: `group_no`, `photo_number`.
   - Used to resolve `photo_number` per group_no (single bulk query).
 
 **Mapping to report columns:**
 
-| Report column | Source / logic |
-|---------------|----------------|
-| Item Name | issues_for_pressing.item_name |
-| Group no | issues_for_pressing.group_no |
-| Photo No | photos.photo_number via group_no |
-| Order No | pressing_done_details.pressing_id (first match per group_no) |
-| Thickness | issues_for_pressing.thickness |
-| Size | `length X width` (string) |
-| Opening SqMtr | current_available + pressing_received + pressing_waste − issued_for_pressing |
-| Issued for pressing SqMtr | issues_for_pressing.sqm where createdAt in [start, end] |
-| Pressing received Sqmtr | pressing_done_details.sqm where pressing_date in [start, end] |
-| Pressing Waste SqMtr | pressing_damage.sqm via pressing_done_details in period |
-| Closing SqMtr | current_available |
+
+| Report column             | Source / logic                                                               |
+| ------------------------- | ---------------------------------------------------------------------------- |
+| Item Name                 | issues_for_pressing.item_name                                                |
+| Group no                  | issues_for_pressing.group_no                                                 |
+| Photo No                  | photos.photo_number via group_no                                             |
+| Order No                  | pressing_done_details.pressing_id (first match per group_no)                 |
+| Thickness                 | issues_for_pressing.thickness                                                |
+| Size                      | `length X width` (string)                                                    |
+| Opening SqMtr             | current_available + pressing_received + pressing_waste − issued_for_pressing |
+| Issued for pressing SqMtr | issues_for_pressing.sqm where createdAt in [start, end]                      |
+| Pressing received Sqmtr   | pressing_done_details.sqm where pressing_date in [start, end]                |
+|                         | pressing_damage.sqm via pressing_done_details in period                      |
+| Closing SqMtr             | current_available                                                            |
+
 
 ---
 
@@ -82,12 +82,14 @@ Closing SqMtr      = current_available
 
 ## File and route layout
 
-| Purpose | Path |
-|---------|------|
-| Controller | `controllers/reports2/Pressing/pressingStockRegisterReport2.js` |
+
+| Purpose         | Path                                                                     |
+| --------------- | ------------------------------------------------------------------------ |
+| Controller      | `controllers/reports2/Pressing/pressingStockRegisterReport2.js`          |
 | Excel generator | `config/downloadExcel/reports2/Pressing/pressingStockRegisterReport2.js` |
-| Routes | `routes/report/reports2/Pressing/pressing.routes.js` |
-| Mount | `routes/report/reports2.routes.js` — pressing router already mounted |
+| Routes          | `routes/report/reports2/Pressing/pressing.routes.js`                     |
+| Mount           | `routes/report/reports2.routes.js` — pressing router already mounted     |
+
 
 Reference patterns:
 
@@ -176,6 +178,8 @@ sequenceDiagram
   pressingStockRegisterReport2_ctrl-->>Client: 200 { result: downloadLink }
 ```
 
+
+
 ---
 
 ## Clarifications and assumptions
@@ -195,3 +199,4 @@ sequenceDiagram
 - Show all `pressing_id`s for a group (e.g. as comma-separated) if a group has been pressed multiple times.
 - Credit groups that appear only in `group_no_array` of `pressing_done_details` for received/waste attribution.
 - Add a `photo_name` / `sales_item_name` column (available from `photos.item_name` or `photos.sales_item_name`) for more context alongside Photo No.
+

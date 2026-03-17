@@ -185,7 +185,7 @@ New Sqmtr = Issue SqMtr − Process Waste SqMtr
 ### 7. Understanding the API response
 
 - **200**: The report was generated. **result** is a **URL** to the Excel file (e.g. `http://localhost:5000/public/upload/reports/reports2/Pressing/Pressing-Stock-Register-<timestamp>.xlsx`). The client can GET this URL to download the file.
-- The Excel contains: title row with date range, one header row (Category, Item Group, Item Name, OPBL SqMtr, Received SqMtr, Pur Sq Mtr, Issue SqMtr, Process Waste SqMtr, New Sqmtr, Closing SqMtr), data rows grouped by Category and Item Group with **merged cells** for Category and Item Group, a **Total** row after each Item Group (subtotal), and one **Total** row at the end (grand total).
+- The Excel contains: title row with date range, one header row (Category, Item Group, Item Name, OPBL SqMtr, Received SqMtr, Pur Sq Mtr, Issue SqMtr, Process Waste SqMtr, New Sqmtr, Closing SqMtr), data rows grouped by Category and Item Group with **merged cells** for Category and Item Group, a **Total** row after each Item Group (subtotal, **separate** from item details), and one **Total** row at the end (grand total, **separate** from item details).
 - **400**: Invalid request (missing/invalid dates or start > end).
 - **404**: No distinct (Category, Item Group, Item Name) found, or all rows were dropped as all-zero.
 
@@ -222,18 +222,18 @@ Example: `Pressing Item Stock Register between 01/03/2025 and 31/03/2025`
 
 - One row per distinct **(Category, Item Group, Item Name)** that has any non-zero metric.
 - Sorted by Category, then Item Group, then Item Name.
-- **Merged cells**: Category column is merged for consecutive rows with the same Category; Item Group column is merged for consecutive rows with the same Item Group (including the following Total row for that group).
+- **Merged cells**: Category column is merged for consecutive **detail rows** with the same Category; Item Group column is merged for consecutive **detail rows** with the same Item Group only. The Total row is **not** merged with item details.
 - Numeric columns use two decimal places.
 
 ### Item Group Total Rows
 
 - After each Item Group’s detail rows, a **Total** row sums OPBL SqMtr, Received SqMtr, Pur Sq Mtr, Issue SqMtr, Process Waste SqMtr, New Sqmtr, Closing SqMtr for that group only.
-- Item Name column shows **Total**; Category and Item Group show the group’s values (and are part of the merged cell range).
+- **The Total row is separate from item details** — it is not merged with the Category or Item Group cells. Item Name column shows **Total**; Category and Item Group show **Total** or blank.
 
 ### Grand Total Row
 
 - Last row is **Total**, with sums of all numeric columns across the entire report.
-- Category column: **Total**; Item Group and Item Name blank.
+- **The Grand Total row is separate from item details and subtotal rows.** Category column: **Total**; Item Group and Item Name blank.
 
 ---
 

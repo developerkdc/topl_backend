@@ -143,8 +143,8 @@ export const GeneratePressingStockRegisterExcel = async (
       if (prevItemGroup !== null && (prevCategory !== category || prevItemGroup !== itemGroup)) {
         if (groupTotals !== null && groupStartRow !== null) {
           const tr = worksheet.getRow(currentRow);
-          tr.getCell(1).value = prevCategory ?? '';
-          tr.getCell(2).value = prevItemGroup ?? '';
+          tr.getCell(1).value = '';
+          tr.getCell(2).value = '';
           tr.getCell(3).value = 'Total';
           tr.getCell(4).value = groupTotals.opening_balance;
           tr.getCell(5).value = groupTotals.received;
@@ -157,7 +157,7 @@ export const GeneratePressingStockRegisterExcel = async (
           tr.eachCell((cell) => {
             Object.assign(cell, totalRowStyle);
           });
-          mergeRanges.itemGroup.push({ start: itemGroupStartRow, end: currentRow });
+          mergeRanges.itemGroup.push({ start: itemGroupStartRow, end: currentRow - 1 });
           currentRow++;
         }
         groupTotals = null;
@@ -229,8 +229,8 @@ export const GeneratePressingStockRegisterExcel = async (
 
     if (groupTotals !== null && groupStartRow !== null) {
       const tr = worksheet.getRow(currentRow);
-      tr.getCell(1).value = prevCategory ?? '';
-      tr.getCell(2).value = prevItemGroup ?? '';
+      tr.getCell(1).value = '';
+      tr.getCell(2).value = '';
       tr.getCell(3).value = 'Total';
       tr.getCell(4).value = groupTotals.opening_balance;
       tr.getCell(5).value = groupTotals.received;
@@ -241,7 +241,7 @@ export const GeneratePressingStockRegisterExcel = async (
       tr.getCell(10).value = groupTotals.closing_balance;
       for (let col = 4; col <= 10; col++) tr.getCell(col).numFmt = '0.00';
       tr.eachCell((cell) => Object.assign(cell, totalRowStyle));
-      mergeRanges.itemGroup.push({ start: itemGroupStartRow, end: currentRow });
+      mergeRanges.itemGroup.push({ start: itemGroupStartRow, end: currentRow - 1 });
       currentRow++;
     }
     if (categoryStartRow !== null) mergeRanges.category.push({ start: categoryStartRow, end: currentRow - 1 });

@@ -69,8 +69,8 @@ export const GeneratePressingStockRegisterReport2Excel = async (
       'Issued for pressing SqMtr',
       'Pressing received Sqmtr',
       'Pressing Waste SqMtr',
-      'Sales',
-      'All Damage',
+      // 'Sales',
+      // 'All Damage',
       'Closing SqMtr',
     ];
     const NUM_COLS = headers.length;
@@ -120,16 +120,16 @@ export const GeneratePressingStockRegisterReport2Excel = async (
 
     const writeItemTotal = (name, totals, rowNum) => {
       const tr = worksheet.getRow(rowNum);
-      tr.getCell(1).value = name;
-      tr.getCell(2).value = 'Total';
+      tr.getCell(1).value = 'Total';
+      tr.getCell(2).value = '';
       for (let c = 3; c <= 6; c++) tr.getCell(c).value = '';
       tr.getCell(7).value = totals.opening_sqm;
       tr.getCell(8).value = totals.issued_for_pressing;
       tr.getCell(9).value = totals.pressing_received;
       tr.getCell(10).value = totals.pressing_waste;
-      tr.getCell(11).value = totals.sales;
-      tr.getCell(12).value = totals.all_damage;
-      tr.getCell(13).value = totals.closing_sqm;
+      // tr.getCell(11).value = totals.sales;
+      // tr.getCell(12).value = totals.all_damage;
+      tr.getCell(11).value = totals.closing_sqm;
       for (let c = NUMERIC_START_COL; c <= NUM_COLS; c++) tr.getCell(c).numFmt = '0.00';
       tr.eachCell((cell) => Object.assign(cell, totalRowStyle));
     };
@@ -139,7 +139,7 @@ export const GeneratePressingStockRegisterReport2Excel = async (
 
       if (prevItemName !== null && prevItemName !== itemName) {
         writeItemTotal(prevItemName, itemTotals, currentRow);
-        itemMergeRanges.push({ start: itemStartRow, end: currentRow });
+        itemMergeRanges.push({ start: itemStartRow, end: currentRow - 1 });
         currentRow++;
         itemTotals = null;
       }
@@ -168,9 +168,9 @@ export const GeneratePressingStockRegisterReport2Excel = async (
       r.getCell(8).value = row.issued_for_pressing;
       r.getCell(9).value = row.pressing_received;
       r.getCell(10).value = row.pressing_waste;
-      r.getCell(11).value = row.sales;
-      r.getCell(12).value = row.all_damage;
-      r.getCell(13).value = row.closing_sqm;
+      // r.getCell(11).value = row.sales;
+      // r.getCell(12).value = row.all_damage;
+      r.getCell(11).value = row.closing_sqm;
 
       r.getCell(5).numFmt = '0.00';
       for (let c = NUMERIC_START_COL; c <= NUM_COLS; c++) r.getCell(c).numFmt = '0.00';
@@ -197,7 +197,7 @@ export const GeneratePressingStockRegisterReport2Excel = async (
 
     if (itemTotals !== null) {
       writeItemTotal(prevItemName, itemTotals, currentRow);
-      itemMergeRanges.push({ start: itemStartRow, end: currentRow });
+      itemMergeRanges.push({ start: itemStartRow, end: currentRow - 1 });
       currentRow++;
     }
 
@@ -213,9 +213,9 @@ export const GeneratePressingStockRegisterReport2Excel = async (
     gr.getCell(8).value = grandTotals.issued_for_pressing;
     gr.getCell(9).value = grandTotals.pressing_received;
     gr.getCell(10).value = grandTotals.pressing_waste;
-    gr.getCell(11).value = grandTotals.sales;
-    gr.getCell(12).value = grandTotals.all_damage;
-    gr.getCell(13).value = grandTotals.closing_sqm;
+    // gr.getCell(11).value = grandTotals.sales;
+    // gr.getCell(12).value = grandTotals.all_damage;
+    gr.getCell(11).value = grandTotals.closing_sqm;
     gr.eachCell((cell) => {
       Object.assign(cell, totalRowStyle);
       if (cell.col >= NUMERIC_START_COL) cell.numFmt = '0.00';
@@ -223,7 +223,7 @@ export const GeneratePressingStockRegisterReport2Excel = async (
 
     worksheet.columns = [
       { width: 20 }, { width: 14 }, { width: 12 }, { width: 14 }, { width: 10 }, { width: 16 },
-      { width: 15 }, { width: 22 }, { width: 20 }, { width: 18 }, { width: 12 }, { width: 15 }, { width: 15 }
+      { width: 15 }, { width: 22 }, { width: 20 }, { width: 18 }, /*{ width: 12 }, { width: 15 },*/ { width: 15 }
     ];
 
     const timeStamp = new Date().getTime();

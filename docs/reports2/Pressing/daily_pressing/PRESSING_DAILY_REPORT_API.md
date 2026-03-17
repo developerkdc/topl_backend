@@ -79,8 +79,8 @@ Pressing Details Report Date: DD/MM/YYYY
 | 7 | Sheets    | Number of sheets                              |
 | 8 | Sq Mtr    | Square meters (from DB or calculated when missing) |
 
-- Data is grouped by **Category**; each category has a **Total** row (Sheets and Sq Mtr summed).
-- After all categories, a **Grand Total** row sums total Sheets and total Sq Mtr.
+- Data is grouped by **Category**; each category has a **Total** row (Sheets and Sq Mtr summed). **The Total row is separate from item details** — it is not merged with the category rows.
+- After all categories, a **Grand Total** row sums total Sheets and total Sq Mtr. **The Grand Total row is separate from item details and category totals.**
 - **Sq Mtr** is used from DB when present and > 0; otherwise calculated as (length × width) / 10000.
 
 ### Section 2: Core - Face Consumption Sq.Mtr.
@@ -122,8 +122,8 @@ When the API returns **200 OK**:
 
 2. **The Excel file** contains:
    - **Section 1**: Title "Pressing Details Report Date: DD/MM/YYYY", then a table (8 columns: Category, Base, Item Name, Thick., Side, Size, Sheets, Sq Mtr) built from base_details. Rows grouped by category with Total per category and Grand Total.
-   - **Section 2**: Header "Core - Face Consumption Sq.Mtr.", then table from face_details with total row.
-   - **Section 3**: Header "Plywood Consumption Sq.Mtr.", then table from base_details by item name with total row.
+   - **Section 2**: Header "Core - Face Consumption Sq.Mtr.", then table from face_details with total row (**separate** from item details).
+   - **Section 3**: Header "Plywood Consumption Sq.Mtr.", then table from base_details by item name with total row (**separate** from item details).
 
 3. **Where each value comes from** is documented in **Field Mapping** and **How Data Is Brought Together** below.
 
