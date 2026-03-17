@@ -2,11 +2,11 @@
 
 ## Overview
 
-The Pressing Stock Register Report 1 API generates an Excel report that shows pressing item stock movements grouped by **Item Name → Sales item Name → Thickness → Size** over a date range. The report includes Opening SqMtr, Pressing SqMtr (output from pressing), Alls Sell (issued to further processes), All Damage (pressing-stage waste), Process Waste, and Closing SqMtr. Rows are grouped by Item Name with merged cells; each Item Name group has a **Total** (subtotal) row, and the report ends with a **Total** (grand total) row.
+The Pressing Stock Register Report 1 API generates an Excel report that shows pressing item stock movements grouped by **Item Name → Sales item Name → Thickness → Size** over a date range. The report includes Opening SqMtr, Pressing SqMtr (output from pressing), Alls Sell (Sales = issued for order minus CNC+Colour+Polish damage), All Damage (Pressing + CNC + Colour + Polish damage), Process Waste, and Closing SqMtr. Rows are grouped by Item Name with merged cells; each Item Name group has a **Total** (subtotal) row, and the report ends with a **Total** (grand total) row.
 
-Data is sourced from `pressing_done_details` (row universe & Pressing SqMtr), `pressing_done_history` (Sales — items issued to further processes from pressing), `pressing_damage` (All Damage — pressing-stage waste), `issues_for_pressing` (item_name via group_no, current available for opening balance), and `photos` (sales_item_name via group_no).
+Data is sourced from `pressing_done_details` (row universe & Pressing SqMtr), `pressing_done_history` (Sales), `pressing_damage`, `cnc_damage_details`, `color_damage_details`, `polishing_damage_details` (All Damage — aggregated via pressing_details_id), `issues_for_pressing` (item_name via group_no), and `photos` (sales_item_name via group_no).
 
-> **Note:** Issue for Challan is currently **0** (schema gap). All Damage reflects pressing-stage waste from `pressing_damage`. Downstream CNC/colour/polishing damage will be added in a future phase.
+> **Note:** Issue for Challan is currently **0** (schema gap). All Damage = sum of damage from Pressing, CNC, Colour, and Polish stages (linked via pressing_done_details._id).
 
 ## Endpoint
 
@@ -140,14 +140,17 @@ A developer should be able to understand the report from this section without re
 | Collection | Role | Key fields |
 |---|---|---|
 | **pressing_done_details** | Row universe and Pressing SqMtr — one doc per pressing run | `_id`, `group_no`, `pressing_date`, `thickness`, `length`, `width`, `sqm` |
-| **pressing_done_history** | Sales — records where a pressed item was issued to a further process (CNC, COLOR, etc.) | `issued_item_id` (→ pressing_done_details._id), `issue_status`, `sqm` |
-| **pressing_damage** | All Damage — pressing-stage waste per run | `pressing_done_details_id`, `sqm` |
-| **issues_for_pressing** | Resolves `item_name` via group_no; provides current_available for opening balance | `group_no`, `item_name`, `sqm`, `available_details.sqm`, `is_pressing_done`, `createdAt` |
+| **pressing_done_history** | Sales — records where a pressed item was issued for ORDER | `issued_item_id` (→ pressing_done_details._id), `issued_for`, `sqm` |
+| **pressing_damage** | All Damage — pressing-stage waste | `pressing_done_details_id`, `sqm` |
+| **cnc_damage_details** | All Damage — CNC-stage waste | `cnc_done_id` → cnc_done_details.pressing_details_id |
+| **color_damage_details** | All Damage — colour-stage waste | `color_done_id` → color_done_details.pressing_details_id |
+| **polishing_damage_details** | All Damage — polishing-stage waste | `polishing_done_id` → polishing_done_details.pressing_details_id |
+| **issues_for_pressing** | Resolves `item_name` via group_no | `group_no`, `item_name`, `sqm`, `available_details.sqm`, `is_pressing_done`, `createdAt` |
 | **photos** (masters) | Sales item name per group | `group_no`, `sales_item_name` |
 
 - **Join (Pressing SqMtr)**: `pressing_done_details` where `pressing_date` ∈ [start, end] → sum(`sqm`) per combo.
-- **Join (Sales)**: `pressing_done_history.issued_item_id` ∈ pressing_done_details `_id`s in period → sum(`sqm`) per pressing_done_id → attributed to combo.
-- **Join (All Damage)**: `pressing_damage.pressing_done_details_id` ∈ pressing_done `_id`s in period → sum(`sqm`) per pressing_done_id → attributed to combo.
+- **Join (Sales)**: `pressing_done_history` where `issued_for` = "ORDER" → sum(`sqm`) per pressing_done_id. Subtract (CNC + Colour + Polish damage) per pressing_done_id → net Sales. Closing uses net sales.
+- **Join (All Damage)**: Sum of (1) `pressing_damage` where `pressing_done_details_id` ∈ pressing_done IDs; (2) `cnc_damage_details` via `cnc_done_details.pressing_details_id`; (3) `color_damage_details` via `color_done_details.pressing_details_id`; (4) `polishing_damage_details` via `polishing_done_details.pressing_details_id` → attributed to combo.
 - **Current available**: `issues_for_pressing` where `is_pressing_done = false`, sum(`available_details.sqm`) per `(group_no, item_name)`.
 - **Issued in period**: `issues_for_pressing` where `createdAt` ∈ [start, end], sum(`sqm`) per `(group_no, item_name)`.
 
@@ -156,10 +159,10 @@ A developer should be able to understand the report from this section without re
 | Quantity | Source | Filter | Meaning |
 |---|---|---|---|
 | **Pressing SqMtr** | pressing_done_details | pressing_date ∈ [start, end] | Pressed output (finished panels) in period |
-| **Sales** | pressing_done_history | issued_item_id ∈ pressing_done IDs in period | SQM issued from pressing to further processes (CNC/COLOR/etc.) |
+| **Sales** | pressing_done_history − (CNC + Colour + Polish damage) | issued_for = "ORDER"; subtract downstream damage | Net SQM: issued for order minus damage at CNC/Colour/Polish |
 | **Issue for Challan** | — | — | 0 (schema gap) |
-| **All Damage** | pressing_damage | pressing_done_details_id ∈ pressing_done IDs | Pressing-stage waste in period |
-| **Process Waste** | pressing_damage | Same as All Damage | Same value as All Damage (pressing-stage) |
+| **All Damage** | pressing_damage + cnc_damage + color_damage + polishing_damage | Linked via pressing_done_details._id | Total waste across Pressing, CNC, Colour, Polish |
+| **Process Waste** | pressing_damage | pressing_done_details_id ∈ pressing_done IDs | Pressing-stage waste only |
 | **Current available** | issues_for_pressing | is_pressing_done = false | SQM still awaiting pressing |
 | **Opening SqMtr** | Calculated | — | Stock at pressing stage at start of period |
 | **Closing SqMtr** | Calculated | — | Stock at end of period |
@@ -170,17 +173,22 @@ For each `(item_name, sales_item_name, thickness, size)` combo (summing across a
 
 ```
 pressing_sqm       = sum of pressing_done_details.sqm where pressing_date in [start, end]
-sales              = sum of pressing_done_history.sqm where issued_item_id in pressing_done IDs
-all_damage         = sum of pressing_damage.sqm where pressing_done_details_id in pressing_done IDs
+sales_raw          = sum of pressing_done_history.sqm where issued_for = "ORDER" and issued_item_id in pressing_done IDs
+downstream_damage  = sum of (cnc_damage + color_damage + polishing_damage).sqm linked to pressing_done IDs
+sales              = max(0, sales_raw − downstream_damage)   (displayed Sales column)
+all_damage         = sum of (pressing_damage + cnc_damage + color_damage + polishing_damage).sqm
+                    linked to pressing_done IDs via pressing_done_details_id / cnc_done_details.pressing_details_id /
+                    color_done_details.pressing_details_id / polishing_done_details.pressing_details_id
 current_available  = sum of issues_for_pressing.available_details.sqm where is_pressing_done = false
 issued_in_period   = sum of issues_for_pressing.sqm where createdAt in [start, end]
 
-process_waste      = all_damage   (pressing-stage waste)
+process_waste      = pressing_damage only   (pressing-stage waste)
 issue_for_challan  = 0
 
 Opening SqMtr = current_available + pressing_sqm + all_damage − issued_in_period
 
-Closing SqMtr = Opening SqMtr + pressing_sqm − sales − issue_for_challan − all_damage − process_waste
+Closing SqMtr = Opening SqMtr + pressing_sqm − sales − issue_for_challan − all_damage
+                (uses net sales: sales_raw − downstream damage)
 ```
 
 - **Opening** = stock that would have been "current" at the start of the period if we reverse pressing output/damage and add back the period's issues.
@@ -195,7 +203,7 @@ Closing SqMtr = Opening SqMtr + pressing_sqm − sales − issue_for_challan −
 ### 7. Understanding the API response
 
 - **200**: The report was generated. **result** is a URL to the Excel file. The client can GET this URL to download the file.
-- The Excel contains: title row, two-row header, data rows grouped by Item Name with merged Item Name cells, a **Total** row after each Item Name group (subtotal), and one **Total** row at the end (grand total).
+- The Excel contains: title row, two-row header, data rows grouped by Item Name with merged Item Name cells, a **Total** row after each Item Name group (subtotal, **separate** from item details), and one **Total** row at the end (grand total, **separate** from item details).
 - **400**: Invalid request (missing/invalid dates or start > end).
 - **404**: No distinct groups in `issues_for_pressing`, or all rows were dropped as all-zero.
 
@@ -245,18 +253,18 @@ Example: `Pressing Item Stock Register sales name - thickness - other process wi
 
 - One row per distinct **(Item Name, Sales item Name, Thickness, Size)** that has any non-zero metric.
 - Sorted by Item Name, then Sales item Name, then Thickness (numeric asc), then Size.
-- **Merged cells**: Item Name column is merged for consecutive rows of the same Item Name (including the following Total row for that group).
+- **Merged cells**: Item Name column is merged for consecutive **detail rows** of the same Item Name only. The Total row is **not** merged with item details.
 - Numeric columns use two decimal places.
 
 ### Item Name Total Rows
 
 - After each Item Name's detail rows, a **Total** row sums Opening SqMtr, Pressing SqMtr, Sales, Issue for Challan, All Damage, Process Waste, Closing SqMtr for that group only.
-- Col 1 shows the Item Name (part of the merged cell); Col 2 shows **Total**.
+- **The Total row is separate from item details** — it is not merged with the Item Name cell. Col 1 shows **Total**; Col 2 shows **Total**.
 
 ### Grand Total Row
 
 - Last row is **Total**, with sums of all numeric columns across the entire report.
-- Col 1: **Total**; remaining text columns blank.
+- **The Grand Total row is separate from item details and subtotal rows.** Col 1: **Total**; remaining text columns blank.
 
 ---
 
@@ -271,10 +279,10 @@ Example: `Pressing Item Stock Register sales name - thickness - other process wi
 | 4   | Size              | `size`              | `length X width` from issues_for_pressing                                | String                    |
 | 5   | Opening SqMtr     | `opening_sqm`       | current_available + pressing_sqm + pressing_waste_sqm − issued_in_period |                           |
 | 6   | Pressing SqMtr    | `pressing_sqm`      | pressing_done_details.sqm where pressing_date in range                   | Output from pressing runs |
-| 7   | Sales             | `sales`             | 0                                                                        | Schema gap                |
+| 7   | Sales             | `sales`             | pressing_done_history.sqm (issued_for=ORDER) − (CNC+Colour+Polish damage) | Net sales, min 0           |
 | 8   | Issue for Challan | `issue_for_challan` | 0                                                                        | Schema gap                |
-| 9   | All Damage        | `damage`            | 0                                                                        | Schema gap                |
-| 10  | Process Waste     | `process_waste`     | pressing_damage.sqm (via pressing_done_details in period)                |                           |
+| 9   | All Damage        | `damage`            | pressing_damage + cnc_damage + color_damage + polishing_damage (via pressing_details_id) | Pressing + CNC + Colour + Polish |
+| 10  | Process Waste     | `process_waste`     | pressing_damage.sqm only (pressing-stage waste)                           |                           |
 | 11  | Closing SqMtr     | `closing_sqm`       | Opening + Pressing − Sales − Challan − Damage − Process Waste            |                           |
 
 
@@ -289,11 +297,15 @@ Example: `Pressing Item Stock Register sales name - thickness - other process wi
   - Used for: distinct (group_no, item_name, thickness, size); issued in period = sum(sqm) where createdAt in range; current available = sum(available_details.sqm) where is_pressing_done = false.
 2. **pressing_done_details** (one document per pressing run)
   - Key fields: `_id`, `group_no`, `pressing_id`, `sqm`, `pressing_date`.
-  - Used for: Pressing SqMtr = sum(sqm) per group_no where pressing_date in range; also provides `_id`s for joining to pressing_damage.
-3. **pressing_damage**
-  - Key fields: `pressing_done_details_id`, `sqm`.
-  - Used for: Process Waste = sum(sqm) grouped by pressing_done_details_id, then mapped back to group_no via pressing_done_details.
-4. **photos** (masters)
+  - Used for: Pressing SqMtr = sum(sqm) per group_no where pressing_date in range; also provides `_id`s for joining to pressing_damage and pressing_done_history.
+3. **pressing_done_history** (items issued from pressing to further processes)
+  - Key fields: `issued_item_id` (→ pressing_done_details._id), `issued_for`, `sqm`.
+  - Used for: Sales = sum(sqm) where issued_for = "ORDER", grouped by issued_item_id.
+4. **pressing_damage**, **cnc_damage_details**, **color_damage_details**, **polishing_damage_details**
+  - pressing_damage: `pressing_done_details_id`, `sqm`. Direct link to pressing_done_details._id.
+  - cnc_damage: `cnc_done_id` → cnc_done_details.pressing_details_id. color_damage: `color_done_id` → color_done_details.pressing_details_id. polishing_damage: `polishing_done_id` → polishing_done_details.pressing_details_id.
+  - Used for: All Damage = sum(sqm) from all four damage tables, mapped back to pressing_done_details._id.
+5. **photos** (masters)
   - Key fields: `group_no`, `sales_item_name`.
   - Used to resolve `sales_item_name` for each group_no.
 
@@ -306,7 +318,9 @@ issues_for_pressing
 pressing_done_details
     ├── group_no  (links back to issues_for_pressing)
     ├── sqm + pressing_date  →  Pressing SqMtr (in period)
-    └── _id  →  pressing_damage.pressing_done_details_id  →  sqm  →  Process Waste
+    ├── _id  →  pressing_done_history.issued_item_id (issued_for="ORDER")  →  sqm  →  Sales
+    ├── _id  →  pressing_damage.pressing_done_details_id  →  sqm  →  Process Waste (pressing only)
+    └── _id  →  All Damage (sum of pressing + cnc + color + polishing damage, via pressing_details_id)
 ```
 
 ### Combo Aggregation
@@ -384,8 +398,7 @@ const generatePressingStockRegisterReport1 = async () => {
 ## Notes
 
 - **Sales item Name** is sourced from the `photos` collection via `group_no`. If a group_no has no matching photo document, `sales_item_name` defaults to an empty string.
-- **Sales, Issue for Challan, Damage** columns are 0 in the current implementation. They require schema-level links from downstream processes (challan, dispatch, CNC/colour/polishing damage) to pressing items at the group/thickness/size grain.
-- **Process Waste** is currently set to `pressing_waste_sqm` (from `pressing_damage`). When the downstream damage schema is linked, `damage` will carry that value and `process_waste` may be scoped to pressing-stage waste only.
+- **Issue for Challan** is 0 (schema gap). **All Damage** = pressing + cnc + color + polishing damage. **Process Waste** = pressing_damage only (pressing-stage waste).
 - Excel files are timestamped; stored in `public/upload/reports/reports2/Pressing/`.
 
 ## File Storage

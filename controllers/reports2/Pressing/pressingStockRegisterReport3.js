@@ -69,7 +69,6 @@ export const PressingStockRegisterReport3Excel = catchAsync(async (req, res, nex
     }
 
     const allGroupNos = [...new Set(pressingDoneRaw.map((r) => r._id.group_no).filter(Boolean))];
-    const allPdIds = pressingDoneRaw.flatMap((r) => r.pressing_done_ids);
 
     // 2. Resolve item_name from issues_for_pressing
     const itemNameDocs = await issues_for_pressing_model
@@ -93,46 +92,84 @@ export const PressingStockRegisterReport3Excel = catchAsync(async (req, res, nex
         .json(new ApiResponse(404, 'No pressing data found for the selected period'));
     }
 
-    const filteredPdIds = filteredGroups.flatMap((r) => r.pressing_done_ids);
     const filteredGroupNos = [...new Set(filteredGroups.map((r) => r._id.group_no))];
 
-    // 3. Resolve sales_item_name from photos
+    // 3. Opening: SUM(pressing_done_details.sqm) where pressing_date < start
+    const openingAgg = await pressing_done_details_model.aggregate([
+      {
+        $match: {
+          pressing_date: { $lt: start },
+          group_no: { $in: filteredGroupNos },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            group_no: '$group_no',
+            thickness: '$thickness',
+            length: '$length',
+            width: '$width',
+          },
+          opening_sqm: { $sum: '$sqm' },
+        },
+      },
+    ]);
+    const openingByGroupDim = new Map(
+      openingAgg.map((r) => [
+        `${r._id.group_no}|${r._id.thickness ?? 0}|${r._id.length ?? 0}|${r._id.width ?? 0}`,
+        r.opening_sqm,
+      ])
+    );
+
+    // 4. All pressing_done IDs for each (group_no, thickness, length, width) where pressing_date <= end
+    const allPdIdsAgg = await pressing_done_details_model.aggregate([
+      {
+        $match: {
+          pressing_date: { $lte: end },
+          group_no: { $in: filteredGroupNos },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            group_no: '$group_no',
+            thickness: '$thickness',
+            length: '$length',
+            width: '$width',
+          },
+          pressing_done_ids: { $push: '$_id' },
+        },
+      },
+    ]);
+    const allPdIdsByGroupDim = new Map(
+      allPdIdsAgg.map((r) => [
+        `${r._id.group_no}|${r._id.thickness ?? 0}|${r._id.length ?? 0}|${r._id.width ?? 0}`,
+        r.pressing_done_ids,
+      ])
+    );
+    const allPdIdsForDamageSales = allPdIdsAgg.flatMap((r) => r.pressing_done_ids);
+
+    // 5. Resolve sales_item_name from photos
     const photoDocs = await photoModel
       .find({ group_no: { $in: filteredGroupNos } }, { group_no: 1, sales_item_name: 1 })
       .lean();
     const salesNameMap = new Map(photoDocs.map((p) => [p.group_no, p.sales_item_name ?? '']));
 
-    // 4. Sales from pressing_done_history (issued out to further processes)
+    // 6. Sales from pressing_done_history (ALL pressing_done for each group)
     const salesAgg = await pressing_done_history_model.aggregate([
-      { $match: { issued_item_id: { $in: filteredPdIds } } },
+      { $match: { issued_item_id: { $in: allPdIdsForDamageSales } } },
       { $group: { _id: '$issued_item_id', total: { $sum: '$sqm' } } },
     ]);
     const salesByPdId = new Map(salesAgg.map((r) => [r._id.toString(), r.total]));
 
-    // 5. All Damage from pressing_damage
+    // 7. All Damage from pressing_damage (ALL pressing_done for each group)
     const damageAgg = await pressing_damage_model.aggregate([
-      { $match: { pressing_done_details_id: { $in: filteredPdIds } } },
+      { $match: { pressing_done_details_id: { $in: allPdIdsForDamageSales } } },
       { $group: { _id: '$pressing_done_details_id', total: { $sum: '$sqm' } } },
     ]);
     const damageByPdId = new Map(damageAgg.map((r) => [r._id.toString(), r.total]));
 
-    // 6. Stocks from issues_for_pressing
-    const currentAgg = await issues_for_pressing_model.aggregate([
-      {
-        $match: {
-          group_no: { $in: filteredGroupNos },
-          is_pressing_done: false,
-        },
-      },
-      {
-        $group: {
-          _id: '$group_no',
-          total: { $sum: '$available_details.sqm' },
-        },
-      },
-    ]);
-    const currentMap = new Map(currentAgg.map((r) => [r._id, r.total]));
-
+    // 8. Issued for pressing (inflow in period)
     const issuedAgg = await issues_for_pressing_model.aggregate([
       {
         $match: {
@@ -149,7 +186,7 @@ export const PressingStockRegisterReport3Excel = catchAsync(async (req, res, nex
     ]);
     const issuedMap = new Map(issuedAgg.map((r) => [r._id, r.total]));
 
-    // 7. Group by (item_name, sales_item_name, thickness, size)
+    // 9. Group by (item_name, sales_item_name, thickness, size)
     const comboMap = new Map();
     for (const group of filteredGroups) {
       const { group_no, thickness, length, width } = group._id;
@@ -164,41 +201,42 @@ export const PressingStockRegisterReport3Excel = catchAsync(async (req, res, nex
           sales_item_name,
           thickness: thickness ?? 0,
           size,
-          group_nos: [],
-          pressing_done_ids: [],
+          groupDims: [],
           pressing_received: 0,
         });
       }
       const combo = comboMap.get(comboKey);
-      combo.group_nos.push(group_no);
-      combo.pressing_done_ids.push(...group.pressing_done_ids);
+      combo.groupDims.push({ group_no, thickness: thickness ?? 0, length: length ?? 0, width: width ?? 0 });
       combo.pressing_received += group.pressing_received;
     }
 
     const stockData = [...comboMap.values()].map((combo) => {
-      const { item_name, sales_item_name, thickness, size, group_nos, pressing_done_ids } = combo;
+      const { item_name, sales_item_name, thickness, size, groupDims } = combo;
+
+      let opening_sqm = 0;
+      const allPdIdsForCombo = [];
+      for (const dim of groupDims) {
+        const dimKey = `${dim.group_no}|${dim.thickness}|${dim.length}|${dim.width}`;
+        opening_sqm += openingByGroupDim.get(dimKey) ?? 0;
+        allPdIdsForCombo.push(...(allPdIdsByGroupDim.get(dimKey) ?? []));
+      }
 
       let sales = 0;
       let all_damage = 0;
-      for (const id of pressing_done_ids) {
+      for (const id of allPdIdsForCombo) {
         sales += salesByPdId.get(id.toString()) ?? 0;
         all_damage += damageByPdId.get(id.toString()) ?? 0;
       }
 
       let issued_for_pressing = 0;
-      let current_available = 0;
-      for (const gn of group_nos) {
-        issued_for_pressing += issuedMap.get(gn) ?? 0;
-        current_available += currentMap.get(gn) ?? 0;
+      for (const dim of groupDims) {
+        issued_for_pressing += issuedMap.get(dim.group_no) ?? 0;
       }
 
       const pressing_received = combo.pressing_received;
       const pressing_waste = all_damage;
 
-      const opening_sqm = current_available + pressing_received + pressing_waste - issued_for_pressing;
-      // Closing = Opening + Issued - Received - Waste - Sales (simplified)
-      // We'll keep current_available logic for consistency if possible, or Opening sum logic.
-      const closing_sqm = opening_sqm + issued_for_pressing - pressing_received - pressing_waste - sales;
+      const closing_sqm = Math.max(0, opening_sqm + pressing_received - all_damage - sales);
 
       return {
         item_name,

@@ -173,8 +173,8 @@ export const GeneratePressingStockRegisterReport1Excel = async (
 
     const writeItemTotal = (name, totals, rowNum) => {
       const tr = worksheet.getRow(rowNum);
-      tr.getCell(1).value = name;
-      tr.getCell(2).value = 'Total';
+      tr.getCell(1).value = 'Total';
+      tr.getCell(2).value = '';
       tr.getCell(3).value = '';
       tr.getCell(4).value = '';
       tr.getCell(5).value = totals.opening_sqm;
@@ -194,7 +194,7 @@ export const GeneratePressingStockRegisterReport1Excel = async (
 
       if (prevItemName !== null && prevItemName !== itemName) {
         writeItemTotal(prevItemName, itemTotals, currentRow);
-        itemMergeRanges.push({ start: itemStartRow, end: currentRow });
+        itemMergeRanges.push({ start: itemStartRow, end: currentRow - 1 });
         currentRow++;
         itemTotals = null;
         itemStartRow = null;
@@ -259,7 +259,7 @@ export const GeneratePressingStockRegisterReport1Excel = async (
     // Last item subtotal
     if (itemTotals !== null && itemStartRow !== null) {
       writeItemTotal(prevItemName, itemTotals, currentRow);
-      itemMergeRanges.push({ start: itemStartRow, end: currentRow });
+      itemMergeRanges.push({ start: itemStartRow, end: currentRow - 1 });
       currentRow++;
     }
 
