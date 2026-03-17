@@ -119,56 +119,52 @@ A developer should be able to understand the report from this section without re
 
 ### 1. Report period
 
-- **start**: `new Date(startDate)` at 00:00:00.000
-- **end**: `new Date(endDate)` at 23:59:59.999
-- All "in period" logic uses this inclusive range.
+- **start**: `new Date(startDate)` shifted to UTC 00:00:00.000 (via `setUTCHours(0,0,0,0)`)
+- **end**: `new Date(endDate)` shifted to UTC 23:59:59.999 (via `setUTCHours(23,59,59,999)`)
+- All "in period" logic uses this inclusive UTC range to avoid timezone offset issues.
 
 ### 2. Which rows appear in the report
 
-- Distinct `(group_no, item_name)` pairs are pulled from `issues_for_pressing` (all time — opening balance needs full history). Sorted by item_name, then group_no.
-- Each `group_no` is joined to `photos` to get `photo_number` (Photo No column).
-- Each `group_no` is joined to `pressing_done_details` to get `pressing_id` (first match → Order No column).
-- One row is generated per distinct `(group_no, item_name)`.
-- Optional filter: `filter.item_name` applied as `item_name` match on `issues_for_pressing`.
+- Distinct `(group_no, thickness, length, width)` are pulled from `pressing_done_details` **filtered by `pressing_date` in [start, end]**. Only groups actually pressed in the period appear.
+- `item_name` is resolved for each `group_no` via `issues_for_pressing`.
+- `photo_number` is resolved via `photos`.
+- One row is generated per distinct group/dimension row from pressing output.
+- Optional filter: `filter.item_name` applied after resolving item names.
 
 ### 3. Collections and fields used
 
 | Collection | Role | Key fields |
 |------------|------|------------|
-| **issues_for_pressing** | Items issued from splicing to pressing; drives issued in period and current available | `group_no`, `item_name`, `thickness`, `length`, `width`, `sqm`, `available_details.sqm`, `is_pressing_done`, `createdAt` |
-| **pressing_done_details** | Pressing run header; provides `pressing_id` (Order No), `sqm` output, and `pressing_date` | `_id`, `group_no`, `pressing_id`, `sqm`, `pressing_date` |
-| **pressing_damage** | Pressing waste per run | `pressing_done_details_id`, `sqm` |
-| **photos** (masters) | Photo number per group | `group_no`, `photo_number` |
+| **pressing_done_details** | Row universe and Pressing received — one doc per pressing run | `_id`, `group_no`, `pressing_id`, `pressing_date`, `thickness`, `length`, `width`, `sqm` |
+| **pressing_done_history** | Sales — items issued from pressing to further processes (CNC, COLOR, etc.) | `issued_item_id` (→ pressing_done_details._id), `sqm` |
+| **pressing_damage** | All Damage — pressing-stage waste per run | `pressing_done_details_id`, `sqm` |
+| **issues_for_pressing** | Resolves `item_name` via group_no; provides current_available and inflow | `group_no`, `item_name`, `sqm`, `available_details.sqm`, `is_pressing_done`, `createdAt` |
+| **photos** | Photo number per group | `group_no`, `photo_number` |
 
-- **Join (Photo No)**: `photos.group_no = group_no` → `photo_number`.
-- **Join (Order No)**: `pressing_done_details.group_no = group_no` → first `pressing_id` found per group_no.
-- **Join (pressing received)**: `pressing_done_details.pressing_date` ∈ [start, end] AND `group_no` in set → sum(`sqm`) per group_no.
-- **Join (pressing waste)**: same pressing_done_details docs → collect `_id`s → `pressing_damage.pressing_done_details_id` in those IDs → sum(`sqm`) per `_id` → map back to group_no.
-- **Issued for pressing**: `issues_for_pressing.createdAt` ∈ [start, end] → sum(`sqm`) per `(group_no, item_name)`.
-- **Current available**: `issues_for_pressing` where `is_pressing_done = false` → sum(`available_details.sqm`) per `(group_no, item_name)`.
+- **Join (Pressing received)**: `pressing_done_details` where `pressing_date` ∈ [start, end] → sum(`sqm`) per group/dimension.
+- **Join (Sales)**: `pressing_done_history.issued_item_id` ∈ pressing_done `_id`s in period → sum(`sqm`) per group.
+- **Join (All Damage)**: `pressing_damage.pressing_done_details_id` ∈ pressing_done `_id`s in period → sum(`sqm`) per group.
+- **Current available**: `issues_for_pressing` where `is_pressing_done = false` → sum(`available_details.sqm`) per `group_no`.
+- **Issued for pressing**: `issues_for_pressing.createdAt` ∈ [start, end] → sum(`sqm`) per `group_no`.
 
-### 4. Per-row aggregates (for each group_no / item_name)
+### 4. Per-row aggregates (for each group row)
 
 | Quantity | Source | Filter | Meaning |
 |----------|--------|--------|---------|
-| **Issued for pressing SqMtr** | issues_for_pressing | createdAt ∈ [start, end] | SQM issued from splicing to pressing in the period |
-| **Pressing received SqMtr** | pressing_done_details | pressing_date ∈ [start, end] | Pressed output (finished panels) for this group in period |
-| **Pressing Waste SqMtr** | pressing_damage | Via pressing_done_details in period | Pressing waste for this group in period |
-| **Current available** | issues_for_pressing | is_pressing_done = false | SQM still awaiting pressing |
+| **Pressing received Sqmtr** | pressing_done_details | pressing_date ∈ [start, end] | Pressed output in period |
+| **Sales** | pressing_done_history | issued_item_id ∈ PD IDs | SQM issued from pressing to next process |
+| **All Damage** | pressing_damage | PD IDs in period | Pressing waste (same as Pressing Waste SqMtr) |
 | **Opening SqMtr** | Calculated | — | Stock at pressing stage at start of period |
 | **Closing SqMtr** | Calculated | — | Stock at pressing stage at end of period |
 
 ### 5. Formulas
 
-For each `(group_no, item_name)` row:
+For each group row:
 
 ```
-current_available   = sum(issues_for_pressing.available_details.sqm) where is_pressing_done = false
+Opening SqMtr       = current_available + pressing_received + all_damage − issued_for_pressing
 
-Opening SqMtr       = current_available + pressing_received + pressing_waste − issued_for_pressing
-
-Closing SqMtr       = current_available
-                    (= Opening + issued_for_pressing − pressing_received − pressing_waste)
+Closing SqMtr       = Opening + issued_for_pressing − pressing_received − all_damage − sales
 ```
 
 - **Opening** = what would have been "current" at the start of the period if we reverse the period's pressing output and waste, and add back the period's issues.

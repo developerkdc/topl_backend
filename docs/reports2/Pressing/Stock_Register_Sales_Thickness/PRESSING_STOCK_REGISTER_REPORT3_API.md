@@ -119,9 +119,9 @@ A developer should be able to understand the report from this section without re
 
 ### 1. Report period
 
-- **start**: `new Date(startDate)` at 00:00:00.000
-- **end**: `new Date(endDate)` at 23:59:59.999
-- All "in period" logic uses this inclusive range.
+- **start**: `new Date(startDate)` shifted to UTC 00:00:00.000 (via `setUTCHours(0,0,0,0)`)
+- **end**: `new Date(endDate)` shifted to UTC 23:59:59.999 (via `setUTCHours(23,59,59,999)`)
+- All "in period" logic uses this inclusive UTC range to avoid timezone offset issues.
 
 ### 2. Which rows appear in the report
 
