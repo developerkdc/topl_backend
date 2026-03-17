@@ -67,11 +67,11 @@ Closing SqMtr      = Opening SqMtr + pressing_sqm − sales − issue_for_challa
 | Size | `length X width` (string) |
 | Opening SqMtr | current_available + pressing_sqm + pressing_waste_sqm − issued_in_period |
 | Pressing SqMtr | pressing_done_details.sqm where pressing_date in [start, end] |
-| Sales | pressing_done_history.sqm where issued_for = "ORDER" |
+| Sales | pressing_done_history.sqm (issued_for=ORDER) − (CNC+Colour+Polish damage), min 0 |
 | Issue for Challan | 0 (schema gap) |
 | All Damage | pressing_damage + cnc_damage + color_damage + polishing_damage (via pressing_details_id) |
 | Process Waste | pressing_damage only (pressing-stage waste) |
-| Closing SqMtr | Opening + Pressing − Sales − Challan − Damage − Process Waste |
+| Closing SqMtr | Opening + Pressing − sales − all_damage (uses net sales) |
 
 ---
 
@@ -189,7 +189,7 @@ sequenceDiagram
 
 ## Optional later enhancements
 
-- ~~Wire **Sales** column~~ — **Done:** Sales = pressing_done_history.sqm where issued_for = "ORDER".
+- ~~Wire **Sales** column~~ — **Done:** Sales = pressing_done_history.sqm (issued_for=ORDER) − (CNC+Colour+Polish damage), min 0.
 - Wire **Issue for Challan** from issue_for_challan schema in the same way.
 - ~~Wire **All Damage** from downstream process damage schemas~~ — **Done:** All Damage = pressing_damage + cnc_damage + color_damage + polishing_damage.
 - Add `filter.sales_item_name` support to narrow by sales item name.

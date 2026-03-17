@@ -259,10 +259,16 @@ export const PressingStockRegisterReport1Excel = catchAsync(async (req, res, nex
     }
     const processWasteByPdId = new Map(pressingDamageAgg.map((r) => [r._id.toString(), r.total]));
 
+    // CNC + Colour + Polish damage per pressing_done_id (for Sales = sales_raw - downstream damage)
+    const cncColorPolishDamageByPdId = new Map();
+    for (const r of [...cncDamageAgg, ...colorDamageAgg, ...polishingDamageAgg]) {
+      const key = r._id.toString();
+      cncColorPolishDamageByPdId.set(key, (cncColorPolishDamageByPdId.get(key) ?? 0) + r.total);
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // 9. Build per-combo stock data
-    // Opening = pressing_done before start. Closing = max(0, Opening + Receive - damage - sales)
-    // All Damage = Pressing+CNC+Colour+Polish. Process Waste = pressing damage only.
+    // Sales (displayed) = sales_raw - CNC+Colour+Polish damage. Closing uses sales_raw.
     // ─────────────────────────────────────────────────────────────────────────
     const stockData = combos.map((combo) => {
       const { item_name, sales_item_name, thickness, size, groupDims } = combo;
@@ -276,21 +282,22 @@ export const PressingStockRegisterReport1Excel = catchAsync(async (req, res, nex
         allPdIdsForCombo.push(...(allPdIdsByGroupDim.get(dimKey) ?? []));
       }
 
-      // Sales and damage: use ALL pressing_done for this combo (not just period)
       const uniquePdIds = [...new Set(allPdIdsForCombo.map((id) => id.toString()))];
-      let sales = 0;
+      let sales_raw = 0;
+      let downstream_damage = 0;
       let all_damage = 0;
       let process_waste = 0;
       for (const idStr of uniquePdIds) {
-        sales += salesByPdId.get(idStr) ?? 0;
+        sales_raw += salesByPdId.get(idStr) ?? 0;
+        downstream_damage += cncColorPolishDamageByPdId.get(idStr) ?? 0;
         all_damage += damageByPdId.get(idStr) ?? 0;
         process_waste += processWasteByPdId.get(idStr) ?? 0;
       }
 
+      const sales = Math.max(0, sales_raw - downstream_damage);
       const pressing_sqm = combo.pressing_sqm;
       const issue_for_challan = 0;
 
-      // Closing = max(0, Opening + Receive - damage - sales)
       const closing_sqm = Math.max(0, opening_sqm + pressing_sqm - sales - all_damage);
 
       return {

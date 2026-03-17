@@ -2,9 +2,9 @@
 
 ## Overview
 
-The Pressing Stock Register Report 2 API generates an Excel report showing pressing item stock at **transaction (group) level** — one row per group number, grouped and subtotalled by **Item Name**. The report includes Group no, Photo No (from `photos`), Order No (`pressing_id` from the pressing run), Thickness, Size, Opening SqMtr, Issued for pressing SqMtr, Pressing received SqMtr, Pressing Waste SqMtr, and Closing SqMtr. Each Item Name group has a **Total** (subtotal) row, and the report ends with a **Total** (grand total) row.
+The Pressing Stock Register Report 2 API generates an Excel report showing pressing item stock at **transaction (group) level** — one row per group number, grouped and subtotalled by **Item Name**. The report includes Group no, Photo No (from `photos`), Order No (order number from `orders` when `issued_for` = ORDER, else empty), Thickness, Size, Opening SqMtr, Issued for pressing SqMtr, Pressing received SqMtr, Pressing Waste SqMtr, and Closing SqMtr. Each Item Name group has a **Total** (subtotal) row, and the report ends with a **Total** (grand total) row.
 
-Data is sourced from `issues_for_pressing` (issued from splicing to pressing), `pressing_done_details` (pressing run output and order identifier), `pressing_damage` (pressing waste), and `photos` (photo number via group_no).
+Data is sourced from `issues_for_pressing` (issued from splicing to pressing), `pressing_done_details` (pressing run output, order_id when issued_for=ORDER), `orders` (order_no for Order No column), `pressing_damage` (pressing waste), and `photos` (photo number via group_no or hybrid_group_no).
 
 ## Endpoint
 
@@ -127,7 +127,7 @@ A developer should be able to understand the report from this section without re
 
 - Distinct `(group_no, thickness, length, width)` are pulled from `pressing_done_details` **filtered by `pressing_date` in [start, end]**. Only groups actually pressed in the period appear.
 - `item_name` is resolved for each `group_no` via `issues_for_pressing`.
-- `photo_number` is resolved via `photos`.
+- `photo_number` is resolved via `photos` (group_no or hybrid_group_no.group_no for hybrid veneer).
 - One row is generated per distinct group/dimension row from pressing output.
 - Optional filter: `filter.item_name` applied after resolving item names.
 
@@ -135,17 +135,18 @@ A developer should be able to understand the report from this section without re
 
 | Collection | Role | Key fields |
 |------------|------|------------|
-| **pressing_done_details** | Row universe and Pressing received — one doc per pressing run | `_id`, `group_no`, `pressing_id`, `pressing_date`, `thickness`, `length`, `width`, `sqm` |
+| **pressing_done_details** | Row universe and Pressing received — one doc per pressing run | `_id`, `group_no`, `order_id`, `issued_for`, `pressing_date`, `thickness`, `length`, `width`, `sqm` |
+| **orders** | Order number when pressing was for order | `_id`, `order_no` |
 | **pressing_done_history** | Sales — items issued from pressing to further processes (CNC, COLOR, etc.) | `issued_item_id` (→ pressing_done_details._id), `sqm` |
 | **pressing_damage** | All Damage — pressing-stage waste per run | `pressing_done_details_id`, `sqm` |
 | **issues_for_pressing** | Resolves `item_name` via group_no; provides current_available and inflow | `group_no`, `item_name`, `sqm`, `available_details.sqm`, `is_pressing_done`, `createdAt` |
-| **photos** | Photo number per group | `group_no`, `photo_number` |
+| **photos** | Photo number per group | `group_no`, `photo_number`, `hybrid_group_no` |
 
 - **Join (Pressing received)**: `pressing_done_details` where `pressing_date` ∈ [start, end] → sum(`sqm`) per group/dimension.
 - **Join (Sales)**: `pressing_done_history.issued_item_id` ∈ pressing_done `_id`s in period → sum(`sqm`) per group.
 - **Join (All Damage)**: `pressing_damage.pressing_done_details_id` ∈ pressing_done `_id`s in period → sum(`sqm`) per group.
 - **Current available**: `issues_for_pressing` where `is_pressing_done = false` → sum(`available_details.sqm`) per `group_no`.
-- **Issued for pressing**: `issues_for_pressing.createdAt` ∈ [start, end] → sum(`sqm`) per `group_no`.
+- **Issued for pressing**: `issues_for_pressing.createdAt` ∈ [start, end] → sum(`sqm`) per `(group_no, thickness, length, width)`.
 
 ### 4. Per-row aggregates (for each group row)
 
@@ -204,7 +205,7 @@ Example: `Pressing Item Stock Register between group no wise 01/03/2025 and 31/0
 | 1 | Item Name | Veneer item name |
 | 2 | Group no | Group number from issues_for_pressing |
 | 3 | Photo No | `photo_number` from photos collection |
-| 4 | Order No | `pressing_id` from pressing_done_details (first match per group) |
+| 4 | Order No | `orders.order_no` when `pressing_done_details.issued_for` = ORDER, else empty |
 | 5 | Thickness | Veneer thickness (mm), numFmt 0.00 |
 | 6 | Size | `length X width` (string) |
 | 7 | Opening SqMtr | Stock at pressing stage at start of period |
@@ -238,12 +239,12 @@ Example: `Pressing Item Stock Register between group no wise 01/03/2025 and 31/0
 |---|---------------|-----------------|------------|-------|
 | 1 | Item Name | `item_name` | issues_for_pressing.item_name | Merged per group |
 | 2 | Group no | `group_no` | issues_for_pressing.group_no | |
-| 3 | Photo No | `photo_no` | photos.photo_number via group_no | Empty string if no match |
-| 4 | Order No | `order_no` | pressing_done_details.pressing_id, first match per group_no | Empty string if no match |
+| 3 | Photo No | `photo_no` | photos.photo_number via group_no or hybrid_group_no.group_no | Empty string if no match; hybrid veneer groups in hybrid_group_no also resolve |
+| 4 | Order No | `order_no` | orders.order_no when pressing_done_details.issued_for = ORDER, else empty | Empty when issued_for is STOCK or SAMPLE |
 | 5 | Thickness | `thickness` | issues_for_pressing.thickness | numFmt 0.00 |
 | 6 | Size | `size` | `length X width` string | |
 | 7 | Opening SqMtr | `opening_sqm` | current_available + pressing_received + pressing_waste − issued_for_pressing | |
-| 8 | Issued for pressing SqMtr | `issued_for_pressing` | issues_for_pressing.sqm where createdAt in range | |
+| 8 | Issued for pressing SqMtr | `issued_for_pressing` | issues_for_pressing.sqm where createdAt in range, per (group_no, thickness, length, width) | |
 | 9 | Pressing received Sqmtr | `pressing_received` | pressing_done_details.sqm where pressing_date in range | |
 | 10 | Pressing Waste SqMtr | `pressing_waste` | pressing_damage.sqm via pressing_done_details in period | |
 | 11 | Closing SqMtr | `closing_sqm` | current_available | = Opening + issued − received − waste |
@@ -256,19 +257,22 @@ Example: `Pressing Item Stock Register between group no wise 01/03/2025 and 31/0
 
 1. **issues_for_pressing** (items issued from splicing/tapping to pressing)
    - Key fields: `group_no`, `item_name`, `thickness`, `length`, `width`, `sqm`, `available_details.sqm`, `is_pressing_done`, `createdAt`.
-   - Used for: distinct (group_no, item_name); issued in period = sum(sqm) where createdAt in range; current available = sum(available_details.sqm) where is_pressing_done = false.
+   - Used for: distinct (group_no, item_name); issued in period = sum(sqm) where createdAt in range, **per (group_no, thickness, length, width)**; current available = sum(available_details.sqm) where is_pressing_done = false.
 
 2. **pressing_done_details** (one document per pressing run)
-   - Key fields: `_id`, `group_no`, `pressing_id`, `sqm`, `pressing_date`.
-   - Used for: `pressing_id` (Order No, first match per group_no); Pressing received = sum(sqm) per group_no where pressing_date in range; bridge for waste join.
+   - Key fields: `_id`, `group_no`, `order_id`, `issued_for`, `sqm`, `pressing_date`.
+   - Used for: Order No = order_id when issued_for=ORDER (resolved via orders.order_no); Pressing received = sum(sqm) per group_no where pressing_date in range; bridge for waste join.
+3. **orders**
+   - Key fields: `_id`, `order_no`.
+   - Used for: Order No column — lookup order_no by order_id when pressing_done_details.issued_for = ORDER.
 
-3. **pressing_damage**
+4. **pressing_damage**
    - Key fields: `pressing_done_details_id`, `sqm`.
    - Used for: Pressing Waste = sum(sqm) per pressing_done_details_id; mapped back to group_no.
 
-4. **photos** (masters)
-   - Key fields: `group_no`, `photo_number`.
-   - Used to resolve `photo_number` for each group_no (single bulk query).
+5. **photos** (masters)
+   - Key fields: `group_no`, `photo_number`, `hybrid_group_no`.
+   - Used to resolve `photo_number` for each group_no. For hybrid veneer, groups in `hybrid_group_no.group_no` also map to the same `photo_number` (single bulk query with `$or` on group_no and hybrid_group_no.group_no).
 
 ### Join Diagram (conceptual)
 
@@ -276,7 +280,7 @@ Example: `Pressing Item Stock Register between group no wise 01/03/2025 and 31/0
 issues_for_pressing
     └── group_no  →  photos.group_no  →  photo_number          (Photo No column)
     └── group_no  →  pressing_done_details.group_no
-                         ├── pressing_id (first)               (Order No column)
+                         ├── order_id (when issued_for=ORDER)  →  orders.order_no  (Order No column)
                          ├── sqm + pressing_date in period     (Pressing received SqMtr)
                          └── _id  →  pressing_damage           (Pressing Waste SqMtr)
 ```
@@ -343,9 +347,9 @@ const generatePressingStockRegisterReport2 = async () => {
 
 ## Notes
 
-- **Order No** uses `pressing_done_details.pressing_id` — the identifier assigned to a pressing run. The first `pressing_done_details` document found for a given `group_no` is used. If a group has been pressed multiple times, only the first matched `pressing_id` appears.
+- **Order No** shows `orders.order_no` when `pressing_done_details.issued_for` = ORDER, else empty. Resolved via pressing_done_details.order_id → orders._id → orders.order_no. When issued_for is STOCK or SAMPLE, Order No is blank.
 - **Pressing received** and **Pressing Waste** are attributed to the primary `group_no` field of `pressing_done_details`. Groups that appear only in `group_no_array` (secondary groups in a multi-group pressing run) are not credited in this report.
-- **Photo No** defaults to empty string if no `photos` document exists for the group_no.
+- **Photo No** defaults to empty string if no `photos` document exists for the group_no. For hybrid veneer, groups listed in `photos.hybrid_group_no` also resolve to the same photo_number.
 - All rows from `issues_for_pressing` (all time) form the universe of groups. Rows with all-zero metrics are excluded.
 - Excel files are timestamped; stored in `public/upload/reports/reports2/Pressing/`.
 
@@ -390,8 +394,8 @@ A row is dropped if every numeric column is 0 (opening, issued, received, waste,
 
 ### Photo No / Order No is blank
 
-- **Photo No**: Check that a `photos` document exists with `group_no` matching the pressing group and that `photo_number` is set.
-- **Order No**: Check that `pressing_done_details` has a document with `group_no` matching the pressing group and that `pressing_id` is set.
+- **Photo No**: Check that a `photos` document exists with `group_no` or `hybrid_group_no.group_no` matching the pressing group and that `photo_number` is set. For hybrid veneer, the second group may appear only in `hybrid_group_no`.
+- **Order No**: Check that `pressing_done_details` has a document with `group_no` matching the pressing group, `issued_for` = ORDER, and `order_id` set. The order must exist in `orders` with a valid `order_no`.
 
 ### Incorrect Date Format
 
