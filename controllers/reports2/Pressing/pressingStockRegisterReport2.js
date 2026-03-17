@@ -3,6 +3,7 @@ import ApiError from '../../../utils/errors/apiError.js';
 import ApiResponse from '../../../utils/ApiResponse.js';
 import { issues_for_pressing_model } from '../../../database/schema/factory/pressing/issues_for_pressing/issues_for_pressing.schema.js';
 import { pressing_done_details_model } from '../../../database/schema/factory/pressing/pressing_done/pressing_done.schema.js';
+import { pressing_done_history_model } from '../../../database/schema/factory/pressing/pressing_history/pressing_done_history.schema.js';
 import { pressing_damage_model } from '../../../database/schema/factory/pressing/pressing_damage/pressing_damage.schema.js';
 import photoModel from '../../../database/schema/masters/photo.schema.js';
 import { GeneratePressingStockRegisterReport2Excel } from '../../../config/downloadExcel/reports2/Pressing/pressingStockRegisterReport2.js';
@@ -10,9 +11,11 @@ import { GeneratePressingStockRegisterReport2Excel } from '../../../config/downl
 /**
  * Pressing Stock Register Report 2 — Group No Wise
  * Columns: Item Name, Group no, Photo No, Order No, Thickness, Size,
- *          Opening SqMtr, Issued for pressing SqMtr, Pressing received Sqmtr,
- *          Pressing Waste SqMtr, Closing SqMtr
- * Grouping: Item Name → rows per group; subtotal per Item Name; grand total.
+ *          Opening SqMtr, Issued for pressing, Pressing received,
+ *          Pressing Waste, Sales, All Damage, Closing SqMtr
+ *
+ * Row universe: distinct (group_no, thickness, length, width) from
+ *   pressing_done_details with pressing_date in [start, end].
  *
  * @route POST /report/download-excel-pressing-stock-register-group-wise
  * @access Private
@@ -25,8 +28,9 @@ export const PressingStockRegisterReport2Excel = catchAsync(async (req, res, nex
   }
 
   const start = new Date(startDate);
+  start.setUTCHours(0, 0, 0, 0);
   const end = new Date(endDate);
-  end.setHours(23, 59, 59, 999);
+  end.setUTCHours(23, 59, 59, 999);
 
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     return next(new ApiError('Invalid date format. Use YYYY-MM-DD', 400));
@@ -36,160 +40,163 @@ export const PressingStockRegisterReport2Excel = catchAsync(async (req, res, nex
     return next(new ApiError('Start date cannot be after end date', 400));
   }
 
-  const itemFilter = {};
-  if (filter.item_name) itemFilter.item_name = filter.item_name;
-
   try {
-    // 1. Distinct (group_no, item_name) from issues_for_pressing (all time — opening balance needs full history)
-    const distinctGroups = await issues_for_pressing_model.aggregate([
-      { $match: itemFilter },
-      {
-        $group: {
-          _id: { group_no: '$group_no', item_name: '$item_name' },
-          thickness: { $first: '$thickness' },
-          length: { $first: '$length' },
-          width: { $first: '$width' },
-        },
-      },
-      { $sort: { '_id.item_name': 1, '_id.group_no': 1 } },
-    ]);
-
-    if (distinctGroups.length === 0) {
-      return res
-        .status(404)
-        .json(new ApiResponse(404, 'No pressing group data found for the selected period'));
-    }
-
-    const allGroupNos = [...new Set(distinctGroups.map((g) => g._id.group_no).filter(Boolean))];
-
-    // 2. Bulk fetch photo_number keyed by group_no
-    const photoDocs = await photoModel
-      .find({ group_no: { $in: allGroupNos } }, { group_no: 1, photo_number: 1 })
-      .lean();
-    const photoMap = new Map(photoDocs.map((p) => [p.group_no, p.photo_number ?? '']));
-
-    // 3. Bulk fetch pressing_id (used as Order No) keyed by group_no — take first match per group
-    const pressingDetailsList = await pressing_done_details_model
-      .find({ group_no: { $in: allGroupNos } }, { group_no: 1, pressing_id: 1 })
-      .lean();
-    const pressingIdMap = new Map();
-    for (const pd of pressingDetailsList) {
-      if (!pressingIdMap.has(pd.group_no)) {
-        pressingIdMap.set(pd.group_no, pd.pressing_id ?? '');
-      }
-    }
-
-    // 4. Bulk: Issued for pressing in period, keyed by "group_no|item_name"
-    const issuedAgg = await issues_for_pressing_model.aggregate([
-      {
-        $match: {
-          createdAt: { $gte: start, $lte: end },
-          ...(itemFilter.item_name ? { item_name: itemFilter.item_name } : {}),
-        },
-      },
-      {
-        $group: {
-          _id: { group_no: '$group_no', item_name: '$item_name' },
-          total: { $sum: '$sqm' },
-        },
-      },
-    ]);
-    const issuedMap = new Map(
-      issuedAgg.map((r) => [`${r._id.group_no}|${r._id.item_name}`, r.total])
-    );
-
-    // 5. Bulk: Pressing done (received) in period, keyed by group_no
-    const pressingDoneAgg = await pressing_done_details_model.aggregate([
+    // 1. Fetch distinct groups that were pressed in the date range
+    const pressingDoneRaw = await pressing_done_details_model.aggregate([
       {
         $match: {
           pressing_date: { $gte: start, $lte: end },
-          group_no: { $in: allGroupNos },
-        },
-      },
-      { $group: { _id: '$group_no', total: { $sum: '$sqm' } } },
-    ]);
-    const pressingDoneMap = new Map(pressingDoneAgg.map((r) => [r._id, r.total]));
-
-    // 6. Bulk: Pressing waste in period — join pressing_damage to pressing_done_details by pressing_date
-    const pressingDoneDocsForDamage = await pressing_done_details_model
-      .find(
-        { pressing_date: { $gte: start, $lte: end }, group_no: { $in: allGroupNos } },
-        { _id: 1, group_no: 1 }
-      )
-      .lean();
-    const pdIdToGroupNo = new Map(
-      pressingDoneDocsForDamage.map((pd) => [pd._id.toString(), pd.group_no])
-    );
-    const pdIds = pressingDoneDocsForDamage.map((pd) => pd._id);
-
-    const damageAgg = await pressing_damage_model.aggregate([
-      { $match: { pressing_done_details_id: { $in: pdIds } } },
-      { $group: { _id: '$pressing_done_details_id', total: { $sum: '$sqm' } } },
-    ]);
-    const damageByGroupNo = new Map();
-    for (const d of damageAgg) {
-      const groupNo = pdIdToGroupNo.get(d._id.toString());
-      if (groupNo) {
-        damageByGroupNo.set(groupNo, (damageByGroupNo.get(groupNo) ?? 0) + d.total);
-      }
-    }
-
-    // 7. Bulk: Current available (is_pressing_done = false), keyed by "group_no|item_name"
-    const currentAgg = await issues_for_pressing_model.aggregate([
-      {
-        $match: {
-          is_pressing_done: false,
-          ...(itemFilter.item_name ? { item_name: itemFilter.item_name } : {}),
         },
       },
       {
         $group: {
-          _id: { group_no: '$group_no', item_name: '$item_name' },
+          _id: {
+            group_no: '$group_no',
+            thickness: '$thickness',
+            length: '$length',
+            width: '$width',
+          },
+          pressing_received: { $sum: '$sqm' },
+          pressing_done_ids: { $push: '$_id' },
+          pressing_id: { $first: '$pressing_id' }, // Order No
+        },
+      },
+    ]);
+
+    if (pressingDoneRaw.length === 0) {
+      return res
+        .status(404)
+        .json(new ApiResponse(404, 'No pressing data found for the selected period'));
+    }
+
+    const allGroupNos = [...new Set(pressingDoneRaw.map((r) => r._id.group_no).filter(Boolean))];
+    const allPdIds = pressingDoneRaw.flatMap((r) => r.pressing_done_ids);
+
+    // 2. Resolve item_name and current_available from issues_for_pressing
+    const itemNameDocs = await issues_for_pressing_model
+      .find({ group_no: { $in: allGroupNos } }, { group_no: 1, item_name: 1 })
+      .lean();
+    const itemNameMap = new Map();
+    for (const doc of itemNameDocs) {
+      if (!itemNameMap.has(doc.group_no)) {
+        itemNameMap.set(doc.group_no, doc.item_name ?? '');
+      }
+    }
+
+    // Apply item_name filter if present
+    const filteredGroups = filter.item_name
+      ? pressingDoneRaw.filter((r) => itemNameMap.get(r._id.group_no) === filter.item_name.toUpperCase().trim())
+      : pressingDoneRaw;
+
+    if (filteredGroups.length === 0) {
+      return res
+        .status(404)
+        .json(new ApiResponse(404, 'No pressing data found for the selected period'));
+    }
+
+    const filteredPdIds = filteredGroups.flatMap((r) => r.pressing_done_ids);
+    const filteredGroupNos = [...new Set(filteredGroups.map((r) => r._id.group_no))];
+
+    // 3. Resolve photo_no and sales_item_name from photos
+    const photoDocs = await photoModel
+      .find({ group_no: { $in: filteredGroupNos } }, { group_no: 1, photo_number: 1, sales_item_name: 1 })
+      .lean();
+    const photoMap = new Map(photoDocs.map((p) => [p.group_no, p.photo_number ?? '']));
+
+    // 4. Sales from pressing_done_history (items issued out)
+    const salesAgg = await pressing_done_history_model.aggregate([
+      { $match: { issued_item_id: { $in: filteredPdIds } } },
+      { $group: { _id: '$issued_item_id', total: { $sum: '$sqm' } } },
+    ]);
+    const salesByPdId = new Map(salesAgg.map((r) => [r._id.toString(), r.total]));
+
+    // 5. All Damage from pressing_damage
+    const damageAgg = await pressing_damage_model.aggregate([
+      { $match: { pressing_done_details_id: { $in: filteredPdIds } } },
+      { $group: { _id: '$pressing_done_details_id', total: { $sum: '$sqm' } } },
+    ]);
+    const damageByPdId = new Map(damageAgg.map((r) => [r._id.toString(), r.total]));
+
+    // 6. Current available and Inflow (Issued for pressing)
+    const currentAgg = await issues_for_pressing_model.aggregate([
+      {
+        $match: {
+          group_no: { $in: filteredGroupNos },
+          is_pressing_done: false,
+        },
+      },
+      {
+        $group: {
+          _id: '$group_no',
           total: { $sum: '$available_details.sqm' },
         },
       },
     ]);
-    const currentMap = new Map(
-      currentAgg.map((r) => [`${r._id.group_no}|${r._id.item_name}`, r.total])
-    );
+    const currentMap = new Map(currentAgg.map((r) => [r._id, r.total]));
 
-    // 8. Build per-row stock data
-    const stockData = distinctGroups.map((group) => {
-      const { group_no, item_name } = group._id;
-      const key = `${group_no}|${item_name}`;
+    const issuedAgg = await issues_for_pressing_model.aggregate([
+      {
+        $match: {
+          group_no: { $in: filteredGroupNos },
+          createdAt: { $gte: start, $lte: end },
+        },
+      },
+      {
+        $group: {
+          _id: '$group_no',
+          total: { $sum: '$sqm' },
+        },
+      },
+    ]);
+    const issuedMap = new Map(issuedAgg.map((r) => [r._id, r.total]));
 
-      const issued_for_pressing = issuedMap.get(key) ?? 0;
-      const pressing_received = pressingDoneMap.get(group_no) ?? 0;
-      const pressing_waste = damageByGroupNo.get(group_no) ?? 0;
-      const current_available = currentMap.get(key) ?? 0;
+    // 7. Map everything into rows
+    const stockData = filteredGroups.map((group) => {
+      const { group_no, thickness, length, width } = group._id;
+      const pdIds = group.pressing_done_ids;
 
-      // Opening = current_available + pressing_received + pressing_waste - issued_in_period
+      let sales = 0;
+      let all_damage = 0;
+      for (const id of pdIds) {
+        sales += salesByPdId.get(id.toString()) ?? 0;
+        all_damage += damageByPdId.get(id.toString()) ?? 0;
+      }
+
+      const issued_for_pressing = issuedMap.get(group_no) ?? 0;
+      const pressing_received = group.pressing_received;
+      const pressing_waste = all_damage;
+      const current_available = currentMap.get(group_no) ?? 0;
+
+      // Opening = current_available + pressing_received + pressing_waste - issued_for_pressing
       const opening_sqm = current_available + pressing_received + pressing_waste - issued_for_pressing;
-      // Closing = Opening + issued - pressing_received - pressing_waste = current_available
-      const closing_sqm = current_available;
+      // Closing = Opening + issued - received - waste - sales - damage?
+      // For consistency with R1: Closing = current_available (since R2/R3 track what's at pressing stage)
+      // But adding Sales/Damage outflow:
+      const closing_sqm = opening_sqm + issued_for_pressing - pressing_received - pressing_waste - sales;
 
       return {
-        item_name,
-        group_no: group_no ?? '',
+        item_name: itemNameMap.get(group_no) ?? '',
+        group_no,
         photo_no: photoMap.get(group_no) ?? '',
-        order_no: pressingIdMap.get(group_no) ?? '',
-        thickness: group.thickness ?? 0,
-        size: `${group.length ?? 0} X ${group.width ?? 0}`,
+        order_no: group.pressing_id ?? '',
+        thickness: thickness ?? 0,
+        size: `${length ?? 0} X ${width ?? 0}`,
         opening_sqm,
         issued_for_pressing,
         pressing_received,
         pressing_waste,
+        sales,
+        all_damage,
         closing_sqm,
       };
     });
 
     const activeStockData = stockData.filter(
       (row) =>
-        row.opening_sqm !== 0 ||
         row.issued_for_pressing !== 0 ||
         row.pressing_received !== 0 ||
-        row.pressing_waste !== 0 ||
-        row.closing_sqm !== 0
+        row.all_damage !== 0 ||
+        row.sales !== 0
     );
 
     if (activeStockData.length === 0) {
