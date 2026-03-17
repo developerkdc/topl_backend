@@ -146,84 +146,69 @@ export const PressingStockRegisterExcel = catchAsync(async (req, res, next) => {
     }
 
     const itemEntries = [...itemMap.values()];
-    const allPdIds = itemEntries.flatMap((e) => e.pd_ids);
     const allFilteredGroupNos = itemEntries.flatMap((e) => e.group_nos);
 
-    // 4. Batch fetch Sales and Damages
+    // 4. Opening: SUM(pressing_done_details.sqm) where pressing_date < start, by group_no
+    const openingAgg = await pressing_done_details_model.aggregate([
+      {
+        $match: {
+          pressing_date: { $lt: start },
+          group_no: { $in: allFilteredGroupNos },
+        },
+      },
+      { $group: { _id: '$group_no', opening_sqm: { $sum: '$sqm' } } },
+    ]);
+    const openingByGroup = new Map(openingAgg.map((r) => [r._id, r.opening_sqm]));
+
+    // 5. All pressing_done IDs per group_no where pressing_date <= end (for full damage/sales scope)
+    const allPdIdsAgg = await pressing_done_details_model.aggregate([
+      {
+        $match: {
+          pressing_date: { $lte: end },
+          group_no: { $in: allFilteredGroupNos },
+        },
+      },
+      { $group: { _id: '$group_no', pd_ids: { $push: '$_id' } } },
+    ]);
+    const allPdIdsByGroup = new Map(allPdIdsAgg.map((r) => [r._id, r.pd_ids]));
+    const allPdIdsForDamageSales = allPdIdsAgg.flatMap((r) => r.pd_ids);
+
+    // 6. Batch fetch Sales and Damages (ALL pressing_done for each group)
     const salesAgg = await pressing_done_history_model.aggregate([
-      { $match: { issued_item_id: { $in: allPdIds } } },
+      { $match: { issued_item_id: { $in: allPdIdsForDamageSales } } },
       { $group: { _id: '$issued_item_id', total: { $sum: '$sqm' } } },
     ]);
     const salesMap = new Map(salesAgg.map((r) => [r._id.toString(), r.total]));
 
     const damageAgg = await pressing_damage_model.aggregate([
-      { $match: { pressing_done_details_id: { $in: allPdIds } } },
+      { $match: { pressing_done_details_id: { $in: allPdIdsForDamageSales } } },
       { $group: { _id: '$pressing_done_details_id', total: { $sum: '$sqm' } } },
     ]);
     const damageMap = new Map(damageAgg.map((r) => [r._id.toString(), r.total]));
 
-    // 5. Stocks (current and issued-for-pressing)
-    const currentAgg = await issues_for_pressing_model.aggregate([
-      {
-        $match: {
-          group_no: { $in: allFilteredGroupNos },
-          is_pressing_done: false,
-        },
-      },
-      {
-        $group: {
-          _id: { group_no: '$group_no', item_name: '$item_name' },
-          total: { $sum: '$available_details.sqm' },
-        },
-      },
-    ]);
-    const currentStockMap = new Map(
-      currentAgg.map((r) => [`${r._id.group_no}|${r._id.item_name}`, r.total])
-    );
-
-    const periodInflowAgg = await issues_for_pressing_model.aggregate([
-      {
-        $match: {
-          group_no: { $in: allFilteredGroupNos },
-          createdAt: { $gte: start, $lte: end },
-        },
-      },
-      {
-        $group: {
-          _id: { group_no: '$group_no', item_name: '$item_name' },
-          total: { $sum: '$sqm' },
-        },
-      },
-    ]);
-    const periodInflowMap = new Map(
-      periodInflowAgg.map((r) => [`${r._id.group_no}|${r._id.item_name}`, r.total])
-    );
-
-    // 6. Build report data
+    // 7. Build report data
     const stockData = itemEntries.map((entry) => {
+      const allPdIds = entry.group_nos.flatMap((gn) => allPdIdsByGroup.get(gn) ?? []);
+
       let sales = 0;
       let damage = 0;
-      for (const id of entry.pd_ids) {
+      for (const id of allPdIds) {
         sales += salesMap.get(id.toString()) ?? 0;
         damage += damageMap.get(id.toString()) ?? 0;
       }
 
-      let current_available = 0;
-      let issued_for_pressing = 0;
+      let opening_balance = 0;
       for (const gn of entry.group_nos) {
-        current_available += currentStockMap.get(`${gn}|${entry.item_name}`) ?? 0;
-        issued_for_pressing += periodInflowMap.get(`${gn}|${entry.item_name}`) ?? 0;
+        opening_balance += openingByGroup.get(gn) ?? 0;
       }
 
       const received = entry.received_sqm;
       const process_waste = damage;
       const purchase = 0;
-
-      const opening_balance = current_available + received + damage - issued_for_pressing;
-      // Issue in this report = outflow out of pressing stage (Sales)
       const issue = sales;
       const new_sqmtr = received - process_waste;
-      const closing_balance = opening_balance + issued_for_pressing - received - damage;
+
+      const closing_balance = Math.max(0, opening_balance + received - damage - sales);
 
       return {
         category: entry.category,

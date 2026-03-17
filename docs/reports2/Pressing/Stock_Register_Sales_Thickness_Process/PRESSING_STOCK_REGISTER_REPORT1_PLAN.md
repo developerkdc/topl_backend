@@ -50,7 +50,8 @@ Closing SqMtr      = Opening SqMtr + pressing_sqm − sales − issue_for_challa
 
 - **pressing_damage** (`topl_backend/database/schema/factory/pressing/pressing_damage/pressing_damage.schema.js`)
   - Key fields: `pressing_done_details_id`, `sqm`.
-  - **Process Waste:** sum(sqm) per pressing_done_details_id; map back to group_no using the pressing_done_details bridge.
+- **cnc_damage_details**, **color_damage_details**, **polishing_damage_details** — linked via cnc_done_details/color_done_details/polishing_done_details.`pressing_details_id` → pressing_done_details._id.
+- **All Damage:** sum(sqm) from pressing_damage + cnc_damage + color_damage + polishing_damage, mapped to pressing_done_details._id.
 
 - **photos** (`topl_backend/database/schema/masters/photo.schema.js`)
   - Key fields: `group_no`, `sales_item_name`.
@@ -66,10 +67,10 @@ Closing SqMtr      = Opening SqMtr + pressing_sqm − sales − issue_for_challa
 | Size | `length X width` (string) |
 | Opening SqMtr | current_available + pressing_sqm + pressing_waste_sqm − issued_in_period |
 | Pressing SqMtr | pressing_done_details.sqm where pressing_date in [start, end] |
-| Sales | 0 (schema gap) |
+| Sales | pressing_done_history.sqm where issued_for = "ORDER" |
 | Issue for Challan | 0 (schema gap) |
-| All Damage | 0 (schema gap) |
-| Process Waste | pressing_damage.sqm via pressing_done_details in period |
+| All Damage | pressing_damage + cnc_damage + color_damage + polishing_damage (via pressing_details_id) |
+| Process Waste | pressing_damage only (pressing-stage waste) |
 | Closing SqMtr | Opening + Pressing − Sales − Challan − Damage − Process Waste |
 
 ---
@@ -180,7 +181,7 @@ sequenceDiagram
 
 - **Combo aggregation in memory:** Distinct combos are built in Node.js (not in MongoDB) by iterating the group-level distinct results and grouping by composite key. This avoids a complex multi-level MongoDB aggregation across collections.
 - **Bulk queries, not N+1:** All DB queries are bulk — one query per collection, returning all relevant rows at once. Lookup/sum per combo is done in memory using Maps.
-- **process_waste = pressing_waste_sqm:** Until downstream damage schemas are linked, `process_waste` in the Excel is set to the pressing-stage waste (pressing_damage). When "All Damage" is later wired from downstream (CNC, colour, polishing), the `process_waste` field should be scoped to pressing-stage only.
+- **All Damage = Pressing + CNC + Colour + Polish:** Damage is aggregated from pressing_damage, cnc_damage_details, color_damage_details, polishing_damage_details. **Process Waste = pressing_damage only** (pressing-stage waste).
 - **Pressing waste attribution:** Waste is attributed to the `group_no` field of `pressing_done_details`. If a pressing run spans multiple groups (via `group_no_array`), secondary groups are not credited. This is a known approximation.
 - **Opening balance uses all-time history:** The distinct groups step fetches from issues_for_pressing without a date filter. This is intentional — opening balance depends on the full stock history, not just the report period.
 
@@ -188,8 +189,8 @@ sequenceDiagram
 
 ## Optional later enhancements
 
-- Wire **Sales** column from challan/dispatch schema once a joining key to pressing items (by group_no or item_name + thickness + size) is available.
+- ~~Wire **Sales** column~~ — **Done:** Sales = pressing_done_history.sqm where issued_for = "ORDER".
 - Wire **Issue for Challan** from issue_for_challan schema in the same way.
-- Wire **All Damage** from downstream process damage schemas (CNC damage, colour damage, polishing damage).
+- ~~Wire **All Damage** from downstream process damage schemas~~ — **Done:** All Damage = pressing_damage + cnc_damage + color_damage + polishing_damage.
 - Add `filter.sales_item_name` support to narrow by sales item name.
 - Add `filter.thickness` support to narrow by specific thickness.

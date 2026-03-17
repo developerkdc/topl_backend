@@ -4,8 +4,12 @@ import ApiResponse from '../../../utils/ApiResponse.js';
 import { pressing_done_details_model } from '../../../database/schema/factory/pressing/pressing_done/pressing_done.schema.js';
 import { pressing_damage_model } from '../../../database/schema/factory/pressing/pressing_damage/pressing_damage.schema.js';
 import { pressing_done_history_model } from '../../../database/schema/factory/pressing/pressing_history/pressing_done_history.schema.js';
+import { item_issued_for } from '../../../database/Utils/constants/constants.js';
 import { issues_for_pressing_model } from '../../../database/schema/factory/pressing/issues_for_pressing/issues_for_pressing.schema.js';
 import photoModel from '../../../database/schema/masters/photo.schema.js';
+import cnc_damage_model from '../../../database/schema/factory/cnc/cnc_damage/cnc_damage.schema.js';
+import color_damage_model from '../../../database/schema/factory/colour/colour_damage/colour_damage.schema.js';
+import polishing_damage_model from '../../../database/schema/factory/polishing/polishing_damage/polishing_damage.schema.js';
 import { GeneratePressingStockRegisterReport1Excel } from '../../../config/downloadExcel/reports2/Pressing/pressingStockRegisterReport1.js';
 
 /**
@@ -14,8 +18,8 @@ import { GeneratePressingStockRegisterReport1Excel } from '../../../config/downl
  *          Opening SqMtr, Pressing SqMtr,
  *          Sales (total issued from pressing to further processes via pressing_done_history),
  *          Issue for Challan (0 — schema gap),
- *          All Damage (pressing_damage sqm in period),
- *          Process Waste (pressing_damage sqm — same as All Damage currently),
+ *          All Damage (Pressing + CNC + Colour + Polish damage sqm),
+ *          Process Waste (pressing damage only),
  *          Closing SqMtr
  * Grouping: Item Name → Sales item Name; subtotal per Item Name; grand total.
  *
@@ -78,8 +82,6 @@ export const PressingStockRegisterReport1Excel = catchAsync(async (req, res, nex
         .json(new ApiResponse(404, 'No pressing data found for the selected period'));
     }
 
-    // Collect all pressing_done IDs and group_nos
-    const allPressingDoneIds = pressingDoneRaw.flatMap((r) => r.pressing_done_ids);
     const allGroupNos = [...new Set(pressingDoneRaw.map((r) => r._id.group_no).filter(Boolean))];
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -135,124 +137,161 @@ export const PressingStockRegisterReport1Excel = catchAsync(async (req, res, nex
           sales_item_name,
           thickness: thickness ?? 0,
           size,
-          group_nos: [],
-          pressing_done_ids: [],
+          groupDims: [],
           pressing_sqm: 0,
         });
       }
       const combo = comboMap.get(comboKey);
-      combo.group_nos.push(group_no);
-      combo.pressing_done_ids.push(...row.pressing_done_ids);
+      combo.groupDims.push({ group_no, thickness: thickness ?? 0, length: length ?? 0, width: width ?? 0 });
       combo.pressing_sqm += row.pressing_sqm;
     }
 
     const combos = [...comboMap.values()];
 
     // ─────────────────────────────────────────────────────────────────────────
-    // 5. Sales: sum sqm from pressing_done_history where issued_item_id in pressing_done IDs
-    //    issue_status values: CNC, COLOR, POLISHING, BUNITO, CANVAS, PACKING etc.
+    // 5. Opening: SUM(pressing_done_details.sqm) where pressing_date < start,
+    //    grouped by (group_no, thickness, length, width)
     // ─────────────────────────────────────────────────────────────────────────
-    const salesAgg = await pressing_done_history_model.aggregate([
-      { $match: { issued_item_id: { $in: allPressingDoneIds } } },
+    const openingAgg = await pressing_done_details_model.aggregate([
+      {
+        $match: {
+          pressing_date: { $lt: start },
+          group_no: { $in: filteredGroupNos },
+        },
+      },
       {
         $group: {
-          _id: '$issued_item_id',
-          total: { $sum: '$sqm' },
+          _id: {
+            group_no: '$group_no',
+            thickness: '$thickness',
+            length: '$length',
+            width: '$width',
+          },
+          opening_sqm: { $sum: '$sqm' },
         },
       },
     ]);
-    // Map pressing_done_id (string) → sales sqm
+    const openingByGroupDim = new Map(
+      openingAgg.map((r) => [
+        `${r._id.group_no}|${r._id.thickness ?? 0}|${r._id.length ?? 0}|${r._id.width ?? 0}`,
+        r.opening_sqm,
+      ])
+    );
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 6. All pressing_done IDs for each (group_no, thickness, length, width)
+    //    where pressing_date <= end — for full damage/sales scope (not just period)
+    // ─────────────────────────────────────────────────────────────────────────
+    const allPdIdsAgg = await pressing_done_details_model.aggregate([
+      {
+        $match: {
+          pressing_date: { $lte: end },
+          group_no: { $in: filteredGroupNos },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            group_no: '$group_no',
+            thickness: '$thickness',
+            length: '$length',
+            width: '$width',
+          },
+          pressing_done_ids: { $push: '$_id' },
+        },
+      },
+    ]);
+    const allPdIdsByGroupDim = new Map(
+      allPdIdsAgg.map((r) => [
+        `${r._id.group_no}|${r._id.thickness ?? 0}|${r._id.length ?? 0}|${r._id.width ?? 0}`,
+        r.pressing_done_ids,
+      ])
+    );
+
+    const allPdIdsForDamageSales = allPdIdsAgg.flatMap((r) => r.pressing_done_ids);
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 7. Sales: sum sqm from pressing_done_history where issued_for = ORDER
+    // ─────────────────────────────────────────────────────────────────────────
+    const salesAgg = await pressing_done_history_model.aggregate([
+      {
+        $match: {
+          issued_item_id: { $in: allPdIdsForDamageSales },
+          issued_for: item_issued_for.order,
+        },
+      },
+      { $group: { _id: '$issued_item_id', total: { $sum: '$sqm' } } },
+    ]);
     const salesByPdId = new Map(salesAgg.map((r) => [r._id.toString(), r.total]));
 
     // ─────────────────────────────────────────────────────────────────────────
-    // 6. All Damage: pressing_damage sqm in the period (pressing-stage waste)
+    // 8. All Damage: Pressing + CNC + Colour + Polish (via pressing_details_id)
     // ─────────────────────────────────────────────────────────────────────────
-    const damageAgg = await pressing_damage_model.aggregate([
-      { $match: { pressing_done_details_id: { $in: allPressingDoneIds } } },
-      {
-        $group: {
-          _id: '$pressing_done_details_id',
-          total: { $sum: '$sqm' },
-        },
-      },
+    const [pressingDamageAgg, cncDamageAgg, colorDamageAgg, polishingDamageAgg] = await Promise.all([
+      pressing_damage_model.aggregate([
+        { $match: { pressing_done_details_id: { $in: allPdIdsForDamageSales } } },
+        { $group: { _id: '$pressing_done_details_id', total: { $sum: '$sqm' } } },
+      ]),
+      cnc_damage_model.aggregate([
+        { $lookup: { from: 'cnc_done_details', localField: 'cnc_done_id', foreignField: '_id', as: 'cnc_done' } },
+        { $unwind: '$cnc_done' },
+        { $match: { 'cnc_done.pressing_details_id': { $in: allPdIdsForDamageSales } } },
+        { $group: { _id: '$cnc_done.pressing_details_id', total: { $sum: '$sqm' } } },
+      ]),
+      color_damage_model.aggregate([
+        { $lookup: { from: 'color_done_details', localField: 'color_done_id', foreignField: '_id', as: 'color_done' } },
+        { $unwind: '$color_done' },
+        { $match: { 'color_done.pressing_details_id': { $in: allPdIdsForDamageSales } } },
+        { $group: { _id: '$color_done.pressing_details_id', total: { $sum: '$sqm' } } },
+      ]),
+      polishing_damage_model.aggregate([
+        { $lookup: { from: 'polishing_done_details', localField: 'polishing_done_id', foreignField: '_id', as: 'polishing_done' } },
+        { $unwind: '$polishing_done' },
+        { $match: { 'polishing_done.pressing_details_id': { $in: allPdIdsForDamageSales } } },
+        { $group: { _id: '$polishing_done.pressing_details_id', total: { $sum: '$sqm' } } },
+      ]),
     ]);
-    const damageByPdId = new Map(damageAgg.map((r) => [r._id.toString(), r.total]));
+
+    const damageByPdId = new Map();
+    for (const r of [...pressingDamageAgg, ...cncDamageAgg, ...colorDamageAgg, ...polishingDamageAgg]) {
+      const key = r._id.toString();
+      damageByPdId.set(key, (damageByPdId.get(key) ?? 0) + r.total);
+    }
+    const processWasteByPdId = new Map(pressingDamageAgg.map((r) => [r._id.toString(), r.total]));
 
     // ─────────────────────────────────────────────────────────────────────────
-    // 7. Current available: issues_for_pressing where is_pressing_done = false
-    //    Used to compute Opening SqMtr
-    // ─────────────────────────────────────────────────────────────────────────
-    const currentAgg = await issues_for_pressing_model.aggregate([
-      {
-        $match: {
-          group_no: { $in: filteredGroupNos },
-          is_pressing_done: false,
-          ...(filter.item_name ? { item_name: filter.item_name.toUpperCase().trim() } : {}),
-        },
-      },
-      {
-        $group: {
-          _id: { group_no: '$group_no', item_name: '$item_name' },
-          total: { $sum: '$available_details.sqm' },
-        },
-      },
-    ]);
-    const currentMap = new Map(
-      currentAgg.map((r) => [`${r._id.group_no}|${r._id.item_name}`, r.total])
-    );
-
-    // Issued in period (from issues_for_pressing.createdAt for opening balance calc)
-    const issuedAgg = await issues_for_pressing_model.aggregate([
-      {
-        $match: {
-          group_no: { $in: filteredGroupNos },
-          createdAt: { $gte: start, $lte: end },
-          ...(filter.item_name ? { item_name: filter.item_name.toUpperCase().trim() } : {}),
-        },
-      },
-      {
-        $group: {
-          _id: { group_no: '$group_no', item_name: '$item_name' },
-          total: { $sum: '$sqm' },
-        },
-      },
-    ]);
-    const issuedMap = new Map(
-      issuedAgg.map((r) => [`${r._id.group_no}|${r._id.item_name}`, r.total])
-    );
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // 8. Build per-combo stock data
+    // 9. Build per-combo stock data
+    // Opening = pressing_done before start. Closing = max(0, Opening + Receive - damage - sales)
+    // All Damage = Pressing+CNC+Colour+Polish. Process Waste = pressing damage only.
     // ─────────────────────────────────────────────────────────────────────────
     const stockData = combos.map((combo) => {
-      const { item_name, sales_item_name, thickness, size, group_nos, pressing_done_ids } = combo;
+      const { item_name, sales_item_name, thickness, size, groupDims } = combo;
 
-      // Sum sales and damage across all pressing_done_ids in this combo
-      let sales = 0;
-      let all_damage = 0;
-      for (const pdId of pressing_done_ids) {
-        sales += salesByPdId.get(pdId.toString()) ?? 0;
-        all_damage += damageByPdId.get(pdId.toString()) ?? 0;
+      // Opening: sum pressing_done.sqm before start for each (group_no, thickness, length, width) in combo
+      let opening_sqm = 0;
+      const allPdIdsForCombo = [];
+      for (const dim of groupDims) {
+        const dimKey = `${dim.group_no}|${dim.thickness}|${dim.length}|${dim.width}`;
+        opening_sqm += openingByGroupDim.get(dimKey) ?? 0;
+        allPdIdsForCombo.push(...(allPdIdsByGroupDim.get(dimKey) ?? []));
       }
 
-      // Sum current_available and issued_in_period across all group_nos in this combo
-      let current_available = 0;
-      let issued_in_period = 0;
-      for (const gn of group_nos) {
-        current_available += currentMap.get(`${gn}|${item_name}`) ?? 0;
-        issued_in_period += issuedMap.get(`${gn}|${item_name}`) ?? 0;
+      // Sales and damage: use ALL pressing_done for this combo (not just period)
+      const uniquePdIds = [...new Set(allPdIdsForCombo.map((id) => id.toString()))];
+      let sales = 0;
+      let all_damage = 0;
+      let process_waste = 0;
+      for (const idStr of uniquePdIds) {
+        sales += salesByPdId.get(idStr) ?? 0;
+        all_damage += damageByPdId.get(idStr) ?? 0;
+        process_waste += processWasteByPdId.get(idStr) ?? 0;
       }
 
       const pressing_sqm = combo.pressing_sqm;
-      const process_waste = all_damage; // pressing-stage waste
-      const issue_for_challan = 0; // schema gap
+      const issue_for_challan = 0;
 
-      // Opening = current_available + pressing_sqm + all_damage - issued_in_period
-      const opening_sqm = current_available + pressing_sqm + all_damage - issued_in_period;
-
-      // Closing = Opening + Pressing - Sales - ChallanIssue - Damage - ProcessWaste
-      const closing_sqm =
-        opening_sqm + pressing_sqm - sales - issue_for_challan - all_damage - process_waste;
+      // Closing = max(0, Opening + Receive - damage - sales)
+      const closing_sqm = Math.max(0, opening_sqm + pressing_sqm - sales - all_damage);
 
       return {
         item_name,
@@ -266,8 +305,6 @@ export const PressingStockRegisterReport1Excel = catchAsync(async (req, res, nex
         damage: all_damage,
         process_waste,
         closing_sqm,
-        // used only for active-row filter
-        issued_in_period,
       };
     });
 
