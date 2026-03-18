@@ -2,7 +2,7 @@
 
 ## Objective
 
-Implement the **Fleece Stock Report** API under reports2 that generates an Excel report for a user-selected date range. The report shows opening stock, receives, consumption, sales, issue for pressing, and closing stock. Data is grouped by **Fleece Paper sub-category**, **thickness**, and **size**. Values are in **rolls** and **square meters**.
+Implement the **Fleece Stock Report** API under reports2 that generates an Excel report for a user-selected date range. The report shows opening stock, receives, consumption (total of challan, order, pressing), order, issue for pressing, and closing stock. Challan is computed and included in Consume but not displayed. Data is grouped by **Fleece Paper sub-category**, **thickness**, and **size**. Values are in **rolls** and **square meters**.
 
 ## Implementation Approach
 
@@ -15,7 +15,7 @@ Implement the **Fleece Stock Report** API under reports2 that generates an Excel
 - **Period:** User-specified date range (startDate, endDate).
 - **Data source:** fleece_inventory_items_view_modal + fleece_inventory_items_details + fleece_inventory_invoice_details + fleece_history_details.
 - **Grouping:** Fleece Paper Sub Category → Thickness → Size; subtotal per thickness; grand total.
-- **Columns:** Fleece Paper Sub Category, Thickness, Size, Opening Rolls, Opening Metres, Received Rolls, Received Mtrs, Consumed Rolls, Consumed Mtrs, Sales Rolls, Sales Mtrs, Issue For Pressing, Issue For Pressing Sq Met, Closing sheets, Closing Metres.
+- **Columns:** Fleece Paper Sub Category, Thickness, Size, Opening Rolls, Opening Metres, Received Rolls, Received Mtrs, Consumed Rolls, Consumed Mtrs, Order Rolls, Order Mtrs, Issue For Pressing, Issue For Pressing Sq Met, Closing Rolls, Closing Metres. Challan columns are hidden.
 
 ## Implementation Files
 
@@ -54,5 +54,5 @@ Implement the **Fleece Stock Report** API under reports2 that generates an Excel
 | Body   | startDate, endDate, optional filter (item_sub_category_name) |
 | 200    | `{ data: "<download URL>", message: "Stock report generated successfully" }` |
 | 400    | Missing/invalid dates or start > end |
-| 404    | No stock data for period (no receive, consume, sales, or issue for pressing in date range) |
+| 404    | No stock data for period (no receive, consume, challan, order, or issue for pressing in date range) |
 | 500    | Error generating report |

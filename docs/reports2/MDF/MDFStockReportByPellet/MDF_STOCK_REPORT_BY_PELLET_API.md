@@ -2,7 +2,7 @@
 
 ## Overview
 
-The MDF Stock Report by Pellet No. API (reports2) generates a dynamic inventory report with the same structure as the standard MDF Stock Report, but with each row representing an individual pellet (pallet). Data is grouped by **MDF sub-category**, with **Pellet No.** (pallet_number) as the first column. The report shows opening stock, receives, consumption, sales, issue for pressing, and closing stock for a given date range. MDF has no ply resizing, so the report has 16 columns (vs 18 for Plywood).
+The MDF Stock Report by Pellet No. API (reports2) generates a dynamic inventory report with the same structure as the standard MDF Stock Report, but with each row representing an individual pellet (pallet). Data is grouped by **MDF sub-category**, with **Pellet No.** (pallet_number) as the first column. The report shows opening stock, receives, consumption (total of challan, order, pressing), order, issue for pressing, and closing stock for a given date range. Challan is included in Consumed but not displayed. MDF has no ply resizing, so the report has 16 columns (vs 18 for Plywood).
 
 ## Endpoint
 
@@ -151,14 +151,16 @@ MDF Type [ CATEGORY ]   stock  in the period  DD/MM/YYYY and DD/MM/YYYY
 | 6  | Opening Metres                 | Opening stock (sq m)                     |
 | 7  | Received Sheets                | Received in period (sheets)              |
 | 8  | Received Mtrs                  | Received (sq m)                          |
-| 9  | Consumed Sheets                | Consumed in period (sheets)              |
-| 10 | Consumed Mtrs                  | Consumed (sq m)                          |
-| 11 | Sales Sheets                   | Sold in period (sheets)                  |
-| 12 | Sales Mtrs                     | Sold (sq m)                              |
+| 9  | Consumed Sheets                | Total consumed (challan + order + pressing) (sheets) |
+| 10 | Consumed Mtrs                  | Total consumed (sq m)                    |
+| 11 | Order Sheets                   | Issued for order (sheets)                |
+| 12 | Order Mtrs                     | Issued for order (sq m)                  |
 | 13 | Issue For Pressing             | Issued for pressing (sheets)             |
 | 14 | Issue For Pressing Sq Met      | Issued for pressing (sq m)               |
 | 15 | Closing sheets                 | Closing stock (sheets)                   |
 | 16 | Closing Metres                 | Closing stock (sq m)                     |
+
+- **Note:** Challan is included in Consumed but Challan columns are hidden in the Excel output for now.
 
 - Data grouped by **MDF Sub Category**; subtotal row after each category; grand total at the end.
 - Each row represents one pellet (one document in mdf_inventory_items_details).
@@ -170,17 +172,18 @@ All values are computed in **sheets** and **square meters** per pellet.
 ### Formulas
 
 - **Opening (sheets):**  
-  `Opening Sheets = Current Available Sheets + (Consumed + Sold) Sheets - Received Sheets`
+  `Opening Sheets = Current Available Sheets + Consumed Sheets - Received Sheets`
 - **Opening (sq m):**  
-  `Opening Sqm = Current Available Sqm + (Consumed + Sold) Sqm - Received Sqm`
-- **Receives:** For each pellet, if its invoice `inward_date` is between startDate and endDate, use `no_of_sheet` and `total_sq_meter`; else 0.
-- **Consumption:** From mdf history where `mdf_item_id` = pellet `_id`, `issue_status` in `['order', 'pressing']` and `createdAt` in period; sum `issued_sheets` and `issued_sqm`.
-- **Sales:** From mdf history where `mdf_item_id` = pellet `_id`, `issue_status = 'challan'` and `createdAt` in period; sum `issued_sheets` and `issued_sqm`.
+  `Opening Sqm = Current Available Sqm + Consumed Sqm - Received Sqm`
+- **Consumed:** Challan + Order + Issue for pressing (computed from history).
+- **Challan:** From mdf history where `mdf_item_id` = pellet `_id`, `issue_status = 'challan'` and `createdAt` in period; sum `issued_sheets` and `issued_sqm`.
+- **Order:** From mdf history where `mdf_item_id` = pellet `_id`, `issue_status = 'order'` and `createdAt` in period; sum `issued_sheets` and `issued_sqm`.
+- **Receives:** For each pellet, if its invoice `inward_date` is between startDate and endDate (end includes 23:59:59.999 UTC), use `no_of_sheet` and `total_sq_meter`; else 0.
 - **Issue for pressing:** From mdf history where `mdf_item_id` = pellet `_id`, `issue_status = 'pressing'` and `createdAt` in period; sum `issued_sheets` and `issued_sqm`.
 - **Closing:**  
-  `Closing = Opening + Receive - Consume - Sales` (in both sheets and sq m).
+  `Closing = Opening + Receive - Consume` (in both sheets and sq m).
 
-Only rows that had **at least one movement in the period** (receive, consume, sales, or issue for pressing) are included. If there was no inward, consumption, sales, or issue for pressing in the date range, no rows are shown and the API returns 404. All stock values are output as non-negative (`Math.max(0, value)`).
+Only rows that had **at least one movement in the period** (receive, consume, challan, order, or issue for pressing) are included. If there was no inward, consumption, sales, or issue for pressing in the date range, no rows are shown and the API returns 404. All stock values are output as non-negative (`Math.max(0, value)`).
 
 ## Database Collections Used
 
@@ -213,7 +216,8 @@ window.open(downloadUrl, '_blank');
 
 ## Notes
 
-- Report includes only rows that had at least one movement in the period (receive, consume, sales, or issue for pressing). If the date range has no such activity, the report returns 404 with "No stock data found for the selected period".
+- Report includes only rows that had at least one movement in the period (receive, consume, challan, order, or issue for pressing). If the date range has no such activity, the report returns 404 with "No stock data found for the selected period".
+- Date range: end date includes the full day (23:59:59.999 UTC) so transactions on the end date are included.
 - Each row corresponds to one pellet (pallet_number) from mdf_inventory_items_details.
 - MDF has no ply resizing; only Issue For Pressing columns (vs Plywood which has both ply resizing and pressing).
 - Excel files are timestamped to avoid overwriting.

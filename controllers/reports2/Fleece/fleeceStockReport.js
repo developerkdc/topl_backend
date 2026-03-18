@@ -10,8 +10,14 @@ import { StatusCodes } from '../../../utils/constants.js';
 import {
   GenerateFleeceStockReportExcel,
   GenerateFleeceItemWiseStockReportExcel,
-  GenerateFleeceStockReportByRollExcel,
+  GenerateFleeceStockReportByInwardExcel,
 } from '../../../config/downloadExcel/reports2/Fleece/fleeceStockReport.js';
+
+/** Round stock value; treat floating-point noise (|v| < 1e-10) as 0 */
+const roundStock = (v, decimals = 4) => {
+  const rounded = Math.round(v * 10 ** decimals) / 10 ** decimals;
+  return Math.abs(rounded) < 1e-10 ? 0 : rounded;
+};
 
 /**
  * Fleece Stock Report – Excel download.
@@ -31,6 +37,7 @@ export const fleeceStockReportCsv = catchAsync(async (req, res, next) => {
 
   const start = new Date(startDate);
   const end = new Date(endDate);
+  end.setUTCHours(23, 59, 59, 999);
 
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     return next(new ApiError('Invalid date format', 400));
@@ -106,99 +113,104 @@ export const fleeceStockReportCsv = catchAsync(async (req, res, next) => {
           },
         ]);
 
-        const consumption = await fleece_history_model.aggregate([
-          {
-            $match: {
-              fleece_item_id: { $in: itemIds },
-              issue_status: { $in: ['order', 'pressing'] },
-              createdAt: { $gte: start, $lte: end },
+        const [challan, order, issuePressing] = await Promise.all([
+          fleece_history_model.aggregate([
+            {
+              $match: {
+                fleece_item_id: { $in: itemIds },
+                issue_status: 'challan',
+                createdAt: { $gte: start, $lte: end },
+              },
             },
-          },
-          {
-            $group: {
-              _id: null,
-              total_rolls: { $sum: '$issued_number_of_roll' },
-              total_sqm: { $sum: '$issued_sqm' },
+            {
+              $group: {
+                _id: null,
+                total_rolls: { $sum: '$issued_number_of_roll' },
+                total_sqm: { $sum: '$issued_sqm' },
+              },
             },
-          },
-        ]);
-
-        const sales = await fleece_history_model.aggregate([
-          {
-            $match: {
-              fleece_item_id: { $in: itemIds },
-              issue_status: 'challan',
-              createdAt: { $gte: start, $lte: end },
+          ]),
+          fleece_history_model.aggregate([
+            {
+              $match: {
+                fleece_item_id: { $in: itemIds },
+                issue_status: 'order',
+                createdAt: { $gte: start, $lte: end },
+              },
             },
-          },
-          {
-            $group: {
-              _id: null,
-              total_rolls: { $sum: '$issued_number_of_roll' },
-              total_sqm: { $sum: '$issued_sqm' },
+            {
+              $group: {
+                _id: null,
+                total_rolls: { $sum: '$issued_number_of_roll' },
+                total_sqm: { $sum: '$issued_sqm' },
+              },
             },
-          },
-        ]);
-
-        const issuePressing = await fleece_history_model.aggregate([
-          {
-            $match: {
-              fleece_item_id: { $in: itemIds },
-              issue_status: 'pressing',
-              createdAt: { $gte: start, $lte: end },
+          ]),
+          fleece_history_model.aggregate([
+            {
+              $match: {
+                fleece_item_id: { $in: itemIds },
+                issue_status: 'pressing',
+                createdAt: { $gte: start, $lte: end },
+              },
             },
-          },
-          {
-            $group: {
-              _id: null,
-              total_rolls: { $sum: '$issued_number_of_roll' },
-              total_sqm: { $sum: '$issued_sqm' },
+            {
+              $group: {
+                _id: null,
+                total_rolls: { $sum: '$issued_number_of_roll' },
+                total_sqm: { $sum: '$issued_sqm' },
+              },
             },
-          },
+          ]),
         ]);
 
         const receiveRolls = receives[0]?.total_rolls || 0;
         const receiveSqm = receives[0]?.total_sqm || 0;
-        const consumeRolls = consumption[0]?.total_rolls || 0;
-        const consumeSqm = consumption[0]?.total_sqm || 0;
-        const salesRolls = sales[0]?.total_rolls || 0;
-        const salesSqm = sales[0]?.total_sqm || 0;
+        const challanRolls = challan[0]?.total_rolls || 0;
+        const challanSqm = challan[0]?.total_sqm || 0;
+        const orderRolls = order[0]?.total_rolls || 0;
+        const orderSqm = order[0]?.total_sqm || 0;
         const issuePressingRolls = issuePressing[0]?.total_rolls || 0;
         const issuePressingSqm = issuePressing[0]?.total_sqm || 0;
+        const consumeRolls = challanRolls + orderRolls + issuePressingRolls;
+        const consumeSqm = challanSqm + orderSqm + issuePressingSqm;
         const currentRolls = item.current_rolls || 0;
         const currentSqm = item.current_sqm || 0;
 
-        const openingRolls = currentRolls + consumeRolls + salesRolls - receiveRolls;
-        const openingSqm = currentSqm + consumeSqm + salesSqm - receiveSqm;
-        const closingRolls = openingRolls + receiveRolls - consumeRolls - salesRolls;
-        const closingSqm = openingSqm + receiveSqm - consumeSqm - salesSqm;
+        const openingRolls = currentRolls + consumeRolls - receiveRolls;
+        const openingSqm = currentSqm + consumeSqm - receiveSqm;
+        const closingRolls = openingRolls + receiveRolls - consumeRolls;
+        const closingSqm = openingSqm + receiveSqm - consumeSqm;
 
         return {
           fleece_sub_type: item_sub_category_name,
           thickness,
           size: `${length} X ${width}`,
-          opening_rolls: Math.max(0, openingRolls),
-          opening_sqm: Math.max(0, openingSqm),
+          opening_rolls: Math.max(0, roundStock(openingRolls, 0)),
+          opening_sqm: Math.max(0, roundStock(openingSqm)),
           receive_rolls: receiveRolls,
           receive_sqm: receiveSqm,
           consume_rolls: consumeRolls,
           consume_sqm: consumeSqm,
-          sales_rolls: salesRolls,
-          sales_sqm: salesSqm,
+          challan_rolls: challanRolls,
+          challan_sqm: challanSqm,
+          order_rolls: orderRolls,
+          order_sqm: orderSqm,
           issue_pressing_rolls: issuePressingRolls,
           issue_pressing_sqm: issuePressingSqm,
-          closing_rolls: Math.max(0, closingRolls),
-          closing_sqm: Math.max(0, closingSqm),
+          closing_rolls: Math.max(0, roundStock(closingRolls, 0)),
+          closing_sqm: Math.max(0, roundStock(closingSqm)),
         };
       })
     );
 
-    // Only include rows that had at least one movement in the period (receive, consume, sales, or issue for pressing).
+    // Only include rows that had at least one movement in the period (receive, consume, challan, order, or issue for pressing).
     const activeStockData = stockData.filter(
       (item) =>
         item.receive_rolls > 0 ||
         item.consume_rolls > 0 ||
-        item.sales_rolls > 0 ||
+        item.challan_rolls > 0 ||
+        item.order_rolls > 0 ||
         item.issue_pressing_rolls > 0
     );
 
@@ -247,6 +259,7 @@ export const fleeceItemWiseStockReportCsv = catchAsync(async (req, res, next) =>
 
   const start = new Date(startDate);
   const end = new Date(endDate);
+  end.setUTCHours(23, 59, 59, 999);
 
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     return next(new ApiError('Invalid date format', 400));
@@ -318,100 +331,105 @@ export const fleeceItemWiseStockReportCsv = catchAsync(async (req, res, next) =>
           },
         ]);
 
-        const consumption = await fleece_history_model.aggregate([
-          {
-            $match: {
-              fleece_item_id: { $in: itemIds },
-              issue_status: { $in: ['order', 'pressing'] },
-              createdAt: { $gte: start, $lte: end },
+        const [challan, order, issuePressing] = await Promise.all([
+          fleece_history_model.aggregate([
+            {
+              $match: {
+                fleece_item_id: { $in: itemIds },
+                issue_status: 'challan',
+                createdAt: { $gte: start, $lte: end },
+              },
             },
-          },
-          {
-            $group: {
-              _id: null,
-              total_rolls: { $sum: '$issued_number_of_roll' },
-              total_sqm: { $sum: '$issued_sqm' },
+            {
+              $group: {
+                _id: null,
+                total_rolls: { $sum: '$issued_number_of_roll' },
+                total_sqm: { $sum: '$issued_sqm' },
+              },
             },
-          },
-        ]);
-
-        const sales = await fleece_history_model.aggregate([
-          {
-            $match: {
-              fleece_item_id: { $in: itemIds },
-              issue_status: 'challan',
-              createdAt: { $gte: start, $lte: end },
+          ]),
+          fleece_history_model.aggregate([
+            {
+              $match: {
+                fleece_item_id: { $in: itemIds },
+                issue_status: 'order',
+                createdAt: { $gte: start, $lte: end },
+              },
             },
-          },
-          {
-            $group: {
-              _id: null,
-              total_rolls: { $sum: '$issued_number_of_roll' },
-              total_sqm: { $sum: '$issued_sqm' },
+            {
+              $group: {
+                _id: null,
+                total_rolls: { $sum: '$issued_number_of_roll' },
+                total_sqm: { $sum: '$issued_sqm' },
+              },
             },
-          },
-        ]);
-
-        const issuePressing = await fleece_history_model.aggregate([
-          {
-            $match: {
-              fleece_item_id: { $in: itemIds },
-              issue_status: 'pressing',
-              createdAt: { $gte: start, $lte: end },
+          ]),
+          fleece_history_model.aggregate([
+            {
+              $match: {
+                fleece_item_id: { $in: itemIds },
+                issue_status: 'pressing',
+                createdAt: { $gte: start, $lte: end },
+              },
             },
-          },
-          {
-            $group: {
-              _id: null,
-              total_rolls: { $sum: '$issued_number_of_roll' },
-              total_sqm: { $sum: '$issued_sqm' },
+            {
+              $group: {
+                _id: null,
+                total_rolls: { $sum: '$issued_number_of_roll' },
+                total_sqm: { $sum: '$issued_sqm' },
+              },
             },
-          },
+          ]),
         ]);
 
         const receiveRolls = receives[0]?.total_rolls || 0;
         const receiveSqm = receives[0]?.total_sqm || 0;
-        const consumeRolls = consumption[0]?.total_rolls || 0;
-        const consumeSqm = consumption[0]?.total_sqm || 0;
-        const salesRolls = sales[0]?.total_rolls || 0;
-        const salesSqm = sales[0]?.total_sqm || 0;
+        const challanRolls = challan[0]?.total_rolls || 0;
+        const challanSqm = challan[0]?.total_sqm || 0;
+        const orderRolls = order[0]?.total_rolls || 0;
+        const orderSqm = order[0]?.total_sqm || 0;
         const issuePressingRolls = issuePressing[0]?.total_rolls || 0;
         const issuePressingSqm = issuePressing[0]?.total_sqm || 0;
+        const consumeRolls = challanRolls + orderRolls + issuePressingRolls;
+        const consumeSqm = challanSqm + orderSqm + issuePressingSqm;
         const currentRolls = item.current_rolls || 0;
         const currentSqm = item.current_sqm || 0;
 
-        const openingRolls = currentRolls + consumeRolls + salesRolls - receiveRolls;
-        const openingSqm = currentSqm + consumeSqm + salesSqm - receiveSqm;
-        const closingRolls = openingRolls + receiveRolls - consumeRolls - salesRolls;
-        const closingSqm = openingSqm + receiveSqm - consumeSqm - salesSqm;
+        const openingRolls = currentRolls + consumeRolls - receiveRolls;
+        const openingSqm = currentSqm + consumeSqm - receiveSqm;
+        const closingRolls = openingRolls + receiveRolls - consumeRolls;
+        const closingSqm = openingSqm + receiveSqm - consumeSqm;
 
         return {
           item_name: item_name || '',
           fleece_sub_type: item_sub_category_name,
           thickness,
           size: `${length} X ${width}`,
-          opening_rolls: Math.max(0, openingRolls),
-          opening_sqm: Math.max(0, openingSqm),
+          opening_rolls: Math.max(0, roundStock(openingRolls, 0)),
+          opening_sqm: Math.max(0, roundStock(openingSqm)),
           receive_rolls: receiveRolls,
           receive_sqm: receiveSqm,
           consume_rolls: consumeRolls,
           consume_sqm: consumeSqm,
-          sales_rolls: salesRolls,
-          sales_sqm: salesSqm,
+          challan_rolls: challanRolls,
+          challan_sqm: challanSqm,
+          order_rolls: orderRolls,
+          order_sqm: orderSqm,
           issue_pressing_rolls: issuePressingRolls,
           issue_pressing_sqm: issuePressingSqm,
-          closing_rolls: Math.max(0, closingRolls),
-          closing_sqm: Math.max(0, closingSqm),
+          closing_rolls: Math.max(0, roundStock(closingRolls, 0)),
+          closing_sqm: Math.max(0, roundStock(closingSqm)),
         };
       })
     );
 
-    // Only include rows that had at least one movement in the period (receive, consume, sales, or issue for pressing).
+    // Only include rows that had at least one movement in the period (receive, consume, challan, order, or issue for pressing).
     const activeStockData = stockData.filter(
       (row) =>
         row.receive_rolls > 0 ||
         row.consume_rolls > 0 ||
-        row.sales_rolls > 0 ||
+        row.challan_rolls > 0 ||
+        row.order_rolls > 0 ||
         row.issue_pressing_rolls > 0
     );
 
@@ -447,13 +465,13 @@ export const fleeceItemWiseStockReportCsv = catchAsync(async (req, res, next) =>
 });
 
 /**
- * Fleece Stock Report – By Roll No. Each row = one roll (item_sr_no).
- * Same columns as stock report with Roll No. as first column; grouped by Fleece Paper Sub Category.
+ * Fleece Stock Report – By Inward Number. Each row = one inward per (sub_category, thickness, size).
+ * Multiple items in same inward with different specs = multiple rows (same inward_no, different specs).
  *
- * @route POST /report/download-stock-report-fleece-by-roll
+ * @route POST /report/download-stock-report-fleece-by-inward
  * @access Private
  */
-export const fleeceStockReportByRollCsv = catchAsync(async (req, res, next) => {
+export const fleeceStockReportByInwardCsv = catchAsync(async (req, res, next) => {
   const { startDate, endDate } = req.body;
   const filter = req.body?.filter || {};
 
@@ -463,6 +481,7 @@ export const fleeceStockReportByRollCsv = catchAsync(async (req, res, next) => {
 
   const start = new Date(startDate);
   const end = new Date(endDate);
+  end.setUTCHours(23, 59, 59, 999);
 
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     return next(new ApiError('Invalid date format', 400));
@@ -478,7 +497,7 @@ export const fleeceStockReportByRollCsv = catchAsync(async (req, res, next) => {
   }
 
   try {
-    const allItems = await fleece_inventory_items_modal.aggregate([
+    const inwardGroups = await fleece_inventory_items_modal.aggregate([
       { $match: { deleted_at: null, ...itemFilter } },
       {
         $lookup: {
@@ -490,55 +509,45 @@ export const fleeceStockReportByRollCsv = catchAsync(async (req, res, next) => {
       },
       { $unwind: { path: '$invoice', preserveNullAndEmptyArrays: true } },
       {
-        $project: {
-          _id: 1,
-          item_sr_no: 1,
-          item_sub_category_name: 1,
-          thickness: 1,
-          length: 1,
-          width: 1,
-          number_of_roll: 1,
-          total_sq_meter: 1,
-          available_number_of_roll: 1,
-          available_sqm: 1,
-          inward_date: '$invoice.inward_date',
+        $group: {
+          _id: {
+            invoice_id: '$invoice_id',
+            item_sub_category_name: '$item_sub_category_name',
+            thickness: '$thickness',
+            length: '$length',
+            width: '$width',
+          },
+          inward_sr_no: { $first: '$invoice.inward_sr_no' },
+          inward_date: { $first: '$invoice.inward_date' },
+          item_ids: { $push: '$_id' },
+          total_number_of_roll: { $sum: '$number_of_roll' },
+          total_sq_meter: { $sum: '$total_sq_meter' },
+          current_rolls: { $sum: '$available_number_of_roll' },
+          current_sqm: { $sum: '$available_sqm' },
         },
       },
-    ]);
+    ]).then((groups) => groups.filter((g) => g.inward_sr_no != null));
 
     const stockData = await Promise.all(
-      allItems.map(async (item) => {
-        const itemId = item._id;
-        const inwardDate = item.inward_date;
+      inwardGroups.map(async (group) => {
+        const { item_sub_category_name, thickness, length, width } = group._id;
+        const itemIds = group.item_ids;
+        const inwardDate = group.inward_date;
 
         const receiveRolls =
-          inwardDate && inwardDate >= start && inwardDate <= end ? (item.number_of_roll || 0) : 0;
+          inwardDate && inwardDate >= start && inwardDate <= end
+            ? (group.total_number_of_roll || 0)
+            : 0;
         const receiveSqm =
           inwardDate && inwardDate >= start && inwardDate <= end
-            ? (item.total_sq_meter || 0)
+            ? (group.total_sq_meter || 0)
             : 0;
 
-        const [consumption, sales, issuePressing] = await Promise.all([
+        const [challan, order, issuePressing] = await Promise.all([
           fleece_history_model.aggregate([
             {
               $match: {
-                fleece_item_id: itemId,
-                issue_status: { $in: ['order', 'pressing'] },
-                createdAt: { $gte: start, $lte: end },
-              },
-            },
-            {
-              $group: {
-                _id: null,
-                total_rolls: { $sum: '$issued_number_of_roll' },
-                total_sqm: { $sum: '$issued_sqm' },
-              },
-            },
-          ]),
-          fleece_history_model.aggregate([
-            {
-              $match: {
-                fleece_item_id: itemId,
+                fleece_item_id: { $in: itemIds },
                 issue_status: 'challan',
                 createdAt: { $gte: start, $lte: end },
               },
@@ -554,7 +563,23 @@ export const fleeceStockReportByRollCsv = catchAsync(async (req, res, next) => {
           fleece_history_model.aggregate([
             {
               $match: {
-                fleece_item_id: itemId,
+                fleece_item_id: { $in: itemIds },
+                issue_status: 'order',
+                createdAt: { $gte: start, $lte: end },
+              },
+            },
+            {
+              $group: {
+                _id: null,
+                total_rolls: { $sum: '$issued_number_of_roll' },
+                total_sqm: { $sum: '$issued_sqm' },
+              },
+            },
+          ]),
+          fleece_history_model.aggregate([
+            {
+              $match: {
+                fleece_item_id: { $in: itemIds },
                 issue_status: 'pressing',
                 createdAt: { $gte: start, $lte: end },
               },
@@ -569,54 +594,61 @@ export const fleeceStockReportByRollCsv = catchAsync(async (req, res, next) => {
           ]),
         ]);
 
-        const consumeRolls = consumption[0]?.total_rolls || 0;
-        const consumeSqm = consumption[0]?.total_sqm || 0;
-        const salesRolls = sales[0]?.total_rolls || 0;
-        const salesSqm = sales[0]?.total_sqm || 0;
+        const challanRolls = challan[0]?.total_rolls || 0;
+        const challanSqm = challan[0]?.total_sqm || 0;
+        const orderRolls = order[0]?.total_rolls || 0;
+        const orderSqm = order[0]?.total_sqm || 0;
         const issuePressingRolls = issuePressing[0]?.total_rolls || 0;
         const issuePressingSqm = issuePressing[0]?.total_sqm || 0;
-        const currentRolls = item.available_number_of_roll ?? item.number_of_roll ?? 0;
-        const currentSqm = item.available_sqm ?? item.total_sq_meter ?? 0;
+        const consumeRolls = challanRolls + orderRolls + issuePressingRolls;
+        const consumeSqm = challanSqm + orderSqm + issuePressingSqm;
+        const currentRolls = group.current_rolls ?? 0;
+        const currentSqm = group.current_sqm ?? 0;
 
-        const openingRolls = currentRolls + consumeRolls + salesRolls - receiveRolls;
-        const openingSqm = currentSqm + consumeSqm + salesSqm - receiveSqm;
-        const closingRolls = openingRolls + receiveRolls - consumeRolls - salesRolls;
-        const closingSqm = openingSqm + receiveSqm - consumeSqm - salesSqm;
+        const openingRolls = currentRolls + consumeRolls - receiveRolls;
+        const openingSqm = currentSqm + consumeSqm - receiveSqm;
+        const closingRolls = openingRolls + receiveRolls - consumeRolls;
+        const closingSqm = openingSqm + receiveSqm - consumeSqm;
 
         return {
-          roll_no: item.item_sr_no,
-          fleece_sub_type: item.item_sub_category_name,
-          thickness: item.thickness,
-          size: `${item.length} X ${item.width}`,
-          opening_rolls: Math.max(0, openingRolls),
-          opening_sqm: Math.max(0, openingSqm),
+          inward_no: group.inward_sr_no ?? '',
+          fleece_sub_type: item_sub_category_name ?? '',
+          thickness: thickness ?? '',
+          size: `${length ?? ''} X ${width ?? ''}`,
+          opening_rolls: Math.max(0, roundStock(openingRolls, 0)),
+          opening_sqm: Math.max(0, roundStock(openingSqm)),
           receive_rolls: receiveRolls,
           receive_sqm: receiveSqm,
           consume_rolls: consumeRolls,
           consume_sqm: consumeSqm,
-          sales_rolls: salesRolls,
-          sales_sqm: salesSqm,
+          challan_rolls: challanRolls,
+          challan_sqm: challanSqm,
+          order_rolls: orderRolls,
+          order_sqm: orderSqm,
           issue_pressing_rolls: issuePressingRolls,
           issue_pressing_sqm: issuePressingSqm,
-          closing_rolls: Math.max(0, closingRolls),
-          closing_sqm: Math.max(0, closingSqm),
+          closing_rolls: Math.max(0, roundStock(closingRolls, 0)),
+          closing_sqm: Math.max(0, roundStock(closingSqm)),
         };
       })
     );
 
-    // Only include rows that had at least one movement in the period (receive, consume, sales, or issue for pressing).
+    // Only include rows that had at least one movement in the period (receive, consume, challan, order, or issue for pressing).
     const activeStockData = stockData
       .filter(
         (item) =>
           item.receive_rolls > 0 ||
           item.consume_rolls > 0 ||
-          item.sales_rolls > 0 ||
+          item.challan_rolls > 0 ||
+          item.order_rolls > 0 ||
           item.issue_pressing_rolls > 0
       )
       .sort((a, b) => {
+        const inwardCmp = (a.inward_no ?? 0) - (b.inward_no ?? 0);
+        if (inwardCmp !== 0) return inwardCmp;
         const subCmp = (a.fleece_sub_type || '').localeCompare(b.fleece_sub_type || '');
         if (subCmp !== 0) return subCmp;
-        return (a.roll_no || 0) - (b.roll_no || 0);
+        return (a.thickness ?? 0) - (b.thickness ?? 0);
       });
 
     if (activeStockData.length === 0) {
@@ -630,7 +662,7 @@ export const fleeceStockReportByRollCsv = catchAsync(async (req, res, next) => {
         );
     }
 
-    const excelLink = await GenerateFleeceStockReportByRollExcel(
+    const excelLink = await GenerateFleeceStockReportByInwardExcel(
       activeStockData,
       startDate,
       endDate,
@@ -640,12 +672,12 @@ export const fleeceStockReportByRollCsv = catchAsync(async (req, res, next) => {
     return res.json(
       new ApiResponse(
         StatusCodes.OK,
-        'Stock report by roll generated successfully',
+        'Stock report by inward number generated successfully',
         excelLink
       )
     );
   } catch (error) {
-    console.error('Error generating fleece stock report by roll:', error);
+    console.error('Error generating fleece stock report by inward:', error);
     return next(new ApiError(error.message || 'Failed to generate stock report', 500));
   }
 });

@@ -2,7 +2,7 @@
 
 ## Objective
 
-Implement the **Plywood Item-Wise Stock Report** API under reports2 that generates an Excel report for a user-selected date range. The report shows opening stock, receives, consumption, sales, issue for recalibration, and closing stock, grouped by **item name**, then **plywood sub-type**, **thickness**, and **size**. Same columns as the Plywood Stock Report with **Item Name** as the first column.
+Implement the **Plywood Item-Wise Stock Report** API under reports2 that generates an Excel report for a user-selected date range. The report shows opening stock, receives, consumption (total of challan, order, resizing, pressing), challan, order, issue for ply resizing, issue for pressing, and closing stock, grouped by **item name**, then **plywood sub-type**, **thickness**, and **size**. Same columns as the Plywood Stock Report with **Item Name** as the first column.
 
 ## Implementation Approach
 
@@ -14,7 +14,7 @@ Implement the **Plywood Item-Wise Stock Report** API under reports2 that generat
 - **Period:** User-specified date range (startDate, endDate).
 - **Data source:** MongoDB aggregations over plywood view, item details, invoice details, and plywood history.
 - **Grouping:** Item Name → Thickness → Size; subtotal per thickness; grand total.
-- **Columns:** Item Name, Plywood Sub Type, Thickness, Size, Opening (sheets + sq m), Receive, Consume, Sales, Issue For Rec Ply/Cal (sheets + sq m), Closing (sheets + sq m).
+- **Columns:** Item Name, Plywood Sub Type, Thickness, Size, Opening (sheets + sq m), Receive, Consume, Challan, Order, Issue For Ply Resizing (sheets + sq m), Issue For Pressing (sheets + sq m), Closing (sheets + sq m).
 
 ## Implementation Files
 
@@ -45,9 +45,10 @@ Implement the **Plywood Item-Wise Stock Report** API under reports2 that generat
 4. **Current inventory:** Aggregate `plywood_inventory_items_view_modal`: match `deleted_at: null` and `...itemFilter`; group by (item_name, sub-type, thickness, length, width); sum `available_sheets`, `available_sqm`; collect `item_ids`.
 5. For each group:
    - **Receives:** Aggregate `plywood_inventory_items_details` (match on item_name, sub-type, thickness, length, width, `deleted_at: null`) → `$lookup` invoice → match `invoice.inward_date` in [start, end] → sum `sheets`, `total_sq_meter`.
-   - **Consumption / Sales / Issue for recal:** Same as stock report, using item_ids and date range.
+   - **Challan / Order / Issue for ply resizing / Issue for pressing:** Same as stock report, using item_ids and date range.
+   - **Consumed** = challan + order + issue for ply resizing + issue for pressing (computed).
    - Compute **opening** and **closing**; clamp to non-negative.
-6. Filter rows with at least one non-zero among opening, receive, consume, sales, closing.
+6. Filter rows with at least one non-zero among opening, receive, consume, challan, order, closing.
 7. If no rows, return 404 "No stock data found for the selected period".
 8. Call `GeneratePlywoodItemWiseStockReportExcel(aggregatedData, startDate, endDate, filter)`.
 9. Return 200 with ApiResponse: message and `data: excelLink`.
@@ -104,7 +105,7 @@ Same formulas as Plywood Stock Report. Receives and history aggregations are sco
 ### Pipeline structure (conceptual)
 
 1. **Current inventory:** `plywood_inventory_items_view_modal` → match (deleted_at, filters including item_name) → group by (item_name, sub-type, thickness, length, width) → sum available_sheets/sqm, push _id as item_ids.
-2. **Per group:** Receives from item details (with item_name in match) + invoice lookup; Consumption / Sales / Issue recal from plywood_history_model (item_ids, issue_status, date range).
+2. **Per group:** Receives from item details (with item_name in match) + invoice lookup; Challan / Order / Issue for ply resizing / Issue for pressing from plywood_history_model (item_ids, issue_status, date range). Consumed = sum of all four.
 3. **Compute** opening and closing; build row object (item_name, plywood_sub_type, thickness, size, and all numeric columns).
 4. **Filter** active rows; pass to Excel generator.
 
@@ -122,12 +123,16 @@ Same formulas as Plywood Stock Report. Receives and history aggregations are sco
 8. Rec Mtrs  
 9. Consume (sheets)  
 10. Cons Mtrs  
-11. Sales (sheets)  
-12. Sales Mtrs  
-13. Issue For Rec Ply/Cal Sheet  
-14. Issue For Rec Ply/Cal Sq Met  
-15. Closing (sheets)  
-16. Cl Metres  
+11. Challan Sheets  
+12. Challan Mtrs  
+13. Order Sheets  
+14. Order Mtrs  
+15. Issue For Ply Resizing Sheet  
+16. Issue For Ply Resizing Sq Met  
+17. Issue For Pressing  
+18. Issue For Pressing Sq Met  
+19. Closing (sheets)  
+20. Cl Metres  
 
 ### Row hierarchy
 

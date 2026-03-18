@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Plywood Item-Wise Stock Report API (reports2) generates a dynamic inventory report with opening stock, receives, consumption, sales, issue for recalibration, and closing stock for a given date range. Data is grouped by **item name**, then **plywood sub-type**, **thickness**, and **size**. Same columns as the standard Plywood Stock Report with **Item Name** as the first column.
+The Plywood Item-Wise Stock Report API (reports2) generates a dynamic inventory report with opening stock, receives, consumption (total of challan, order, resizing, pressing), challan, order, issue for ply resizing, issue for pressing, and closing stock for a given date range. Data is grouped by **item name**, then **plywood sub-type**, **thickness**, and **size**. Same columns as the standard Plywood Stock Report with **Item Name** as the first column.
 
 ## Endpoint
 
@@ -152,20 +152,24 @@ Plywood Type (Item Wise) [ CATEGORY ] [ Item: ITEM_NAME ]   stock  in the period
 | 6  | Op Metres                   | Opening stock (sq m)                     |
 | 7  | Receive                     | Received in period (sheets)              |
 | 8  | Rec Mtrs                    | Received (sq m)                         |
-| 9  | Consume                     | Consumed in period (sheets)              |
-| 10 | Cons Mtrs                   | Consumed (sq m)                         |
-| 11 | Sales                       | Sold in period (sheets)                 |
-| 12 | Sales Mtrs                  | Sold (sq m)                              |
-| 13 | Issue For Rec Ply/Cal Sheet | Issued for recal (sheets)               |
-| 14 | Issue For Rec Ply/Cal Sq Met| Issued for recal (sq m)                  |
-| 15 | Closing                     | Closing stock (sheets)                  |
-| 16 | Cl Metres                   | Closing stock (sq m)                     |
+| 9  | Consume                     | Total consumed (challan + order + resizing + pressing) (sheets) |
+| 10 | Cons Mtrs                   | Total consumed (sq m)                   |
+| 11 | Challan Sheets               | Issued for challan (sheets)             |
+| 12 | Challan Mtrs                 | Issued for challan (sq m)               |
+| 13 | Order Sheets                 | Issued for order (sheets)               |
+| 14 | Order Mtrs                   | Issued for order (sq m)                 |
+| 15 | Issue For Ply Resizing Sheet | Issued for ply resizing (sheets)        |
+| 16 | Issue For Ply Resizing Sq Met| Issued for ply resizing (sq m)          |
+| 17 | Issue For Pressing           | Issued for pressing (sheets)            |
+| 18 | Issue For Pressing Sq Met    | Issued for pressing (sq m)              |
+| 19 | Closing                      | Closing stock (sheets)                  |
+| 20 | Cl Metres                    | Closing stock (sq m)                    |
 
 - Data grouped by **Item Name → Thickness → Size**; subtotal row after each thickness; grand total at the end.
 
 ## Stock Calculation Logic
 
-Same as the Plywood Stock Report: all values in **sheets** and **square meters**. Opening = current + consume + sales - receive; Closing = opening + receive - consume - sales. Receives from invoice inward date in period; consumption from `issue_status` in `['order', 'pressing', 'plywood_resizing']`; sales from `issue_status = 'challan'`; issue for recal from `['plywood_resizing', 'pressing']`. Only rows that had at least one movement in the period (receive, consume, sales, ply resizing, or pressing) are included; if there was no such activity, the API returns 404. Values are non-negative.
+Same as the Plywood Stock Report: all values in **sheets** and **square meters**. Opening = current + consume - receive; Closing = opening + receive - consume. Consumed = challan + order + ply resizing + pressing. Receives from invoice inward date in period (end date includes full day 23:59:59.999 UTC); challan from `issue_status = 'challan'`; order from `issue_status = 'order'`; issue for ply resizing from `issue_status = 'plywood_resizing'`; issue for pressing from `issue_status = 'pressing'`. Only rows that had at least one movement in the period (receive, consume, challan, order, ply resizing, or pressing) are included; if there was no such activity, the API returns 404. Values are non-negative.
 
 ## Database Collections Used
 
@@ -199,6 +203,7 @@ window.open(downloadUrl, '_blank');
 
 ## Notes
 
-- Report includes only rows that had at least one movement in the period (receive, consume, sales, issue for ply resizing, or issue for pressing). If the date range has no such activity, the report returns 404 with "No stock data found for the selected period".
+- Report includes only rows that had at least one movement in the period (receive, consume, challan, order, issue for ply resizing, or issue for pressing). If the date range has no such activity, the report returns 404 with "No stock data found for the selected period".
+- Date range: end date includes the full day (23:59:59.999 UTC) so transactions on the end date are included.
 - Excel files are timestamped to avoid overwriting.
 - Files are stored under `public/upload/reports/reports2/Plywood/`.

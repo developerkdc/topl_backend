@@ -2,7 +2,7 @@
 
 ## Objective
 
-Implement the **MDF Stock Report** API under reports2 that generates an Excel report for a user-selected date range. The report shows opening stock, receives, consumption, sales, issue for pressing, and closing stock, grouped by **MDF sub-type**, **thickness**, and **size**.
+Implement the **MDF Stock Report** API under reports2 that generates an Excel report for a user-selected date range. The report shows opening stock, receives, consumption (total of challan, order, pressing), challan, order, issue for pressing, and closing stock, grouped by **MDF sub-type**, **thickness**, and **size**.
 
 ## Implementation Approach
 
@@ -14,7 +14,7 @@ Implement the **MDF Stock Report** API under reports2 that generates an Excel re
 - **Period:** User-specified date range (startDate, endDate).
 - **Data source:** MongoDB aggregations over MDF view, item details, invoice details, and MDF history.
 - **Grouping:** MDF Sub Type → Thickness → Size; subtotal per thickness; grand total.
-- **Columns:** MDF Sub Type, Thickness, Size, Opening (sheets + sq m), Receive, Consume, Sales, Issue For Pressing (sheets + sq m), Closing (sheets + sq m).
+- **Columns:** MDF Sub Type, Thickness, Size, Opening (sheets + sq m), Receive, Consume, Order, Issue For Pressing (sheets + sq m), Closing (sheets + sq m). Challan is computed and included in Consume but not displayed.
 
 ## Implementation Files
 
@@ -44,11 +44,10 @@ Implement the **MDF Stock Report** API under reports2 that generates an Excel re
 4. **Current inventory:** Aggregate `mdf_inventory_items_view_modal`: match `deleted_at: null` and `...itemFilter`; group by (sub-type, thickness, length, width); sum `available_sheets`, `available_sqm`; collect `item_ids`.
 5. For each group:
    - **Receives:** Aggregate `mdf_inventory_items_details` (match on sub-type, thickness, length, width, `deleted_at: null`) → `$lookup` `mdf_inventory_invoice_details` on `invoice_id` → match `invoice.inward_date` in [start, end] → sum `no_of_sheet`, `total_sq_meter`.
-   - **Consumption:** Aggregate `mdf_history_model`: match `mdf_item_id` in item_ids, `issue_status` in `['order', 'pressing']`, `createdAt` in [start, end] → sum `issued_sheets`, `issued_sqm`.
-   - **Sales:** Same collection; `issue_status: 'challan'`, same date range → sum `issued_sheets`, `issued_sqm`.
-   - **Issue for pressing:** Same collection; `issue_status: 'pressing'`, same date range → sum `issued_sheets`, `issued_sqm`.
-   - Compute **opening** = current + consume + sales - receive (sheets and sq m); **closing** = opening + receive - consume - sales; clamp to non-negative.
-6. Filter rows with at least one non-zero among opening, receive, consume, sales, closing.
+   - **Challan / Order / Issue for pressing:** Aggregate `mdf_history_model`: match `mdf_item_id` in item_ids, `issue_status` ('challan', 'order', 'pressing'), `createdAt` in [start, end] → sum `issued_sheets`, `issued_sqm` per status.
+   - **Consumed** = challan + order + issue for pressing (computed).
+   - Compute **opening** = current + consume - receive (sheets and sq m); **closing** = opening + receive - consume; clamp to non-negative.
+6. Filter rows with at least one non-zero among opening, receive, consume, challan, order, closing.
 7. If no rows, return 404 "No stock data found for the selected period".
 8. Call `GenerateMdfStockReportExcel(aggregatedData, startDate, endDate, filter)`.
 9. Return 200 with ApiResponse: message and `data: excelLink`.
@@ -64,7 +63,7 @@ Implement the **MDF Stock Report** API under reports2 that generates an Excel re
 - Ensure folder `public/upload/reports/reports2/MDF` exists.
 - Create workbook, sheet "MDF Stock Report".
 - Title row: "MDF Type [ filter ]   stock  in the period  DD/MM/YYYY and DD/MM/YYYY" (filter from `filters.item_sub_category_name` or "ALL").
-- Define columns: mdf_sub_type, thickness, size, opening_sheets, opening_sqm, receive_sheets, receive_sqm, consume_sheets, consume_sqm, sales_sheets, sales_sqm, issue_pressing_sheets, issue_pressing_sqm, closing_sheets, closing_sqm.
+- Define columns: mdf_sub_type, thickness, size, opening_sheets, opening_sqm, receive_sheets, receive_sqm, consume_sheets, consume_sqm, order_sheets, order_sqm, issue_pressing_sheets, issue_pressing_sqm, closing_sheets, closing_sqm. Challan columns are hidden (challan is included in consume).
 - Group data by mdf_sub_type → thickness; for each group add data rows then a "Total" row; then grand total row. Bold headers and totals; gray header row.
 - Save to `MDF-Stock-Report-{timestamp}.xlsx` in the same folder; return full download URL.
 
@@ -98,17 +97,18 @@ Implement the **MDF Stock Report** API under reports2 that generates an Excel re
 
 ### Stock calculation
 
-- **Receives (period):** Items where `inward_date` ∈ [start, end]; group by (sub-type, thickness, length, width). Sum `no_of_sheet`, `total_sq_meter`.
-- **Consumption:** History where `issue_status` ∈ `['order', 'pressing']`, `createdAt` ∈ [start, end]. Sum `issued_sheets`, `issued_sqm` per item group (via item_ids).
-- **Sales:** History where `issue_status === 'challan'`, same date range. Sum `issued_sheets`, `issued_sqm`.
+- **Receives (period):** Items where `inward_date` ∈ [start, end] (end includes 23:59:59.999 UTC); group by (sub-type, thickness, length, width). Sum `no_of_sheet`, `total_sq_meter`.
+- **Challan:** History where `issue_status === 'challan'`, `createdAt` ∈ [start, end]. Sum `issued_sheets`, `issued_sqm`.
+- **Order:** History where `issue_status === 'order'`, same date range. Sum `issued_sheets`, `issued_sqm`.
 - **Issue for pressing:** History where `issue_status === 'pressing'`, same date range. Sum `issued_sheets`, `issued_sqm`.
-- **Opening:** `current_sheets + consume_sheets + sales_sheets - receive_sheets` (and same for sq m). Then `Math.max(0, ...)`.
-- **Closing:** `opening + receive - consume - sales` (sheets and sq m). Then `Math.max(0, ...)`.
+- **Consumed:** challan + order + issue for pressing (computed).
+- **Opening:** `current_sheets + consume_sheets - receive_sheets` (and same for sq m). Then `Math.max(0, ...)`.
+- **Closing:** `opening + receive - consume` (sheets and sq m). Then `Math.max(0, ...)`.
 
 ### Pipeline structure (conceptual)
 
 1. **Current inventory:** `mdf_inventory_items_view_modal` → match (deleted_at, filters) → group by (sub-type, thickness, length, width) → sum available_sheets/sqm, push _id as item_ids.
-2. **Per group:** Receives from item details + invoice lookup (sum no_of_sheet, total_sq_meter); Consumption / Sales / Issue pressing from mdf_history_model (mdf_item_id, issue_status, date range).
+2. **Per group:** Receives from item details + invoice lookup (sum no_of_sheet, total_sq_meter); Challan / Order / Issue pressing from mdf_history_model (mdf_item_id, issue_status, date range). Consumed = sum of all three.
 3. **Compute** opening and closing; build row object (mdf_sub_type, thickness, size, and all numeric columns).
 4. **Filter** active rows; pass to Excel generator.
 
@@ -125,8 +125,8 @@ Implement the **MDF Stock Report** API under reports2 that generates an Excel re
 7. Rec Mtrs  
 8. Consume (sheets)  
 9. Cons Mtrs  
-10. Sales (sheets)  
-11. Sales Mtrs  
+10. Order Sheets  
+11. Order Mtrs  
 12. Issue For Pressing  
 13. Issue For Pressing Sq Met  
 14. Closing (sheets)  

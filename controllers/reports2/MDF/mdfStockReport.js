@@ -13,10 +13,16 @@ import {
   GenerateMdfStockReportByPelletExcel,
 } from '../../../config/downloadExcel/reports2/MDF/mdfStockReport.js';
 
+/** Round stock value; treat floating-point noise (|v| < 1e-10) as 0 */
+const roundStock = (v, decimals = 4) => {
+  const rounded = Math.round(v * 10 ** decimals) / 10 ** decimals;
+  return Math.abs(rounded) < 1e-10 ? 0 : rounded;
+};
+
 /**
  * MDF Stock Report – Excel download.
  * Uses startDate, endDate and optional filter (item_sub_category_name).
- * Returns opening, receive, consume, sales, issue for pressing, closing (sheets + sqm).
+ * Returns opening, receive, consume, challan, order, issue for pressing, closing (sheets + sqm).
  *
  * @route POST /report/download-stock-report-mdf
  * @access Private
@@ -31,6 +37,7 @@ export const mdfStockReportCsv = catchAsync(async (req, res, next) => {
 
   const start = new Date(startDate);
   const end = new Date(endDate);
+  end.setUTCHours(23, 59, 59, 999);
 
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     return next(new ApiError('Invalid date format', 400));
@@ -106,100 +113,104 @@ export const mdfStockReportCsv = catchAsync(async (req, res, next) => {
           },
         ]);
 
-        const consumption = await mdf_history_model.aggregate([
-          {
-            $match: {
-              mdf_item_id: { $in: itemIds },
-              issue_status: { $in: ['order', 'pressing'] },
-              createdAt: { $gte: start, $lte: end },
+        const [challan, order, issuePressing] = await Promise.all([
+          mdf_history_model.aggregate([
+            {
+              $match: {
+                mdf_item_id: { $in: itemIds },
+                issue_status: 'challan',
+                createdAt: { $gte: start, $lte: end },
+              },
             },
-          },
-          {
-            $group: {
-              _id: null,
-              total_sheets: { $sum: '$issued_sheets' },
-              total_sqm: { $sum: '$issued_sqm' },
+            {
+              $group: {
+                _id: null,
+                total_sheets: { $sum: '$issued_sheets' },
+                total_sqm: { $sum: '$issued_sqm' },
+              },
             },
-          },
-        ]);
-
-        const sales = await mdf_history_model.aggregate([
-          {
-            $match: {
-              mdf_item_id: { $in: itemIds },
-              issue_status: 'challan',
-              createdAt: { $gte: start, $lte: end },
+          ]),
+          mdf_history_model.aggregate([
+            {
+              $match: {
+                mdf_item_id: { $in: itemIds },
+                issue_status: 'order',
+                createdAt: { $gte: start, $lte: end },
+              },
             },
-          },
-          {
-            $group: {
-              _id: null,
-              total_sheets: { $sum: '$issued_sheets' },
-              total_sqm: { $sum: '$issued_sqm' },
+            {
+              $group: {
+                _id: null,
+                total_sheets: { $sum: '$issued_sheets' },
+                total_sqm: { $sum: '$issued_sqm' },
+              },
             },
-          },
-        ]);
-
-        const issuePressing = await mdf_history_model.aggregate([
-          {
-            $match: {
-              mdf_item_id: { $in: itemIds },
-              issue_status: 'pressing',
-              createdAt: { $gte: start, $lte: end },
+          ]),
+          mdf_history_model.aggregate([
+            {
+              $match: {
+                mdf_item_id: { $in: itemIds },
+                issue_status: 'pressing',
+                createdAt: { $gte: start, $lte: end },
+              },
             },
-          },
-          {
-            $group: {
-              _id: null,
-              total_sheets: { $sum: '$issued_sheets' },
-              total_sqm: { $sum: '$issued_sqm' },
+            {
+              $group: {
+                _id: null,
+                total_sheets: { $sum: '$issued_sheets' },
+                total_sqm: { $sum: '$issued_sqm' },
+              },
             },
-          },
+          ]),
         ]);
 
         const receiveSheets = receives[0]?.total_sheets || 0;
         const receiveSqm = receives[0]?.total_sqm || 0;
-        const consumeSheets = consumption[0]?.total_sheets || 0;
-        const consumeSqm = consumption[0]?.total_sqm || 0;
-        const salesSheets = sales[0]?.total_sheets || 0;
-        const salesSqm = sales[0]?.total_sqm || 0;
+        const challanSheets = challan[0]?.total_sheets || 0;
+        const challanSqm = challan[0]?.total_sqm || 0;
+        const orderSheets = order[0]?.total_sheets || 0;
+        const orderSqm = order[0]?.total_sqm || 0;
         const issuePressingSheets = issuePressing[0]?.total_sheets || 0;
         const issuePressingSqm = issuePressing[0]?.total_sqm || 0;
+        const consumeSheets = challanSheets + orderSheets + issuePressingSheets;
+        const consumeSqm = challanSqm + orderSqm + issuePressingSqm;
         const currentSheets = item.current_sheets || 0;
         const currentSqm = item.current_sqm || 0;
 
-        const openingSheets = currentSheets + consumeSheets + salesSheets - receiveSheets;
-        const openingSqm = currentSqm + consumeSqm + salesSqm - receiveSqm;
-        const closingSheets = openingSheets + receiveSheets - consumeSheets - salesSheets;
-        const closingSqm = openingSqm + receiveSqm - consumeSqm - salesSqm;
+        const openingSheets = currentSheets + consumeSheets - receiveSheets;
+        const openingSqm = currentSqm + consumeSqm - receiveSqm;
+        const closingSheets = openingSheets + receiveSheets - consumeSheets;
+        const closingSqm = openingSqm + receiveSqm - consumeSqm;
 
         return {
           mdf_sub_type: item_sub_category_name,
           thickness,
           size: `${length} X ${width}`,
-          opening_sheets: Math.max(0, openingSheets),
-          opening_sqm: Math.max(0, openingSqm),
+          opening_sheets: Math.max(0, roundStock(openingSheets, 0)),
+          opening_sqm: Math.max(0, roundStock(openingSqm)),
           receive_sheets: receiveSheets,
           receive_sqm: receiveSqm,
           consume_sheets: consumeSheets,
           consume_sqm: consumeSqm,
-          sales_sheets: salesSheets,
-          sales_sqm: salesSqm,
+          challan_sheets: challanSheets,
+          challan_sqm: challanSqm,
+          order_sheets: orderSheets,
+          order_sqm: orderSqm,
           issue_pressing_sheets: issuePressingSheets,
           issue_pressing_sqm: issuePressingSqm,
-          closing_sheets: Math.max(0, closingSheets),
-          closing_sqm: Math.max(0, closingSqm),
+          closing_sheets: Math.max(0, roundStock(closingSheets, 0)),
+          closing_sqm: Math.max(0, roundStock(closingSqm)),
         };
       })
     );
 
-    // Only include rows that had at least one movement in the period (receive, consume, sales, or issue for pressing).
-    // This avoids showing rows when date range is e.g. "today" but there was no inward/activity today.
+    // Only include rows that had at least one movement in the period (receive, consume, challan, order, or issue for pressing).
     const activeStockData = stockData.filter(
       (item) =>
         item.receive_sheets > 0 ||
         item.consume_sheets > 0 ||
-        item.sales_sheets > 0 ||
+        item.challan_sheets > 0 ||
+        item.order_sheets > 0 ||
         item.issue_pressing_sheets > 0
     );
 
@@ -248,6 +259,7 @@ export const mdfItemWiseStockReportCsv = catchAsync(async (req, res, next) => {
 
   const start = new Date(startDate);
   const end = new Date(endDate);
+  end.setUTCHours(23, 59, 59, 999);
 
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     return next(new ApiError('Invalid date format', 400));
@@ -319,100 +331,105 @@ export const mdfItemWiseStockReportCsv = catchAsync(async (req, res, next) => {
           },
         ]);
 
-        const consumption = await mdf_history_model.aggregate([
-          {
-            $match: {
-              mdf_item_id: { $in: itemIds },
-              issue_status: { $in: ['order', 'pressing'] },
-              createdAt: { $gte: start, $lte: end },
+        const [challan, order, issuePressing] = await Promise.all([
+          mdf_history_model.aggregate([
+            {
+              $match: {
+                mdf_item_id: { $in: itemIds },
+                issue_status: 'challan',
+                createdAt: { $gte: start, $lte: end },
+              },
             },
-          },
-          {
-            $group: {
-              _id: null,
-              total_sheets: { $sum: '$issued_sheets' },
-              total_sqm: { $sum: '$issued_sqm' },
+            {
+              $group: {
+                _id: null,
+                total_sheets: { $sum: '$issued_sheets' },
+                total_sqm: { $sum: '$issued_sqm' },
+              },
             },
-          },
-        ]);
-
-        const sales = await mdf_history_model.aggregate([
-          {
-            $match: {
-              mdf_item_id: { $in: itemIds },
-              issue_status: 'challan',
-              createdAt: { $gte: start, $lte: end },
+          ]),
+          mdf_history_model.aggregate([
+            {
+              $match: {
+                mdf_item_id: { $in: itemIds },
+                issue_status: 'order',
+                createdAt: { $gte: start, $lte: end },
+              },
             },
-          },
-          {
-            $group: {
-              _id: null,
-              total_sheets: { $sum: '$issued_sheets' },
-              total_sqm: { $sum: '$issued_sqm' },
+            {
+              $group: {
+                _id: null,
+                total_sheets: { $sum: '$issued_sheets' },
+                total_sqm: { $sum: '$issued_sqm' },
+              },
             },
-          },
-        ]);
-
-        const issuePressing = await mdf_history_model.aggregate([
-          {
-            $match: {
-              mdf_item_id: { $in: itemIds },
-              issue_status: 'pressing',
-              createdAt: { $gte: start, $lte: end },
+          ]),
+          mdf_history_model.aggregate([
+            {
+              $match: {
+                mdf_item_id: { $in: itemIds },
+                issue_status: 'pressing',
+                createdAt: { $gte: start, $lte: end },
+              },
             },
-          },
-          {
-            $group: {
-              _id: null,
-              total_sheets: { $sum: '$issued_sheets' },
-              total_sqm: { $sum: '$issued_sqm' },
+            {
+              $group: {
+                _id: null,
+                total_sheets: { $sum: '$issued_sheets' },
+                total_sqm: { $sum: '$issued_sqm' },
+              },
             },
-          },
+          ]),
         ]);
 
         const receiveSheets = receives[0]?.total_sheets || 0;
         const receiveSqm = receives[0]?.total_sqm || 0;
-        const consumeSheets = consumption[0]?.total_sheets || 0;
-        const consumeSqm = consumption[0]?.total_sqm || 0;
-        const salesSheets = sales[0]?.total_sheets || 0;
-        const salesSqm = sales[0]?.total_sqm || 0;
+        const challanSheets = challan[0]?.total_sheets || 0;
+        const challanSqm = challan[0]?.total_sqm || 0;
+        const orderSheets = order[0]?.total_sheets || 0;
+        const orderSqm = order[0]?.total_sqm || 0;
         const issuePressingSheets = issuePressing[0]?.total_sheets || 0;
         const issuePressingSqm = issuePressing[0]?.total_sqm || 0;
+        const consumeSheets = challanSheets + orderSheets + issuePressingSheets;
+        const consumeSqm = challanSqm + orderSqm + issuePressingSqm;
         const currentSheets = item.current_sheets || 0;
         const currentSqm = item.current_sqm || 0;
 
-        const openingSheets = currentSheets + consumeSheets + salesSheets - receiveSheets;
-        const openingSqm = currentSqm + consumeSqm + salesSqm - receiveSqm;
-        const closingSheets = openingSheets + receiveSheets - consumeSheets - salesSheets;
-        const closingSqm = openingSqm + receiveSqm - consumeSqm - salesSqm;
+        const openingSheets = currentSheets + consumeSheets - receiveSheets;
+        const openingSqm = currentSqm + consumeSqm - receiveSqm;
+        const closingSheets = openingSheets + receiveSheets - consumeSheets;
+        const closingSqm = openingSqm + receiveSqm - consumeSqm;
 
         return {
           item_name: item_name || '',
           mdf_sub_type: item_sub_category_name,
           thickness,
           size: `${length} X ${width}`,
-          opening_sheets: Math.max(0, openingSheets),
-          opening_sqm: Math.max(0, openingSqm),
+          opening_sheets: Math.max(0, roundStock(openingSheets, 0)),
+          opening_sqm: Math.max(0, roundStock(openingSqm)),
           receive_sheets: receiveSheets,
           receive_sqm: receiveSqm,
           consume_sheets: consumeSheets,
           consume_sqm: consumeSqm,
-          sales_sheets: salesSheets,
-          sales_sqm: salesSqm,
+          challan_sheets: challanSheets,
+          challan_sqm: challanSqm,
+          order_sheets: orderSheets,
+          order_sqm: orderSqm,
           issue_pressing_sheets: issuePressingSheets,
           issue_pressing_sqm: issuePressingSqm,
-          closing_sheets: Math.max(0, closingSheets),
-          closing_sqm: Math.max(0, closingSqm),
+          closing_sheets: Math.max(0, roundStock(closingSheets, 0)),
+          closing_sqm: Math.max(0, roundStock(closingSqm)),
         };
       })
     );
 
-    // Only include rows that had at least one movement in the period (receive, consume, sales, or issue for pressing).
+    // Only include rows that had at least one movement in the period (receive, consume, challan, order, or issue for pressing).
     const activeStockData = stockData.filter(
       (row) =>
         row.receive_sheets > 0 ||
         row.consume_sheets > 0 ||
-        row.sales_sheets > 0 ||
+        row.challan_sheets > 0 ||
+        row.order_sheets > 0 ||
         row.issue_pressing_sheets > 0
     );
 
@@ -464,6 +481,7 @@ export const mdfStockReportByPelletCsv = catchAsync(async (req, res, next) => {
 
   const start = new Date(startDate);
   const end = new Date(endDate);
+  end.setUTCHours(23, 59, 59, 999);
 
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     return next(new ApiError('Invalid date format', 400));
@@ -519,12 +537,12 @@ export const mdfStockReportByPelletCsv = catchAsync(async (req, res, next) => {
             ? (item.total_sq_meter || 0)
             : 0;
 
-        const [consumption, sales, issuePressing] = await Promise.all([
+        const [challan, order, issuePressing] = await Promise.all([
           mdf_history_model.aggregate([
             {
               $match: {
                 mdf_item_id: itemId,
-                issue_status: { $in: ['order', 'pressing'] },
+                issue_status: 'challan',
                 createdAt: { $gte: start, $lte: end },
               },
             },
@@ -540,7 +558,7 @@ export const mdfStockReportByPelletCsv = catchAsync(async (req, res, next) => {
             {
               $match: {
                 mdf_item_id: itemId,
-                issue_status: 'challan',
+                issue_status: 'order',
                 createdAt: { $gte: start, $lte: end },
               },
             },
@@ -570,48 +588,53 @@ export const mdfStockReportByPelletCsv = catchAsync(async (req, res, next) => {
           ]),
         ]);
 
-        const consumeSheets = consumption[0]?.total_sheets || 0;
-        const consumeSqm = consumption[0]?.total_sqm || 0;
-        const salesSheets = sales[0]?.total_sheets || 0;
-        const salesSqm = sales[0]?.total_sqm || 0;
+        const challanSheets = challan[0]?.total_sheets || 0;
+        const challanSqm = challan[0]?.total_sqm || 0;
+        const orderSheets = order[0]?.total_sheets || 0;
+        const orderSqm = order[0]?.total_sqm || 0;
         const issuePressingSheets = issuePressing[0]?.total_sheets || 0;
         const issuePressingSqm = issuePressing[0]?.total_sqm || 0;
+        const consumeSheets = challanSheets + orderSheets + issuePressingSheets;
+        const consumeSqm = challanSqm + orderSqm + issuePressingSqm;
         const currentSheets = item.available_sheets ?? item.no_of_sheet ?? 0;
         const currentSqm = item.available_sqm ?? item.total_sq_meter ?? 0;
 
-        const openingSheets = currentSheets + consumeSheets + salesSheets - receiveSheets;
-        const openingSqm = currentSqm + consumeSqm + salesSqm - receiveSqm;
-        const closingSheets = openingSheets + receiveSheets - consumeSheets - salesSheets;
-        const closingSqm = openingSqm + receiveSqm - consumeSqm - salesSqm;
+        const openingSheets = currentSheets + consumeSheets - receiveSheets;
+        const openingSqm = currentSqm + consumeSqm - receiveSqm;
+        const closingSheets = openingSheets + receiveSheets - consumeSheets;
+        const closingSqm = openingSqm + receiveSqm - consumeSqm;
 
         return {
           pellet_no: item.pallet_number,
           mdf_sub_type: item.item_sub_category_name,
           thickness: item.thickness,
           size: `${item.length} X ${item.width}`,
-          opening_sheets: Math.max(0, openingSheets),
-          opening_sqm: Math.max(0, openingSqm),
+          opening_sheets: Math.max(0, roundStock(openingSheets, 0)),
+          opening_sqm: Math.max(0, roundStock(openingSqm)),
           receive_sheets: receiveSheets,
           receive_sqm: receiveSqm,
           consume_sheets: consumeSheets,
           consume_sqm: consumeSqm,
-          sales_sheets: salesSheets,
-          sales_sqm: salesSqm,
+          challan_sheets: challanSheets,
+          challan_sqm: challanSqm,
+          order_sheets: orderSheets,
+          order_sqm: orderSqm,
           issue_pressing_sheets: issuePressingSheets,
           issue_pressing_sqm: issuePressingSqm,
-          closing_sheets: Math.max(0, closingSheets),
-          closing_sqm: Math.max(0, closingSqm),
+          closing_sheets: Math.max(0, roundStock(closingSheets, 0)),
+          closing_sqm: Math.max(0, roundStock(closingSqm)),
         };
       })
     );
 
-    // Only include rows that had at least one movement in the period (receive, consume, sales, or issue for pressing).
+    // Only include rows that had at least one movement in the period (receive, consume, challan, order, or issue for pressing).
     const activeStockData = stockData
       .filter(
         (item) =>
           item.receive_sheets > 0 ||
           item.consume_sheets > 0 ||
-          item.sales_sheets > 0 ||
+          item.challan_sheets > 0 ||
+          item.order_sheets > 0 ||
           item.issue_pressing_sheets > 0
       )
       .sort((a, b) => {

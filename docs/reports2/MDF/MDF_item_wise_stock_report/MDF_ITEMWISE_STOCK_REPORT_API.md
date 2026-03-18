@@ -2,7 +2,7 @@
 
 ## Overview
 
-The MDF Item-Wise Stock Report API (reports2) generates a dynamic inventory report with opening stock, receives, consumption, sales, issue for pressing, and closing stock for a given date range. Data is grouped by **item name**, then **MDF sub-type**, **thickness**, and **size**. Same columns as the standard MDF Stock Report with **Item Name** as the first column.
+The MDF Item-Wise Stock Report API (reports2) generates a dynamic inventory report with opening stock, receives, consumption (total of challan, order, pressing), challan, order, issue for pressing, and closing stock for a given date range. Data is grouped by **item name**, then **MDF sub-type**, **thickness**, and **size**. Same columns as the standard MDF Stock Report with **Item Name** as the first column.
 
 ## Endpoint
 
@@ -152,20 +152,22 @@ MDF Type (Item Wise) [ CATEGORY ] [ Item: ITEM_NAME ]   stock  in the period  DD
 | 6  | Op Metres               | Opening stock (sq m)                     |
 | 7  | Receive                 | Received in period (sheets)              |
 | 8  | Rec Mtrs                | Received (sq m)                          |
-| 9  | Consume                 | Consumed in period (sheets)              |
-| 10 | Cons Mtrs               | Consumed (sq m)                          |
-| 11 | Sales                   | Sold in period (sheets)                  |
-| 12 | Sales Mtrs              | Sold (sq m)                              |
+| 9  | Consume                 | Total consumed (challan + order + pressing) (sheets) |
+| 10 | Cons Mtrs               | Total consumed (sq m)                    |
+| 11 | Order Sheets            | Issued for order (sheets)                 |
+| 12 | Order Mtrs              | Issued for order (sq m)                   |
 | 13 | Issue For Pressing      | Issued for pressing (sheets)             |
 | 14 | Issue For Pressing Sq Met | Issued for pressing (sq m)             |
 | 15 | Closing                 | Closing stock (sheets)                   |
 | 16 | Cl Metres               | Closing stock (sq m)                     |
 
+- **Note:** Challan is included in Consume but Challan columns are hidden in the Excel output for now.
+
 - Data grouped by **Item Name → Thickness → Size**; subtotal row after each thickness; grand total at the end.
 
 ## Stock Calculation Logic
 
-Same as the MDF Stock Report: all values in **sheets** and **square meters**. Opening = current + consume + sales - receive; Closing = opening + receive - consume - sales. Receives from invoice inward date in period (sum `no_of_sheet`, `total_sq_meter`); consumption from `issue_status` in `['order', 'pressing']`; sales from `issue_status = 'challan'`; issue for pressing from `issue_status = 'pressing'`. Only rows that had at least one movement in the period (receive, consume, sales, or issue for pressing) are included; if there was no such activity, the API returns 404. Values are non-negative.
+Same as the MDF Stock Report: all values in **sheets** and **square meters**. Opening = current + consume - receive; Closing = opening + receive - consume. Consumed = challan + order + pressing. Receives from invoice inward date in period (end date includes full day 23:59:59.999 UTC); challan from `issue_status = 'challan'`; order from `issue_status = 'order'`; issue for pressing from `issue_status = 'pressing'`. Only rows that had at least one movement in the period (receive, consume, challan, order, or issue for pressing) are included; if there was no such activity, the API returns 404. Values are non-negative.
 
 ## Database Collections Used
 
@@ -199,6 +201,7 @@ window.open(downloadUrl, '_blank');
 
 ## Notes
 
-- Report includes only rows that had at least one movement in the period (receive, consume, sales, or issue for pressing). If the date range has no such activity, the report returns 404 with "No stock data found for the selected period".
+- Report includes only rows that had at least one movement in the period (receive, consume, challan, order, or issue for pressing). If the date range has no such activity, the report returns 404 with "No stock data found for the selected period".
+- Date range: end date includes the full day (23:59:59.999 UTC) so transactions on the end date are included.
 - Excel files are timestamped to avoid overwriting.
 - Files are stored under `public/upload/reports/reports2/MDF/`.

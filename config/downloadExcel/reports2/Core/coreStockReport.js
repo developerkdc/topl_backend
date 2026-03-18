@@ -124,52 +124,14 @@ export const GenerateCoreStockReportExcel = async (
       let itemLastClosing = 0;
       let itemReceived = 0;
       let itemIssued = 0;
-      let currentThickness = null;
-      let thicknessSub = {
-        opening_balance: 0,
-        received_metres: 0,
-        issued_metres: 0,
-        closing_bal: 0,
-      };
+
+      let itemStartRow = null;
 
       items.forEach((item) => {
-        if (item.thickness !== currentThickness) {
-          if (currentThickness !== null) {
-            const thicknessTotalRow = worksheet.addRow({
-              item_name: '',
-              thickness: 'Total',
-              inward_date: '',
-              opening_balance: thicknessSub.opening_balance.toFixed(2),
-              received_metres: thicknessSub.received_metres.toFixed(2),
-              issued_metres: thicknessSub.issued_metres.toFixed(2),
-              closing_bal: thicknessSub.closing_bal.toFixed(2),
-            });
-            thicknessTotalRow.eachCell((cell) => {
-              cell.font = { bold: true };
-              cell.fill = {
-                type: 'pattern',
-                pattern: 'solid',
-                fgColor: { argb: 'FFF0F0F0' },
-              };
-            });
-          }
-          currentThickness = item.thickness;
-          thicknessSub = {
-            opening_balance: parseFloat(item.opening_balance || 0),
-            received_metres: 0,
-            issued_metres: 0,
-            closing_bal: 0,
-          };
-        }
-
         if (itemFirstOpening === null) itemFirstOpening = parseFloat(item.opening_balance || 0);
         itemLastClosing = parseFloat(item.closing_bal || 0);
         itemReceived += parseFloat(item.received_metres || 0);
         itemIssued += parseFloat(item.issued_metres || 0);
-
-        thicknessSub.received_metres += parseFloat(item.received_metres || 0);
-        thicknessSub.issued_metres += parseFloat(item.issued_metres || 0);
-        thicknessSub.closing_bal = parseFloat(item.closing_bal || 0);
 
         const rowData = {
           item_name: itemName,
@@ -180,27 +142,15 @@ export const GenerateCoreStockReportExcel = async (
           issued_metres: parseFloat(item.issued_metres || 0).toFixed(2),
           closing_bal: parseFloat(item.closing_bal || 0).toFixed(2),
         };
-        worksheet.addRow(rowData);
+        const row = worksheet.addRow(rowData);
+        if (itemStartRow === null) itemStartRow = row.number;
       });
 
-      if (currentThickness !== null) {
-        const thicknessTotalRow = worksheet.addRow({
-          item_name: '',
-          thickness: 'Total',
-          inward_date: '',
-          opening_balance: thicknessSub.opening_balance.toFixed(2),
-          received_metres: thicknessSub.received_metres.toFixed(2),
-          issued_metres: thicknessSub.issued_metres.toFixed(2),
-          closing_bal: thicknessSub.closing_bal.toFixed(2),
-        });
-        thicknessTotalRow.eachCell((cell) => {
-          cell.font = { bold: true };
-          cell.fill = {
-            type: 'pattern',
-            pattern: 'solid',
-            fgColor: { argb: 'FFF0F0F0' },
-          };
-        });
+      const itemEndRow = worksheet.lastRow.number;
+      if (itemStartRow !== null && itemEndRow >= itemStartRow) {
+        worksheet.mergeCells(itemStartRow, 1, itemEndRow, 1);
+        const mergedCell = worksheet.getCell(itemStartRow, 1);
+        mergedCell.alignment = { vertical: 'middle', horizontal: 'left' };
       }
 
       const itemTotalRow = worksheet.addRow({
