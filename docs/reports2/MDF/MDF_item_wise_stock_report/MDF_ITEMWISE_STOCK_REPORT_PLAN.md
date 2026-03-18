@@ -14,7 +14,7 @@ Implement the **MDF Item-Wise Stock Report** API under reports2 that generates a
 - **Period:** User-specified date range (startDate, endDate).
 - **Data source:** MongoDB aggregations over MDF view, item details, invoice details, and MDF history.
 - **Grouping:** Item Name → Thickness → Size; subtotal per thickness; grand total.
-- **Columns:** Item Name, MDF Sub Type, Thickness, Size, Opening (sheets + sq m), Receive, Consume, Challan, Order, Issue For Pressing (sheets + sq m), Closing (sheets + sq m).
+- **Columns:** Item Name, MDF Sub Type, Thickness, Size, Opening (sheets + sq m), Receive, Consume, Order, Issue For Pressing (sheets + sq m), Closing (sheets + sq m). Challan is computed and included in Consume but not displayed.
 
 ## Implementation Files
 
@@ -122,14 +122,12 @@ Same formulas as MDF Stock Report. Receives and history aggregations are scoped 
 8. Rec Mtrs  
 9. Consume (sheets)  
 10. Cons Mtrs  
-11. Challan Sheets  
-12. Challan Mtrs  
-13. Order Sheets  
-14. Order Mtrs  
-15. Issue For Pressing  
-16. Issue For Pressing Sq Met  
-17. Closing (sheets)  
-18. Cl Metres  
+11. Order Sheets  
+12. Order Mtrs  
+13. Issue For Pressing  
+14. Issue For Pressing Sq Met  
+15. Closing (sheets)  
+16. Cl Metres  
 
 ### Row hierarchy
 

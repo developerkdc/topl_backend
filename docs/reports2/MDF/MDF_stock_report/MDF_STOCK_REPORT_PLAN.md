@@ -14,7 +14,7 @@ Implement the **MDF Stock Report** API under reports2 that generates an Excel re
 - **Period:** User-specified date range (startDate, endDate).
 - **Data source:** MongoDB aggregations over MDF view, item details, invoice details, and MDF history.
 - **Grouping:** MDF Sub Type → Thickness → Size; subtotal per thickness; grand total.
-- **Columns:** MDF Sub Type, Thickness, Size, Opening (sheets + sq m), Receive, Consume, Challan, Order, Issue For Pressing (sheets + sq m), Closing (sheets + sq m).
+- **Columns:** MDF Sub Type, Thickness, Size, Opening (sheets + sq m), Receive, Consume, Order, Issue For Pressing (sheets + sq m), Closing (sheets + sq m). Challan is computed and included in Consume but not displayed.
 
 ## Implementation Files
 
@@ -63,7 +63,7 @@ Implement the **MDF Stock Report** API under reports2 that generates an Excel re
 - Ensure folder `public/upload/reports/reports2/MDF` exists.
 - Create workbook, sheet "MDF Stock Report".
 - Title row: "MDF Type [ filter ]   stock  in the period  DD/MM/YYYY and DD/MM/YYYY" (filter from `filters.item_sub_category_name` or "ALL").
-- Define columns: mdf_sub_type, thickness, size, opening_sheets, opening_sqm, receive_sheets, receive_sqm, consume_sheets, consume_sqm, challan_sheets, challan_sqm, order_sheets, order_sqm, issue_pressing_sheets, issue_pressing_sqm, closing_sheets, closing_sqm.
+- Define columns: mdf_sub_type, thickness, size, opening_sheets, opening_sqm, receive_sheets, receive_sqm, consume_sheets, consume_sqm, order_sheets, order_sqm, issue_pressing_sheets, issue_pressing_sqm, closing_sheets, closing_sqm. Challan columns are hidden (challan is included in consume).
 - Group data by mdf_sub_type → thickness; for each group add data rows then a "Total" row; then grand total row. Bold headers and totals; gray header row.
 - Save to `MDF-Stock-Report-{timestamp}.xlsx` in the same folder; return full download URL.
 
@@ -125,14 +125,12 @@ Implement the **MDF Stock Report** API under reports2 that generates an Excel re
 7. Rec Mtrs  
 8. Consume (sheets)  
 9. Cons Mtrs  
-10. Challan Sheets  
-11. Challan Mtrs  
-12. Order Sheets  
-13. Order Mtrs  
-14. Issue For Pressing  
-15. Issue For Pressing Sq Met  
-16. Closing (sheets)  
-17. Cl Metres  
+10. Order Sheets  
+11. Order Mtrs  
+12. Issue For Pressing  
+13. Issue For Pressing Sq Met  
+14. Closing (sheets)  
+15. Cl Metres  
 
 ### Row hierarchy
 

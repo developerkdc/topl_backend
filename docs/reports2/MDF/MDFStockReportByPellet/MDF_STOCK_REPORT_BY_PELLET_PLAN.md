@@ -2,7 +2,7 @@
 
 ## Objective
 
-Implement the **MDF Stock Report by Pellet No.** API under reports2 that generates an Excel report for a user-selected date range. The report has the same structure as the standard MDF Stock Report but with **Pellet No.** (pallet_number) as the first column. Each row represents one pellet (one document in mdf_inventory_items_details). Data is grouped by **MDF sub-category** with subtotals and grand total. MDF has no ply resizing, so 18 columns (vs 20 for Plywood).
+Implement the **MDF Stock Report by Pellet No.** API under reports2 that generates an Excel report for a user-selected date range. The report has the same structure as the standard MDF Stock Report but with **Pellet No.** (pallet_number) as the first column. Each row represents one pellet (one document in mdf_inventory_items_details). Data is grouped by **MDF sub-category** with subtotals and grand total. MDF has no ply resizing, so 16 columns (vs 18 for Plywood).
 
 ## Implementation Approach
 
@@ -15,7 +15,7 @@ Implement the **MDF Stock Report by Pellet No.** API under reports2 that generat
 - **Period:** User-specified date range (startDate, endDate).
 - **Data source:** mdf_inventory_items_details + mdf_inventory_invoice_details + mdf_history.
 - **Grouping:** MDF Sub Category; subtotal per category; grand total.
-- **Columns:** Pellet No., MDF Sub Category, Thickness, Size, Opening (sheets + sq m), Received, Consumed, Challan, Order, Issue For Pressing (sheets + sq m), Closing (sheets + sq m).
+- **Columns:** Pellet No., MDF Sub Category, Thickness, Size, Opening (sheets + sq m), Received, Consumed, Order, Issue For Pressing (sheets + sq m), Closing (sheets + sq m). Challan is computed and included in Consumed but not displayed.
 
 ## Implementation Files
 
@@ -65,7 +65,7 @@ Implement the **MDF Stock Report by Pellet No.** API under reports2 that generat
 - Ensure folder `public/upload/reports/reports2/MDF` exists.
 - Create workbook, sheet "MDF Stock Report (By Pellet No.)".
 - Title row: "MDF Type [ filter ]   stock  in the period  DD/MM/YYYY and DD/MM/YYYY" (filter from `filters.item_sub_category_name` or "ALL").
-- Define columns: pellet_no, mdf_sub_type, thickness, size, opening_sheets, opening_sqm, receive_sheets, receive_sqm, consume_sheets, consume_sqm, challan_sheets, challan_sqm, order_sheets, order_sqm, issue_pressing_sheets, issue_pressing_sqm, closing_sheets, closing_sqm (18 columns).
+- Define columns: pellet_no, mdf_sub_type, thickness, size, opening_sheets, opening_sqm, receive_sheets, receive_sqm, consume_sheets, consume_sqm, order_sheets, order_sqm, issue_pressing_sheets, issue_pressing_sqm, closing_sheets, closing_sqm (16 columns). Challan columns are hidden.
 - Group data by mdf_sub_type; for each group add data rows then a "Total" row; then grand total row. Bold headers and totals; gray header row.
 - Save to `MDF-Stock-Report-ByPellet-{timestamp}.xlsx` in the same folder; return full download URL.
 
@@ -119,14 +119,12 @@ Implement the **MDF Stock Report by Pellet No.** API under reports2 that generat
 8. Received Mtrs  
 9. Consumed Sheets  
 10. Consumed Mtrs  
-11. Challan Sheets  
-12. Challan Mtrs  
-13. Order Sheets  
-14. Order Mtrs  
-15. Issue For Pressing  
-16. Issue For Pressing Sq Met  
-17. Closing sheets  
-18. Closing Metres  
+11. Order Sheets  
+12. Order Mtrs  
+13. Issue For Pressing  
+14. Issue For Pressing Sq Met  
+15. Closing sheets  
+16. Closing Metres  
 
 ### Row hierarchy
 

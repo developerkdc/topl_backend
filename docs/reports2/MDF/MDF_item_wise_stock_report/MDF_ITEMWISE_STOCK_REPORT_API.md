@@ -154,14 +154,14 @@ MDF Type (Item Wise) [ CATEGORY ] [ Item: ITEM_NAME ]   stock  in the period  DD
 | 8  | Rec Mtrs                | Received (sq m)                          |
 | 9  | Consume                 | Total consumed (challan + order + pressing) (sheets) |
 | 10 | Cons Mtrs               | Total consumed (sq m)                    |
-| 11 | Challan Sheets         | Issued for challan (sheets)              |
-| 12 | Challan Mtrs            | Issued for challan (sq m)                 |
-| 13 | Order Sheets            | Issued for order (sheets)                 |
-| 14 | Order Mtrs              | Issued for order (sq m)                   |
-| 15 | Issue For Pressing      | Issued for pressing (sheets)             |
-| 16 | Issue For Pressing Sq Met | Issued for pressing (sq m)             |
-| 17 | Closing                 | Closing stock (sheets)                   |
-| 18 | Cl Metres               | Closing stock (sq m)                     |
+| 11 | Order Sheets            | Issued for order (sheets)                 |
+| 12 | Order Mtrs              | Issued for order (sq m)                   |
+| 13 | Issue For Pressing      | Issued for pressing (sheets)             |
+| 14 | Issue For Pressing Sq Met | Issued for pressing (sq m)             |
+| 15 | Closing                 | Closing stock (sheets)                   |
+| 16 | Cl Metres               | Closing stock (sq m)                     |
+
+- **Note:** Challan is included in Consume but Challan columns are hidden in the Excel output for now.
 
 - Data grouped by **Item Name → Thickness → Size**; subtotal row after each thickness; grand total at the end.
 

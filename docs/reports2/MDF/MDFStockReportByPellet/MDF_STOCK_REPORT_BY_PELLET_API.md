@@ -2,7 +2,7 @@
 
 ## Overview
 
-The MDF Stock Report by Pellet No. API (reports2) generates a dynamic inventory report with the same structure as the standard MDF Stock Report, but with each row representing an individual pellet (pallet). Data is grouped by **MDF sub-category**, with **Pellet No.** (pallet_number) as the first column. The report shows opening stock, receives, consumption (total of challan, order, pressing), challan, order, issue for pressing, and closing stock for a given date range. MDF has no ply resizing, so the report has 18 columns (vs 20 for Plywood).
+The MDF Stock Report by Pellet No. API (reports2) generates a dynamic inventory report with the same structure as the standard MDF Stock Report, but with each row representing an individual pellet (pallet). Data is grouped by **MDF sub-category**, with **Pellet No.** (pallet_number) as the first column. The report shows opening stock, receives, consumption (total of challan, order, pressing), order, issue for pressing, and closing stock for a given date range. Challan is included in Consumed but not displayed. MDF has no ply resizing, so the report has 16 columns (vs 18 for Plywood).
 
 ## Endpoint
 
@@ -153,14 +153,14 @@ MDF Type [ CATEGORY ]   stock  in the period  DD/MM/YYYY and DD/MM/YYYY
 | 8  | Received Mtrs                  | Received (sq m)                          |
 | 9  | Consumed Sheets                | Total consumed (challan + order + pressing) (sheets) |
 | 10 | Consumed Mtrs                  | Total consumed (sq m)                    |
-| 11 | Challan Sheets                 | Issued for challan (sheets)              |
-| 12 | Challan Mtrs                   | Issued for challan (sq m)                |
-| 13 | Order Sheets                   | Issued for order (sheets)                |
-| 14 | Order Mtrs                     | Issued for order (sq m)                  |
-| 15 | Issue For Pressing             | Issued for pressing (sheets)             |
-| 16 | Issue For Pressing Sq Met      | Issued for pressing (sq m)               |
-| 17 | Closing sheets                 | Closing stock (sheets)                   |
-| 18 | Closing Metres                 | Closing stock (sq m)                     |
+| 11 | Order Sheets                   | Issued for order (sheets)                |
+| 12 | Order Mtrs                     | Issued for order (sq m)                  |
+| 13 | Issue For Pressing             | Issued for pressing (sheets)             |
+| 14 | Issue For Pressing Sq Met      | Issued for pressing (sq m)               |
+| 15 | Closing sheets                 | Closing stock (sheets)                   |
+| 16 | Closing Metres                 | Closing stock (sq m)                     |
+
+- **Note:** Challan is included in Consumed but Challan columns are hidden in the Excel output for now.
 
 - Data grouped by **MDF Sub Category**; subtotal row after each category; grand total at the end.
 - Each row represents one pellet (one document in mdf_inventory_items_details).
