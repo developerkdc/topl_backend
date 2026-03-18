@@ -64,8 +64,6 @@ export const GeneratePlywoodStockReportExcel = async (
       { key: 'receive_sqm', width: 12 },
       { key: 'consume_sheets', width: 12 },
       { key: 'consume_sqm', width: 12 },
-      { key: 'challan_sheets', width: 14 },
-      { key: 'challan_sqm', width: 14 },
       { key: 'order_sheets', width: 12 },
       { key: 'order_sqm', width: 12 },
       { key: 'issue_for_ply_resizing_sheets', width: 22 },
@@ -82,7 +80,7 @@ export const GeneratePlywoodStockReportExcel = async (
     filterRow.font = { bold: true, size: 12 };
     filterRow.alignment = { vertical: 'middle', horizontal: 'left', wrapText: false };
     filterRow.height = 20;
-    worksheet.mergeCells(1, 1, 1, 19);
+    worksheet.mergeCells(1, 1, 1, 17);
 
     worksheet.addRow([]);
 
@@ -96,8 +94,6 @@ export const GeneratePlywoodStockReportExcel = async (
       'Received Mtrs',
       'Consumed Sheets',
       'Consumed Mtrs',
-      'Challan Sheets',
-      'Challan Mtrs',
       'Order Sheets',
       'Order Mtrs',
       'Issue For Ply Resizing Sheet',
@@ -175,7 +171,7 @@ export const GeneratePlywoodStockReportExcel = async (
             };
 
             items.forEach((item) => {
-              const rowData = {
+              const fullRowData = {
                 plywood_sub_type: item.plywood_sub_type || '',
                 thickness: item.thickness || 0,
                 size: item.size || '',
@@ -196,6 +192,7 @@ export const GeneratePlywoodStockReportExcel = async (
                 closing_sheets: item.closing_sheets || 0,
                 closing_sqm: item.closing_sqm || 0,
               };
+              const { challan_sheets, challan_sqm, ...rowData } = fullRowData;
               worksheet.addRow(rowData);
               thicknessTotals.opening_sheets += item.opening_sheets || 0;
               thicknessTotals.opening_sqm += item.opening_sqm || 0;
@@ -203,8 +200,8 @@ export const GeneratePlywoodStockReportExcel = async (
               thicknessTotals.receive_sqm += item.receive_sqm || 0;
               thicknessTotals.consume_sheets += item.consume_sheets || 0;
               thicknessTotals.consume_sqm += item.consume_sqm || 0;
-              thicknessTotals.challan_sheets += item.challan_sheets || 0;
-              thicknessTotals.challan_sqm += item.challan_sqm || 0;
+              thicknessTotals.challan_sheets += fullRowData.challan_sheets || 0;
+              thicknessTotals.challan_sqm += fullRowData.challan_sqm || 0;
               thicknessTotals.order_sheets += item.order_sheets || 0;
               thicknessTotals.order_sqm += item.order_sqm || 0;
               thicknessTotals.issue_for_ply_resizing_sheets += item.issue_for_ply_resizing_sheets || 0;
@@ -215,11 +212,12 @@ export const GeneratePlywoodStockReportExcel = async (
               thicknessTotals.closing_sqm += item.closing_sqm || 0;
             });
 
+            const { challan_sheets: _cs1, challan_sqm: _csq1, ...displayTotals } = thicknessTotals;
             const thicknessTotalRow = worksheet.addRow({
               plywood_sub_type: '',
               thickness: '',
               size: 'Total',
-              ...thicknessTotals,
+              ...displayTotals,
             });
             thicknessTotalRow.eachCell((cell) => {
               cell.font = { bold: true };
@@ -231,11 +229,12 @@ export const GeneratePlywoodStockReportExcel = async (
           });
       });
 
+    const { challan_sheets: _cs2, challan_sqm: _csq2, ...displayGrandTotals } = grandTotals;
     const grandTotalRow = worksheet.addRow({
       plywood_sub_type: 'Total',
       thickness: '',
       size: '',
-      ...grandTotals,
+      ...displayGrandTotals,
     });
     grandTotalRow.eachCell((cell) => {
       cell.font = { bold: true };
@@ -317,8 +316,6 @@ export const GeneratePlywoodItemWiseStockReportExcel = async (
       { key: 'receive_sqm', width: 12 },
       { key: 'consume_sheets', width: 12 },
       { key: 'consume_sqm', width: 12 },
-      { key: 'challan_sheets', width: 14 },
-      { key: 'challan_sqm', width: 14 },
       { key: 'order_sheets', width: 12 },
       { key: 'order_sqm', width: 12 },
       { key: 'issue_for_ply_resizing_sheets', width: 22 },
@@ -335,7 +332,7 @@ export const GeneratePlywoodItemWiseStockReportExcel = async (
     filterRow.font = { bold: true, size: 12 };
     filterRow.alignment = { vertical: 'middle', horizontal: 'left', wrapText: false };
     filterRow.height = 20;
-    worksheet.mergeCells(1, 1, 1, 20);
+    worksheet.mergeCells(1, 1, 1, 18);
 
     worksheet.addRow([]);
 
@@ -350,8 +347,6 @@ export const GeneratePlywoodItemWiseStockReportExcel = async (
       'Received Mtrs',
       'Consumed Sheets',
       'Consumed Mtrs',
-      'Challan Sheets',
-      'Challan Mtrs',
       'Order Sheets',
       'Order Mtrs',
       'Issue For Ply Resizing Sheet',
@@ -448,7 +443,7 @@ export const GeneratePlywoodItemWiseStockReportExcel = async (
             };
 
             rows.forEach((item) => {
-              const rowData = {
+              const fullRowData = {
                 item_name: item.item_name ?? '',
                 plywood_sub_type: item.plywood_sub_type ?? '',
                 thickness: item.thickness ?? 0,
@@ -470,6 +465,7 @@ export const GeneratePlywoodItemWiseStockReportExcel = async (
                 closing_sheets: item.closing_sheets ?? 0,
                 closing_sqm: item.closing_sqm ?? 0,
               };
+              const { challan_sheets, challan_sqm, ...rowData } = fullRowData;
               worksheet.addRow(rowData);
               thicknessTotals.opening_sheets += item.opening_sheets ?? 0;
               thicknessTotals.opening_sqm += item.opening_sqm ?? 0;
@@ -477,8 +473,8 @@ export const GeneratePlywoodItemWiseStockReportExcel = async (
               thicknessTotals.receive_sqm += item.receive_sqm ?? 0;
               thicknessTotals.consume_sheets += item.consume_sheets ?? 0;
               thicknessTotals.consume_sqm += item.consume_sqm ?? 0;
-              thicknessTotals.challan_sheets += item.challan_sheets ?? 0;
-              thicknessTotals.challan_sqm += item.challan_sqm ?? 0;
+              thicknessTotals.challan_sheets += fullRowData.challan_sheets ?? 0;
+              thicknessTotals.challan_sqm += fullRowData.challan_sqm ?? 0;
               thicknessTotals.order_sheets += item.order_sheets ?? 0;
               thicknessTotals.order_sqm += item.order_sqm ?? 0;
               thicknessTotals.issue_for_ply_resizing_sheets += item.issue_for_ply_resizing_sheets ?? 0;
@@ -489,12 +485,13 @@ export const GeneratePlywoodItemWiseStockReportExcel = async (
               thicknessTotals.closing_sqm += item.closing_sqm ?? 0;
             });
 
+            const { challan_sheets: _cs1, challan_sqm: _csq1, ...displayTotals } = thicknessTotals;
             const thicknessTotalRow = worksheet.addRow({
               item_name: '',
               plywood_sub_type: '',
               thickness: '',
               size: 'Total',
-              ...thicknessTotals,
+              ...displayTotals,
             });
             thicknessTotalRow.eachCell((cell) => {
               cell.font = { bold: true };
@@ -505,12 +502,13 @@ export const GeneratePlywoodItemWiseStockReportExcel = async (
             });
           });
 
+        const { challan_sheets: _cs2, challan_sqm: _csq2, ...displayItemTotals } = itemTotals;
         const itemTotalRow = worksheet.addRow({
           item_name: itemName,
           plywood_sub_type: '',
           thickness: '',
           size: 'Item Total',
-          ...itemTotals,
+          ...displayItemTotals,
         });
         itemTotalRow.eachCell((cell) => {
           cell.font = { bold: true };
@@ -521,12 +519,13 @@ export const GeneratePlywoodItemWiseStockReportExcel = async (
         });
       });
 
+    const { challan_sheets: _cs3, challan_sqm: _csq3, ...displayGrandTotals } = grandTotals;
     const grandTotalRow = worksheet.addRow({
       item_name: 'Total',
       plywood_sub_type: '',
       thickness: '',
       size: '',
-      ...grandTotals,
+      ...displayGrandTotals,
     });
     grandTotalRow.eachCell((cell) => {
       cell.font = { bold: true };
@@ -610,8 +609,6 @@ export const GeneratePlywoodStockReportByPelletExcel = async (
       { key: 'receive_sqm', width: 12 },
       { key: 'consume_sheets', width: 12 },
       { key: 'consume_sqm', width: 12 },
-      { key: 'challan_sheets', width: 14 },
-      { key: 'challan_sqm', width: 14 },
       { key: 'order_sheets', width: 12 },
       { key: 'order_sqm', width: 12 },
       { key: 'issue_for_ply_resizing_sheets', width: 22 },
@@ -628,7 +625,7 @@ export const GeneratePlywoodStockReportByPelletExcel = async (
     filterRow.font = { bold: true, size: 12 };
     filterRow.alignment = { vertical: 'middle', horizontal: 'left', wrapText: false };
     filterRow.height = 20;
-    worksheet.mergeCells(1, 1, 1, 20);
+    worksheet.mergeCells(1, 1, 1, 18);
 
     worksheet.addRow([]);
 
@@ -643,8 +640,6 @@ export const GeneratePlywoodStockReportByPelletExcel = async (
       'Received Mtrs',
       'Consumed Sheets',
       'Consumed Mtrs',
-      'Challan Sheets',
-      'Challan Mtrs',
       'Order Sheets',
       'Order Mtrs',
       'Issue For Ply Resizing Sheet',
@@ -714,7 +709,7 @@ export const GeneratePlywoodStockReportByPelletExcel = async (
         };
 
         items.forEach((item) => {
-          const rowData = {
+          const fullRowData = {
             pellet_no: item.pellet_no ?? '',
             plywood_sub_type: item.plywood_sub_type ?? '',
             thickness: item.thickness ?? 0,
@@ -736,6 +731,7 @@ export const GeneratePlywoodStockReportByPelletExcel = async (
             closing_sheets: item.closing_sheets ?? 0,
             closing_sqm: item.closing_sqm ?? 0,
           };
+          const { challan_sheets, challan_sqm, ...rowData } = fullRowData;
           worksheet.addRow(rowData);
           categoryTotals.opening_sheets += item.opening_sheets ?? 0;
           categoryTotals.opening_sqm += item.opening_sqm ?? 0;
@@ -743,8 +739,8 @@ export const GeneratePlywoodStockReportByPelletExcel = async (
           categoryTotals.receive_sqm += item.receive_sqm ?? 0;
           categoryTotals.consume_sheets += item.consume_sheets ?? 0;
           categoryTotals.consume_sqm += item.consume_sqm ?? 0;
-          categoryTotals.challan_sheets += item.challan_sheets ?? 0;
-          categoryTotals.challan_sqm += item.challan_sqm ?? 0;
+          categoryTotals.challan_sheets += fullRowData.challan_sheets ?? 0;
+          categoryTotals.challan_sqm += fullRowData.challan_sqm ?? 0;
           categoryTotals.order_sheets += item.order_sheets ?? 0;
           categoryTotals.order_sqm += item.order_sqm ?? 0;
           categoryTotals.issue_for_ply_resizing_sheets += item.issue_for_ply_resizing_sheets ?? 0;
@@ -755,12 +751,13 @@ export const GeneratePlywoodStockReportByPelletExcel = async (
           categoryTotals.closing_sqm += item.closing_sqm ?? 0;
         });
 
+        const { challan_sheets: _cs1, challan_sqm: _csq1, ...displayCategoryTotals } = categoryTotals;
         const categoryTotalRow = worksheet.addRow({
           pellet_no: '',
           plywood_sub_type: '',
           thickness: '',
           size: 'Total',
-          ...categoryTotals,
+          ...displayCategoryTotals,
         });
         categoryTotalRow.eachCell((cell) => {
           cell.font = { bold: true };
@@ -771,12 +768,13 @@ export const GeneratePlywoodStockReportByPelletExcel = async (
         });
       });
 
+    const { challan_sheets: _cs2, challan_sqm: _csq2, ...displayGrandTotals } = grandTotals;
     const grandTotalRow = worksheet.addRow({
       pellet_no: '',
       plywood_sub_type: 'Total',
       thickness: '',
       size: '',
-      ...grandTotals,
+      ...displayGrandTotals,
     });
     grandTotalRow.eachCell((cell) => {
       cell.font = { bold: true };

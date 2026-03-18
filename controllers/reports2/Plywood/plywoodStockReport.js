@@ -13,6 +13,12 @@ import {
   GeneratePlywoodStockReportByPelletExcel,
 } from '../../../config/downloadExcel/reports2/Plywood/plywoodStockReport.js';
 
+/** Round stock value; treat floating-point noise (|v| < 1e-10) as 0 */
+const roundStock = (v, decimals = 4) => {
+  const rounded = Math.round(v * 10 ** decimals) / 10 ** decimals;
+  return Math.abs(rounded) < 1e-10 ? 0 : rounded;
+};
+
 /**
  * Plywood Stock Report – Excel download.
  * Uses startDate, endDate and optional filter (item_sub_category_name).
@@ -198,8 +204,8 @@ export const plywoodStockReportCsv = catchAsync(async (req, res, next) => {
           plywood_sub_type: item_sub_category_name,
           thickness,
           size: `${length} X ${width}`,
-          opening_sheets: Math.max(0, openingSheets),
-          opening_sqm: Math.max(0, openingSqm),
+          opening_sheets: Math.max(0, roundStock(openingSheets, 0)),
+          opening_sqm: Math.max(0, roundStock(openingSqm)),
           receive_sheets: receiveSheets,
           receive_sqm: receiveSqm,
           consume_sheets: consumeSheets,
@@ -212,8 +218,8 @@ export const plywoodStockReportCsv = catchAsync(async (req, res, next) => {
           issue_for_ply_resizing_sqm: issuePlyResizingSqm,
           issue_for_pressing_sheets: issuePressingSheets,
           issue_for_pressing_sqm: issuePressingSqm,
-          closing_sheets: Math.max(0, closingSheets),
-          closing_sqm: Math.max(0, closingSqm),
+          closing_sheets: Math.max(0, roundStock(closingSheets, 0)),
+          closing_sqm: Math.max(0, roundStock(closingSqm)),
         };
       })
     );
@@ -438,8 +444,8 @@ export const plywoodItemWiseStockReportCsv = catchAsync(async (req, res, next) =
           plywood_sub_type: item_sub_category_name,
           thickness,
           size: `${length} X ${width}`,
-          opening_sheets: Math.max(0, openingSheets),
-          opening_sqm: Math.max(0, openingSqm),
+          opening_sheets: Math.max(0, roundStock(openingSheets, 0)),
+          opening_sqm: Math.max(0, roundStock(openingSqm)),
           receive_sheets: receiveSheets,
           receive_sqm: receiveSqm,
           consume_sheets: consumeSheets,
@@ -452,8 +458,8 @@ export const plywoodItemWiseStockReportCsv = catchAsync(async (req, res, next) =
           issue_for_ply_resizing_sqm: issuePlyResizingSqm,
           issue_for_pressing_sheets: issuePressingSheets,
           issue_for_pressing_sqm: issuePressingSqm,
-          closing_sheets: Math.max(0, closingSheets),
-          closing_sqm: Math.max(0, closingSqm),
+          closing_sheets: Math.max(0, roundStock(closingSheets, 0)),
+          closing_sqm: Math.max(0, roundStock(closingSqm)),
         };
       })
     );
@@ -663,8 +669,8 @@ export const plywoodStockReportByPelletCsv = catchAsync(async (req, res, next) =
           plywood_sub_type: item.item_sub_category_name,
           thickness: item.thickness,
           size: `${item.length} X ${item.width}`,
-          opening_sheets: Math.max(0, openingSheets),
-          opening_sqm: Math.max(0, openingSqm),
+          opening_sheets: Math.max(0, roundStock(openingSheets, 0)),
+          opening_sqm: Math.max(0, roundStock(openingSqm)),
           receive_sheets: receiveSheets,
           receive_sqm: receiveSqm,
           consume_sheets: consumeSheets,
@@ -677,8 +683,8 @@ export const plywoodStockReportByPelletCsv = catchAsync(async (req, res, next) =
           issue_for_ply_resizing_sqm: issuePlyResizingSqm,
           issue_for_pressing_sheets: issuePressingSheets,
           issue_for_pressing_sqm: issuePressingSqm,
-          closing_sheets: Math.max(0, closingSheets),
-          closing_sqm: Math.max(0, closingSqm),
+          closing_sheets: Math.max(0, roundStock(closingSheets, 0)),
+          closing_sqm: Math.max(0, roundStock(closingSqm)),
         };
       })
     );

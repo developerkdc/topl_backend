@@ -2,20 +2,20 @@
 
 ## Objective
 
-Implement the **MDF Stock Report by Pellet No.** API under reports2 that generates an Excel report for a user-selected date range. The report has the same structure as the standard MDF Stock Report but with **Pellet No.** (pallet_number) as the first column. Each row represents one pellet (one document in mdf_inventory_items_details). Data is grouped by **MDF sub-category** with subtotals and grand total. MDF has no ply resizing, so 16 columns (vs 18 for Plywood).
+Implement the **MDF Stock Report by Pellet No.** API under reports2 that generates an Excel report for a user-selected date range. The report has the same structure as the standard MDF Stock Report but with **Pellet No.** (pallet_number) as the first column. Each row represents one pellet (one document in mdf_inventory_items_details). Data is grouped by **MDF sub-category** with subtotals and grand total. MDF has no ply resizing, so 18 columns (vs 20 for Plywood).
 
 ## Implementation Approach
 
 - Reuse the same calculation logic as the standard MDF Stock Report (opening, receives, consumption, sales, issue for pressing, closing).
 - Data is anchored on **mdf_inventory_items_details** (individual pellets); for each item, period receives come from invoice lookup (inward_date in range), and consumption/sales/issue from **mdf_history** matched by `mdf_item_id`.
-- MDF has no plywood_resizing; consumption = `order` + `pressing`; sales = `challan`.
+- MDF has no plywood_resizing; consumed = `challan` + `order` + `pressing`.
 
 ## Report Structure (Excel)
 
 - **Period:** User-specified date range (startDate, endDate).
 - **Data source:** mdf_inventory_items_details + mdf_inventory_invoice_details + mdf_history.
 - **Grouping:** MDF Sub Category; subtotal per category; grand total.
-- **Columns:** Pellet No., MDF Sub Category, Thickness, Size, Opening (sheets + sq m), Received, Consumed, Sales, Issue For Pressing (sheets + sq m), Closing (sheets + sq m).
+- **Columns:** Pellet No., MDF Sub Category, Thickness, Size, Opening (sheets + sq m), Received, Consumed, Challan, Order, Issue For Pressing (sheets + sq m), Closing (sheets + sq m).
 
 ## Implementation Files
 
@@ -45,11 +45,10 @@ Implement the **MDF Stock Report by Pellet No.** API under reports2 that generat
 4. **All items:** Aggregate `mdf_inventory_items_details`: match `deleted_at: null` and `...itemFilter`; `$lookup` invoice for `inward_date`; project pallet_number, item_sub_category_name, thickness, length, width, no_of_sheet, total_sq_meter, available_sheets, available_sqm.
 5. For each item (each pellet):
    - **Receives:** If `invoice.inward_date` in [start, end], use `no_of_sheet` and `total_sq_meter`; else 0.
-   - **Consumption:** Aggregate `mdf_history_model`: match `mdf_item_id: item._id`, `issue_status` in `['order', 'pressing']`, `createdAt` in [start, end] → sum `issued_sheets`, `issued_sqm`.
-   - **Sales:** Same collection; `mdf_item_id: item._id`, `issue_status: 'challan'`, same date range.
-   - **Issue for pressing:** Same collection; `mdf_item_id: item._id`, `issue_status: 'pressing'`.
-   - Compute **opening** = current + consume + sales - receive; **closing** = opening + receive - consume - sales; clamp to non-negative.
-6. Filter rows with at least one non-zero among opening, receive, consume, sales, closing.
+   - **Challan / Order / Issue for pressing:** Aggregate `mdf_history_model`: match `mdf_item_id: item._id`, `issue_status` ('challan', 'order', 'pressing'), `createdAt` in [start, end] → sum `issued_sheets`, `issued_sqm` per status.
+   - **Consumed** = challan + order + issue for pressing (computed).
+   - Compute **opening** = current + consume - receive; **closing** = opening + receive - consume; clamp to non-negative.
+6. Filter rows with at least one non-zero among opening, receive, consume, challan, order, closing.
 7. Sort by item_sub_category_name, then pallet_number.
 8. If no rows, return 404 "No stock data found for the selected period".
 9. Call `GenerateMdfStockReportByPelletExcel(aggregatedData, startDate, endDate, filter)`.
@@ -66,7 +65,7 @@ Implement the **MDF Stock Report by Pellet No.** API under reports2 that generat
 - Ensure folder `public/upload/reports/reports2/MDF` exists.
 - Create workbook, sheet "MDF Stock Report (By Pellet No.)".
 - Title row: "MDF Type [ filter ]   stock  in the period  DD/MM/YYYY and DD/MM/YYYY" (filter from `filters.item_sub_category_name` or "ALL").
-- Define columns: pellet_no, mdf_sub_type, thickness, size, opening_sheets, opening_sqm, receive_sheets, receive_sqm, consume_sheets, consume_sqm, sales_sheets, sales_sqm, issue_pressing_sheets, issue_pressing_sqm, closing_sheets, closing_sqm (16 columns).
+- Define columns: pellet_no, mdf_sub_type, thickness, size, opening_sheets, opening_sqm, receive_sheets, receive_sqm, consume_sheets, consume_sqm, challan_sheets, challan_sqm, order_sheets, order_sqm, issue_pressing_sheets, issue_pressing_sqm, closing_sheets, closing_sqm (18 columns).
 - Group data by mdf_sub_type; for each group add data rows then a "Total" row; then grand total row. Bold headers and totals; gray header row.
 - Save to `MDF-Stock-Report-ByPellet-{timestamp}.xlsx` in the same folder; return full download URL.
 
@@ -92,11 +91,12 @@ Implement the **MDF Stock Report by Pellet No.** API under reports2 that generat
 ### Stock calculation (per pellet)
 
 - **Receives (period):** If item's invoice `inward_date` ∈ [start, end], use item's `no_of_sheet` and `total_sq_meter`; else 0.
-- **Consumption:** History where `mdf_item_id === item._id`, `issue_status` ∈ `['order', 'pressing']`, `createdAt` ∈ [start, end]. Sum `issued_sheets`, `issued_sqm`.
-- **Sales:** History where `mdf_item_id === item._id`, `issue_status === 'challan'`, same date range.
+- **Challan:** History where `mdf_item_id === item._id`, `issue_status === 'challan'`, `createdAt` ∈ [start, end]. Sum `issued_sheets`, `issued_sqm`.
+- **Order:** History where `mdf_item_id === item._id`, `issue_status === 'order'`, same date range.
 - **Issue for pressing:** History where `mdf_item_id === item._id`, `issue_status === 'pressing'`, same date range.
-- **Opening:** `current_sheets + consume_sheets + sales_sheets - receive_sheets` (and same for sq m). Then `Math.max(0, ...)`.
-- **Closing:** `opening + receive - consume - sales` (sheets and sq m). Then `Math.max(0, ...)`.
+- **Consumed:** challan + order + issue for pressing (computed).
+- **Opening:** `current_sheets + consume_sheets - receive_sheets` (and same for sq m). Then `Math.max(0, ...)`.
+- **Closing:** `opening + receive - consume` (sheets and sq m). Then `Math.max(0, ...)`.
 
 ### Pipeline structure (conceptual)
 
@@ -119,12 +119,14 @@ Implement the **MDF Stock Report by Pellet No.** API under reports2 that generat
 8. Received Mtrs  
 9. Consumed Sheets  
 10. Consumed Mtrs  
-11. Sales Sheets  
-12. Sales Mtrs  
-13. Issue For Pressing  
-14. Issue For Pressing Sq Met  
-15. Closing sheets  
-16. Closing Metres  
+11. Challan Sheets  
+12. Challan Mtrs  
+13. Order Sheets  
+14. Order Mtrs  
+15. Issue For Pressing  
+16. Issue For Pressing Sq Met  
+17. Closing sheets  
+18. Closing Metres  
 
 ### Row hierarchy
 

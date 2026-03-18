@@ -2,7 +2,7 @@
 
 ## Overview
 
-The MDF Stock Report API (reports2) generates a dynamic inventory report with opening stock, receives, consumption, sales, issue for pressing, and closing stock for a given date range. Data is grouped by **MDF sub-type**, **thickness**, and **size**.
+The MDF Stock Report API (reports2) generates a dynamic inventory report with opening stock, receives, consumption (total of challan, order, pressing), challan, order, issue for pressing, and closing stock for a given date range. Data is grouped by **MDF sub-type**, **thickness**, and **size**.
 
 ## Endpoint
 
@@ -150,14 +150,16 @@ MDF Type [ CATEGORY ]   stock  in the period  DD/MM/YYYY and DD/MM/YYYY
 | 5  | Op Metres               | Opening stock (sq m)                     |
 | 6  | Receive                 | Received in period (sheets)              |
 | 7  | Rec Mtrs                | Received (sq m)                          |
-| 8  | Consume                 | Consumed in period (sheets)              |
-| 9  | Cons Mtrs               | Consumed (sq m)                          |
-| 10 | Sales                   | Sold in period (sheets)                  |
-| 11 | Sales Mtrs              | Sold (sq m)                              |
-| 12 | Issue For Pressing      | Issued for pressing (sheets)             |
-| 13 | Issue For Pressing Sq Met | Issued for pressing (sq m)            |
-| 14 | Closing                 | Closing stock (sheets)                   |
-| 15 | Cl Metres               | Closing stock (sq m)                     |
+| 8  | Consume                 | Total consumed (challan + order + pressing) (sheets) |
+| 9  | Cons Mtrs               | Total consumed (sq m)                    |
+| 10 | Challan Sheets          | Issued for challan (sheets)             |
+| 11 | Challan Mtrs            | Issued for challan (sq m)               |
+| 12 | Order Sheets            | Issued for order (sheets)                |
+| 13 | Order Mtrs              | Issued for order (sq m)                  |
+| 14 | Issue For Pressing      | Issued for pressing (sheets)             |
+| 15 | Issue For Pressing Sq Met | Issued for pressing (sq m)            |
+| 16 | Closing                 | Closing stock (sheets)                   |
+| 17 | Cl Metres               | Closing stock (sq m)                     |
 
 - Data grouped by **MDF Sub Type → Thickness → Size**; subtotal row after each thickness; grand total at the end.
 
@@ -168,17 +170,18 @@ All values are computed in **sheets** and **square meters**.
 ### Formulas
 
 - **Opening (sheets):**  
-  `Opening Sheets = Current Available Sheets + (Consumed + Sold) Sheets - Received Sheets`
+  `Opening Sheets = Current Available Sheets + Consumed Sheets - Received Sheets`
 - **Opening (sq m):**  
-  `Opening Sqm = Current Available Sqm + (Consumed + Sold) Sqm - Received Sqm`
-- **Receives:** From MDF inventory item details joined to invoice details where `inward_date` is between startDate and endDate; sum `no_of_sheet` and `total_sq_meter`.
-- **Consumption:** From MDF history where `issue_status` in `['order', 'pressing']` and `createdAt` in period; sum `issued_sheets` and `issued_sqm`.
-- **Sales:** From MDF history where `issue_status = 'challan'` and `createdAt` in period; sum `issued_sheets` and `issued_sqm`.
+  `Opening Sqm = Current Available Sqm + Consumed Sqm - Received Sqm`
+- **Consumed:** Challan + Order + Issue for pressing (computed from history).
+- **Challan:** From MDF history where `issue_status = 'challan'` and `createdAt` in period; sum `issued_sheets` and `issued_sqm`.
+- **Order:** From MDF history where `issue_status = 'order'` and `createdAt` in period; sum `issued_sheets` and `issued_sqm`.
+- **Receives:** From MDF inventory item details joined to invoice details where `inward_date` is between startDate and endDate (end date includes full day 23:59:59.999 UTC); sum `no_of_sheet` and `total_sq_meter`.
 - **Issue for pressing:** From MDF history where `issue_status = 'pressing'` and `createdAt` in period; sum `issued_sheets` and `issued_sqm`.
 - **Closing:**  
-  `Closing = Opening + Receive - Consume - Sales` (in both sheets and sq m).
+  `Closing = Opening + Receive - Consume` (in both sheets and sq m).
 
-Only rows that had **at least one movement in the period** (receive, consume, sales, or issue for pressing) are included. If there was no inward, consumption, sales, or issue for pressing in the date range, no rows are shown and the API returns 404. All stock values are output as non-negative (`Math.max(0, value)`).
+Only rows that had **at least one movement in the period** (receive, consume, challan, order, or issue for pressing) are included. If there was no inward, consumption, challan, order, or issue for pressing in the date range, no rows are shown and the API returns 404. All stock values are output as non-negative (`Math.max(0, value)`).
 
 ## Database Collections Used
 
@@ -212,6 +215,7 @@ window.open(downloadUrl, '_blank');
 
 ## Notes
 
-- Report includes only rows that had at least one movement in the period (receive, consume, sales, or issue for pressing). If the date range has no such activity, the report returns 404 with "No stock data found for the selected period".
+- Report includes only rows that had at least one movement in the period (receive, consume, challan, order, or issue for pressing). If the date range has no such activity, the report returns 404 with "No stock data found for the selected period".
+- Date range: end date includes the full day (23:59:59.999 UTC) so transactions on the end date are included.
 - Excel files are timestamped to avoid overwriting.
 - Files are stored under `public/upload/reports/reports2/MDF/`.

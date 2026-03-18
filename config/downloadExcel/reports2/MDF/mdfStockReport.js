@@ -5,7 +5,7 @@ import ApiError from '../../../../utils/errors/apiError.js';
 /**
  * Generate MDF Stock Report Excel for reports2.
  * Title: MDF Type [ filter ] stock in the period DD/MM/YYYY and DD/MM/YYYY
- * Columns: MDF Sub Type, Thickness, Size, Opening, Receive, Consume, Sales, Issue For Pressing, Closing (sheets + sqm).
+ * Columns: MDF Sub Type, Thickness, Size, Opening, Receive, Consume, Challan, Order, Issue For Pressing, Closing (sheets + sqm).
  *
  * @param {Array} aggregatedData - Aggregated stock data per (mdf_sub_type, thickness, size)
  * @param {String} startDate - Start date (YYYY-MM-DD)
@@ -64,8 +64,8 @@ export const GenerateMdfStockReportExcel = async (
       { key: 'receive_sqm', width: 12 },
       { key: 'consume_sheets', width: 12 },
       { key: 'consume_sqm', width: 12 },
-      { key: 'sales_sheets', width: 12 },
-      { key: 'sales_sqm', width: 12 },
+      { key: 'order_sheets', width: 12 },
+      { key: 'order_sqm', width: 12 },
       { key: 'issue_pressing_sheets', width: 20 },
       { key: 'issue_pressing_sqm', width: 20 },
       { key: 'closing_sheets', width: 12 },
@@ -92,8 +92,8 @@ export const GenerateMdfStockReportExcel = async (
       'Received Mtrs',
       'Consumed Sheets',
       'Consumed Mtrs',
-      'Sales Sheets',
-      'Sales Mtrs',
+      'Order Sheets',
+      'Order Mtrs',
       'Issue For Pressing',
       'Issue For Pressing Sq Met',
       'Closing sheets',
@@ -127,8 +127,10 @@ export const GenerateMdfStockReportExcel = async (
       receive_sqm: 0,
       consume_sheets: 0,
       consume_sqm: 0,
-      sales_sheets: 0,
-      sales_sqm: 0,
+      challan_sheets: 0,
+      challan_sqm: 0,
+      order_sheets: 0,
+      order_sqm: 0,
       issue_pressing_sheets: 0,
       issue_pressing_sqm: 0,
       closing_sheets: 0,
@@ -150,8 +152,10 @@ export const GenerateMdfStockReportExcel = async (
               receive_sqm: 0,
               consume_sheets: 0,
               consume_sqm: 0,
-              sales_sheets: 0,
-              sales_sqm: 0,
+              challan_sheets: 0,
+              challan_sqm: 0,
+              order_sheets: 0,
+              order_sqm: 0,
               issue_pressing_sheets: 0,
               issue_pressing_sqm: 0,
               closing_sheets: 0,
@@ -159,7 +163,7 @@ export const GenerateMdfStockReportExcel = async (
             };
 
             items.forEach((item) => {
-              const rowData = {
+              const fullRowData = {
                 mdf_sub_type: item.mdf_sub_type || '',
                 thickness: item.thickness || 0,
                 size: item.size || '',
@@ -169,24 +173,28 @@ export const GenerateMdfStockReportExcel = async (
                 receive_sqm: item.receive_sqm || 0,
                 consume_sheets: item.consume_sheets || 0,
                 consume_sqm: item.consume_sqm || 0,
-                sales_sheets: item.sales_sheets || 0,
-                sales_sqm: item.sales_sqm || 0,
+                challan_sheets: item.challan_sheets || 0,
+                challan_sqm: item.challan_sqm || 0,
+                order_sheets: item.order_sheets || 0,
+                order_sqm: item.order_sqm || 0,
                 issue_pressing_sheets: item.issue_pressing_sheets || 0,
                 issue_pressing_sqm: item.issue_pressing_sqm || 0,
                 closing_sheets: item.closing_sheets || 0,
                 closing_sqm: item.closing_sqm || 0,
               };
+              const { challan_sheets, challan_sqm, ...rowData } = fullRowData;
               worksheet.addRow(rowData);
               Object.keys(thicknessTotals).forEach((key) => {
-                thicknessTotals[key] += rowData[key] || 0;
+                thicknessTotals[key] += fullRowData[key] || 0;
               });
             });
 
+            const { challan_sheets: _cs1, challan_sqm: _csq1, ...displayTotals } = thicknessTotals;
             const thicknessTotalRow = worksheet.addRow({
               mdf_sub_type: '',
               thickness: '',
               size: 'Total',
-              ...thicknessTotals,
+              ...displayTotals,
             });
             thicknessTotalRow.eachCell((cell) => {
               cell.font = { bold: true };
@@ -198,11 +206,12 @@ export const GenerateMdfStockReportExcel = async (
           });
       });
 
+    const { challan_sheets: _cs2, challan_sqm: _csq2, ...displayGrandTotals } = grandTotals;
     const grandTotalRow = worksheet.addRow({
       mdf_sub_type: 'Total',
       thickness: '',
       size: '',
-      ...grandTotals,
+      ...displayGrandTotals,
     });
     grandTotalRow.eachCell((cell) => {
       cell.font = { bold: true };
@@ -284,8 +293,8 @@ export const GenerateMdfItemWiseStockReportExcel = async (
       { key: 'receive_sqm', width: 12 },
       { key: 'consume_sheets', width: 12 },
       { key: 'consume_sqm', width: 12 },
-      { key: 'sales_sheets', width: 12 },
-      { key: 'sales_sqm', width: 12 },
+      { key: 'order_sheets', width: 12 },
+      { key: 'order_sqm', width: 12 },
       { key: 'issue_pressing_sheets', width: 20 },
       { key: 'issue_pressing_sqm', width: 20 },
       { key: 'closing_sheets', width: 12 },
@@ -313,8 +322,8 @@ export const GenerateMdfItemWiseStockReportExcel = async (
       'Received Mtrs',
       'Consumed Sheets',
       'Consumed Mtrs',
-      'Sales Sheets',
-      'Sales Mtrs',
+      'Order Sheets',
+      'Order Mtrs',
       'Issue For Pressing',
       'Issue For Pressing Sq Met',
       'Closing sheets',
@@ -348,8 +357,10 @@ export const GenerateMdfItemWiseStockReportExcel = async (
       receive_sqm: 0,
       consume_sheets: 0,
       consume_sqm: 0,
-      sales_sheets: 0,
-      sales_sqm: 0,
+      challan_sheets: 0,
+      challan_sqm: 0,
+      order_sheets: 0,
+      order_sqm: 0,
       issue_pressing_sheets: 0,
       issue_pressing_sqm: 0,
       closing_sheets: 0,
@@ -367,8 +378,10 @@ export const GenerateMdfItemWiseStockReportExcel = async (
           receive_sqm: 0,
           consume_sheets: 0,
           consume_sqm: 0,
-          sales_sheets: 0,
-          sales_sqm: 0,
+          challan_sheets: 0,
+          challan_sqm: 0,
+          order_sheets: 0,
+          order_sqm: 0,
           issue_pressing_sheets: 0,
           issue_pressing_sqm: 0,
           closing_sheets: 0,
@@ -386,8 +399,10 @@ export const GenerateMdfItemWiseStockReportExcel = async (
               receive_sqm: 0,
               consume_sheets: 0,
               consume_sqm: 0,
-              sales_sheets: 0,
-              sales_sqm: 0,
+              challan_sheets: 0,
+              challan_sqm: 0,
+              order_sheets: 0,
+              order_sqm: 0,
               issue_pressing_sheets: 0,
               issue_pressing_sqm: 0,
               closing_sheets: 0,
@@ -395,7 +410,7 @@ export const GenerateMdfItemWiseStockReportExcel = async (
             };
 
             rows.forEach((item) => {
-              const rowData = {
+              const fullRowData = {
                 item_name: item.item_name ?? '',
                 mdf_sub_type: item.mdf_sub_type ?? '',
                 thickness: item.thickness ?? 0,
@@ -406,25 +421,29 @@ export const GenerateMdfItemWiseStockReportExcel = async (
                 receive_sqm: item.receive_sqm ?? 0,
                 consume_sheets: item.consume_sheets ?? 0,
                 consume_sqm: item.consume_sqm ?? 0,
-                sales_sheets: item.sales_sheets ?? 0,
-                sales_sqm: item.sales_sqm ?? 0,
+                challan_sheets: item.challan_sheets ?? 0,
+                challan_sqm: item.challan_sqm ?? 0,
+                order_sheets: item.order_sheets ?? 0,
+                order_sqm: item.order_sqm ?? 0,
                 issue_pressing_sheets: item.issue_pressing_sheets ?? 0,
                 issue_pressing_sqm: item.issue_pressing_sqm ?? 0,
                 closing_sheets: item.closing_sheets ?? 0,
                 closing_sqm: item.closing_sqm ?? 0,
               };
+              const { challan_sheets, challan_sqm, ...rowData } = fullRowData;
               worksheet.addRow(rowData);
               Object.keys(thicknessTotals).forEach((key) => {
-                thicknessTotals[key] += rowData[key] ?? 0;
+                thicknessTotals[key] += fullRowData[key] ?? 0;
               });
             });
 
+            const { challan_sheets: _cs1, challan_sqm: _csq1, ...displayTotals } = thicknessTotals;
             const thicknessTotalRow = worksheet.addRow({
               item_name: '',
               mdf_sub_type: '',
               thickness: '',
               size: 'Total',
-              ...thicknessTotals,
+              ...displayTotals,
             });
             thicknessTotalRow.eachCell((cell) => {
               cell.font = { bold: true };
@@ -435,12 +454,13 @@ export const GenerateMdfItemWiseStockReportExcel = async (
             });
           });
 
+        const { challan_sheets: _cs2, challan_sqm: _csq2, ...displayItemTotals } = itemTotals;
         const itemTotalRow = worksheet.addRow({
           item_name: itemName,
           mdf_sub_type: '',
           thickness: '',
           size: 'Item Total',
-          ...itemTotals,
+          ...displayItemTotals,
         });
         itemTotalRow.eachCell((cell) => {
           cell.font = { bold: true };
@@ -451,12 +471,13 @@ export const GenerateMdfItemWiseStockReportExcel = async (
         });
       });
 
+    const { challan_sheets: _cs3, challan_sqm: _csq3, ...displayGrandTotals } = grandTotals;
     const grandTotalRow = worksheet.addRow({
       item_name: 'Total',
       mdf_sub_type: '',
       thickness: '',
       size: '',
-      ...grandTotals,
+      ...displayGrandTotals,
     });
     grandTotalRow.eachCell((cell) => {
       cell.font = { bold: true };
@@ -540,8 +561,8 @@ export const GenerateMdfStockReportByPelletExcel = async (
       { key: 'receive_sqm', width: 12 },
       { key: 'consume_sheets', width: 12 },
       { key: 'consume_sqm', width: 12 },
-      { key: 'sales_sheets', width: 12 },
-      { key: 'sales_sqm', width: 12 },
+      { key: 'order_sheets', width: 12 },
+      { key: 'order_sqm', width: 12 },
       { key: 'issue_pressing_sheets', width: 20 },
       { key: 'issue_pressing_sqm', width: 20 },
       { key: 'closing_sheets', width: 12 },
@@ -569,8 +590,8 @@ export const GenerateMdfStockReportByPelletExcel = async (
       'Received Mtrs',
       'Consumed Sheets',
       'Consumed Mtrs',
-      'Sales Sheets',
-      'Sales Mtrs',
+      'Order Sheets',
+      'Order Mtrs',
       'Issue For Pressing',
       'Issue For Pressing Sq Met',
       'Closing sheets',
@@ -600,8 +621,10 @@ export const GenerateMdfStockReportByPelletExcel = async (
       receive_sqm: 0,
       consume_sheets: 0,
       consume_sqm: 0,
-      sales_sheets: 0,
-      sales_sqm: 0,
+      challan_sheets: 0,
+      challan_sqm: 0,
+      order_sheets: 0,
+      order_sqm: 0,
       issue_pressing_sheets: 0,
       issue_pressing_sqm: 0,
       closing_sheets: 0,
@@ -619,8 +642,10 @@ export const GenerateMdfStockReportByPelletExcel = async (
           receive_sqm: 0,
           consume_sheets: 0,
           consume_sqm: 0,
-          sales_sheets: 0,
-          sales_sqm: 0,
+          challan_sheets: 0,
+          challan_sqm: 0,
+          order_sheets: 0,
+          order_sqm: 0,
           issue_pressing_sheets: 0,
           issue_pressing_sqm: 0,
           closing_sheets: 0,
@@ -628,7 +653,7 @@ export const GenerateMdfStockReportByPelletExcel = async (
         };
 
         items.forEach((item) => {
-          const rowData = {
+          const fullRowData = {
             pellet_no: item.pellet_no ?? '',
             mdf_sub_type: item.mdf_sub_type ?? '',
             thickness: item.thickness ?? 0,
@@ -639,25 +664,29 @@ export const GenerateMdfStockReportByPelletExcel = async (
             receive_sqm: item.receive_sqm ?? 0,
             consume_sheets: item.consume_sheets ?? 0,
             consume_sqm: item.consume_sqm ?? 0,
-            sales_sheets: item.sales_sheets ?? 0,
-            sales_sqm: item.sales_sqm ?? 0,
+            challan_sheets: item.challan_sheets ?? 0,
+            challan_sqm: item.challan_sqm ?? 0,
+            order_sheets: item.order_sheets ?? 0,
+            order_sqm: item.order_sqm ?? 0,
             issue_pressing_sheets: item.issue_pressing_sheets ?? 0,
             issue_pressing_sqm: item.issue_pressing_sqm ?? 0,
             closing_sheets: item.closing_sheets ?? 0,
             closing_sqm: item.closing_sqm ?? 0,
           };
+          const { challan_sheets, challan_sqm, ...rowData } = fullRowData;
           worksheet.addRow(rowData);
           Object.keys(categoryTotals).forEach((key) => {
-            categoryTotals[key] += rowData[key] ?? 0;
+            categoryTotals[key] += fullRowData[key] ?? 0;
           });
         });
 
+        const { challan_sheets: _cs1, challan_sqm: _csq1, ...displayCategoryTotals } = categoryTotals;
         const categoryTotalRow = worksheet.addRow({
           pellet_no: '',
           mdf_sub_type: '',
           thickness: '',
           size: 'Total',
-          ...categoryTotals,
+          ...displayCategoryTotals,
         });
         categoryTotalRow.eachCell((cell) => {
           cell.font = { bold: true };
@@ -668,12 +697,13 @@ export const GenerateMdfStockReportByPelletExcel = async (
         });
       });
 
+    const { challan_sheets: _cs2, challan_sqm: _csq2, ...displayGrandTotals } = grandTotals;
     const grandTotalRow = worksheet.addRow({
       pellet_no: '',
       mdf_sub_type: 'Total',
       thickness: '',
       size: '',
-      ...grandTotals,
+      ...displayGrandTotals,
     });
     grandTotalRow.eachCell((cell) => {
       cell.font = { bold: true };
