@@ -46,7 +46,7 @@ export const PeelingDailyReportExcel = catchAsync(
       },
       {
         $lookup: {
-          from: 'issue_for_peeling_wastage',
+          from: 'issues_for_peeling_wastage',
           localField: 'issue_for_peeling_id',
           foreignField: 'issue_for_peeling_id',
           as: 'wastage',
@@ -121,7 +121,7 @@ export const PeelingDailyReportExcel = catchAsync(
           rej_length: '$wastage.length',
           rej_diameter: '$wastage.diameter',
           rej_cmt: '$wastage.cmt',
-          remarks: { $ifNull: ['$wastage.remark', 'COMPLETE'] },
+          remarks: { $ifNull: ['$items.remark', ''] },
         },
       },
     ];

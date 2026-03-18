@@ -220,6 +220,7 @@ export const PressingStockRegisterReport3Excel = catchAsync(async (req, res, nex
         opening_sqm += openingByGroupDim.get(dimKey) ?? 0;
         allPdIdsForCombo.push(...(allPdIdsByGroupDim.get(dimKey) ?? []));
       }
+      opening_sqm = Math.max(0, opening_sqm);
 
       let sales = 0;
       let all_damage = 0;

@@ -191,7 +191,7 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
             ...grouping_data,
             order_id: order_item_data?.order_id,
             order_item_id: order_item_data?._id,
-            order_category: order_category.series_product,
+            order_category: order_category.raw,
             issue_status: issues_for_status?.order,
             grouping_done_item_id: grouping_item_data?._id,
             grouping_done_other_details_id:

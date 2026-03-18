@@ -234,12 +234,17 @@ export const TappingORClippingStockRegisterExcel = catchAsync(
 
             const issuedInPeriod = issueTotal;
 
-            // Opening = current available + issued in period - received in period
-            const openingBalance =
-              currentAvailable + issuedInPeriod - received;
+            // Opening = current available + issued in period - received in period (min 0)
+            const openingBalance = Math.max(
+              0,
+              currentAvailable + issuedInPeriod - received
+            );
 
-            // Closing = opening + received - issue total
-            const closingBalance = openingBalance + received - issueTotal;
+            // Closing = opening + received - issue total (min 0)
+            const closingBalance = Math.max(
+              0,
+              openingBalance + received - issueTotal
+            );
 
             return {
               item_group_name: item_sub_category_name,

@@ -113,12 +113,12 @@ The `data` field is a direct download URL for the generated Excel file.
 | 4 | Opening Balance (SQM)       | 0.00   | Computed (see Balance Formulas)            |
 | 5 | Grouping Done (Sheets)       | 0.00   | `SUM(items.no_of_sheets)`                  |
 | 6 | Grouping Done (SQM)          | 0.00   | `SUM(items.sqm)`                           |
-| 7 | Issue for tapping (Sheets)   | 0.00   | `SUM(history.no_of_sheets)` where `issue_status = 'tapping'` |
-| 8 | Issue for tapping (SQM)      | 0.00   | `SUM(history.sqm)` where `issue_status = 'tapping'` |
+| 7 | Issue for tapping (Sheets)   | 0.00   | `SUM(history)` where `issue_status='tapping'` OR `issued_for` in `['STOCK','SAMPLE']` OR (`issue_status='order'` AND `order_category!='RAW'`) |
+| 8 | Issue for tapping (SQM)      | 0.00   | Same as above (sqm) |
 | 9 | Issue for Challan (Sheets)   | 0.00   | `SUM(history.no_of_sheets)` where `issue_status = 'challan'` |
 |10 | Issue for Challan (SQM)      | 0.00   | `SUM(history.sqm)` where `issue_status = 'challan'` |
-|11 | Issue Sales (Sheets)         | 0.00   | `SUM(history.no_of_sheets)` where `issue_status = 'order'`   |
-|12 | Issue Sales (SQM)            | 0.00   | `SUM(history.sqm)` where `issue_status = 'order'`   |
+|11 | Issue Sales (Sheets)         | 0.00   | `SUM(history.no_of_sheets)` where `issue_status='order'` AND `order_category='RAW'`   |
+|12 | Issue Sales (SQM)            | 0.00   | `SUM(history.sqm)` where `issue_status='order'` AND `order_category='RAW'`   |
 |13 | Damage (Sheets)              | 0.00   | `SUM(items.no_of_sheets)` where `is_damaged = true`          |
 |14 | Damage (SQM)                 | 0.00   | `SUM(items.sqm)` where `is_damaged = true`          |
 |15 | Closing Balance (Sheets)     | 0.00   | Computed (see Balance Formulas)            |

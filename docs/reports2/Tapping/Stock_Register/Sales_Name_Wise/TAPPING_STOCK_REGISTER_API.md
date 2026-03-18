@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Tapping Stock Register API generates an Excel "Splicing Item Stock Register sales name wise" report for a given date range. It shows stock movement for each tapping item, broken down into Tapping received (Hand Splice and Machine Splice), Issue to Pressing, Process Waste, Sales (placeholder 0), and calculates Opening and Closing Balances.
+The Tapping Stock Register API generates an Excel "Splicing Item Stock Register sales name wise" report for a given date range. It shows stock movement for each tapping item, broken down into Tapping received (Hand Splice and Machine Splice), Issue to Pressing, Process Waste, Sales (from raw-order issues), and calculates Opening and Closing Balances.
 
 The existing `TappingORClipping` stock register (`/download-excel-tapping-or-clipping-stock-register`) is unchanged.
 
@@ -96,12 +96,12 @@ Splicing Item Stock Register sales name wise - DD/MM/YYYY and DD/MM/YYYY
 |---|--------|--------|-------|
 | 1 | Item Name | `tapping_done_items_details.item_sub_category_name` | Item category/group |
 | 2 | Sales Item Name | `tapping_done_items_details.item_name` | Specific item |
-| 3 | Opening Balance | Calculated | `currentAvailable + issuePressing − tappingReceived` |
+| 3 | Opening Balance | Calculated | `currentAvailable + issuePressing + sales − tappingReceived` |
 | 4 | Hand Splice | `tapping_done_items_details` + `tapping_done_other_details` | sqm in period, splicing_type = HAND |
 | 5 | Machine Splice | Same join | sqm in period, splicing_type = MACHINE |
-| 6 | Pressing | `tapping_done_history` | sqm issued to pressing in period |
+| 6 | Pressing | `tapping_done_history` | sqm issued to pressing (excl. order+RAW); `issued_for` STOCK/SAMPLE OR (ORDER AND `order_category`≠RAW) |
 | 7 | Process Waste | `issue_for_tapping_wastage` + `issue_for_tappings` | wastage sqm in period |
-| 8 | Sales | — | **0** (placeholder) |
+| 8 | Sales | `tapping_done_history` | sqm where `issued_for` ORDER AND `order_category`=RAW |
 | 9 | Closing Balance | Calculated | `Opening + Hand + Machine − Pressing − ProcessWaste − Sales` |
 
 ### Data Rows
@@ -126,14 +126,15 @@ Last row is **Total**, with sums of all numeric columns (cols 3–9).
 ### 2. Which Rows Appear
 Distinct `(item_sub_category_name, item_name)` from `tapping_done_items_details` (all records, not filtered to the period). All-zero rows are then dropped.
 
-### 3. Per-Row Aggregates (5 parallel queries per item pair)
+### 3. Per-Row Aggregates (6 parallel queries per item pair)
 
 | Quantity | Collection(s) | Filter | Meaning |
 |----------|--------------|--------|---------|
 | currentAvailable | `tapping_done_items_details` | Match item | SUM of `available_details.sqm` — current stock in tapping |
 | tappingHand | `tapping_done_items_details` + `tapping_done_other_details` | Join; `tapping_date` in range; `splicing_type IN ['HAND','HAND SPLICING']` | SQM received via hand splicing in period |
 | tappingMachine | Same join | `splicing_type IN ['MACHINE','MACHINE SPLICING']` | SQM received via machine splicing in period |
-| issuePressing | `tapping_done_history` | `createdAt` in range, match item | SQM issued to pressing in period |
+| issuePressing | `tapping_done_history` | `createdAt` in range, match item; `issued_for` STOCK/SAMPLE OR (ORDER AND `order_category`≠RAW) | SQM issued to pressing (excl. order+RAW) |
+| sales | `tapping_done_history` | `createdAt` in range, match item; `issued_for` ORDER AND `order_category`=RAW | SQM issued for raw orders (Sales) |
 | processWaste | `issue_for_tapping_wastage` + `issue_for_tappings` | Wastage `createdAt` in range; match item via lookup | Wastage SQM in period |
 
 ### 4. Balance Formulas
@@ -141,12 +142,12 @@ Distinct `(item_sub_category_name, item_name)` from `tapping_done_items_details`
 ```
 tappingReceived = tappingHand + tappingMachine
 
-Opening Balance  = currentAvailable + issuePressing − tappingReceived
+Opening Balance  = currentAvailable + issuePressing + sales − tappingReceived
 Closing Balance  = Opening + tappingReceived − issuePressing − processWaste − sales
 ```
 
 This derives Opening by "reversing" the period's activity on the current stock snapshot:
-- Add back what was issued out (issuePressing)
+- Add back what was issued out (issuePressing + sales)
 - Subtract what was received (tappingReceived)
 
 Closing then applies all movements to Opening.
@@ -235,4 +236,4 @@ window.open(response.data.result, '_blank');
 - Verify `issue_for_tapping_wastage` documents exist for the period and that `issue_for_tapping_item_id` correctly references `issue_for_tappings`.
 
 ### Sales Column Always Zero
-- `Sales` is a placeholder with no current data source. Contact the development team to wire in the appropriate collection when the sales tracking feature is implemented.
+- `Sales` comes from `tapping_done_history` where `issued_for` = ORDER and `order_category` = RAW. Verify that raw-order issues create history with `order_category: 'RAW'` and that the report date range includes those records.

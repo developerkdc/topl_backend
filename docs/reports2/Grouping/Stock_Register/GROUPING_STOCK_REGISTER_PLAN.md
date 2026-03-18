@@ -51,7 +51,7 @@
   2. `$lookup`: join `grouping_done_items_details` via `_id` → `grouping_done_other_details_id`
   3. `$unwind`: items
   4. `$lookup`: join `grouping_done_history` via `items._id` → `grouping_done_item_id`
-  5. `$addFields`: compute `item_issue_tapping`, `item_issue_challan`, `item_issue_sales` (sheets) and `item_issue_tapping_sqm`, `item_issue_challan_sqm`, `item_issue_sales_sqm` (SQM) using `$filter` + `$sum` over history array.
+  5. `$addFields`: compute `item_issue_tapping`, `item_issue_challan`, `item_issue_sales` (sheets) and SQM variants using `$filter` + `$sum` over history. Issue for tapping: `issue_status='tapping'` OR `issued_for` in `['STOCK','SAMPLE']` OR (`issue_status='order'` AND `order_category!='RAW'`). Issue Sales: `issue_status='order'` AND `order_category='RAW'`.
   6. `$group` by `(items.item_sub_category_name, items.item_name, grouping_done_date, items.log_no_code, items.thickness)`:
      - Sheets: `grouping_done`, `current_available`, `damage`, `issue_tapping`, `issue_challan`, `issue_sales`
      - SQM: `grouping_done_sqm`, `current_available_sqm`, `damage_sqm`, `issue_tapping_sqm`, `issue_challan_sqm`, `issue_sales_sqm`

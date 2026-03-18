@@ -201,6 +201,7 @@ export const PressingStockRegisterExcel = catchAsync(async (req, res, next) => {
       for (const gn of entry.group_nos) {
         opening_balance += openingByGroup.get(gn) ?? 0;
       }
+      opening_balance = Math.max(0, opening_balance);
 
       const received = entry.received_sqm;
       const process_waste = damage;

@@ -70,9 +70,9 @@ Join `grouping_done_history` via `grouping_done_item_id`.
 
 ### Stage 4 — `$addFields`
 Compute per-item issue totals (sheets + SQM) using `$filter` + `$sum`:
-- `item_issue_tapping`, `item_issue_tapping_sqm` — history with `issue_status = 'tapping'` (no_of_sheets, sqm)
+- `item_issue_tapping`, `item_issue_tapping_sqm` — history with `issue_status = 'tapping'` OR `issued_for` in `['STOCK','SAMPLE']` OR (`issue_status = 'order'` AND `order_category != 'RAW'`)
 - `item_issue_challan`, `item_issue_challan_sqm` — history with `issue_status = 'challan'`
-- `item_issue_sales`, `item_issue_sales_sqm`   — history with `issue_status = 'order'`
+- `item_issue_sales`, `item_issue_sales_sqm`   — history with `issue_status = 'order'` AND `order_category = 'RAW'`
 
 ### Stage 5 — `$group` (2-key)
 ```javascript

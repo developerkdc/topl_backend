@@ -293,7 +293,10 @@ export const LogWiseDressingReportExcel = catchAsync(async (req, res, next) => {
       const clipping = groupingIssueMap.get(logNo) || 0;
       const dyeing = smokingDyingIssueMap.get(logNo) || 0;
       const mixmatch = mixmatchMap.get(logNo) || 0;
-      const openingBalance = openingBalanceMap.get(logNo) ?? 0; // closing balance at end of day before date range
+      const openingBalance = Math.max(
+        0,
+        openingBalanceMap.get(logNo) ?? 0
+      ); // closing balance at end of day before date range (min 0)
       const issueBeforeVal = issueBeforeMap.get(logNo) || 0;
 
       const closingBalance = Math.max(0, openingBalance + receipt - issue);

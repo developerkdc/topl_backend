@@ -273,7 +273,7 @@ export const PressingStockRegisterReport1Excel = catchAsync(async (req, res, nex
     const stockData = combos.map((combo) => {
       const { item_name, sales_item_name, thickness, size, groupDims } = combo;
 
-      // Opening: sum pressing_done.sqm before start for each (group_no, thickness, length, width) in combo
+      // Opening: sum pressing_done.sqm before start for each (group_no, thickness, length, width) in combo (min 0)
       let opening_sqm = 0;
       const allPdIdsForCombo = [];
       for (const dim of groupDims) {
@@ -281,6 +281,7 @@ export const PressingStockRegisterReport1Excel = catchAsync(async (req, res, nex
         opening_sqm += openingByGroupDim.get(dimKey) ?? 0;
         allPdIdsForCombo.push(...(allPdIdsByGroupDim.get(dimKey) ?? []));
       }
+      opening_sqm = Math.max(0, opening_sqm);
 
       const uniquePdIds = [...new Set(allPdIdsForCombo.map((id) => id.toString()))];
       let sales_raw = 0;

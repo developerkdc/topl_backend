@@ -100,6 +100,17 @@ export const GroupingStockRegisterExcel = catchAsync(
                         { $eq: ['$$this.issue_status', 'tapping'] },
                         { $eq: ['$$this.issued_for', 'STOCK'] },
                         { $eq: ['$$this.issued_for', 'SAMPLE'] },
+                        {
+                          $and: [
+                            {
+                              $or: [
+                                { $eq: ['$$this.issue_status', 'order'] },
+                                { $eq: ['$$this.issued_for', 'ORDER'] },
+                              ],
+                            },
+                            { $ne: ['$$this.order_category', 'RAW'] },
+                          ],
+                        },
                       ],
                     },
                   },
@@ -119,6 +130,17 @@ export const GroupingStockRegisterExcel = catchAsync(
                         { $eq: ['$$this.issue_status', 'tapping'] },
                         { $eq: ['$$this.issued_for', 'STOCK'] },
                         { $eq: ['$$this.issued_for', 'SAMPLE'] },
+                        {
+                          $and: [
+                            {
+                              $or: [
+                                { $eq: ['$$this.issue_status', 'order'] },
+                                { $eq: ['$$this.issued_for', 'ORDER'] },
+                              ],
+                            },
+                            { $ne: ['$$this.order_category', 'RAW'] },
+                          ],
+                        },
                       ],
                     },
                   },
@@ -160,9 +182,14 @@ export const GroupingStockRegisterExcel = catchAsync(
                   $filter: {
                     input: '$item_history',
                     cond: {
-                      $or: [
-                        { $eq: ['$$this.issue_status', 'order'] },
-                        { $eq: ['$$this.issued_for', 'ORDER'] },
+                      $and: [
+                        {
+                          $or: [
+                            { $eq: ['$$this.issue_status', 'order'] },
+                            { $eq: ['$$this.issued_for', 'ORDER'] },
+                          ],
+                        },
+                        { $eq: ['$$this.order_category', 'RAW'] },
                       ],
                     },
                   },
@@ -178,9 +205,14 @@ export const GroupingStockRegisterExcel = catchAsync(
                   $filter: {
                     input: '$item_history',
                     cond: {
-                      $or: [
-                        { $eq: ['$$this.issue_status', 'order'] },
-                        { $eq: ['$$this.issued_for', 'ORDER'] },
+                      $and: [
+                        {
+                          $or: [
+                            { $eq: ['$$this.issue_status', 'order'] },
+                            { $eq: ['$$this.issued_for', 'ORDER'] },
+                          ],
+                        },
+                        { $eq: ['$$this.order_category', 'RAW'] },
                       ],
                     },
                   },
@@ -273,13 +305,29 @@ export const GroupingStockRegisterExcel = catchAsync(
               { $eq: ['$issue_status', 'tapping'] },
               { $eq: ['$issued_for', 'STOCK'] },
               { $eq: ['$issued_for', 'SAMPLE'] },
+              {
+                $and: [
+                  {
+                    $or: [
+                      { $eq: ['$issue_status', 'order'] },
+                      { $eq: ['$issued_for', 'ORDER'] },
+                    ],
+                  },
+                  { $ne: ['$order_category', 'RAW'] },
+                ],
+              },
             ],
           },
           is_challan: { $eq: ['$issue_status', 'challan'] },
           is_order: {
-            $or: [
-              { $eq: ['$issue_status', 'order'] },
-              { $eq: ['$issued_for', 'ORDER'] },
+            $and: [
+              {
+                $or: [
+                  { $eq: ['$issue_status', 'order'] },
+                  { $eq: ['$issued_for', 'ORDER'] },
+                ],
+              },
+              { $eq: ['$order_category', 'RAW'] },
             ],
           },
         },
@@ -452,20 +500,24 @@ export const GroupingStockRegisterExcel = catchAsync(
           (r.grouping_done_sqm || 0)
       );
 
-      const closing_balance =
+      const closing_balance = Math.max(
+        0,
         opening_balance +
-        (r.grouping_done || 0) -
-        (r.issue_tapping || 0) -
-        (r.issue_challan || 0) -
-        (r.issue_sales || 0) -
-        (r.damage || 0);
-      const closing_balance_sqm =
+          (r.grouping_done || 0) -
+          (r.issue_tapping || 0) -
+          (r.issue_challan || 0) -
+          (r.issue_sales || 0) -
+          (r.damage || 0)
+      );
+      const closing_balance_sqm = Math.max(
+        0,
         opening_balance_sqm +
-        (r.grouping_done_sqm || 0) -
-        (r.issue_tapping_sqm || 0) -
-        (r.issue_challan_sqm || 0) -
-        (r.issue_sales_sqm || 0) -
-        (r.damage_sqm || 0);
+          (r.grouping_done_sqm || 0) -
+          (r.issue_tapping_sqm || 0) -
+          (r.issue_challan_sqm || 0) -
+          (r.issue_sales_sqm || 0) -
+          (r.damage_sqm || 0)
+      );
 
       return {
         item_group_name: r._id.item_sub_category_name,

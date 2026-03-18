@@ -97,10 +97,10 @@ Splicing Details Report Date: DD/MM/YYYY
 | 4 | Length | `items.length` | Formatted 2 dp |
 | 5 | Width | `items.width` | Formatted 2 dp |
 | 6 | Sheets | `items.no_of_sheets` | Total sheets for this log entry |
-| 7 | Machine Splicing — Sheets | `items.no_of_sheets` if `splicing_type = 'MACHINE'`, else 0 | |
-| 8 | Machine Splicing — SQ Mtr | `items.sqm` if `splicing_type = 'MACHINE'`, else 0 | |
-| 9 | Hand Splicing — Sheets | `items.no_of_sheets` if `splicing_type = 'HAND'`, else 0 | |
-| 10 | Hand Splicing — SQ Mtr | `items.sqm` if `splicing_type = 'HAND'`, else 0 | |
+| 7 | Machine Splicing — Sheets | `items.no_of_sheets` if `splicing_type` IN ['MACHINE','MACHINE SPLICING'], else 0 | |
+| 8 | Machine Splicing — SQ Mtr | `items.sqm` if `splicing_type` IN ['MACHINE','MACHINE SPLICING'], else 0 | |
+| 9 | Hand Splicing — Sheets | `items.no_of_sheets` if `splicing_type` IN ['HAND','HAND SPLICING'], else 0 | |
+| 10 | Hand Splicing — SQ Mtr | `items.sqm` if `splicing_type` IN ['HAND','HAND SPLICING'], else 0 | |
 | 11 | Character | `items.character_name` | |
 | 12 | Pattern | `items.pattern_name` | |
 | 13 | Series | `items.series_name` | |
@@ -201,10 +201,10 @@ Placed below the main table. Label "Summery" appears as a bold title row.
 | Length | tapping_done_items_details | length | |
 | Width | tapping_done_items_details | width | |
 | Sheets | tapping_done_items_details | no_of_sheets | |
-| Machine Splicing Sheets | tapping_done_items_details | no_of_sheets | Only if splicing_type = 'MACHINE' |
-| Machine Splicing SQ Mtr | tapping_done_items_details | sqm | Only if splicing_type = 'MACHINE' |
-| Hand Splicing Sheets | tapping_done_items_details | no_of_sheets | Only if splicing_type = 'HAND' |
-| Hand Splicing SQ Mtr | tapping_done_items_details | sqm | Only if splicing_type = 'HAND' |
+| Machine Splicing Sheets | tapping_done_items_details | no_of_sheets | Only if splicing_type IN ['MACHINE','MACHINE SPLICING'] |
+| Machine Splicing SQ Mtr | tapping_done_items_details | sqm | Only if splicing_type IN ['MACHINE','MACHINE SPLICING'] |
+| Hand Splicing Sheets | tapping_done_items_details | no_of_sheets | Only if splicing_type IN ['HAND','HAND SPLICING'] |
+| Hand Splicing SQ Mtr | tapping_done_items_details | sqm | Only if splicing_type IN ['HAND','HAND SPLICING'] |
 | Character | tapping_done_items_details | character_name | |
 | Pattern | tapping_done_items_details | pattern_name | |
 | Series | tapping_done_items_details | series_name | |
@@ -300,7 +300,7 @@ window.open(response.data.result, '_blank');
 - Confirm tapping sessions exist in `tapping_done_other_details` for that date.
 
 ### Machine/Hand Columns All Zero
-- Check that `splicing_type` is populated on `tapping_done_other_details` documents (`'MACHINE'` or `'HAND'`, uppercase).
+- Check that `splicing_type` is populated on `tapping_done_other_details` documents. Supported values: `'MACHINE'`, `'MACHINE SPLICING'`, `'HAND'`, or `'HAND SPLICING'` (uppercase).
 
 ### Issue Columns All Zero
 - Check that `issue_for_tapping_item_id` is populated on `tapping_done_other_details` and the referenced `issue_for_tappings` document exists.

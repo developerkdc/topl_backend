@@ -166,11 +166,13 @@ export const DressingStockRegisterExcel = catchAsync(async (req, res, next) => {
             item_name,
           };
 
-          // Opening = closing balance at end of day before date range (from precomputed map)
-          const openingBalance =
+          // Opening = closing balance at end of day before date range (from precomputed map, min 0)
+          const openingBalance = Math.max(
+            0,
             openingBalanceByPair.get(
               pairKey(item_sub_category_name, item_name)
-            ) ?? 0;
+            ) ?? 0
+          );
 
           // Receipt in period: join with dressing_done_other_details, dressing_date in range
           const receiptResult = await dressing_done_items_model.aggregate([
