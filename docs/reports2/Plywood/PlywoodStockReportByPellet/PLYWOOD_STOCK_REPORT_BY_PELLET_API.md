@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Plywood Stock Report by Pellet No. API (reports2) generates a dynamic inventory report with the same structure as the standard Plywood Stock Report, but with each row representing an individual pellet (pallet). Data is grouped by **plywood sub-category**, with **Pellet No.** (pallet_number) as the first column. The report shows opening stock, receives, consumption, sales, issue for ply resizing, issue for pressing, and closing stock for a given date range.
+The Plywood Stock Report by Pellet No. API (reports2) generates a dynamic inventory report with the same structure as the standard Plywood Stock Report, but with each row representing an individual pellet (pallet). Data is grouped by **plywood sub-category**, with **Pellet No.** (pallet_number) as the first column. The report shows opening stock, receives, consumption (total of challan, order, resizing, pressing), challan, order, issue for ply resizing, issue for pressing, and closing stock for a given date range.
 
 ## Endpoint
 
@@ -156,16 +156,18 @@ Plywood Type [ CATEGORY ]   stock  in the period  DD/MM/YYYY and DD/MM/YYYY
 | 6   | Opening Metres                | Opening stock (sq m)              |
 | 7   | Received Sheets               | Received in period (sheets)       |
 | 8   | Received Mtrs                 | Received (sq m)                   |
-| 9   | Consumed Sheets               | Consumed in period (sheets)       |
-| 10  | Consumed Mtrs                 | Consumed (sq m)                   |
-| 11  | Sales Sheets                  | Sold in period (sheets)           |
-| 12  | Sales Mtrs                    | Sold (sq m)                       |
-| 13  | Issue For Ply Resizing Sheet  | Issued for ply resizing (sheets)  |
-| 14  | Issue For Ply Resizing Sq Met | Issued for ply resizing (sq m)    |
-| 15  | Issue For Pressing            | Issued for pressing (sheets)      |
-| 16  | Issue For Pressing Sq Met     | Issued for pressing (sq m)        |
-| 17  | Closing sheets                | Closing stock (sheets)            |
-| 18  | Closing Metres                | Closing stock (sq m)              |
+| 9   | Consumed Sheets               | Total consumed (challan + order + resizing + pressing) (sheets) |
+| 10  | Consumed Mtrs                 | Total consumed (sq m)            |
+| 11  | Challan Sheets                | Issued for challan (sheets)      |
+| 12  | Challan Mtrs                  | Issued for challan (sq m)        |
+| 13  | Order Sheets                  | Issued for order (sheets)        |
+| 14  | Order Mtrs                    | Issued for order (sq m)          |
+| 15  | Issue For Ply Resizing Sheet  | Issued for ply resizing (sheets)  |
+| 16  | Issue For Ply Resizing Sq Met | Issued for ply resizing (sq m)    |
+| 17  | Issue For Pressing            | Issued for pressing (sheets)      |
+| 18  | Issue For Pressing Sq Met     | Issued for pressing (sq m)        |
+| 19  | Closing sheets                | Closing stock (sheets)            |
+| 20  | Closing Metres                | Closing stock (sq m)              |
 
 
 - Data grouped by **Plywood Sub Category**; subtotal row after each category; grand total at the end.
@@ -178,18 +180,19 @@ All values are computed in **sheets** and **square meters** per pellet.
 ### Formulas
 
 - **Opening (sheets):**  
-`Opening Sheets = Current Available Sheets + (Consumed + Sold) Sheets - Received Sheets`
+`Opening Sheets = Current Available Sheets + Consumed Sheets - Received Sheets`
 - **Opening (sq m):**  
-`Opening Sqm = Current Available Sqm + (Consumed + Sold) Sqm - Received Sqm`
-- **Receives:** For each pellet, if its invoice `inward_date` is between startDate and endDate, use `sheets` and `total_sq_meter`; else 0.
-- **Consumption:** From plywood history where `plywood_item_id` = pellet `_id`, `issue_status` in `['order', 'pressing', 'plywood_resizing']` and `createdAt` in period; sum `issued_sheets` and `issued_sqm`.
-- **Sales:** From plywood history where `plywood_item_id` = pellet `_id`, `issue_status = 'challan'` and `createdAt` in period; sum `issued_sheets` and `issued_sqm`.
+`Opening Sqm = Current Available Sqm + Consumed Sqm - Received Sqm`
+- **Receives:** For each pellet, if its invoice `inward_date` is between startDate and endDate (end date includes full day 23:59:59.999 UTC), use `sheets` and `total_sq_meter`; else 0.
+- **Consumed:** Total of challan + order + ply resizing + pressing. Sum of `issued_sheets` and `issued_sqm` from plywood history where `plywood_item_id` = pellet `_id`, `issue_status` in `['challan', 'order', 'plywood_resizing', 'pressing']` and `createdAt` in period.
+- **Challan:** From plywood history where `plywood_item_id` = pellet `_id`, `issue_status = 'challan'` and `createdAt` in period; sum `issued_sheets` and `issued_sqm`.
+- **Order:** From plywood history where `plywood_item_id` = pellet `_id`, `issue_status = 'order'` and `createdAt` in period; sum `issued_sheets` and `issued_sqm`.
 - **Issue for ply resizing:** From plywood history where `plywood_item_id` = pellet `_id`, `issue_status = 'plywood_resizing'` and `createdAt` in period; sum `issued_sheets` and `issued_sqm`.
 - **Issue for pressing:** From plywood history where `plywood_item_id` = pellet `_id`, `issue_status = 'pressing'` and `createdAt` in period; sum `issued_sheets` and `issued_sqm`.
 - **Closing:**  
-`Closing = Opening + Receive - Consume - Sales` (in both sheets and sq m).
+`Closing = Opening + Receive - Consume` (in both sheets and sq m).
 
-Only rows that had **at least one movement in the period** (receive, consume, sales, issue for ply resizing, or issue for pressing) are included. If there was no such activity in the date range, no rows are shown and the API returns 404. All stock values are output as non-negative (`Math.max(0, value)`).
+Only rows that had **at least one movement in the period** (receive, consume, challan, order, issue for ply resizing, or issue for pressing) are included. If there was no such activity in the date range, no rows are shown and the API returns 404. All stock values are output as non-negative (`Math.max(0, value)`).
 
 ## Database Collections Used
 
@@ -222,7 +225,8 @@ window.open(downloadUrl, '_blank');
 
 ## Notes
 
-- Report includes only rows that had at least one movement in the period (receive, consume, sales, issue for ply resizing, or issue for pressing). If the date range has no such activity, the report returns 404 with "No stock data found for the selected period".
+- Report includes only rows that had at least one movement in the period (receive, consume, challan, order, issue for ply resizing, or issue for pressing). If the date range has no such activity, the report returns 404 with "No stock data found for the selected period".
+- Date range: end date includes the full day (23:59:59.999 UTC) so transactions on the end date are included.
 - Each row corresponds to one pellet (pallet_number) from plywood_inventory_items_details.
 - Excel files are timestamped to avoid overwriting.
 - Files are stored under `public/upload/reports/reports2/Plywood/`.

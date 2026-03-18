@@ -99,7 +99,7 @@ Slicing Details Report Date: 02/04/2025
 1. **Rej. Height** – Rejection height
 2. **Rej. Width** – Rejection width
 3. **Rej. CMT** – Rejection CMT
-4. **Remarks** – e.g. COMPLETE or wastage remark
+4. **Remarks** – Actual wastage remark (empty if none)
 
 **Totals:**
 
@@ -218,7 +218,7 @@ const generateSlicingReport = async () => {
 - CMT: 3 decimal places; dimensions: 2 decimal places.
 - Excel filenames are timestamped to avoid overwrites.
 - Files are stored in: `public/reports/Slicing/`.
-- If no wastage record exists, Remarks defaults to "COMPLETE".
+- If no wastage record exists, Remarks is empty.
 - Sq Mtr is output as 0.00 (not computed in current implementation).
 
 ## File Storage
@@ -235,8 +235,8 @@ const generateSlicingReport = async () => {
 Slicing Details Report Date: 02/04/2025
 
 Item Name | Flitch No | Thickness | Length | Width | Height | CMT   | Leaves | Sq Mtr | Rej. Height | Rej. Width | Rej. CMT | Remarks
-SAPELI    | D252A1A   | 0.40      | 3.15   | 0.68  | 0.40   | 0.721 | 1660   | 0.00   | 0.40        | 0.02       | 0.025    | COMPLETE
-          | D252A2A   | 0.40      | 3.15   | 0.60  | 0.44   | 0.669 | 1470   | 0.00   | 0.44        | 0.02       | 0.028    | COMPLETE
+SAPELI    | D252A1A   | 0.40      | 3.15   | 0.68  | 0.40   | 0.721 | 1660   | 0.00   | 0.40        | 0.02       | 0.025    | actual remark
+          | D252A2A   | 0.40      | 3.15   | 0.60  | 0.44   | 0.669 | 1470   | 0.00   | 0.44        | 0.02       | 0.028    | actual remark
           | ...       |           |        |       |        |       |        |        |             |            |          |
           | Total     |           |        |       |        | 3.650 | 7610   | 0.00   |             |            | 0.143    |
 
@@ -266,7 +266,7 @@ If you get 404:
 
 ### Missing rejection data
 
-- Rejection: requires an **issue_for_slicing_wastage** row for that session's `issue_for_slicing_id`; otherwise Rej. columns will be empty and Remarks defaults to "COMPLETE".
+- Rejection: requires an **issue_for_slicing_wastage** row for that session's `issue_for_slicing_id`; otherwise Rej. columns will be empty and Remarks will be empty.
 
 ## Technical Implementation
 

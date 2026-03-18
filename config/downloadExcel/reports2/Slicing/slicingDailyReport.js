@@ -54,7 +54,7 @@ const groupRows = (rows) => {
       rej_height: r.rej_height,
       rej_width: r.rej_width,
       rej_cmt: rejCmt,
-      remarks: r.remarks || 'COMPLETE',
+      remarks: r.remarks ?? '',
     });
     byItem[itemName].leaves += leaves;
 
@@ -171,12 +171,10 @@ const GenerateSlicingDailyReport = async (rows, reportDate) => {
       row.getCell(rejStartCol + 2).value = r.rej_cmt;
       row.getCell(rejStartCol + 3).value = r.remarks;
 
-      [3, 4, 5, 6, 7, 9, rejStartCol, rejStartCol + 1, rejStartCol + 2].forEach((col) => {
+      [3, 4, 5, 6, 7, 8, 9, rejStartCol, rejStartCol + 1, rejStartCol + 2].forEach((col) => {
         const c = row.getCell(col);
-        if (typeof c.value === 'number') c.numFmt = '0.00';
+        if (typeof c.value === 'number') c.numFmt = '0.000';
       });
-      if (typeof row.getCell(7).value === 'number') row.getCell(7).numFmt = '0.000';
-      if (typeof row.getCell(rejStartCol + 2).value === 'number') row.getCell(rejStartCol + 2).numFmt = '0.000';
 
       totalCmt += r.cmt;
       totalLeaves += r.leaves;
@@ -194,11 +192,18 @@ const GenerateSlicingDailyReport = async (rows, reportDate) => {
     totalRow.getCell(7).numFmt = '0.000';
     totalRow.getCell(8).value = totalLeaves;
     totalRow.getCell(8).font = { bold: true };
+    totalRow.getCell(8).numFmt = '0.000';
     totalRow.getCell(9).value = totalSqMtr;
     totalRow.getCell(9).font = { bold: true };
+    totalRow.getCell(9).numFmt = '0.000';
     totalRow.getCell(rejStartCol + 2).value = totalRejCmt;
     totalRow.getCell(rejStartCol + 2).font = { bold: true };
     totalRow.getCell(rejStartCol + 2).numFmt = '0.000';
+    for (let col = 1; col <= mainColCount + rejHeaders.length; col++) {
+      const cell = totalRow.getCell(col);
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8E8E8' } };
+      setCellStyle(cell);
+    }
     currentRow++;
 
     grandFlitchCmt += itemData.flitch_cmt;
@@ -229,7 +234,7 @@ const GenerateSlicingDailyReport = async (rows, reportDate) => {
     row.getCell(3).value = itemData.rej_cmt;
     row.getCell(4).value = sliceCmt;
     row.getCell(5).value = itemData.leaves;
-    [2, 3, 4].forEach((col) => {
+    [2, 3, 4, 5].forEach((col) => {
       const c = row.getCell(col);
       if (typeof c.value === 'number') c.numFmt = '0.000';
     });
@@ -244,10 +249,15 @@ const GenerateSlicingDailyReport = async (rows, reportDate) => {
   summaryTotalRow.getCell(4).value = grandFlitchCmt - grandRejCmt;
   summaryTotalRow.getCell(5).value = grandLeaves;
   summaryTotalRow.font = { bold: true };
-  [2, 3, 4].forEach((col) => {
+  [2, 3, 4, 5].forEach((col) => {
     const c = summaryTotalRow.getCell(col);
     if (typeof c.value === 'number') c.numFmt = '0.000';
   });
+  for (let col = 1; col <= 5; col++) {
+    const cell = summaryTotalRow.getCell(col);
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8E8E8' } };
+    setCellStyle(cell);
+  }
 
   worksheet.columns = [
     { width: 14 },
