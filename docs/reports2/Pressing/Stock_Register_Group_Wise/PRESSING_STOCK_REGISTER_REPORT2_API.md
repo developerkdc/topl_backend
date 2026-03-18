@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Pressing Stock Register Report 2 API generates an Excel report showing pressing item stock at **transaction (group) level** — one row per group number, grouped and subtotalled by **Item Name**. The report includes Group no, Photo No (from `photos`), Order No (order number from `orders` when `issued_for` = ORDER, else empty), Thickness, Size, Opening SqMtr, Issued for pressing SqMtr, Pressing received SqMtr, Pressing Waste SqMtr, and Closing SqMtr. Each Item Name group has a **Total** (subtotal) row, and the report ends with a **Total** (grand total) row.
+The Pressing Stock Register Report 2 API generates an Excel report showing pressing item stock at **transaction (group) level** — one row per group number, grouped and subtotalled by **Item Name**. The report includes Group no, Photo No (from `photos`), Order No (order number from `orders` when `issued_for` = ORDER, else empty), Issued Thickness (from consumed issues), Received Thickness (pressing output), Size, Opening SqMtr, Issued for pressing SqMtr, Pressing received SqMtr, Pressing Waste SqMtr, and Closing SqMtr. Each Item Name group has a **Total** (subtotal) row, and the report ends with a **Total** (grand total) row.
 
 Data is sourced from `issues_for_pressing` (issued from splicing to pressing), `pressing_done_details` (pressing run output, order_id when issued_for=ORDER), `orders` (order_no for Order No column), `pressing_damage` (pressing waste), and `photos` (photo number via group_no or hybrid_group_no).
 
@@ -141,12 +141,13 @@ A developer should be able to understand the report from this section without re
 | **pressing_damage** | All Damage — pressing-stage waste per run | `pressing_done_details_id`, `sqm` |
 | **issues_for_pressing** | Resolves `item_name` via group_no; provides current_available and inflow | `group_no`, `item_name`, `sqm`, `available_details.sqm`, `is_pressing_done`, `createdAt` |
 | **photos** | Photo number per group | `group_no`, `photo_number`, `hybrid_group_no` |
+| **pressing_done_consumed_items_details** | Consumed items per pressing run | `pressing_done_details_id`, `group_details` (group_no, thickness) |
 
 - **Join (Pressing received)**: `pressing_done_details` where `pressing_date` ∈ [start, end] → sum(`sqm`) per group/dimension.
 - **Join (Sales)**: `pressing_done_history.issued_item_id` ∈ pressing_done `_id`s in period → sum(`sqm`) per group.
 - **Join (All Damage)**: `pressing_damage.pressing_done_details_id` ∈ pressing_done `_id`s in period → sum(`sqm`) per group.
 - **Current available**: `issues_for_pressing` where `is_pressing_done = false` → sum(`available_details.sqm`) per `group_no`.
-- **Issued for pressing**: `issues_for_pressing.createdAt` ∈ [start, end] → sum(`sqm`) per `(group_no, thickness, length, width)`.
+- **Issued for pressing**: `issues_for_pressing.createdAt` ∈ [start, end] → sum(`sqm`) per `(group_no, thickness, length, width)`. When dimension match returns 0 but pressing was done, fallback to sum from `pressing_done_consumed_items_details.group_details` (consumed sqm).
 
 ### 4. Per-row aggregates (for each group row)
 
@@ -198,7 +199,7 @@ Pressing Item Stock Register between group no wise DD/MM/YYYY and DD/MM/YYYY
 
 Example: `Pressing Item Stock Register between group no wise 01/03/2025 and 31/03/2025`
 
-### Column Headers (11 columns, single row)
+### Column Headers (12 columns, single row)
 
 | # | Column | Description |
 |---|--------|-------------|
@@ -206,13 +207,14 @@ Example: `Pressing Item Stock Register between group no wise 01/03/2025 and 31/0
 | 2 | Group no | Group number from issues_for_pressing |
 | 3 | Photo No | `photo_number` from photos collection |
 | 4 | Order No | `orders.order_no` when `pressing_done_details.issued_for` = ORDER, else empty |
-| 5 | Thickness | Veneer thickness (mm), numFmt 0.00 |
-| 6 | Size | `length X width` (string) |
-| 7 | Opening SqMtr | Stock at pressing stage at start of period |
-| 8 | Issued for pressing SqMtr | Issued from splicing to pressing in period |
-| 9 | Pressing received Sqmtr | Pressed output in period |
-| 10 | Pressing Waste SqMtr | Pressing waste in period |
-| 11 | Closing SqMtr | Stock at pressing stage at end of period |
+| 5 | Issued Thickness | Veneer thickness (mm) from pressing_done_consumed_items_details.group_details — thickness when issued |
+| 6 | Received Thickness | Veneer thickness (mm) from pressing_done_details — pressed output |
+| 7 | Size | `length X width` (string) |
+| 8 | Opening SqMtr | Stock at pressing stage at start of period |
+| 9 | Issued for pressing SqMtr | Issued from splicing to pressing in period |
+| 10 | Pressing received Sqmtr | Pressed output in period |
+| 11 | Pressing Waste SqMtr | Pressing waste in period |
+| 12 | Closing SqMtr | Stock at pressing stage at end of period |
 
 ### Data Rows
 
@@ -224,12 +226,12 @@ Example: `Pressing Item Stock Register between group no wise 01/03/2025 and 31/0
 ### Item Name Total Rows
 
 - After each Item Name's detail rows, a **Total** row sums Opening SqMtr, Issued for pressing SqMtr, Pressing received Sqmtr, Pressing Waste SqMtr, Closing SqMtr for that group only.
-- **The Total row is separate from item details** — it is not merged with the Item Name cell. Col 1 shows **Total**; Col 2 shows **Total**; cols 3–6 are blank.
+- **The Total row is separate from item details** — it is not merged with the Item Name cell. Col 1 shows **Total**; Col 2 shows **Total**; cols 3–7 are blank.
 
 ### Grand Total Row
 
 - Last row is **Total**, with sums of all numeric columns across the entire report.
-- **The Grand Total row is separate from item details and subtotal rows.** Col 1: **Total**; cols 2–6 blank.
+- **The Grand Total row is separate from item details and subtotal rows.** Col 1: **Total**; cols 2–7 blank.
 
 ---
 
@@ -241,13 +243,14 @@ Example: `Pressing Item Stock Register between group no wise 01/03/2025 and 31/0
 | 2 | Group no | `group_no` | issues_for_pressing.group_no | |
 | 3 | Photo No | `photo_no` | photos.photo_number via group_no or hybrid_group_no.group_no | Empty string if no match; hybrid veneer groups in hybrid_group_no also resolve |
 | 4 | Order No | `order_no` | orders.order_no when pressing_done_details.issued_for = ORDER, else empty | Empty when issued_for is STOCK or SAMPLE |
-| 5 | Thickness | `thickness` | issues_for_pressing.thickness | numFmt 0.00 |
-| 6 | Size | `size` | `length X width` string | |
-| 7 | Opening SqMtr | `opening_sqm` | current_available + pressing_received + pressing_waste − issued_for_pressing | |
-| 8 | Issued for pressing SqMtr | `issued_for_pressing` | issues_for_pressing.sqm where createdAt in range, per (group_no, thickness, length, width) | |
-| 9 | Pressing received Sqmtr | `pressing_received` | pressing_done_details.sqm where pressing_date in range | |
-| 10 | Pressing Waste SqMtr | `pressing_waste` | pressing_damage.sqm via pressing_done_details in period | |
-| 11 | Closing SqMtr | `closing_sqm` | current_available | = Opening + issued − received − waste |
+| 5 | Issued Thickness | `issued_thickness` | issues_for_pressing.thickness when dimKey matches; else pressing_done_consumed_items_details.group_details.thickness | Primary from issues (covers issued-but-not-pressed); fallback from consumed when dimension mismatch |
+| 6 | Received Thickness | `received_thickness` | pressing_done_details.thickness | Thickness of pressed output; numFmt 0.00 |
+| 7 | Size | `size` | `length X width` string | |
+| 8 | Opening SqMtr | `opening_sqm` | current_available + pressing_received + pressing_waste − issued_for_pressing | |
+| 9 | Issued for pressing SqMtr | `issued_for_pressing` | issues_for_pressing.sqm when dimKey matches; else sum from pressing_done_consumed_items_details.group_details | Never 0 when pressing_received > 0 |
+| 10 | Pressing received Sqmtr | `pressing_received` | pressing_done_details.sqm where pressing_date in range | |
+| 11 | Pressing Waste SqMtr | `pressing_waste` | pressing_damage.sqm via pressing_done_details in period | |
+| 12 | Closing SqMtr | `closing_sqm` | current_available | = Opening + issued − received − waste |
 
 ---
 
@@ -257,7 +260,7 @@ Example: `Pressing Item Stock Register between group no wise 01/03/2025 and 31/0
 
 1. **issues_for_pressing** (items issued from splicing/tapping to pressing)
    - Key fields: `group_no`, `item_name`, `thickness`, `length`, `width`, `sqm`, `available_details.sqm`, `is_pressing_done`, `createdAt`.
-   - Used for: distinct (group_no, item_name); issued in period = sum(sqm) where createdAt in range, **per (group_no, thickness, length, width)**; current available = sum(available_details.sqm) where is_pressing_done = false.
+   - Used for: distinct (group_no, item_name); issued in period = sum(sqm) where createdAt in range, **per (group_no, thickness, length, width)**; fallback to consumed sqm when dimension mismatch; current available = sum(available_details.sqm) where is_pressing_done = false.
 
 2. **pressing_done_details** (one document per pressing run)
    - Key fields: `_id`, `group_no`, `order_id`, `issued_for`, `sqm`, `pressing_date`.
@@ -350,6 +353,7 @@ const generatePressingStockRegisterReport2 = async () => {
 - **Order No** shows `orders.order_no` when `pressing_done_details.issued_for` = ORDER, else empty. Resolved via pressing_done_details.order_id → orders._id → orders.order_no. When issued_for is STOCK or SAMPLE, Order No is blank.
 - **Pressing received** and **Pressing Waste** are attributed to the primary `group_no` field of `pressing_done_details`. Groups that appear only in `group_no_array` (secondary groups in a multi-group pressing run) are not credited in this report.
 - **Photo No** defaults to empty string if no `photos` document exists for the group_no. For hybrid veneer, groups listed in `photos.hybrid_group_no` also resolve to the same photo_number.
+- **Issued Thickness** vs **Received Thickness**: Issued Thickness comes from `issues_for_pressing` when dimensions match (covers issued-but-not-pressed items); fallback from `pressing_done_consumed_items_details.group_details` when dimension mismatch. Received Thickness is from `pressing_done_details` (pressed output). Issued for pressing SqMtr includes all items issued in the period, including those not yet pressed.
 - All rows from `issues_for_pressing` (all time) form the universe of groups. Rows with all-zero metrics are excluded.
 - Excel files are timestamped; stored in `public/upload/reports/reports2/Pressing/`.
 
@@ -368,12 +372,12 @@ const generatePressingStockRegisterReport2 = async () => {
 ```
 Pressing Item Stock Register between group no wise 01/03/2025 and 31/03/2025
 
-Item Name        | Group no | Photo No | Order No | Thickness | Size        | Opening SqMtr | Issued for pressing SqMtr | Pressing received Sqmtr | Pressing Waste SqMtr | Closing SqMtr
-AMERICAN WALNUT  | G-001    | AW-P-01  | PR-2025  | 0.50      | 2440 X 1220 | 12.56         | 8.00                      | 6.00                    | 0.20                 | 12.56
-AMERICAN WALNUT  | G-002    | AW-P-02  | PR-2025  | 0.50      | 2440 X 610  | 4.20          | 3.10                      | 2.80                    | 0.05                 | 4.20
-AMERICAN WALNUT  | Total    |          |          |           |             | 16.76         | 11.10                     | 8.80                    | 0.25                 | 16.76
+Item Name        | Group no | Photo No | Order No | Issued Thickness | Received Thickness | Size        | Opening SqMtr | Issued for pressing SqMtr | Pressing received Sqmtr | Pressing Waste SqMtr | Closing SqMtr
+AMERICAN WALNUT  | G-001    | AW-P-01  | PR-2025  | 0.50              | 0.50               | 2440 X 1220 | 12.56         | 8.00                      | 6.00                    | 0.20                 | 12.56
+AMERICAN WALNUT  | G-002    | AW-P-02  | PR-2025  | 0.50              | 0.50               | 2440 X 610  | 4.20          | 3.10                      | 2.80                    | 0.05                 | 4.20
+AMERICAN WALNUT  | Total    |          |          |                     |                  |             | 16.76         | 11.10                     | 8.80                    | 0.25                 | 16.76
 ...
-Total            |          |          |          |           |             | ...           | ...                       | ...                     | ...                  | ...
+Total            |          |          |          |                     |                  |             | ...           | ...                       | ...                     | ...                  | ...
 ```
 
 ---

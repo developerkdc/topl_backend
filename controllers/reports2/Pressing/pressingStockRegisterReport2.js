@@ -2,7 +2,10 @@ import catchAsync from '../../../utils/errors/catchAsync.js';
 import ApiError from '../../../utils/errors/apiError.js';
 import ApiResponse from '../../../utils/ApiResponse.js';
 import { issues_for_pressing_model } from '../../../database/schema/factory/pressing/issues_for_pressing/issues_for_pressing.schema.js';
-import { pressing_done_details_model } from '../../../database/schema/factory/pressing/pressing_done/pressing_done.schema.js';
+import {
+  pressing_done_details_model,
+  pressing_done_consumed_items_details_model,
+} from '../../../database/schema/factory/pressing/pressing_done/pressing_done.schema.js';
 import { pressing_done_history_model } from '../../../database/schema/factory/pressing/pressing_history/pressing_done_history.schema.js';
 import { pressing_damage_model } from '../../../database/schema/factory/pressing/pressing_damage/pressing_damage.schema.js';
 import photoModel from '../../../database/schema/masters/photo.schema.js';
@@ -12,7 +15,7 @@ import { GeneratePressingStockRegisterReport2Excel } from '../../../config/downl
 
 /**
  * Pressing Stock Register Report 2 — Group No Wise
- * Columns: Item Name, Group no, Photo No, Order No, Thickness, Size,
+ * Columns: Item Name, Group no, Photo No, Order No, Issued Thickness, Received Thickness, Size,
  *          Opening SqMtr, Issued for pressing, Pressing received,
  *          Pressing Waste, Sales, All Damage, Closing SqMtr
  *
@@ -253,6 +256,41 @@ export const PressingStockRegisterReport2Excel = catchAsync(async (req, res, nex
         r.total,
       ])
     );
+    const issuedThicknessFromIssuesMap = new Map(
+      issuedAgg.map((r) => [
+        `${r._id.group_no}|${r._id.thickness ?? 0}|${r._id.length ?? 0}|${r._id.width ?? 0}`,
+        r._id.thickness ?? 0,
+      ])
+    );
+
+    // 9b. Issued thickness: primary from issues_for_pressing (covers issued-but-not-pressed); fallback from consumed (when dimension mismatch)
+    const idToDimKey = new Map();
+    for (const r of allPdIdsAgg) {
+      const dimKey = `${r._id.group_no}|${r._id.thickness ?? 0}|${r._id.length ?? 0}|${r._id.width ?? 0}`;
+      for (const id of r.pressing_done_ids) {
+        idToDimKey.set(id.toString(), dimKey);
+      }
+    }
+    const consumedDocs = await pressing_done_consumed_items_details_model
+      .find({ pressing_done_details_id: { $in: allPdIdsForDamageSales } }, { pressing_done_details_id: 1, group_details: 1 })
+      .lean();
+    const issuedThicknessFromConsumedMap = new Map();
+    const consumedIssuedMap = new Map();
+    for (const doc of consumedDocs) {
+      const dimKey = idToDimKey.get(doc.pressing_done_details_id.toString());
+      if (!dimKey) continue;
+      const groupNo = dimKey.split('|')[0];
+      const groupDetail = Array.isArray(doc.group_details)
+        ? doc.group_details.find((g) => (g?.group_no ?? '').toUpperCase() === groupNo.toUpperCase())
+        : null;
+      if (groupDetail != null) {
+        if (groupDetail.thickness != null) {
+          issuedThicknessFromConsumedMap.set(dimKey, groupDetail.thickness);
+        }
+        const sqm = groupDetail.sqm ?? 0;
+        consumedIssuedMap.set(dimKey, (consumedIssuedMap.get(dimKey) ?? 0) + sqm);
+      }
+    }
 
     // 10. Map everything into rows
     const stockData = filteredGroups.map((group) => {
@@ -269,19 +307,27 @@ export const PressingStockRegisterReport2Excel = catchAsync(async (req, res, nex
         all_damage += damageByPdId.get(id.toString()) ?? 0;
       }
 
-      const issued_for_pressing = issuedMap.get(dimKey) ?? 0;
+      const issued_for_pressing =
+        issuedMap.get(dimKey) ?? consumedIssuedMap.get(dimKey) ?? 0;
       const pressing_received = group.pressing_received;
       const pressing_waste = all_damage;
 
       // Closing = max(0, Opening + Receive - damage - sales)
       const closing_sqm = Math.max(0, opening_sqm + pressing_received - all_damage - sales);
 
+      const received_thickness = thickness ?? 0;
+      const issued_thickness =
+        issuedThicknessFromIssuesMap.get(dimKey) ??
+        issuedThicknessFromConsumedMap.get(dimKey) ??
+        received_thickness;
+
       return {
         item_name: itemNameMap.get(group_no) ?? '',
         group_no,
         photo_no: photoMap.get(group_no) ?? '',
         order_no: orderNoByDimKey.get(dimKey) ?? '',
-        thickness: thickness ?? 0,
+        issued_thickness,
+        received_thickness,
         size: `${length ?? 0} X ${width ?? 0}`,
         opening_sqm,
         issued_for_pressing,

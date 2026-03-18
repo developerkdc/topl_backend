@@ -63,7 +63,8 @@ export const GeneratePressingStockRegisterReport2Excel = async (
       'Group no',
       'Photo No',
       'Order No',
-      'Thickness',
+      'Issued Thickness',
+      'Received Thickness',
       'Size',
       'Opening SqMtr',
       'Issued for pressing SqMtr',
@@ -74,7 +75,7 @@ export const GeneratePressingStockRegisterReport2Excel = async (
       'Closing SqMtr',
     ];
     const NUM_COLS = headers.length;
-    const NUMERIC_START_COL = 7;
+    const NUMERIC_START_COL = 8;
 
     let currentRow = 1;
 
@@ -122,14 +123,12 @@ export const GeneratePressingStockRegisterReport2Excel = async (
       const tr = worksheet.getRow(rowNum);
       tr.getCell(1).value = 'Total';
       tr.getCell(2).value = '';
-      for (let c = 3; c <= 6; c++) tr.getCell(c).value = '';
-      tr.getCell(7).value = totals.opening_sqm;
-      tr.getCell(8).value = totals.issued_for_pressing;
-      tr.getCell(9).value = totals.pressing_received;
-      tr.getCell(10).value = totals.pressing_waste;
-      // tr.getCell(11).value = totals.sales;
-      // tr.getCell(12).value = totals.all_damage;
-      tr.getCell(11).value = totals.closing_sqm;
+      for (let c = 3; c <= 7; c++) tr.getCell(c).value = '';
+      tr.getCell(8).value = totals.opening_sqm;
+      tr.getCell(9).value = totals.issued_for_pressing;
+      tr.getCell(10).value = totals.pressing_received;
+      tr.getCell(11).value = totals.pressing_waste;
+      tr.getCell(12).value = totals.closing_sqm;
       for (let c = NUMERIC_START_COL; c <= NUM_COLS; c++) tr.getCell(c).numFmt = '0.00';
       tr.eachCell((cell) => Object.assign(cell, totalRowStyle));
     };
@@ -162,17 +161,17 @@ export const GeneratePressingStockRegisterReport2Excel = async (
       r.getCell(2).value = row.group_no ?? '';
       r.getCell(3).value = row.photo_no ?? '';
       r.getCell(4).value = row.order_no ?? '';
-      r.getCell(5).value = row.thickness ?? 0;
-      r.getCell(6).value = row.size ?? '';
-      r.getCell(7).value = row.opening_sqm;
-      r.getCell(8).value = row.issued_for_pressing;
-      r.getCell(9).value = row.pressing_received;
-      r.getCell(10).value = row.pressing_waste;
-      // r.getCell(11).value = row.sales;
-      // r.getCell(12).value = row.all_damage;
-      r.getCell(11).value = row.closing_sqm;
+      r.getCell(5).value = row.issued_thickness ?? 0;
+      r.getCell(6).value = row.received_thickness ?? 0;
+      r.getCell(7).value = row.size ?? '';
+      r.getCell(8).value = row.opening_sqm;
+      r.getCell(9).value = row.issued_for_pressing;
+      r.getCell(10).value = row.pressing_received;
+      r.getCell(11).value = row.pressing_waste;
+      r.getCell(12).value = row.closing_sqm;
 
       r.getCell(5).numFmt = '0.00';
+      r.getCell(6).numFmt = '0.00';
       for (let c = NUMERIC_START_COL; c <= NUM_COLS; c++) r.getCell(c).numFmt = '0.00';
 
       itemTotals.opening_sqm += row.opening_sqm;
@@ -208,22 +207,20 @@ export const GeneratePressingStockRegisterReport2Excel = async (
     // Grand total row
     const gr = worksheet.getRow(currentRow);
     gr.getCell(1).value = 'Total';
-    for (let c = 2; c <= 6; c++) gr.getCell(c).value = '';
-    gr.getCell(7).value = grandTotals.opening_sqm;
-    gr.getCell(8).value = grandTotals.issued_for_pressing;
-    gr.getCell(9).value = grandTotals.pressing_received;
-    gr.getCell(10).value = grandTotals.pressing_waste;
-    // gr.getCell(11).value = grandTotals.sales;
-    // gr.getCell(12).value = grandTotals.all_damage;
-    gr.getCell(11).value = grandTotals.closing_sqm;
+    for (let c = 2; c <= 7; c++) gr.getCell(c).value = '';
+    gr.getCell(8).value = grandTotals.opening_sqm;
+    gr.getCell(9).value = grandTotals.issued_for_pressing;
+    gr.getCell(10).value = grandTotals.pressing_received;
+    gr.getCell(11).value = grandTotals.pressing_waste;
+    gr.getCell(12).value = grandTotals.closing_sqm;
     gr.eachCell((cell) => {
       Object.assign(cell, totalRowStyle);
       if (cell.col >= NUMERIC_START_COL) cell.numFmt = '0.00';
     });
 
     worksheet.columns = [
-      { width: 20 }, { width: 14 }, { width: 12 }, { width: 14 }, { width: 10 }, { width: 16 },
-      { width: 15 }, { width: 22 }, { width: 20 }, { width: 18 }, /*{ width: 12 }, { width: 15 },*/ { width: 15 }
+      { width: 20 }, { width: 14 }, { width: 12 }, { width: 14 }, { width: 14 }, { width: 14 },
+      { width: 16 }, { width: 15 }, { width: 22 }, { width: 20 }, { width: 18 }, { width: 15 }
     ];
 
     const timeStamp = new Date().getTime();
