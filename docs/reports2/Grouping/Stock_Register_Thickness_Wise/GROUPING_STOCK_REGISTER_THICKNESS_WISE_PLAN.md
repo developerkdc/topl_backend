@@ -51,7 +51,7 @@ This is a simplified variant of the already-built date-wise stock register (`gro
 
 ### 1. Controller — `groupingStockRegisterThicknessWise.js`
 
-Identical aggregation pipeline to the date-wise register (including SQM in `$addFields` and `$group`) except Stage 5 `$group` uses only 3 keys:
+Identical aggregation pipeline to the date-wise register (including SQM in `$addFields` and `$group`). Issue for tapping: `issue_status='tapping'` OR `issued_for` in `['STOCK','SAMPLE']` OR (`issue_status='order'` AND `order_category!='RAW'`). Issue Sales: `issue_status='order'` AND `order_category='RAW'`. Stage 5 `$group` uses only 3 keys:
 
 ```javascript
 _id: {

@@ -35,34 +35,100 @@ export const TappingStockRegisterExcel = catchAsync(async (req, res, next) => {
     return next(new ApiError('Start date cannot be after end date', 400));
   }
 
-  // Step 1: get all distinct (item_sub_category_name, item_name) pairs
-  const distinctPairs = await tapping_done_items_details_model.aggregate([
-    {
-      $group: {
-        _id: {
-          item_sub_category_name: '$item_sub_category_name',
-          item_name: '$item_name',
+  // Step 1: get distinct (item_sub_category_name, item_name) pairs with activity in the date range
+  // Include: tapping in period, issue to pressing in period, process waste in period
+  const [pairsFromTapping, pairsFromIssuePressing, pairsFromProcessWaste] =
+    await Promise.all([
+      // Source 1: tapping done in period
+      tapping_done_items_details_model.aggregate([
+        {
+          $lookup: {
+            from: 'tapping_done_other_details',
+            localField: 'tapping_done_other_details_id',
+            foreignField: '_id',
+            as: 'session',
+          },
         },
-      },
-    },
-    {
-      $sort: {
-        '_id.item_sub_category_name': 1,
-        '_id.item_name': 1,
-      },
-    },
-  ]);
+        { $unwind: '$session' },
+        {
+          $match: {
+            'session.tapping_date': { $gte: start, $lte: end },
+          },
+        },
+        {
+          $group: {
+            _id: {
+              item_sub_category_name: '$item_sub_category_name',
+              item_name: '$item_name',
+            },
+          },
+        },
+      ]),
+      // Source 2: issued to pressing in period (tapped earlier, issued in period)
+      tapping_done_history_model.aggregate([
+        {
+          $match: { createdAt: { $gte: start, $lte: end } },
+        },
+        {
+          $group: {
+            _id: {
+              item_sub_category_name: '$item_sub_category_name',
+              item_name: '$item_name',
+            },
+          },
+        },
+      ]),
+      // Source 3: process waste in period
+      issue_for_tapping_wastage_model.aggregate([
+        { $match: { createdAt: { $gte: start, $lte: end } } },
+        {
+          $lookup: {
+            from: 'issue_for_tappings',
+            localField: 'issue_for_tapping_item_id',
+            foreignField: '_id',
+            as: 'issueFor',
+          },
+        },
+        { $unwind: '$issueFor' },
+        {
+          $group: {
+            _id: {
+              item_sub_category_name: '$issueFor.item_sub_category_name',
+              item_name: '$issueFor.item_name',
+            },
+          },
+        },
+      ]),
+    ]);
 
-  if (!distinctPairs.length) {
+  // Merge and dedupe by (item_sub_category_name, item_name)
+  const pairMap = new Map();
+  for (const p of [
+    ...pairsFromTapping,
+    ...pairsFromIssuePressing,
+    ...pairsFromProcessWaste,
+  ]) {
+    const key = `${p._id.item_sub_category_name}|${p._id.item_name}`;
+    if (!pairMap.has(key)) {
+      pairMap.set(key, {
+        item_sub_category_name: p._id.item_sub_category_name,
+        item_name: p._id.item_name,
+      });
+    }
+  }
+
+  const pairs = Array.from(pairMap.values()).sort((a, b) => {
+    const cmpA = (a.item_sub_category_name || '').localeCompare(
+      b.item_sub_category_name || ''
+    );
+    return cmpA !== 0 ? cmpA : (a.item_name || '').localeCompare(b.item_name || '');
+  });
+
+  if (!pairs.length) {
     return res.status(404).json(
       new ApiResponse(404, 'No tapping data found')
     );
   }
-
-  const pairs = distinctPairs.map((p) => ({
-    item_sub_category_name: p._id.item_sub_category_name,
-    item_name: p._id.item_name,
-  }));
 
   // Step 2: compute per-pair aggregates in parallel
   const stockData = await Promise.all(
@@ -75,6 +141,7 @@ export const TappingStockRegisterExcel = catchAsync(async (req, res, next) => {
         tappingHandResult,
         tappingMachineResult,
         issuePressingResult,
+        salesResult,
         processWasteResult,
       ] = await Promise.all([
         // currentAvailable: sum available_details.sqm
@@ -125,12 +192,35 @@ export const TappingStockRegisterExcel = catchAsync(async (req, res, next) => {
           { $group: { _id: null, total: { $sum: '$sqm' } } },
         ]),
 
-        // issuePressing: from tapping_done_history in period
+        // issuePressing: from tapping_done_history in period — exclude order+RAW (those go to Sales)
         tapping_done_history_model.aggregate([
           {
             $match: {
               ...matchItem,
               createdAt: { $gte: start, $lte: end },
+              $or: [
+                { issued_for: 'STOCK' },
+                { issued_for: 'SAMPLE' },
+                {
+                  $and: [
+                    { issued_for: 'ORDER' },
+                    { order_category: { $ne: 'RAW' } },
+                  ],
+                },
+              ],
+            },
+          },
+          { $group: { _id: null, total: { $sum: '$sqm' } } },
+        ]),
+
+        // sales: from tapping_done_history — order + RAW only
+        tapping_done_history_model.aggregate([
+          {
+            $match: {
+              ...matchItem,
+              createdAt: { $gte: start, $lte: end },
+              $or: [{ issued_for: 'ORDER' }],
+              order_category: 'RAW',
             },
           },
           { $group: { _id: null, total: { $sum: '$sqm' } } },
@@ -163,14 +253,19 @@ export const TappingStockRegisterExcel = catchAsync(async (req, res, next) => {
       const tappingMachine = tappingMachineResult[0]?.total ?? 0;
       const tappingReceived = tappingHand + tappingMachine;
       const issuePressing = issuePressingResult[0]?.total ?? 0;
+      const sales = salesResult[0]?.total ?? 0;
       const processWaste = processWasteResult[0]?.total ?? 0;
-      const sales = 0; // placeholder — no schema source
 
-      // Opening = currentAvailable + issueInPeriod − tappingReceived
-      const openingBalance = currentAvailable + issuePressing - tappingReceived;
-      // Closing = Opening + tappingReceived − issuePressing − processWaste − sales
-      const closingBalance =
-        openingBalance + tappingReceived - issuePressing - processWaste - sales;
+      // Opening = currentAvailable + (issuePressing + sales) − tappingReceived (min 0)
+      const openingBalance = Math.max(
+        0,
+        currentAvailable + issuePressing + sales - tappingReceived
+      );
+      // Closing = Opening + tappingReceived − issuePressing − processWaste − sales (min 0)
+      const closingBalance = Math.max(
+        0,
+        openingBalance + tappingReceived - issuePressing - processWaste - sales
+      );
 
       return {
         item_name: item_sub_category_name,

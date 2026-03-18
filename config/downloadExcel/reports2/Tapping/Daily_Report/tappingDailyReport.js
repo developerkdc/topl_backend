@@ -235,8 +235,11 @@ const GenerateTappingDailyReportExcel = async (details, reportDate) => {
 
       rows.forEach((row, idx) => {
         const dataRow = ws.getRow(r);
-        const isMachine = row.splicing_type === 'MACHINE';
-        const isHand = row.splicing_type === 'HAND';
+        // Accept both 'MACHINE'/'MACHINE SPLICING' and 'HAND'/'HAND SPLICING' (DB may store either)
+        const isMachine =
+          row.splicing_type === 'MACHINE' || row.splicing_type === 'MACHINE SPLICING';
+        const isHand =
+          row.splicing_type === 'HAND' || row.splicing_type === 'HAND SPLICING';
 
         // Col 1: Item Name (only on first row of group)
         if (idx === 0) {

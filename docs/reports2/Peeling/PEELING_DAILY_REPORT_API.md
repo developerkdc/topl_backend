@@ -109,7 +109,7 @@ Rows are grouped by **Item Name**. For each item, detail rows then a **Total** r
 | Rej. Length   | Wastage length                 |
 | Rej. Diameter | Wastage diameter                |
 | Rej. CMT      | Wastage CMT                    |
-| Remarks       | Wastage remark or "COMPLETE"   |
+| Remarks       | Actual wastage remark (empty if none) |
 
 - Each item group has a **Total** row for CMT, Leaves, Sq Mtr, and Rej. CMT.
 - Numeric cells use decimal formatting (e.g. CMT to 3 decimal places).
@@ -125,17 +125,9 @@ Item-wise summary table:
 
 - **Peel CMT** = Input CMT − Rej. CMT per item; totals at bottom.
 
-### Peeling Session Details
 
-At the bottom of the sheet:
 
-| Peeling Id | Shift | Work Hours | Worker   |
-|------------|-------|------------|----------|
-| ...        | DAY   | 8          | John Doe |
-
-- One row per distinct peeling session (by peeling_done_other_details id) for the day.
-- **Worker** is created_by user’s first_name + last_name.
-
+ user’s 
 ## Data Sources
 
 ### Collections
@@ -229,7 +221,7 @@ window.open(downloadUrl, '_blank');
 
 - Report includes only peeling sessions with `peeling_date` on the given day.
 - One row in the main table is one **peeling_done_item**; input and wastage are joined from issue-for-peeling.
-- Session block lists each distinct peeling session (by peeling_done_other_details id) once.
+- Remarks column shows the actual wastage remark from `issue_for_peeling_wastage.remark` (empty if none).
 - Excel uses borders and header styling consistent with other daily reports (e.g. Slicing).
 
 ## Troubleshooting

@@ -21,7 +21,6 @@ const formatDate = (dateString) => {
  */
 const groupRows = (rows) => {
   const byItem = {};
-  const sessions = [];
 
   rows.forEach((r) => {
     const itemName = r.item_name || 'UNKNOWN';
@@ -50,23 +49,14 @@ const groupRows = (rows) => {
       rej_length: r.rej_length,
       rej_diameter: r.rej_diameter,
       rej_cmt: rejCmt,
-      remarks: r.remarks || 'COMPLETE',
+      remarks: r.remarks ?? '',
     });
     byItem[itemName].input_cmt += cmt;
     byItem[itemName].rej_cmt += rejCmt;
     byItem[itemName].leaves += leaves;
-
-    if (r.peeling_id && !sessions.find((s) => s.peeling_id?.toString() === r.peeling_id?.toString())) {
-      sessions.push({
-        peeling_id: r.peeling_id,
-        shift: r.shift || '',
-        work_hours: r.no_of_working_hours ?? '',
-        worker: (r.worker || '').trim(),
-      });
-    }
   });
 
-  return { byItem, sessions };
+  return { byItem };
 };
 
 const setCellStyle = (cell, bold = false) => {
@@ -84,14 +74,13 @@ const setCellStyle = (cell, bold = false) => {
  * - Main Peeling Details (Item Name, Log No, Output Type, Thickness, Length, Width, Diameter, CMT, Leaves, Sq Mtr) + Total
  * - Rejection Details (Rej. Length, Rej. Diameter, Rej. CMT, Remarks) + Total Rej. CMT
  * - Summary (Item name, Input CMT, Rej. CMT, Peel CMT, Leaves) + Total
- * - Peeling Session Details (Peeling Id, Shift, Work Hours, Worker)
  */
 const GeneratePeelingDailyReport = async (rows, reportDate) => {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Peeling Details Report');
 
   const formattedDate = formatDate(reportDate);
-  const { byItem, sessions } = groupRows(rows);
+  const { byItem } = groupRows(rows);
 
   const itemNames = Object.keys(byItem).sort();
   let currentRow = 1;
@@ -248,30 +237,6 @@ const GeneratePeelingDailyReport = async (rows, reportDate) => {
     const c = summaryTotalRow.getCell(col);
     if (typeof c.value === 'number') c.numFmt = '0.000';
   });
-  currentRow += 2;
-
-  // Peeling Session Details
-  const sessionHeaders = ['Peeling Id', 'Shift', 'Work Hours', 'Worker'];
-  const sessionHeaderRow = worksheet.getRow(currentRow);
-  sessionHeaders.forEach((h, i) => {
-    const cell = sessionHeaderRow.getCell(i + 1);
-    cell.value = h;
-    cell.font = { bold: true };
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD3D3D3' } };
-    cell.alignment = { horizontal: 'center', vertical: 'middle' };
-    setCellStyle(cell);
-  });
-  currentRow++;
-
-  sessions.forEach((s) => {
-    const row = worksheet.getRow(currentRow);
-    row.getCell(1).value = s.peeling_id?.toString?.() ?? s.peeling_id;
-    row.getCell(2).value = s.shift;
-    row.getCell(3).value = s.work_hours;
-    row.getCell(4).value = s.worker;
-    currentRow++;
-  });
-
   worksheet.columns = [
     { width: 14 },
     { width: 12 },

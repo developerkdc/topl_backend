@@ -213,6 +213,7 @@ export const LogWiseTappingORClippingReportExcel = catchAsync(
         if (openingBalance === undefined) {
           openingBalance = openingAtStartMap.get(key) ?? 0;
         }
+        openingBalance = Math.max(0, openingBalance);
 
         const issueKey = `${row.log_no_code}|${row.item_name}|${dateStr}`;
         const issue = issueMap.get(issueKey) ?? 0;

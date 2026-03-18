@@ -164,12 +164,12 @@ Where `current_available_sheets` = sum of `available_details.no_of_sheets`, and 
 | 5 | Opening Balance (SQM)          | Computed                                       | —                             | See formula |
 | 6 | Grouping Done (Sheets)         | `no_of_sheets`                                 | grouping_done_items_details   | Sum for group |
 | 7 | Grouping Done (SQM)            | `sqm`                                          | grouping_done_items_details   | Sum for group |
-| 8 | Issue for tapping (Sheets)     | `no_of_sheets` where `issue_status='tapping'`  | grouping_done_history         | Matched by `grouping_done_item_id` |
-| 9 | Issue for tapping (SQM)        | `sqm` where `issue_status='tapping'`          | grouping_done_history         | Matched by `grouping_done_item_id` |
+| 8 | Issue for tapping (Sheets)     | `no_of_sheets` where `issue_status='tapping'` OR `issued_for` in `['STOCK','SAMPLE']` OR (`issue_status='order'` AND `order_category!='RAW'`) | grouping_done_history |
+| 9 | Issue for tapping (SQM)        | Same as above (sqm) | grouping_done_history |
 |10 | Issue for Challan (Sheets)     | `no_of_sheets` where `issue_status='challan'`  | grouping_done_history         | Matched by `grouping_done_item_id` |
 |11 | Issue for Challan (SQM)        | `sqm` where `issue_status='challan'`          | grouping_done_history         | Matched by `grouping_done_item_id` |
-|12 | Issue Sales (Sheets)           | `no_of_sheets` where `issue_status='order'`    | grouping_done_history         | Matched by `grouping_done_item_id` |
-|13 | Issue Sales (SQM)              | `sqm` where `issue_status='order'`            | grouping_done_history         | Matched by `grouping_done_item_id` |
+|12 | Issue Sales (Sheets)           | `no_of_sheets` where `issue_status='order'` AND `order_category='RAW'` | grouping_done_history |
+|13 | Issue Sales (SQM)              | `sqm` where `issue_status='order'` AND `order_category='RAW'` | grouping_done_history |
 |14 | Damage (Sheets)                | `no_of_sheets` where `is_damaged=true`         | grouping_done_items_details   | Sum for group |
 |15 | Damage (SQM)                   | `sqm` where `is_damaged=true`                 | grouping_done_items_details   | Sum for group |
 |16 | Closing Balance (Sheets)       | Computed                                       | —                             | See formula |

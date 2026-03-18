@@ -81,20 +81,20 @@ const matchItem = {
 };
 ```
 
-All 5 aggregations identical to Report -1 otherwise:
+All 6 aggregations: same as Report -1 (issuePressing excludes order+RAW; sales = order+RAW only)
 1. **currentAvailable** — sum `available_details.sqm`
 2. **tappingHand** — sum `sqm` in date range, `splicing_type IN ['HAND', 'HAND SPLICING']`
 3. **tappingMachine** — sum `sqm` in date range, `splicing_type IN ['MACHINE', 'MACHINE SPLICING']`
-4. **issuePressing** — sum `sqm` from `tapping_done_history` in date range
-5. **processWaste** — sum `sqm` from `issue_for_tapping_wastage` joined to `issue_for_tappings`, matched by `item_sub_category_name`
+4. **issuePressing** — sum `sqm` from `tapping_done_history`; `issued_for` STOCK/SAMPLE OR (ORDER AND `order_category`≠RAW)
+5. **sales** — sum `sqm` from `tapping_done_history`; `issued_for` ORDER AND `order_category`=RAW
+6. **processWaste** — sum `sqm` from `issue_for_tapping_wastage` (tapping damage) joined to `issue_for_tappings`, matched by (item_sub_category_name, thickness, log_no_code)
 
 ### Step 3 — Calculations
 
 ```
 tappingReceived   = tappingHand + tappingMachine
-openingBalance    = currentAvailable + issuePressing − tappingReceived
+openingBalance    = currentAvailable + issuePressing + sales − tappingReceived
 closingBalance    = openingBalance + tappingReceived − issuePressing − processWaste − sales
-sales             = 0  (placeholder)
 ```
 
 ### Step 4 — Filter

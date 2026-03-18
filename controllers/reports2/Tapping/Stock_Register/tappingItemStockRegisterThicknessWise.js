@@ -37,48 +37,114 @@ export const TappingItemStockRegisterThicknessWiseExcel = catchAsync(
     }
 
     // Step 1: distinct (item_sub_category_name, thickness, log_no_code) tuples
-    // item_name is NOT included in the group key (Report -2 vs Report -1)
-    const distinctTuples = await tapping_done_items_details_model.aggregate([
-      {
-        $lookup: {
-          from: 'tapping_done_other_details',
-          localField: 'tapping_done_other_details_id',
-          foreignField: '_id',
-          as: 'session',
-        },
-      },
-      { $unwind: { path: '$session', preserveNullAndEmptyArrays: true } },
-      {
-        $group: {
-          _id: {
-            item_sub_category_name: '$item_sub_category_name',
-            thickness: '$thickness',
-            log_no_code: '$log_no_code',
+    // Include: tapping in period, issue to pressing in period, process waste in period (Report -2: no item_name)
+    const [
+      tuplesFromTapping,
+      tuplesFromIssuePressing,
+      tuplesFromProcessWaste,
+    ] = await Promise.all([
+      // Source 1: tapping done in period
+      tapping_done_items_details_model.aggregate([
+        {
+          $lookup: {
+            from: 'tapping_done_other_details',
+            localField: 'tapping_done_other_details_id',
+            foreignField: '_id',
+            as: 'session',
           },
-          tapping_date: { $min: '$session.tapping_date' },
         },
-      },
-      {
-        $sort: {
-          '_id.item_sub_category_name': 1,
-          '_id.thickness': 1,
-          '_id.log_no_code': 1,
+        { $unwind: '$session' },
+        {
+          $match: {
+            'session.tapping_date': { $gte: start, $lte: end },
+          },
         },
-      },
+        {
+          $group: {
+            _id: {
+              item_sub_category_name: '$item_sub_category_name',
+              thickness: '$thickness',
+              log_no_code: '$log_no_code',
+            },
+            tapping_date: { $min: '$session.tapping_date' },
+          },
+        },
+      ]),
+      // Source 2: issued to pressing in period (tapped earlier, issued in period)
+      tapping_done_history_model.aggregate([
+        {
+          $match: { createdAt: { $gte: start, $lte: end } },
+        },
+        {
+          $group: {
+            _id: {
+              item_sub_category_name: '$item_sub_category_name',
+              thickness: '$thickness',
+              log_no_code: '$log_no_code',
+            },
+            tapping_date: { $min: '$createdAt' },
+          },
+        },
+      ]),
+      // Source 3: process waste in period
+      issue_for_tapping_wastage_model.aggregate([
+        { $match: { createdAt: { $gte: start, $lte: end } } },
+        {
+          $lookup: {
+            from: 'issue_for_tappings',
+            localField: 'issue_for_tapping_item_id',
+            foreignField: '_id',
+            as: 'issueFor',
+          },
+        },
+        { $unwind: '$issueFor' },
+        {
+          $group: {
+            _id: {
+              item_sub_category_name: '$issueFor.item_sub_category_name',
+              thickness: '$issueFor.thickness',
+              log_no_code: '$issueFor.log_no_code',
+            },
+            tapping_date: { $min: '$createdAt' },
+          },
+        },
+      ]),
     ]);
 
-    if (!distinctTuples.length) {
+    // Merge and dedupe; for date use earliest from any source
+    const tupleMap = new Map();
+    for (const t of [
+      ...tuplesFromTapping,
+      ...tuplesFromIssuePressing,
+      ...tuplesFromProcessWaste,
+    ]) {
+      const key =
+        `${t._id.item_sub_category_name}|${t._id.thickness}|${t._id.log_no_code}`;
+      const existing = tupleMap.get(key);
+      const date = t.tapping_date ?? null;
+      if (!existing || (date && (!existing.tapping_date || date < existing.tapping_date))) {
+        tupleMap.set(key, {
+          item_sub_category_name: t._id.item_sub_category_name,
+          thickness: t._id.thickness,
+          log_no_code: t._id.log_no_code,
+          tapping_date: date,
+        });
+      }
+    }
+
+    const tuples = Array.from(tupleMap.values()).sort((a, b) => {
+      const c1 = (a.item_sub_category_name || '').localeCompare(b.item_sub_category_name || '');
+      if (c1) return c1;
+      const c2 = (a.thickness ?? 0) - (b.thickness ?? 0);
+      if (c2) return c2;
+      return (a.log_no_code || '').localeCompare(b.log_no_code || '');
+    });
+
+    if (!tuples.length) {
       return res.status(404).json(
         new ApiResponse(404, 'No tapping data found')
       );
     }
-
-    const tuples = distinctTuples.map((t) => ({
-      item_sub_category_name: t._id.item_sub_category_name,
-      thickness: t._id.thickness,
-      log_no_code: t._id.log_no_code,
-      tapping_date: t.tapping_date ?? null,
-    }));
 
     // Step 2: compute per-tuple aggregates in parallel
     const stockData = await Promise.all(
@@ -96,6 +162,7 @@ export const TappingItemStockRegisterThicknessWiseExcel = catchAsync(
             tappingHandResult,
             tappingMachineResult,
             issuePressingResult,
+            salesResult,
             processWasteResult,
           ] = await Promise.all([
             // currentAvailable: sum available_details.sqm for this (item_sub_category, thickness, log)
@@ -153,7 +220,7 @@ export const TappingItemStockRegisterThicknessWiseExcel = catchAsync(
               { $group: { _id: null, total: { $sum: '$sqm' } } },
             ]),
 
-            // issuePressing: sqm issued to pressing for this (item_sub_category, thickness, log) in period
+            // issuePressing: sqm issued to pressing — exclude order+RAW (those go to Sales)
             tapping_done_history_model.aggregate([
               {
                 $match: {
@@ -161,12 +228,37 @@ export const TappingItemStockRegisterThicknessWiseExcel = catchAsync(
                   thickness,
                   log_no_code,
                   createdAt: { $gte: start, $lte: end },
+                  $or: [
+                    { issued_for: 'STOCK' },
+                    { issued_for: 'SAMPLE' },
+                    {
+                      $and: [
+                        { issued_for: 'ORDER' },
+                        { order_category: { $ne: 'RAW' } },
+                      ],
+                    },
+                  ],
                 },
               },
               { $group: { _id: null, total: { $sum: '$sqm' } } },
             ]),
 
-            // processWaste: wastage for this item (via issue_for_tappings lookup) in period
+            // sales: order + RAW only
+            tapping_done_history_model.aggregate([
+              {
+                $match: {
+                  item_sub_category_name,
+                  thickness,
+                  log_no_code,
+                  createdAt: { $gte: start, $lte: end },
+                  issued_for: 'ORDER',
+                  order_category: 'RAW',
+                },
+              },
+              { $group: { _id: null, total: { $sum: '$sqm' } } },
+            ]),
+
+            // processWaste: wastage for this (item_sub_category, thickness, log) from tapping damage (via issue_for_tappings lookup) in period
             issue_for_tapping_wastage_model.aggregate([
               { $match: { createdAt: { $gte: start, $lte: end } } },
               {
@@ -181,6 +273,8 @@ export const TappingItemStockRegisterThicknessWiseExcel = catchAsync(
               {
                 $match: {
                   'issueFor.item_sub_category_name': item_sub_category_name,
+                  'issueFor.thickness': thickness,
+                  'issueFor.log_no_code': log_no_code,
                 },
               },
               { $group: { _id: null, total: { $sum: '$sqm' } } },
@@ -192,12 +286,17 @@ export const TappingItemStockRegisterThicknessWiseExcel = catchAsync(
           const tappingMachine = tappingMachineResult[0]?.total ?? 0;
           const tappingReceived = tappingHand + tappingMachine;
           const issuePressing = issuePressingResult[0]?.total ?? 0;
+          const sales = salesResult[0]?.total ?? 0;
           const processWaste = processWasteResult[0]?.total ?? 0;
-          const sales = 0; // placeholder — no schema source
 
-          const openingBalance = currentAvailable + issuePressing - tappingReceived;
-          const closingBalance =
-            openingBalance + tappingReceived - issuePressing - processWaste - sales;
+          const openingBalance = Math.max(
+            0,
+            currentAvailable + issuePressing + sales - tappingReceived
+          );
+          const closingBalance = Math.max(
+            0,
+            openingBalance + tappingReceived - issuePressing - processWaste - sales
+          );
 
           return {
             item_name: item_sub_category_name,

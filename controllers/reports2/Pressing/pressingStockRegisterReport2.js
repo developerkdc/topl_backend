@@ -297,7 +297,7 @@ export const PressingStockRegisterReport2Excel = catchAsync(async (req, res, nex
       const { group_no, thickness, length, width } = group._id;
       const dimKey = `${group_no}|${thickness ?? 0}|${length ?? 0}|${width ?? 0}`;
 
-      const opening_sqm = openingByGroupDim.get(dimKey) ?? 0;
+      const opening_sqm = Math.max(0, openingByGroupDim.get(dimKey) ?? 0);
       const allPdIds = allPdIdsByGroupDim.get(dimKey) ?? [];
 
       let sales = 0;

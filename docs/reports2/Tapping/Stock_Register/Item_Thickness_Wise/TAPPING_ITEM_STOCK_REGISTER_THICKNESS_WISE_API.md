@@ -87,11 +87,11 @@ This is a simplified variant of Report -1 (`tappingStockRegisterThicknessWise`).
 | 2   | Thickness ↕        | (merged)             | `tapping_done_items_details.thickness` |
 | 3   | Log No ↕           | (merged)             | `tapping_done_items_details.log_no_code` |
 | 4   | Date ↕             | (merged)             | `tapping_done_other_details.tapping_date` (earliest for log) |
-| 5   | Opening Balance ↕  | (merged)             | Calculated: `currentAvailable + issuePressing − tappingReceived` |
+| 5   | Opening Balance ↕  | (merged)             | Calculated: `currentAvailable + issuePressing + sales − tappingReceived` |
 | 6–7 | Tapping →          | Hand / Machine Splice | `tapping_done_items_details.sqm` filtered by `splicing_type` |
-| 8   | Issue              | Pressing             | `tapping_done_history.sqm` |
+| 8   | Issue              | Pressing             | `tapping_done_history.sqm` where `issued_for` STOCK/SAMPLE OR (ORDER AND `order_category`≠RAW) |
 | 9   | Process Waste ↕    | (merged)             | `issue_for_tapping_wastage.sqm` |
-| 10  | Sales ↕            | (merged)             | `0` (placeholder) |
+| 10  | Sales ↕            | (merged)             | `tapping_done_history.sqm` where `issued_for` ORDER AND `order_category`=RAW |
 | 11  | Closing Balance ↕  | (merged)             | Calculated: `openingBalance + tappingReceived − issuePressing − processWaste − sales` |
 
 ---
@@ -116,12 +116,12 @@ This is a simplified variant of Report -1 (`tappingStockRegisterThicknessWise`).
 | Thickness           | `tapping_done_items_details`    | `thickness`                                           |
 | Log No              | `tapping_done_items_details`    | `log_no_code`                                         |
 | Date                | `tapping_done_other_details`    | `tapping_date` (min date for that log)                |
-| Opening Balance     | Calculated                      | `currentAvailable + issuePressing − tappingReceived`  |
+| Opening Balance     | Calculated                      | `currentAvailable + issuePressing + sales − tappingReceived`  |
 | Tapping (Hand)      | `tapping_done_items_details`    | `sqm` where `splicing_type` IN ['HAND','HAND SPLICING'] |
 | Tapping (Machine)   | `tapping_done_items_details`    | `sqm` where `splicing_type` IN ['MACHINE','MACHINE SPLICING'] |
-| Issue → Pressing    | `tapping_done_history`          | `sqm` where `createdAt` in range; matched by `(item_sub_category_name, thickness, log_no_code)` |
-| Process Waste       | `issue_for_tapping_wastage`     | `sqm` joined to `issue_for_tappings`; matched by `item_sub_category_name` |
-| Sales               | —                               | `0` placeholder                                       |
+| Issue → Pressing    | `tapping_done_history`          | `sqm` where `createdAt` in range; `issued_for` STOCK/SAMPLE OR (ORDER AND `order_category`≠RAW); matched by `(item_sub_category_name, thickness, log_no_code)` |
+| Process Waste       | `issue_for_tapping_wastage`     | `sqm` joined to `issue_for_tappings`; match by `(item_sub_category_name, thickness, log_no_code)` |
+| Sales               | `tapping_done_history`          | `sqm` where `issued_for` ORDER AND `order_category`=RAW; `createdAt` in range |
 | Closing Balance     | Calculated                      | `openingBalance + tappingReceived − issuePressing − processWaste − sales` |
 
 ---

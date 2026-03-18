@@ -23,9 +23,9 @@
 | Opening Balance        | Calculated                                                  | —                        | `currentAvailable + issueInPeriod −`                                                                           |
 | Tapping Hand Splice    | `tapping_done_items_details` + `tapping_done_other_details` | `sqm`                    | Join by `tapping_done_other_details_id`; `tapping_date` in range; `splicing_type IN ['HAND', 'HAND SPLICING']` |
 | Tapping Machine Splice | Same join                                                   | `sqm`                    | `splicing_type IN ['MACHINE', 'MACHINE SPLICING']`                                                             |
-| Issue → Pressing       | `tapping_done_history`                                      | `sqm`                    | `createdAt` in range, match item                                                                               |
+| Issue → Pressing       | `tapping_done_history`                                      | `sqm`                    | `createdAt` in range, match item; `issued_for` STOCK/SAMPLE OR (ORDER AND `order_category`≠RAW)               |
 | Process Waste          | `issue_for_tapping_wastage` + `issue_for_tappings`          | `sqm`                    | Wastage `createdAt` in range; match item via lookup                                                            |
-| Sales                  | —                                                           | —                        | **0** (placeholder — no schema source)                                                                         |
+| Sales                  | `tapping_done_history`                                      | `sqm`                    | `issued_for` ORDER AND `order_category`=RAW; `createdAt` in range, match item                                  |
 | Closing Balance        | Calculated                                                  | —                        | `Opening + Tapping(Hand+Machine) − IssuePressing − ProcessWaste − Sales`                                       |
 
 
@@ -34,7 +34,7 @@
 ```
 currentAvailable = SUM(tapping_done_items_details.available_details.sqm)
 tappingReceived  = tappingHand + tappingMachine
-issueInPeriod    = issuePressing
+issueInPeriod    = issuePressing + sales
 
 Opening  = currentAvailable + issueInPeriod − tappingReceived
 Closing  = Opening + tappingReceived − issuePressing − processWaste − sales
