@@ -304,6 +304,7 @@ export const issue_for_tapping_from_grouping_for_order = catchAsync(async (req, 
           {
             issue_for_tapping_id: issue_for_tapping_id,
             ...grouping_history_detials,
+            issue_status: issues_for_status?.order,
           },
         ],
         {

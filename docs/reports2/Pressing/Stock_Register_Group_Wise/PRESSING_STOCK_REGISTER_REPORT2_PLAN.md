@@ -2,7 +2,7 @@
 
 ## Group No Wise
 
-**Overview:** Add a Pressing Item Stock Register (Report 2) API under reports2 > Pressing that produces an Excel report at transaction (group) level — one row per distinct `(group_no, item_name)`, grouped and subtotalled by Item Name. Columns include Group no, Photo No, Order No, Thickness, Size, Opening SqMtr, Issued for pressing SqMtr, Pressing received Sqmtr, Pressing Waste SqMtr, and Closing SqMtr. Data is sourced from `issues_for_pressing`, `pressing_done_details`, `pressing_damage`, and `photos`.
+**Overview:** Add a Pressing Item Stock Register (Report 2) API under reports2 > Pressing that produces an Excel report at transaction (group) level — one row per distinct `(group_no, item_name)`, grouped and subtotalled by Item Name. Columns include Group no, Photo No, Order No, Issued Thickness, Received Thickness, Size, Opening SqMtr, Issued for pressing SqMtr, Pressing received Sqmtr, Pressing Waste SqMtr, and Closing SqMtr. Data is sourced from `issues_for_pressing`, `pressing_done_details`, `pressing_damage`, and `photos`.
 
 ---
 
@@ -11,7 +11,7 @@
 Implement a **Pressing Item Stock Register — Group No Wise** report matching the specified layout:
 
 - **Title:** `"Pressing Item Stock Register between group no wise DD/MM/YYYY and DD/MM/YYYY"`
-- **Columns (11):** Item Name | Group no | Photo No | Order No | Thickness | Size | Opening SqMtr | Issued for pressing SqMtr | Pressing received Sqmtr | Pressing Waste SqMtr | Closing SqMtr
+- **Columns (12):** Item Name | Group no | Photo No | Order No | Issued Thickness | Received Thickness | Size | Opening SqMtr | Issued for pressing SqMtr | Pressing received Sqmtr | Pressing Waste SqMtr | Closing SqMtr
 - **Single header row.**
 - **Grouping:** One row per distinct `(group_no, item_name)`. Rows grouped by Item Name with merged Item Name cells.
 - **Subtotals:** A "Total" row after each Item Name group summing all numeric columns.
@@ -63,7 +63,8 @@ Closing SqMtr      = current_available
 | Group no                  | issues_for_pressing.group_no                                                 |
 | Photo No                  | photos.photo_number via group_no or hybrid_group_no.group_no                 |
 | Order No                  | orders.order_no when pressing_done_details.issued_for = ORDER, else empty   |
-| Thickness                 | issues_for_pressing.thickness                                                |
+| Issued Thickness          | issues_for_pressing.thickness when dimKey matches; else pressing_done_consumed_items_details.group_details.thickness |
+| Received Thickness        | pressing_done_details.thickness (pressed output)                             |
 | Size                      | `length X width` (string)                                                    |
 | Opening SqMtr             | current_available + pressing_received + pressing_waste − issued_for_pressing |
 | Issued for pressing SqMtr | issues_for_pressing.sqm where createdAt in [start, end], per (group_no, thickness, length, width) |
@@ -110,7 +111,8 @@ Reference patterns:
 - **Step 1 — Distinct groups (all time):** Aggregate issues_for_pressing → `$group` by `(group_no, item_name)`, keep `$first` of thickness, length, width. Sort by `_id.item_name` asc, `_id.group_no` asc. Return 404 with `"No pressing group data found..."` if empty.
 - **Step 2 — Photo numbers:** `photoModel.find({ $or: [{ group_no: { $in: allGroupNos } }, { 'hybrid_group_no.group_no': { $in: allGroupNos } }] }, { group_no: 1, photo_number: 1, hybrid_group_no: 1 }).lean()` → `Map<group_no → photo_number>` (populate for both group_no and each hybrid_group_no.group_no).
 - **Step 3 — Order numbers:** Aggregate pressing_done_details where issued_for=ORDER, group_no in set, group by (group_no, thickness, length, width), $first order_id. Query orders by order_ids → `Map<dimKey → order_no>`. Empty when issued_for is STOCK or SAMPLE.
-- **Step 4 — Issued for pressing in period:** Aggregate issues_for_pressing where createdAt ∈ [start, end], group by `(group_no, thickness, length, width)`, sum sqm → `Map<"group_no|thickness|length|width" → total>`.
+- **Step 4 — Issued for pressing in period:** Aggregate issues_for_pressing where createdAt ∈ [start, end], group by `(group_no, thickness, length, width)`, sum sqm → `Map<"group_no|thickness|length|width" → total>`. Also build consumedIssuedMap from pressing_done_consumed_items_details.group_details (sum sqm per dimKey). Use consumed as fallback when issues returns 0 — ensures issued_for_pressing ≠ 0 when pressing_received > 0.
+- **Step 4b — Issued thickness:** Primary from issues_for_pressing (issuedThicknessFromIssuesMap, same dimKey as issuedMap). Fallback from pressing_done_consumed_items_details.group_details when dimension mismatch (issuedThicknessFromConsumedMap). Covers both issued-but-not-pressed (from issues) and pressed-with-dimension-mismatch (from consumed).
 - **Step 5 — Pressing received in period:** Aggregate pressing_done_details where pressing_date ∈ [start, end] AND group_no ∈ set, group by group_no, sum sqm → `Map<group_no → total>`.
 - **Step 6 — Pressing waste in period:** Fetch pressing_done_details docs (pressing_date in range, group_no in set) → collect `_id`s and build `Map<_id.toString() → group_no>`; aggregate pressing_damage where pressing_done_details_id ∈ those ids, group by pressing_done_details_id, sum sqm; map to group_no → `Map<group_no → total>`.
 - **Step 7 — Current available:** Aggregate issues_for_pressing where is_pressing_done = false, group by `(group_no, item_name)`, sum available_details.sqm → `Map<"group_no|item_name" → total>`.
@@ -122,6 +124,7 @@ Reference patterns:
   - `opening_sqm = current_available + pressing_received + pressing_waste − issued_for_pressing`
   - `closing_sqm = current_available`
   - `photo_no` from photoMap, `order_no` from orderNoByDimKey (orders.order_no when issued_for=ORDER)
+  - `issued_thickness` from issues_for_pressing when dimKey matches, else from consumed group_details, else received_thickness; `received_thickness` from pressing_done (group._id.thickness)
 - Filter to "active" rows (any non-zero numeric: opening, issued, received, waste, closing).
 - Return 404 `"No pressing stock data found..."` if no active rows.
 - Call `GeneratePressingStockRegisterReport2Excel(activeStockData, startDate, endDate, filter)` and return download link.
@@ -130,16 +133,16 @@ Reference patterns:
 
 - Folder: `public/upload/reports/reports2/Pressing` (created with `fs.mkdir(..., { recursive: true })`).
 - Title: `"Pressing Item Stock Register between group no wise {start} and {end}"` (DD/MM/YYYY). Note: title format `"between group no wise DD/MM/YYYY and DD/MM/YYYY"`.
-- **Single header row:** 11 headers — Item Name, Group no, Photo No, Order No, Thickness, Size, Opening SqMtr, Issued for pressing SqMtr, Pressing received Sqmtr, Pressing Waste SqMtr, Closing SqMtr.
-- `NUMERIC_START_COL = 7` (Opening SqMtr onwards).
+- **Single header row:** 12 headers — Item Name, Group no, Photo No, Order No, Issued Thickness, Received Thickness, Size, Opening SqMtr, Issued for pressing SqMtr, Pressing received Sqmtr, Pressing Waste SqMtr, Closing SqMtr.
+- `NUMERIC_START_COL = 8` (Opening SqMtr onwards).
 - Sort data by item_name → group_no (both ascending string compare).
-- Write detail rows. When item_name changes, insert a "Total" row (col 2 = "Total", cols 3–6 blank, numeric sums in cols 7–11). Record merge range for Item Name column (col 1).
+- Write detail rows. When item_name changes, insert a "Total" row (col 2 = "Total", cols 3–7 blank, numeric sums in cols 8–12). Record merge range for Item Name column (col 1).
 - After all rows, write last item subtotal.
 - Merge Item Name column cells across each group's detail rows and its subtotal row.
-- Write grand total row (col 1: "Total"; cols 2–6 blank; numeric sums in cols 7–11).
-- Apply `numFmt = '0.00'` to Thickness (col 5) and numeric cols 7–11 in data/total rows.
+- Write grand total row (col 1: "Total"; cols 2–7 blank; numeric sums in cols 8–12).
+- Apply `numFmt = '0.00'` to Issued Thickness (col 5), Received Thickness (col 6), and numeric cols 8–12 in data/total rows.
 - `headerStyle`: bold, center, grey fill (`FFD3D3D3`), thin borders. `totalRowStyle`: bold, lighter grey fill (`FFE0E0E0`).
-- Column widths: 24, 16, 13, 16, 12, 16, 15, 24, 22, 20, 15.
+- Column widths: 20, 14, 12, 14, 14, 14, 16, 15, 22, 20, 18, 15.
 - Filename: `Pressing-Stock-Register-Group-Wise-{timestamp}.xlsx`.
 - Return `${process.env.APP_URL}${filePath}`.
 
@@ -193,6 +196,7 @@ sequenceDiagram
 - **Pressing received / waste attribution:** Attributed to the `group_no` field of `pressing_done_details`. If a pressing run records secondary groups only in `group_no_array`, those groups will not receive credit for received/waste in this report.
 - **Photo No for hybrid veneer:** Groups that appear only in `photos.hybrid_group_no` (e.g. second group in hybrid veneer) are now resolved via `$or` query so both groups show the correct photo number.
 - **Issued for pressing per dimension:** Issued-for-pressing is aggregated by `(group_no, thickness, length, width)` so each row reflects the correct inflow for that specific dimension.
+- **Issued vs Received Thickness:** Issued Thickness: primary from issues_for_pressing (covers issued-but-not-pressed); fallback from consumed when dimension mismatch. Issued for pressing SqMtr includes all issued items in period, including those not yet pressed. Received Thickness is from pressing_done_details (pressed output).
 - **Closing = current_available:** The algebraic equivalence `Opening + issued − received − waste = current_available` is by definition of Opening. Using `current_available` directly is simpler and avoids floating-point drift.
 - **Opening balance uses all-time history:** Distinct groups are fetched without a date filter to capture all groups that have ever had pressing activity, ensuring correct opening balances.
 
