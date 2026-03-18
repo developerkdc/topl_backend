@@ -157,7 +157,10 @@ export const GroupingSplicingStockRegisterExcel = catchAsync(
               {
                 $match: {
                   ...matchItem,
-                  issue_status: 'order',
+                  $or: [
+                    { issue_status: 'order' },
+                    { issued_for: 'ORDER' },
+                  ],
                   updatedAt: { $gte: start, $lte: end },
                 },
               },
@@ -181,7 +184,11 @@ export const GroupingSplicingStockRegisterExcel = catchAsync(
               {
                 $match: {
                   ...matchItem,
-                  issue_status: 'tapping',
+                  $or: [
+                    { issue_status: 'tapping' },
+                    { issued_for: 'STOCK' },
+                    { issued_for: 'SAMPLE' },
+                  ],
                   updatedAt: { $gte: start, $lte: end },
                 },
               },
@@ -208,9 +215,11 @@ export const GroupingSplicingStockRegisterExcel = catchAsync(
             const purchase = 0;
             const processWaste = 0;
 
-            // Opening = current available + issued in period - receipt in period (allow negative)
-            const openingBalance =
-              currentAvailable + issuedInPeriod - receiptTotal;
+            // Opening = current available + issued in period - receipt in period (min 0)
+            const openingBalance = Math.max(
+              0,
+              currentAvailable + issuedInPeriod - receiptTotal
+            );
 
             // Closing = Opening + Purchase + (Hand + Machine) - (Pressing + Demage + Sale + Cal Ply) - Process Waste
             const closingBalance =
