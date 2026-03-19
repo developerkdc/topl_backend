@@ -39,7 +39,6 @@ const groupData = (data) => {
           inward_cmt: record.original_log?.physical_cmt || 0,
         },
         pieces: [],
-        workers: [],
       };
     }
 
@@ -50,21 +49,6 @@ const groupData = (data) => {
       girth: record.girth,
       cc_cmt: record.crosscut_cmt,
     });
-
-    const workerKey = `${record.machine_id}_${record.worker_details?.shift || ''}`;
-    const existingWorker = grouped[itemName][logNo].workers.find(
-      (w) => `${w.machine_id}_${w.shift}` === workerKey
-    );
-
-    if (!existingWorker && record.worker_details) {
-      grouped[itemName][logNo].workers.push({
-        machine_id: record.machine_id,
-        machine_name: record.machine_name,
-        shift: record.worker_details.shift,
-        working_hours: record.worker_details.working_hours,
-        workers: record.worker_details.workers,
-      });
-    }
   });
 
   return grouped;
@@ -107,6 +91,13 @@ const GenerateCrosscutDailyReportExcel = async (details, reportDate) => {
     'CC CMT',
   ];
 
+  const thinBorder = {
+    top: { style: 'thin' },
+    left: { style: 'thin' },
+    bottom: { style: 'thin' },
+    right: { style: 'thin' },
+  };
+
   const headerRow = worksheet.getRow(currentRow);
   headers.forEach((header, index) => {
     const cell = headerRow.getCell(index + 1);
@@ -118,12 +109,7 @@ const GenerateCrosscutDailyReportExcel = async (details, reportDate) => {
       pattern: 'solid',
       fgColor: { argb: 'FFD3D3D3' },
     };
-    cell.border = {
-      top: { style: 'thin' },
-      left: { style: 'thin' },
-      bottom: { style: 'thin' },
-      right: { style: 'thin' },
-    };
+    cell.border = thinBorder;
   });
   currentRow++;
 
@@ -159,33 +145,28 @@ const GenerateCrosscutDailyReportExcel = async (details, reportDate) => {
           let logCCTotal = 0;
 
           logData.pieces.forEach((piece, pieceIndex) => {
-            // Row 1 (Log row): Item, LogNo, Length, Girth, Inward CMT; cols 6-9 empty
-            const logRow = worksheet.getRow(currentRow);
-            if (currentRow === itemStartRow) {
-              logRow.getCell(1).value = itemName;
-            }
-            if (pieceIndex === 0) {
-              logRow.getCell(2).value = logData.original_log.log_no;
-              logRow.getCell(3).value = logData.original_log.length;
-              logRow.getCell(4).value = logData.original_log.girth;
-              logRow.getCell(5).value = logData.original_log.inward_cmt;
-              [3, 4, 5].forEach((colNum) => {
-                const cell = logRow.getCell(colNum);
-                if (cell.value != null && typeof cell.value === 'number') {
-                  cell.numFmt = '0.000';
-                }
-              });
-            }
-            currentRow++;
+            const row = worksheet.getRow(currentRow);
 
-            // Row 2 (LogX row): cols 1-5 empty; LogX, Length, Girth, CC CMT
-            const logxRow = worksheet.getRow(currentRow);
-            logxRow.getCell(6).value = piece.log_no_code || piece.code;
-            logxRow.getCell(7).value = piece.length;
-            logxRow.getCell(8).value = piece.girth;
-            logxRow.getCell(9).value = piece.cc_cmt;
-            [7, 8, 9].forEach((colNum) => {
-              const cell = logxRow.getCell(colNum);
+            if (pieceIndex === 0) {
+              // First piece: Log info + LogX on same row (no empty row)
+              if (currentRow === itemStartRow) {
+                row.getCell(1).value = itemName;
+              }
+              row.getCell(2).value = logData.original_log.log_no;
+              row.getCell(3).value = logData.original_log.length;
+              row.getCell(4).value = logData.original_log.girth;
+              row.getCell(5).value = logData.original_log.inward_cmt;
+            }
+
+            // LogX columns (6-9): LogX, Length, Girth, CC CMT
+            row.getCell(6).value = piece.log_no_code || piece.code;
+            row.getCell(7).value = piece.length;
+            row.getCell(8).value = piece.girth;
+            row.getCell(9).value = piece.cc_cmt;
+
+            [1, 2, 3, 4, 5, 6, 7, 8, 9].forEach((colNum) => {
+              const cell = row.getCell(colNum);
+              cell.border = thinBorder;
               if (cell.value != null && typeof cell.value === 'number') {
                 cell.numFmt = '0.000';
               }
@@ -201,27 +182,25 @@ const GenerateCrosscutDailyReportExcel = async (details, reportDate) => {
           totalRow.getCell(9).value = logCCTotal;
           totalRow.getCell(9).font = { bold: true };
           totalRow.getCell(9).numFmt = '0.000';
+          [1, 2, 3, 4, 5, 6, 7, 8, 9].forEach((colNum) => {
+            totalRow.getCell(colNum).border = thinBorder;
+          });
           currentRow++;
 
           itemInwardTotal += logData.original_log.inward_cmt || 0;
           itemCCTotal += logCCTotal;
         });
 
-      // Item-level totals: two "Total" rows under LogNo column with CC CMT
-      const itemTotalRow1 = worksheet.getRow(currentRow);
-      itemTotalRow1.getCell(2).value = 'Total';
-      itemTotalRow1.getCell(2).font = { bold: true };
-      itemTotalRow1.getCell(9).value = itemCCTotal;
-      itemTotalRow1.getCell(9).font = { bold: true };
-      itemTotalRow1.getCell(9).numFmt = '0.000';
-      currentRow++;
-
-      const itemTotalRow2 = worksheet.getRow(currentRow);
-      itemTotalRow2.getCell(2).value = 'Total';
-      itemTotalRow2.getCell(2).font = { bold: true };
-      itemTotalRow2.getCell(9).value = itemCCTotal;
-      itemTotalRow2.getCell(9).font = { bold: true };
-      itemTotalRow2.getCell(9).numFmt = '0.000';
+      // Item-level total: one "Total" row under LogNo column with CC CMT
+      const itemTotalRow = worksheet.getRow(currentRow);
+      itemTotalRow.getCell(2).value = 'Total';
+      itemTotalRow.getCell(2).font = { bold: true };
+      itemTotalRow.getCell(9).value = itemCCTotal;
+      itemTotalRow.getCell(9).font = { bold: true };
+      itemTotalRow.getCell(9).numFmt = '0.000';
+      [1, 2, 3, 4, 5, 6, 7, 8, 9].forEach((colNum) => {
+        itemTotalRow.getCell(colNum).border = thinBorder;
+      });
       currentRow++;
 
       itemTotals[itemName] = { inward: itemInwardTotal, cc: itemCCTotal };
@@ -243,6 +222,7 @@ const GenerateCrosscutDailyReportExcel = async (details, reportDate) => {
       fgColor: { argb: 'FFD3D3D3' },
     };
     cell.alignment = { horizontal: 'center', vertical: 'middle' };
+    cell.border = thinBorder;
   });
   currentRow++;
 
@@ -255,6 +235,9 @@ const GenerateCrosscutDailyReportExcel = async (details, reportDate) => {
       row.getCell(2).numFmt = '0.000';
       row.getCell(3).value = itemTotals[itemName].cc;
       row.getCell(3).numFmt = '0.000';
+      [1, 2, 3].forEach((colNum) => {
+        row.getCell(colNum).border = thinBorder;
+      });
       currentRow++;
     });
 
@@ -265,45 +248,8 @@ const GenerateCrosscutDailyReportExcel = async (details, reportDate) => {
   summaryTotalRow.font = { bold: true };
   summaryTotalRow.getCell(2).numFmt = '0.000';
   summaryTotalRow.getCell(3).numFmt = '0.000';
-  currentRow++;
-
-  // Operational details: CCId, Shift, Work Hours, Worker, Machine Id
-  currentRow += 2;
-  const workerHeaderRow = worksheet.getRow(currentRow);
-  workerHeaderRow.getCell(1).value = 'CCId';
-  workerHeaderRow.getCell(2).value = 'Shift';
-  workerHeaderRow.getCell(3).value = 'Work Hours';
-  workerHeaderRow.getCell(4).value = 'Worker';
-  workerHeaderRow.getCell(5).value = 'Machine Id';
-  workerHeaderRow.font = { bold: true };
-  workerHeaderRow.eachCell({ includeEmpty: false }, (cell) => {
-    cell.fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FFD3D3D3' },
-    };
-    cell.alignment = { horizontal: 'center', vertical: 'middle' };
-  });
-  currentRow++;
-
-  const allWorkers = new Set();
-  Object.values(groupedData).forEach((logs) => {
-    Object.values(logs).forEach((logData) => {
-      logData.workers.forEach((worker) => {
-        allWorkers.add(JSON.stringify(worker));
-      });
-    });
-  });
-
-  Array.from(allWorkers).forEach((workerJson) => {
-    const worker = JSON.parse(workerJson);
-    const row = worksheet.getRow(currentRow);
-    row.getCell(1).value = details[0]?._id?.toString().slice(-5) || '';
-    row.getCell(2).value = worker.shift ?? '';
-    row.getCell(3).value = worker.working_hours ?? '';
-    row.getCell(4).value = worker.workers ?? '';
-    row.getCell(5).value = worker.machine_name ?? worker.machine_id ?? '';
-    currentRow++;
+  [1, 2, 3].forEach((colNum) => {
+    summaryTotalRow.getCell(colNum).border = thinBorder;
   });
 
   const timestamp = new Date().getTime();

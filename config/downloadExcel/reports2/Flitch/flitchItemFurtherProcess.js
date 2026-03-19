@@ -129,15 +129,34 @@ export const createFlitchItemFurtherProcessReportExcel = async (
       pattern: 'solid',
       fgColor: { argb: 'FFFFD54F' },
     };
+    const thin = { style: 'thin' };
+    const medium = { style: 'medium' };
     const thinBorder = {
-      top: { style: 'thin' },
-      left: { style: 'thin' },
-      bottom: { style: 'thin' },
-      right: { style: 'thin' },
+      top: thin,
+      left: thin,
+      bottom: thin,
+      right: thin,
+    };
+
+    const applyRowBorders = (row, startCol, endCol, opts = {}) => {
+      const { top = false, bottom = true, bottomStyle = 'thin' } = opts;
+      const bottomBorder = bottomStyle === 'medium' ? medium : thin;
+      for (let col = startCol; col <= endCol; col++) {
+        const cell = row.getCell(col);
+        cell.border = {
+          left: thin,
+          right: thin,
+          ...(top && { top: thin }),
+          ...(bottom && { bottom: bottomBorder }),
+        };
+      }
     };
 
     const styleCell = (cell, opts = {}) => {
-      cell.border = thinBorder;
+      const borderType = opts.borderType || 'full';
+      if (borderType === 'full') {
+        cell.border = thinBorder;
+      }
       cell.alignment = {
         vertical: 'middle',
         horizontal: opts.align || 'center',
@@ -369,6 +388,12 @@ export const createFlitchItemFurtherProcessReportExcel = async (
           numFmt: NUMERIC_COLS.has(colNum) ? numFmt : undefined,
         });
       });
+      const isGrandTotal = label[0] === 'Total' && label[1] === '';
+      applyRowBorders(wsRow, 1, 47, {
+        top: true,
+        bottom: true,
+        bottomStyle: isGrandTotal ? 'medium' : 'thin',
+      });
       return wsRow.number;
     };
 
@@ -435,8 +460,10 @@ export const createFlitchItemFurtherProcessReportExcel = async (
             styleCell(cell, {
               align: NUMERIC_COLS.has(colNum) ? 'right' : 'left',
               numFmt: NUMERIC_COLS.has(colNum) ? numFmt : undefined,
+              borderType: 'data',
             });
           });
+          applyRowBorders(wsRow, 1, 47, { top: false, bottom: true });
 
           // Accumulate totals using full (un-blanked) values
           const fullCells = toCells(row);

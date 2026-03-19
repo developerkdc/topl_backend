@@ -7,6 +7,7 @@ import { issues_for_peeling_model } from '../../../database/schema/factory/peeli
 import { peeling_done_other_details_model } from '../../../database/schema/factory/peeling/peeling_done/peeling_done.schema.js';
 import { crosscutting_done_model } from '../../../database/schema/factory/crossCutting/crosscutting.schema.js';
 import { flitching_done_model } from '../../../database/schema/factory/flitching/flitching.schema.js';
+import { flitch_inventory_items_model } from '../../../database/schema/inventory/Flitch/flitch.schema.js';
 import { createItemWiseFlitchReportExcel } from '../../../config/downloadExcel/reports2/Flitch/itemWiseFlitch.js';
 
 /**
@@ -50,14 +51,39 @@ export const ItemWiseFlitchReportExcel = catchAsync(async (req, res, next) => {
 
   try {
     /*************************************************************
-     * STEP 1: Get all unique item names from flitching inventory
+     * STEP 1: Get unique item names with flitch inward in date range
+     * (flitch_inventory invoice.inward_date OR flitching_done worker_details.flitching_date)
      *************************************************************/
-    const allItemNames = await flitching_done_model.aggregate([
-      { $match: { deleted_at: null, ...itemFilter } },
-      { $group: { _id: '$item_name' } },
+    const [inventoryItemsInPeriod, factoryItemsInPeriod] = await Promise.all([
+      flitch_inventory_items_model.aggregate([
+        { $match: { ...itemFilter } },
+        {
+          $lookup: {
+            from: 'flitch_inventory_invoice_details',
+            localField: 'invoice_id',
+            foreignField: '_id',
+            as: 'invoice',
+          },
+        },
+        { $unwind: '$invoice' },
+        { $match: { 'invoice.inward_date': { $gte: start, $lte: end } } },
+        { $group: { _id: '$item_name' } },
+      ]),
+      flitching_done_model.aggregate([
+        {
+          $match: {
+            deleted_at: null,
+            'worker_details.flitching_date': { $gte: start, $lte: end },
+            ...itemFilter,
+          },
+        },
+        { $group: { _id: '$item_name' } },
+      ]),
     ]);
 
-    const itemNames = allItemNames.map((i) => i._id).filter(Boolean);
+    const itemNames = [...new Set(
+      [...inventoryItemsInPeriod, ...factoryItemsInPeriod].map((i) => i._id).filter(Boolean)
+    )];
 
     if (itemNames.length === 0) {
       return res
@@ -416,9 +442,12 @@ export const ItemWiseFlitchReportExcel = catchAsync(async (req, res, next) => {
     closingAgg.forEach((r) => closingMap.set(r._id, r.total));
 
     /*************************************************************
-     * STEP 14: Build final 20-field report rows
+     * STEP 14: Build final 20-field report rows (only items with flitch inward in period)
      *************************************************************/
-    const report = Array.from(reportMap.values()).map((r) => ({
+    const itemNamesSet = new Set(itemNames);
+    const report = Array.from(reportMap.values())
+      .filter((r) => itemNamesSet.has(r.item_name))
+      .map((r) => ({
       item_name:             r.item_name,
       opening_stock_cmt:     r.opening_stock_cmt,
       invoice_cmt:           r.invoice_cmt,

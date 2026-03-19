@@ -46,14 +46,32 @@ export const LogWiseFlitchReportExcel = catchAsync(async (req, res, next) => {
   }
 
   try {
-    // ── STEP 1: Collect all unique log numbers ──
+    // ── STEP 1: Collect log numbers with inward_date in date range ──
+    // Inventory: flitch_inventory_invoice_details.inward_date
+    // Factory: flitching_done.worker_details.flitching_date
     const [inventoryLogNos, factoryLogNos] = await Promise.all([
       flitch_inventory_items_model.aggregate([
         { $match: { ...itemFilter } },
+        {
+          $lookup: {
+            from: 'flitch_inventory_invoice_details',
+            localField: 'invoice_id',
+            foreignField: '_id',
+            as: 'invoice',
+          },
+        },
+        { $unwind: '$invoice' },
+        { $match: { 'invoice.inward_date': { $gte: start, $lte: end } } },
         { $group: { _id: { log_no: '$log_no', item_name: '$item_name' } } },
       ]),
       flitching_done_model.aggregate([
-        { $match: { deleted_at: null, ...itemFilter } },
+        {
+          $match: {
+            deleted_at: null,
+            'worker_details.flitching_date': { $gte: start, $lte: end },
+            ...itemFilter,
+          },
+        },
         { $group: { _id: { log_no: '$log_no', item_name: '$item_name' } } },
       ]),
     ]);

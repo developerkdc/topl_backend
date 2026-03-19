@@ -102,20 +102,20 @@ export const createLogWiseFlitchReportExcel = async (
       { key: 'fl_closing',            width: 16 }, // 19
     ];
 
-    // ── Helper: apply thin border to a single cell ───────────────────────────
-    const applyBorder = (cell) => {
-      cell.border = {
-        top:    { style: 'thin' },
-        left:   { style: 'thin' },
-        bottom: { style: 'thin' },
-        right:  { style: 'thin' },
-      };
-    };
+    const thin = { style: 'thin' };
+    const medium = { style: 'medium' };
 
-    // ── Helper: apply border to all cells in a row by column range ───────────
-    const applyRowBorders = (row, fromCol = 1, toCol = TOTAL_COLS) => {
-      for (let c = fromCol; c <= toCol; c++) {
-        applyBorder(row.getCell(c));
+    const applyRowBorders = (row, startCol, endCol, opts = {}) => {
+      const { top = false, bottom = true, bottomStyle = 'thin' } = opts;
+      const bottomBorder = bottomStyle === 'medium' ? medium : thin;
+      for (let col = startCol; col <= endCol; col++) {
+        const cell = row.getCell(col);
+        cell.border = {
+          left: thin,
+          right: thin,
+          ...(top && { top: thin }),
+          ...(bottom && { bottom: bottomBorder }),
+        };
       }
     };
 
@@ -159,8 +159,8 @@ export const createLogWiseFlitchReportExcel = async (
       const cell = groupHeaderRow.getCell(c);
       cell.fill = groupFill;
       cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
-      applyBorder(cell);
     }
+    applyRowBorders(groupHeaderRow, 1, TOTAL_COLS, { top: true, bottom: true });
 
     // ── ROW 4: Sub-column headers ────────────────────────────────────────────
     const subHeaderRow = worksheet.addRow([
@@ -190,8 +190,8 @@ export const createLogWiseFlitchReportExcel = async (
       const cell = subHeaderRow.getCell(c);
       cell.fill = groupFill;
       cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
-      applyBorder(cell);
     }
+    applyRowBorders(subHeaderRow, 1, TOTAL_COLS, { top: true, bottom: true });
 
     // ── Grand-total accumulators ─────────────────────────────────────────────
     const grand = {
@@ -251,10 +251,9 @@ export const createLogWiseFlitchReportExcel = async (
           fl_closing:            n(log.fl_closing),
         });
 
-        // Apply border + default center alignment to every cell
+        applyRowBorders(dataRow, 1, TOTAL_COLS, { top: false, bottom: true });
         for (let c = 1; c <= TOTAL_COLS; c++) {
           const cell = dataRow.getCell(c);
-          applyBorder(cell);
           cell.alignment = { vertical: 'middle', horizontal: 'center' };
         }
         // Left-align text columns
@@ -318,8 +317,8 @@ export const createLogWiseFlitchReportExcel = async (
       cell.font = { bold: true };
       cell.fill = yellowFill;
       cell.alignment = { vertical: 'middle', horizontal: 'center' };
-      applyBorder(cell);
     }
+    applyRowBorders(grandTotalRow, 1, TOTAL_COLS, { top: true, bottom: true });
     grandTotalRow.getCell(1).alignment = { vertical: 'middle', horizontal: 'left' };
 
     // ── Save & return download URL ────────────────────────────────────────────

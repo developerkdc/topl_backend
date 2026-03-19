@@ -16,6 +16,23 @@ const formatDate = (dateString) => {
   }
 };
 
+const thin = { style: 'thin' };
+const medium = { style: 'medium' };
+
+const applyRowBorders = (row, startCol, endCol, opts = {}) => {
+  const { top = false, bottom = true, bottomStyle = 'thin' } = opts;
+  const bottomBorder = bottomStyle === 'medium' ? medium : thin;
+  for (let col = startCol; col <= endCol; col++) {
+    const cell = row.getCell(col);
+    cell.border = {
+      left: thin,
+      right: thin,
+      ...(top && { top: thin }),
+      ...(bottom && { bottom: bottomBorder }),
+    };
+  }
+};
+
 /**
  * Apply grey background fill to a row from startCol to totalCols (inclusive)
  */
@@ -123,10 +140,10 @@ const GenerateFlitchDailyReport = async (details, reportDate) => {
       fgColor: { argb: 'FFD3D3D3' },
     };
     cell.border = {
-      top: { style: 'thin' },
-      left: { style: 'thin' },
-      bottom: { style: 'thin' },
-      right: { style: 'thin' },
+      top: thin,
+      left: thin,
+      bottom: thin,
+      right: thin,
     };
   });
   currentRow++;
@@ -196,19 +213,11 @@ const GenerateFlitchDailyReport = async (details, reportDate) => {
             const cmtCell = row.getCell(10);
             if (cmtCell.value && typeof cmtCell.value === 'number') cmtCell.numFmt = '0.000';
 
+            applyRowBorders(row, 1, 10, { top: false, bottom: true });
+
             itemFlitchTotal += flitch.flitch_cmt || 0;
             currentRow++;
           });
-
-          // Item total row
-          const itemTotalRow = worksheet.getRow(currentRow);
-          applyGreyBackground(itemTotalRow, 10, 3);
-          itemTotalRow.getCell(3).value = 'Total';
-          itemTotalRow.getCell(3).font = { bold: true };
-          itemTotalRow.getCell(10).value = itemFlitchTotal;
-          itemTotalRow.getCell(10).font = { bold: true };
-          itemTotalRow.getCell(10).numFmt = '0.000';
-          currentRow++;
 
           inwardTotal += itemFlitchTotal;
           grandTotalFlitch += itemFlitchTotal || 0;
@@ -222,6 +231,7 @@ const GenerateFlitchDailyReport = async (details, reportDate) => {
       inwardTotalRow.getCell(10).value = inwardTotal;
       inwardTotalRow.getCell(10).font = { bold: true };
       inwardTotalRow.getCell(10).numFmt = '0.000';
+      applyRowBorders(inwardTotalRow, 1, 10, { top: true, bottom: true, bottomStyle: 'medium' });
       currentRow++;
       currentRow++;
     });
@@ -250,10 +260,10 @@ const GenerateFlitchDailyReport = async (details, reportDate) => {
       fgColor: { argb: 'FFD3D3D3' },
     };
     cell.border = {
-      top: { style: 'thin' },
-      left: { style: 'thin' },
-      bottom: { style: 'thin' },
-      right: { style: 'thin' },
+      top: thin,
+      left: thin,
+      bottom: thin,
+      right: thin,
     };
   });
   currentRow++;
@@ -295,6 +305,8 @@ const GenerateFlitchDailyReport = async (details, reportDate) => {
           const cell = row.getCell(3);
           if (cell.value && typeof cell.value === 'number') cell.numFmt = '0.000';
 
+          applyRowBorders(row, 1, 3, { top: false, bottom: true });
+
           itemFlitchTotal += summaryMap[itemName][supp].flitch;
           grandFlitch += summaryMap[itemName][supp].flitch;
           currentRow++;
@@ -308,6 +320,7 @@ const GenerateFlitchDailyReport = async (details, reportDate) => {
       itemTotalRow.getCell(3).value = itemFlitchTotal;
       itemTotalRow.getCell(3).font = { bold: true };
       itemTotalRow.getCell(3).numFmt = '0.000';
+      applyRowBorders(itemTotalRow, 1, 3, { top: true, bottom: true });
       currentRow++;
       currentRow++;
     });
@@ -320,6 +333,7 @@ const GenerateFlitchDailyReport = async (details, reportDate) => {
   grandRow.getCell(3).value = grandFlitch;
   grandRow.getCell(3).font = { bold: true };
   grandRow.getCell(3).numFmt = '0.000';
+  applyRowBorders(grandRow, 1, 3, { top: true, bottom: true, bottomStyle: 'medium' });
   currentRow++;
 
   // Generate file path

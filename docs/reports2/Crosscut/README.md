@@ -6,7 +6,7 @@ Crosscut report APIs are documented in subfolders, aligned with the Dressing rep
 
 | Folder | Description | Main Doc |
 |--------|-------------|----------|
-| **Daily_Crosscut** | Crosscut daily report (single date, log details with two-row-per-log layout, summary, operational details) | [CROSSCUT_DAILY_REPORT_API.md](./Daily_Crosscut/CROSSCUT_DAILY_REPORT_API.md), [CROSSCUT_DAILY_REPORT_PLAN.md](./Daily_Crosscut/CROSSCUT_DAILY_REPORT_PLAN.md) |
+| **Daily_Crosscut** | Crosscut daily report (single date, log details with two-row-per-log layout, summary) | [CROSSCUT_DAILY_REPORT_API.md](./Daily_Crosscut/CROSSCUT_DAILY_REPORT_API.md), [CROSSCUT_DAILY_REPORT_PLAN.md](./Daily_Crosscut/CROSSCUT_DAILY_REPORT_PLAN.md) |
 | **Log_wise_crosscut** | Log Wise Crosscut (date range, one row per log, 15 columns, totals per item and grand total) | [LOG_WISE_CROSSCUT_REPORT_API.md](./Log_wise_crosscut/LOG_WISE_CROSSCUT_REPORT_API.md), [LOG_WISE_CROSSCUT_REPORT_PLAN.md](./Log_wise_crosscut/LOG_WISE_CROSSCUT_REPORT_PLAN.md) |
 
 ## API Endpoints

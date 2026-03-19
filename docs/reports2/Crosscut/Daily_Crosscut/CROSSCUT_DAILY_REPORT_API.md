@@ -1,7 +1,7 @@
 # Crosscut Daily Report API
 
 ## Overview
-The Crosscut Daily Report API generates Excel reports showing cross-cutting production details for a specific date. The report includes a main data table with a two-row-per-log layout (original log row + LogX/cut-piece row, then Total row), item-level totals, a summary table (Item Name, Inward CMT, CC CMT), and operational metadata (CCId, Shift, Work Hours, Worker, Machine Id) at the end.
+The Crosscut Daily Report API generates Excel reports showing cross-cutting production details for a specific date. The report includes a main data table with a two-row-per-log layout (original log row + LogX/cut-piece row, then Total row), item-level totals, and a summary table (Item Name, Inward CMT, CC CMT).
 
 ## Endpoint
 ```
@@ -108,7 +108,7 @@ For each cut piece:
 - **Row 2 (LogX row):** Columns 1–5 empty; LogX (piece code), Length, Girth, CC CMT.
 - **Row 3 (Total):** "Total" in column 6 (LogX column); column 9 = sum of CC CMT for that log (per-log subtotal).
 
-After all logs of an item: two **item total** rows (LogNo column = "Total", CC CMT column = item total).
+After all logs of an item: one **item total** row (LogNo column = "Total", CC CMT column = item total).
 
 ### Summary Section
 
@@ -119,24 +119,12 @@ After the main data:
 | RED OAK   | 6.602      | 6.602  |
 | **Total** | **6.602**  | **6.602** |
 
-### Operational Details Section (at the end)
-
-**Headers:** CCId | Shift | Work Hours | Worker | Machine Id
-
-**Data:** One row per unique worker/machine combination. CCId is derived from the document _id (e.g. last 5 characters).
-
-**Example:**
-| CCId  | Shift | Work Hours | Worker | Machine Id   |
-|-------|-------|------------|--------|--------------|
-| 11306 | DAY   | 8          | 4      | CROSSCUT-1   |
-
 ## Report Features
 
 - **Single date filtering**: Report for one specific day only.
 - **Optional item filter**: `item_name` to restrict to one wood type.
 - **Two-row-per-log layout**: Original log row, then LogX row, then Total row per log.
-- **Item totals**: Two Total rows per item with CC CMT; then summary table with Inward CMT and CC CMT per item and grand total.
-- **Operational details at end**: CCId, Shift, Work Hours, Worker, Machine Id (one row per unique worker/machine).
+- **Item totals**: One Total row per item with CC CMT; then summary table with Inward CMT and CC CMT per item and grand total.
 - **Bold formatting**: Headers and total rows are bold.
 - **Visual styling**: Header row has gray background.
 - **Numeric formatting**: CMT and dimensions formatted to 3 decimal places (0.000).
@@ -151,7 +139,6 @@ When the API returns **200 OK**:
    - **Title row**: "CrossCut Details Report Date: DD/MM/YYYY" (date from request `reportDate`, formatted as DD/MM/YYYY).
    - **Main table**: 9 columns; two data rows per piece (Log row + LogX row) plus a Total row per log; item total rows; grouped by Item Name and LogNo.
    - **Summary table**: Item Name, Inward CMT, CC CMT; one row per item plus bold Total row.
-   - **Operational details section**: One header row and one data row per unique worker/machine (CCId, Shift, Work Hours, Worker, Machine Id).
 
 3. **Where each value comes from** is documented in **Field Mapping** and **How Data Is Brought Together** below.
 
@@ -188,9 +175,8 @@ The report is built in two steps: **aggregation** (controller) and **Excel gener
 - **Input**: The aggregated array and `reportDate`.
 - **Grouping**: Data is grouped by `item_name` and then by `log_no`. Each group has `original_log` (length, girth, inward_cmt) and `pieces` (code, log_no_code, length, girth, cc_cmt).
 - **Title**: "CrossCut Details Report Date: " + `reportDate` formatted as DD/MM/YYYY.
-- **Main table**: For each item → each log → each piece: write Log row (cols 1–5), LogX row (cols 6–9), then Total row (col 6 = "Total", col 9 = log CC CMT sum). Then two item total rows (Total in col 2, item CC CMT total in col 9).
+- **Main table**: For each item → each log → each piece: write Log row (cols 1–5), LogX row (cols 6–9), then Total row (col 6 = "Total", col 9 = log CC CMT sum). Then one item total row (Total in col 2, item CC CMT total in col 9).
 - **Summary**: One row per item (Item Name, Inward CMT, CC CMT) and one bold Total row.
-- **Operational details**: Collect unique worker/machine from grouped data; one row per unique (machine_id, shift) with CCId (from first document _id, last 5 chars), Shift, Work Hours, Worker, Machine Id (machine_name or machine_id).
 
 ---
 
@@ -216,16 +202,6 @@ The report is built in two steps: **aggregation** (controller) and **Excel gener
 | Inward CMT     | Sum of original_log.physical_cmt per item |
 | CC CMT         | Sum of piece crosscut_cmt per item |
 
-**Operational details section:**
-
-| Report column | Source |
-|----------------|--------|
-| CCId           | First document `_id` from aggregated data, last 5 characters (or similar convention) |
-| Shift          | worker_details.shift |
-| Work Hours     | worker_details.working_hours |
-| Worker         | worker_details.workers (count) |
-| Machine Id     | machine_name or machine_id |
-
 ---
 
 ## Calculations
@@ -240,10 +216,10 @@ The report is built in two steps: **aggregation** (controller) and **Excel gener
 - **Column 6**: Literal `"Total"`.
 - **Column 9**: Sum of `crosscut_cmt` for all pieces of that log.
 
-### Item total rows
+### Item total row
 
 - **Column 2**: Literal `"Total"`.
-- **Column 9**: Sum of CC CMT for all pieces of that item (same value in both item total rows).
+- **Column 9**: Sum of CC CMT for all pieces of that item.
 
 ### Summary section
 
@@ -337,7 +313,6 @@ const generateCrosscutReport = async () => {
 
 - Report includes all cross-cutting activity for the given date unless `item_name` is specified.
 - Original log measurements (Length, Girth, Inward CMT) are shown once per log on the first row of each log block.
-- CCId in the operational section is derived from the first document _id (e.g. last 5 characters); there is no dedicated CCId field in the schema.
 - Excel files are timestamped; stored in `public/reports/CrossCutting/`.
 
 ## File Storage
@@ -361,14 +336,10 @@ RED OAK   | D356  | 3.20   | 1.50  | 0.450      |        |        |       |
           |       |        |       |            | D357A  | 3.30   | 1.57  | 0.508
           |       |        |       |            | Total  |        |       | 0.508
           | Total |        |       |            |        |        |       | 6.602
-          | Total |        |       |            |        |        |       | 6.602
 
 Item Name | Inward CMT | CC CMT
 RED OAK   | 6.602      | 6.602
 Total     | 6.602      | 6.602
-
-CCId  | Shift | Work Hours | Worker | Machine Id
-11306 | DAY   | 8          | 4      | CROSSCUT-1
 ```
 
 ## Troubleshooting
@@ -382,9 +353,6 @@ If you receive a 404 error, verify:
 
 ### Incorrect Date Format
 Date should be in ISO format: `"YYYY-MM-DD"` (e.g. `"2025-03-31"`).
-
-### Missing Worker Details
-Worker details are sourced from `worker_details` on each crosscutting_done document. If the section is empty, ensure `worker_details` (shift, working_hours, workers) and machine_id/machine_name are populated.
 
 ## Technical Implementation
 
@@ -455,4 +423,4 @@ Order for the report:
 }
 ```
 
-**Result**: Array of documents. Each document has crosscutting_done fields plus `original_log` (physical_length, physical_diameter, physical_cmt, log_no). This array is passed to `GenerateCrosscutDailyReportExcel(details, reportDate)` in the config; the config groups by item_name and log_no, then writes the two-row-per-log main table, item totals, summary table, and operational details.
+**Result**: Array of documents. Each document has crosscutting_done fields plus `original_log` (physical_length, physical_diameter, physical_cmt, log_no). This array is passed to `GenerateCrosscutDailyReportExcel(details, reportDate)` in the config; the config groups by item_name and log_no, then writes the two-row-per-log main table, item totals, and summary table.

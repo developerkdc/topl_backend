@@ -3,6 +3,23 @@ import fs from 'fs/promises';
 import ApiError from '../../../../utils/errors/apiError.js';
 import dotenv from 'dotenv/config';
 
+const thin = { style: 'thin' };
+const medium = { style: 'medium' };
+
+const applyRowBorders = (row, startCol, endCol, opts = {}) => {
+  const { top = false, bottom = true, bottomStyle = 'thin' } = opts;
+  const bottomBorder = bottomStyle === 'medium' ? medium : thin;
+  for (let col = startCol; col <= endCol; col++) {
+    const cell = row.getCell(col);
+    cell.border = {
+      left: thin,
+      right: thin,
+      ...(top && { top: thin }),
+      ...(bottom && { bottom: bottomBorder }),
+    };
+  }
+};
+
 /**
  * Create Item Wise Flitch Report Excel
  * 20 columns with group headers:
@@ -129,6 +146,7 @@ export const createItemWiseFlitchReportExcel = async (
       pattern: 'solid',
       fgColor: { argb: 'FFD3D3D3' },
     };
+    applyRowBorders(groupHeaderRow, 1, TOTAL_COLS, { top: true, bottom: true });
 
     // Merge group header cells (row 3)
     worksheet.mergeCells(3, 3, 3, 5);   // Round Log Detail CMT
@@ -167,6 +185,7 @@ export const createItemWiseFlitchReportExcel = async (
       pattern: 'solid',
       fgColor: { argb: 'FFD3D3D3' },
     };
+    applyRowBorders(headerRow, 1, TOTAL_COLS, { top: true, bottom: true });
 
     // Grand totals accumulator
     const grandTotals = {
@@ -196,7 +215,7 @@ export const createItemWiseFlitchReportExcel = async (
     );
 
     sortedData.forEach((item) => {
-      worksheet.addRow({
+      const dataRow = worksheet.addRow({
         item_name:             item.item_name || '',
         opening_stock_cmt:     parseFloat(item.opening_stock_cmt     || 0).toFixed(3),
         invoice_cmt:           parseFloat(item.invoice_cmt           || 0).toFixed(3),
@@ -218,6 +237,7 @@ export const createItemWiseFlitchReportExcel = async (
         rejected:              parseFloat(item.rejected              || 0).toFixed(3),
         closing_stock_cmt:     parseFloat(item.closing_stock_cmt     || 0).toFixed(3),
       });
+      applyRowBorders(dataRow, 1, TOTAL_COLS, { top: false, bottom: true });
 
       grandTotals.opening_stock_cmt     += parseFloat(item.opening_stock_cmt     || 0);
       grandTotals.invoice_cmt           += parseFloat(item.invoice_cmt           || 0);
@@ -270,6 +290,7 @@ export const createItemWiseFlitchReportExcel = async (
         fgColor: { argb: 'FFE0E0E0' },
       };
     });
+    applyRowBorders(totalRow, 1, TOTAL_COLS, { top: true, bottom: true });
 
     const timeStamp = new Date().getTime();
     const fileName = `Item-Wise-Flitch-Report-${timeStamp}.xlsx`;

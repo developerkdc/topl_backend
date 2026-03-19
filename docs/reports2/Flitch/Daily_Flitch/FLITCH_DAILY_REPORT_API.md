@@ -107,7 +107,7 @@ After the main data, a summary table:
 - **Single-date filter**: Report for one specific day (by inward date).
 - **Grouping**: Inward Id → Item Name → Flitch pieces.
 - **Dimensions**: Flitch length, Width1–3, height; CMT per flitch.
-- **Totals**: Per-item and per-inward total rows (grey background, bold).
+- **Totals**: Per-inward total rows (grey background, bold).
 - **Summary 1**: Item Name, Supplier, Flitch CMT with item and grand totals.
 - **Numeric formatting**: CMT to 3 decimal places (0.000); dimensions to 2 (0.00).
 - **Header styling**: Grey background (#D3D3D3) for header rows.
@@ -171,7 +171,6 @@ Flitch Details Report Date: 31/03/2025
 Inward Id | Supplier Name | Item Name | Flitch No | Flitch Length | Width1 | Width2 | Width3 | Height | Flitch CMT
 INV-001   | ABC Ltd       | RED OAK   | F001      | 3.20          | 0.19   | 0.44   | 0.20   | 0.39   | 0.433
           |               |           | F002      | 3.30          | 0.19   | 0.43   | 0.21   | 0.43   | 0.479
-          |               | Total     |           |               |        |        |        |        | 0.912
 TOTAL INV-001             |           |           |               |        |        |        |        | 0.912
 
 Summary 1
