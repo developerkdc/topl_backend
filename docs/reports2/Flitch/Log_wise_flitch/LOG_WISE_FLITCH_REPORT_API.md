@@ -1,8 +1,8 @@
-# Log Wise Flitch Report API Documentation
+# Log Wise Flitch Report API Documentation (v3.0)
 
 ## Overview
 
-The Log Wise Flitch Report generates the **"Inward Item & Log Wise Report"** as an Excel file, tracking the complete journey of individual flitch logs across inward, stock, flitching, peeling, sales, and rejection stages. The layout uses multi-level column headers matching the client's required format.
+The Log Wise Flitch Report generates the **"Inward Item & Log Wise Report"** as an Excel file, tracking the complete journey of individual flitch logs through factory stages (flitching → slicing) with inventory-flow-based stock calculations. Uses 19-column multi-level layout aligned to Item Wise Flitch v4 logic: Slicing instead of Peeling, LOG/CROSSCUT source differentiation, and comprehensive wastage aggregation.
 
 ## API Endpoint
 
@@ -65,15 +65,15 @@ The Log Wise Flitch Report generates the **"Inward Item & Log Wise Report"** as 
 ```
 Row 3 (group headers):
   ┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │col 1│col 2│col 3│col 4│col 5│col 6│col 7│  Received Flitch  │   Flitch Details CMT   │ Peeling Details CMT │Round log+CrossCu│col19│
-  │     │     │     │     │     │     │     │   Detail CMT (8-9) │       (10–12)           │      (13–15)        │ (Cc+Fl+Pe)(16-18)│     │
+  │col 1│col 2│col 3│col 4│col 5│col 6│col 7│  Received Flitch  │   Flitch Details CMT   │ Slicing Details CMT │Round log+CrossCu│col19│
+  │     │     │     │     │     │     │     │   Detail CMT (8-9) │       (10–12)           │      (13–15)        │ (Cc+Fl+Sl)(16-18)│     │
   └──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 Row 4 (sub-headers):
   Item Name | Flitch Log No. | Inward Date | Status | Opening Stock CMT | Recovered From rejected | Invoice |
   Indian | Actual |
   Issue for Flitch | Flitch Received | Flitch Diff |
-  Issue for Peeling | Peeling Received | Peeling Diff |
+  Issue for Slicing | Slicing Received | Slicing Diff |
   Issue for Sq.Edge | Sales | Rejected |
   Closing Stock CMT
 ```
@@ -85,21 +85,21 @@ Row 4 (sub-headers):
 | 1  | `item_name`             | Item Name               | Species/item (vertically merged per group) |
 | 2  | `log_no`                | Flitch Log No.          | Individual flitch log number |
 | 3  | `inward_date`           | Inward Date             | Earliest invoice inward date (DD/MM/YY) |
-| 4  | `status`                | Status                  | Derived: Stock / Flitch / Peeling / Sales / Rejected |
-| 5  | `op_bal`                | Opening Stock CMT       | Opening balance (CMT) |
+| 4  | `status`                | Status                  | Derived: Stock / Flitch / Slicing / Sales / Rejected |
+| 5  | `op_bal`                | Opening Stock CMT       | Opening balance from `flitching_done` with `issue_status=null` before period |
 | 6  | `recover_from_rejected` | Recovered From rejected | Placeholder – 0.000 (data source TBD) |
-| 7  | `invoice_ref`           | Invoice                 | Inward SR number from inventory invoice |
-| 8  | `indian_cmt`            | Indian                  | Placeholder – 0.000 (no Indian CMT in flitch schema) |
-| 9  | `actual_cmt`            | Actual                  | Total flitch received (inventory + CC) in period |
+| 7  | `invoice_cmt`           | Invoice                 | LOG source: `log_inventory_items_details.invoice_cmt` |
+| 8  | `indian_cmt`            | Indian                  | LOG source: `log_inventory_items_details.indian_cmt` |
+| 9  | `actual_cmt`            | Actual (Round Log Detail) | LOG: `log_data.physical_cmt` + CROSSCUT: `crosscut_done.crosscut_cmt` in period |
 | 10 | `issue_for_flitch`      | Issue for Flitch        | Total CMT issued from flitch stock in period |
 | 11 | `flitch_received`       | Flitch Received         | Total flitch CMT received in period (= Actual) |
 | 12 | `flitch_diff`           | Flitch Diff             | Issue for Flitch − Flitch Received |
-| 13 | `issue_for_peeling`     | Issue for Peeling       | CMT issued with `slicing_peeling` status in period |
-| 14 | `peel_received`         | Peeling Received        | Peeling output (face + core) CMT in period |
-| 15 | `peeling_diff`          | Peeling Diff            | Issue for Peeling − Peeling Received |
+| 13 | `issue_for_slicing`     | Issue for Slicing       | CMT issued from `issued_for_slicing_model` in period |
+| 14 | `slicing_received`      | Slicing Received        | CMT from `slicing_done_other_details_model` in period |
+| 15 | `slicing_diff`          | Slicing Diff            | Issue for Slicing − Slicing Received |
 | 16 | `issue_for_sqedge`      | Issue for Sq.Edge       | Placeholder – 0.000 (data source TBD) |
 | 17 | `sales`                 | Sales                   | CMT issued for order/challan in period |
-| 18 | `rejected`              | Rejected                | CMT with `is_rejected = true` in period |
+| 18 | `rejected`              | Rejected                | Flitch wastage (`wastage_info.wastage_sqm`) + Slicing wastage (`issue_for_slicing_wastage.cmt`) in period |
 | 19 | `fl_closing`            | Closing Stock CMT       | Closing balance (CMT) |
 
 ---
@@ -110,9 +110,12 @@ Row 4 (sub-headers):
 |------------|-------|-------------|
 | `flitch_inventory_items_details` | `flitch_inventory_items_model` | `log_no`, `item_name`, `flitch_cmt`, `issue_status`, `is_rejected`, `invoice_id`, `updatedAt` |
 | `flitch_inventory_invoice_details` | (via `$lookup`) | `inward_date`, `inward_sr_no` |
-| `flitchings` | `flitching_done_model` | `log_no`, `item_name`, `flitch_cmt`, `issue_status`, `is_rejected`, `worker_details.flitching_date`, `deleted_at`, `updatedAt` |
-| `peeling_done_items` | `peeling_done_items_model` | `log_no`, `output_type`, `cmt`, `peeling_done_other_details_id` |
-| `peeling_done_other_details` | (via `$lookup`) | `peeling_date` |
+| `flitchings` | `flitching_done_model` | `log_no`, `item_name`, `flitch_cmt`, `issue_status`, `is_rejected`, `worker_details.flitching_date`, `crosscut_done_id`, `deleted_at`, `updatedAt`, `wastage_info.wastage_sqm` |
+| `log_inventory_items_details` | (via `$lookup`) | `invoice_cmt`, `indian_cmt`, `physical_cmt` |
+| `crosscutting_done` | (via `$lookup`) | `crosscut_cmt` |
+| `issued_for_slicing` | `issued_for_slicing_model` | `log_no`, `cmt`, `date_of_issued` |
+| `slicing_done_other_details` | `slicing_done_other_details_model` | `log_no`, `total_cmt`, `slicing_date` |
+| `issue_for_slicing_wastage` | `issue_for_slicing_wastage_model` | `log_no`, `cmt`, `created_at` |
 
 ---
 
@@ -137,7 +140,19 @@ Checks the most recently updated flitch item for this log:
 | `issue_status IN ['order','challan']` | Sales |
 | Otherwise | Stock |
 
-### Actual CMT (col 9) = Flitch Received (col 11)
+### Actual CMT (col 9) — Round Log Detail from LOG/CROSSCUT sources
+
+Separated by `crosscut_done_id` field:
+- **LOG sources** (`crosscut_done_id = null`): SUM(`log_inventory_items_details.physical_cmt`) where `worker_details.flitching_date` in period
+- **CROSSCUT sources** (`crosscut_done_id != null`): SUM(`crosscutting_done.crosscut_cmt`) where `worker_details.flitching_date` in period
+
+**Actual CMT = LOG Actual + CROSSCUT Actual**
+
+### Invoice & Indian CMT (cols 7–8) — Round Log Detail from LOG sources only
+- **Invoice CMT**: `log_inventory_items_details.invoice_cmt` (LOG sources only)
+- **Indian CMT**: `log_inventory_items_details.indian_cmt` (LOG sources only)
+
+### Flitch Received (col 11)
 Sum of `flitch_cmt` from:
 - `flitch_inventory_items_model` where `invoice.inward_date` in period (inventory)
 - `flitching_done_model` where `worker_details.flitching_date` in period (CC/factory)
@@ -150,50 +165,59 @@ Sum of `flitch_cmt` from both sources where `issue_status IN ['order','challan',
 Flitch Diff = Issue for Flitch − Flitch Received
 ```
 
-### Issue for Peeling (col 13)
-Sum of `flitch_cmt` from both sources where `issue_status = 'slicing_peeling'` and `updatedAt` in period.
+### Issue for Slicing (col 13)
+Sum of `cmt` from `issued_for_slicing_model` matched by `log_no` and `date_of_issued` in period.
 
-### Peeling Received (col 14)
-Sum of `cmt` from `peeling_done_items` where `output_type IN ['face','core']` and `peeling_details.peeling_date` in period.
+### Slicing Received (col 14)
+Sum of `total_cmt` from `slicing_done_other_details_model` where `slicing_date` in period.
 
-### Peeling Diff (col 15)
+### Slicing Diff (col 15)
 ```
-Peeling Diff = Issue for Peeling − Peeling Received
+Slicing Diff = Issue for Slicing − Slicing Received
 ```
 
 ### Sales (col 17)
 Sum of `flitch_cmt` from both sources where `issue_status IN ['order','challan']` and `updatedAt` in period.
 
 ### Rejected (col 18)
-Sum of `flitch_cmt` from both sources where `is_rejected = true` and `updatedAt` in period.
+```
+Rejected = Flitch Wastage + Slicing Wastage
+```
+- **Flitch Wastage**: SUM(`wastage_info.wastage_sqm`) from `flitching_done` where `worker_details.flitching_date` in period
+- **Slicing Wastage**: SUM(`cmt`) from `issue_for_slicing_wastage_model` where `created_at` in period
 
-### Opening Balance (col 5)
+### Opening Stock CMT (col 5)
 ```
-Opening = Current Available CMT + Total Issued (period) − Total Received (period)
+Opening Stock = SUM(flitching_done.flitch_cmt) 
+  WHERE worker_details.flitching_date < start_date 
+    AND issue_status = null 
+    AND deleted_at = null
 ```
-Where *Current Available* = CMT with `issue_status = null` across both sources (all-time).
+Represents inventory available before the period (not issued, not rejected).
 
 ### Closing Stock CMT (col 19)
 ```
-Closing = Opening + Received − Issued  (= Current Available CMT)
+Closing Stock = MAX(0, Opening Stock + Flitch Received − Issue for Flitch − Sales)
 ```
+Inventory-flow formula representing true ending balance (consumption accounts for all outflows: flitch issue + sales).
 
 ---
 
 ## Placeholder Columns
 
-| Column | Reason | Future source |
-|--------|--------|---------------|
-| Recovered From rejected (col 6) | No "recovered" flag in flitch/peeling schema | TBD by client |
-| Indian (col 8) | No `indian_cmt` field in flitch inventory schema | Schema change required |
-| Issue for Sq.Edge (col 16) | No square-edge tracking in factory module | TBD by client |
+| Column | Status | Notes |
+|--------|--------|-------|
+| Recovered From rejected (col 6) | Placeholder 0 | No "recovered" flag in schema; future source TBD |
+| Issue for Sq.Edge (col 16) | Placeholder 0 | No square-edge tracking in current factory module; future source TBD |
+
+*Note: Invoice & Indian CMT (cols 7–8) are now sourced from `log_inventory_items_details` model (no longer placeholders).*
 
 ---
 
 ## Active Log Filter
 
 A log is included in the report only if at least one of the following is non-zero:
-- Opening balance, Flitch Received, Issue for Flitch, Closing Stock CMT, Peeling Received, Sales, Rejected
+- Opening balance, Flitch Received, Issue for Flitch, Closing Stock CMT, Slicing Received, Sales, Rejected
 
 ---
 
@@ -202,11 +226,11 @@ A log is included in the report only if at least one of the following is non-zer
 ```
 Inward Item & Log Wise Report From 01/04/2025 To 15/07/2025
 
-                    │         │ Received Flitch   │      Flitch Details CMT      │    Peeling Details CMT     │ Round log+Cross Cu │
-Item Name│Log No.│Date│Status │ Op.Stock│RecovRej│Inv│ Indian│ Actual │IssFlitch│FlRecvd│FlDiff │IssePeel│PeelRecvd│PeelDiff│IssSqEdge│Sales│Rej│ClStock
+                    │         │ Received Flitch   │      Flitch Details CMT      │    Slicing Details CMT     │ Round log+Cross Cu │
+Item Name│Log No.│Date│Status │ Op.Stock│RecovRej│Inv│ Indian│ Actual │IssFlitch│FlRecvd│FlDiff │IssSlic│SlicRecvd│SlicDiff│IssSqEdge│Sales│Rej│ClStock
 ─────────┼───────┼────┼───────┼─────────┼────────┼───┼───────┼────────┼─────────┼───────┼───────┼────────┼─────────┼────────┼─────────┼─────┼───┼───────
 Red Oak  │ L1    │... │ Stock │  0.000  │  0.000 │ 1 │ 0.000 │ 0.357  │  0.000  │ 0.357 │-0.357 │  0.000 │  0.000  │  0.000 │  0.000  │0.000│0.0│ 0.357
-         │ L2    │... │ Peeling│ 0.000  │  0.000 │ 1 │ 0.000 │ 0.270  │  0.270  │ 0.270 │ 0.000 │  0.270 │  0.230  │  0.040 │  0.000  │0.000│0.0│ 0.000
+         │ L2    │... │ Slicing│ 0.000  │  0.000 │ 1 │ 0.000 │ 0.270  │  0.270  │ 0.270 │ 0.000 │  0.270 │  0.230  │  0.040 │  0.000  │0.000│0.0│ 0.000
 ─────────┼───────┼────┼───────┼─────────┼────────┼───┼───────┼────────┼─────────┼───────┼───────┼────────┼─────────┼────────┼─────────┼─────┼───┼───────
 Total    │       │    │       │ 0.000   │  0.000 │   │ 0.000 │ 0.627  │  0.270  │ 0.627 │-0.357 │  0.270 │  0.230  │  0.040 │  0.000  │0.000│0.0│ 0.357
 ```
@@ -228,4 +252,5 @@ Total    │       │    │       │ 0.000   │  0.000 │   │ 0.000 │ 0
 | Version | Date       | Changes |
 |---------|------------|---------|
 | 1.0.0   | 2025-02-03 | Initial implementation (11 flat columns) |
-| 2.0.0   | 2026-03-06 | Restructured to 19-column multi-level layout matching client image. Added Inward Date, Status, Invoice, Indian/Actual, Issue/Diff for Flitch and Peeling, Sales, Rejected columns. |
+| 2.0.0   | 2026-03-06 | Restructured to 19-column multi-level layout; added Inward Date, Status, Invoice, Indian/Actual, Issue/Diff for Flitch and Peeling |
+| 3.0.0   | 2026-03-20 | Aligned to Item Wise v4: replaced Peeling with Slicing; inventory-flow opening/closing; LOG/CROSSCUT Round Log sourcing; wastage aggregation (flitch+slicing) in Rejected |

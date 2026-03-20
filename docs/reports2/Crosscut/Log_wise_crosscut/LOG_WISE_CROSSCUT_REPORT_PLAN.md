@@ -51,7 +51,7 @@ Implement the **Log Wise Crosscut** report that:
 | CC Received                                            | Sum `crosscut_cmt` from `crosscutting_done` for that log where `worker_details.crosscut_date` in [start, end].                                                    |
 | CC Issued                                              | Sum `crosscut_cmt` from `crosscutting_done` for that log where `issue_status` in `['order','challan','flitching','peeling']` and `updatedAt` in [start, end]. Issued further = sales, challan, flitching, peeling. |
 | CC Closing                                             | Op Bal + CC Received − CC Issued (capped at 0).                                                                                                                   |
-| CC Length                                              | Sum of `length` from `crosscutting_done` for that log in period (same date filter as CC Received).                                                                |
+| CC Length                                              | Sum of `length` for opening crosscut stock (same filter as Op Bal) **+** sum of `length` in period (same filter as CC Received).                                   |
 | Flitch Received                                        | Sum `crosscut_cmt` from `crosscutting_done` for that log where `issue_status === 'flitching'` and `updatedAt` in [start, end].                                    |
 | SQ Received, UN Received                               | No schema source; use **0**.                                                                                                                                      |
 | Peel Received                                          | Sum `crosscut_cmt` from `crosscutting_done` for that log where `issue_status === 'peeling'` and `updatedAt` in [start, end].                                      |
@@ -73,7 +73,7 @@ Request body: `{ startDate, endDate, filter?: { item_name? } }`.
 - Validate `startDate`/`endDate`, parse dates, apply optional `filter.item_name`.
 - Get distinct `(log_no, item_name)` from `issues_for_crosscutting` and `crosscutting_done` (merge and dedupe).
 - One aggregation on `issues_for_crosscutting`: `$group` by log_no+item_name with `$first` for invoice_cmt, indian_cmt, physical_cmt, physical_length (after `$sort` by createdAt).
-- For each log: Op Bal (crosscutting_done, issue_status null, crosscut_date < start), CC Received (crosscut_date in period), CC Issued (crosscutting_done issued further: order/challan/flitching/peeling, updatedAt in period), CC Closing (formula), CC Length (sum length in period), Flitch/Peel Received (issue_status + updatedAt in period). SQ/UN = 0.
+- For each log: Op Bal (CMT; same match also gives opening length sum), CC Received (crosscut_date in period), CC Issued, CC Closing, **CC Length** (opening length + in-period length), Flitch/Peel Received. SQ/UN = 0.
 - Sort rows by item_name then log_no; call Excel generator with (rows, startDate, endDate, filter); return download link.
 
 ### 2. Excel config – config/downloadExcel/reports2/Crosscut/logWiseCrosscut.js
