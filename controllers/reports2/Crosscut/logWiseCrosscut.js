@@ -11,7 +11,7 @@ import { createLogWiseCrosscutReportExcel } from '../../../config/downloadExcel/
  * Log Wise Crosscut Report Export
  * Generates Excel report: one row per log (grouped by Item Name) with
  * Invoice CMT, Indian CMT, Physical CMT, Op Bal, CC Received, CC Issued, CC Closing,
- * Physical Length, CC Length, Flitch Received, SQ Received, UN Received, Peel Received.
+ * Physical Length, CC Length (opening + in-period length), Flitch Received, SQ Received, UN Received, Peel Received.
  * Totals row after each item group and grand total at end.
  *
  * @route POST /api/V1/report/download-excel-log-wise-crosscut-report
@@ -140,7 +140,7 @@ export const LogWiseCrosscutReportExcel = catchAsync(async (req, res, next) => {
           physical_length: 0,
         };
 
-        // Op Bal: crosscut stock at period start (not yet issued, crosscut before start)
+        // Op Bal: crosscut stock at period start (CMT); same match also supplies length for CC Length
         const opBalAgg = await crosscutting_done_model.aggregate([
           {
             $match: {
@@ -151,9 +151,16 @@ export const LogWiseCrosscutReportExcel = catchAsync(async (req, res, next) => {
               'worker_details.crosscut_date': { $lt: start },
             },
           },
-          { $group: { _id: null, total: { $sum: '$crosscut_cmt' } } },
+          {
+            $group: {
+              _id: null,
+              total: { $sum: '$crosscut_cmt' },
+              length: { $sum: '$length' },
+            },
+          },
         ]);
         const opBal = opBalAgg[0]?.total ?? 0;
+        const opBalLengthForCc = opBalAgg[0]?.length ?? 0;
 
         // CC Received: crosscut done in period (by crosscut_date)
         const ccRecAgg = await crosscutting_done_model.aggregate([
@@ -169,6 +176,7 @@ export const LogWiseCrosscutReportExcel = catchAsync(async (req, res, next) => {
         ]);
         const ccReceived = ccRecAgg[0]?.total ?? 0;
         const ccLengthInPeriod = ccRecAgg[0]?.length ?? 0;
+        const ccLength = opBalLengthForCc + ccLengthInPeriod;
 
         // CC Issued: crosscut pieces issued further (sales, challan, flitching, peeling) in period
         const ccIssuedAgg = await crosscutting_done_model.aggregate([
@@ -255,7 +263,7 @@ export const LogWiseCrosscutReportExcel = catchAsync(async (req, res, next) => {
           cc_issued: ccIssued,
           cc_closing: ccClosing,
           physical_length: issue.physical_length,
-          cc_length: ccLengthInPeriod,
+          cc_length: ccLength,
           flitch_received: flitchReceived,
           sq_received: 0,
           un_received: 0,
@@ -268,6 +276,7 @@ export const LogWiseCrosscutReportExcel = catchAsync(async (req, res, next) => {
     const activeLogsData = logDataWithMetrics.filter(
       (log) =>
         log.op_bal > 0 ||
+        log.cc_length > 0 ||
         log.cc_received > 0 ||
         log.cc_issued > 0 ||
         log.cc_closing > 0 ||

@@ -6,27 +6,26 @@ import dotenv from 'dotenv/config';
 /**
  * Create Flitch Item Further Process Report Excel
  *
- * 45 columns across 13 section groups:
+ * 41 columns across 12 section groups:
  *  Col  1        : Item Name
- *  Cols  2- 5   : Flitch Inward in(CMT) → Flitch No., REC CMT, Issue For Slicing/Peeling, Issue Status
+ *  Cols  2- 5   : Flitch Inward in(CMT) → LogNo (original log_no), REC CMT, Issue For Slicing/Peeling, Issue Status
  *  Cols  6- 9   : Slicing Issue in(CMT) → Side, Process Cmt, Balance Cmt, REC (Leaf)
- *  Cols 10-13   : Peeling               → Process, Balance Rostroller, Output, Rec (Leaf)
- *  Cols 14-16   : Dressing              → Rec Sq. Mtr., Issue (Sq.Mtr.), Issue Status
- *  Cols 17-19   : Smoking/Dying         → Process, Issue (Sq.Mtr.), Issue Status
- *  Cols 20-27   : Clipping/Grouping     → New Group Number, Rec Sheets, Rec Sq.Mtr.,
+ *  Cols 10-12   : Dressing              → Rec Sq. Mtr., Issue (Sq.Mtr.), Issue Status
+ *  Cols 13-15   : Smoking/Dying         → Process, Issue (Sq.Mtr.), Issue Status
+ *  Cols 16-23   : Clipping/Grouping     → New Group Number, Rec Sheets, Rec Sq.Mtr.,
  *                                          Issue (Sheets), Issue (Sq.Mtr.), Issue Status,
  *                                          Balance (Sheets), Balance Sq. Mtr.
- *  Cols 28-34   : Splicing              → Rec Machine (Sq.mtr.), Rec Hand (Sq.Mtr.),
+ *  Cols 24-30   : Splicing              → Rec Machine (Sq.mtr.), Rec Hand (Sq.Mtr.),
  *                                          Splicing Sheets, Issue (Sheets), Issue Status,
  *                                          Balance (Sheets), Balance (Sq. Mtr.)
- *  Cols 35-41   : Pressing              → Pressing (Sheets), Pressing (Sq.mtr.),
+ *  Cols 31-37   : Pressing              → Pressing (Sheets), Pressing (Sq.mtr.),
  *                                          Issue (Sheets), Issue (Sq. Mtr.), Issue Status,
  *                                          Balance (Sheets), Balance (Sq. Mtr.)
- *  Cols 42-43   : CNC                   → Cnc Type, REC (Sheets)
- *  Col  44      : COLOUR                → REC (Sheets)
- *  Col  45      : Sales                 → REC (Sheets)
+ *  Cols 38-39   : CNC                   → Cnc Type, REC (Sheets)
+ *  Col  40      : COLOUR                → REC (Sheets)
+ *  Col  41      : Sales                 → REC (Sheets)
  *
- * Rows are one per leaf entity (grouping item / peeling item / slicing side).
+ * Rows are one per leaf entity (grouping item / slicing side).
  * Parent columns are merged vertically for consecutive identical keys.
  */
 export const createFlitchItemFurtherProcessReportExcel = async (
@@ -48,10 +47,10 @@ export const createFlitchItemFurtherProcessReportExcel = async (
       views: [{ state: 'frozen', xSplit: 2, ySplit: 5 }],
     });
 
-    // ── Column definitions (45 total) ────────────────────────────────────────
+    // ── Column definitions (41 total) ────────────────────────────────────────
     ws.columns = [
       { key: 'item_name',               width: 22 },  //  1
-      { key: 'flitch_no',               width: 14 },  //  2
+      { key: 'log_no',                  width: 14 },  //  2  original log number
       { key: 'rece_cmt',                width: 11 },  //  3
       { key: 'issue_for',               width: 14 },  //  4
       { key: 'issue_status',            width: 13 },  //  5
@@ -59,43 +58,41 @@ export const createFlitchItemFurtherProcessReportExcel = async (
       { key: 'slicing_process_cmt',     width: 12 },  //  7
       { key: 'slicing_balance_cmt',     width: 12 },  //  8
       { key: 'slicing_rec_leaf',        width: 12 },  //  9
-      { key: 'peeling_process',         width: 12 },  // 10
-      { key: 'peeling_balance_rostroller', width: 14 }, // 11
-      { key: 'peeling_output',          width: 12 },  // 12
-      { key: 'peeling_rec_leaf',        width: 12 },  // 13
-      { key: 'dress_rec_sqm',           width: 12 },  // 14
-      { key: 'dress_issue_sqm',         width: 12 },  // 15
-      { key: 'dress_issue_status',      width: 13 },  // 16
-      { key: 'smoking_process',         width: 12 },  // 17
-      { key: 'smoking_issue_sqm',       width: 12 },  // 18
-      { key: 'smoking_issue_status',    width: 13 },  // 19
-      { key: 'grouping_new_group_no',   width: 16 },  // 20
-      { key: 'grouping_rec_sheets',     width: 12 },  // 21
-      { key: 'grouping_rec_sqm',        width: 12 },  // 22
-      { key: 'grouping_issue_sheets',   width: 12 },  // 23
-      { key: 'grouping_issue_sqm',      width: 12 },  // 24
-      { key: 'grouping_issue_status',   width: 13 },  // 25
-      { key: 'grouping_balance_sheets', width: 14 },  // 26
-      { key: 'grouping_balance_sqm',    width: 14 },  // 27
-      { key: 'splicing_rec_machine_sqm', width: 16 }, // 28
-      { key: 'splicing_rec_hand_sqm',   width: 16 },  // 29
-      { key: 'splicing_sheets',         width: 14 },  // 30
-      { key: 'splicing_issue_sheets',   width: 14 },  // 31
-      { key: 'splicing_issue_status',   width: 13 },  // 32
-      { key: 'splicing_balance_sheets', width: 15 },  // 33
-      { key: 'splicing_balance_sqm',    width: 15 },  // 34
-      { key: 'pressing_sheets',         width: 14 },  // 35
-      { key: 'pressing_sqm',            width: 13 },  // 36
-      { key: 'pressing_issue_sheets',   width: 14 },  // 37
-      { key: 'pressing_issue_sqm',      width: 14 },  // 38
-      { key: 'pressing_issue_status',   width: 13 },  // 39
-      { key: 'pressing_balance_sheets', width: 15 },  // 40
-      { key: 'pressing_balance_sqm',    width: 15 },  // 41
-      { key: 'cnc_type',                width: 13 },  // 42
-      { key: 'cnc_rec_sheets',          width: 12 },  // 43
-      { key: 'colour_rec_sheets',       width: 12 },  // 44
-      { key: 'sales_rec_sheets',        width: 12 },  // 45
+      { key: 'dress_rec_sqm',           width: 12 },  // 10
+      { key: 'dress_issue_sqm',         width: 12 },  // 11
+      { key: 'dress_issue_status',      width: 13 },  // 12
+      { key: 'smoking_process',         width: 12 },  // 13
+      { key: 'smoking_issue_sqm',       width: 12 },  // 14
+      { key: 'smoking_issue_status',    width: 13 },  // 15
+      { key: 'grouping_new_group_no',   width: 16 },  // 16
+      { key: 'grouping_rec_sheets',     width: 12 },  // 17
+      { key: 'grouping_rec_sqm',        width: 12 },  // 18
+      { key: 'grouping_issue_sheets',   width: 12 },  // 19
+      { key: 'grouping_issue_sqm',      width: 12 },  // 20
+      { key: 'grouping_issue_status',   width: 13 },  // 21
+      { key: 'grouping_balance_sheets', width: 14 },  // 22
+      { key: 'grouping_balance_sqm',    width: 14 },  // 23
+      { key: 'splicing_rec_machine_sqm', width: 16 }, // 24
+      { key: 'splicing_rec_hand_sqm',   width: 16 },  // 25
+      { key: 'splicing_sheets',         width: 14 },  // 26
+      { key: 'splicing_issue_sheets',   width: 14 },  // 27
+      { key: 'splicing_issue_status',   width: 13 },  // 28
+      { key: 'splicing_balance_sheets', width: 15 },  // 29
+      { key: 'splicing_balance_sqm',    width: 15 },  // 30
+      { key: 'pressing_sheets',         width: 14 },  // 31
+      { key: 'pressing_sqm',            width: 13 },  // 32
+      { key: 'pressing_issue_sheets',   width: 14 },  // 33
+      { key: 'pressing_issue_sqm',      width: 14 },  // 34
+      { key: 'pressing_issue_status',   width: 13 },  // 35
+      { key: 'pressing_balance_sheets', width: 15 },  // 36
+      { key: 'pressing_balance_sqm',    width: 15 },  // 37
+      { key: 'cnc_type',                width: 13 },  // 38
+      { key: 'cnc_rec_sheets',          width: 12 },  // 39
+      { key: 'colour_rec_sheets',       width: 12 },  // 40
+      { key: 'sales_rec_sheets',        width: 12 },  // 41
     ];
+
+    const COL_COUNT = 41;
 
     // ── Helpers ───────────────────────────────────────────────────────────────
     const fmt = (dateStr) => {
@@ -172,7 +169,7 @@ export const createFlitchItemFurtherProcessReportExcel = async (
     titleRow.font = { bold: true, size: 12 };
     titleRow.alignment = { vertical: 'middle', horizontal: 'left' };
     titleRow.height = 22;
-    ws.mergeCells(1, 1, 1, 45);
+    ws.mergeCells(1, 1, 1, 41);
 
     // ── Row 2: Date range ─────────────────────────────────────────────────────
     const dateRangeRow = ws.addRow([
@@ -181,34 +178,33 @@ export const createFlitchItemFurtherProcessReportExcel = async (
     dateRangeRow.font = { size: 10 };
     dateRangeRow.alignment = { vertical: 'middle', horizontal: 'left' };
     dateRangeRow.height = 16;
-    ws.mergeCells(2, 1, 2, 45);
+    ws.mergeCells(2, 1, 2, 41);
 
     // ── Row 3: Filter label (only when inward_id or flitch_no is provided) ────
     const filterLabel = filter.inward_id
       ? `Inward Id :- ${filter.inward_id}`
       : filter.flitch_no
-      ? `Flitch No :- ${filter.flitch_no}`
+      ? `Flitch Code :- ${filter.flitch_no}`
       : '';
     const filterRow = ws.addRow([filterLabel]);
     filterRow.font = { size: 10 };
     filterRow.alignment = { vertical: 'middle', horizontal: 'left' };
     filterRow.height = 16;
-    ws.mergeCells(3, 1, 3, 45);
+    ws.mergeCells(3, 1, 3, 41);
 
     // ── Row 4: Section group headers ──────────────────────────────────────────
-    const secHdr = new Array(45).fill('');
+    const secHdr = new Array(41).fill('');
     secHdr[0]  = '';                       //  1  Item Name – no group label
     secHdr[1]  = 'Flitch Inward in(CMT)'; //  2-5
     secHdr[5]  = 'Slicing Issue in(CMT)'; //  6-9
-    secHdr[9]  = 'Peeling';               // 10-13
-    secHdr[13] = 'Dressing';              // 14-16
-    secHdr[16] = 'Smoking/Dying';         // 17-19
-    secHdr[19] = 'Clipping/Grouping';     // 20-27
-    secHdr[27] = 'Splicing';              // 28-34
-    secHdr[34] = 'Pressing';              // 35-41
-    secHdr[41] = 'CNC';                   // 42-43
-    secHdr[43] = 'COLOUR';               // 44
-    secHdr[44] = 'Sales';                 // 45
+    secHdr[9]  = 'Dressing';              // 10-12
+    secHdr[12] = 'Smoking/Dying';         // 13-15
+    secHdr[15] = 'Clipping/Grouping';     // 16-23
+    secHdr[23] = 'Splicing';              // 24-30
+    secHdr[30] = 'Pressing';              // 31-37
+    secHdr[37] = 'CNC';                   // 38-39
+    secHdr[39] = 'COLOUR';               // 40
+    secHdr[40] = 'Sales';                 // 41
 
     const groupRow = ws.addRow(secHdr);
     groupRow.height = 22;
@@ -217,18 +213,17 @@ export const createFlitchItemFurtherProcessReportExcel = async (
     // Merge section header spans
     ws.mergeCells(4,  2,  4,  5);   // Flitch Inward in(CMT)
     ws.mergeCells(4,  6,  4,  9);   // Slicing Issue in(CMT)
-    ws.mergeCells(4, 10,  4, 13);   // Peeling
-    ws.mergeCells(4, 14,  4, 16);   // Dressing
-    ws.mergeCells(4, 17,  4, 19);   // Smoking/Dying
-    ws.mergeCells(4, 20,  4, 27);   // Clipping/Grouping
-    ws.mergeCells(4, 28,  4, 34);   // Splicing
-    ws.mergeCells(4, 35,  4, 41);   // Pressing
-    ws.mergeCells(4, 42,  4, 43);   // CNC
+    ws.mergeCells(4, 10,  4, 12);   // Dressing
+    ws.mergeCells(4, 13,  4, 15);   // Smoking/Dying
+    ws.mergeCells(4, 16,  4, 23);   // Clipping/Grouping
+    ws.mergeCells(4, 24,  4, 30);   // Splicing
+    ws.mergeCells(4, 31,  4, 37);   // Pressing
+    ws.mergeCells(4, 38,  4, 39);   // CNC
 
     // ── Row 5: Column headers ─────────────────────────────────────────────────
     const colHdr = [
       'Item Name',                          //  1
-      'Flitch No.',                         //  2
+      'LogNo',                              //  2
       'REC CMT',                            //  3
       'Issue For Slicing/Peeling',         //  4
       'Issue Status',                       //  5
@@ -236,42 +231,38 @@ export const createFlitchItemFurtherProcessReportExcel = async (
       'Process Cmt',                        //  7
       'Balance Cmt',                        //  8
       'REC (Leaf)',                          //  9
-      'Process',                            // 10
-      'Balance Rostroller',                 // 11
-      'Output',                             // 12
-      'Rec (Leaf)',                          // 13
-      'Rec Sq. Mtr.',                       // 14
-      'Issue (Sq.Mtr.)',                    // 15
-      'Issue Status',                       // 16
-      'Process',                            // 17
-      'Issue (Sq.Mtr.)',                    // 18
-      'Issue Status',                       // 19
-      'New Group Number',                   // 20
-      'Rec Sheets',                         // 21
-      'Rec Sq.Mtr.',                        // 22
-      'Issue (Sheets)',                     // 23
-      'Issue (Sq.Mtr.)',                    // 24
-      'Issue Status',                       // 25
-      'Balance (Sheets)',                   // 26
-      'Balance Sq. Mtr.',                   // 27
-      'Rec Machine (Sq.mtr.)',              // 28
-      'Rec Hand (Sq.Mtr.)',                // 29
-      'Splicing Sheets',                    // 30
-      'Issue (Sheets)',                     // 31
-      'Issue Status',                       // 32
-      'Balance (Sheets)',                   // 33
-      'Balance (Sq. Mtr.)',                // 34
-      'Pressing (Sheets)',                  // 35
-      'Pressing (Sq.mtr.)',               // 36
-      'Issue (Sheets)',                     // 37
-      'Issue (Sq. Mtr.)',                   // 38
-      'Issue Status',                       // 39
-      'Balance (Sheets)',                   // 40
-      'Balance (Sq. Mtr.)',                // 41
-      'Cnc Type',                           // 42
-      'REC (Sheets)',                       // 43
-      'REC (Sheets)',                       // 44
-      'REC (Sheets)',                       // 45
+      'Rec Sq. Mtr.',                       // 10
+      'Issue (Sq.Mtr.)',                    // 11
+      'Issue Status',                       // 12
+      'Process',                            // 13
+      'Issue (Sq.Mtr.)',                    // 14
+      'Issue Status',                       // 15
+      'New Group Number',                   // 16
+      'Rec Sheets',                         // 17
+      'Rec Sq.Mtr.',                        // 18
+      'Issue (Sheets)',                     // 19
+      'Issue (Sq.Mtr.)',                    // 20
+      'Issue Status',                       // 21
+      'Balance (Sheets)',                   // 22
+      'Balance Sq. Mtr.',                   // 23
+      'Rec Machine (Sq.mtr.)',              // 24
+      'Rec Hand (Sq.Mtr.)',                // 25
+      'Splicing Sheets',                    // 26
+      'Issue (Sheets)',                     // 27
+      'Issue Status',                       // 28
+      'Balance (Sheets)',                   // 29
+      'Balance (Sq. Mtr.)',                // 30
+      'Pressing (Sheets)',                  // 31
+      'Pressing (Sq.mtr.)',               // 32
+      'Issue (Sheets)',                     // 33
+      'Issue (Sq. Mtr.)',                   // 34
+      'Issue Status',                       // 35
+      'Balance (Sheets)',                   // 36
+      'Balance (Sq. Mtr.)',                // 37
+      'Cnc Type',                           // 38
+      'REC (Sheets)',                       // 39
+      'REC (Sheets)',                       // 40
+      'REC (Sheets)',                       // 41
     ];
 
     const headerRow = ws.addRow(colHdr);
@@ -282,27 +273,26 @@ export const createFlitchItemFurtherProcessReportExcel = async (
     const NUMERIC_COLS = new Set([
       3, 4,         // rece_cmt, issue_for
       7, 8, 9,      // slicing_process_cmt, slicing_balance_cmt, slicing_rec_leaf
-      13,           // peeling_rec_leaf
-      14, 15,       // dress_rec_sqm, dress_issue_sqm
-      18,           // smoking_issue_sqm
-      21, 22, 23, 24, 26, 27,  // grouping
-      28, 29, 30, 31, 33, 34,  // splicing
-      35, 36, 37, 38, 40, 41,  // pressing
-      43, 44, 45,   // cnc, colour, sales
+      10, 11,       // dress_rec_sqm, dress_issue_sqm
+      14,           // smoking_issue_sqm
+      17, 18, 19, 20, 22, 23,  // grouping
+      24, 25, 26, 27, 29, 30,  // splicing
+      31, 32, 33, 34, 36, 37,  // pressing
+      39, 40, 41,   // cnc, colour, sales
     ]);
 
     // Columns to MERGE vertically (parent-level columns)
     // Col 1        : item_name
     // Cols 2-5     : flitch-level
-    // Cols 6-9, 14-19: slicing-side-level + dressing + smoking
+    // Cols 6-9, 10-15: slicing-side-level + dressing + smoking
     const ITEM_COLS   = [1];
     const FLITCH_COLS = [2, 3, 4, 5];
-    const SIDE_COLS   = [6, 7, 8, 9, 14, 15, 16, 17, 18, 19];
+    const SIDE_COLS   = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
 
-    // ── Helper: convert row object to cell value array (45 elements) ─────────
+    // ── Helper: convert row object to cell value array (41 elements) ─────────
     const toCells = (row) => [
       row.item_name,
-      row.flitch_no,
+      row.log_no,
       row.rece_cmt,
       row.issue_for,
       row.issue_status,
@@ -310,10 +300,6 @@ export const createFlitchItemFurtherProcessReportExcel = async (
       row.slicing_process_cmt,
       row.slicing_balance_cmt,
       row.slicing_rec_leaf,
-      row.peeling_process,
-      row.peeling_balance_rostroller,
-      row.peeling_output,
-      row.peeling_rec_leaf,
       row.dress_rec_sqm,
       row.dress_issue_sqm,
       row.dress_issue_status,
@@ -359,7 +345,7 @@ export const createFlitchItemFurtherProcessReportExcel = async (
 
     // ── Helper: add a styled total row ───────────────────────────────────────
     const addTotalRow = (label, totals, fill) => {
-      const cells = new Array(45).fill('');
+      const cells = new Array(COL_COUNT).fill('');
       cells[0] = label[0];
       cells[1] = label[1] || '';
       NUMERIC_COLS.forEach((colIdx1) => {
@@ -379,7 +365,7 @@ export const createFlitchItemFurtherProcessReportExcel = async (
         });
       });
       const isGrandTotal = label[0] === 'Total' && label[1] === '';
-      applyRowBorders(wsRow, 1, 45, {
+      applyRowBorders(wsRow, 1, COL_COUNT, {
         top: true,
         bottom: true,
         bottomStyle: isGrandTotal ? 'medium' : 'thin',
@@ -387,12 +373,12 @@ export const createFlitchItemFurtherProcessReportExcel = async (
       return wsRow.number;
     };
 
-    // ── Group data by item_name → flitch_no ──────────────────────────────────
-    const itemGroups = new Map(); // item_name → { flitchGroups: Map<flitch_no, rows[]> }
+    // ── Group data by item_name → log_no (original log number) ───────────────
+    const itemGroups = new Map(); // item_name → { flitchGroups: Map<log_no, rows[]> }
 
     for (const row of flitchData) {
       const item = row.item_name;
-      const fno  = row.flitch_no;
+      const fno  = row.log_no;
       if (!itemGroups.has(item)) {
         itemGroups.set(item, { flitchGroups: new Map() });
       }
@@ -423,7 +409,7 @@ export const createFlitchItemFurtherProcessReportExcel = async (
 
         for (const row of rows) {
           const curItem   = row.item_name;
-          const curFlitch = row.flitch_no || '__EMPTY__';
+          const curFlitch = row.log_no || '__EMPTY__';
           const curSide   = row.slicing_side || row.peeling_process || '__EMPTY__';
 
           const wsRowNum = ws.lastRow ? ws.lastRow.number + 1 : 6;
@@ -453,7 +439,7 @@ export const createFlitchItemFurtherProcessReportExcel = async (
               borderType: 'data',
             });
           });
-          applyRowBorders(wsRow, 1, 45, { top: false, bottom: true });
+          applyRowBorders(wsRow, 1, COL_COUNT, { top: false, bottom: true });
 
           // Accumulate totals using full (un-blanked) values
           const fullCells = toCells(row);

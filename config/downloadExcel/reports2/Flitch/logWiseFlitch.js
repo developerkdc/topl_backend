@@ -11,7 +11,7 @@ import dotenv from 'dotenv/config';
  *   Row 1 – Title (merged)
  *   Row 2 – Empty spacer
  *   Row 3 – Group headers (Received Flitch Detail CMT, Flitch Details CMT,
- *            Peeling Details CMT, Round log + Cross Cu merged across sub-columns)
+ *            Slicing Details CMT, Round log + Cross Cu merged across sub-columns)
  *   Row 4 – Sub-column headers
  *
  * Column layout:
@@ -20,11 +20,11 @@ import dotenv from 'dotenv/config';
  *   7  Invoice, 8 Indian, 9 Actual
  *   ── Flitch Details CMT (cols 10–12) ──
  *   10 Issue for Flitch, 11 Flitch Received, 12 Flitch Diff
- *   ── Peeling Details CMT (cols 13–15) ──
- *   13 Issue for Peeling, 14 Peeling Received, 15 Peeling Diff
+ *   ── Slicing Details CMT (cols 13–15) ──
+ *   13 Issue for Slicing, 14 Slicing Received, 15 Slicing Diff
  *   16 Issue for Sq.Edge (standalone)
  *   17 Round log +Cross Cut → Sales
- *   18 (Cc+Flitch+Peeling) → Rejected
+ *   18 (Cc+Flitch+Slicing) → Rejected
  *   19 Closing Stock CMT (standalone)
  *
  * @param {Array}  logData   – Array of log objects from the controller
@@ -87,15 +87,15 @@ export const createLogWiseFlitchReportExcel = async (
       { key: 'status',                width: 20 }, // 4
       { key: 'op_bal',                width: 16 }, // 5
       { key: 'recover_from_rejected', width: 22 }, // 6
-      { key: 'invoice_ref',           width: 10 }, // 7
+      { key: 'invoice_cmt',           width: 10 }, // 7
       { key: 'indian_cmt',            width: 12 }, // 8
       { key: 'actual_cmt',            width: 12 }, // 9
       { key: 'issue_for_flitch',      width: 16 }, // 10
       { key: 'flitch_received',       width: 16 }, // 11
       { key: 'flitch_diff',           width: 13 }, // 12
-      { key: 'issue_for_peeling',     width: 16 }, // 13
-      { key: 'peel_received',         width: 16 }, // 14
-      { key: 'peeling_diff',          width: 13 }, // 15
+      { key: 'issue_for_slicing',     width: 16 }, // 13
+      { key: 'slicing_received',      width: 16 }, // 14
+      { key: 'slicing_diff',          width: 13 }, // 15
       { key: 'issue_for_sqedge',      width: 16 }, // 16
       { key: 'sales',                 width: 12 }, // 17
       { key: 'rejected',              width: 12 }, // 18
@@ -132,16 +132,16 @@ export const createLogWiseFlitchReportExcel = async (
     worksheet.addRow([]);
 
     // ── ROW 3: Group header row ──────────────────────────────────────────────
-    // Received Flitch Detail CMT (7–9), Flitch Details CMT (10–12), Peeling Details CMT (13–15),
-    // col 16 empty, Round log +Cross Cut (17), (Cc+Flitch+Peeling) (18), col 19 empty
+    // Received Flitch Detail CMT (7–9), Flitch Details CMT (10–12), Slicing Details CMT (13–15),
+    // col 16 empty, Round log +Cross Cut (17), (Cc+Flitch+Slicing) (18), col 19 empty
     const groupHeaderRow = worksheet.addRow([
       '', '', '', '', '', '',                           // cols 1–6: no group label
       'Received Flitch Detail CMT', '', '',             // cols 7–9 (Invoice, Indian, Actual)
       'Flitch Details CMT', '', '',                     // cols 10–12
-      'Peeling Details CMT', '', '',                    // cols 13–15
+      'Slicing Details CMT', '', '',                    // cols 13–15
       '',                                               // col 16: Issue for Sq.Edge standalone
       'Round log +Cross Cut',                           // col 17: Sales
-      '(Cc+Flitch+Peeling)',                             // col 18: Rejected
+      'Flitch+Slicing',                                  // col 18: Rejected
       '',                                               // col 19: Closing Stock standalone
     ]);
     groupHeaderRow.font = { bold: true };
@@ -176,9 +176,9 @@ export const createLogWiseFlitchReportExcel = async (
       'Issue for Flitch',
       'Flitch Received',
       'Flitch Diff',
-      'Issue for Peeling',
-      'Peeling Received',
-      'Peeling Diff',
+      'Issue for Slicing',
+      'Slicing Received',
+      'Slicing Diff',
       'Issue for Sq.Edge',
       'Sales',
       'Rejected',
@@ -197,14 +197,15 @@ export const createLogWiseFlitchReportExcel = async (
     const grand = {
       op_bal: 0,
       recover_from_rejected: 0,
+      invoice_cmt: 0,
       indian_cmt: 0,
       actual_cmt: 0,
       issue_for_flitch: 0,
       flitch_received: 0,
       flitch_diff: 0,
-      issue_for_peeling: 0,
-      peel_received: 0,
-      peeling_diff: 0,
+      issue_for_slicing: 0,
+      slicing_received: 0,
+      slicing_diff: 0,
       issue_for_sqedge: 0,
       sales: 0,
       rejected: 0,
@@ -236,15 +237,15 @@ export const createLogWiseFlitchReportExcel = async (
           status:                log.status || '',
           op_bal:                n(log.op_bal),
           recover_from_rejected: n(log.recover_from_rejected),
-          invoice_ref:           log.invoice_ref != null ? log.invoice_ref : '',
+          invoice_cmt:           log.invoice_cmt != null ? log.invoice_cmt : '',
           indian_cmt:            n(log.indian_cmt),
           actual_cmt:            n(log.actual_cmt),
           issue_for_flitch:      n(log.issue_for_flitch),
           flitch_received:       n(log.flitch_received),
           flitch_diff:           n(log.flitch_diff),
-          issue_for_peeling:     n(log.issue_for_peeling),
-          peel_received:         n(log.peel_received),
-          peeling_diff:          n(log.peeling_diff),
+          issue_for_slicing:     n(log.issue_for_slicing),
+          slicing_received:      n(log.slicing_received),
+          slicing_diff:          n(log.slicing_diff),
           issue_for_sqedge:      n(log.issue_for_sqedge),
           sales:                 n(log.sales),
           rejected:              n(log.rejected),
@@ -264,14 +265,15 @@ export const createLogWiseFlitchReportExcel = async (
         // Accumulate grand totals
         grand.op_bal             += parseFloat(log.op_bal             || 0);
         grand.recover_from_rejected += parseFloat(log.recover_from_rejected || 0);
+        grand.invoice_cmt        += parseFloat(log.invoice_cmt        || 0);
         grand.indian_cmt         += parseFloat(log.indian_cmt         || 0);
         grand.actual_cmt         += parseFloat(log.actual_cmt         || 0);
         grand.issue_for_flitch   += parseFloat(log.issue_for_flitch   || 0);
         grand.flitch_received    += parseFloat(log.flitch_received    || 0);
         grand.flitch_diff        += parseFloat(log.flitch_diff        || 0);
-        grand.issue_for_peeling  += parseFloat(log.issue_for_peeling  || 0);
-        grand.peel_received      += parseFloat(log.peel_received      || 0);
-        grand.peeling_diff       += parseFloat(log.peeling_diff       || 0);
+        grand.issue_for_slicing  += parseFloat(log.issue_for_slicing  || 0);
+        grand.slicing_received   += parseFloat(log.slicing_received   || 0);
+        grand.slicing_diff       += parseFloat(log.slicing_diff       || 0);
         grand.issue_for_sqedge   += parseFloat(log.issue_for_sqedge   || 0);
         grand.sales              += parseFloat(log.sales              || 0);
         grand.rejected           += parseFloat(log.rejected           || 0);
@@ -296,15 +298,15 @@ export const createLogWiseFlitchReportExcel = async (
       status:                '',
       op_bal:                g(grand.op_bal),
       recover_from_rejected: g(grand.recover_from_rejected),
-      invoice_ref:           '',
+      invoice_cmt:           g(grand.invoice_cmt),
       indian_cmt:            g(grand.indian_cmt),
       actual_cmt:            g(grand.actual_cmt),
       issue_for_flitch:      g(grand.issue_for_flitch),
       flitch_received:       g(grand.flitch_received),
       flitch_diff:           g(grand.flitch_diff),
-      issue_for_peeling:     g(grand.issue_for_peeling),
-      peel_received:         g(grand.peel_received),
-      peeling_diff:          g(grand.peeling_diff),
+      issue_for_slicing:     g(grand.issue_for_slicing),
+      slicing_received:      g(grand.slicing_received),
+      slicing_diff:          g(grand.slicing_diff),
       issue_for_sqedge:      g(grand.issue_for_sqedge),
       sales:                 g(grand.sales),
       rejected:              g(grand.rejected),
