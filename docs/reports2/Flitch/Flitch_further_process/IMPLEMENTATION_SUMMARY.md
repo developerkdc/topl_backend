@@ -13,7 +13,7 @@ from flitch inventory instead of log inventory, removing the CrossCut and Flitch
 | File | Lines | Purpose |
 |---|---|---|
 | `controllers/reports2/Flitch/flitchItemFurtherProcess.js` | ~330 | Bulk-fetch, tree-build, row-flatten |
-| `config/downloadExcel/reports2/Flitch/flitchItemFurtherProcess.js` | ~340 | 47-column Excel with vertical merges |
+| `config/downloadExcel/reports2/Flitch/flitchItemFurtherProcess.js` | ~340 | 45-column Excel with vertical merges |
 | `routes/report/reports2/Flitch/flitch.routes.js` | 22 | Route registration (4th flitch route) |
 
 ---
@@ -37,7 +37,7 @@ non-first rows** and **merged vertically** in Excel.
 | Root entity | `log_inventory_items_view_model` | `flitch_inventory_items_view_model` |
 | Date filter | `log_invoice_details.inward_date` | `flitch_invoice_details.inward_date` |
 | Tiers removed | — | Log Inward, CrossCut |
-| Columns | 56 | 47 |
+| Columns | 56 | 45 |
 | Per-subtotal grouping | per log_no | per flitch_code |
 | Merge levels | Item / Log / CrossCut / Flitch / Side | Item / Flitch / Side |
 
@@ -45,6 +45,7 @@ non-first rows** and **merged vertically** in Excel.
 
 ```
 1. Flitches     ← flitch_inventory_items_view_model  (date range + filters)
+   Issue For Slicing/Peeling ← issued_for_slicings (flitch_inventory_item_id) + issues_for_peelings (log_no_code matches flitch)
 2. Slicing      ← slicing_done_items                 (log_no IN flitchLogNos)
    Peeling      ← peeling_done_items                 (log_no IN flitchLogNos)
    [in-memory link via buildChildPattern(flitch_code)]
@@ -70,13 +71,13 @@ e.g. flitch `L0702A1` → matches `L0702A1A`, `L0702A1B` but NOT `L0702A10A`.
 
 ---
 
-## Column Summary — 47 Columns
+## Column Summary — 45 Columns
 
 | Range | Section | Key Fields |
 |---|---|---|
 | 1 | Item Name | Merged vertically per species |
-| 2–5 | Flitch Inward in(CMT) | flitch_code, flitch_cmt, issue_status |
-| 6–9 | Slicing Issue in(CMT) | log_no_code (side), no_of_leaves |
+| 2–5 | Flitch Inward in(CMT) | flitch_code, flitch_cmt, Issue For Slicing/Peeling (from issued_for_slicings + issues_for_peelings), issue_status |
+| 6–9 | Slicing Issue in(CMT) | log_no_code (side), process_cmt (cmt − balance_cmt), balance_cmt (from issue_for_slicing_available when type=balance_flitch), no_of_leaves |
 | 10–13 | Peeling | output_type, no_of_leaves |
 | 14–16 | Dressing | SUM(sqm), issue_status |
 | 17–19 | Smoking/Dying | process_name, SUM(sqm), issue_status |
@@ -86,8 +87,6 @@ e.g. flitch `L0702A1` → matches `L0702A1A`, `L0702A1B` but NOT `L0702A10A`.
 | 42–43 | CNC | product_type, no_of_sheets |
 | 44 | COLOUR | no_of_sheets |
 | 45 | Sales | placeholder |
-| 46 | Job Work Challan | placeholder |
-| 47 | Adv Work Challan | placeholder |
 
 ---
 
@@ -109,7 +108,7 @@ The `inward_id` / `flitch_no` values are shown in **Row 3** of the report title 
 | Property | Value |
 |---|---|
 | Sheet name | `Flitch Further Process` |
-| Total columns | 47 |
+| Total columns | 45 |
 | Header rows | 5 (title, date range, filter label, section groups, column names) |
 | Frozen pane | Column 2, Row 5 |
 | Numeric format | `#,##0.000` |
@@ -125,13 +124,9 @@ The `inward_id` / `flitch_no` values are shown in **Row 3** of the report title 
 
 | Column | Reason blank |
 |---|---|
-| Slicing: Process Cmt (col 7) | No CMT-per-side field in `slicing_done_items` schema |
-| Slicing: Balance Cmt (col 8) | Same — no per-side CMT tracking |
 | Peeling: Balance Rostroller (col 11) | No roller-balance field in `peeling_done_items` schema |
 | Grouping: Issue Status (col 25) | Not tracked in `grouping_done_items_details` schema |
 | Sales (col 45) | Schema/model not yet identified |
-| Job Work Challan (col 46) | Schema/model not yet identified |
-| Adv Work Challan (col 47) | Schema/model not yet identified |
 
 ---
 

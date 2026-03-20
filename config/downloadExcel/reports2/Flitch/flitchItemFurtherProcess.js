@@ -6,9 +6,9 @@ import dotenv from 'dotenv/config';
 /**
  * Create Flitch Item Further Process Report Excel
  *
- * 47 columns across 14 section groups:
+ * 45 columns across 13 section groups:
  *  Col  1        : Item Name
- *  Cols  2- 5   : Flitch Inward in(CMT) → Flitch No., REC CMT, Issue For Slicing/Peeling/Sales, Issue Status
+ *  Cols  2- 5   : Flitch Inward in(CMT) → Flitch No., REC CMT, Issue For Slicing/Peeling, Issue Status
  *  Cols  6- 9   : Slicing Issue in(CMT) → Side, Process Cmt, Balance Cmt, REC (Leaf)
  *  Cols 10-13   : Peeling               → Process, Balance Rostroller, Output, Rec (Leaf)
  *  Cols 14-16   : Dressing              → Rec Sq. Mtr., Issue (Sq.Mtr.), Issue Status
@@ -25,8 +25,6 @@ import dotenv from 'dotenv/config';
  *  Cols 42-43   : CNC                   → Cnc Type, REC (Sheets)
  *  Col  44      : COLOUR                → REC (Sheets)
  *  Col  45      : Sales                 → REC (Sheets)
- *  Col  46      : Job Work Challan      → Veneer
- *  Col  47      : Adv Work Challan      → Pressing Sheets
  *
  * Rows are one per leaf entity (grouping item / peeling item / slicing side).
  * Parent columns are merged vertically for consecutive identical keys.
@@ -50,7 +48,7 @@ export const createFlitchItemFurtherProcessReportExcel = async (
       views: [{ state: 'frozen', xSplit: 2, ySplit: 5 }],
     });
 
-    // ── Column definitions (47 total) ────────────────────────────────────────
+    // ── Column definitions (45 total) ────────────────────────────────────────
     ws.columns = [
       { key: 'item_name',               width: 22 },  //  1
       { key: 'flitch_no',               width: 14 },  //  2
@@ -97,8 +95,6 @@ export const createFlitchItemFurtherProcessReportExcel = async (
       { key: 'cnc_rec_sheets',          width: 12 },  // 43
       { key: 'colour_rec_sheets',       width: 12 },  // 44
       { key: 'sales_rec_sheets',        width: 12 },  // 45
-      { key: 'jwc_veneer',              width: 12 },  // 46
-      { key: 'awc_pressing_sheets',     width: 16 },  // 47
     ];
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -176,7 +172,7 @@ export const createFlitchItemFurtherProcessReportExcel = async (
     titleRow.font = { bold: true, size: 12 };
     titleRow.alignment = { vertical: 'middle', horizontal: 'left' };
     titleRow.height = 22;
-    ws.mergeCells(1, 1, 1, 47);
+    ws.mergeCells(1, 1, 1, 45);
 
     // ── Row 2: Date range ─────────────────────────────────────────────────────
     const dateRangeRow = ws.addRow([
@@ -185,7 +181,7 @@ export const createFlitchItemFurtherProcessReportExcel = async (
     dateRangeRow.font = { size: 10 };
     dateRangeRow.alignment = { vertical: 'middle', horizontal: 'left' };
     dateRangeRow.height = 16;
-    ws.mergeCells(2, 1, 2, 47);
+    ws.mergeCells(2, 1, 2, 45);
 
     // ── Row 3: Filter label (only when inward_id or flitch_no is provided) ────
     const filterLabel = filter.inward_id
@@ -197,10 +193,10 @@ export const createFlitchItemFurtherProcessReportExcel = async (
     filterRow.font = { size: 10 };
     filterRow.alignment = { vertical: 'middle', horizontal: 'left' };
     filterRow.height = 16;
-    ws.mergeCells(3, 1, 3, 47);
+    ws.mergeCells(3, 1, 3, 45);
 
     // ── Row 4: Section group headers ──────────────────────────────────────────
-    const secHdr = new Array(47).fill('');
+    const secHdr = new Array(45).fill('');
     secHdr[0]  = '';                       //  1  Item Name – no group label
     secHdr[1]  = 'Flitch Inward in(CMT)'; //  2-5
     secHdr[5]  = 'Slicing Issue in(CMT)'; //  6-9
@@ -213,8 +209,6 @@ export const createFlitchItemFurtherProcessReportExcel = async (
     secHdr[41] = 'CNC';                   // 42-43
     secHdr[43] = 'COLOUR';               // 44
     secHdr[44] = 'Sales';                 // 45
-    secHdr[45] = 'Job Work Challan';      // 46
-    secHdr[46] = 'Adv Work Challan';      // 47
 
     const groupRow = ws.addRow(secHdr);
     groupRow.height = 22;
@@ -236,7 +230,7 @@ export const createFlitchItemFurtherProcessReportExcel = async (
       'Item Name',                          //  1
       'Flitch No.',                         //  2
       'REC CMT',                            //  3
-      'Issue For Slicing/Peeling/Sales',    //  4
+      'Issue For Slicing/Peeling',         //  4
       'Issue Status',                       //  5
       'Side',                               //  6
       'Process Cmt',                        //  7
@@ -278,8 +272,6 @@ export const createFlitchItemFurtherProcessReportExcel = async (
       'REC (Sheets)',                       // 43
       'REC (Sheets)',                       // 44
       'REC (Sheets)',                       // 45
-      'Veneer',                             // 46
-      'Pressing Sheets',                    // 47
     ];
 
     const headerRow = ws.addRow(colHdr);
@@ -289,7 +281,7 @@ export const createFlitchItemFurtherProcessReportExcel = async (
     // ── Numeric column indices (1-based) used for totals ─────────────────────
     const NUMERIC_COLS = new Set([
       3, 4,         // rece_cmt, issue_for
-      9,            // slicing_rec_leaf
+      7, 8, 9,      // slicing_process_cmt, slicing_balance_cmt, slicing_rec_leaf
       13,           // peeling_rec_leaf
       14, 15,       // dress_rec_sqm, dress_issue_sqm
       18,           // smoking_issue_sqm
@@ -307,7 +299,7 @@ export const createFlitchItemFurtherProcessReportExcel = async (
     const FLITCH_COLS = [2, 3, 4, 5];
     const SIDE_COLS   = [6, 7, 8, 9, 14, 15, 16, 17, 18, 19];
 
-    // ── Helper: convert row object to cell value array (47 elements) ─────────
+    // ── Helper: convert row object to cell value array (45 elements) ─────────
     const toCells = (row) => [
       row.item_name,
       row.flitch_no,
@@ -354,8 +346,6 @@ export const createFlitchItemFurtherProcessReportExcel = async (
       row.cnc_rec_sheets,
       row.colour_rec_sheets,
       row.sales_rec_sheets,
-      row.jwc_veneer,
-      row.awc_pressing_sheets,
     ];
 
     // ── Helper: accumulate numeric values into totals object ─────────────────
@@ -369,7 +359,7 @@ export const createFlitchItemFurtherProcessReportExcel = async (
 
     // ── Helper: add a styled total row ───────────────────────────────────────
     const addTotalRow = (label, totals, fill) => {
-      const cells = new Array(47).fill('');
+      const cells = new Array(45).fill('');
       cells[0] = label[0];
       cells[1] = label[1] || '';
       NUMERIC_COLS.forEach((colIdx1) => {
@@ -389,7 +379,7 @@ export const createFlitchItemFurtherProcessReportExcel = async (
         });
       });
       const isGrandTotal = label[0] === 'Total' && label[1] === '';
-      applyRowBorders(wsRow, 1, 47, {
+      applyRowBorders(wsRow, 1, 45, {
         top: true,
         bottom: true,
         bottomStyle: isGrandTotal ? 'medium' : 'thin',
@@ -463,7 +453,7 @@ export const createFlitchItemFurtherProcessReportExcel = async (
               borderType: 'data',
             });
           });
-          applyRowBorders(wsRow, 1, 47, { top: false, bottom: true });
+          applyRowBorders(wsRow, 1, 45, { top: false, bottom: true });
 
           // Accumulate totals using full (un-blanked) values
           const fullCells = toCells(row);

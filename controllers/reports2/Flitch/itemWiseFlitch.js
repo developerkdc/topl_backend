@@ -51,10 +51,25 @@ export const ItemWiseFlitchReportExcel = catchAsync(async (req, res, next) => {
 
   try {
     /*************************************************************
-     * STEP 1: Get unique item names with flitch inward in date range
-     * (flitch_inventory invoice.inward_date OR flitching_done worker_details.flitching_date)
+     * STEP 1: Get unique item names inwarded in date range
+     * (log inward: log_inventory + invoice.inward_date)
+     * (flitch inward: flitch_inventory + invoice.inward_date)
      *************************************************************/
-    const [inventoryItemsInPeriod, factoryItemsInPeriod] = await Promise.all([
+    const [logInwardItems, flitchInwardItems] = await Promise.all([
+      log_inventory_items_model.aggregate([
+        { $match: { ...itemFilter } },
+        {
+          $lookup: {
+            from: 'log_inventory_invoice_details',
+            localField: 'invoice_id',
+            foreignField: '_id',
+            as: 'invoice',
+          },
+        },
+        { $unwind: '$invoice' },
+        { $match: { 'invoice.inward_date': { $gte: start, $lte: end } } },
+        { $group: { _id: '$item_name' } },
+      ]),
       flitch_inventory_items_model.aggregate([
         { $match: { ...itemFilter } },
         {
@@ -69,26 +84,16 @@ export const ItemWiseFlitchReportExcel = catchAsync(async (req, res, next) => {
         { $match: { 'invoice.inward_date': { $gte: start, $lte: end } } },
         { $group: { _id: '$item_name' } },
       ]),
-      flitching_done_model.aggregate([
-        {
-          $match: {
-            deleted_at: null,
-            'worker_details.flitching_date': { $gte: start, $lte: end },
-            ...itemFilter,
-          },
-        },
-        { $group: { _id: '$item_name' } },
-      ]),
     ]);
 
     const itemNames = [...new Set(
-      [...inventoryItemsInPeriod, ...factoryItemsInPeriod].map((i) => i._id).filter(Boolean)
+      [...logInwardItems, ...flitchInwardItems].map((i) => i._id).filter(Boolean)
     )];
 
     if (itemNames.length === 0) {
       return res
         .status(404)
-        .json(new ApiResponse(404, 'No flitch data found for the selected period'));
+        .json(new ApiResponse(404, 'No inward data found for the selected period'));
     }
 
     /*************************************************************
@@ -442,7 +447,7 @@ export const ItemWiseFlitchReportExcel = catchAsync(async (req, res, next) => {
     closingAgg.forEach((r) => closingMap.set(r._id, r.total));
 
     /*************************************************************
-     * STEP 14: Build final 20-field report rows (only items with flitch inward in period)
+     * STEP 14: Build final 20-field report rows (items inwarded in period)
      *************************************************************/
     const itemNamesSet = new Set(itemNames);
     const report = Array.from(reportMap.values())
@@ -492,7 +497,7 @@ export const ItemWiseFlitchReportExcel = catchAsync(async (req, res, next) => {
     if (activeReport.length === 0) {
       return res
         .status(404)
-        .json(new ApiResponse(404, 'No flitch data found for the selected period'));
+        .json(new ApiResponse(404, 'No inward data found for the selected period'));
     }
 
     const excelLink = await createItemWiseFlitchReportExcel(
