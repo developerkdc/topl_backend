@@ -30,6 +30,30 @@ const applyGreyBackground = (row, totalCols = 13, startCol = 1) => {
   }
 };
 
+const thin = { style: 'thin' };
+const medium = { style: 'medium' };
+
+/**
+ * Apply borders to a row - vertical separators + optional top/bottom
+ * @param {Row} row - Excel row
+ * @param {number} startCol - first column
+ * @param {number} endCol - last column
+ * @param {{ top?: boolean, bottom?: boolean, bottomStyle?: string }} opts
+ */
+const applyRowBorders = (row, startCol, endCol, opts = {}) => {
+  const { top = false, bottom = true, bottomStyle = 'thin' } = opts;
+  const bottomBorder = bottomStyle === 'medium' ? medium : thin;
+  for (let col = startCol; col <= endCol; col++) {
+    const cell = row.getCell(col);
+    cell.border = {
+      left: thin,
+      right: thin,
+      ...(top && { top: thin }),
+      ...(bottom && { bottom: bottomBorder }),
+    };
+  }
+};
+
 /**
  * Generate Log Daily Inward Report
  */
@@ -175,14 +199,13 @@ const GenerateLogDailyInwardReport = async (details, reportDate) => {
             row.getCell(11).value = log.physical_cmt || 0;
             row.getCell(12).value = log.remark || '';
 
-            [6, 7, 11].forEach((colNum) => {
+            // Invoice Length, Invoice Dia., Physical Length, Physical Girth, Physical CMT, Invoice CMT, Indian CMT: 3 decimals
+            [5, 6, 7, 8, 9, 10, 11].forEach((colNum) => {
               const cell = row.getCell(colNum);
-              if (cell.value && typeof cell.value === 'number') cell.numFmt = '0.00';
+              if (typeof cell.value === 'number') cell.numFmt = '0.000';
             });
-            [8, 9, 12].forEach((colNum) => {
-              const cell = row.getCell(colNum);
-              if (cell.value && typeof cell.value === 'number') cell.numFmt = '0.000';
-            });
+
+            applyRowBorders(row, 1, 12, { top: false, bottom: true });
 
             itemInvoiceCMT += log.invoice_cmt || 0;
             itemIndianCMT += log.indian_cmt || 0;
@@ -221,6 +244,7 @@ const GenerateLogDailyInwardReport = async (details, reportDate) => {
           itemTotalRow.getCell(11).value = itemPhysicalCMT;
           itemTotalRow.getCell(11).font = { bold: true };
           itemTotalRow.getCell(11).numFmt = '0.000';
+          applyRowBorders(itemTotalRow, 1, 12, { top: true, bottom: true });
           currentRow++;
 
           inwardInvoiceCMT += itemInvoiceCMT;
@@ -228,7 +252,7 @@ const GenerateLogDailyInwardReport = async (details, reportDate) => {
           inwardPhysicalCMT += itemPhysicalCMT;
         });
 
-      // Inward total row — grey background across full row
+      // Inward total row — grey background across full row, thicker bottom border
       const inwardTotalRow = worksheet.getRow(currentRow);
       applyGreyBackground(inwardTotalRow, 12);
       inwardTotalRow.getCell(1).value = `TOTAL ${inward}`;
@@ -242,6 +266,7 @@ const GenerateLogDailyInwardReport = async (details, reportDate) => {
       inwardTotalRow.getCell(11).value = inwardPhysicalCMT;
       inwardTotalRow.getCell(11).font = { bold: true };
       inwardTotalRow.getCell(11).numFmt = '0.000';
+      applyRowBorders(inwardTotalRow, 1, 12, { top: true, bottom: true, bottomStyle: 'medium' });
       currentRow++;
       currentRow++; // blank line between inwards
     });
@@ -260,6 +285,7 @@ const GenerateLogDailyInwardReport = async (details, reportDate) => {
   grandTotalRow.getCell(11).value = grandTotalPhysicalCMT;
   grandTotalRow.getCell(11).font = { bold: true };
   grandTotalRow.getCell(11).numFmt = '0.000';
+  applyRowBorders(grandTotalRow, 1, 12, { top: true, bottom: true });
   currentRow++;
 
   // === Summary section ===
@@ -340,6 +366,7 @@ const GenerateLogDailyInwardReport = async (details, reportDate) => {
             const cell = row.getCell(col);
             if (cell.value && typeof cell.value === 'number') cell.numFmt = '0.000';
           });
+          applyRowBorders(row, 1, 5, { top: false, bottom: true });
           itemInvoiceTotal += suppliers[supp].invoice;
           itemIndianTotal += suppliers[supp].indian;
           itemPhysicalTotal += suppliers[supp].physical;
@@ -363,11 +390,12 @@ const GenerateLogDailyInwardReport = async (details, reportDate) => {
       itemTotalRow.getCell(5).value = itemPhysicalTotal;
       itemTotalRow.getCell(5).font = { bold: true };
       itemTotalRow.getCell(5).numFmt = '0.000';
+      applyRowBorders(itemTotalRow, 1, 5, { top: true, bottom: true });
       currentRow++;
       currentRow++; // blank after each item
     });
 
-  // Summary grand total row — grey background
+  // Summary grand total row — grey background, thicker bottom for outer edge
   const grandRow = worksheet.getRow(currentRow);
   applyGreyBackground(grandRow, 5);
   grandRow.getCell(2).value = 'Grand Total';
@@ -381,6 +409,7 @@ const GenerateLogDailyInwardReport = async (details, reportDate) => {
   grandRow.getCell(5).value = grandPhysical;
   grandRow.getCell(5).font = { bold: true };
   grandRow.getCell(5).numFmt = '0.000';
+  applyRowBorders(grandRow, 1, 5, { top: true, bottom: true, bottomStyle: 'medium' });
   currentRow++;
 
   // Generate file path

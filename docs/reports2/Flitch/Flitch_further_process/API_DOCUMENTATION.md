@@ -72,7 +72,7 @@
 
 ---
 
-## Column Structure — 47 Columns
+## Column Structure — 45 Columns
 
 ### Col 1 — (standalone)
 | Col | Header | Source |
@@ -84,15 +84,15 @@
 |---|---|---|
 | 2 | Flitch No. | `flitch_inventory_items_details.flitch_code` |
 | 3 | REC CMT | `flitch_inventory_items_details.flitch_cmt` |
-| 4 | Issue For Slicing/Peeling/Sales | `flitch_cmt` (value issued for downstream processing) |
+| 4 | Issue For Slicing/Peeling | Sum of `cmt` from `issued_for_slicings` (where `flitch_inventory_item_id` = flitch) + sum of `cmt` from `issues_for_peelings` (where `log_no_code` matches flitch) |
 | 5 | Issue Status | `flitch_inventory_items_details.issue_status` |
 
 ### Cols 6–9 — Slicing Issue in(CMT)
 | Col | Header | Source |
 |---|---|---|
 | 6 | Side | `slicing_done_items.log_no_code` |
-| 7 | Process Cmt | *(placeholder — no per-side CMT in schema)* |
-| 8 | Balance Cmt | *(placeholder — no per-side CMT in schema)* |
+| 7 | Process Cmt | `issued_for_slicings.cmt - balance_cmt` (via `slicing_done_other_details.issue_for_slicing_id`) |
+| 8 | Balance Cmt | If `issued_for_slicings.type === "balance_flitch"` then `issue_for_slicing_available_details.cmt`, else `0` |
 | 9 | REC (Leaf) | `slicing_done_items.no_of_leaves` |
 
 ### Cols 10–13 — Peeling
@@ -167,16 +167,6 @@
 |---|---|---|
 | 45 | REC (Sheets) | *(placeholder — schema not yet identified)* |
 
-### Col 46 — Job Work Challan
-| Col | Header | Source |
-|---|---|---|
-| 46 | Veneer | *(placeholder — schema not yet identified)* |
-
-### Col 47 — Adv Work Challan
-| Col | Header | Source |
-|---|---|---|
-| 47 | Pressing Sheets | *(placeholder — schema not yet identified)* |
-
 ---
 
 ## Row Granularity
@@ -213,8 +203,8 @@ flitch_inventory_items_details (flitch_code, log_no)
 All stage data is fetched in bulk using `$in` queries:
 
 1. Fetch all flitches matching date range + filters from `flitch_inventory_items_view_model`
-2. Collect all `log_no` values from those flitches
-3. Bulk-fetch slicing sides and peeling items using `log_no IN logNos`
+2. Collect all `flitch_code` values from those flitches
+3. Bulk-fetch slicing sides and peeling items using `log_no IN flitchCodes` (slicing/peeling store flitch code in `log_no`)
 4. In-memory: link each side/peel to its parent flitch via `buildChildPattern(flitch_code)`
 5. Collect all leaf `log_no_code` values
 6. Bulk-fetch dressing, smoking, grouping for those codes
@@ -232,7 +222,7 @@ All stage data is fetched in bulk using `$in` queries:
 | Location | `public/upload/reports/reports2/Flitch/` |
 | Filename | `Flitch-Item-Further-Process-Report-{timestamp}.xlsx` |
 | Sheet name | `Flitch Further Process` |
-| Total columns | 47 |
+| Total columns | 45 |
 | Frozen pane | Column 2, Row 5 |
 | Numeric format | `#,##0.000` (3 decimal places) |
 | Per-flitch total | Orange fill, `Total {flitch_no}` label |

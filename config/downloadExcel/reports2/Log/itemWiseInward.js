@@ -3,6 +3,23 @@ import fs from 'fs/promises';
 import ApiError from '../../../../utils/errors/apiError.js';
 import dotenv from 'dotenv/config';
 
+const thin = { style: 'thin' };
+const medium = { style: 'medium' };
+
+const applyRowBorders = (row, startCol, endCol, opts = {}) => {
+  const { top = false, bottom = true, bottomStyle = 'thin' } = opts;
+  const bottomBorder = bottomStyle === 'medium' ? medium : thin;
+  for (let col = startCol; col <= endCol; col++) {
+    const cell = row.getCell(col);
+    cell.border = {
+      left: thin,
+      right: thin,
+      ...(top && { top: thin }),
+      ...(bottom && { bottom: bottomBorder }),
+    };
+  }
+};
+
 /**
  * Create Item Wise Inward Report Excel
  * Generates comprehensive inventory report tracking complete journey of logs
@@ -128,6 +145,7 @@ export const createItemWiseInwardReportExcel = async (
       pattern: 'solid',
       fgColor: { argb: 'FFD3D3D3' },
     };
+    applyRowBorders(groupHeaderRow, 1, 21, { top: true, bottom: true });
 
     // Merge group headers
     worksheet.mergeCells(3, 3, 3, 5);   // ROUND LOG DETAIL CMT (cols 3-5: Invoice, Indian, Actual)
@@ -171,6 +189,7 @@ export const createItemWiseInwardReportExcel = async (
       pattern: 'solid',
       fgColor: { argb: 'FFD3D3D3' },
     };
+    applyRowBorders(headerRow, 1, 21, { top: true, bottom: true });
 
     // Initialize grand totals
     const grandTotals = {
@@ -229,7 +248,8 @@ export const createItemWiseInwardReportExcel = async (
         closing_stock_cmt: parseFloat(item.closing_stock_cmt || 0).toFixed(3),
       };
 
-      worksheet.addRow(rowData);
+      const dataRow = worksheet.addRow(rowData);
+      applyRowBorders(dataRow, 1, 21, { top: false, bottom: true });
 
       // Accumulate grand totals
       grandTotals.opening_stock_cmt += parseFloat(item.opening_stock_cmt || 0);
@@ -286,6 +306,7 @@ export const createItemWiseInwardReportExcel = async (
         fgColor: { argb: 'FFE0E0E0' },
       };
     });
+    applyRowBorders(totalRow, 1, 21, { top: true, bottom: true });
 
     // Save file
     const timeStamp = new Date().getTime();

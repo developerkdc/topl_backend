@@ -1,6 +1,6 @@
 # Crosscut Daily Report API Plan
 
-**Overview:** Add a Crosscut daily report API under reports2 > Crosscut that produces an Excel report matching the specified layout: a main data table with two-row-per-log layout (Log row + LogX row + Total row), item-level totals, a summary table (Item Name, Inward CMT, CC CMT), and operational metadata (CCId, Shift, Work Hours, Worker, Machine Id). Data is sourced from crosscutting_done and issues_for_crosscutting (via lookup).
+**Overview:** Add a Crosscut daily report API under reports2 > Crosscut that produces an Excel report matching the specified layout: a main data table with two-row-per-log layout (Log row + LogX row + Total row), item-level totals, and a summary table (Item Name, Inward CMT, CC CMT). Data is sourced from crosscutting_done and issues_for_crosscutting (via lookup).
 
 ---
 
@@ -12,9 +12,8 @@
   - **Row 1 (Log row):** Item Name (first of item only), LogNo, Length, Girth, Inward CMT; columns 6–9 empty.
   - **Row 2 (LogX row):** Columns 1–5 empty; LogX, Length, Girth, CC CMT.
   - **Row 3:** "Total" in LogX column; only CC CMT column filled (per-log subtotal).
-- **Item-level totals:** Two "Total" rows under LogNo column with item CC CMT total in CC CMT column.
+- **Item-level totals:** One "Total" row under LogNo column with item CC CMT total in CC CMT column.
 - **Summary:** Table with columns Item Name | Inward CMT | CC CMT; one row per item plus bold **Total** row.
-- **Operational:** Table CCId | Shift | Work Hours | Worker | Machine Id (one row per unique worker/machine).
 
 ## Data source (schema)
 
@@ -65,7 +64,6 @@
   - Group data by item_name and log_no. For each piece: Row 1 (Log): cols 1–5 from original_log (item name on first of item, log info on first of log); cols 6–9 empty. Row 2 (LogX): cols 1–5 empty; cols 6–9 = LogX, length, girth, CC CMT. Row 3: "Total" in col 6, per-log CC CMT sum in col 9.
   - After each item: two item total rows (Total in LogNo column, item CC CMT total in col 9).
   - Summary table: Item Name | Inward CMT | CC CMT; one row per item, then bold Total row.
-  - Operational section: headers CCId, Shift, Work Hours, Worker, Machine Id; one row per unique worker/machine (CCId from first doc _id e.g. last 5 chars).
 - Styling: bold headers, gray fill (e.g. D3D3D3), thin borders, 0.000 for CMT/dimensions.
 - Save to `public/reports/CrossCutting/crosscutting_daily_report_&lt;timestamp&gt;.xlsx`; return `APP_URL + filePath`.
 
@@ -106,7 +104,6 @@ sequenceDiagram
 
 ## Notes
 
-- **CCId:** Not a dedicated schema field; derived from first document _id (e.g. last 5 characters) for the operational section.
 - **Two-row-per-log:** Exact layout per spec: Log row (cols 1–5), LogX row (cols 6–9), then Total row (col 6 = "Total", col 9 = log CC CMT sum).
-- **Item totals:** Two "Total" rows per item, both showing the same item CC CMT total in column 9.
+- **Item totals:** One "Total" row per item with item CC CMT total in column 9.
 - **Worker/ops:** One row per unique (machine_id, shift) with worker_details and machine_name/machine_id.

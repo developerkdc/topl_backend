@@ -7,7 +7,9 @@ import { issues_for_flitching_model } from '../../../database/schema/factory/fli
 import { issues_for_peeling_model } from '../../../database/schema/factory/peeling/issues_for_peeling/issues_for_peeling.schema.js';
 import { peeling_done_other_details_model } from '../../../database/schema/factory/peeling/peeling_done/peeling_done.schema.js';
 import { crosscutting_done_model } from '../../../database/schema/factory/crossCutting/crosscutting.schema.js';
+import { rejected_crosscutting_model } from '../../../database/schema/factory/crossCutting/rejectedCrosscutting.schema.js';
 import { flitching_done_model } from '../../../database/schema/factory/flitching/flitching.schema.js';
+import issues_for_peeling_wastage_model from '../../../database/schema/factory/peeling/issues_for_peeling/issues_for_peeling_wastage.schema.js';
 import { createItemWiseInwardReportExcel } from '../../../config/downloadExcel/reports2/Log/itemWiseInward.js';
 
 /**
@@ -470,30 +472,66 @@ export const ItemWiseInwardDailyReportExcel = catchAsync(async (req, res, next) 
     };
 
     /*********************************************************
-     STEP 3: Opening Stock – logs created between start and end with status null
+     STEP 3: Current Available CMT (closing balance) – for formula: Opening = Closing + Issued - Received
+     Sum of: round logs (issue_status=null) + crosscut (issue_status=null) + flitch (issue_status=null)
     *********************************************************/
-    const openingAgg = await log_inventory_items_model.aggregate([
-      { $match: { ...itemFilter} },
-      {
-        $lookup: {
-          from: 'log_inventory_invoice_details',
-          localField: 'invoice_id',
-          foreignField: '_id',
-          as: 'invoice',
+    const [currentLogAgg, currentCrosscutAgg, currentFlitchAgg] = await Promise.all([
+      log_inventory_items_model.aggregate([
+        {
+          $match: {
+            ...itemFilter,
+            $or: [{ issue_status: null }, { issue_status: { $exists: false } }],
+          },
         },
-      },
-      { $unwind: '$invoice' },
-      { $match: { 'invoice.inward_date': { $gte: start, $lte: end } } },
-      {
-        $group: {
-          _id: { item_id: '$item_id', item_name: '$item_name' },
-          total: { $sum: '$physical_cmt' },
+        {
+          $group: {
+            _id: { item_id: '$item_id', item_name: '$item_name' },
+            total: { $sum: '$physical_cmt' },
+          },
         },
-      },
+      ]),
+      crosscutting_done_model.aggregate([
+        {
+          $match: {
+            ...itemFilter,
+            $or: [{ issue_status: null }, { issue_status: { $exists: false } }],
+          },
+        },
+        {
+          $group: {
+            _id: { item_id: '$item_id', item_name: '$item_name' },
+            total: { $sum: '$crosscut_cmt' },
+          },
+        },
+      ]),
+      flitching_done_model.aggregate([
+        {
+          $match: {
+            ...itemFilter,
+            deleted_at: null,
+            $or: [{ issue_status: null }, { issue_status: { $exists: false } }],
+          },
+        },
+        {
+          $group: {
+            _id: { item_id: '$item_id', item_name: '$item_name' },
+            total: { $sum: '$flitch_cmt' },
+          },
+        },
+      ]),
     ]);
-    openingAgg.forEach((r) =>
-      addValue(r._id.item_id, r._id.item_name, "opening_stock", r.total)
-    );
+
+    const currentAvailableMap = new Map();
+    const keyToItem = new Map();
+    [...currentLogAgg, ...currentCrosscutAgg, ...currentFlitchAgg].forEach((r) => {
+      const key = `${r._id.item_id}_${r._id.item_name}`;
+      currentAvailableMap.set(key, (currentAvailableMap.get(key) || 0) + (r.total || 0));
+      if (!keyToItem.has(key)) keyToItem.set(key, { item_id: r._id.item_id, item_name: r._id.item_name });
+    });
+    allItems.forEach((i) => {
+      const k = `${i._id.item_id}_${i._id.item_name}`;
+      if (!keyToItem.has(k)) keyToItem.set(k, { item_id: i._id.item_id, item_name: i._id.item_name });
+    });
 
     /*********************************************************
      STEP 3a: Received logs (invoice/indian/actual) during period
@@ -667,7 +705,8 @@ export const ItemWiseInwardDailyReportExcel = catchAsync(async (req, res, next) 
     );
 
     /*********************************************************
-     STEP 10: Peeling Received
+     STEP 10: Peeling Received – from peeling_done_other_details.total_cmt
+     Allocate total_cmt to items proportionally when a record has multiple items
     *********************************************************/
     const peelingReceivedAgg = await peeling_done_other_details_model.aggregate([
       {
@@ -681,6 +720,11 @@ export const ItemWiseInwardDailyReportExcel = catchAsync(async (req, res, next) 
           as: "items",
         },
       },
+      {
+        $addFields: {
+          itemsSum: { $sum: "$items.cmt" },
+        },
+      },
       { $unwind: "$items" },
 
       ...(filter.item_name
@@ -688,12 +732,28 @@ export const ItemWiseInwardDailyReportExcel = catchAsync(async (req, res, next) 
         : []),
 
       {
+        $addFields: {
+          itemShare: {
+            $cond: [
+              { $eq: ["$itemsSum", 0] },
+              0,
+              { $divide: ["$items.cmt", "$itemsSum"] },
+            ],
+          },
+        },
+      },
+      {
+        $addFields: {
+          allocatedCmt: { $multiply: ["$total_cmt", "$itemShare"] },
+        },
+      },
+      {
         $group: {
           _id: {
             item_id: "$items.item_name_id",
             item_name: "$items.item_name",
           },
-          total: { $sum: "$items.cmt" },
+          total: { $sum: "$allocatedCmt" },
         },
       },
     ]);
@@ -703,177 +763,254 @@ export const ItemWiseInwardDailyReportExcel = catchAsync(async (req, res, next) 
     );
 
     /*********************************************************
-     STEP 10a: Sales – aggregate all orders/challans across stages
+     STEP 10a: Sales (order only) and Job Work Challan (challan only)
     *********************************************************/
-    const logSalesAgg = await log_inventory_items_model.aggregate([
-      {
-        $match: {
-          createdAt: { $gte: start, $lte: end },
-          issue_status: { $in: ['order', 'challan'] },
-          ...itemFilter,
-        },
-      },
-      {
-        $group: {
-          _id: { item_id: '$item_id', item_name: '$item_name' },
-          total: { $sum: '$physical_cmt' },
-        },
-      },
+    const [logOrderAgg, logChallanAgg] = await Promise.all([
+      log_inventory_items_model.aggregate([
+        { $match: { createdAt: { $gte: start, $lte: end }, issue_status: 'order', ...itemFilter } },
+        { $group: { _id: { item_id: '$item_id', item_name: '$item_name' }, total: { $sum: '$physical_cmt' } } },
+      ]),
+      log_inventory_items_model.aggregate([
+        { $match: { createdAt: { $gte: start, $lte: end }, issue_status: 'challan', ...itemFilter } },
+        { $group: { _id: { item_id: '$item_id', item_name: '$item_name' }, total: { $sum: '$physical_cmt' } } },
+      ]),
     ]);
-    logSalesAgg.forEach((r) =>
-      addValue(r._id.item_id, r._id.item_name, 'sales', r.total)
-    );
+    logOrderAgg.forEach((r) => addValue(r._id.item_id, r._id.item_name, 'sales', r.total));
+    logChallanAgg.forEach((r) => addValue(r._id.item_id, r._id.item_name, 'job_work_challan', r.total));
 
-    const crosscutSalesAgg = await crosscutting_done_model.aggregate([
-      {
-        $match: {
-          createdAt: { $gte: start, $lte: end },
-          issue_status: { $in: ['order', 'challan'] },
-          ...itemFilter,
-        },
-      },
-      {
-        $group: {
-          _id: { item_id: '$item_id', item_name: '$item_name' },
-          total: { $sum: '$crosscut_cmt' },
-        },
-      },
+    const [crosscutOrderAgg, crosscutChallanAgg] = await Promise.all([
+      crosscutting_done_model.aggregate([
+        { $match: { createdAt: { $gte: start, $lte: end }, issue_status: 'order', ...itemFilter } },
+        { $group: { _id: { item_id: '$item_id', item_name: '$item_name' }, total: { $sum: '$crosscut_cmt' } } },
+      ]),
+      crosscutting_done_model.aggregate([
+        { $match: { createdAt: { $gte: start, $lte: end }, issue_status: 'challan', ...itemFilter } },
+        { $group: { _id: { item_id: '$item_id', item_name: '$item_name' }, total: { $sum: '$crosscut_cmt' } } },
+      ]),
     ]);
-    crosscutSalesAgg.forEach((r) =>
-      addValue(r._id.item_id, r._id.item_name, 'sales', r.total)
-    );
+    crosscutOrderAgg.forEach((r) => addValue(r._id.item_id, r._id.item_name, 'sales', r.total));
+    crosscutChallanAgg.forEach((r) => addValue(r._id.item_id, r._id.item_name, 'job_work_challan', r.total));
 
-    const flitchSalesAgg = await flitching_done_model.aggregate([
-      {
-        $match: {
-          createdAt: { $gte: start, $lte: end },
-          deleted_at: null,
-          issue_status: { $in: ['order', 'challan'] },
-          ...itemFilter,
-        },
-      },
-      {
-        $group: {
-          _id: { item_id: '$item_id', item_name: '$item_name' },
-          total: { $sum: '$flitch_cmt' },
-        },
-      },
+    const [flitchOrderAgg, flitchChallanAgg] = await Promise.all([
+      flitching_done_model.aggregate([
+        { $match: { createdAt: { $gte: start, $lte: end }, deleted_at: null, issue_status: 'order', ...itemFilter } },
+        { $group: { _id: { item_id: '$item_id', item_name: '$item_name' }, total: { $sum: '$flitch_cmt' } } },
+      ]),
+      flitching_done_model.aggregate([
+        { $match: { createdAt: { $gte: start, $lte: end }, deleted_at: null, issue_status: 'challan', ...itemFilter } },
+        { $group: { _id: { item_id: '$item_id', item_name: '$item_name' }, total: { $sum: '$flitch_cmt' } } },
+      ]),
     ]);
-    flitchSalesAgg.forEach((r) =>
-      addValue(r._id.item_id, r._id.item_name, 'sales', r.total)
-    );
+    flitchOrderAgg.forEach((r) => addValue(r._id.item_id, r._id.item_name, 'sales', r.total));
+    flitchChallanAgg.forEach((r) => addValue(r._id.item_id, r._id.item_name, 'job_work_challan', r.total));
 
     /*********************************************************
-     STEP 10b: Rejected – sum is_rejected across crosscut, flitch, peeling
+     STEP 10b: Rejected (Cc+Flitch+Peeling)
+     CC: rejected crosscutting (rejected_crosscutting.rejected_quantity.physical_cmt)
+     Flitch: wastage CMT (flitching_done.wastage_info.wastage_sqm * sqm_factor)
+     Peeling: peeling wastage (issues_for_peeling_wastage.cmt)
     *********************************************************/
-    const rejectedCrosscutAgg = await crosscutting_done_model.aggregate([
+    const rejectedCrosscutAgg = await rejected_crosscutting_model.aggregate([
       {
         $match: {
           createdAt: { $gte: start, $lte: end },
-          is_rejected: true,
           ...itemFilter,
         },
       },
       {
         $group: {
           _id: { item_id: '$item_id', item_name: '$item_name' },
-          total: { $sum: '$crosscut_cmt' },
+          total: { $sum: '$rejected_quantity.physical_cmt' },
         },
       },
     ]);
-    rejectedCrosscutAgg.forEach((r) =>
-      addValue(r._id.item_id, r._id.item_name, 'rejected', r.total)
-    );
+    rejectedCrosscutAgg.forEach((r) => {
+      addValue(r._id.item_id, r._id.item_name, 'rejected', r.total);
+      console.log('Rejected Stock [CC - Rejected Crosscutting]:', r._id.item_name, '=', r.total);
+    });
 
     const rejectedFlitchAgg = await flitching_done_model.aggregate([
       {
         $match: {
           createdAt: { $gte: start, $lte: end },
           deleted_at: null,
-          is_rejected: true,
           ...itemFilter,
         },
       },
       {
+        $addFields: {
+          wastageCmt: {
+            $multiply: [
+              { $ifNull: ['$wastage_info.wastage_sqm', 0] },
+              { $ifNull: ['$sqm_factor', 1] },
+            ],
+          },
+        },
+      },
+      {
         $group: {
           _id: { item_id: '$item_id', item_name: '$item_name' },
-          total: { $sum: '$flitch_cmt' },
+          total: { $sum: '$wastageCmt' },
         },
       },
     ]);
-    rejectedFlitchAgg.forEach((r) =>
-      addValue(r._id.item_id, r._id.item_name, 'rejected', r.total)
-    );
+    rejectedFlitchAgg.forEach((r) => {
+      addValue(r._id.item_id, r._id.item_name, 'rejected', r.total);
+      console.log('Rejected Stock [Flitch - Wastage CMT]:', r._id.item_name, '=', r.total);
+    });
 
-    const rejectedPeelingAgg = await peeling_done_other_details_model.aggregate([
+    const rejectedPeelingAgg = await issues_for_peeling_wastage_model.aggregate([
       {
-        $match: { createdAt: { $gte: start, $lte: end }, is_rejected: true },
+        $match: { createdAt: { $gte: start, $lte: end } },
       },
       {
         $lookup: {
-          from: 'peeling_done_items',
-          localField: '_id',
-          foreignField: 'peeling_done_other_details_id',
-          as: 'items',
+          from: 'issues_for_peelings',
+          localField: 'issue_for_peeling_id',
+          foreignField: '_id',
+          as: 'issue',
         },
       },
-      { $unwind: '$items' },
+      { $unwind: '$issue' },
       ...(filter.item_name
-        ? [{ $match: { 'items.item_name': filter.item_name } }]
+        ? [{ $match: { 'issue.item_name': filter.item_name } }]
         : []),
       {
         $group: {
-          _id: {
-            item_id: '$items.item_name_id',
-            item_name: '$items.item_name',
+          _id: { item_id: '$issue.item_id', item_name: '$issue.item_name' },
+          total: { $sum: '$cmt' },
+        },
+      },
+    ]);
+    rejectedPeelingAgg.forEach((r) => {
+      addValue(r._id.item_id, r._id.item_name, 'rejected', r.total);
+      console.log('Rejected Stock [Peeling - Peeling Wastage]:', r._id.item_name, '=', r.total);
+    });
+
+    /*********************************************************
+     STEP 10c: Received/Issued AFTER period – to reconstruct period-end closing for past dates
+     Period-end closing = stock at end of endDate. If endDate < today, we must reconstruct:
+     Closing(period-end) = Current - Received(after) + Issued(after)
+    *********************************************************/
+    const now = new Date();
+    const isCurrentPeriod = end >= now;
+
+    let receivedAfterMap = new Map();
+    let issuedAfterMap = new Map();
+
+    if (!isCurrentPeriod) {
+      const [recAfter, issueCcAfter, flitchAfter, peelAfter, salesAfter, rejCcAfter, rejFlitchAfter, rejPeelAfter] = await Promise.all([
+        log_inventory_items_model.aggregate([
+          { $match: { ...itemFilter } },
+          { $lookup: { from: 'log_inventory_invoice_details', localField: 'invoice_id', foreignField: '_id', as: 'invoice' } },
+          { $unwind: '$invoice' },
+          { $match: { 'invoice.inward_date': { $gt: end } } },
+          { $group: { _id: { item_id: '$item_id', item_name: '$item_name' }, total: { $sum: '$physical_cmt' } } },
+        ]),
+        log_inventory_items_model.aggregate([
+          { $match: { ...itemFilter, issue_status: 'crosscutting', updatedAt: { $gt: end } } },
+          { $group: { _id: { item_id: '$item_id', item_name: '$item_name' }, total: { $sum: '$physical_cmt' } } },
+        ]),
+        issues_for_flitching_model.aggregate([
+          { $match: { ...itemFilter, createdAt: { $gt: end } } },
+          { $group: { _id: { item_id: '$item_id', item_name: '$item_name' }, total: { $sum: '$cmt' } } },
+        ]),
+        issues_for_peeling_model.aggregate([
+          { $match: { ...itemFilter, createdAt: { $gt: end } } },
+          { $group: { _id: { item_id: '$item_id', item_name: '$item_name' }, total: { $sum: '$cmt' } } },
+        ]),
+        log_inventory_items_model.aggregate([
+          { $match: { ...itemFilter, issue_status: { $in: ['order', 'challan'] }, updatedAt: { $gt: end } } },
+          { $group: { _id: { item_id: '$item_id', item_name: '$item_name' }, total: { $sum: '$physical_cmt' } } },
+        ]),
+        rejected_crosscutting_model.aggregate([
+          { $match: { ...itemFilter, createdAt: { $gt: end } } },
+          { $group: { _id: { item_id: '$item_id', item_name: '$item_name' }, total: { $sum: '$rejected_quantity.physical_cmt' } } },
+        ]),
+        flitching_done_model.aggregate([
+          {
+            $match: { ...itemFilter, deleted_at: null, createdAt: { $gt: end } },
           },
-          total: { $sum: '$items.cmt' },
-        },
-      },
-    ]);
-    rejectedPeelingAgg.forEach((r) =>
-      addValue(r._id.item_id, r._id.item_name, 'rejected', r.total)
-    );
+          {
+            $addFields: {
+              wastageCmt: {
+                $multiply: [
+                  { $ifNull: ['$wastage_info.wastage_sqm', 0] },
+                  { $ifNull: ['$sqm_factor', 1] },
+                ],
+              },
+            },
+          },
+          { $group: { _id: { item_id: '$item_id', item_name: '$item_name' }, total: { $sum: '$wastageCmt' } } },
+        ]),
+        issues_for_peeling_wastage_model.aggregate([
+          { $match: { createdAt: { $gt: end } } },
+          { $lookup: { from: 'issues_for_peelings', localField: 'issue_for_peeling_id', foreignField: '_id', as: 'issue' } },
+          { $unwind: '$issue' },
+          ...(filter.item_name ? [{ $match: { 'issue.item_name': filter.item_name } }] : []),
+          { $group: { _id: { item_id: '$issue.item_id', item_name: '$issue.item_name' }, total: { $sum: '$cmt' } } },
+        ]),
+      ]);
 
-    // closing stock agg: logs with invoice inward_date in range and status != null
-    const closingAgg = await log_inventory_items_model.aggregate([
-      { $match: { ...itemFilter, issue_status: { $ne: null } } },
-      {
-        $lookup: {
-          from: 'log_inventory_invoice_details',
-          localField: 'invoice_id',
-          foreignField: '_id',
-          as: 'invoice',
-        },
-      },
-      { $unwind: '$invoice' },
-      {
-        $match: {
-          'invoice.inward_date': { $gte: start, $lte: end },
-        },
-      },
-      {
-        $group: {
-          _id: { item_id: '$item_id', item_name: '$item_name' },
-          total: { $sum: '$physical_cmt' },
-        },
-      },
-    ]);
+      const crosscutSalesAfter = await crosscutting_done_model.aggregate([
+        { $match: { ...itemFilter, issue_status: { $in: ['order', 'challan'] }, updatedAt: { $gt: end } } },
+        { $group: { _id: { item_id: '$item_id', item_name: '$item_name' }, total: { $sum: '$crosscut_cmt' } } },
+      ]);
+      const flitchSalesAfter = await flitching_done_model.aggregate([
+        { $match: { ...itemFilter, deleted_at: null, issue_status: { $in: ['order', 'challan'] }, updatedAt: { $gt: end } } },
+        { $group: { _id: { item_id: '$item_id', item_name: '$item_name' }, total: { $sum: '$flitch_cmt' } } },
+      ]);
 
-    const closingMap = new Map();
-    closingAgg.forEach((r) =>
-      closingMap.set(`${r._id.item_id}_${r._id.item_name}`, r.total)
-    );
+      recAfter.forEach((x) => {
+        const k = `${x._id.item_id}_${x._id.item_name}`;
+        receivedAfterMap.set(k, (receivedAfterMap.get(k) || 0) + (x.total || 0));
+      });
+      [issueCcAfter, flitchAfter, peelAfter, salesAfter, rejCcAfter, rejFlitchAfter, rejPeelAfter, crosscutSalesAfter, flitchSalesAfter].forEach((arr) => {
+        arr.forEach((x) => {
+          const k = `${x._id.item_id}_${x._id.item_name}`;
+          issuedAfterMap.set(k, (issuedAfterMap.get(k) || 0) + (x.total || 0));
+        });
+      });
+    }
 
     /*********************************************************
      STEP 11: Build Final Report
-     simple opening/closing formula per user request
+     Filter by date range: only include items that had inward_date in [start, end]
+     Opening = stock at start of period (startDate). Closing = stock at end of period (endDate).
+     Formula: Opening = Closing + Issued - Received
+     For current period (endDate >= today): Closing = current available
+     For past period: Closing = Current - Received(after) + Issued(after)
+     Issued = issue_for_cc + flitch_issued + peeling_issued + sales + job_work_challan + rejected
+     Received = actual_cmt (logs inward in period)
     *********************************************************/
-    const report = Array.from(reportMap.values()).map((r) => {
-      const key = `${r.item_id}_${r.item_name}`;
-      const opening_stock_cmt = r.opening_stock || 0; // from earlier agg
-      const closing_stock_cmt =
-        (closingMap.get(key) || 0) - opening_stock_cmt;
+    const itemsInPeriod = new Set(
+      logsReceivedAgg.map((r) => `${r._id.item_id}_${r._id.item_name}`)
+    );
+    const mergedKeys = new Set();
+    reportMap.forEach((_, k) => {
+      if (itemsInPeriod.has(k)) mergedKeys.add(k);
+    });
+    currentAvailableMap.forEach((_, k) => {
+      if (itemsInPeriod.has(k)) mergedKeys.add(k);
+    });
+    const defaults = { issue_for_cc: 0, flitch_issued: 0, peeling_issued: 0, sales: 0, rejected: 0, actual_cmt: 0, invoice_cmt: 0, indian_cmt: 0, cc_received: 0, cc_issued: 0, flitch_received: 0, peeling_received: 0, recover_from_rejected: 0, issue_for_sqedge: 0, job_work_challan: 0 };
+    const report = Array.from(mergedKeys).map((key) => {
+      const r = reportMap.get(key) || { ...keyToItem.get(key), ...defaults };
+      const currentAvailable = currentAvailableMap.get(key) || 0;
+      const received = r.actual_cmt || 0;
+      const issued =
+        (r.issue_for_cc || 0) +
+        (r.flitch_issued || 0) +
+        (r.peeling_issued || 0) +
+        (r.sales || 0) +
+        (r.job_work_challan || 0) +
+        (r.rejected || 0);
+
+      const periodEndClosing = isCurrentPeriod
+        ? currentAvailable
+        : Math.max(0, currentAvailable - (receivedAfterMap.get(key) || 0) + (issuedAfterMap.get(key) || 0));
+      const opening_stock_cmt = Math.max(0, periodEndClosing + issued - received);
+      const closing_stock_cmt = opening_stock_cmt + received - issued;
 
       return {
         item_id: r.item_id,

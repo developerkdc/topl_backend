@@ -80,7 +80,7 @@ aggregation patterns from `controllers/reports2/Log/itemWiseInward.js` were reus
 - **Endpoint:** `POST /api/V1/reports2/flitch/download-excel-item-wise-flitch-report`
 - **Request:** `{ "startDate": "YYYY-MM-DD", "endDate": "YYYY-MM-DD", "filter": { "item_name": "..." } }`
 - **Success (200):** `{ result: "<APP_URL>/public/upload/reports/reports2/Flitch/Item-Wise-Flitch-Report-<ts>.xlsx", statusCode: 200, message: "Item wise flitch report generated successfully" }`
-- **Errors:** 400 for missing/invalid dates; 404 when no flitch items found
+- **Errors:** 400 for missing/invalid dates; 404 when no inward items found in the date range
 
 ---
 
@@ -88,7 +88,7 @@ aggregation patterns from `controllers/reports2/Log/itemWiseInward.js` were reus
 
 ### Controller – `controllers/reports2/Flitch/itemWiseFlitch.js`
 
-- **Item universe:** Unique `item_name` values from `flitching_done_model` (deleted_at null) – report stays "flitch-centric".
+- **Item universe:** Unique `item_name` values from items **inwarded in the date range** – union of log inward (`log_inventory_items` + `log_inventory_invoice_details.inward_date`) and flitch inward (`flitch_inventory_items` + `flitch_inventory_invoice_details.inward_date`).
 - **Architecture:** Replaced the old N+1 `Promise.all` loop with a **Map-based single-pass** approach: 14 global aggregations (each grouped by `item_name`) are run in sequence; results are merged into a `reportMap` via an `addValue` helper.
 - **New imports added:** `issues_for_flitching_model`, `issues_for_peeling_model`, `peeling_done_other_details_model`.
 - **Return shape:** 21 fields per item including computed diffs and closing stock.

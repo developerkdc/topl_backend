@@ -83,7 +83,7 @@ POST /api/V1/report/download-excel-item-wise-flitch-report
 {
   "statusCode": 404,
   "status": "error",
-  "message": "No flitch data found for the selected period"
+  "message": "No inward data found for the selected period"
 }
 ```
 
@@ -145,6 +145,7 @@ Merged across all 20 columns.
 
 ## Report Features
 
+- **Item filtering**: Report shows all items **inwarded in the date range** – union of log inward (`log_inventory_items` + `log_inventory_invoice_details.inward_date`) and flitch inward (`flitch_inventory_items` + `flitch_inventory_invoice_details.inward_date`).
 - **20 columns** with grouped header row (Round Log Detail CMT, Cross Cut Details CMT, Flitch Details CMT, Peeling Details CMT, Sales, Rejected, Closing Stock)
 - **Sorted data**: items sorted alphabetically by name
 - **Grand Total row**: sums numeric columns, bold with gray background
@@ -361,7 +362,7 @@ public/upload/reports/reports2/Flitch/
 5. **Decimal Precision:** All CMT values formatted to 3 decimal places.
 6. **Sorting:** Results sorted alphabetically by item name.
 7. **Placeholder columns:** Recover From rejected and Issue for Sq.Edge always output 0 until a data source is defined by the client.
-8. **Item universe:** Unique `item_name` values from `flitching_done` (deleted_at null).
+8. **Item universe:** Unique `item_name` values from items **inwarded in the date range** – union of log inward (`log_inventory_items` + `log_inventory_invoice_details.inward_date`) and flitch inward (`flitch_inventory_items` + `flitch_inventory_invoice_details.inward_date`).
 9. **Cross Cut section:** Issue for CC, CC Received, CC Issue, CC Diff are included (columns 7–10); data from `log_inventory_items` (issue_status crosscutting) and `crosscutting_done`.
 
 ---

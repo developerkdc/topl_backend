@@ -7,7 +7,7 @@ The Log Wise Crosscut Report API generates an Excel report **Logwise Crosscut** 
 **Concepts a developer must know:**
 
 - **CC Received** = crosscut output: when a piece is “crosscut done”, its `crosscut_cmt` is added. The date used is **worker_details.crosscut_date** on `crosscutting_done`.
-- **CC Issued** = when a log is issued for crosscutting (round log sent to crosscut). The date used is **createdAt** on `issues_for_crosscutting`; we sum `physical_cmt` for that log in the period.
+- **CC Issued** = crosscut pieces issued further (sales, challan, flitching, peeling). The date used is **updatedAt** on `crosscutting_done`; we sum `crosscut_cmt` for that log where `issue_status` is one of `order`, `challan`, `flitching`, `peeling`.
 - **Op Bal** = crosscut stock for that log at the **start** of the report period (pieces not yet issued, crosscut before start).
 - **CC Closing** = crosscut stock at the **end** of the period (Op Bal + CC Received − CC Issued).
 - **Flitch Received / Peel Received** = crosscut pieces issued for flitching/peeling during the period (`issue_status` + `updatedAt` on `crosscutting_done`).
@@ -82,6 +82,16 @@ The Log Wise Crosscut Report API generates an Excel report **Logwise Crosscut** 
 }
 ```
 
+#### 400 Bad Request - Future Date
+
+```json
+{
+  "statusCode": 400,
+  "success": false,
+  "message": "End date cannot be in the future"
+}
+```
+
 #### 404 Not Found - No Data
 
 ```json
@@ -121,7 +131,7 @@ The Log Wise Crosscut Report API generates an Excel report **Logwise Crosscut** 
 | 5 | Physical CMT | Physical CMT from issues_for_crosscutting | Decimal (3 places) |
 | 6 | Op Bal | Opening crosscut balance at start of period (CMT) | Decimal (3 places) |
 | 7 | CC Received | Crosscut done in period (CMT) | Decimal (3 places) |
-| 8 | CC Issued | Logs issued for crosscutting in period (CMT) | Decimal (3 places) |
+| 8 | CC Issued | Crosscut pieces issued further (sales, challan, flitching, peeling) in period (CMT) | Decimal (3 places) |
 | 9 | CC Closing | Closing crosscut balance (Op Bal + CC Received − CC Issued) | Decimal (3 places) |
 | 10 | Physical Length | Physical length from issues_for_crosscutting (meters) | Decimal (3 places) |
 | 11 | CC Length | Sum of piece lengths from crosscutting_done in period (meters) | Decimal (3 places) |
@@ -156,8 +166,12 @@ The Log Wise Crosscut Report API generates an Excel report **Logwise Crosscut** 
 ### Issue Status Values (crosscutting_done)
 
 - `null` – Not yet issued (in crosscut stock)
-- `flitching` – Issued for flitching (**Flitch Received**)
-- `peeling` – Issued for peeling (**Peel Received**)
+- `order` – Issued for sales (**CC Issued**)
+- `challan` – Issued for challan (**CC Issued**)
+- `flitching` – Issued for flitching (**CC Issued**, **Flitch Received**)
+- `peeling` – Issued for peeling (**CC Issued**, **Peel Received**)
+
+**Note:** The schema may currently only allow `flitching` and `peeling`. If `order` and `challan` are added to the schema, they will be included in CC Issued automatically.
 
 ---
 
@@ -191,7 +205,7 @@ For **each** log from Step 1:
 
 - **Op Bal:** `crosscutting_done` where `log_no`, `item_name` match, `deleted_at: null`, `issue_status` null, `worker_details.crosscut_date` < start → sum `crosscut_cmt`.
 - **CC Received:** `crosscutting_done` where same match, `worker_details.crosscut_date` in [start, end] → sum `crosscut_cmt`; same pipeline also sums `length` → **CC Length**.
-- **CC Issued:** `issues_for_crosscutting` where same match, `createdAt` in [start, end] → sum `physical_cmt`.
+- **CC Issued:** `crosscutting_done` where same match, `issue_status` in `['order','challan','flitching','peeling']`, `updatedAt` in [start, end] → sum `crosscut_cmt`.
 - **CC Closing:** `max(0, Op Bal + CC Received − CC Issued)`.
 - **Flitch Received:** `crosscutting_done` where same match, `issue_status: 'flitching'`, `updatedAt` in [start, end] → sum `crosscut_cmt`.
 - **Peel Received:** `crosscutting_done` where same match, `issue_status: 'peeling'`, `updatedAt` in [start, end] → sum `crosscut_cmt`.
@@ -222,7 +236,7 @@ The sorted rows are passed to the Excel generator. The generator:
 | **Invoice CMT, Indian CMT, Physical CMT, Physical Length** | From `issues_for_crosscutting` (first row per log by createdAt). |
 | **Op Bal** | Sum of `crosscut_cmt` from `crosscutting_done` where `issue_status` null and `worker_details.crosscut_date` < start. |
 | **CC Received** | Sum of `crosscut_cmt` from `crosscutting_done` where `worker_details.crosscut_date` in [start, end]. |
-| **CC Issued** | Sum of `physical_cmt` from `issues_for_crosscutting` where `createdAt` in [start, end]. |
+| **CC Issued** | Sum of `crosscut_cmt` from `crosscutting_done` where `issue_status` in `['order','challan','flitching','peeling']` and `updatedAt` in [start, end]. |
 | **CC Closing** | `max(0, Op Bal + CC Received − CC Issued)`. |
 | **CC Length** | Sum of `length` from `crosscutting_done` where `worker_details.crosscut_date` in [start, end]. |
 | **Flitch Received** | Sum of `crosscut_cmt` from `crosscutting_done` where `issue_status === 'flitching'` and `updatedAt` in [start, end]. |
@@ -243,7 +257,7 @@ CC Closing = max(0, Op Bal + CC Received − CC Issued)
 | Op Bal | crosscutting_done | worker_details.crosscut_date | `issue_status` null, date < start |
 | CC Received | crosscutting_done | worker_details.crosscut_date | date between start and end |
 | CC Length | crosscutting_done | worker_details.crosscut_date | same as CC Received; sum `length` |
-| CC Issued | issues_for_crosscutting | createdAt | createdAt between start and end |
+| CC Issued | crosscutting_done | updatedAt | `issue_status` in order/challan/flitching/peeling, updatedAt in period |
 | Flitch Received | crosscutting_done | updatedAt | `issue_status === 'flitching'`, updatedAt in period |
 | Peel Received | crosscutting_done | updatedAt | `issue_status === 'peeling'`, updatedAt in period |
 
