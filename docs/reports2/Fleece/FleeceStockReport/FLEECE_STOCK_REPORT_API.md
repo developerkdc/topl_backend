@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Fleece Stock Report API (reports2) generates a dynamic inventory report with opening stock, receives, consumption, sales, issue for pressing, and closing stock for a given date range. Data is grouped by **Fleece Paper sub-category**, **thickness**, and **size**. Values are in **rolls** and **square meters**.
+The Fleece Stock Report API (reports2) generates a dynamic inventory report with opening stock, receives, consumption (total of challan, order, pressing), order, issue for pressing, and closing stock for a given date range. Challan is included in Consume but not displayed. Data is grouped by **Fleece Paper sub-category**, **thickness**, and **size**. Values are in **rolls** and **square meters**.
 
 ## Endpoint
 
@@ -150,14 +150,16 @@ Fleece Paper Type [ CATEGORY ]   stock  in the period  DD/MM/YYYY and DD/MM/YYYY
 | 5  | Opening Metres                 | Opening stock (sq m)                      |
 | 6  | Received Rolls                 | Received in period (rolls)                |
 | 7  | Received Mtrs                  | Received (sq m)                           |
-| 8  | Consumed Rolls                 | Consumed in period (rolls)                |
-| 9  | Consumed Mtrs                  | Consumed (sq m)                           |
-| 10 | Sales Rolls                    | Sold in period (rolls)                    |
-| 11 | Sales Mtrs                     | Sold (sq m)                               |
+| 8  | Consumed Rolls                 | Total consumed (challan + order + pressing) (rolls) |
+| 9  | Consumed Mtrs                  | Total consumed (sq m)                    |
+| 10 | Order Rolls                    | Issued for order (rolls)                 |
+| 11 | Order Mtrs                     | Issued for order (sq m)                  |
 | 12 | Issue For Pressing             | Issued for pressing (rolls)               |
 | 13 | Issue For Pressing Sq Met      | Issued for pressing (sq m)                |
-| 14 | Closing sheets                 | Closing stock (rolls)                     |
+| 14 | Closing Rolls                  | Closing stock (rolls)                     |
 | 15 | Closing Metres                 | Closing stock (sq m)                      |
+
+- **Note:** Challan is included in Consume but Challan columns are hidden in the Excel output for now.
 
 - Data grouped by **Fleece Paper Sub Category → Thickness → Size**; subtotal row after each thickness; grand total at the end.
 
@@ -168,17 +170,18 @@ All values are computed in **rolls** and **square meters**.
 ### Formulas
 
 - **Opening (rolls):**  
-  `Opening Rolls = Current Available Rolls + (Consumed + Sold) Rolls - Received Rolls`
+  `Opening Rolls = Current Available Rolls + Consumed Rolls - Received Rolls`
 - **Opening (sq m):**  
-  `Opening Sqm = Current Available Sqm + (Consumed + Sold) Sqm - Received Sqm`
-- **Receives:** From inventory item details joined to invoice details where `inward_date` is between startDate and endDate; sum `number_of_roll` and `total_sq_meter`.
-- **Consumption:** From fleece history where `issue_status` in `['order', 'pressing']` and `createdAt` in period; sum `issued_number_of_roll` and `issued_sqm`.
-- **Sales:** From fleece history where `issue_status = 'challan'` and `createdAt` in period; sum `issued_number_of_roll` and `issued_sqm`.
+  `Opening Sqm = Current Available Sqm + Consumed Sqm - Received Sqm`
+- **Consumed:** Challan + Order + Issue for pressing (computed from history).
+- **Challan:** From fleece history where `issue_status = 'challan'` and `createdAt` in period; sum `issued_number_of_roll` and `issued_sqm`.
+- **Order:** From fleece history where `issue_status = 'order'` and `createdAt` in period; sum `issued_number_of_roll` and `issued_sqm`.
+- **Receives:** From inventory item details joined to invoice details where `inward_date` is between startDate and endDate (end date includes full day 23:59:59.999 UTC); sum `number_of_roll` and `total_sq_meter`.
 - **Issue for pressing:** From fleece history where `issue_status = 'pressing'` and `createdAt` in period; sum `issued_number_of_roll` and `issued_sqm`.
 - **Closing:**  
-  `Closing = Opening + Receive - Consume - Sales` (in both rolls and sq m).
+  `Closing = Opening + Receive - Consume` (in both rolls and sq m).
 
-Only rows with at least one non-zero value among opening, receive, consume, sales, or closing are included. All stock values are output as non-negative (`Math.max(0, value)`).
+Only rows that had **at least one movement in the period** (receive, consume, challan, order, or issue for pressing) are included. If there was no such activity in the date range, no rows are shown and the API returns 404. All stock values are output as non-negative (`Math.max(0, value)`).
 
 ## Database Collections Used
 
@@ -212,7 +215,8 @@ window.open(downloadUrl, '_blank');
 
 ## Notes
 
-- Report includes only rows with activity in the period (non-zero opening, receive, consume, sales, or closing).
+- Report includes only rows that had at least one movement in the period (receive, consume, challan, order, or issue for pressing). If the date range has no such activity, the report returns 404 with "No stock data found for the selected period".
+- Date range: end date includes the full day (23:59:59.999 UTC) so transactions on the end date are included.
 - Fleece uses rolls (not sheets); all quantity columns use rolls.
 - Excel files are timestamped to avoid overwriting.
 - Files are stored under `public/upload/reports/reports2/Fleece/`.

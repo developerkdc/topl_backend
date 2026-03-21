@@ -112,18 +112,23 @@ const GeneratePressingDailyReportExcel = async (pressingData, reportDate) => {
   pressingData.forEach((doc) => {
     const consumed = doc.consumed || {};
     const baseDetails = consumed.base_details || [];
+    // Thickness, Size and Sheets come from the pressing_done_details record (doc),
+    // not from the individual base_details item.
+    const docThick = doc.thickness ?? 0;
+    const docSheets = doc.no_of_sheets ?? 0;
+    const docSqm = getSqm(doc.sqm, doc.length, doc.width);
+    const docSize = formatSize(doc.length, doc.width);
     baseDetails.forEach((bd) => {
       const baseType = (bd.base_type || '').toUpperCase();
-      const sqm = getSqm(bd.sqm, bd.length, bd.width);
       pressingDetailsRows.push({
         category: BASE_TYPE_TO_CATEGORY[baseType] || baseType,
         base: BASE_TYPE_TO_BASE_LABEL[baseType] || baseType,
         itemName: bd.item_name || '',
-        thick: bd.thickness ?? 0,
+        thick: docThick,
         side: SIDE_PLACEHOLDER,
-        size: formatSize(bd.length, bd.width),
-        sheets: bd.no_of_sheets ?? 0,
-        sqm,
+        size: docSize,
+        sheets: docSheets,
+        sqm: docSqm,
       });
     });
   });

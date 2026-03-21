@@ -20,7 +20,7 @@
 
 ## Data Sources (Schema)
 
-- **tapping_done_other_details:** `tapping_date`, `shift`, `splicing_type` (`MACHINE` or `HAND`), `issue_for_tapping_item_id`
+- **tapping_done_other_details:** `tapping_date`, `shift`, `splicing_type` (`MACHINE`, `MACHINE SPLICING`, `HAND`, or `HAND SPLICING`), `issue_for_tapping_item_id`
 - **tapping_done_items_details:** `item_name`, `log_no_code`, `thickness`, `length`, `width`, `no_of_sheets`, `sqm`, `character_name`, `pattern_name`, `series_name`, `remark`
 - **issue_for_tappings:** `no_of_sheets`, `sqm` — accessed via `tapping_done_other_details.issue_for_tapping_item_id`
 

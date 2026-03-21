@@ -19,15 +19,14 @@ topl_backend/
 │           └── logInward.js                        ✅ Controller
 ├── routes/
 │   └── report/
-│       ├── report.routes.js                        (skipped - not modified)
 │       ├── reports2.routes.js                      ✅ Main router (imports Log routes)
 │       └── reports2/
 │           └── Log/
-│               └── logInward.routes.js             ✅ Log inward routes
+│               └── log.routes.js                   ✅ Log routes (shared with other Log reports)
 └── docs/
     └── reports2/
         └── Log/
-            └── logInward/
+            └── daily_log_Inward/
                 ├── LOG_INWARD_DAILY_REPORT_API.md
                 ├── LOG_INWARD_DAILY_REPORT_IMPLEMENTATION_PLAN.md
                 ├── LOG_INWARD_DAILY_REPORT_TESTING.md
@@ -38,7 +37,7 @@ topl_backend/
 ### 🎯 API Endpoint
 
 ```
-POST /reports2/download-excel-log-inward-daily-report
+POST /api/V1/report/download-excel-log-inward-daily-report
 ```
 
 ### 📝 Request Format
@@ -63,7 +62,7 @@ POST /reports2/download-excel-log-inward-daily-report
 ### 🔧 Implementation Details
 
 #### Routes Structure
-`topl_backend/routes/report/reports2/Log/logInward.routes.js`
+`topl_backend/routes/report/reports2/Log/log.routes.js`
 ```javascript
 import { LogInwardDailyReportExcel } from '../../../../controllers/reports2/Log/logInward.js';
 router.post('/download-excel-log-inward-daily-report', LogInwardDailyReportExcel);
@@ -72,8 +71,8 @@ router.post('/download-excel-log-inward-daily-report', LogInwardDailyReportExcel
 #### Main Router
 `topl_backend/routes/report/reports2.routes.js`
 ```javascript
-import logInwardRoutes from './reports2/Log/logInward.routes.js';
-router.use(logInwardRoutes);
+import logRoutes from './reports2/Log/log.routes.js';
+router.use(logRoutes);
 ```
 
 #### Controller Path
@@ -99,7 +98,7 @@ All files pass linter checks with no errors.
 ### 🧪 Quick Test
 
 ```bash
-curl -X POST http://localhost:5000/reports2/download-excel-log-inward-daily-report \
+curl -X POST http://localhost:5000/api/V1/report/download-excel-log-inward-daily-report \
   -H "Content-Type: application/json" \
   -d '{"filters":{"reportDate":"2025-02-24"}}'
 ```
@@ -107,18 +106,18 @@ curl -X POST http://localhost:5000/reports2/download-excel-log-inward-daily-repo
 ### 📚 Documentation
 
 Complete documentation available in:
-- **API Docs**: `docs/reports2/Log/logInward/LOG_INWARD_DAILY_REPORT_API.md`
-- **Implementation Plan**: `docs/reports2/Log/logInward/LOG_INWARD_DAILY_REPORT_IMPLEMENTATION_PLAN.md`
-- **Testing Guide**: `docs/reports2/Log/logInward/LOG_INWARD_DAILY_REPORT_TESTING.md`
-- **Quick Reference**: `docs/reports2/Log/logInward/QUICK_REFERENCE.md`
+- **API Docs**: `docs/reports2/Log/daily_log_Inward/LOG_INWARD_DAILY_REPORT_API.md`
+- **Implementation Plan**: `docs/reports2/Log/daily_log_Inward/LOG_INWARD_DAILY_REPORT_IMPLEMENTATION_PLAN.md`
+- **Testing Guide**: `docs/reports2/Log/daily_log_Inward/LOG_INWARD_DAILY_REPORT_TESTING.md`
+- **Quick Reference**: `docs/reports2/Log/daily_log_Inward/QUICK_REFERENCE.md`
 
 ### 🎉 Ready for Testing
 
 The API is fully implemented with complete `reports2 -> Log` structure across all layers:
-- ✅ Routes: `routes/report/reports2/Log/logInward.routes.js`
+- ✅ Routes: `routes/report/reports2/Log/log.routes.js`
 - ✅ Controller: `controllers/reports2/Log/logInward.js`
 - ✅ Config: `config/downloadExcel/reports2/Log/logInward.js`
-- ✅ Docs: `docs/reports2/Log/logInward/`
+- ✅ Docs: `docs/reports2/Log/daily_log_Inward/`
 
 **Next Steps:**
 1. Start the backend server

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Plywood Stock Report API (reports2) generates a dynamic inventory report with opening stock, receives, consumption, sales, issue for ply resizing, issue for pressing, and closing stock for a given date range. Data is grouped by **plywood sub-category**, **thickness**, and **size**.
+The Plywood Stock Report API (reports2) generates a dynamic inventory report with opening stock, receives, consumption (total of challan, order, ply resizing, pressing), challan, order, issue for ply resizing, issue for pressing, and closing stock for a given date range. Data is grouped by **plywood sub-category**, **thickness**, and **size**.
 
 ## Endpoint
 
@@ -150,16 +150,18 @@ Plywood Type [ CATEGORY ]   stock  in the period  DD/MM/YYYY and DD/MM/YYYY
 | 5  | Opening Metres                 | Opening stock (sq m)                     |
 | 6  | Received Sheets                | Received in period (sheets)               |
 | 7  | Received Mtrs                   | Received (sq m)                          |
-| 8  | Consumed Sheets                | Consumed in period (sheets)              |
-| 9  | Consumed Mtrs                  | Consumed (sq m)                          |
-| 10 | Sales Sheets                   | Sold in period (sheets)                   |
-| 11 | Sales Mtrs                     | Sold (sq m)                              |
-| 12 | Issue For Ply Resizing Sheet   | Issued for ply resizing (sheets)        |
-| 13 | Issue For Ply Resizing Sq Met  | Issued for ply resizing (sq m)          |
-| 14 | Issue For Pressing             | Issued for pressing (sheets)             |
-| 15 | Issue For Pressing Sq Met      | Issued for pressing (sq m)              |
-| 16 | Closing sheets                 | Closing stock (sheets)                   |
-| 17 | Closing Metres                 | Closing stock (sq m)                     |
+| 8  | Consumed Sheets                | Total consumed (challan + order + resizing + pressing) (sheets) |
+| 9  | Consumed Mtrs                  | Total consumed (sq m)                    |
+| 10 | Challan Sheets                 | Issued for challan (sheets)             |
+| 11 | Challan Mtrs                   | Issued for challan (sq m)               |
+| 12 | Order Sheets                   | Issued for order (sheets)               |
+| 13 | Order Mtrs                     | Issued for order (sq m)                 |
+| 14 | Issue For Ply Resizing Sheet   | Issued for ply resizing (sheets)        |
+| 15 | Issue For Ply Resizing Sq Met  | Issued for ply resizing (sq m)          |
+| 16 | Issue For Pressing             | Issued for pressing (sheets)             |
+| 17 | Issue For Pressing Sq Met      | Issued for pressing (sq m)              |
+| 18 | Closing sheets                 | Closing stock (sheets)                   |
+| 19 | Closing Metres                 | Closing stock (sq m)                     |
 
 - Data grouped by **Plywood Sub Category → Thickness → Size**; subtotal row after each thickness; grand total at the end.
 
@@ -170,18 +172,19 @@ All values are computed in **sheets** and **square meters**.
 ### Formulas
 
 - **Opening (sheets):**  
-  `Opening Sheets = Current Available Sheets + (Consumed + Sold) Sheets - Received Sheets`
+  `Opening Sheets = Current Available Sheets + Consumed Sheets - Received Sheets`
 - **Opening (sq m):**  
-  `Opening Sqm = Current Available Sqm + (Consumed + Sold) Sqm - Received Sqm`
-- **Receives:** From inventory item details joined to invoice details where `inward_date` is between startDate and endDate; sum `sheets` and `total_sq_meter`.
-- **Consumption:** From plywood history where `issue_status` in `['order', 'pressing', 'plywood_resizing']` and `createdAt` in period; sum `issued_sheets` and `issued_sqm`.
-- **Sales:** From plywood history where `issue_status = 'challan'` and `createdAt` in period; sum `issued_sheets` and `issued_sqm`.
+  `Opening Sqm = Current Available Sqm + Consumed Sqm - Received Sqm`
+- **Receives:** From inventory item details joined to invoice details where `inward_date` is between startDate and endDate (end date includes full day 23:59:59.999 UTC); sum `sheets` and `total_sq_meter`.
+- **Consumed:** Total of challan + order + ply resizing + pressing. Sum of `issued_sheets` and `issued_sqm` from plywood history where `issue_status` in `['challan', 'order', 'plywood_resizing', 'pressing']` and `createdAt` in period.
+- **Challan:** From plywood history where `issue_status = 'challan'` and `createdAt` in period; sum `issued_sheets` and `issued_sqm`.
+- **Order:** From plywood history where `issue_status = 'order'` and `createdAt` in period; sum `issued_sheets` and `issued_sqm`.
 - **Issue for ply resizing:** From plywood history where `issue_status = 'plywood_resizing'` and `createdAt` in period; sum `issued_sheets` and `issued_sqm`.
 - **Issue for pressing:** From plywood history where `issue_status = 'pressing'` and `createdAt` in period; sum `issued_sheets` and `issued_sqm`.
 - **Closing:**  
-  `Closing = Opening + Receive - Consume - Sales` (in both sheets and sq m).
+  `Closing = Opening + Receive - Consume` (in both sheets and sq m).
 
-Only rows with at least one non-zero value among opening, receive, consume, sales, or closing are included. All stock values are output as non-negative (`Math.max(0, value)`).
+Only rows that had **at least one movement in the period** (receive, consume, challan, order, issue for ply resizing, or issue for pressing) are included. If there was no such activity in the date range, no rows are shown and the API returns 404. All stock values are output as non-negative (`Math.max(0, value)`).
 
 ## Database Collections Used
 
@@ -215,6 +218,7 @@ window.open(downloadUrl, '_blank');
 
 ## Notes
 
-- Report includes only rows with activity in the period (non-zero opening, receive, consume, sales, or closing).
+- Report includes only rows that had at least one movement in the period (receive, consume, challan, order, issue for ply resizing, or issue for pressing). If the date range has no such activity, the report returns 404 with "No stock data found for the selected period".
+- Date range: end date includes the full day (23:59:59.999 UTC) so transactions on the end date are included.
 - Excel files are timestamped to avoid overwriting.
 - Files are stored under `public/upload/reports/reports2/Plywood/`.

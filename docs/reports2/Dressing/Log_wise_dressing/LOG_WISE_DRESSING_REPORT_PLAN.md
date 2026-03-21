@@ -58,11 +58,14 @@ Implement the **Dressing Stock Register By LogX** report that:
 | Item Name | `dressing_done_items.item_name` |
 | Dressing Date | From `dressing_done_other_details.dressing_date` – for log-wise, use one date per log (e.g. first or last dressing date for that `log_no_code` in the period) |
 | Log X | `dressing_done_items.log_no_code` |
-| Opening Balance | Balance at start of period: sum(receipts for log before period) − sum(issues for log before period). Requires aggregating dressing_done by date and issues by updatedAt. |
+| Opening Balance | Closing balance at end of the day before the date range. Compute day-by-day: for each day up to (startDate − 1), closing = max(0, previous closing + receipt that day − issue that day); opening = that closing after the last day. Requires receipt/issue per log per day before start. |
 | Purchase | Not in dressing flow; use **0** unless another source is added. |
 | Receipt | Sum of `sqm` for that log where dressing was done in period (join with `dressing_done_other_details`, filter by `dressing_date` in range). |
 | Issue Sq Mtr | Sum of `sqm` for that log where `issue_status` is set and issue happened in period (e.g. `updatedAt` in range). |
-| Clipping, Dyeing, Mixmatch, Edgebanding, Lipping, Redressing | Not present in dressing schema; use **0** unless you provide another source (e.g. from another module). |
+| Clipping | Issue to Grouping: sum of `sqm` for that log where `issue_status === 'grouping'` and issue in period (`updatedAt` in range). |
+| Dyeing | Issue to Smoking/Dyeing: sum of `sqm` for that log where `issue_status === 'smoking_dying'` and issue in period (`updatedAt` in range). |
+| Mixmatch | Dressing mismatch: sum of `sqm` from **dressing_miss_match_data** for that log where `dressing_date` in report period (`dressing_miss_match_data` has `log_no_code`). |
+| Edgebanding, Lipping, Redressing | Not present in dressing schema; use **0** unless you provide another source (e.g. from another module). |
 | Sale | Subset of Issue where `issue_status === 'order'`. |
 | Closing Balance | Opening + Receipt − Issue (or equivalent end-of-period balance). |
 | Issue From Old Balance / Closing Balance Old / Issue From New Balance / Closing Balance New | Define: "Old" = before period, "New" = within period. Derive from same receipt/issue aggregates. |
@@ -87,10 +90,10 @@ Request body: `{ startDate, endDate, filter?: { item_name?, ... } }`.
 - For each log:
   - **Receipt (period):** aggregate `dressing_done_items.sqm` where `dressing_done_other_details.dressing_date` in `[start, end]`.
   - **Issue (period):** aggregate `dressing_done_items.sqm` where `issue_status` is not null and `updatedAt` in `[start, end]` (and Sale = same where `issue_status === 'order'`).
-  - **Opening balance:** sum(receipts for log before start) − sum(issues for log before start). Use same collections with date filters `< start`.
+  - **Opening balance:** closing balance at end of (startDate − 1). Aggregate receipt and issue **per log per day** before start; then for each log, sort days and compute running closing = max(0, running_closing + receipt_day − issue_day). Opening = running closing after last day.
   - **Closing balance:** opening + receipt − issue (for period).
   - **Dressing date:** e.g. min or max `dressing_date` for that log in period (or first dressing date in period).
-  - Set Purchase, Clipping, Dyeing, Mixmatch, Edgebanding, Lipping, Redressing to 0 unless another source is specified.
+  - Set Purchase, Edgebanding, Lipping, Redressing to 0 unless another source is specified. Clipping = issue to Grouping; Dyeing = issue to Smoking/Dyeing; Mixmatch = sum of `sqm` from `dressing_miss_match_data` by log, `dressing_date` in period.
   - Compute Issue From Old/New Balance and Closing Balance Old/New from the same receipt/issue breakdown (old = before period, new = in period).
 - Build array of row objects with the 20 fields; sort by item group / item name / log_no_code.
 - Call Excel generator with rows, startDate, endDate, filter; return download link in response (same response shape as Log/Flitch reports).
@@ -118,6 +121,8 @@ Request body: `{ startDate, endDate, filter?: { item_name?, ... } }`.
 ## Assumptions and notes
 
 - **Item Group Name:** Mapped from `item_sub_category_name`; if null/empty, use `item_name` so the report always has a label.
-- **Purchase, Clipping, Dyeing, Mixmatch, Edgebanding, Lipping, Redressing:** Kept as 0 in this phase; can be wired later if a source exists.
+- **Clipping** and **Dyeing** are wired to issue data: Clipping = issue to Grouping (`issue_status === 'grouping'`), Dyeing = issue to Smoking/Dyeing (`issue_status === 'smoking_dying'`), both using `updatedAt` in the report period.
+- **Mixmatch** is wired to **dressing_miss_match_data**: aggregate by `log_no_code`, `dressing_date` in period, sum `sqm`.
+- **Purchase, Edgebanding, Lipping, Redressing:** Kept as 0 unless another source is added.
 - **Old/New balance columns:** Implemented as "before period" vs "in period"; if your existing report uses different rules, those can be applied in the controller once defined.
 - **One Total row:** Single summary row at the end of the sheet (no per-item subtotals unless you add them later).

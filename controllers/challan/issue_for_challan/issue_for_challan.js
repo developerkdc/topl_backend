@@ -1157,6 +1157,7 @@ class IssueForChallan {
             issued_quantity: this.issued_data,
             // issued_sqm: issued_sqm,
             issued_amount: issued_amount,
+            issue_date: new Date(),
             created_by: this.userDetails?._id,
             updated_by: this.userDetails?._id,
           },

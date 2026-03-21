@@ -10,8 +10,8 @@ Leveraging a specialized history schema (`other_goods_history_model`), it compil
 
 ### Report Structure (dynamic, from database)
 
-- **Period:** Range spanning (`startDate`, `endDate`).
-- **Data source:** Primary interactions mapped directly from `other_goods_history`.
+- **Period:** Range spanning (`startDate`, `endDate`), applied to **consumption date** (`issue_date`).
+- **Data source:** Only **consume** (direct consumption) records from `other_goods_history_details` where `issue_status` is `'consume'` and `issue_date` falls within the period. Order and challan issues are excluded.
 - **Grouping/Sorting:** Clustered sequentially based on `department_name`, mapped down into `machine_name`, finally filtering by `item_name`.
 - **Columns:**
   1. Department
@@ -63,15 +63,15 @@ Provides department level subtotal metrics as department values switch, summariz
 
 1. Interrogate arguments isolating starting bounds validating temporal structure details.
 2. Build aggregation configuration upon `other_goods_history_model`.
-3. Construct deeply nested join architecture:
+3. **Match Phase (before lookups):** Filter to `issue_status: 'consume'` only; then filter to records where `issue_date` exists and is within `[startDate, endDate]`.
+4. Construct deeply nested join architecture:
   - Acquire base item info against `othergoods_inventory_items_details`.
-  - Gather receipt logs joining `othergoods_inventory_invoice_details`.
-  - *Perform Match Phase*: Apply boundary filters querying invoice inward periods.
+  - Gather receipt logs joining `othergoods_inventory_invoice_details` (for item context; no date filter).
   - Source generalized names by querying `item_names`.
   - Pin target units executing final joining mapping `item_categories`.
-4. Normalise naming references simplifying object structure aligning with script parameters (aliasing deep references mapping correctly, `department_name: '$item_details.department_name'`).
-5. Process payload issuing 404 response on no-data conditions.
-6. Assemble Excel structure launching configuration tooling binding result string towards end users.
+5. Normalise naming references simplifying object structure aligning with script parameters (aliasing deep references mapping correctly, `department_name: '$item_details.department_name'`).
+6. Process payload issuing 404 response on no-data conditions.
+7. Assemble Excel structure launching configuration tooling binding result string towards end users.
 
 ### 3. Route
 
@@ -90,16 +90,17 @@ router.post('/download-other-goods-consumption-report', otherGoodsConsumptionRep
 
 ### Collections
 
-- **other_goods_history:** Baseline of usage statistics tracking issued items (`issued_quantity`, `issued_amount`).
+- **other_goods_history_details:** Filtered by `issue_status: 'consume'` and `issue_date` in range; baseline of consumption data (`issued_quantity`, `issued_amount`, `issue_date`).
 - **othergoods_inventory_items_details:** Item linking (`department_name`, `machine_name`, `item_name`).
-- **othergoods_inventory_invoice_details:** For invoice date resolution (`inward_date`).
+- **othergoods_inventory_invoice_details:** Invoice mapping for item context (not used for date filtering).
 - **item_names:** Category retrieval pivot.
 - **item_categories:** Target data fetch (determination of actual `calculate_unit`).
 
 ### Formulas
 
-- **Quantity:** Sum of `issued_quantity` filtered by inward date.
-- **Amount:** Sum of `issued_amount` filtered by inward date.
+- **Scope:** Only records with `issue_status: 'consume'` and `issue_date` within the selected date range.
+- **Quantity:** `issued_quantity` from each matched history record.
+- **Amount:** `issued_amount` from each matched history record.
 
 ## Documentation
 
@@ -108,6 +109,8 @@ router.post('/download-other-goods-consumption-report', otherGoodsConsumptionRep
 
 ## Notes
 
+- This report includes **only consumed data**: history records where `issue_status` is `'consume'` (from the Consume modal). Order and challan issues are excluded.
+- The date range is applied to `issue_date` (when consumption occurred), not to invoice inward date.
 - This utilizes a history-based model contrasting with the daily/inward variations dependent on inventory structures.
-- Ensures tracking focuses around real-time consumption events rather than simply static inventory checks.
+- Ensures tracking focuses around direct consumption events (store consume) rather than order/challan issues or static inventory checks.
 - Aligns with Core-style implementation plans and reports2 structure.

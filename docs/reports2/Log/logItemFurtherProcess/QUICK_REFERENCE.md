@@ -1,237 +1,133 @@
-# Log Item Further Process Report - Quick Reference
+# Quick Reference — Inward Log Item Further Process Report
 
-## Quick Start
-
-### Endpoint
+## Endpoint
 ```
 POST /api/V1/reports2/log/download-excel-log-item-further-process-report
 ```
 
-### Request Example
+---
+
+## Minimal Request
 ```json
 {
-  "startDate": "2025-01-01",
-  "endDate": "2025-01-31",
+  "startDate": "2026-01-01",
+  "endDate": "2026-01-31"
+}
+```
+
+## With Filters
+```json
+{
+  "startDate": "2026-01-01",
+  "endDate": "2026-05-31",
   "filter": {
-    "item_name": "RED OAK"
+    "inward_id": 5
   }
 }
 ```
 
-### Response Example
-```json
-{
-  "statusCode": 200,
-  "status": "success",
-  "message": "Log item further process report generated successfully",
-  "result": "http://localhost:3000/public/upload/reports/reports2/Log/Log-Item-Further-Process-Report-1234567890.xlsx"
-}
-```
+---
 
-## Report Columns (44 Total)
+## All 56 Columns
 
-### Inward Details (Columns 1-4)
-1. Item Name
-2. LogNo
-3. Indian CMT
-4. RECE
+| # | Section Group | Column Header | Notes |
+|---|---|---|---|
+| 1 | *(standalone)* | Item Name | Merged vertically |
+| 2 | Inward in(CMT) | LogNo | Merged vertically |
+| 3 | Inward in(CMT) | Indian CMT | |
+| 4 | Inward in(CMT) | RECE CMT | |
+| 5 | Inward in(CMT) | Issue For Cross cut/Flitch/Peeling/Sales | From log's issue_status and physical_cmt fields |
+| 6 | Inward in(CMT) | Issue Status | |
+| 7 | Cross Cut Issue in(CMT) | Cross Cut Log No | Merged vertically |
+| 8 | Cross Cut Issue in(CMT) | CC REC | |
+| 9 | Cross Cut Issue in(CMT) | Issue For Flitch/Peeling | `crosscut_cmt` if `issue_status` is peeling or flitching |
+| 10 | Cross Cut Issue in(CMT) | Status | Same row’s `issue_status` (when col 9 filled) |
+| 11 | Flitch Issue in(CMT) | Log No code | `log_no_code` (merged vertically) |
+| 12 | Flitch Issue in(CMT) | REC | `flitch_cmt` |
+| 13 | Flitch Issue in(CMT) | Issue For Slicing/Peeling | `flitch_cmt` (quantity issued) |
+| 14 | Flitch Issue in(CMT) | Status | `issue_status` (slicing, peeling, order, or challan) |
+| 15 | Slicing Issue in(CMT) | Side | Merged vertically |
+| 16 | Slicing Issue in(CMT) | Process Cmt | Placeholder |
+| 17 | Slicing Issue in(CMT) | Balance Cmt | Placeholder |
+| 18 | Slicing Issue in(CMT) | REC (Leaf) | |
+| 19 | Peeling | Process | |
+| 20 | Peeling | Balance Rostroller | Placeholder |
+| 21 | Peeling | Output | |
+| 22 | Peeling | Rec (Leaf) | |
+| 23 | Dressing | Rec Sq. Mtr. | Merged vertically |
+| 24 | Dressing | Issue (Sq.Mtr.) | |
+| 25 | Dressing | Issue Status | |
+| 26 | Smoking/Dying | Process | Merged vertically |
+| 27 | Smoking/Dying | Issue (Sq.Mtr.) | |
+| 28 | Smoking/Dying | Issue Status | |
+| 29 | Clipping/Grouping | New Group Number | |
+| 30 | Clipping/Grouping | Rec Sheets | |
+| 31 | Clipping/Grouping | Rec Sq.Mtr. | |
+| 32 | Clipping/Grouping | Issue (Sheets) | |
+| 33 | Clipping/Grouping | Issue (Sq.Mtr.) | |
+| 34 | Clipping/Grouping | Issue Status | Placeholder |
+| 35 | Clipping/Grouping | Balance (Sheets) | |
+| 36 | Clipping/Grouping | Balance Sq. Mtr. | |
+| 37 | Splicing | Rec Machine (Sq.mtr.) | |
+| 38 | Splicing | Rec Hand (Sq.Mtr.) | |
+| 39 | Splicing | Splicing Sheets | |
+| 40 | Splicing | Issue (Sheets) | |
+| 41 | Splicing | Issue Status | |
+| 42 | Splicing | Balance (Sheets) | |
+| 43 | Splicing | Balance (Sq. Mtr.) | |
+| 44 | Pressing | Pressing (Sheets) | `pressing_done_details` sum |
+| 45 | Pressing | Pressing (Sq.mtr.) | `pressing_done_details` sum |
+| 46 | Pressing | Issue (Sheets) | `pressing_done_history` sum |
+| 47 | Pressing | Issue (Sq. Mtr.) | `pressing_done_history` sum |
+| 48 | Pressing | Issue Status | `pressing_done_history` |
+| 49 | Pressing | Balance (Sheets) | received − issued (hist.) |
+| 50 | Pressing | Balance (Sq. Mtr.) | received − issued (hist.) |
+| 51 | CNC | Cnc Type | |
+| 52 | CNC | REC (Sheets) | |
+| 53 | COLOUR | REC (Sheets) | |
+| 54 | Sales | REC (Sheets) | Placeholder |
+| 55 | Job Work Challan | Veneer | Placeholder |
+| 56 | Adv Work Challan | Pressing Sheets | Placeholder |
 
-### Inward in(CMT) (Columns 5-10)
-5. Total Stock
-6. CC RECE
-7. Saw.
-8. UE
-9. Peel
-10. Flitch
+---
 
-### Cross Cut Issue in(CMT) (Columns 11-13)
-11. Total Stock
-12. Total Issue
-13. Total Stock
+## Header Row Layout
 
-### Slice Issue (Columns 14-18)
-14. Slice RECE
-15. Dress
-16. Dye
-17. Total issue
-18. Total Stock
+| Row | Content | Condition |
+|---|---|---|
+| 1 | `Inward Log Further Process Report` | Always |
+| 2 | `Date: DD/MM/YYYY  To  DD/MM/YYYY` | Always |
+| 3 | `Inward Id :- {n}` or `Log No :- {x}` | Only when filter provided, else empty |
+| 4 | Section group headers | Always |
+| 5 | Column headers (frozen here) | Always |
 
-### Dressing Issue (Columns 19-24)
-19. Dress RECE
-20. Clipp
-21. Dye
-22. Mix Match
-23. Total issue
-24. Total Stock
+---
 
-### Dyeing (Columns 25-27)
-25. Total Issue
-26. Total Stock
-27. Dye RECE
+## Error Reference
 
-### Clip Issue (Columns 28-32)
-28. Clip RECE
-29. MSplic
-30. HSplic
-31. Total Issue
-32. Total Stock
+| HTTP | Meaning |
+|---|---|
+| 400 | Missing / invalid dates or start > end |
+| 404 | No records found for the date range + filters |
+| 500 | Server or DB error |
 
-### Machine Splicing (Columns 33-35)
-33. RECE
-34. Total Issue
-35. Total Stock
+---
 
-### Hand Splicing (Columns 36-38)
-36. RECE
-37. Total Issue
-38. Total Stock
+## Models Used
 
-### End Tapping (Columns 39-41)
-39. Total RECE
-40. Total Issue
-41. Total Stock
-
-### Splicing (Columns 42-43)
-42. Total Issue
-43. Total Stock
-
-### Pressing (Column 44)
-44. RECE
-
-## Key Features
-
-✅ **Comprehensive Tracking**: Tracks logs from inward through all processing stages  
-✅ **Item Grouping**: Groups logs by item name with subtotals  
-✅ **Grand Totals**: Overall totals across all items  
-✅ **Date Range**: Filter by inward date range  
-✅ **Item Filter**: Optional filter by item name  
-✅ **Excel Format**: Professional multi-level headers with formatting
-
-## Files Created
-
-### 1. Controller
-**Path**: `topl_backend/controllers/reports2/Log/logItemFurtherProcess.js`  
-**Size**: ~15.8 KB  
-**Purpose**: Handles API request, aggregates data from all processing stages
-
-### 2. Excel Generator
-**Path**: `topl_backend/config/downloadExcel/reports2/Log/logItemFurtherProcess.js`  
-**Size**: ~22.2 KB  
-**Purpose**: Creates formatted Excel file with multi-level headers
-
-### 3. Route
-**Path**: `topl_backend/routes/report/reports2/Log/log.routes.js`  
-**Updated**: Added new route and import
-
-### 4. Documentation
-**Path**: `topl_backend/docs/reports2/Log/logItemFurtherProcess/API_DOCUMENTATION.md`  
-**Purpose**: Complete API documentation
-
-## Processing Stages Tracked
-
-1. **Inward** → Log received with measurements
-2. **Crosscutting** → Logs cut into crosscut pieces
-3. **Flitching** → Logs converted to flitches
-4. **Slicing** → Flitches sliced into veneers
-5. **Dressing** → Veneers dressed/trimmed
-6. **Dyeing** → Veneers dyed/smoked
-7. **Tapping/Splicing** → Veneers joined (machine/hand)
-8. **Pressing** → Final pressing into plywood
-
-## Data Sources
-
-| Stage | Database Model |
-|-------|----------------|
-| Inward | `log_inventory_items_view_model` |
-| Crosscut | `crosscutting_done_model` |
-| Flitch | `flitching_done_model` |
-| Slice | `slicing_done_items_model` |
-| Dress | `dressing_done_items_model` |
-| Dye | `process_done_items_details_model` |
-| Tap/Splice | `tapping_done_items_details_model` |
-| Press | `pressing_done_details_model` |
-
-## Testing Checklist
-
-- [ ] Test with valid date range
-- [ ] Test with item name filter
-- [ ] Test with no data in date range (should return 404)
-- [ ] Test with invalid date format (should return 400)
-- [ ] Test with start date > end date (should return 400)
-- [ ] Verify Excel file downloads correctly
-- [ ] Verify all 44 columns are present
-- [ ] Verify item grouping works
-- [ ] Verify subtotals calculate correctly
-- [ ] Verify grand totals are accurate
-
-## Common Issues & Solutions
-
-### Issue: "No log data found"
-**Solution**: Check that logs were actually received during the date range
-
-### Issue: "Invalid date format"
-**Solution**: Use YYYY-MM-DD format (e.g., "2025-01-31")
-
-### Issue: "Start date cannot be after end date"
-**Solution**: Ensure startDate ≤ endDate
-
-### Issue: Excel file not downloading
-**Solution**: Check folder permissions and APP_URL environment variable
-
-## Example Scenarios
-
-### Scenario 1: Monthly Report
-```json
-{
-  "startDate": "2025-01-01",
-  "endDate": "2025-01-31"
-}
-```
-
-### Scenario 2: Single Day Report
-```json
-{
-  "startDate": "2025-01-15",
-  "endDate": "2025-01-15"
-}
-```
-
-### Scenario 3: Specific Item
-```json
-{
-  "startDate": "2025-01-01",
-  "endDate": "2025-01-31",
-  "filter": {
-    "item_name": "WHITE OAK"
-  }
-}
-```
-
-## Report Layout Preview
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│ Inward Log Wise Stock   Inward Date: 01/01/2025                   │
-├─────┬───────┬────────┬──────┬────────────────┬─────────────┬───────┤
-│Item │ LogNo │ Indian │ RECE │ Inward in(CMT) │ Slice Issue │  ...  │
-│Name │       │  CMT   │      │                │             │       │
-├─────┼───────┼────────┼──────┼────────────────┼─────────────┼───────┤
-│RED  │ D372  │ 0.788  │0.788 │ ...            │ ...         │ ...   │
-│OAK  │ D373  │ 0.688  │0.688 │ ...            │ ...         │ ...   │
-│     │ Total │ 1.476  │1.476 │ ...            │ ...         │ ...   │
-├─────┼───────┼────────┼──────┼────────────────┼─────────────┼───────┤
-│WHITE│ D370  │ 0.561  │0.561 │ ...            │ ...         │ ...   │
-│OAK  │ D371  │ 1.134  │1.134 │ ...            │ ...         │ ...   │
-│     │ Total │ 1.695  │1.695 │ ...            │ ...         │ ...   │
-├─────┼───────┼────────┼──────┼────────────────┼─────────────┼───────┤
-│Total│       │ 3.171  │3.171 │ ...            │ ...         │ ...   │
-└─────┴───────┴────────┴──────┴────────────────┴─────────────┴───────┘
-```
-
-## Support
-
-For issues or questions:
-1. Check API_DOCUMENTATION.md for detailed information
-2. Verify database schemas are properly configured
-3. Ensure all processing models are accessible
-4. Check server logs for detailed error messages
+| Model | Stage |
+|---|---|
+| `log_inventory_items_view_model` | Inward logs |
+| `crosscutting_done_model` | Cross cut |
+| `flitching_done_model` | Flitch |
+| `slicing_done_items_model` | Slicing sides |
+| `peeling_done_items_model` | Peeling items |
+| `dressing_done_items_model` | Dressing |
+| `process_done_items_details_model` | Smoking / Dying |
+| `grouping_done_items_details_model` | Clipping / Grouping |
+| `tapping_done_items_details_model` | Splicing (tapping) |
+| `tapping_done_other_details_model` | Splicing type lookup |
+| `pressing_done_details_model` | Pressing (received) |
+| `pressing_done_history_model` | Pressing issue / issue status / balances |
+| `cnc_done_details_model` | CNC |
+| `color_done_details_model` | Colour |

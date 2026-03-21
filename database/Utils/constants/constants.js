@@ -20,6 +20,7 @@ export const issues_for_status = {
   sample: 'sample',
   stock: 'stock',
   challan: 'challan',
+  consume: 'consume',
   plywood_resizing: 'plywood_resizing',
   face: 'face',
   core: 'core',

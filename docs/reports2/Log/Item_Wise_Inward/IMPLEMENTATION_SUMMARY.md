@@ -17,16 +17,16 @@ All core functionality has been migrated to the new reports2 structure and is re
 **Features:**
 - Date validation (required, format check, logical order)
 - Optional item_name filtering
-- Comprehensive aggregation pipelines for all data sources:
-  - log_inventory_items_model
-  - crosscutting_done_model
-  - flitching_done_model
-- Opening balance calculation (reverse calculation from current stock)
+- Map-based batch aggregation (single pipeline per data category, merged into a shared Map keyed by item_id+item_name)
+- Data sources: log_inventory_items_model, crosscutting_done_model, flitching_done_model, issues_for_flitching_model, issues_for_peeling_model, peeling_done_other_details_model
+- Opening balance = SUM(physical_cmt) for logs received in period
 - Round log details (Invoice/Indian/Actual CMT)
-- Cross cut tracking (Issue for CC, CC Received, Diff)
-- Flitching, Peeling, and Sales tracking
-- Closing balance calculation
-- Filters out items with no activity
+- Cross cut tracking (Issue for CC, CC Received, CC Issued, CC Diff)
+- Flitch tracking (Issue for Flitch, Flitch Received, Flitch Diff)
+- Peeling tracking (Peeling Issued, Peeling Received, Peeling Diff)
+- Sales (across log, crosscut, flitch stages)
+- Rejected (across crosscut, flitch, peeling stages)
+- Placeholder columns: Recover From Rejected, Issue for SqEdge, Job Work Challan
 
 ### 2. Excel Generator Function ✅
 **File:** `topl_backend/config/downloadExcel/reports2/Log/itemWiseInward.js`
@@ -34,7 +34,7 @@ All core functionality has been migrated to the new reports2 structure and is re
 **Function:** `createItemWiseInwardReportExcel(aggregatedData, startDate, endDate, filter)`
 
 **Features:**
-- 15 columns with proper labels and widths
+- 21 columns with proper labels and widths
 - Multi-level headers (Row 3: Group headers, Row 4: Column headers)
 - Title row with date range (merged across all columns)
 - Grand total row with bold formatting and gray background
@@ -112,23 +112,29 @@ topl_backend/
 
 ## Column Details
 
-| # | Column Name | Status | Data Source |
-|---|-------------|--------|-------------|
-| 1 | ItemName | ✅ Complete | log_inventory_items.item_name |
-| 2 | Opening Stock CMT | ✅ Complete | Calculated (Current - Received + Issued) |
-| 3 | Invoice | ✅ Complete | log_inventory_items.invoice_cmt (period) |
-| 4 | Indian | ✅ Complete | log_inventory_items.indian_cmt (period) |
-| 5 | Actual | ✅ Complete | log_inventory_items.physical_cmt (period) |
-| 6 | Issue for CC | ✅ Complete | Logs issued for crosscutting (period) |
-| 7 | CC Received | ✅ Complete | crosscutting_done.crosscut_cmt (period) |
-| 8 | Diff | ✅ Complete | Issue for CC - CC Received |
-| 9 | Flitching | ✅ Complete | crosscutting_done → flitching (period) |
-| 10 | Sawing | ⏳ Placeholder | Shows 0.000 - awaiting clarification |
-| 11 | Wooden Tile | ⏳ Placeholder | Shows 0.000 - awaiting clarification |
-| 12 | UnEdge | ⏳ Placeholder | Shows 0.000 - awaiting clarification |
-| 13 | Peel | ✅ Complete | crosscutting_done → peeling (period) |
-| 14 | Sales | ✅ Complete | Items → order/challan (period) |
-| 15 | Closing Stock CMT | ✅ Complete | Calculated from opening + movements |
+| #  | Column Name           | Status          | Data Source                                              |
+|----|-----------------------|-----------------|----------------------------------------------------------|
+| 1  | ItemName              | ✅ Complete     | log_inventory_items.item_name                            |
+| 2  | Opening Stock CMT     | ✅ Complete     | SUM(physical_cmt) where invoice.inward_date in period    |
+| 3  | Invoice               | ✅ Complete     | log_inventory_items.invoice_cmt (period)                 |
+| 4  | Indian                | ✅ Complete     | log_inventory_items.indian_cmt (period)                  |
+| 5  | Actual                | ✅ Complete     | log_inventory_items.physical_cmt (period)                |
+| 6  | Recover From Rejected | ⏳ Placeholder  | Shows 0.000 – data source TBD                            |
+| 7  | Issue for CC          | ✅ Complete     | Logs with issue_status='crosscutting', createdAt in period |
+| 8  | CC Received           | ✅ Complete     | crosscutting_done.crosscut_cmt, createdAt in period      |
+| 9  | CC Issued             | ✅ Complete     | crosscutting_done.crosscut_cmt, issue_status!=null, createdAt in period |
+| 10 | CC Diff               | ✅ Complete     | Issue for CC − CC Received                               |
+| 11 | Issue for Flitch      | ✅ Complete     | issues_for_flitching.cmt, createdAt in period            |
+| 12 | Flitch Received       | ✅ Complete     | flitching_done.flitch_cmt, createdAt in period           |
+| 13 | Flitch Diff           | ✅ Complete     | Issue for Flitch − Flitch Received                       |
+| 14 | Issue for SqEdge      | ⏳ Placeholder  | Shows 0.000 – data source TBD                            |
+| 15 | Peeling Issued        | ✅ Complete     | issues_for_peeling.cmt, createdAt in period              |
+| 16 | Peeling Received      | ✅ Complete     | peeling_done_items.cmt, createdAt in period              |
+| 17 | Peeling Diff          | ✅ Complete     | Peeling Issued − Peeling Received                        |
+| 18 | Sales                 | ✅ Complete     | order/challan across log, crosscut, flitch stages        |
+| 19 | Job Work Challan      | ⏳ Placeholder  | Shows 0.000 – data source TBD                            |
+| 20 | Rejected              | ✅ Complete     | is_rejected across crosscut, flitch, peeling stages      |
+| 21 | Closing Stock CMT     | ✅ Complete     | Logs with invoice in period and issue_status != null     |
 
 ## Files Created/Modified
 
@@ -161,13 +167,13 @@ topl_backend/
 
 ## Database Collections Used
 
-1. **log_inventory_items_details** - Source logs with CMT measurements
-2. **log_inventory_invoice_details** - Invoice and inward date information
-3. **crosscutting_done** - Completed crosscut items
-4. **flitching_done** - Completed flitch items
-5. **issues_for_crosscutting** - Logs issued for crosscutting process
-6. **issues_for_flitching** - Crosscut items issued for flitching
-7. **issues_for_peeling** - Crosscut items issued for peeling
+1. **log_inventory_items_details** – Source logs with CMT measurements and issue_status
+2. **log_inventory_invoice_details** – Invoice and inward date information (joined via invoice_id)
+3. **crosscutting_done** – Completed crosscut items (CC Received, CC Issued, crosscut-stage sales, rejected crosscut)
+4. **flitching_done** – Completed flitch items (Flitch Received, flitch-stage sales, rejected flitch)
+5. **issues_for_flitching** – Records of crosscut items issued for flitching (Issue for Flitch)
+6. **issues_for_peeling** – Records of items issued for peeling (Peeling Issued)
+7. **peeling_done_other_details + peeling_done_items** – Peeling output (Peeling Received, rejected peeling)
 
 ## API Request Example
 
@@ -191,7 +197,7 @@ curl -X POST http://localhost:5000/api/V1/reports2/download-excel-item-wise-inwa
   "statusCode": 200,
   "status": "success",
   "message": "Item wise inward report generated successfully",
-  "data": "http://localhost:5000/public/upload/reports/reports2/Log/Item-Wise-Inward-Report-1706432891234.xlsx"
+  "result": "http://localhost:5000/public/upload/reports/reports2/Log/Item-Wise-Inward-Report-1706432891234.xlsx"
 }
 ```
 
@@ -207,10 +213,10 @@ Row 3: [Group Headers - Bold, Gray Background]
        | ItemName | Opening | ROUND LOG DETAIL CMT (3 cols) | Cross Cut Details CMT (3 cols) | Flitching | Sawing | CrossCut Log Issue For CMT (4 cols) | Closing |
 
 Row 4: [Column Headers - Bold, Gray Background]
-       | ItemName | Opening Stock CMT | Invoice | Indian | Actual | Issue for CC | CC Received | Diff | Flitching | Sawing | Wooden Tile | UnEdge | Peel | Sales | Closing Stock CMT |
+       | ItemName | Opening Stock CMT | Invoice | Indian | Actual | Recover From Rejected | Issue for CC | CC Received | CC Issued | CC Diff | Issue for Flitch | Flitch Received | Flitch Diff | Issue for SqEdge | Peeling Issued | Peeling Received | Peeling Diff | Sales | Job Work Challan | Rejected | Closing Stock CMT |
 
 Row 5+: [Data Rows - Sorted by ItemName]
-        ASH      | 95.366  | 7949.000 | 26.244 | 35.423 | 6.602 | 6.602 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 124.189 |
+        ASH      | 95.366  | 7949.000 | 26.244 | 35.423 | 0.000 | 6.602 | 6.602 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 124.189 |
         BEECH    | ...
         ...
 
@@ -236,28 +242,11 @@ Last Row: [Total Row - Bold, Light Gray Background]
 
 ### Columns Needing Clarification (Currently Showing 0.000)
 
-1. **Sawing (Column 10)**
-   - Question: What data source represents "sawing" in the system?
-   - Options to investigate:
-     - Is it an issue_status type?
-     - Is it a production process output?
-     - Is it tracked in a specific table?
+1. **Recover From Rejected** – Data source and business meaning TBD.
+2. **Issue For SqEdge** – Replaces the previous Sawing/Wooden Tile/UnEdge placeholders. Data source and business rules TBD.
+3. **Job Work Challan** – Data source TBD.
 
-2. **Wooden Tile (Column 11)**
-   - Question: What does "Wooden Tile" represent?
-   - Options to investigate:
-     - Is it an item_sub_category_name?
-     - Is it a production output type?
-     - Is it crosscut items issued for a specific destination?
-
-3. **UnEdge (Column 12)**
-   - Question: What does "UnEdge" represent?
-   - Options to investigate:
-     - Is it an item_sub_category_name?
-     - Is it a production output type?
-     - Is it crosscut items issued for a specific destination?
-
-**Note:** These columns are implemented as placeholders and documented in the API docs. Once clarified, the controller function can be updated to populate these columns with actual data.
+**Note:** These columns are implemented as placeholders. Once clarified, the controller can be updated to populate them with actual data.
 
 ## Testing Status
 

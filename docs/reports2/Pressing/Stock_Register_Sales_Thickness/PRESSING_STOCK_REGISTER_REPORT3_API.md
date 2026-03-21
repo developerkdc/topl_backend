@@ -119,9 +119,9 @@ A developer should be able to understand the report from this section without re
 
 ### 1. Report period
 
-- **start**: `new Date(startDate)` at 00:00:00.000
-- **end**: `new Date(endDate)` at 23:59:59.999
-- All "in period" logic uses this inclusive range.
+- **start**: `new Date(startDate)` shifted to UTC 00:00:00.000 (via `setUTCHours(0,0,0,0)`)
+- **end**: `new Date(endDate)` shifted to UTC 23:59:59.999 (via `setUTCHours(23,59,59,999)`)
+- All "in period" logic uses this inclusive UTC range to avoid timezone offset issues.
 
 ### 2. Which rows appear in the report
 
@@ -182,7 +182,7 @@ Closing SqMtr       = current_available
 ### 7. Understanding the API response
 
 - **200**: The report was generated. **result** is a URL to the Excel file. The client can GET this URL to download the file.
-- The Excel contains: title row, one header row, data rows grouped by Item Name with merged Item Name cells, a **Total** row after each Item Name group (subtotal), and one **Total** row at the end (grand total).
+- The Excel contains: title row, one header row, data rows grouped by Item Name with merged Item Name cells, a **Total** row after each Item Name group (subtotal, **separate** from item details), and one **Total** row at the end (grand total, **separate** from item details).
 - **400**: Invalid request (missing/invalid dates or start > end).
 - **404**: No distinct groups in `issues_for_pressing`, or all rows were dropped as all-zero.
 
@@ -220,18 +220,18 @@ Example: `Pressing Item Stock Register sales name - thicksens between 01/03/2025
 
 - One row per distinct **(Item Name, Sales item Name, Thickness, Size)** that has any non-zero metric.
 - Sorted by Item Name (asc), then Sales item Name (asc), then Thickness (numeric asc), then Size (string asc).
-- **Merged cells**: Item Name column (col 1) is merged for consecutive rows of the same Item Name (including the following Total row for that group).
+- **Merged cells**: Item Name column (col 1) is merged for consecutive **detail rows** of the same Item Name only. The Total row is **not** merged with item details.
 - Numeric columns use two decimal places.
 
 ### Item Name Total Rows
 
 - After each Item Name's detail rows, a **Total** row sums Opening SqMtr, Issued for pressing SqMtr, Pressing received Sqmtr, Pressing Waste SqMtr, Closing SqMtr for that group only.
-- Col 1 shows the Item Name (part of merged cell); Col 2 shows **Total**; cols 3–4 are blank.
+- **The Total row is separate from item details** — it is not merged with the Item Name cell. Col 1 shows **Total**; Col 2 shows **Total**; cols 3–4 are blank.
 
 ### Grand Total Row
 
 - Last row is **Total**, with sums of all numeric columns across the entire report.
-- Col 1: **Total**; cols 2–4 blank.
+- **The Grand Total row is separate from item details and subtotal rows.** Col 1: **Total**; cols 2–4 blank.
 
 ---
 

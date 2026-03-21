@@ -56,23 +56,23 @@ Request body:
 
 Aggregate `tapping_done_items_details` (joined to `tapping_done_other_details`) to get distinct `(item_sub_category_name, item_name, thickness, log_no_code)` plus `min(tapping_date)`.
 
-### Step 2 — Per-Tuple: 5 Parallel Aggregations
+### Step 2 — Per-Tuple: 6 Parallel Aggregations
 
 For each tuple, run `Promise.all` with:
 
 1. **currentAvailable** — sum `available_details.sqm` for this (item, thickness, log) from `tapping_done_items_details`
 2. **tappingHand** — sum `sqm` in date range where `splicing_type IN ['HAND', 'HAND SPLICING']`
 3. **tappingMachine** — sum `sqm` in date range where `splicing_type IN ['MACHINE', 'MACHINE SPLICING']`
-4. **issuePressing** — sum `sqm` from `tapping_done_history` in date range, matched by (item, thickness, log)
-5. **processWaste** — sum `sqm` from `issue_for_tapping_wastage` joined to `issue_for_tappings`, matched by item
+4. **issuePressing** — sum `sqm` from `tapping_done_history` in date range; `issued_for` STOCK/SAMPLE OR (ORDER AND `order_category`≠RAW); matched by (item, thickness, log)
+5. **sales** — sum `sqm` from `tapping_done_history` in date range; `issued_for` ORDER AND `order_category`=RAW; matched by (item, thickness, log)
+6. **processWaste** — sum `sqm` from `issue_for_tapping_wastage` (tapping damage) joined to `issue_for_tappings`, matched by (item_sub_category_name, item_name, thickness, log_no_code)
 
 ### Step 3 — Calculations
 
 ```
 tappingReceived   = tappingHand + tappingMachine
-openingBalance    = currentAvailable + issuePressing − tappingReceived
+openingBalance    = currentAvailable + issuePressing + sales − tappingReceived
 closingBalance    = openingBalance + tappingReceived − issuePressing − processWaste − sales
-sales             = 0  (placeholder)
 ```
 
 ### Step 4 — Filter

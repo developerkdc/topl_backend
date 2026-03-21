@@ -2,7 +2,7 @@
 
 ## Objective
 
-Implement the **MDF Item-Wise Stock Report** API under reports2 that generates an Excel report for a user-selected date range. The report shows opening stock, receives, consumption, sales, issue for pressing, and closing stock, grouped by **item name**, then **MDF sub-type**, **thickness**, and **size**. Same columns as the MDF Stock Report with **Item Name** as the first column.
+Implement the **MDF Item-Wise Stock Report** API under reports2 that generates an Excel report for a user-selected date range. The report shows opening stock, receives, consumption (total of challan, order, pressing), challan, order, issue for pressing, and closing stock, grouped by **item name**, then **MDF sub-type**, **thickness**, and **size**. Same columns as the MDF Stock Report with **Item Name** as the first column.
 
 ## Implementation Approach
 
@@ -14,7 +14,7 @@ Implement the **MDF Item-Wise Stock Report** API under reports2 that generates a
 - **Period:** User-specified date range (startDate, endDate).
 - **Data source:** MongoDB aggregations over MDF view, item details, invoice details, and MDF history.
 - **Grouping:** Item Name → Thickness → Size; subtotal per thickness; grand total.
-- **Columns:** Item Name, MDF Sub Type, Thickness, Size, Opening (sheets + sq m), Receive, Consume, Sales, Issue For Pressing (sheets + sq m), Closing (sheets + sq m).
+- **Columns:** Item Name, MDF Sub Type, Thickness, Size, Opening (sheets + sq m), Receive, Consume, Order, Issue For Pressing (sheets + sq m), Closing (sheets + sq m). Challan is computed and included in Consume but not displayed.
 
 ## Implementation Files
 
@@ -45,9 +45,10 @@ Implement the **MDF Item-Wise Stock Report** API under reports2 that generates a
 4. **Current inventory:** Aggregate `mdf_inventory_items_view_modal`: match `deleted_at: null` and `...itemFilter`; group by (item_name, sub-type, thickness, length, width); sum `available_sheets`, `available_sqm`; collect `item_ids`.
 5. For each group:
    - **Receives:** Aggregate `mdf_inventory_items_details` (match on item_name, sub-type, thickness, length, width, `deleted_at: null`) → `$lookup` invoice → match `invoice.inward_date` in [start, end] → sum `no_of_sheet`, `total_sq_meter`.
-   - **Consumption / Sales / Issue for pressing:** Same as stock report, using mdf_item_id in item_ids and date range.
+   - **Challan / Order / Issue for pressing:** Same as stock report, using mdf_item_id in item_ids and date range.
+   - **Consumed** = challan + order + issue for pressing (computed).
    - Compute **opening** and **closing**; clamp to non-negative.
-6. Filter rows with at least one non-zero among opening, receive, consume, sales, closing.
+6. Filter rows with at least one non-zero among opening, receive, consume, challan, order, closing.
 7. If no rows, return 404 "No stock data found for the selected period".
 8. Call `GenerateMdfItemWiseStockReportExcel(aggregatedData, startDate, endDate, filter)`.
 9. Return 200 with ApiResponse: message and `data: excelLink`.
@@ -103,7 +104,7 @@ Same formulas as MDF Stock Report. Receives and history aggregations are scoped 
 ### Pipeline structure (conceptual)
 
 1. **Current inventory:** `mdf_inventory_items_view_modal` → match (deleted_at, filters including item_name) → group by (item_name, sub-type, thickness, length, width) → sum available_sheets/sqm, push _id as item_ids.
-2. **Per group:** Receives from item details (with item_name in match) + invoice lookup (sum no_of_sheet, total_sq_meter); Consumption / Sales / Issue pressing from mdf_history_model (mdf_item_id in item_ids, issue_status, date range).
+2. **Per group:** Receives from item details (with item_name in match) + invoice lookup (sum no_of_sheet, total_sq_meter); Challan / Order / Issue pressing from mdf_history_model (mdf_item_id in item_ids, issue_status, date range). Consumed = sum of all three.
 3. **Compute** opening and closing; build row object (item_name, mdf_sub_type, thickness, size, and all numeric columns).
 4. **Filter** active rows; pass to Excel generator.
 
@@ -121,8 +122,8 @@ Same formulas as MDF Stock Report. Receives and history aggregations are scoped 
 8. Rec Mtrs  
 9. Consume (sheets)  
 10. Cons Mtrs  
-11. Sales (sheets)  
-12. Sales Mtrs  
+11. Order Sheets  
+12. Order Mtrs  
 13. Issue For Pressing  
 14. Issue For Pressing Sq Met  
 15. Closing (sheets)  

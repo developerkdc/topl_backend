@@ -46,7 +46,7 @@ export const PeelingDailyReportExcel = catchAsync(
       },
       {
         $lookup: {
-          from: 'issue_for_peeling_wastage',
+          from: 'issues_for_peeling_wastage',
           localField: 'issue_for_peeling_id',
           foreignField: 'issue_for_peeling_id',
           as: 'wastage',
@@ -113,15 +113,15 @@ export const PeelingDailyReportExcel = catchAsync(
           log_no: '$items.log_no',
           output_type: '$items.output_type',
           thickness: '$items.thickness',
-          length: { $ifNull: ['$issued_for_peeling.length', '$items.length'] },
-          diameter: '$issued_for_peeling.diameter',
+          length: '$items.length',
           width: '$items.width',
+          sq_mtr: '$items.cmt',
           cmt: { $ifNull: ['$issued_for_peeling.cmt', '$items.cmt'] },
           leaves: '$items.no_of_leaves',
           rej_length: '$wastage.length',
           rej_diameter: '$wastage.diameter',
           rej_cmt: '$wastage.cmt',
-          remarks: { $ifNull: ['$wastage.remark', 'COMPLETE'] },
+          remarks: { $ifNull: ['$items.remark', ''] },
         },
       },
     ];

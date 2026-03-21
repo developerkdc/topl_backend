@@ -16,10 +16,11 @@ The report lives under the **reports2** report module: routes, controller, and E
 - **Columns:**
   1. Item name  
   2. Thickness  
-  3. Opening Balance (sq m)  
-  4. Received Metres (sq m)  
-  5. Issued Metres (sq m)  
-  6. Closing Bal (sq m)  
+  3. Inward Date (inward date(s) in period)  
+  4. Opening Balance (sq m)  
+  5. Received Metres (sq m)  
+  6. Issued Metres (sq m)  
+  7. Closing Bal (sq m)  
 
 Subtotal row per item; grand total row at bottom.
 
@@ -63,8 +64,8 @@ Subtotal row per item; grand total row at bottom.
 **Steps:**
 
 1. Validate startDate and endDate (required, valid dates, start ≤ end).
-2. Build item filter from `filter.item_name` if present.
-3. Get unique (item_name, thickness) from `core_inventory_items_details` (deleted_at: null + item filter).
+2. Build item filter from `filter.item_name` if present. Use UTC date boundaries (start and end of day) for the range.
+3. Get unique (item_name, thickness) from `core_inventory_items_details` that have at least one inward in the date range (via lookup to `core_inventory_invoice_details`, filter by inward_date in [start, end]).
 4. For each (item_name, thickness):
    - Current available sqm: sum of `available_sqm` in core_inventory_items_details.
    - Received sqm in period: lookup core_inventory_invoice_details by invoice_id, filter by inward_date in [start, end], sum `total_sq_meter`.

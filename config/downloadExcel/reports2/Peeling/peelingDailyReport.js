@@ -21,7 +21,6 @@ const formatDate = (dateString) => {
  */
 const groupRows = (rows) => {
   const byItem = {};
-  const sessions = [];
 
   rows.forEach((r) => {
     const itemName = r.item_name || 'UNKNOWN';
@@ -36,37 +35,28 @@ const groupRows = (rows) => {
     const cmt = Number(r.cmt) || 0;
     const rejCmt = Number(r.rej_cmt) || 0;
     const leaves = Number(r.leaves) || 0;
+    const isVeneer = (r.output_type || '').toUpperCase() === 'VENEER';
     byItem[itemName].rows.push({
       item_name: itemName,
       log_no: r.log_no,
       output_type: r.output_type,
       thickness: r.thickness,
-      length: r.length ?? 0,
-      width: r.width ?? 0,
-      diameter: r.diameter ?? 0,
+      length: isVeneer ? '' : (r.length ?? 0),
+      width: isVeneer ? '' : (r.width ?? 0),
       cmt,
       leaves,
-      sq_mtr: 0,
+      sq_mtr: r.sq_mtr ?? 0,
       rej_length: r.rej_length,
       rej_diameter: r.rej_diameter,
       rej_cmt: rejCmt,
-      remarks: r.remarks || 'COMPLETE',
+      remarks: r.remarks ?? '',
     });
     byItem[itemName].input_cmt += cmt;
     byItem[itemName].rej_cmt += rejCmt;
     byItem[itemName].leaves += leaves;
-
-    if (r.peeling_id && !sessions.find((s) => s.peeling_id?.toString() === r.peeling_id?.toString())) {
-      sessions.push({
-        peeling_id: r.peeling_id,
-        shift: r.shift || '',
-        work_hours: r.no_of_working_hours ?? '',
-        worker: (r.worker || '').trim(),
-      });
-    }
   });
 
-  return { byItem, sessions };
+  return { byItem };
 };
 
 const setCellStyle = (cell, bold = false) => {
@@ -81,23 +71,22 @@ const setCellStyle = (cell, bold = false) => {
 
 /**
  * Generate Peeling Daily Report matching the Slicing-style layout:
- * - Main Peeling Details (Item Name, Log No, Output Type, Thickness, Length, Width, Diameter, CMT, Leaves, Sq Mtr) + Total
+ * - Main Peeling Details (Item Name, Log No, Output Type, Thickness, Length, Width, CMT, Leaves, Sq Mtr) + Total
  * - Rejection Details (Rej. Length, Rej. Diameter, Rej. CMT, Remarks) + Total Rej. CMT
  * - Summary (Item name, Input CMT, Rej. CMT, Peel CMT, Leaves) + Total
- * - Peeling Session Details (Peeling Id, Shift, Work Hours, Worker)
  */
 const GeneratePeelingDailyReport = async (rows, reportDate) => {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Peeling Details Report');
 
   const formattedDate = formatDate(reportDate);
-  const { byItem, sessions } = groupRows(rows);
+  const { byItem } = groupRows(rows);
 
   const itemNames = Object.keys(byItem).sort();
   let currentRow = 1;
 
   // Title
-  worksheet.mergeCells(currentRow, 1, currentRow, 14);
+  worksheet.mergeCells(currentRow, 1, currentRow, 13);
   const titleCell = worksheet.getCell(currentRow, 1);
   titleCell.value = `Peeling Details Report Date: ${formattedDate}`;
   titleCell.font = { bold: true, size: 12 };
@@ -105,7 +94,7 @@ const GeneratePeelingDailyReport = async (rows, reportDate) => {
   worksheet.getRow(currentRow).height = 20;
   currentRow += 2;
 
-  // Main table: Item Name, Log No, Output Type, Thickness, Length, Width, Diameter, CMT, Leaves, Sq Mtr
+  // Main table: Item Name, Log No, Output Type, Thickness, Length, Width, CMT, Leaves, Sq Mtr
   // Rejection table to the right: Rej. Length, Rej. Diameter, Rej. CMT, Remarks
   const mainHeaders = [
     'Item Name',
@@ -114,7 +103,6 @@ const GeneratePeelingDailyReport = async (rows, reportDate) => {
     'Thickness',
     'Length',
     'Width',
-    'Diameter',
     'CMT',
     'Leaves',
     'Sq Mtr',
@@ -162,20 +150,19 @@ const GeneratePeelingDailyReport = async (rows, reportDate) => {
       row.getCell(4).value = r.thickness;
       row.getCell(5).value = r.length;
       row.getCell(6).value = r.width;
-      row.getCell(7).value = r.diameter;
-      row.getCell(8).value = r.cmt;
-      row.getCell(9).value = r.leaves;
-      row.getCell(10).value = r.sq_mtr;
+      row.getCell(7).value = r.cmt;
+      row.getCell(8).value = r.leaves;
+      row.getCell(9).value = r.sq_mtr;
       row.getCell(rejStartCol).value = r.rej_length;
       row.getCell(rejStartCol + 1).value = r.rej_diameter;
       row.getCell(rejStartCol + 2).value = r.rej_cmt;
       row.getCell(rejStartCol + 3).value = r.remarks;
 
-      [4, 5, 6, 7, 8, 10, rejStartCol, rejStartCol + 1, rejStartCol + 2].forEach((col) => {
+      [4, 5, 6, 7, 9, rejStartCol, rejStartCol + 1, rejStartCol + 2].forEach((col) => {
         const c = row.getCell(col);
         if (typeof c.value === 'number') c.numFmt = '0.00';
       });
-      if (typeof row.getCell(8).value === 'number') row.getCell(8).numFmt = '0.000';
+      if (typeof row.getCell(7).value === 'number') row.getCell(7).numFmt = '0.000';
       if (typeof row.getCell(rejStartCol + 2).value === 'number') row.getCell(rejStartCol + 2).numFmt = '0.000';
 
       totalCmt += r.cmt;
@@ -189,16 +176,21 @@ const GeneratePeelingDailyReport = async (rows, reportDate) => {
     const totalRow = worksheet.getRow(currentRow);
     totalRow.getCell(2).value = 'Total';
     totalRow.getCell(2).font = { bold: true };
-    totalRow.getCell(8).value = totalCmt;
+    totalRow.getCell(7).value = totalCmt;
+    totalRow.getCell(7).font = { bold: true };
+    totalRow.getCell(7).numFmt = '0.000';
+    totalRow.getCell(8).value = totalLeaves;
     totalRow.getCell(8).font = { bold: true };
-    totalRow.getCell(8).numFmt = '0.000';
-    totalRow.getCell(9).value = totalLeaves;
+    totalRow.getCell(9).value = totalSqMtr;
     totalRow.getCell(9).font = { bold: true };
-    totalRow.getCell(10).value = totalSqMtr;
-    totalRow.getCell(10).font = { bold: true };
     totalRow.getCell(rejStartCol + 2).value = totalRejCmt;
     totalRow.getCell(rejStartCol + 2).font = { bold: true };
     totalRow.getCell(rejStartCol + 2).numFmt = '0.000';
+    for (let col = 1; col <= mainColCount + rejHeaders.length; col++) {
+      const cell = totalRow.getCell(col);
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8E8E8' } };
+      setCellStyle(cell);
+    }
     currentRow++;
 
     grandInputCmt += itemData.input_cmt;
@@ -248,30 +240,11 @@ const GeneratePeelingDailyReport = async (rows, reportDate) => {
     const c = summaryTotalRow.getCell(col);
     if (typeof c.value === 'number') c.numFmt = '0.000';
   });
-  currentRow += 2;
-
-  // Peeling Session Details
-  const sessionHeaders = ['Peeling Id', 'Shift', 'Work Hours', 'Worker'];
-  const sessionHeaderRow = worksheet.getRow(currentRow);
-  sessionHeaders.forEach((h, i) => {
-    const cell = sessionHeaderRow.getCell(i + 1);
-    cell.value = h;
-    cell.font = { bold: true };
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD3D3D3' } };
-    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+  for (let col = 1; col <= 5; col++) {
+    const cell = summaryTotalRow.getCell(col);
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8E8E8' } };
     setCellStyle(cell);
-  });
-  currentRow++;
-
-  sessions.forEach((s) => {
-    const row = worksheet.getRow(currentRow);
-    row.getCell(1).value = s.peeling_id?.toString?.() ?? s.peeling_id;
-    row.getCell(2).value = s.shift;
-    row.getCell(3).value = s.work_hours;
-    row.getCell(4).value = s.worker;
-    currentRow++;
-  });
-
+  }
   worksheet.columns = [
     { width: 14 },
     { width: 12 },

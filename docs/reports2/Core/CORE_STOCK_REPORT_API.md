@@ -104,14 +104,15 @@ POST /report/download-stock-report-core
 
 ### Columns
 
-| Column            | Description                                  |
-|------------------|----------------------------------------------|
-| Item name        | Item name from inventory                     |
-| Thickness        | Thickness                                   |
-| Opening Balance  | Opening stock (sq m)                         |
-| Received Metres  | Received during period (sq m)               |
-| Issued Metres    | Issued during period (sq m)                  |
-| Closing Bal      | Closing stock (sq m)                         |
+| Column            | Description                                                  |
+|------------------|--------------------------------------------------------------|
+| Item name        | Item name from inventory                                     |
+| Thickness        | Thickness                                                   |
+| Inward Date      | Inward date(s) in period (DD/MM/YYYY; comma-separated if multiple) |
+| Opening Balance  | Opening stock (sq m)                                         |
+| Received Metres  | Received during period (sq m)                               |
+| Issued Metres    | Issued during period (sq m)                                  |
+| Closing Bal      | Closing stock (sq m)                                         |
 
 ### Layout
 
@@ -171,6 +172,7 @@ const downloadUrl = response.data.data;
 
 ## Notes
 
-- Only items with at least one non-zero value (opening, received, issued, closing) are included.
+- Only items with at least one inward in the selected date range are included; date range uses UTC boundaries (full start and end day).
+- Only rows with at least one non-zero value (opening, received, issued, closing) are included.
 - Excel files are timestamped to avoid overwrites.
 - Date format: YYYY-MM-DD.

@@ -3,13 +3,15 @@ import ApiError from '../../../utils/errors/apiError.js';
 import ApiResponse from '../../../utils/ApiResponse.js';
 import { issues_for_crosscutting_model } from '../../../database/schema/factory/crossCutting/issuedForCutting.schema.js';
 import { crosscutting_done_model } from '../../../database/schema/factory/crossCutting/crosscutting.schema.js';
+import { flitching_done_model } from '../../../database/schema/factory/flitching/flitching.schema.js';
+import { peeling_done_items_model } from '../../../database/schema/factory/peeling/peeling_done/peeling_done.schema.js';
 import { createLogWiseCrosscutReportExcel } from '../../../config/downloadExcel/reports2/Crosscut/logWiseCrosscut.js';
 
 /**
  * Log Wise Crosscut Report Export
  * Generates Excel report: one row per log (grouped by Item Name) with
  * Invoice CMT, Indian CMT, Physical CMT, Op Bal, CC Received, CC Issued, CC Closing,
- * Physical Length, CC Length, Flitch Received, SQ Received, UN Received, Peel Received.
+ * Physical Length, CC Length (opening + in-period length), Flitch Received, SQ Received, UN Received, Peel Received.
  * Totals row after each item group and grand total at end.
  *
  * @route POST /api/V1/report/download-excel-log-wise-crosscut-report
@@ -34,18 +36,51 @@ export const LogWiseCrosscutReportExcel = catchAsync(async (req, res, next) => {
     return next(new ApiError('Start date cannot be after end date', 400));
   }
 
+  const today = new Date();
+  today.setHours(23, 59, 59, 999);
+  if (end > today) {
+    return next(
+      new ApiError('End date cannot be in the future', 400)
+    );
+  }
+
   const itemFilter = filter.item_name ? { item_name: filter.item_name } : {};
 
   try {
-    // Distinct (log_no, item_name) from issues_for_crosscutting
+    // Distinct (log_no, item_name) from issues_for_crosscutting – logs issued for crosscutting in period
     const fromIssues = await issues_for_crosscutting_model.aggregate([
-      { $match: itemFilter },
+      {
+        $match: {
+          ...itemFilter,
+          createdAt: { $gte: start, $lte: end },
+        },
+      },
       { $group: { _id: { log_no: '$log_no', item_name: '$item_name' } } },
     ]);
 
-    // Distinct (log_no, item_name) from crosscutting_done (exclude soft-deleted)
+    // Distinct (log_no, item_name) from crosscutting_done – only logs with activity in period:
+    // CC Received (crosscut_date in period), Op Bal (crosscut before start, still in stock),
+    // CC Issued (issued further: sales, challan, flitching, peeling), Flitch/Peel Received
     const fromDone = await crosscutting_done_model.aggregate([
-      { $match: { deleted_at: null, ...itemFilter } },
+      {
+        $match: {
+          deleted_at: null,
+          ...itemFilter,
+          $or: [
+            { 'worker_details.crosscut_date': { $gte: start, $lte: end } },
+            {
+              $and: [
+                { $or: [{ issue_status: null }, { issue_status: { $exists: false } }] },
+                { 'worker_details.crosscut_date': { $lt: start } },
+              ],
+            },
+            {
+              issue_status: { $in: ['order', 'challan', 'flitching', 'peeling'] },
+              updatedAt: { $gte: start, $lte: end },
+            },
+          ],
+        },
+      },
       { $group: { _id: { log_no: '$log_no', item_name: '$item_name' } } },
     ]);
 
@@ -105,7 +140,7 @@ export const LogWiseCrosscutReportExcel = catchAsync(async (req, res, next) => {
           physical_length: 0,
         };
 
-        // Op Bal: crosscut stock at period start (not yet issued, crosscut before start)
+        // Op Bal: crosscut stock at period start (CMT); same match also supplies length for CC Length
         const opBalAgg = await crosscutting_done_model.aggregate([
           {
             $match: {
@@ -116,9 +151,16 @@ export const LogWiseCrosscutReportExcel = catchAsync(async (req, res, next) => {
               'worker_details.crosscut_date': { $lt: start },
             },
           },
-          { $group: { _id: null, total: { $sum: '$crosscut_cmt' } } },
+          {
+            $group: {
+              _id: null,
+              total: { $sum: '$crosscut_cmt' },
+              length: { $sum: '$length' },
+            },
+          },
         ]);
         const opBal = opBalAgg[0]?.total ?? 0;
+        const opBalLengthForCc = opBalAgg[0]?.length ?? 0;
 
         // CC Received: crosscut done in period (by crosscut_date)
         const ccRecAgg = await crosscutting_done_model.aggregate([
@@ -134,49 +176,79 @@ export const LogWiseCrosscutReportExcel = catchAsync(async (req, res, next) => {
         ]);
         const ccReceived = ccRecAgg[0]?.total ?? 0;
         const ccLengthInPeriod = ccRecAgg[0]?.length ?? 0;
+        const ccLength = opBalLengthForCc + ccLengthInPeriod;
 
-        // CC Issued: issues_for_crosscutting created in period
-        const ccIssuedAgg = await issues_for_crosscutting_model.aggregate([
+        // CC Issued: crosscut pieces issued further (sales, challan, flitching, peeling) in period
+        const ccIssuedAgg = await crosscutting_done_model.aggregate([
           {
             $match: {
               log_no: logNo,
               item_name: itemName,
-              createdAt: { $gte: start, $lte: end },
+              deleted_at: null,
+              issue_status: { $in: ['order', 'challan', 'flitching', 'peeling'] },
+              updatedAt: { $gte: start, $lte: end },
             },
           },
-          { $group: { _id: null, total: { $sum: '$physical_cmt' } } },
+          { $group: { _id: null, total: { $sum: '$crosscut_cmt' } } },
         ]);
         const ccIssued = ccIssuedAgg[0]?.total ?? 0;
 
         const ccClosing = Math.max(0, opBal + ccReceived - ccIssued);
 
-        // Flitch Received: crosscutting_done issued for flitching in period
-        const flitchAgg = await crosscutting_done_model.aggregate([
+        // Flitch Received: flitching done in period (from crosscut pieces only – join via crosscut_done_id)
+        const flitchAgg = await flitching_done_model.aggregate([
           {
             $match: {
-              log_no: logNo,
-              item_name: itemName,
+              crosscut_done_id: { $ne: null },
               deleted_at: null,
-              issue_status: 'flitching',
-              updatedAt: { $gte: start, $lte: end },
+              'worker_details.flitching_date': { $gte: start, $lte: end },
             },
           },
-          { $group: { _id: null, total: { $sum: '$crosscut_cmt' } } },
+          {
+            $lookup: {
+              from: 'crosscutting_dones',
+              localField: 'crosscut_done_id',
+              foreignField: '_id',
+              as: 'crosscut',
+            },
+          },
+          { $unwind: '$crosscut' },
+          {
+            $match: {
+              'crosscut.log_no': logNo,
+              'crosscut.item_name': itemName,
+            },
+          },
+          { $group: { _id: null, total: { $sum: '$flitch_cmt' } } },
         ]);
         const flitchReceived = flitchAgg[0]?.total ?? 0;
 
-        // Peel Received: crosscutting_done issued for peeling in period
-        const peelAgg = await crosscutting_done_model.aggregate([
+        // Peel Received: peeling done in period – use peeling_done_other_details.total_cmt
+        const peelAgg = await peeling_done_items_model.aggregate([
           {
             $match: {
               log_no: logNo,
               item_name: itemName,
-              deleted_at: null,
-              issue_status: 'peeling',
-              updatedAt: { $gte: start, $lte: end },
+              output_type: { $in: ['face', 'core'] },
             },
           },
-          { $group: { _id: null, total: { $sum: '$crosscut_cmt' } } },
+          {
+            $lookup: {
+              from: 'peeling_done_other_details',
+              localField: 'peeling_done_other_details_id',
+              foreignField: '_id',
+              as: 'peeling_details',
+            },
+          },
+          { $unwind: '$peeling_details' },
+          { $match: { 'peeling_details.peeling_date': { $gte: start, $lte: end } } },
+          {
+            $group: {
+              _id: '$peeling_done_other_details_id',
+              total_cmt: { $first: '$peeling_details.total_cmt' },
+            },
+          },
+          { $group: { _id: null, total: { $sum: '$total_cmt' } } },
         ]);
         const peelReceived = peelAgg[0]?.total ?? 0;
 
@@ -191,7 +263,7 @@ export const LogWiseCrosscutReportExcel = catchAsync(async (req, res, next) => {
           cc_issued: ccIssued,
           cc_closing: ccClosing,
           physical_length: issue.physical_length,
-          cc_length: ccLengthInPeriod,
+          cc_length: ccLength,
           flitch_received: flitchReceived,
           sq_received: 0,
           un_received: 0,
@@ -200,13 +272,33 @@ export const LogWiseCrosscutReportExcel = catchAsync(async (req, res, next) => {
       })
     );
 
-    logDataWithMetrics.sort((a, b) => {
+    // Filter to logs with activity in the period (consistent with Log Wise Flitch)
+    const activeLogsData = logDataWithMetrics.filter(
+      (log) =>
+        log.op_bal > 0 ||
+        log.cc_length > 0 ||
+        log.cc_received > 0 ||
+        log.cc_issued > 0 ||
+        log.cc_closing > 0 ||
+        log.flitch_received > 0 ||
+        log.peel_received > 0
+    );
+
+    if (activeLogsData.length === 0) {
+      return res
+        .status(404)
+        .json(
+          new ApiResponse(404, 'No crosscut data found for the selected criteria')
+        );
+    }
+
+    activeLogsData.sort((a, b) => {
       const c = a.item_name.localeCompare(b.item_name);
       return c !== 0 ? c : a.log_no.localeCompare(b.log_no);
     });
 
     const excelLink = await createLogWiseCrosscutReportExcel(
-      logDataWithMetrics,
+      activeLogsData,
       startDate,
       endDate,
       filter

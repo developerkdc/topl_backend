@@ -38,22 +38,24 @@ Implement the **Log Wise Crosscut** report that:
 - **issuedForCutting.schema.js** (`topl_backend/database/schema/factory/crossCutting/issuedForCutting.schema.js`)
   - `issues_for_crosscutting`: `log_no`, `item_name`, `invoice_cmt`, `indian_cmt`, `physical_length`, `physical_cmt`, `createdAt`.
 - **crosscutting.schema.js** (`topl_backend/database/schema/factory/crossCutting/crosscutting.schema.js`)
-  - `crosscutting_done`: `log_no`, `item_name`, `length`, `crosscut_cmt`, `issue_status` (flitching, peeling), `worker_details.crosscut_date`, `createdAt`, `updatedAt`, `deleted_at`.
+  - `crosscutting_done`: `log_no`, `item_name`, `length`, `crosscut_cmt`, `issue_status` (order, challan, flitching, peeling), `worker_details.crosscut_date`, `createdAt`, `updatedAt`, `deleted_at`.
 
 **Column mapping (with current schema):**
 
-| Column | Source / note |
-|--------|----------------|
-| Item Name, Log No | From distinct (log_no, item_name). |
-| Invoice CMT, Indian CMT, Physical CMT, Physical Length | From `issues_for_crosscutting`: one representative row per log (e.g. `$first` after sort by `createdAt`). |
-| Op Bal | Crosscut stock at period start: sum of `crosscut_cmt` from `crosscutting_done` where log+item match, `issue_status` null, `worker_details.crosscut_date` < start. |
-| CC Received | Sum `crosscut_cmt` from `crosscutting_done` for that log where `worker_details.crosscut_date` in [start, end]. |
-| CC Issued | Sum `physical_cmt` from `issues_for_crosscutting` for that log where `createdAt` in [start, end]. |
-| CC Closing | Op Bal + CC Received − CC Issued (capped at 0). |
-| CC Length | Sum of `length` from `crosscutting_done` for that log in period (same date filter as CC Received). |
-| Flitch Received | Sum `crosscut_cmt` from `crosscutting_done` for that log where `issue_status === 'flitching'` and `updatedAt` in [start, end]. |
-| SQ Received, UN Received | No schema source; use **0**. |
-| Peel Received | Sum `crosscut_cmt` from `crosscutting_done` for that log where `issue_status === 'peeling'` and `updatedAt` in [start, end]. |
+
+| Column                                                 | Source / note                                                                                                                                                     |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Item Name, Log No                                      | From distinct (log_no, item_name).                                                                                                                                |
+| Invoice CMT, Indian CMT, Physical CMT, Physical Length | From `issues_for_crosscutting`: one representative row per log (e.g. `$first` after sort by `createdAt`).                                                         |
+| Op Bal                                                 | Crosscut stock at period start: sum of `crosscut_cmt` from `crosscutting_done` where log+item match, `issue_status` null, `worker_details.crosscut_date` < start. |
+| CC Received                                            | Sum `crosscut_cmt` from `crosscutting_done` for that log where `worker_details.crosscut_date` in [start, end].                                                    |
+| CC Issued                                              | Sum `crosscut_cmt` from `crosscutting_done` for that log where `issue_status` in `['order','challan','flitching','peeling']` and `updatedAt` in [start, end]. Issued further = sales, challan, flitching, peeling. |
+| CC Closing                                             | Op Bal + CC Received − CC Issued (capped at 0).                                                                                                                   |
+| CC Length                                              | Sum of `length` for opening crosscut stock (same filter as Op Bal) **+** sum of `length` in period (same filter as CC Received).                                   |
+| Flitch Received                                        | Sum `crosscut_cmt` from `crosscutting_done` for that log where `issue_status === 'flitching'` and `updatedAt` in [start, end].                                    |
+| SQ Received, UN Received                               | No schema source; use **0**.                                                                                                                                      |
+| Peel Received                                          | Sum `crosscut_cmt` from `crosscutting_done` for that log where `issue_status === 'peeling'` and `updatedAt` in [start, end].                                      |
+
 
 ## File and route layout
 
@@ -71,7 +73,7 @@ Request body: `{ startDate, endDate, filter?: { item_name? } }`.
 - Validate `startDate`/`endDate`, parse dates, apply optional `filter.item_name`.
 - Get distinct `(log_no, item_name)` from `issues_for_crosscutting` and `crosscutting_done` (merge and dedupe).
 - One aggregation on `issues_for_crosscutting`: `$group` by log_no+item_name with `$first` for invoice_cmt, indian_cmt, physical_cmt, physical_length (after `$sort` by createdAt).
-- For each log: Op Bal (crosscutting_done, issue_status null, crosscut_date < start), CC Received (crosscut_date in period), CC Issued (issues_for_crosscutting createdAt in period), CC Closing (formula), CC Length (sum length in period), Flitch/Peel Received (issue_status + updatedAt in period). SQ/UN = 0.
+- For each log: Op Bal (CMT; same match also gives opening length sum), CC Received (crosscut_date in period), CC Issued, CC Closing, **CC Length** (opening length + in-period length), Flitch/Peel Received. SQ/UN = 0.
 - Sort rows by item_name then log_no; call Excel generator with (rows, startDate, endDate, filter); return download link.
 
 ### 2. Excel config – config/downloadExcel/reports2/Crosscut/logWiseCrosscut.js
@@ -95,3 +97,4 @@ Request body: `{ startDate, endDate, filter?: { item_name? } }`.
 
 - **SQ Received, UN Received:** No source in crosscut schema; columns shown with 0. Can be wired later if a source is added.
 - **Totals:** One "Totals" row after each Item Name group (subtotal); one "Total" row at the end (grand total), matching the reference image.
+

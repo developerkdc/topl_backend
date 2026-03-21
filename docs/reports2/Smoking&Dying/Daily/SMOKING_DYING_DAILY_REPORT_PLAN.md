@@ -101,5 +101,5 @@ sequenceDiagram
 - **Item Name / LogX:** Map to `item_name` and `log_no_code` from `process_done_items_details`; merge vertically per log group.
 - **Process color:** Map to `color_name` from `process_done_items_details`.
 - **Subtotal rows:** Label "TOTAL" only (no item name); sum Leaves and Sq Mtr per item group.
-- **Summary section:** Group by item_name; RECEIVED MTR. left blank; PROCESS NAME from first occurrence; LEAVE and PRODUCTION SQ. MTR = sum of no_of_leaves and sqm.
+- **Summary section:** Group by item_name; RECEIVED MTR. = PRODUCTION SQ. MTR (same value); PROCESS NAME from first occurrence; LEAVE and PRODUCTION SQ. MTR = sum of no_of_leaves and sqm.
 - **Merged cells:** Detect log-group boundaries (same process_done_id + same log_no_code) and merge columns 1 (Item Name) and 2 (LogX).

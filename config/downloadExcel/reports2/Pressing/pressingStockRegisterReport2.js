@@ -17,7 +17,7 @@ const formatDate = (dateStr) => {
 
 const headerStyle = {
   font: { bold: true },
-  alignment: { horizontal: 'center', vertical: 'middle' },
+  alignment: { horizontal: 'center', vertical: 'middle', wrapText: true },
   fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD3D3D3' } },
   border: {
     top: { style: 'thin' },
@@ -34,11 +34,6 @@ const totalRowStyle = {
 
 /**
  * Generate Pressing Stock Register Report 2 (Group No Wise) Excel
- * Title: Pressing Item Stock Register between group no wise DD/MM/YYYY and DD/MM/YYYY
- * Columns (11): Item Name, Group no, Photo No, Order No, Thickness, Size,
- *               Opening SqMtr, Issued for pressing SqMtr, Pressing received Sqmtr,
- *               Pressing Waste SqMtr, Closing SqMtr
- * Grouping: Item Name; subtotal per Item Name; grand total row.
  *
  * @param {Array}  aggregatedData - Stock rows
  * @param {string} startDate      - YYYY-MM-DD
@@ -61,24 +56,26 @@ export const GeneratePressingStockRegisterReport2Excel = async (
 
     const formattedStart = formatDate(startDate);
     const formattedEnd = formatDate(endDate);
-    const title = `Pressing Item Stock Register between group no wise ${formattedStart} and ${formattedEnd}`;
-
-    const NUM_COLS = 11;
-    const NUMERIC_START_COL = 7; // Opening SqMtr onwards
+    const title = `Pressing Item Stock Register group wise between ${formattedStart} and ${formattedEnd}`;
 
     const headers = [
       'Item Name',
       'Group no',
       'Photo No',
       'Order No',
-      'Thickness',
+      'Issued Thickness',
+      'Received Thickness',
       'Size',
       'Opening SqMtr',
       'Issued for pressing SqMtr',
       'Pressing received Sqmtr',
       'Pressing Waste SqMtr',
+      // 'Sales',
+      // 'All Damage',
       'Closing SqMtr',
     ];
+    const NUM_COLS = headers.length;
+    const NUMERIC_START_COL = 8;
 
     let currentRow = 1;
 
@@ -98,9 +95,9 @@ export const GeneratePressingStockRegisterReport2Excel = async (
       cell.value = h;
       Object.assign(cell, headerStyle);
     });
+    worksheet.getRow(currentRow).height = 25;
     currentRow++;
 
-    // Sort by item_name → group_no
     const sortedData = [...aggregatedData].sort((a, b) => {
       const cmp = (a.item_name || '').localeCompare(b.item_name || '');
       if (cmp !== 0) return cmp;
@@ -112,6 +109,8 @@ export const GeneratePressingStockRegisterReport2Excel = async (
       issued_for_pressing: 0,
       pressing_received: 0,
       pressing_waste: 0,
+      sales: 0,
+      all_damage: 0,
       closing_sqm: 0,
     };
 
@@ -120,118 +119,108 @@ export const GeneratePressingStockRegisterReport2Excel = async (
     let itemStartRow = null;
     const itemMergeRanges = [];
 
-    const writeItemTotal = (name, totals, endRowNum) => {
-      const tr = worksheet.getRow(endRowNum);
-      tr.getCell(1).value = name;
-      tr.getCell(2).value = 'Total';
-      for (let c = 3; c <= 6; c++) tr.getCell(c).value = '';
-      tr.getCell(7).value = totals.opening_sqm;
-      tr.getCell(8).value = totals.issued_for_pressing;
-      tr.getCell(9).value = totals.pressing_received;
-      tr.getCell(10).value = totals.pressing_waste;
-      tr.getCell(11).value = totals.closing_sqm;
+    const writeItemTotal = (name, totals, rowNum) => {
+      const tr = worksheet.getRow(rowNum);
+      tr.getCell(1).value = 'Total';
+      tr.getCell(2).value = '';
+      for (let c = 3; c <= 7; c++) tr.getCell(c).value = '';
+      tr.getCell(8).value = totals.opening_sqm;
+      tr.getCell(9).value = totals.issued_for_pressing;
+      tr.getCell(10).value = totals.pressing_received;
+      tr.getCell(11).value = totals.pressing_waste;
+      tr.getCell(12).value = totals.closing_sqm;
       for (let c = NUMERIC_START_COL; c <= NUM_COLS; c++) tr.getCell(c).numFmt = '0.00';
       tr.eachCell((cell) => Object.assign(cell, totalRowStyle));
     };
 
-    for (let i = 0; i < sortedData.length; i++) {
-      const row = sortedData[i];
+    for (const row of sortedData) {
       const itemName = row.item_name ?? '';
 
       if (prevItemName !== null && prevItemName !== itemName) {
         writeItemTotal(prevItemName, itemTotals, currentRow);
-        itemMergeRanges.push({ start: itemStartRow, end: currentRow });
+        itemMergeRanges.push({ start: itemStartRow, end: currentRow - 1 });
         currentRow++;
         itemTotals = null;
-        itemStartRow = null;
       }
 
-      if (prevItemName !== itemName) {
+      if (itemTotals === null) {
         itemStartRow = currentRow;
         itemTotals = {
           opening_sqm: 0,
           issued_for_pressing: 0,
           pressing_received: 0,
           pressing_waste: 0,
+          sales: 0,
+          all_damage: 0,
           closing_sqm: 0,
         };
       }
-
-      const ob = Number(row.opening_sqm) || 0;
-      const issued = Number(row.issued_for_pressing) || 0;
-      const received = Number(row.pressing_received) || 0;
-      const waste = Number(row.pressing_waste) || 0;
-      const closing = Number(row.closing_sqm) || 0;
 
       const r = worksheet.getRow(currentRow);
       r.getCell(1).value = itemName;
       r.getCell(2).value = row.group_no ?? '';
       r.getCell(3).value = row.photo_no ?? '';
       r.getCell(4).value = row.order_no ?? '';
-      r.getCell(5).value = row.thickness ?? 0;
-      r.getCell(6).value = row.size ?? '';
-      r.getCell(7).value = ob;
-      r.getCell(8).value = issued;
-      r.getCell(9).value = received;
-      r.getCell(10).value = waste;
-      r.getCell(11).value = closing;
+      r.getCell(5).value = row.issued_thickness ?? 0;
+      r.getCell(6).value = row.received_thickness ?? 0;
+      r.getCell(7).value = row.size ?? '';
+      r.getCell(8).value = row.opening_sqm;
+      r.getCell(9).value = row.issued_for_pressing;
+      r.getCell(10).value = row.pressing_received;
+      r.getCell(11).value = row.pressing_waste;
+      r.getCell(12).value = row.closing_sqm;
+
       r.getCell(5).numFmt = '0.00';
+      r.getCell(6).numFmt = '0.00';
       for (let c = NUMERIC_START_COL; c <= NUM_COLS; c++) r.getCell(c).numFmt = '0.00';
 
-      itemTotals.opening_sqm += ob;
-      itemTotals.issued_for_pressing += issued;
-      itemTotals.pressing_received += received;
-      itemTotals.pressing_waste += waste;
-      itemTotals.closing_sqm += closing;
+      itemTotals.opening_sqm += row.opening_sqm;
+      itemTotals.issued_for_pressing += row.issued_for_pressing;
+      itemTotals.pressing_received += row.pressing_received;
+      itemTotals.pressing_waste += row.pressing_waste;
+      itemTotals.sales += row.sales;
+      itemTotals.all_damage += row.all_damage;
+      itemTotals.closing_sqm += row.closing_sqm;
 
-      grandTotals.opening_sqm += ob;
-      grandTotals.issued_for_pressing += issued;
-      grandTotals.pressing_received += received;
-      grandTotals.pressing_waste += waste;
-      grandTotals.closing_sqm += closing;
+      grandTotals.opening_sqm += row.opening_sqm;
+      grandTotals.issued_for_pressing += row.issued_for_pressing;
+      grandTotals.pressing_received += row.pressing_received;
+      grandTotals.pressing_waste += row.pressing_waste;
+      grandTotals.sales += row.sales;
+      grandTotals.all_damage += row.all_damage;
+      grandTotals.closing_sqm += row.closing_sqm;
 
       prevItemName = itemName;
       currentRow++;
     }
 
-    // Last item subtotal
-    if (itemTotals !== null && itemStartRow !== null) {
+    if (itemTotals !== null) {
       writeItemTotal(prevItemName, itemTotals, currentRow);
-      itemMergeRanges.push({ start: itemStartRow, end: currentRow });
+      itemMergeRanges.push({ start: itemStartRow, end: currentRow - 1 });
       currentRow++;
     }
 
-    // Merge Item Name column
     itemMergeRanges.forEach(({ start, end }) => {
       if (end > start) worksheet.mergeCells(start, 1, end, 1);
     });
 
     // Grand total row
-    const totalRow = worksheet.getRow(currentRow);
-    totalRow.getCell(1).value = 'Total';
-    for (let c = 2; c <= 6; c++) totalRow.getCell(c).value = '';
-    totalRow.getCell(7).value = grandTotals.opening_sqm;
-    totalRow.getCell(8).value = grandTotals.issued_for_pressing;
-    totalRow.getCell(9).value = grandTotals.pressing_received;
-    totalRow.getCell(10).value = grandTotals.pressing_waste;
-    totalRow.getCell(11).value = grandTotals.closing_sqm;
-    totalRow.eachCell((cell) => {
+    const gr = worksheet.getRow(currentRow);
+    gr.getCell(1).value = 'Total';
+    for (let c = 2; c <= 7; c++) gr.getCell(c).value = '';
+    gr.getCell(8).value = grandTotals.opening_sqm;
+    gr.getCell(9).value = grandTotals.issued_for_pressing;
+    gr.getCell(10).value = grandTotals.pressing_received;
+    gr.getCell(11).value = grandTotals.pressing_waste;
+    gr.getCell(12).value = grandTotals.closing_sqm;
+    gr.eachCell((cell) => {
       Object.assign(cell, totalRowStyle);
       if (cell.col >= NUMERIC_START_COL) cell.numFmt = '0.00';
     });
 
     worksheet.columns = [
-      { width: 24 },
-      { width: 16 },
-      { width: 13 },
-      { width: 16 },
-      { width: 12 },
-      { width: 16 },
-      { width: 15 },
-      { width: 24 },
-      { width: 22 },
-      { width: 20 },
-      { width: 15 },
+      { width: 20 }, { width: 14 }, { width: 12 }, { width: 14 }, { width: 14 }, { width: 14 },
+      { width: 16 }, { width: 15 }, { width: 22 }, { width: 20 }, { width: 18 }, { width: 15 }
     ];
 
     const timeStamp = new Date().getTime();

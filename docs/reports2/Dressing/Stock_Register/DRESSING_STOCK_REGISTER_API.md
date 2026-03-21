@@ -141,36 +141,36 @@ All of the following are **sums of `sqm`** (or 0 if no rows), scoped to that pai
 
 | Quantity | Collection(s) | Filter | Meaning |
 |----------|---------------|--------|---------|
-| **Current available** | dressing_done_items | `issue_status` is `null` or not present | Stock still “on hand” (not yet issued). |
 | **Receipt** | dressing_done_items + dressing_done_other_details | Join by `dressing_done_other_details_id` → `_id`; then `dressing_date` ∈ [start, end] | Dressing production **received** in the report period (by session date). |
 | **Issue for order** | dressing_done_items | `issue_status === 'order'` and `updatedAt` ∈ [start, end] | SQM issued for order in the period. |
 | **Issue for grouping** | dressing_done_items | `issue_status === 'grouping'` and `updatedAt` ∈ [start, end] | SQM issued for grouping in the period. |
 | **Issue for dyeing** | dressing_done_items | `issue_status === 'smoking_dying'` and `updatedAt` ∈ [start, end] | SQM issued for smoking/dyeing in the period. |
 | **Mixmatch** | dressing_miss_match_data | `dressing_date` ∈ [start, end] | Mismatch SQM in the period (separate collection). |
 
+- **Opening balance** = **closing balance at end of the day before** the date range. Computed per (item_sub_category_name, item_name): receipt and issue before start are aggregated **by day**; then for each day in order, closing = max(0, previous closing + receipt that day − issue that day); opening is that closing after the last day (startDate − 1).
 - **Issue Sq Mtr** (report column) = Issue for order + Issue for grouping.  
+- **Clipping** (report column) = Issue for grouping.  
 - **Dyeing** (report column) = Issue for dyeing.  
-- **Issued in period** (internal) = Issue Sq Mtr + Dyeing (used only in opening balance formula).
 
-Placeholder columns (no source yet): **Purchase**, **Clipping**, **Edgebanding**, **Lipping**, **Redressing**, **Sale** → all **0**.
+Placeholder columns (no source yet): **Purchase**, **Edgebanding**, **Lipping**, **Redressing**, **Sale** → all **0**.
 
 ### 5. Formulas (calculations)
 
 For each (item_sub_category_name, item_name):
 
 ```
-Opening Balance = max(0,  Current available  +  Issued in period  −  Receipt  )
+Opening Balance = closing balance at end of (startDate − 1), computed day-by-day with cap each day
+                  (for each day up to day before start: closing = max(0, prev_closing + receipt_day − issue_day))
 
 Closing Balance = max(0,  Opening Balance  +  Purchase  +  Receipt  −  Total issues  )
 
 where:
-  Issued in period = Issue Sq Mtr + Dyeing   (from dressing_done_items only)
-  Total issues     = Issue Sq Mtr + Clipping + Dyeing + Mixmatch + Edgebanding + Lipping + Redressing + Sale
+  Total issues = Issue Sq Mtr + Clipping + Dyeing + Mixmatch + Edgebanding + Lipping + Redressing + Sale
 ```
 
 So:
 
-- **Opening** = what would have been “current” at start of period if we reverse the period’s receipts and add back the period’s issues (same idea as item-wise flitch).  
+- **Opening** = closing balance at end of the day before the date range (day-by-day receipt − issue with max(0, …) applied each day).  
 - **Closing** = opening + inflows (purchase + receipt) − all outflows (issue columns + sale).  
 - Both are floored at 0.
 
@@ -207,11 +207,11 @@ Example: `Dressing Stock Register - 01/03/2025-31/03/2025`
 |--------|-------------|
 | Item Group Name | Item sub-category name |
 | Item Name | Item name |
-| Opening Balance | Stock at start of period (SQM) |
+| Opening Balance | Closing balance at end of day before date range (SQM) |
 | Purchase | Purchase in period (currently 0) |
 | Receipt | Dressing production receipt in period (SQM) |
 | Issue Sq Mtr | Issued for order + grouping in period (SQM) |
-| Clipping | Clipping in period (currently 0) |
+| Clipping | Issue to Grouping in period (SQM) |
 | Dyeing | Issued for smoking/dyeing in period (SQM) |
 | Mixmatch | Dressing mismatch in period (SQM) from `dressing_miss_match_data` |
 | Edgebanding | Edgebanding in period (currently 0) |

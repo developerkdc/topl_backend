@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Grouping Stock Register Thickness Wise API generates an Excel stock register grouped by **thickness** for a given date range. Each row represents one unique **(Item Group Name, Sales Item Name, Thickness)** combination and shows Opening Balance, Grouping Done, Issue for tapping, Issue for Challan, Issue Sales, Damage, and Closing Balance — all in **sheets (no_of_sheets)**. A yellow-highlighted **Total** row appears at the bottom.
+The Grouping Stock Register Thickness Wise API generates an Excel stock register grouped by **thickness** for a given date range. Each row represents one unique **(Item Group Name, Sales Item Name, Thickness)** combination and shows Opening Balance, Grouping Done, Issue for tapping, Issue for Challan, Issue Sales, Damage, and Closing Balance — each quantity in **two columns: (Sheets)** and **(SQM)** (pair layout). A **Total** row appears at the bottom.
 
 This differs from the date-wise stock register by removing the Grouping Date and Log X columns and aggregating across all dates and logs for each item+thickness combination.
 
@@ -98,20 +98,11 @@ Grouping Item Stock Register Thickness Wise between DD/MM/YYYY and DD/MM/YYYY
 
 Example: `Grouping Item Stock Register Thickness Wise between 01/07/2025 and 12/02/2026`
 
-### Header Row (10 columns, gray fill, bold)
+### Two-level Header (17 columns, gray fill, bold)
 
-| # | Column             | Description                                                           |
-|---|--------------------|-----------------------------------------------------------------------|
-| 1 | Item Group Name    | Item sub-category name (`item_sub_category_name`)                     |
-| 2 | Sales Item Name    | Item name (`item_name`)                                               |
-| 3 | Thickness          | Thickness (`thickness`), 0.00 format                                  |
-| 4 | Opening Balance    | Sheets at start of period (computed), 0.00 format; may be negative    |
-| 5 | Grouping Done      | Sheets produced in the period (`no_of_sheets`), 0.00 format           |
-| 6 | Issue for tapping  | Sheets issued for tapping (`grouping_done_history`, status=tapping)   |
-| 7 | Issue for Challan  | Sheets issued for challan (`grouping_done_history`, status=challan)   |
-| 8 | Issue Sales        | Sheets issued for orders (`grouping_done_history`, status=order)      |
-| 9 | Damage             | Damaged sheets (`is_damaged=true` items), 0.00 format                 |
-|10 | Closing Balance    | Computed closing stock, 0.00 format; may be negative                  |
+**Row 1 (super-header):** Cols 1–3 = Item Group Name, Sales Item Name, Thickness. Cols 4–17 = seven quantity names, each **merged over 2 columns** (Sheets + SQM): Opening Balance, Grouping Done, Issue for tapping, Issue for Challan, Issue Sales, Damage, Closing Balance.
+
+**Row 2 (sub-header):** Cols 1–3 = blank. Cols 4–17 = "Sheets" and "SQM" repeated under each quantity.
 
 ### Data Rows
 
@@ -121,27 +112,31 @@ Example: `Grouping Item Stock Register Thickness Wise between 01/07/2025 and 12/
 
 ### Total Row
 
-- Last row; **yellow fill** (`FFFFD700`), bold.
-- Sums all numeric columns (Opening Balance through Closing Balance).
+- Last row; **gray fill**, bold.
+- Sums all numeric columns (cols 4–17: Opening Balance through Closing Balance, both Sheets and SQM).
 - Cols 2–3 (Sales Item Name, Thickness) are blank.
 
 ---
 
 ## Balance Formulas
 
+**Sheets:**
 ```
-issued_in_period = Issue for tapping + Issue for Challan + Issue Sales
-
-Opening Balance  = current_available + issued_in_period − Grouping Done
-                   (may be negative)
-
-Closing Balance  = Opening Balance + Grouping Done
-                   − Issue for tapping − Issue for Challan − Issue Sales
-                   − Damage
-                   (may be negative)
+issued_in_period = Issue for tapping (Sheets) + Issue for Challan (Sheets) + Issue Sales (Sheets)
+Opening Balance (Sheets)  = current_available_sheets + issued_in_period − Grouping Done (Sheets)
+Closing Balance (Sheets)  = Opening Balance (Sheets) + Grouping Done (Sheets)
+                           − Issue for tapping − Issue for Challan − Issue Sales (Sheets) − Damage (Sheets)
 ```
 
-Where `current_available` = sum of `available_details.no_of_sheets` for items in the group.
+**SQM:** Same logic using SQM sources:
+```
+issued_in_period_sqm = Issue for tapping (SQM) + Issue for Challan (SQM) + Issue Sales (SQM)
+Opening Balance (SQM)  = current_available_sqm + issued_in_period_sqm − Grouping Done (SQM)
+Closing Balance (SQM)  = Opening Balance (SQM) + Grouping Done (SQM)
+                         − Issue for tapping − Issue for Challan − Issue Sales (SQM) − Damage (SQM)
+```
+
+Where `current_available_sheets` = sum of `available_details.no_of_sheets`, and `current_available_sqm` = sum of `available_details.sqm`, for items in the group. Balances may be negative.
 
 ---
 
@@ -150,28 +145,35 @@ Where `current_available` = sum of `available_details.no_of_sheets` for items in
 | Aspect           | Date-wise Register                                              | Thickness-wise Register                     |
 |------------------|-----------------------------------------------------------------|---------------------------------------------|
 | Endpoint         | `/download-excel-grouping-stock-register`                       | `/download-excel-grouping-stock-register-thickness-wise` |
-| Columns          | 12 (includes Grouping Date, Log X)                              | 10 (no Grouping Date, no Log X)             |
+| Columns          | 19 (includes Grouping Date, Log X; each quantity in Sheets + SQM) | 17 (no Grouping Date, no Log X; each quantity in Sheets + SQM) |
 | Row key          | (item_sub_category_name, item_name, grouping_done_date, log_no_code, thickness) | (item_sub_category_name, item_name, thickness) |
 | Granularity      | Per item per date per log                                       | Per item per thickness (aggregated)         |
 | Data sources     | Same                                                            | Same                                        |
-| Balance formula  | Same                                                            | Same                                        |
+| Balance formula  | Same (Sheets + SQM)                                             | Same (Sheets + SQM)                         |
 
 ---
 
 ## Field Mapping (Report Column → Source)
 
-| # | Report Column      | Source Field                                   | Collection                    | Notes |
-|---|--------------------|------------------------------------------------|-------------------------------|-------|
-| 1 | Item Group Name    | `item_sub_category_name`                       | grouping_done_items_details   | Row key |
-| 2 | Sales Item Name    | `item_name`                                    | grouping_done_items_details   | Row key |
-| 3 | Thickness          | `thickness`                                    | grouping_done_items_details   | Row key; 0.00 |
-| 4 | Opening Balance    | Computed                                       | —                             | See formula |
-| 5 | Grouping Done      | `no_of_sheets`                                 | grouping_done_items_details   | Sum for group |
-| 6 | Issue for tapping  | `no_of_sheets` where `issue_status='tapping'`  | grouping_done_history         | Matched by `grouping_done_item_id` |
-| 7 | Issue for Challan  | `no_of_sheets` where `issue_status='challan'`  | grouping_done_history         | Matched by `grouping_done_item_id` |
-| 8 | Issue Sales        | `no_of_sheets` where `issue_status='order'`    | grouping_done_history         | Matched by `grouping_done_item_id` |
-| 9 | Damage             | `no_of_sheets` where `is_damaged=true`         | grouping_done_items_details   | Sum for group |
-|10 | Closing Balance    | Computed                                       | —                             | See formula |
+| # | Report Column                  | Source Field                                   | Collection                    | Notes |
+|---|--------------------------------|------------------------------------------------|-------------------------------|-------|
+| 1 | Item Group Name                | `item_sub_category_name`                       | grouping_done_items_details   | Row key |
+| 2 | Sales Item Name                | `item_name`                                    | grouping_done_items_details   | Row key |
+| 3 | Thickness                      | `thickness`                                    | grouping_done_items_details   | Row key; 0.00 |
+| 4 | Opening Balance (Sheets)       | Computed                                       | —                             | See formula |
+| 5 | Opening Balance (SQM)          | Computed                                       | —                             | See formula |
+| 6 | Grouping Done (Sheets)         | `no_of_sheets`                                 | grouping_done_items_details   | Sum for group |
+| 7 | Grouping Done (SQM)            | `sqm`                                          | grouping_done_items_details   | Sum for group |
+| 8 | Issue for tapping (Sheets)     | `no_of_sheets` where `issue_status='tapping'` OR `issued_for` in `['STOCK','SAMPLE']` OR (`issue_status='order'` AND `order_category!='RAW'`) | grouping_done_history |
+| 9 | Issue for tapping (SQM)        | Same as above (sqm) | grouping_done_history |
+|10 | Issue for Challan (Sheets)     | `no_of_sheets` where `issue_status='challan'`  | grouping_done_history         | Matched by `grouping_done_item_id` |
+|11 | Issue for Challan (SQM)        | `sqm` where `issue_status='challan'`          | grouping_done_history         | Matched by `grouping_done_item_id` |
+|12 | Issue Sales (Sheets)           | `no_of_sheets` where `issue_status='order'` AND `order_category='RAW'` | grouping_done_history |
+|13 | Issue Sales (SQM)              | `sqm` where `issue_status='order'` AND `order_category='RAW'` | grouping_done_history |
+|14 | Damage (Sheets)                | `no_of_sheets` where `is_damaged=true`         | grouping_done_items_details   | Sum for group |
+|15 | Damage (SQM)                   | `sqm` where `is_damaged=true`                 | grouping_done_items_details   | Sum for group |
+|16 | Closing Balance (Sheets)       | Computed                                       | —                             | See formula |
+|17 | Closing Balance (SQM)          | Computed                                       | —                             | See formula |
 
 ---
 
@@ -179,11 +181,11 @@ Where `current_available` = sum of `available_details.no_of_sheets` for items in
 
 ### Collections Used
 
-| Collection                   | Role                                                                 |
-|------------------------------|----------------------------------------------------------------------|
-| `grouping_done_details`      | Session header; provides `grouping_done_date` for date filtering     |
-| `grouping_done_items_details`| Items: identity (name, thickness), sheets, available, damage         |
-| `grouping_done_history`      | Issue records by `issue_status` (tapping / challan / order)          |
+| Collection                   | Role                                                                              |
+|------------------------------|-----------------------------------------------------------------------------------|
+| `grouping_done_details`      | Session header; provides `grouping_done_date` for date filtering                  |
+| `grouping_done_items_details`| Items: identity (name, thickness), sheets/sqm, available (no_of_sheets, sqm), damage |
+| `grouping_done_history`      | Issue records by `issue_status` (tapping / challan / order); no_of_sheets, sqm    |
 
 ### Join Diagram
 

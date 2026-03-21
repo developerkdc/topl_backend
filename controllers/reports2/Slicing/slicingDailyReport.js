@@ -91,7 +91,7 @@ export const SlicingDailyReportExcel = catchAsync(
           rej_height: '$wastage.height',
           rej_width: '$wastage.width',
           rej_cmt: '$wastage.cmt',
-          remarks: { $ifNull: ['$wastage.remark', 'COMPLETE'] },
+          remarks: { $ifNull: ['$items.remark', ''] },
         },
       },
     ];

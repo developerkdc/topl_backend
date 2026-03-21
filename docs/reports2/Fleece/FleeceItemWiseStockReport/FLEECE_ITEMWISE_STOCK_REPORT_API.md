@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Fleece Item-Wise Stock Report API (reports2) generates a dynamic inventory report with opening stock, receives, consumption, sales, issue for pressing, and closing stock for a given date range. Data is grouped by **item name**, then **Fleece Paper sub-type**, **thickness**, and **size**. Same columns as the standard Fleece Stock Report with **Item Name** as the first column. Values are in **rolls** and **square meters**.
+The Fleece Item-Wise Stock Report API (reports2) generates a dynamic inventory report with opening stock, receives, consumption (total of challan, order, pressing), order, issue for pressing, and closing stock for a given date range. Challan is included in Consume but not displayed. Data is grouped by **item name**, then **Fleece Paper sub-type**, **thickness**, and **size**. Same columns as the standard Fleece Stock Report with **Item Name** as the first column. Values are in **rolls** and **square meters**.
 
 ## Endpoint
 
@@ -80,13 +80,13 @@ Same as Fleece Stock Report (400, 404, 500).
 - **Sheet name:** Fleece Stock Report Item Wise  
 - **File path:** `public/upload/reports/reports2/Fleece/Fleece-Paper-Stock-Report-ItemWise-{timestamp}.xlsx`
 
-**Columns:** Item Name, Fleece Paper Sub Category, Thickness, Size, Opening Rolls, Opening Metres, Received Rolls, Received Mtrs, Consumed Rolls, Consumed Mtrs, Sales Rolls, Sales Mtrs, Issue For Pressing, Issue For Pressing Sq Met, Closing sheets, Closing Metres.
+**Columns:** Item Name, Fleece Paper Sub Category, Thickness, Size, Opening Rolls, Opening Metres, Received Rolls, Received Mtrs, Consumed Rolls, Consumed Mtrs, Order Rolls, Order Mtrs, Issue For Pressing, Issue For Pressing Sq Met, Closing Rolls, Closing Metres. Challan is included in Consume but not displayed.
 
 - Data grouped by **Item Name → Thickness → Size**; subtotal row after each thickness; grand total at the end.
 
 ## Stock Calculation Logic
 
-Same as the Fleece Stock Report: all values in **rolls** and **square meters**. Opening = current + consume + sales - receive; Closing = opening + receive - consume - sales. Receives from invoice inward date in period; consumption from `issue_status` in `['order', 'pressing']`; sales from `issue_status = 'challan'`; issue for pressing from `issue_status = 'pressing'`. Only rows with activity are included; values are non-negative.
+Same as the Fleece Stock Report: all values in **rolls** and **square meters**. Opening = current + consume - receive; Closing = opening + receive - consume. Consumed = challan + order + pressing. Receives from invoice inward date in period (end date includes full day 23:59:59.999 UTC); challan from `issue_status = 'challan'`; order from `issue_status = 'order'`; issue for pressing from `issue_status = 'pressing'`. Only rows that had at least one movement in the period (receive, consume, challan, order, or issue for pressing) are included; if there was no such activity, the API returns 404. Values are non-negative.
 
 ## Database Collections Used
 
@@ -97,6 +97,7 @@ Same as the Fleece Stock Report: all values in **rolls** and **square meters**. 
 
 ## Notes
 
-- Report includes only rows with activity in the period.
+- Report includes only rows that had at least one movement in the period (receive, consume, challan, order, or issue for pressing). If the date range has no such activity, the report returns 404 with "No stock data found for the selected period".
+- Date range: end date includes the full day (23:59:59.999 UTC) so transactions on the end date are included.
 - Excel files are timestamped to avoid overwriting.
 - Files are stored under `public/upload/reports/reports2/Fleece/`.

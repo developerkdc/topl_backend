@@ -13,6 +13,12 @@ import {
   GeneratePlywoodStockReportByPelletExcel,
 } from '../../../config/downloadExcel/reports2/Plywood/plywoodStockReport.js';
 
+/** Round stock value; treat floating-point noise (|v| < 1e-10) as 0 */
+const roundStock = (v, decimals = 4) => {
+  const rounded = Math.round(v * 10 ** decimals) / 10 ** decimals;
+  return Math.abs(rounded) < 1e-10 ? 0 : rounded;
+};
+
 /**
  * Plywood Stock Report – Excel download.
  * Uses startDate, endDate and optional filter (item_sub_category_name).
@@ -31,6 +37,7 @@ export const plywoodStockReportCsv = catchAsync(async (req, res, next) => {
 
   const start = new Date(startDate);
   const end = new Date(endDate);
+  end.setUTCHours(23, 59, 59, 999);
 
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     return next(new ApiError('Invalid date format', 400));
@@ -106,41 +113,39 @@ export const plywoodStockReportCsv = catchAsync(async (req, res, next) => {
           },
         ]);
 
-        const consumption = await plywood_history_model.aggregate([
-          {
-            $match: {
-              plywood_item_id: { $in: itemIds },
-              issue_status: { $in: ['order', 'pressing', 'plywood_resizing'] },
-              createdAt: { $gte: start, $lte: end },
+        const [challan, order, issuePlyResizing, issuePressing] = await Promise.all([
+          plywood_history_model.aggregate([
+            {
+              $match: {
+                plywood_item_id: { $in: itemIds },
+                issue_status: 'challan',
+                createdAt: { $gte: start, $lte: end },
+              },
             },
-          },
-          {
-            $group: {
-              _id: null,
-              total_sheets: { $sum: '$issued_sheets' },
-              total_sqm: { $sum: '$issued_sqm' },
+            {
+              $group: {
+                _id: null,
+                total_sheets: { $sum: '$issued_sheets' },
+                total_sqm: { $sum: '$issued_sqm' },
+              },
             },
-          },
-        ]);
-
-        const sales = await plywood_history_model.aggregate([
-          {
-            $match: {
-              plywood_item_id: { $in: itemIds },
-              issue_status: 'challan',
-              createdAt: { $gte: start, $lte: end },
+          ]),
+          plywood_history_model.aggregate([
+            {
+              $match: {
+                plywood_item_id: { $in: itemIds },
+                issue_status: 'order',
+                createdAt: { $gte: start, $lte: end },
+              },
             },
-          },
-          {
-            $group: {
-              _id: null,
-              total_sheets: { $sum: '$issued_sheets' },
-              total_sqm: { $sum: '$issued_sqm' },
+            {
+              $group: {
+                _id: null,
+                total_sheets: { $sum: '$issued_sheets' },
+                total_sqm: { $sum: '$issued_sqm' },
+              },
             },
-          },
-        ]);
-
-        const [issuePlyResizing, issuePressing] = await Promise.all([
+          ]),
           plywood_history_model.aggregate([
             {
               $match: {
@@ -177,51 +182,57 @@ export const plywoodStockReportCsv = catchAsync(async (req, res, next) => {
 
         const receiveSheets = receives[0]?.total_sheets || 0;
         const receiveSqm = receives[0]?.total_sqm || 0;
-        const consumeSheets = consumption[0]?.total_sheets || 0;
-        const consumeSqm = consumption[0]?.total_sqm || 0;
-        const salesSheets = sales[0]?.total_sheets || 0;
-        const salesSqm = sales[0]?.total_sqm || 0;
+        const challanSheets = challan[0]?.total_sheets || 0;
+        const challanSqm = challan[0]?.total_sqm || 0;
+        const orderSheets = order[0]?.total_sheets || 0;
+        const orderSqm = order[0]?.total_sqm || 0;
         const issuePlyResizingSheets = issuePlyResizing[0]?.total_sheets || 0;
         const issuePlyResizingSqm = issuePlyResizing[0]?.total_sqm || 0;
         const issuePressingSheets = issuePressing[0]?.total_sheets || 0;
         const issuePressingSqm = issuePressing[0]?.total_sqm || 0;
+        const consumeSheets = challanSheets + orderSheets + issuePlyResizingSheets + issuePressingSheets;
+        const consumeSqm = challanSqm + orderSqm + issuePlyResizingSqm + issuePressingSqm;
         const currentSheets = item.current_sheets || 0;
         const currentSqm = item.current_sqm || 0;
 
-        const openingSheets = currentSheets + consumeSheets + salesSheets - receiveSheets;
-        const openingSqm = currentSqm + consumeSqm + salesSqm - receiveSqm;
-        const closingSheets = openingSheets + receiveSheets - consumeSheets - salesSheets;
-        const closingSqm = openingSqm + receiveSqm - consumeSqm - salesSqm;
+        const openingSheets = currentSheets + consumeSheets - receiveSheets;
+        const openingSqm = currentSqm + consumeSqm - receiveSqm;
+        const closingSheets = openingSheets + receiveSheets - consumeSheets;
+        const closingSqm = openingSqm + receiveSqm - consumeSqm;
 
         return {
           plywood_sub_type: item_sub_category_name,
           thickness,
           size: `${length} X ${width}`,
-          opening_sheets: Math.max(0, openingSheets),
-          opening_sqm: Math.max(0, openingSqm),
+          opening_sheets: Math.max(0, roundStock(openingSheets, 0)),
+          opening_sqm: Math.max(0, roundStock(openingSqm)),
           receive_sheets: receiveSheets,
           receive_sqm: receiveSqm,
           consume_sheets: consumeSheets,
           consume_sqm: consumeSqm,
-          sales_sheets: salesSheets,
-          sales_sqm: salesSqm,
+          challan_sheets: challanSheets,
+          challan_sqm: challanSqm,
+          order_sheets: orderSheets,
+          order_sqm: orderSqm,
           issue_for_ply_resizing_sheets: issuePlyResizingSheets,
           issue_for_ply_resizing_sqm: issuePlyResizingSqm,
           issue_for_pressing_sheets: issuePressingSheets,
           issue_for_pressing_sqm: issuePressingSqm,
-          closing_sheets: Math.max(0, closingSheets),
-          closing_sqm: Math.max(0, closingSqm),
+          closing_sheets: Math.max(0, roundStock(closingSheets, 0)),
+          closing_sqm: Math.max(0, roundStock(closingSqm)),
         };
       })
     );
 
+    // Only include rows that had at least one movement in the period (receive, consume, challan, order, ply resizing, or pressing).
     const activeStockData = stockData.filter(
       (item) =>
-        item.opening_sheets > 0 ||
         item.receive_sheets > 0 ||
         item.consume_sheets > 0 ||
-        item.sales_sheets > 0 ||
-        item.closing_sheets > 0
+        item.challan_sheets > 0 ||
+        item.order_sheets > 0 ||
+        item.issue_for_ply_resizing_sheets > 0 ||
+        item.issue_for_pressing_sheets > 0
     );
 
     if (activeStockData.length === 0) {
@@ -269,6 +280,7 @@ export const plywoodItemWiseStockReportCsv = catchAsync(async (req, res, next) =
 
   const start = new Date(startDate);
   const end = new Date(endDate);
+  end.setUTCHours(23, 59, 59, 999);
 
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     return next(new ApiError('Invalid date format', 400));
@@ -340,41 +352,39 @@ export const plywoodItemWiseStockReportCsv = catchAsync(async (req, res, next) =
           },
         ]);
 
-        const consumption = await plywood_history_model.aggregate([
-          {
-            $match: {
-              plywood_item_id: { $in: itemIds },
-              issue_status: { $in: ['order', 'pressing', 'plywood_resizing'] },
-              createdAt: { $gte: start, $lte: end },
+        const [challan, order, issuePlyResizing, issuePressing] = await Promise.all([
+          plywood_history_model.aggregate([
+            {
+              $match: {
+                plywood_item_id: { $in: itemIds },
+                issue_status: 'challan',
+                createdAt: { $gte: start, $lte: end },
+              },
             },
-          },
-          {
-            $group: {
-              _id: null,
-              total_sheets: { $sum: '$issued_sheets' },
-              total_sqm: { $sum: '$issued_sqm' },
+            {
+              $group: {
+                _id: null,
+                total_sheets: { $sum: '$issued_sheets' },
+                total_sqm: { $sum: '$issued_sqm' },
+              },
             },
-          },
-        ]);
-
-        const sales = await plywood_history_model.aggregate([
-          {
-            $match: {
-              plywood_item_id: { $in: itemIds },
-              issue_status: 'challan',
-              createdAt: { $gte: start, $lte: end },
+          ]),
+          plywood_history_model.aggregate([
+            {
+              $match: {
+                plywood_item_id: { $in: itemIds },
+                issue_status: 'order',
+                createdAt: { $gte: start, $lte: end },
+              },
             },
-          },
-          {
-            $group: {
-              _id: null,
-              total_sheets: { $sum: '$issued_sheets' },
-              total_sqm: { $sum: '$issued_sqm' },
+            {
+              $group: {
+                _id: null,
+                total_sheets: { $sum: '$issued_sheets' },
+                total_sqm: { $sum: '$issued_sqm' },
+              },
             },
-          },
-        ]);
-
-        const [issuePlyResizing, issuePressing] = await Promise.all([
+          ]),
           plywood_history_model.aggregate([
             {
               $match: {
@@ -411,52 +421,58 @@ export const plywoodItemWiseStockReportCsv = catchAsync(async (req, res, next) =
 
         const receiveSheets = receives[0]?.total_sheets || 0;
         const receiveSqm = receives[0]?.total_sqm || 0;
-        const consumeSheets = consumption[0]?.total_sheets || 0;
-        const consumeSqm = consumption[0]?.total_sqm || 0;
-        const salesSheets = sales[0]?.total_sheets || 0;
-        const salesSqm = sales[0]?.total_sqm || 0;
+        const challanSheets = challan[0]?.total_sheets || 0;
+        const challanSqm = challan[0]?.total_sqm || 0;
+        const orderSheets = order[0]?.total_sheets || 0;
+        const orderSqm = order[0]?.total_sqm || 0;
         const issuePlyResizingSheets = issuePlyResizing[0]?.total_sheets || 0;
         const issuePlyResizingSqm = issuePlyResizing[0]?.total_sqm || 0;
         const issuePressingSheets = issuePressing[0]?.total_sheets || 0;
         const issuePressingSqm = issuePressing[0]?.total_sqm || 0;
+        const consumeSheets = challanSheets + orderSheets + issuePlyResizingSheets + issuePressingSheets;
+        const consumeSqm = challanSqm + orderSqm + issuePlyResizingSqm + issuePressingSqm;
         const currentSheets = item.current_sheets || 0;
         const currentSqm = item.current_sqm || 0;
 
-        const openingSheets = currentSheets + consumeSheets + salesSheets - receiveSheets;
-        const openingSqm = currentSqm + consumeSqm + salesSqm - receiveSqm;
-        const closingSheets = openingSheets + receiveSheets - consumeSheets - salesSheets;
-        const closingSqm = openingSqm + receiveSqm - consumeSqm - salesSqm;
+        const openingSheets = currentSheets + consumeSheets - receiveSheets;
+        const openingSqm = currentSqm + consumeSqm - receiveSqm;
+        const closingSheets = openingSheets + receiveSheets - consumeSheets;
+        const closingSqm = openingSqm + receiveSqm - consumeSqm;
 
         return {
           item_name: item_name || '',
           plywood_sub_type: item_sub_category_name,
           thickness,
           size: `${length} X ${width}`,
-          opening_sheets: Math.max(0, openingSheets),
-          opening_sqm: Math.max(0, openingSqm),
+          opening_sheets: Math.max(0, roundStock(openingSheets, 0)),
+          opening_sqm: Math.max(0, roundStock(openingSqm)),
           receive_sheets: receiveSheets,
           receive_sqm: receiveSqm,
           consume_sheets: consumeSheets,
           consume_sqm: consumeSqm,
-          sales_sheets: salesSheets,
-          sales_sqm: salesSqm,
+          challan_sheets: challanSheets,
+          challan_sqm: challanSqm,
+          order_sheets: orderSheets,
+          order_sqm: orderSqm,
           issue_for_ply_resizing_sheets: issuePlyResizingSheets,
           issue_for_ply_resizing_sqm: issuePlyResizingSqm,
           issue_for_pressing_sheets: issuePressingSheets,
           issue_for_pressing_sqm: issuePressingSqm,
-          closing_sheets: Math.max(0, closingSheets),
-          closing_sqm: Math.max(0, closingSqm),
+          closing_sheets: Math.max(0, roundStock(closingSheets, 0)),
+          closing_sqm: Math.max(0, roundStock(closingSqm)),
         };
       })
     );
 
+    // Only include rows that had at least one movement in the period (receive, consume, challan, order, ply resizing, or pressing).
     const activeStockData = stockData.filter(
       (row) =>
-        row.opening_sheets > 0 ||
         row.receive_sheets > 0 ||
         row.consume_sheets > 0 ||
-        row.sales_sheets > 0 ||
-        row.closing_sheets > 0
+        row.challan_sheets > 0 ||
+        row.order_sheets > 0 ||
+        row.issue_for_ply_resizing_sheets > 0 ||
+        row.issue_for_pressing_sheets > 0
     );
 
     if (activeStockData.length === 0) {
@@ -507,6 +523,7 @@ export const plywoodStockReportByPelletCsv = catchAsync(async (req, res, next) =
 
   const start = new Date(startDate);
   const end = new Date(endDate);
+  end.setUTCHours(23, 59, 59, 999);
 
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     return next(new ApiError('Invalid date format', 400));
@@ -562,12 +579,12 @@ export const plywoodStockReportByPelletCsv = catchAsync(async (req, res, next) =
             ? (item.total_sq_meter || 0)
             : 0;
 
-        const [consumption, sales, issuePlyResizing, issuePressing] = await Promise.all([
+        const [challan, order, issuePlyResizing, issuePressing] = await Promise.all([
           plywood_history_model.aggregate([
             {
               $match: {
                 plywood_item_id: itemId,
-                issue_status: { $in: ['order', 'pressing', 'plywood_resizing'] },
+                issue_status: 'challan',
                 createdAt: { $gte: start, $lte: end },
               },
             },
@@ -583,7 +600,7 @@ export const plywoodStockReportByPelletCsv = catchAsync(async (req, res, next) =
             {
               $match: {
                 plywood_item_id: itemId,
-                issue_status: 'challan',
+                issue_status: 'order',
                 createdAt: { $gte: start, $lte: end },
               },
             },
@@ -629,53 +646,59 @@ export const plywoodStockReportByPelletCsv = catchAsync(async (req, res, next) =
           ]),
         ]);
 
-        const consumeSheets = consumption[0]?.total_sheets || 0;
-        const consumeSqm = consumption[0]?.total_sqm || 0;
-        const salesSheets = sales[0]?.total_sheets || 0;
-        const salesSqm = sales[0]?.total_sqm || 0;
+        const challanSheets = challan[0]?.total_sheets || 0;
+        const challanSqm = challan[0]?.total_sqm || 0;
+        const orderSheets = order[0]?.total_sheets || 0;
+        const orderSqm = order[0]?.total_sqm || 0;
         const issuePlyResizingSheets = issuePlyResizing[0]?.total_sheets || 0;
         const issuePlyResizingSqm = issuePlyResizing[0]?.total_sqm || 0;
         const issuePressingSheets = issuePressing[0]?.total_sheets || 0;
         const issuePressingSqm = issuePressing[0]?.total_sqm || 0;
+        const consumeSheets = challanSheets + orderSheets + issuePlyResizingSheets + issuePressingSheets;
+        const consumeSqm = challanSqm + orderSqm + issuePlyResizingSqm + issuePressingSqm;
         const currentSheets = item.available_sheets ?? item.sheets ?? 0;
         const currentSqm = item.available_sqm ?? item.total_sq_meter ?? 0;
 
-        const openingSheets = currentSheets + consumeSheets + salesSheets - receiveSheets;
-        const openingSqm = currentSqm + consumeSqm + salesSqm - receiveSqm;
-        const closingSheets = openingSheets + receiveSheets - consumeSheets - salesSheets;
-        const closingSqm = openingSqm + receiveSqm - consumeSqm - salesSqm;
+        const openingSheets = currentSheets + consumeSheets - receiveSheets;
+        const openingSqm = currentSqm + consumeSqm - receiveSqm;
+        const closingSheets = openingSheets + receiveSheets - consumeSheets;
+        const closingSqm = openingSqm + receiveSqm - consumeSqm;
 
         return {
           pellet_no: item.pallet_number,
           plywood_sub_type: item.item_sub_category_name,
           thickness: item.thickness,
           size: `${item.length} X ${item.width}`,
-          opening_sheets: Math.max(0, openingSheets),
-          opening_sqm: Math.max(0, openingSqm),
+          opening_sheets: Math.max(0, roundStock(openingSheets, 0)),
+          opening_sqm: Math.max(0, roundStock(openingSqm)),
           receive_sheets: receiveSheets,
           receive_sqm: receiveSqm,
           consume_sheets: consumeSheets,
           consume_sqm: consumeSqm,
-          sales_sheets: salesSheets,
-          sales_sqm: salesSqm,
+          challan_sheets: challanSheets,
+          challan_sqm: challanSqm,
+          order_sheets: orderSheets,
+          order_sqm: orderSqm,
           issue_for_ply_resizing_sheets: issuePlyResizingSheets,
           issue_for_ply_resizing_sqm: issuePlyResizingSqm,
           issue_for_pressing_sheets: issuePressingSheets,
           issue_for_pressing_sqm: issuePressingSqm,
-          closing_sheets: Math.max(0, closingSheets),
-          closing_sqm: Math.max(0, closingSqm),
+          closing_sheets: Math.max(0, roundStock(closingSheets, 0)),
+          closing_sqm: Math.max(0, roundStock(closingSqm)),
         };
       })
     );
 
+    // Only include rows that had at least one movement in the period (receive, consume, challan, order, ply resizing, or pressing).
     const activeStockData = stockData
       .filter(
         (item) =>
-          item.opening_sheets > 0 ||
           item.receive_sheets > 0 ||
           item.consume_sheets > 0 ||
-          item.sales_sheets > 0 ||
-          item.closing_sheets > 0
+          item.challan_sheets > 0 ||
+          item.order_sheets > 0 ||
+          item.issue_for_ply_resizing_sheets > 0 ||
+          item.issue_for_pressing_sheets > 0
       )
       .sort((a, b) => {
         const subCmp = (a.plywood_sub_type || '').localeCompare(b.plywood_sub_type || '');

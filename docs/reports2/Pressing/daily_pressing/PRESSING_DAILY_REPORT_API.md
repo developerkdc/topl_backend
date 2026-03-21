@@ -79,8 +79,8 @@ Pressing Details Report Date: DD/MM/YYYY
 | 7 | Sheets    | Number of sheets                              |
 | 8 | Sq Mtr    | Square meters (from DB or calculated when missing) |
 
-- Data is grouped by **Category**; each category has a **Total** row (Sheets and Sq Mtr summed).
-- After all categories, a **Grand Total** row sums total Sheets and total Sq Mtr.
+- Data is grouped by **Category**; each category has a **Total** row (Sheets and Sq Mtr summed). **The Total row is separate from item details** — it is not merged with the category rows.
+- After all categories, a **Grand Total** row sums total Sheets and total Sq Mtr. **The Grand Total row is separate from item details and category totals.**
 - **Sq Mtr** is used from DB when present and > 0; otherwise calculated as (length × width) / 10000.
 
 ### Section 2: Core - Face Consumption Sq.Mtr.
@@ -122,8 +122,8 @@ When the API returns **200 OK**:
 
 2. **The Excel file** contains:
    - **Section 1**: Title "Pressing Details Report Date: DD/MM/YYYY", then a table (8 columns: Category, Base, Item Name, Thick., Side, Size, Sheets, Sq Mtr) built from base_details. Rows grouped by category with Total per category and Grand Total.
-   - **Section 2**: Header "Core - Face Consumption Sq.Mtr.", then table from face_details with total row.
-   - **Section 3**: Header "Plywood Consumption Sq.Mtr.", then table from base_details by item name with total row.
+   - **Section 2**: Header "Core - Face Consumption Sq.Mtr.", then table from face_details with total row (**separate** from item details).
+   - **Section 3**: Header "Plywood Consumption Sq.Mtr.", then table from base_details by item name with total row (**separate** from item details).
 
 3. **Where each value comes from** is documented in **Field Mapping** and **How Data Is Brought Together** below.
 
@@ -287,6 +287,7 @@ const generatePressingReport = async () => {
 - **Side** in Pressing Details is not in the schema; column is present and left blank (or placeholder).
 - **Sq Mtr** is calculated as (length × width) / 10000 when sqm is missing or zero in the database.
 - Excel files are timestamped; stored in `public/upload/reports/reports2/Pressing/`.
+- **Timezone**: Dates are filtered using `setUTCHours` so the range matches exactly the UTC day sent by the client. Using `setHours` (local time) would shift the range by the server timezone offset (IST = +05:30), causing stale/wrong-day data.
 
 ## File Storage
 
@@ -363,8 +364,10 @@ Filter by date:
 }
 ```
 
-- `startOfDay` = `new Date(reportDate)` with time 00:00:00.000  
-- `endOfDay` = `new Date(reportDate)` with time 23:59:59.999  
+- `startOfDay` = `new Date(reportDate)` with **UTC** time set to 00:00:00.000 via `setUTCHours(0, 0, 0, 0)`  
+- `endOfDay` = `new Date(reportDate)` with **UTC** time set to 23:59:59.999 via `setUTCHours(23, 59, 59, 999)`  
+
+> **Why `setUTCHours`?** MongoDB stores dates in UTC. The client sends `"YYYY-MM-DD"` (e.g. `"2026-03-16"`), which `new Date()` parses as UTC midnight. Using `setHours()` would shift the range by the server's local timezone offset (IST = +05:30), causing the query to include data from the previous day and miss today's data. `setUTCHours` avoids this shift entirely.
 
 **Stage 2 – $lookup (pressing_done_consumed_items_details)**  
 Attach consumed items for each pressing:
@@ -432,3 +435,11 @@ Order for the report:
 ```
 
 **Result**: Array of documents. Each document has pressing_done fields plus `consumed` (base_details, face_details). This array is passed to `GeneratePressingDailyReportExcel(pressingData, reportDate)` in the Excel config; the config builds each of the three sections from these documents and their nested arrays.
+
+---
+
+## Changelog
+
+| Date | Change | File |
+|------|--------|------|
+| 2026-03-16 | **Bug fix**: Changed `setHours(0,0,0,0)` → `setUTCHours(0,0,0,0)` and `setHours(23,59,59,999)` → `setUTCHours(23,59,59,999)` in date range calculation. `setHours` was shifting the filter window by the IST UTC+5:30 offset, causing the report to show previous-day data and miss today's records. | `controllers/reports2/Pressing/pressingDailyReport.js` |

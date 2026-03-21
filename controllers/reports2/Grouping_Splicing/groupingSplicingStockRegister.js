@@ -152,12 +152,16 @@ export const GroupingSplicingStockRegisterExcel = catchAsync(
             const handSplice = receiptHandResult[0]?.total ?? 0;
             const machineSplice = receiptTotal - handSplice;
 
-            // Issued in period: grouping_done_history by issue_status
+            // Issued in period: grouping_done_history — Sales = order + RAW
             const pressingResult = await grouping_done_history_model.aggregate([
               {
                 $match: {
                   ...matchItem,
-                  issue_status: 'order',
+                  $or: [
+                    { issue_status: 'order' },
+                    { issued_for: 'ORDER' },
+                  ],
+                  order_category: 'RAW',
                   updatedAt: { $gte: start, $lte: end },
                 },
               },
@@ -177,11 +181,27 @@ export const GroupingSplicingStockRegisterExcel = catchAsync(
             ]);
             const sale = saleResult[0]?.total ?? 0;
 
+            // Issue for tapping = tapping/STOCK/SAMPLE OR (order + non-RAW)
             const calPlyResult = await grouping_done_history_model.aggregate([
               {
                 $match: {
                   ...matchItem,
-                  issue_status: 'tapping',
+                  $or: [
+                    { issue_status: 'tapping' },
+                    { issued_for: 'STOCK' },
+                    { issued_for: 'SAMPLE' },
+                    {
+                      $and: [
+                        {
+                          $or: [
+                            { issue_status: 'order' },
+                            { issued_for: 'ORDER' },
+                          ],
+                        },
+                        { order_category: { $ne: 'RAW' } },
+                      ],
+                    },
+                  ],
                   updatedAt: { $gte: start, $lte: end },
                 },
               },
@@ -208,17 +228,21 @@ export const GroupingSplicingStockRegisterExcel = catchAsync(
             const purchase = 0;
             const processWaste = 0;
 
-            // Opening = current available + issued in period - receipt in period (allow negative)
-            const openingBalance =
-              currentAvailable + issuedInPeriod - receiptTotal;
+            // Opening = current available + issued in period - receipt in period (min 0)
+            const openingBalance = Math.max(
+              0,
+              currentAvailable + issuedInPeriod - receiptTotal
+            );
 
-            // Closing = Opening + Purchase + (Hand + Machine) - (Pressing + Demage + Sale + Cal Ply) - Process Waste
-            const closingBalance =
+            // Closing = Opening + Purchase + (Hand + Machine) - (Pressing + Demage + Sale + Cal Ply) - Process Waste (min 0)
+            const closingBalance = Math.max(
+              0,
               openingBalance +
-              purchase +
-              (handSplice + machineSplice) -
-              (pressing + demage + sale + issue_for_cal_ply_pressing) -
-              processWaste;
+                purchase +
+                (handSplice + machineSplice) -
+                (pressing + demage + sale + issue_for_cal_ply_pressing) -
+                processWaste
+            );
 
             return {
               item_group_name: item_sub_category_name,

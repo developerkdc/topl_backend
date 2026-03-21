@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import mongoose, { isValidObjectId } from 'mongoose';
 import {
   othergoods_inventory_invoice_details,
   othergoods_inventory_items_details,
@@ -20,6 +20,9 @@ import {
   otherGoods_approval_inventory_items_model,
 } from '../../../database/schema/inventory/otherGoods/otherGoodsApproval.schema.js';
 import other_goods_history_model from '../../../database/schema/inventory/otherGoods/otherGoods.history.schema.js';
+import { issues_for_status } from '../../../database/Utils/constants/constants.js';
+import departMentModel from '../../../database/schema/masters/department.schema.js';
+import machineModel from '../../../database/schema/masters/machine.schema.js';
 
 export const listing_otherGodds_inventory = catchAsync(
   async (req, res, next) => {
@@ -1243,5 +1246,102 @@ export const otherGoodsStockReportCsv = catchAsync(async (req, res, next) => {
   } catch (error) {
     console.error('Error generating stock report:', error);
     return next(new ApiError(error.message || 'Failed to generate stock report', 500));
+  }
+});
+
+export const consume_other_goods_item = catchAsync(async (req, res, next) => {
+  const { other_goods_item_id, department_id, machine_id, quantity, issue_date: issue_date_body } = req.body;
+  const userDetails = req.userDetails;
+  const session = await mongoose.startSession();
+
+  if (!other_goods_item_id || !department_id || !machine_id || quantity == null || quantity <= 0) {
+    throw new ApiError(
+      'other_goods_item_id, department_id, machine_id and quantity are required (quantity > 0)',
+      StatusCodes.BAD_REQUEST
+    );
+  }
+  if (!isValidObjectId(other_goods_item_id) || !isValidObjectId(department_id) || !isValidObjectId(machine_id)) {
+    throw new ApiError('Invalid ID format for item, department or machine', StatusCodes.BAD_REQUEST);
+  }
+
+  try {
+    session.startTransaction();
+
+    const other_goods_item_data = await othergoods_inventory_items_details.findById(other_goods_item_id);
+    if (!other_goods_item_data) {
+      throw new ApiError('Other Goods Item not found', StatusCodes.NOT_FOUND);
+    }
+    if (other_goods_item_data.available_quantity < quantity) {
+      throw new ApiError(
+        `Insufficient quantity. Available: ${other_goods_item_data.available_quantity}`,
+        StatusCodes.BAD_REQUEST
+      );
+    }
+
+    const departmentExists = await departMentModel.findById(department_id);
+    if (!departmentExists) {
+      throw new ApiError('Department not found', StatusCodes.BAD_REQUEST);
+    }
+    const machineExists = await machineModel.findOne({ _id: machine_id, department: department_id });
+    if (!machineExists) {
+      throw new ApiError('Machine not found or does not belong to selected department', StatusCodes.BAD_REQUEST);
+    }
+
+    const issued_amount =
+      Number(quantity) * Number(other_goods_item_data.rate_in_inr || 0);
+
+    const issue_date = issue_date_body
+      ? new Date(issue_date_body)
+      : new Date();
+    if (isNaN(issue_date.getTime())) {
+      throw new ApiError('Invalid issue_date', StatusCodes.BAD_REQUEST);
+    }
+
+    const [historyDoc] = await other_goods_history_model.create(
+      [
+        {
+          other_goods_item_id: other_goods_item_data._id,
+          department_id,
+          machine_id,
+          issue_status: issues_for_status.consume,
+          issued_quantity: Number(quantity),
+          issued_amount,
+          issue_date,
+          created_by: userDetails._id,
+          updated_by: userDetails._id,
+        },
+      ],
+      { session }
+    );
+
+    const new_available_quantity = other_goods_item_data.available_quantity - quantity;
+    const new_available_amount =
+      other_goods_item_data.available_amount - issued_amount;
+
+    const updateResult = await othergoods_inventory_items_details.updateOne(
+      { _id: other_goods_item_id },
+      {
+        $set: {
+          available_quantity: Math.max(0, new_available_quantity),
+          available_amount: Math.max(0, new_available_amount),
+          updated_by: userDetails._id,
+        },
+      },
+      { session }
+    );
+
+    if (!updateResult.acknowledged || updateResult.matchedCount === 0) {
+      throw new ApiError('Failed to update inventory', StatusCodes.BAD_REQUEST);
+    }
+
+    await session.commitTransaction();
+    return res.status(StatusCodes.CREATED).json(
+      new ApiResponse(StatusCodes.CREATED, 'Item consumed successfully', { history: historyDoc })
+    );
+  } catch (error) {
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    await session.endSession();
   }
 });

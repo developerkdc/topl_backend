@@ -2,12 +2,12 @@
 
 ## API Endpoint
 ```
-POST /api/V1/reports2/download-excel-item-wise-inward-daily-report
+POST /api/V1/report/download-excel-item-wise-inward-daily-report
 ```
 
 ## Quick Test (cURL)
 ```bash
-curl -X POST http://localhost:5000/api/V1/reports2/download-excel-item-wise-inward-daily-report \
+curl -X POST http://localhost:5000/api/V1/report/download-excel-item-wise-inward-daily-report \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -d '{"startDate": "2025-03-01", "endDate": "2025-03-31"}'
@@ -31,23 +31,29 @@ curl -X POST http://localhost:5000/api/V1/reports2/download-excel-item-wise-inwa
 - Testing: `topl_backend/docs/reports2/Log/Item_Wise_Inward/TESTING.md`
 - Implementation: `topl_backend/docs/reports2/Log/Item_Wise_Inward/IMPLEMENTATION_SUMMARY.md`
 
-## Report Columns (15 Total)
+## Report Columns (21 Total)
 
-1. **ItemName** - Item identifier
-2. **Opening Stock CMT** - Opening balance
-3. **Invoice** - Invoice CMT (Round Log)
-4. **Indian** - Indian CMT (Round Log)
-5. **Actual** - Physical CMT (Round Log)
-6. **Issue for CC** - Issued for crosscutting
-7. **CC Received** - Crosscutting completed
-8. **Diff** - Difference (Issue - Received)
-9. **Flitching** - Issued for flitching
-10. **Sawing** - Placeholder (0.000)
-11. **Wooden Tile** - Placeholder (0.000)
-12. **UnEdge** - Placeholder (0.000)
-13. **Peel** - Issued for peeling
-14. **Sales** - Issued to orders/challan
-15. **Closing Stock CMT** - Closing balance
+1. **ItemName** – Item identifier
+2. **Opening Stock CMT** – Physical CMT of logs received in period
+3. **Invoice** – Invoice CMT (Round Log)
+4. **Indian** – Indian CMT (Round Log)
+5. **Actual** – Physical CMT (Round Log)
+6. **Recover From Rejected** – Placeholder (0.000)
+7. **Issue for CC** – Issued for crosscutting
+8. **CC Received** – Crosscutting completed
+9. **CC Issued** – Crosscut pieces forwarded to next stage
+10. **CC Diff** – Issue for CC − CC Received
+11. **Issue for Flitch** – Issued for flitching
+12. **Flitch Received** – Flitch output
+13. **Flitch Diff** – Issue for Flitch − Flitch Received
+14. **Issue for SqEdge** – Placeholder (0.000)
+15. **Peeling Issued** – Issued for peeling
+16. **Peeling Received** – Peeling output
+17. **Peeling Diff** – Peeling Issued − Peeling Received
+18. **Sales** – Issued to orders/challan across all stages
+19. **Job Work Challan** – Placeholder (0.000)
+20. **Rejected** – Rejected across all stages
+21. **Closing Stock CMT** – Closing balance
 
 ## Request Format
 
@@ -68,7 +74,7 @@ curl -X POST http://localhost:5000/api/V1/reports2/download-excel-item-wise-inwa
   "statusCode": 200,
   "status": "success",
   "message": "Item wise inward report generated successfully",
-  "data": "http://localhost:5000/public/upload/reports/reports2/Log/Item-Wise-Inward-Report-1706432891234.xlsx"
+  "result": "http://localhost:5000/public/upload/reports/reports2/Log/Item-Wise-Inward-Report-1706432891234.xlsx"
 }
 ```
 
@@ -83,17 +89,20 @@ public/upload/reports/reports2/Log/Item-Wise-Inward-Report-[timestamp].xlsx
 - `log_inventory_invoice_details`
 - `crosscutting_done`
 - `flitching_done`
+- `issues_for_flitching`
+- `issues_for_peeling`
+- `peeling_done_other_details` + `peeling_done_items`
 
 ## Key Calculations
 
 **Opening Stock:**
 ```
-Opening = Current Available + Total Issued - Total Received (during period)
+Opening = SUM(physical_cmt) where invoice.inward_date in period
 ```
 
 **Closing Stock:**
 ```
-Closing = Opening + Actual - Issue for CC + CC Received - Flitching - Peel - Sales
+Closing = SUM(physical_cmt) of logs (invoice in period, issue_status != null) − Opening
 ```
 
 ## Common Errors
@@ -108,10 +117,10 @@ Closing = Opening + Actual - Issue for CC + CC Received - Flitching - Peel - Sal
 ## Development Notes
 
 - All CMT values use 3 decimal places
-- Items with no activity are filtered out
+- Aggregation uses Map-based batch approach (one pipeline per data category)
+- Placeholder columns: Recover From Rejected, Issue for SqEdge, Job Work Challan (0.000)
 - Files are timestamped to prevent overwrites
 - Multi-level headers for better visualization
-- Columns 10-12 (Sawing, Wooden Tile, UnEdge) are placeholders
 
 ## Testing Checklist
 
@@ -119,7 +128,7 @@ Closing = Opening + Actual - Issue for CC + CC Received - Flitching - Peel - Sal
 - [ ] Date validation working
 - [ ] Filter by item_name working
 - [ ] Excel file generated correctly
-- [ ] All 15 columns present
+- [ ] All 21 columns present
 - [ ] Data sorted alphabetically
 - [ ] Totals calculated correctly
 - [ ] Multi-level headers displayed

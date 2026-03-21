@@ -13,7 +13,7 @@ Implement the **Fleece Item-Wise Stock Report** API under reports2 that generate
 ## Report Structure (Excel)
 
 - **Grouping:** Item Name → Thickness → Size
-- **Columns:** Item Name, Fleece Paper Sub Category, Thickness, Size, Opening Rolls through Closing Metres (16 columns).
+- **Columns:** Item Name, Fleece Paper Sub Category, Thickness, Size, Opening Rolls, Received, Consumed, Order, Issue For Pressing, Closing (rolls + sq m). Challan is computed and included in Consume but not displayed.
 
 ## Implementation Files
 
@@ -42,5 +42,5 @@ Implement the **Fleece Item-Wise Stock Report** API under reports2 that generate
 | Body   | startDate, endDate, optional filter (item_sub_category_name, item_name) |
 | 200    | `{ data: "<download URL>", message: "Item-wise stock report generated successfully" }` |
 | 400    | Missing/invalid dates or start > end |
-| 404    | No stock data for period |
+| 404    | No stock data for period (no receive, consume, challan, order, or issue for pressing in date range) |
 | 500    | Error generating report |

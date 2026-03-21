@@ -191,6 +191,7 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
             other_goods_item_id: other_goods_item_data?._id,
             issued_quantity: issued_quantity_for_order,
             issued_amount: issued_amount_for_order,
+            issue_date: new Date(),
             created_by: userDetails?._id,
             updated_by: userDetails?._id,
           },

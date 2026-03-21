@@ -2,7 +2,7 @@
 
 ## Objective
 
-Implement the **Plywood Stock Report** API under reports2 that generates an Excel report for a user-selected date range. The report shows opening stock, receives, consumption, sales, issue for ply resizing, issue for pressing, and closing stock, grouped by **plywood sub-category**, **thickness**, and **size**.
+Implement the **Plywood Stock Report** API under reports2 that generates an Excel report for a user-selected date range. The report shows opening stock, receives, consumption (total of challan, order, resizing, pressing), challan, order, issue for ply resizing, issue for pressing, and closing stock, grouped by **plywood sub-category**, **thickness**, and **size**.
 
 ## Implementation Approach
 
@@ -14,7 +14,7 @@ Implement the **Plywood Stock Report** API under reports2 that generates an Exce
 - **Period:** User-specified date range (startDate, endDate).
 - **Data source:** MongoDB aggregations over plywood view, item details, invoice details, and plywood history.
 - **Grouping:** Plywood Sub Category → Thickness → Size; subtotal per thickness; grand total.
-- **Columns:** Plywood Sub Category, Thickness, Size, Opening (sheets + sq m), Received, Consumed, Sales, Issue For Ply Resizing (sheets + sq m), Issue For Pressing (sheets + sq m), Closing (sheets + sq m).
+- **Columns:** Plywood Sub Category, Thickness, Size, Opening (sheets + sq m), Received, Consumed, Challan, Order, Issue For Ply Resizing (sheets + sq m), Issue For Pressing (sheets + sq m), Closing (sheets + sq m).
 
 ## Implementation Files
 
@@ -44,12 +44,13 @@ Implement the **Plywood Stock Report** API under reports2 that generates an Exce
 4. **Current inventory:** Aggregate `plywood_inventory_items_view_modal`: match `deleted_at: null` and `...itemFilter`; group by (sub-type, thickness, length, width); sum `available_sheets`, `available_sqm`; collect `item_ids`.
 5. For each group:
    - **Receives:** Aggregate `plywood_inventory_items_details` (match on sub-type, thickness, length, width, `deleted_at: null`) → `$lookup` `plywood_inventory_invoice_details` on `invoice_id` → match `invoice.inward_date` in [start, end] → sum `sheets`, `total_sq_meter`.
-   - **Consumption:** Aggregate `plywood_history_model`: match `plywood_item_id` in item_ids, `issue_status` in `['order', 'pressing', 'plywood_resizing']`, `createdAt` in [start, end] → sum `issued_sheets`, `issued_sqm`.
-   - **Sales:** Same collection; `issue_status: 'challan'`, same date range → sum `issued_sheets`, `issued_sqm`.
-   - **Issue for ply resizing:** Same collection; `issue_status: 'plywood_resizing'`, same date range → sum `issued_sheets`, `issued_sqm`.
-   - **Issue for pressing:** Same collection; `issue_status: 'pressing'`, same date range → sum `issued_sheets`, `issued_sqm`.
-   - Compute **opening** = current + consume + sales - receive (sheets and sq m); **closing** = opening + receive - consume - sales; clamp to non-negative.
-6. Filter rows with at least one non-zero among opening, receive, consume, sales, closing.
+   - **Challan:** Aggregate `plywood_history_model`: match `plywood_item_id` in item_ids, `issue_status: 'challan'`, `createdAt` in [start, end] → sum `issued_sheets`, `issued_sqm`.
+   - **Order:** Same collection; `issue_status: 'order'`, same date range.
+   - **Issue for ply resizing:** Same collection; `issue_status: 'plywood_resizing'`, same date range.
+   - **Issue for pressing:** Same collection; `issue_status: 'pressing'`, same date range.
+   - **Consumed** = challan + order + issue for ply resizing + issue for pressing (computed).
+   - Compute **opening** = current + consume - receive (sheets and sq m); **closing** = opening + receive - consume; clamp to non-negative.
+6. Filter rows with at least one non-zero among opening, receive, consume, challan, order, closing.
 7. If no rows, return 404 "No stock data found for the selected period".
 8. Call `GeneratePlywoodStockReportExcel(aggregatedData, startDate, endDate, filter)`.
 9. Return 200 with ApiResponse: message and `data: excelLink`.
@@ -65,7 +66,7 @@ Implement the **Plywood Stock Report** API under reports2 that generates an Exce
 - Ensure folder `public/upload/reports/reports2/Plywood` exists.
 - Create workbook, sheet "Plywood Stock Report".
 - Title row: "Plywood Type [ filter ]   stock  in the period  DD/MM/YYYY and DD/MM/YYYY" (filter from `filters.item_sub_category_name` or "ALL").
-- Define columns: plywood_sub_type, thickness, size, opening_sheets, opening_sqm, receive_sheets, receive_sqm, consume_sheets, consume_sqm, sales_sheets, sales_sqm, issue_for_ply_resizing_sheets, issue_for_ply_resizing_sqm, issue_for_pressing_sheets, issue_for_pressing_sqm, closing_sheets, closing_sqm.
+- Define columns: plywood_sub_type, thickness, size, opening_sheets, opening_sqm, receive_sheets, receive_sqm, consume_sheets, consume_sqm, challan_sheets, challan_sqm, order_sheets, order_sqm, issue_for_ply_resizing_sheets, issue_for_ply_resizing_sqm, issue_for_pressing_sheets, issue_for_pressing_sqm, closing_sheets, closing_sqm.
 - Group data by plywood_sub_type → thickness; for each group add data rows then a "Total" row; then grand total row. Bold headers and totals; gray header row.
 - Save to `Plywood-Stock-Report-{timestamp}.xlsx` in the same folder; return full download URL.
 
@@ -99,18 +100,19 @@ Implement the **Plywood Stock Report** API under reports2 that generates an Exce
 
 ### Stock calculation
 
-- **Receives (period):** Items where `inward_date` ∈ [start, end]; group by (sub-type, thickness, length, width). Sum `sheets`, `total_sq_meter`.
-- **Consumption:** History where `issue_status` ∈ `['order', 'pressing', 'plywood_resizing']`, `createdAt` ∈ [start, end]. Sum `issued_sheets`, `issued_sqm` per item group (via item_ids).
-- **Sales:** History where `issue_status === 'challan'`, same date range. Sum `issued_sheets`, `issued_sqm`.
-- **Issue for ply resizing:** History where `issue_status === 'plywood_resizing'`, same date range. Sum `issued_sheets`, `issued_sqm`.
-- **Issue for pressing:** History where `issue_status === 'pressing'`, same date range. Sum `issued_sheets`, `issued_sqm`.
-- **Opening:** `current_sheets + consume_sheets + sales_sheets - receive_sheets` (and same for sq m). Then `Math.max(0, ...)`.
-- **Closing:** `opening + receive - consume - sales` (sheets and sq m). Then `Math.max(0, ...)`.
+- **Receives (period):** Items where `inward_date` ∈ [start, end] (end date includes 23:59:59.999 UTC); group by (sub-type, thickness, length, width). Sum `sheets`, `total_sq_meter`.
+- **Challan:** History where `issue_status === 'challan'`, `createdAt` ∈ [start, end]. Sum `issued_sheets`, `issued_sqm`.
+- **Order:** History where `issue_status === 'order'`, same date range.
+- **Issue for ply resizing:** History where `issue_status === 'plywood_resizing'`, same date range.
+- **Issue for pressing:** History where `issue_status === 'pressing'`, same date range.
+- **Consumed:** `challan_sheets + order_sheets + issue_for_ply_resizing_sheets + issue_for_pressing_sheets` (and same for sq m).
+- **Opening:** `current_sheets + consume_sheets - receive_sheets` (and same for sq m). Then `Math.max(0, ...)`.
+- **Closing:** `opening + receive - consume` (sheets and sq m). Then `Math.max(0, ...)`.
 
 ### Pipeline structure (conceptual)
 
 1. **Current inventory:** `plywood_inventory_items_view_modal` → match (deleted_at, filters) → group by (sub-type, thickness, length, width) → sum available_sheets/sqm, push _id as item_ids.
-2. **Per group:** Receives from item details + invoice lookup; Consumption / Sales / Issue for ply resizing / Issue for pressing from plywood_history_model (item_ids, issue_status, date range).
+2. **Per group:** Receives from item details + invoice lookup; Challan / Order / Issue for ply resizing / Issue for pressing from plywood_history_model (item_ids, issue_status, date range). Consumed = sum of all four.
 3. **Compute** opening and closing; build row object (plywood_sub_type, thickness, size, and all numeric columns).
 4. **Filter** active rows; pass to Excel generator.
 
@@ -127,14 +129,16 @@ Implement the **Plywood Stock Report** API under reports2 that generates an Exce
 7. Received Mtrs  
 8. Consumed Sheets  
 9. Consumed Mtrs  
-10. Sales Sheets  
-11. Sales Mtrs  
-12. Issue For Ply Resizing Sheet  
-13. Issue For Ply Resizing Sq Met  
-14. Issue For Pressing  
-15. Issue For Pressing Sq Met  
-16. Closing sheets  
-17. Closing Metres  
+10. Challan Sheets  
+11. Challan Mtrs  
+12. Order Sheets  
+13. Order Mtrs  
+14. Issue For Ply Resizing Sheet  
+15. Issue For Ply Resizing Sq Met  
+16. Issue For Pressing  
+17. Issue For Pressing Sq Met  
+18. Closing sheets  
+19. Closing Metres  
 
 ### Row hierarchy
 

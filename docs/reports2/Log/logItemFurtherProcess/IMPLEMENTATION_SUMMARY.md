@@ -1,215 +1,194 @@
-# Implementation Summary - Log Item Further Process Report
+# Implementation Summary — Inward Log Item Further Process Report
 
-## ✅ Implementation Complete
+## Overview
 
-All tasks have been successfully completed. The Log Item Further Process Report API is now fully functional.
+Tracks every inward log through its complete factory journey — from log receipt to the final
+pressing / CNC / colour stage. The report is hierarchical: one row per leaf-level entity
+(grouping item, peeling item, or unprocessed slicing side), with parent columns merged
+vertically in Excel.
 
-## Created Files
+---
 
-### 1. Controller
-**File**: `topl_backend/controllers/reports2/Log/logItemFurtherProcess.js`
-- Validates request parameters (startDate, endDate, filter)
-- Queries logs received during the date range
-- Aggregates data from 8 different processing stages
-- Handles error cases (404, 400, 500)
-- Returns download link for generated Excel file
+## Files
 
-### 2. Excel Generator
-**File**: `topl_backend/config/downloadExcel/reports2/Log/logItemFurtherProcess.js`
-- Creates Excel workbook with 44 columns
-- Implements multi-level headers (4 rows)
-- Groups data by item name
-- Calculates subtotals per item
-- Calculates grand totals
-- Applies formatting (borders, colors, bold)
-- Saves file and returns download URL
+| File | Lines | Purpose |
+|---|---|---|
+| `controllers/reports2/Log/logItemFurtherProcess.js` | ~825 | Bulk-fetch, tree-build, row-flatten |
+| `config/downloadExcel/reports2/Log/logItemFurtherProcess.js` | ~610 | 56-column Excel with vertical merges |
+| `routes/report/reports2/Log/log.routes.js` | 22 | Route registration (unchanged) |
 
-### 3. Route Registration
-**File**: `topl_backend/routes/report/reports2/Log/log.routes.js`
-- Added import for `LogItemFurtherProcessReportExcel`
-- Registered POST route: `/download-excel-log-item-further-process-report`
+---
 
-### 4. Documentation
-**File**: `topl_backend/docs/reports2/Log/logItemFurtherProcess/API_DOCUMENTATION.md`
-- Complete API documentation
-- Request/response examples
-- Report structure details
-- Error handling
-- Performance considerations
+## Architecture
 
-**File**: `topl_backend/docs/reports2/Log/logItemFurtherProcess/QUICK_REFERENCE.md`
-- Quick start guide
-- Column reference (all 44 columns)
-- Testing checklist
-- Common issues & solutions
-- Example scenarios
+### Row Granularity
+Each data row = **one leaf entity**:
+- `grouping_done_items_details` record (most common path)
+- `slicing_done_items` record not yet in grouping
+- `peeling_done_items` record (peeling path)
+- The log itself when no further processing exists
 
-## Route Chain
+Parent columns (Item Name / Log / CrossCut / Flitch / Slicing Side / Dressing / Smoking)
+are **blanked on non-first rows** and **merged vertically** in the Excel output.
+
+### Data Flow (Bulk Queries)
 
 ```
-Request → index.js 
-        → reports2.routes.js 
-        → log.routes.js 
-        → logItemFurtherProcess.js (controller)
-        → logItemFurtherProcess.js (Excel generator)
-        → Response (download link)
+1. Logs          ← log_inventory_items_view_model  (date range + filters)
+2. CrossCuts     ← crosscutting_done               (log_no IN logNos)
+3. Flitches      ← flitchings                      (log_no IN logNos)
+4. Slicing sides ← slicing_done_items              (log_no IN logNos)
+5. Peeling items ← peeling_done_items              (log_no IN logNos)
+6. Dressing      ← dressing_done_items             (log_no_code IN allLeafCodes)
+7. Smoking/Dying ← process_done_items_details      (log_no_code IN allLeafCodes)
+8. Grouping      ← grouping_done_items_details     (log_no_code IN allLeafCodes)
+9. Tapping       ← tapping_done_items_details      (group_no IN groupNos)
+                    + $lookup tapping_done_other_details (splicing_type)
+10. Pressing     ← pressing_done_details (group_no IN groupNos); **pressing_done_history** (issued_item_id IN pressing ids) for issue sheets/sqm/status and balances
+11. CNC          ← cnc_done_details                (pressing_details_id IN pressingIds)
+12. Colour       ← color_done_details              (pressing_details_id IN pressingIds)
 ```
 
-## Full API Path
+**Note on Column 5**: Issuance CMT is read directly from log's `issue_status` and `physical_cmt` fields — no separate issued_for_* queries needed.
+
+All queries within each tier run via `Promise.all` for parallel execution.
+
+### Key Linking Fields
+
+| From | To | Field |
+|---|---|---|
+| Log | CrossCut | `crosscutting_done.log_no = log.log_no` |
+| CrossCut | Flitch | `flitchings.crosscut_done_id = crosscut._id` |
+| Flitch | Slicing side | `slicing.log_no_code` matches regex `^{flitch_code}[A-Z]+$` |
+| Flitch | Peeling item | `peeling.log_no_code` matches same regex |
+| Slicing/Peeling | Dressing | `dressing_done_items.log_no_code = side.log_no_code` |
+| Slicing/Peeling | Smoking | `process_done_items_details.log_no_code = side.log_no_code` |
+| Slicing/Peeling | Grouping | `grouping_done_items_details.log_no_code = side.log_no_code` |
+| Grouping | Tapping | `tapping_done_items_details.group_no = grouping.group_no` |
+| Grouping | Pressing | `pressing_done_details.group_no = grouping.group_no` |
+| Pressing | CNC | `cnc_done_details.pressing_details_id = pressing._id` |
+| Pressing | Colour | `color_done_details.pressing_details_id = pressing._id` |
+
+### Child Pattern Matching
+
+Slicing sides and peeling items are found using a compiled regex:
+```
+^{escaped_parent_code}[A-Z]+$
+```
+e.g. flitch `L0702A1` → matches `L0702A1A`, `L0702A1B` but NOT `L0702A10A`
+(digit after code means different parent level).
+
+---
+
+## Supported Processing Paths
+
+| Path | Condition |
+|---|---|
+| Log → CrossCut → Flitch → Slicing → ... | Standard veneer path |
+| Log → CrossCut → Peeling | `crosscut.issue_status = 'peeling'` |
+| Log → Flitch → Slicing → ... | No crosscut recorded |
+| Log → Peeling | No crosscut or flitch recorded |
+| Flitch → Slicing + Peeling | `flitch.issue_status = 'slicing_peeling'` |
+
+For any stage not reached, the downstream columns are left **empty** (not zero).
+
+---
+
+## Column Summary — 56 Columns
+
+| Range | Section | Key Fields |
+|---|---|---|
+| 1 | Item Name | Merged vertically per species |
+| 2–6 | Inward in(CMT) | log_no, indian_cmt, physical_cmt, **issue_status** (determines Column 5), physical_cmt (for Column 5 issuance) |
+| 7–10 | Cross Cut Issue in(CMT) | `crosscutting_done`: cols 9–10 use `crosscut_cmt` + `issue_status` **only** when `issue_status` ∈ {`peeling`, `flitching`} |
+| 11–14 | Flitch Issue in(CMT) | `flitching_done`: col 11 `log_no_code`, 12 `flitch_cmt`, cols 13–14 always show `flitch_cmt` + `issue_status` (regardless of where issue was directed) |
+| 15–18 | Slicing Issue in(CMT) | log_no_code (side), no_of_leaves |
+| 19–22 | Peeling | output_type, no_of_leaves |
+| 23–25 | Dressing | SUM(sqm), issue_status |
+| 26–28 | Smoking/Dying | process_name, SUM(sqm), issue_status |
+| 29–36 | Clipping/Grouping | group_no, no_of_sheets, sqm, available balances |
+| 37–43 | Splicing | machine/hand sqm, sheets, available balances |
+| 44–50 | Pressing | Received: `pressing_done_details` sums; Issue + status: `pressing_done_history`; Balance: received − issued (history sums) |
+| 51–52 | CNC | product_type, no_of_sheets |
+| 53 | COLOUR | no_of_sheets |
+| 54 | Sales | placeholder |
+| 55 | Job Work Challan | placeholder |
+| 56 | Adv Work Challan | placeholder |
+
+---
+
+## Filters Supported
+
+| Filter | Request field | Match against |
+|---|---|---|
+| Date range | `startDate`, `endDate` | `log_invoice_details.inward_date` |
+| Species | `filter.item_name` | `log_inventory_items_details.item_name` |
+| Inward ID | `filter.inward_id` | `log_invoice_details.inward_sr_no` (Number) |
+| Log number | `filter.log_no` | `log_inventory_items_details.log_no` |
+
+The `inward_id` / `log_no` values are shown in **Row 2** of the report title area.
+
+---
+
+## Excel Output Details
+
+| Property | Value |
+|---|---|
+| Sheet name | `Log Further Process` |
+| Total columns | 56 |
+| Header rows | 5 (title, date range, filter label, section groups, column names) |
+| Frozen pane | Column 2, Row 5 |
+| Numeric format | `#,##0.000` |
+| Per-log total | Orange fill, `Total {log_no}` label |
+| Per-item total | Orange fill, `Total {item_name}` label |
+| Grand total | Yellow fill, `Total` label |
+| Empty vs zero | Stages not reached = blank cell (not `0`) |
+| Vertical merges | Item Name, Log cols, CrossCut cols, Flitch cols, Slicing side + Dressing + Smoking cols |
+
+---
+
+## Bugs Fixed vs Previous Version
+
+| Stage | Old (broken) | Fixed |
+|---|---|---|
+| Slicing quantity | `$sum: '$natural_cmt'` (field doesn't exist) | `no_of_leaves` |
+| Dressing match | `log_no_code: logNo` (used log_no value) | `log_no_code` of each slicing side |
+| Dressing sum | `$sum: '$natural_sqm'` | `$sum: '$sqm'` |
+| Smoking match | `log_no: logNo` | `log_no_code` |
+| Smoking sum | `$sum: '$natural_sqm'` | `$sum: '$sqm'` |
+| Tapping match | `log_no: logNo` | `log_no_code` |
+| Tapping sum | `$sum: '$natural_sqm'` | `$sum: '$sqm'` |
+| Pressing match | `log_no: logNo` (field doesn't exist on pressing schema) | Via `group_no` from grouping |
+| Missing stages | Grouping, CNC, Colour not included | All 3 now included |
+| Architecture | One flat row per log (summary) | One row per leaf entity (hierarchical) |
+| Query strategy | N+1 queries (one set per log) | Bulk `$in` queries for all logs at once |
+
+---
+
+## Known Placeholders
+
+| Column | Reason blank |
+|---|---|
+| Slicing: Process Cmt (col 16) | No CMT-per-side field in `slicing_done_items` schema |
+| Slicing: Balance Cmt (col 17) | Same — no per-side CMT tracking |
+| Peeling: Balance Rostroller (col 20) | No roller-balance field in `peeling_done_items` schema |
+| Grouping: Issue Status (col 34) | Not tracked in `grouping_done_items_details` schema |
+| Sales (col 54) | Schema/model not yet identified |
+| Job Work Challan (col 55) | Schema/model not yet identified |
+| Adv Work Challan (col 56) | Schema/model not yet identified |
+
+---
+
+## Route
 
 ```
 POST /api/V1/reports2/log/download-excel-log-item-further-process-report
 ```
 
-## Data Flow
-
+Registered in `topl_backend/routes/report/reports2/Log/log.routes.js`:
+```javascript
+router.post(
+  '/download-excel-log-item-further-process-report',
+  LogItemFurtherProcessReportExcel
+);
 ```
-1. User sends POST request with startDate, endDate, filter
-   ↓
-2. Controller validates parameters
-   ↓
-3. Query logs from log_inventory_items_view_model (inward date filter)
-   ↓
-4. For each log, aggregate data from:
-   - crosscutting_done_model
-   - flitching_done_model
-   - slicing_done_items_model
-   - dressing_done_items_model
-   - process_done_items_details_model (dyeing)
-   - tapping_done_items_details_model
-   - pressing_done_details_model
-   ↓
-5. Pass aggregated data to Excel generator
-   ↓
-6. Excel generator creates formatted report with:
-   - Title row
-   - Group headers
-   - Column headers
-   - Data rows (grouped by item)
-   - Subtotal rows (per item)
-   - Grand total row
-   ↓
-7. Save Excel file to public/upload/reports/reports2/Log/
-   ↓
-8. Return download URL to user
-```
-
-## Report Structure
-
-### Header Rows (4 rows)
-1. **Row 1**: Title with date range (merged across all 44 columns)
-2. **Row 2**: Empty spacing row
-3. **Row 3**: Major group headers (Inward in(CMT), Slice Issue, etc.)
-4. **Row 4**: Individual column headers
-
-### Data Section
-- One row per log
-- Item names merged vertically for logs of same item
-- Subtotal row after each item group (gray background)
-- Grand total row at end (darker gray background)
-
-### 44 Columns Organized in 12 Groups
-1. **Inward Details** (4 cols): Item Name, LogNo, Indian CMT, RECE
-2. **Inward in(CMT)** (6 cols): Total Stock, CC RECE, Saw, UE, Peel, Flitch
-3. **Cross Cut Issue in(CMT)** (3 cols): Total Stock, Total Issue, Total Stock
-4. **Slice Issue** (5 cols): Slice RECE, Dress, Dye, Total issue, Total Stock
-5. **Dressing Issue** (6 cols): Dress RECE, Clipp, Dye, Mix Match, Total issue, Total Stock
-6. **Dyeing** (3 cols): Total Issue, Total Stock, Dye RECE
-7. **Clip Issue** (5 cols): Clip RECE, MSplic, HSplic, Total Issue, Total Stock
-8. **Machine Splicing** (3 cols): RECE, Total Issue, Total Stock
-9. **Hand Splicing** (3 cols): RECE, Total Issue, Total Stock
-10. **End Tapping** (3 cols): Total RECE, Total Issue, Total Stock
-11. **Splicing** (2 cols): Total Issue, Total Stock
-12. **Pressing** (1 col): RECE
-
-## Processing Stages Tracked
-
-Each log's journey through the factory:
-
-```
-INWARD (Log received)
-  ↓
-CROSSCUTTING (Log cut into pieces)
-  ↓
-FLITCHING (Log converted to flitches)
-  ↓
-SLICING (Flitches sliced into veneers)
-  ↓
-DRESSING (Veneers dressed/trimmed)
-  ↓
-DYEING/SMOKING (Veneers colored)
-  ↓
-TAPPING/SPLICING (Veneers joined - machine or hand)
-  ↓
-PRESSING (Final pressing into plywood)
-```
-
-## Testing Status
-
-### ✅ Code Quality
-- No linter errors
-- Follows existing code patterns
-- Uses catchAsync for error handling
-- Proper imports and exports
-
-### ⏳ Runtime Testing (Requires User)
-The following tests require a running backend with database access:
-- [ ] Test with valid date range
-- [ ] Test with item filter
-- [ ] Test with empty result set
-- [ ] Test with invalid dates
-- [ ] Verify Excel file generation
-- [ ] Verify all calculations are accurate
-
-## Next Steps for User
-
-1. **Start the backend server** if not already running
-2. **Test the API** using the examples in QUICK_REFERENCE.md
-3. **Verify calculations** against expected values
-4. **Check Excel formatting** matches the reference images
-5. **Test edge cases** (empty results, large date ranges, etc.)
-
-## Notes
-
-### Placeholder Values
-Some fields are set to 0 pending clarification:
-- `saw`: Sawing data source needs clarification
-- `ue`: UnEdge data source needs clarification
-- `peel`: Peeling from logs directly (if applicable)
-- `dress_clipp`: Clipping data source needs clarification
-- `dress_mix_match`: Mix match logic needs clarification
-
-These can be updated once the data sources are confirmed.
-
-### Performance
-The report performs multiple aggregations per log. For production use with large datasets, consider:
-- Adding database indexes on `log_no` across all processing tables
-- Implementing caching for frequently requested reports
-- Adding pagination for very large date ranges
-- Monitoring query performance and optimizing as needed
-
-## Success Criteria Met
-
-✅ Created controller with comprehensive aggregation logic  
-✅ Created Excel generator with multi-level headers  
-✅ Registered route in log.routes.js  
-✅ Follows existing code patterns (logItemWiseInward.js)  
-✅ Handles all error cases  
-✅ Generates report matching image structure  
-✅ Groups data by item with subtotals  
-✅ Calculates grand totals  
-✅ No linter errors  
-✅ Complete documentation created  
-
-## Files Summary
-
-| File | Lines | Purpose |
-|------|-------|---------|
-| logItemFurtherProcess.js (controller) | ~440 | API logic & data aggregation |
-| logItemFurtherProcess.js (Excel gen) | ~640 | Excel file generation |
-| log.routes.js (updated) | 22 | Route registration |
-| API_DOCUMENTATION.md | ~350 | Complete API docs |
-| QUICK_REFERENCE.md | ~280 | Quick reference guide |
-| IMPLEMENTATION_SUMMARY.md | This file | Implementation summary |
-
-**Total**: ~1,732 lines of code and documentation created
