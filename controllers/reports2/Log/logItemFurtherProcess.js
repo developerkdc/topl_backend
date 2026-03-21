@@ -12,7 +12,10 @@ import { grouping_done_items_details_model } from '../../../database/schema/fact
 import grouping_done_history_model from '../../../database/schema/factory/grouping/grouping_done_history.schema.js';
 import { tapping_done_items_details_model } from '../../../database/schema/factory/tapping/tapping_done/tapping_done.schema.js';
 import { tapping_done_history_model } from '../../../database/schema/factory/tapping/tapping_history/tapping_done_history.schema.js';
-import { pressing_done_details_model } from '../../../database/schema/factory/pressing/pressing_done/pressing_done.schema.js';
+import {
+  pressing_done_details_model,
+  pressing_done_consumed_items_details_model,
+} from '../../../database/schema/factory/pressing/pressing_done/pressing_done.schema.js';
 import { pressing_done_history_model } from '../../../database/schema/factory/pressing/pressing_history/pressing_done_history.schema.js';
 import { cnc_done_details_model } from '../../../database/schema/factory/cnc/cnc_done/cnc_done.schema.js';
 import { color_done_details_model } from '../../../database/schema/factory/colour/colour_done/colour_done.schema.js';
@@ -244,6 +247,11 @@ function buildGroupingData(
   const cncRecSheets = sumField(cncItems, 'no_of_sheets');
   const colourRecSheets = sumField(colourItems, 'no_of_sheets');
 
+  // For balance fields: show the numeric value (even 0) when the upstream
+  // process was actually done; keep '' when it was never done.
+  const hasTapping = tappingItems.length > 0;
+  const hasPressing = pressingItems.length > 0;
+
   return {
     grouping_new_group_no: groupNo,
     grouping_rec_sheets: recSheets || '',
@@ -251,22 +259,23 @@ function buildGroupingData(
     grouping_issue_sheets: issueSheets || '',
     grouping_issue_sqm: issueSqm || '',
     grouping_issue_status: '',
-    grouping_balance_sheets: availSheets || '',
-    grouping_balance_sqm: availSqm || '',
+    // grouping was done → always show numeric (0 is meaningful here)
+    grouping_balance_sheets: availSheets,
+    grouping_balance_sqm: availSqm,
     splicing_rec_machine_sqm: machineSqm || '',
     splicing_rec_hand_sqm: handSqm || '',
     splicing_sheets: splicingSheets || '',
     splicing_issue_sheets: splicingIssueSheets || '',
     splicing_issue_status: splicingIssueStatus,
-    splicing_balance_sheets: splicingAvailSheets || '',
-    splicing_balance_sqm: splicingAvailSqm || '',
+    splicing_balance_sheets: hasTapping ? splicingAvailSheets : '',
+    splicing_balance_sqm: hasTapping ? splicingAvailSqm : '',
     pressing_sheets: pressingSheets || '',
     pressing_sqm: pressingSqm || '',
     pressing_issue_sheets: pressingIssueSheets || '',
     pressing_issue_sqm: pressingIssueSqm || '',
     pressing_issue_status: pressingIssueStatus,
-    pressing_balance_sheets: pressingBalanceSheets || '',
-    pressing_balance_sqm: pressingBalanceSqm || '',
+    pressing_balance_sheets: hasPressing ? pressingBalanceSheets : '',
+    pressing_balance_sqm: hasPressing ? pressingBalanceSqm : '',
     cnc_type: cncType,
     cnc_rec_sheets: cncRecSheets || '',
     colour_rec_sheets: colourRecSheets || '',
@@ -320,10 +329,18 @@ function buildSlicingSideRows(
 ) {
   const sideCode = side.log_no_code;
 
+  // Process CMT: individual cmt is not stored per-item; use item_cmt computed
+  // during fetch as total_cmt / sibling_count (or raw cmt if it exists).
+  const processCmt = parseFloat(side.item_cmt ?? side.cmt) || 0;
+  const issuedCmt = parseFloat(side.issued_for_slicing?.cmt) || 0;
+  // Balance = issued - processed. Show numeric 0 when slicing was done but
+  // all CMT is consumed; keep '' only if issued CMT is unknown.
+  const balanceCmt = issuedCmt > 0 ? Math.max(0, issuedCmt - processCmt) : '';
+
   const slicingBase = {
     slicing_side: sideCode,
-    slicing_process_cmt: '',
-    slicing_balance_cmt: '',
+    slicing_process_cmt: processCmt || '',
+    slicing_balance_cmt: balanceCmt,
     slicing_rec_leaf: side.no_of_leaves || '',
   };
 
@@ -445,7 +462,7 @@ function buildFlitchRows(
   logBase,
   ccBase,
   flitch,
-  slicingByLogNo,
+  slicingByFlitchCode,
   peelingByLogNo,
   dressingByCode,
   smokingByCode,
@@ -469,13 +486,14 @@ function buildFlitchRows(
     flitch_status: flitch.issue_status ?? '',
   };
 
-  // Use log_no_code for matching children (slicing/peeling sides that descended from this flitch)
+  // slicing_done_items.log_no == flitch.log_no_code (e.g. "L2105A1").
+  // Look up all slicing sides for this flitch directly by flitch code.
+  const slicingSides = slicingByFlitchCode.get(flitch.log_no_code ?? '') || [];
+
+  // Peeling sides follow the "{flitchCode}[A-Z]+" convention, so keep the
+  // child-pattern filter for peeling.
   const flitchCodeForMatching = flitch.log_no_code ?? flitch.flitch_code ?? '';
   const childPattern = buildChildPattern(flitchCodeForMatching);
-  const allSlicingForLog = slicingByLogNo.get(logBase.log_no) || [];
-  const slicingSides = allSlicingForLog.filter((s) =>
-    childPattern.test(s.log_no_code)
-  );
 
   const allPeelingForLog = peelingByLogNo.get(logBase.log_no) || [];
   const peelingForFlitch = allPeelingForLog.filter((p) =>
@@ -619,7 +637,7 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
       const logIds = logs.map((l) => l._id).filter(Boolean);
 
       // ── Step 2: Bulk-fetch all processing stage data ──────────────────────
-      const [crosscuts, flitches, slicingItems, peelingItems] =
+      const [crosscuts, flitches, peelingItems] =
         await Promise.all([
           crosscutting_done_model
             .find({ log_no: { $in: logNos }, deleted_at: null })
@@ -627,13 +645,99 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
           flitching_done_model
             .find({ log_inventory_item_id: { $in: logIds }, $or: [{ deleted_at: null }, { deleted_at: { $exists: false } }] })
             .lean(),
-          slicing_done_items_model
-            .find({ log_no: { $in: logNos } })
-            .lean(),
           peeling_done_items_model
             .find({ log_no: { $in: logNos } })
             .lean(),
         ]);
+
+      // slicing_done_items.log_no stores the FLITCH code (e.g. "L2105A1"), NOT
+      // the round-log number. Query by the flitch log_no_code values.
+      // Use an aggregate so we can compute item_cmt = total_cmt / sibling_count
+      // (individual cmt is not stored per-item; only total_cmt on the batch).
+      const flitchLogNoCodes = [
+        ...new Set(flitches.map((f) => f.log_no_code).filter(Boolean)),
+      ];
+
+      const slicingItems = flitchLogNoCodes.length
+        ? await slicing_done_items_model.aggregate([
+            { $match: { log_no: { $in: flitchLogNoCodes } } },
+            {
+              $lookup: {
+                from: 'slicing_done_other_details',
+                localField: 'slicing_done_other_details_id',
+                foreignField: '_id',
+                as: 'slicing_done_other_details',
+              },
+            },
+            {
+              $unwind: {
+                path: '$slicing_done_other_details',
+                preserveNullAndEmptyArrays: true,
+              },
+            },
+            {
+              $lookup: {
+                from: 'slicing_done_items',
+                localField: 'slicing_done_other_details_id',
+                foreignField: 'slicing_done_other_details_id',
+                as: '_batch_siblings',
+              },
+            },
+            {
+              $addFields: {
+                item_cmt: {
+                  $let: {
+                    vars: {
+                      raw: { $ifNull: ['$cmt', 0] },
+                      total: {
+                        $ifNull: [
+                          '$slicing_done_other_details.total_cmt',
+                          0,
+                        ],
+                      },
+                      cnt: {
+                        $size: { $ifNull: ['$_batch_siblings', []] },
+                      },
+                    },
+                    in: {
+                      $cond: [
+                        { $gt: ['$$raw', 0] },
+                        '$$raw',
+                        {
+                          $cond: [
+                            {
+                              $and: [
+                                { $gt: ['$$total', 0] },
+                                { $gt: ['$$cnt', 0] },
+                              ],
+                            },
+                            { $divide: ['$$total', '$$cnt'] },
+                            0,
+                          ],
+                        },
+                      ],
+                    },
+                  },
+                },
+              },
+            },
+            {
+              $lookup: {
+                from: 'issued_for_slicings',
+                localField: 'slicing_done_other_details.issue_for_slicing_id',
+                foreignField: '_id',
+                as: 'issued_for_slicing',
+              },
+            },
+            {
+              $unwind: {
+                path: '$issued_for_slicing',
+                preserveNullAndEmptyArrays: true,
+              },
+            },
+            { $project: { _batch_siblings: 0 } },
+          ])
+        : [];
 
       const allLeafCodes = [
         ...new Set([
@@ -665,7 +769,8 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
         ...new Set(groupingItems.map((g) => g.group_no)),
       ];
 
-      const [tappingRaw, pressingItems] = await Promise.all([
+      // Run tapping and pressing-consumed lookup in parallel
+      const [tappingRaw, pressingConsumedLinks] = await Promise.all([
         groupNos.length
           ? tapping_done_items_details_model.aggregate([
               { $match: { group_no: { $in: groupNos } } },
@@ -685,12 +790,42 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
               },
             ])
           : [],
+        // Find every pressing run that consumed sheets from any of our groups.
+        // pressing_done_consumed_items_details.group_details[].group_no is the
+        // string group number (matches grouping_done_items_details.group_no).
+        // This handles both single-group and multi-group pressing runs,
+        // unlike pressing_done_details.group_no which only stores the PRIMARY group.
         groupNos.length
-          ? pressing_done_details_model
-              .find({ group_no: { $in: groupNos } })
-              .lean()
+          ? pressing_done_consumed_items_details_model.aggregate([
+              { $match: { 'group_details.group_no': { $in: groupNos } } },
+              { $unwind: '$group_details' },
+              { $match: { 'group_details.group_no': { $in: groupNos } } },
+              {
+                $project: {
+                  pressing_done_details_id: 1,
+                  group_no: '$group_details.group_no',
+                },
+              },
+            ])
           : [],
       ]);
+
+      // Deduplicate pressing_done_details ObjectIds (keep as ObjectId instances)
+      const uniquePressingDetailIds = [
+        ...new Map(
+          pressingConsumedLinks.map((r) => [
+            String(r.pressing_done_details_id),
+            r.pressing_done_details_id,
+          ])
+        ).values(),
+      ];
+
+      // Fetch the actual pressing output records
+      const pressingItems = uniquePressingDetailIds.length > 0
+        ? await pressing_done_details_model
+            .find({ _id: { $in: uniquePressingDetailIds } })
+            .lean()
+        : [];
 
       // ── History-based queries for issue tracking ─────────────────────────
       const groupingItemIds = groupingItems.map((g) => g._id).filter(Boolean);
@@ -781,20 +916,55 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
       const crosscutsByLogNo = groupByKey(crosscuts, 'log_no');
       const flitchesByCrosscutId = groupByKey(
         flitches.filter((f) => f.crosscut_done_id),
-        'crosscut_done_id'
+        (f) => String(f.crosscut_done_id)
       );
-      const flitchesByLogInventoryItemId = groupByKey(flitches, 'log_inventory_item_id');
-      const slicingByLogNo = groupByKey(slicingItems, 'log_no');
+      const flitchesByLogInventoryItemId = groupByKey(
+        flitches,
+        (f) => String(f.log_inventory_item_id)
+      );
+      // slicingItems keyed by log_no (= flitch code, e.g. "L2105A1")
+      const slicingByFlitchCode = groupByKey(slicingItems, 'log_no');
       const peelingByLogNo = groupByKey(peelingItems, 'log_no');
       const dressingByCode = groupByKey(dressingItems, 'log_no_code');
       const smokingByCode = groupByKey(smokingItems, 'log_no_code');
       const groupingByCode = groupByKey(groupingItems, 'log_no_code');
       const tappingByGroupNo = groupByKey(tappingRaw, 'group_no');
-      const pressingByGroupNo = groupByKey(pressingItems, 'group_no');
+
+      // Build pressingByGroupNo from the consumed-items link so that EVERY group
+      // involved in a pressing run (not just the primary group_no) gets credited.
+      const pressingById = new Map(pressingItems.map((p) => [String(p._id), p]));
+      const pressingByGroupNo = new Map();
+      for (const link of pressingConsumedLinks) {
+        const groupNo = link.group_no;
+        const pressingDetail = pressingById.get(String(link.pressing_done_details_id));
+        if (!pressingDetail) continue;
+        if (!pressingByGroupNo.has(groupNo)) pressingByGroupNo.set(groupNo, []);
+        const list = pressingByGroupNo.get(groupNo);
+        // avoid adding the same pressing record twice for the same group
+        if (!list.find((p) => String(p._id) === String(pressingDetail._id))) {
+          list.push(pressingDetail);
+        }
+      }
+
       const cncByPressingId = groupByKey(cncItems, (c) => String(c.pressing_details_id));
       const colourByPressingId = groupByKey(colourItems, (c) => String(c.pressing_details_id));
 
-      // ── Step 3_DEBUG: Log flitch data for troubleshooting ─────────────────────────────────────────
+      // ── Step 3_DEBUG: Log flitch/slicing data for troubleshooting ──────────────────────────────────
+      console.log(
+        'DEBUG [Slicing Query]',
+        `flitchLogNoCodes: ${flitchLogNoCodes.length}, slicingItems: ${slicingItems.length}, slicingByFlitchCode size: ${slicingByFlitchCode.size}`
+      );
+      if (slicingItems.length > 0) {
+        console.log('DEBUG [Slicing Details - First 3]:');
+        slicingItems.slice(0, 3).forEach((s, i) => {
+          console.log(
+            `  Slicing ${i}: log_no="${s.log_no}", log_no_code="${s.log_no_code}"`
+          );
+        });
+      } else {
+        console.log('DEBUG [No slicing items found - check flitchLogNoCodes]');
+      }
+
       // DEBUG: Log flitch data for troubleshooting
       console.log(
         'DEBUG [Flitch Query]',
@@ -823,7 +993,7 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
       // ── Step 3 PRESSING DEBUG ─────────────────────────────────────────────
       console.log(
         'DEBUG [Pressing Data]',
-        `groupingItems: ${groupingItems.length}, groupNos: ${groupNos.length}, pressingItems: ${pressingItems.length}`
+        `groupingItems: ${groupingItems.length}, groupNos: ${groupNos.length}, pressingConsumedLinks: ${pressingConsumedLinks.length}, pressingItems: ${pressingItems.length}`
       );
       if (pressingItems.length > 0) {
         console.log('DEBUG [Pressing Details - First 3]:');
@@ -831,7 +1001,7 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
           console.log(`  Pressing ${i}: group_no="${p.group_no}", _id="${p._id}", no_of_sheets=${p.no_of_sheets}, sqm=${p.sqm}`);
         });
       } else {
-        console.log('DEBUG [No pressing items found]');
+        console.log('DEBUG [No pressing items found via consumed_items_details]');
       }
 
       console.log(
@@ -917,7 +1087,7 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
                     logBase,
                     ccBase,
                     flitch,
-                    slicingByLogNo,
+                    slicingByFlitchCode,
                     peelingByLogNo,
                     dressingByCode,
                     smokingByCode,
@@ -1008,7 +1178,7 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
                   logBase,
                   ccBase,
                   flitch,
-                  slicingByLogNo,
+                  slicingByFlitchCode,
                   peelingByLogNo,
                   dressingByCode,
                   smokingByCode,
@@ -1040,7 +1210,7 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
                 logBase,
                 ccBase,
                 flitch,
-                slicingByLogNo,
+                slicingByFlitchCode,
                 peelingByLogNo,
                 dressingByCode,
                 smokingByCode,
