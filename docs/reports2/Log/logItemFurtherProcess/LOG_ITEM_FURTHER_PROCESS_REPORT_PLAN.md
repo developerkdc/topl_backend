@@ -123,17 +123,18 @@ Fetched by `pressing_details_id` ∈ pressing IDs from the step above.
 
 ---
 
-## Step 3 — History maps (issue tracking)
+## Step 3 — History maps (issue tracking + order resolution)
 
-All history aggregations run the same pattern: `$match → $sort(updatedAt desc) → $group(_id = item_id, $first each field)`.
+All history aggregations follow the same pattern: `$match → $sort(updatedAt desc) → $group(_id = item_id, $first each field)`.
 
 ### Grouping history — `grouping_done_history_model`
 
 Match on `grouping_done_item_id`.
 
-Produces **two** Maps:
-- `groupingIssuedForByItemId`: `item_id → issued_for` (values: `order`, `stock`, `sample`)
+Produces **three** Maps:
+- `groupingIssuedForByItemId`: `item_id → issued_for` (values: `ORDER`, `STOCK`, `SAMPLE`)
 - `groupingIssueStatusByItemId`: `item_id → issue_status` (values: `challan`, `order`, `tapping`)
+- `groupingOrderIdByItemId`: `item_id → order_id` (only when `issued_for = 'ORDER'`)
 
 `grouping_issue_status` on the report row uses `groupingIssueStatusByItemId`.
 
@@ -141,16 +142,45 @@ Produces **two** Maps:
 
 Match on `tapping_done_item_id`.
 
-Produces `tappingIssueStatusByItemId`: `item_id → formatted label` via `formatTappingPressingIssueLabel(issue_status, issued_for)`.
+Produces two Maps:
+- `tappingIssueStatusByItemId`: `item_id → formatted label` via `formatTappingPressingIssueLabel(issue_status, issued_for)`
+- `tappingOrderIdByItemId`: `item_id → order_id` (only when `issued_for = 'ORDER'`)
 
 ### Pressing history — `pressing_done_history_model`
 
 Match on `issued_item_id`.
 
-Produces three Maps:
+Produces four Maps:
 - `pressingIssuedSheetsByItemId`: `pressing_detail_id → sum(no_of_sheets)`
 - `pressingIssuedSqmByItemId`: `pressing_detail_id → sum(sqm)`
 - `pressingIssueStatusByItemId`: `pressing_detail_id → formatted label` via `formatPressingIssueLabel`
+- `pressingOrderIdByItemId`: `pressing_detail_id → order_id` (only when `issued_for = 'ORDER'`)
+
+### CNC history — `cnc_history_model`
+
+Match on `issued_item_id` ∈ CNC done item ids (run in parallel with Colour history).
+
+Produces one Map:
+- `cncOrderIdByItemId`: `cnc_item_id → order_id` (only when `issued_for = 'ORDER'`)
+
+### Colour history — `color_history_model`
+
+Match on `issued_item_id` ∈ Colour done item ids (run in parallel with CNC history).
+
+Produces one Map:
+- `colourOrderIdByItemId`: `colour_item_id → order_id` (only when `issued_for = 'ORDER'`)
+
+### Orders bulk fetch
+
+After all five history aggregations, all unique `order_id` values are collected and fetched in one query:
+
+```js
+OrderModel.find({ _id: { $in: allOrderIds } }, { order_no: 1, orderDate: 1, owner_name: 1 })
+→ orderById: Map<order_id → { order_no, orderDate, owner_name }>
+```
+
+All six maps are packed into a single `orderMaps` object and threaded through:
+`buildFlitchRows → buildSlicingSideRows / buildPeelingRow → buildGroupingData`.
 
 ---
 
@@ -256,6 +286,21 @@ Computes all Grouping → Tapping → Pressing → CNC → Colour columns:
 | Pressing issue status | `resolvePressingIssueStatusFromHistory` → `pressingIssueStatusByItemId` |
 | CNC type / sheets | First CNC record via `cncByPressingId` |
 | Colour sheets | Sum via `colourByPressingId` |
+| **Sales / Order** | Resolved from `orderMaps` — see priority below |
+
+**Order resolution priority (most-downstream first):**
+
+1. Any Colour item (`colourOrderIdByItemId`) → look up first non-null
+2. Any CNC item (`cncOrderIdByItemId`) → look up first non-null
+3. Any Pressing item (`pressingOrderIdByItemId`) → look up first non-null
+4. Any Tapping item (`tappingOrderIdByItemId`) → look up first non-null
+5. Grouping item itself (`groupingOrderIdByItemId`)
+
+The first non-null `order_id` resolves to an `orders` document via `orderById`. Columns populated:
+- `sales_order_no` — `orders.order_no`
+- `sales_order_date` — `orders.orderDate` formatted as `DD/MM/YYYY`
+- `sales_customer` — `orders.owner_name`
+- `sales_rec_sheets` — total sheets issued from pressing (already computed from `pressingIssuedSheetsByItemId`)
 
 ### `getDressingData(logNoCode, dressingByCode)`
 
@@ -301,6 +346,7 @@ Other CMT/SQM fields use the raw database values (already stored as rounded numb
 - **Peeling `output` shows SQM**, not leaves. `peeling_done_items.cmt` stores the SQM value (length × width × leaves). `no_of_leaves` is separately shown in `peeling_rec_leaf`.
 - **Pressing multi-group:** Only `pressing_done_consumed_items_details` covers all groups in a multi-group pressing run. Using `pressing_done_details.group_no` alone misses secondary groups.
 - **Map key type:** All `groupByKey` calls for ObjectId-based fields explicitly use `String(objectId)` — mixing raw ObjectId instances with string lookups causes silent misses.
+- **Order tracking stages:** `order_id` is only stored in history models from Grouping onwards (Grouping, Tapping, Pressing, CNC, Colour). Log, Crosscut, Flitch, Slicing, Peeling, Smoking, and Dressing schemas have no order association — sales columns will always be blank for rows that terminate before Grouping.
 - **Console DEBUG blocks:** The controller still contains `console.log` blocks for slicing/flitch/pressing debugging. These should be removed or gated behind an environment flag before production deployment.
 - **Performance note:** Wide date ranges can fan out across many collections in parallel. Monitor query count and heap usage on large datasets.
 

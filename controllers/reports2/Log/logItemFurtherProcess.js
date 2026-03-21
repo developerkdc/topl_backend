@@ -18,7 +18,10 @@ import {
 } from '../../../database/schema/factory/pressing/pressing_done/pressing_done.schema.js';
 import { pressing_done_history_model } from '../../../database/schema/factory/pressing/pressing_history/pressing_done_history.schema.js';
 import { cnc_done_details_model } from '../../../database/schema/factory/cnc/cnc_done/cnc_done.schema.js';
+import cnc_history_model from '../../../database/schema/factory/cnc/cnc_history/cnc.history.schema.js';
 import { color_done_details_model } from '../../../database/schema/factory/colour/colour_done/colour_done.schema.js';
+import color_history_model from '../../../database/schema/factory/colour/colour_history/colour_history.schema.js';
+import { OrderModel } from '../../../database/schema/order/orders.schema.js';
 import { createLogItemFurtherProcessReportExcel } from '../../../config/downloadExcel/reports2/Log/logItemFurtherProcess.js';
 
 // ─────────────────────────── Utility helpers ────────────────────────────────
@@ -130,6 +133,9 @@ const emptyDownstream = () => ({
   cnc_type: '',
   cnc_rec_sheets: '',
   colour_rec_sheets: '',
+  sales_order_no: '',
+  sales_order_date: '',
+  sales_customer: '',
   sales_rec_sheets: '',
   jwc_veneer: '',
   awc_pressing_sheets: '',
@@ -181,7 +187,8 @@ function buildGroupingData(
   pressingIssuedSheetsByItemId,
   pressingIssuedSqmByItemId,
   pressingIssueStatusByItemId,
-  groupingIssueStatusByItemId
+  groupingIssueStatusByItemId,
+  orderMaps
 ) {
   const groupNo = groupItem.group_no;
   const recSheets = groupItem.no_of_sheets || 0;
@@ -255,6 +262,45 @@ function buildGroupingData(
   const hasTapping = tappingItems.length > 0;
   const hasPressing = pressingItems.length > 0;
 
+  // ── Order / Sales resolution ──────────────────────────────────────────────
+  // Priority (most-downstream first): Colour → CNC → Pressing → Tapping → Grouping
+  const {
+    groupingOrderIdByItemId,
+    tappingOrderIdByItemId,
+    pressingOrderIdByItemId,
+    cncOrderIdByItemId,
+    colourOrderIdByItemId,
+    orderById,
+  } = orderMaps || {};
+
+  let resolvedOrderId = null;
+  for (const c of colourItems) {
+    const oid = colourOrderIdByItemId?.get(String(c._id));
+    if (oid) { resolvedOrderId = oid; break; }
+  }
+  if (!resolvedOrderId) {
+    for (const c of cncItems) {
+      const oid = cncOrderIdByItemId?.get(String(c._id));
+      if (oid) { resolvedOrderId = oid; break; }
+    }
+  }
+  if (!resolvedOrderId) {
+    for (const p of pressingItems) {
+      const oid = pressingOrderIdByItemId?.get(String(p._id));
+      if (oid) { resolvedOrderId = oid; break; }
+    }
+  }
+  if (!resolvedOrderId) {
+    for (const t of tappingItems) {
+      const oid = tappingOrderIdByItemId?.get(String(t._id));
+      if (oid) { resolvedOrderId = oid; break; }
+    }
+  }
+  if (!resolvedOrderId) {
+    resolvedOrderId = groupingOrderIdByItemId?.get(String(groupItem._id));
+  }
+  const order = resolvedOrderId ? orderById?.get(String(resolvedOrderId)) : null;
+
   return {
     grouping_new_group_no: groupNo,
     grouping_rec_sheets: recSheets || '',
@@ -282,7 +328,12 @@ function buildGroupingData(
     cnc_type: cncType,
     cnc_rec_sheets: cncRecSheets || '',
     colour_rec_sheets: colourRecSheets || '',
-    sales_rec_sheets: '',
+    sales_order_no: order?.order_no || '',
+    sales_order_date: order?.orderDate
+      ? new Date(order.orderDate).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+      : '',
+    sales_customer: order?.owner_name || '',
+    sales_rec_sheets: pressingIssueSheets || '',
     jwc_veneer: '',
     awc_pressing_sheets: '',
   };
@@ -334,7 +385,8 @@ function buildSlicingSideRows(
   pressingIssuedSheetsByItemId,
   pressingIssuedSqmByItemId,
   pressingIssueStatusByItemId,
-  groupingIssueStatusByItemId
+  groupingIssueStatusByItemId,
+  orderMaps
 ) {
   const sideCode = side.log_no_code;
 
@@ -377,7 +429,8 @@ function buildSlicingSideRows(
         pressingIssuedSheetsByItemId,
         pressingIssuedSqmByItemId,
         pressingIssueStatusByItemId,
-        groupingIssueStatusByItemId
+        groupingIssueStatusByItemId,
+        orderMaps
       ),
     }));
   }
@@ -415,7 +468,8 @@ function buildPeelingRow(
   pressingIssuedSheetsByItemId,
   pressingIssuedSqmByItemId,
   pressingIssueStatusByItemId,
-  groupingIssueStatusByItemId
+  groupingIssueStatusByItemId,
+  orderMaps
 ) {
   const peelingCode = peel.log_no_code;
 
@@ -457,7 +511,8 @@ function buildPeelingRow(
         pressingIssuedSheetsByItemId,
         pressingIssuedSqmByItemId,
         pressingIssueStatusByItemId,
-        groupingIssueStatusByItemId
+        groupingIssueStatusByItemId,
+        orderMaps
       ),
     };
   }
@@ -493,7 +548,8 @@ function buildFlitchRows(
   pressingIssuedSheetsByItemId,
   pressingIssuedSqmByItemId,
   pressingIssueStatusByItemId,
-  groupingIssueStatusByItemId
+  groupingIssueStatusByItemId,
+  orderMaps
 ) {
   // Flitch Issue in(CMT): flitching_done — col 11 = log_no_code, 12–14 from flitch row
   // Display log_no_code in column, but match children using the same code
@@ -539,7 +595,8 @@ function buildFlitchRows(
         pressingIssuedSheetsByItemId,
         pressingIssuedSqmByItemId,
         pressingIssueStatusByItemId,
-        groupingIssueStatusByItemId
+        groupingIssueStatusByItemId,
+        orderMaps
       )
     );
   }
@@ -563,7 +620,8 @@ function buildFlitchRows(
         pressingIssuedSheetsByItemId,
         pressingIssuedSqmByItemId,
         pressingIssueStatusByItemId,
-        groupingIssueStatusByItemId
+        groupingIssueStatusByItemId,
+        orderMaps
       )
     );
   }
@@ -899,6 +957,7 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
                   _id: '$grouping_done_item_id',
                   issued_for: { $first: '$issued_for' },
                   issue_status: { $first: '$issue_status' },
+                  order_id: { $first: '$order_id' },
                 },
               },
             ])
@@ -908,6 +967,11 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
       );
       const groupingIssueStatusByItemId = new Map(
         groupingIssuedForAgg.map((r) => [String(r._id), r.issue_status || ''])
+      );
+      const groupingOrderIdByItemId = new Map(
+        groupingIssuedForAgg
+          .filter((r) => r.order_id)
+          .map((r) => [String(r._id), r.order_id])
       );
 
       const tappingItemIds = tappingRaw.map((t) => t._id).filter(Boolean);
@@ -921,6 +985,7 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
                   _id: '$tapping_done_item_id',
                   issue_status: { $first: '$issue_status' },
                   issued_for: { $first: '$issued_for' },
+                  order_id: { $first: '$order_id' },
                 },
               },
             ])
@@ -930,6 +995,11 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
           String(r._id),
           formatTappingPressingIssueLabel(r.issue_status, r.issued_for),
         ])
+      );
+      const tappingOrderIdByItemId = new Map(
+        tappingHistoryAgg
+          .filter((r) => r.order_id)
+          .map((r) => [String(r._id), r.order_id])
       );
 
       const pressingDetailIds = pressingItems.map((p) => p._id).filter(Boolean);
@@ -945,6 +1015,7 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
                   issued_sqm: { $sum: '$sqm' },
                   issue_status: { $first: '$issue_status' },
                   issued_for: { $first: '$issued_for' },
+                  order_id: { $first: '$order_id' },
                 },
               },
             ])
@@ -961,6 +1032,11 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
           formatPressingIssueLabel(r.issue_status, r.issued_for),
         ])
       );
+      const pressingOrderIdByItemId = new Map(
+        pressingHistoryAgg
+          .filter((r) => r.order_id)
+          .map((r) => [String(r._id), r.order_id])
+      );
 
       const pressingIds = pressingItems.map((p) => p._id);
       const [cncItems, colourItems] = await Promise.all([
@@ -975,6 +1051,75 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
               .lean()
           : [],
       ]);
+
+      // ── CNC + Colour order history (parallel) ────────────────────────────────
+      const cncItemIds = cncItems.map((c) => c._id).filter(Boolean);
+      const colourItemIds = colourItems.map((c) => c._id).filter(Boolean);
+      const [cncHistoryAgg, colourHistoryAgg] = await Promise.all([
+        cncItemIds.length
+          ? cnc_history_model.aggregate([
+              { $match: { issued_item_id: { $in: cncItemIds } } },
+              { $sort: { updatedAt: -1 } },
+              {
+                $group: {
+                  _id: '$issued_item_id',
+                  order_id: { $first: '$order_id' },
+                },
+              },
+            ])
+          : [],
+        colourItemIds.length
+          ? color_history_model.aggregate([
+              { $match: { issued_item_id: { $in: colourItemIds } } },
+              { $sort: { updatedAt: -1 } },
+              {
+                $group: {
+                  _id: '$issued_item_id',
+                  order_id: { $first: '$order_id' },
+                },
+              },
+            ])
+          : [],
+      ]);
+      const cncOrderIdByItemId = new Map(
+        cncHistoryAgg
+          .filter((r) => r.order_id)
+          .map((r) => [String(r._id), r.order_id])
+      );
+      const colourOrderIdByItemId = new Map(
+        colourHistoryAgg
+          .filter((r) => r.order_id)
+          .map((r) => [String(r._id), r.order_id])
+      );
+
+      // ── Bulk-fetch orders for all order_ids found across all stages ──────────
+      const allOrderIds = [
+        ...new Set([
+          ...groupingOrderIdByItemId.values(),
+          ...tappingOrderIdByItemId.values(),
+          ...pressingOrderIdByItemId.values(),
+          ...cncOrderIdByItemId.values(),
+          ...colourOrderIdByItemId.values(),
+        ].map(String)),
+      ];
+      const orderDocs = allOrderIds.length
+        ? await OrderModel
+            .find(
+              { _id: { $in: allOrderIds } },
+              { order_no: 1, orderDate: 1, owner_name: 1 }
+            )
+            .lean()
+        : [];
+      const orderById = new Map(orderDocs.map((o) => [String(o._id), o]));
+
+      const orderMaps = {
+        groupingOrderIdByItemId,
+        tappingOrderIdByItemId,
+        pressingOrderIdByItemId,
+        cncOrderIdByItemId,
+        colourOrderIdByItemId,
+        orderById,
+      };
 
       // ── Step 3: Build lookup maps ─────────────────────────────────────────
       const crosscutsByLogNo = groupByKey(crosscuts, 'log_no');
@@ -1165,7 +1310,8 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
                     pressingIssuedSheetsByItemId,
                     pressingIssuedSqmByItemId,
                     pressingIssueStatusByItemId,
-                    groupingIssueStatusByItemId
+                    groupingIssueStatusByItemId,
+                    orderMaps
                   )
                 );
               }
@@ -1196,7 +1342,8 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
                       pressingIssuedSheetsByItemId,
                       pressingIssuedSqmByItemId,
                       pressingIssueStatusByItemId,
-                      groupingIssueStatusByItemId
+                      groupingIssueStatusByItemId,
+                      orderMaps
                     )
                   );
                 }
@@ -1258,7 +1405,8 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
                   pressingIssuedSheetsByItemId,
                   pressingIssuedSqmByItemId,
                   pressingIssueStatusByItemId,
-                  groupingIssueStatusByItemId
+                  groupingIssueStatusByItemId,
+                  orderMaps
                 )
               );
             }
@@ -1291,7 +1439,8 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
                 pressingIssuedSheetsByItemId,
                 pressingIssuedSqmByItemId,
                 pressingIssueStatusByItemId,
-                groupingIssueStatusByItemId
+                groupingIssueStatusByItemId,
+                orderMaps
               )
             );
           }
@@ -1322,7 +1471,8 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
                 pressingIssuedSheetsByItemId,
                 pressingIssuedSqmByItemId,
                 pressingIssueStatusByItemId,
-                groupingIssueStatusByItemId
+                groupingIssueStatusByItemId,
+                orderMaps
               )
             );
           }

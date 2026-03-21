@@ -186,9 +186,21 @@ Each row object contains the following keys. Groups correspond to Excel header g
 | `cnc_type` | `product_type` from first CNC record linked to pressing |
 | `cnc_rec_sheets` | Sum of CNC `no_of_sheets` |
 | `colour_rec_sheets` | Sum of colour `no_of_sheets` |
-| `sales_rec_sheets` | Reserved — always blank |
+
+### Sales / Order
+
+These columns are populated when the log's lineage was issued to a customer order at any stage from Grouping onwards. The most-downstream stage with an order takes priority: **Colour → CNC → Pressing → Tapping → Grouping**.
+
+| Key | Source |
+|-----|--------|
+| `sales_order_no` | `orders.order_no` |
+| `sales_order_date` | `orders.orderDate` formatted as `DD/MM/YYYY` |
+| `sales_customer` | `orders.owner_name` |
+| `sales_rec_sheets` | Total sheets issued from pressing (`pressing_done_history` sum of `no_of_sheets`) |
 | `jwc_veneer` | Reserved — always blank |
 | `awc_pressing_sheets` | Reserved — always blank |
+
+> **Blank when:** the item has not been issued to any order (e.g. still in stock, or processing did not reach Grouping).
 
 ---
 

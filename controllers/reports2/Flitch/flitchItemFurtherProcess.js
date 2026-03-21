@@ -36,6 +36,8 @@ const getVal = (obj, path) =>
 const sumField = (arr, field) =>
   arr.reduce((acc, item) => acc + (parseFloat(getVal(item, field)) || 0), 0);
 
+const round3 = (n) => Math.round((n + Number.EPSILON) * 1000) / 1000;
+
 /** Stock / movement differences (received − available, issued − processed, etc.) never go below zero. */
 function nonNegativeDiff(minuend, subtrahend) {
   const a = parseFloat(minuend) || 0;
@@ -266,10 +268,15 @@ function getDressingData(logNoCode, dressingByCode) {
 function getSmokingData(logNoCode, smokingByCode) {
   const items = smokingByCode.get(logNoCode) || [];
   if (!items.length) return emptySmoking();
+  const issuedItems = items.filter((s) => s.issue_status);
+  const totalSqm = round3(sumField(items, 'sqm'));
+  const issuedSqm = issuedItems.length ? round3(sumField(issuedItems, 'sqm')) : '';
   return {
-    smoking_process: items.map((s) => s.process_name).filter(Boolean)[0] || '',
-    smoking_issue_sqm: sumField(items, 'sqm') || '',
-    smoking_issue_status: items.find((s) => s.issue_status)?.issue_status || '',
+    // Total SQM that passed through smoking/dying (same semantics as log further process report)
+    smoking_process: totalSqm || '',
+    // SQM issued onward from smoking (only rows with issue_status)
+    smoking_issue_sqm: issuedSqm,
+    smoking_issue_status: issuedItems[0]?.issue_status || '',
   };
 }
 

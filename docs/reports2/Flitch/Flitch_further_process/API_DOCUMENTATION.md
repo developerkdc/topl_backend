@@ -103,11 +103,14 @@
 | 12 | Issue Status | `dressing_done_items.issue_status` |
 
 ### Cols 13–15 — Smoking/Dying
+
+Aligned with the **log item further process** report: quantities are SQM-based; “Process” is total throughput, not `process_name`.
+
 | Col | Header | Source |
 |---|---|---|
-| 13 | Process | `process_done_items_details.process_name` |
-| 14 | Issue (Sq.Mtr.) | `SUM(process_done_items_details.sqm)` grouped by `log_no_code` |
-| 15 | Issue Status | `process_done_items_details.issue_status` |
+| 13 | Process | Total SQM processed: `SUM(process_done_items_details.sqm)` for all rows with this `log_no_code`, rounded to 3 decimal places |
+| 14 | Issue (Sq.Mtr.) | `SUM(sqm)` only for rows where `issue_status` is set; rounded to 3 d.p.; blank if nothing issued |
+| 15 | Issue Status | `issue_status` from the first **issued** row (same filter as col 14) |
 
 ### Cols 16–23 — Clipping/Grouping
 | Col | Header | Source |
