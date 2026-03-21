@@ -25,7 +25,9 @@ Hierarchical Excel export that traces each inward log through every downstream f
 | `sumField(arr, field)` | Reduces an array using `getVal` + `parseFloat`. |
 | `round3(n)` | Rounds to 3 decimal places using `Math.round((n + EPSILON) * 1000) / 1000` to eliminate floating-point drift. |
 | `buildChildPattern(code)` | Returns `/^{escaped_code}[A-Z]+$/` regex used to match peeling/CC child codes (e.g. `L0702A1` → children `L0702A1A`, `L0702A1B`, etc.). |
-| `crosscutIssueForFlitchPeeling(cc)` | Returns `{ issue_for, status }` — only populated when `cc.issue_status` is `flitching` or `peeling`. |
+| `crosscutIssueForFlitchPeeling(cc)` | Returns `{ issue_for, status }` — populated when `cc.issue_status` is `flitching`, `peeling`, or `order`. For `order`, `issue_for` is `cc.crosscut_cmt` and `status` is `"order"`. |
+| `formatOrderItemCbmOrSqm(item)` | Formats an order item's CBM or SQM into a display string (e.g. `"12.345 CBM"`). Prioritises `unit_name` hints; falls back to `cbm` then `sqm`. |
+| `loadOrderItemDetailsByIds(ids)` | Fetches order item detail records from `raw_order_item_details`, `decorative_order_item_details`, and `series_product_order_item_details` by a list of `_id`s. Returns a `Map<id → item>`. |
 | `formatTappingPressingIssueLabel(issueStatus, issuedFor)` | Formats tapping history issue label as `"Stage / Dest"` string. |
 | `formatPressingIssueLabel(issueStatus, issuedFor)` | Same pattern for pressing history. |
 | `resolveSplicingIssueStatusFromHistory(tappingItems, map)` | Returns the first non-empty formatted label from the tapping history map for the given items. |
@@ -123,7 +125,7 @@ Fetched by `pressing_details_id` ∈ pressing IDs from the step above.
 
 ---
 
-## Step 3 — History maps (issue tracking + order resolution)
+## Step 3 — History maps and direct-order lookups
 
 All history aggregations follow the same pattern: `$match → $sort(updatedAt desc) → $group(_id = item_id, $first each field)`.
 
@@ -131,56 +133,83 @@ All history aggregations follow the same pattern: `$match → $sort(updatedAt de
 
 Match on `grouping_done_item_id`.
 
-Produces **three** Maps:
+Produces two Maps:
 - `groupingIssuedForByItemId`: `item_id → issued_for` (values: `ORDER`, `STOCK`, `SAMPLE`)
 - `groupingIssueStatusByItemId`: `item_id → issue_status` (values: `challan`, `order`, `tapping`)
-- `groupingOrderIdByItemId`: `item_id → order_id` (only when `issued_for = 'ORDER'`)
-
-`grouping_issue_status` on the report row uses `groupingIssueStatusByItemId`.
 
 ### Tapping history — `tapping_done_history_model`
 
 Match on `tapping_done_item_id`.
 
-Produces two Maps:
+Produces one Map:
 - `tappingIssueStatusByItemId`: `item_id → formatted label` via `formatTappingPressingIssueLabel(issue_status, issued_for)`
-- `tappingOrderIdByItemId`: `item_id → order_id` (only when `issued_for = 'ORDER'`)
 
 ### Pressing history — `pressing_done_history_model`
 
 Match on `issued_item_id`.
 
-Produces four Maps:
+Produces three Maps:
 - `pressingIssuedSheetsByItemId`: `pressing_detail_id → sum(no_of_sheets)`
 - `pressingIssuedSqmByItemId`: `pressing_detail_id → sum(sqm)`
 - `pressingIssueStatusByItemId`: `pressing_detail_id → formatted label` via `formatPressingIssueLabel`
-- `pressingOrderIdByItemId`: `pressing_detail_id → order_id` (only when `issued_for = 'ORDER'`)
 
-### CNC history — `cnc_history_model`
+### Active packing orders — `finished_ready_for_packing_model`
 
-Match on `issued_item_id` ∈ CNC done item ids (run in parallel with Colour history).
+A single query provides CNC and Colour item→order links, and supplements the pressing order links.
 
-Produces one Map:
-- `cncOrderIdByItemId`: `cnc_item_id → order_id` (only when `issued_for = 'ORDER'`)
+**Query:**
+```js
+finished_ready_for_packing_model.find(
+  { pressing_details_id: { $in: pressingIds }, order_id: { $ne: null } },
+  { pressing_details_id: 1, issued_from_id: 1, issued_from: 1, order_id: 1, order_item_id: 1 }
+)
+```
 
-### Colour history — `color_history_model`
+Produces Maps (keyed by `issued_from_id`):
+- `colourOrderIdByItemId` / `colourOrderItemIdByItemId`: rows where `issued_from === 'COLOR'`
+- `cncOrderIdByItemId` / `cncOrderItemIdByItemId`: rows where `issued_from === 'CNC'`
+- `pressingPackingOrderIdByItemId` / `pressingPackingOrderItemIdByItemId`: rows where `issued_from === 'PRESSING_FACTORY'` — merged into the pressing maps with priority over history data
 
-Match on `issued_item_id` ∈ Colour done item ids (run in parallel with CNC history).
+> These maps are built for completeness and possible future use. They do **not** currently feed the Sales columns (see below).
 
-Produces one Map:
-- `colourOrderIdByItemId`: `colour_item_id → order_id` (only when `issued_for = 'ORDER'`)
+### LOG direct orders — `issued_for_order_items`
 
-### Orders bulk fetch
+```js
+issue_for_order_model.find({
+  issued_from: 'LOG',
+  'item_details._id': { $in: logIds }
+})
+```
 
-After all five history aggregations, all unique `order_id` values are collected and fetched in one query:
+Produces `logDirectOrderByLogItemId`: `log_inventory_item._id → { order_id, order_item_id }`.
+
+### CROSSCUT direct orders — `issued_for_order_items`
+
+```js
+issue_for_order_model.find({
+  issued_from: 'CROSSCUTTING',
+  'item_details._id': { $in: crosscutIds }
+})
+```
+
+Produces `crosscutDirectOrderByCrosscutId`: `crosscutting_done._id → { order_id, order_item_id }`.
+
+### Orders & order item details bulk fetch
+
+All unique `order_id` values from the above maps are collected and fetched in one query:
 
 ```js
 OrderModel.find({ _id: { $in: allOrderIds } }, { order_no: 1, orderDate: 1, owner_name: 1 })
 → orderById: Map<order_id → { order_no, orderDate, owner_name }>
 ```
 
-All six maps are packed into a single `orderMaps` object and threaded through:
-`buildFlitchRows → buildSlicingSideRows / buildPeelingRow → buildGroupingData`.
+All unique `order_item_id` values are passed to `loadOrderItemDetailsByIds` which queries all three order item detail collections in parallel, producing:
+
+```
+orderItemById: Map<order_item_id → item detail doc>
+```
+
+All maps are packed into a single `orderMaps` object.
 
 ---
 
@@ -214,6 +243,10 @@ For each seed log, determine which path exists and emit rows accordingly:
 2. flitchesForLog  = flitchesByLogInventoryItemId.get(String(log._id)) || []
 3. peelingForLog   = peelingByLogNo.get(log_no) || []
 ```
+
+Each log row object carries two internal tracking fields that are deleted before Excel output:
+- `log_inventory_item_id` — the log inventory `_id`, used in the post-process sales pass.
+- `crosscut_done_id` — the crosscut record `_id`, used in the post-process sales pass.
 
 ### Tree walk (per log)
 
@@ -271,7 +304,7 @@ ELSE:
 
 ### `buildGroupingData(groupItem, ..., groupingIssueStatusByItemId)`
 
-Computes all Grouping → Tapping → Pressing → CNC → Colour columns:
+Computes all Grouping → Tapping → Pressing → CNC → Colour columns. Does **not** accept or resolve sales/order data — sales columns are always returned as empty strings here.
 
 | Column group | Logic |
 |---|---|
@@ -286,21 +319,7 @@ Computes all Grouping → Tapping → Pressing → CNC → Colour columns:
 | Pressing issue status | `resolvePressingIssueStatusFromHistory` → `pressingIssueStatusByItemId` |
 | CNC type / sheets | First CNC record via `cncByPressingId` |
 | Colour sheets | Sum via `colourByPressingId` |
-| **Sales / Order** | Resolved from `orderMaps` — see priority below |
-
-**Order resolution priority (most-downstream first):**
-
-1. Any Colour item (`colourOrderIdByItemId`) → look up first non-null
-2. Any CNC item (`cncOrderIdByItemId`) → look up first non-null
-3. Any Pressing item (`pressingOrderIdByItemId`) → look up first non-null
-4. Any Tapping item (`tappingOrderIdByItemId`) → look up first non-null
-5. Grouping item itself (`groupingOrderIdByItemId`)
-
-The first non-null `order_id` resolves to an `orders` document via `orderById`. Columns populated:
-- `sales_order_no` — `orders.order_no`
-- `sales_order_date` — `orders.orderDate` formatted as `DD/MM/YYYY`
-- `sales_customer` — `orders.owner_name`
-- `sales_rec_sheets` — total sheets issued from pressing (already computed from `pressingIssuedSheetsByItemId`)
+| **Sales / Order** | Always `''` — populated by the post-process pass below |
 
 ### `getDressingData(logNoCode, dressingByCode)`
 
@@ -313,6 +332,29 @@ The first non-null `order_id` resolves to an `orders` document via `orderById`. 
 - `smoking_process` = `round3(sumField(items, 'sqm'))` — total SQM through smoking/dying
 - `smoking_issue_sqm` = `round3(sumField(issuedItems, 'sqm'))` — only items with `issue_status` set; blank if none
 - `smoking_issue_status` = first `issue_status` from issued items
+
+---
+
+## Step 6 — Post-process: Sales columns
+
+After all rows are built, two sequential passes fill the Sales columns. Neither pass overwrites an already-filled value.
+
+### Pass 1 — LOG direct sales
+
+For each row, look up `row.log_inventory_item_id` in `logDirectOrderByLogItemId`. If a match is found and `sales_rec_sheets` is blank, set:
+
+- `sales_order_no` from `orderById`
+- `sales_order_date` formatted as `DD/MM/YYYY`
+- `sales_customer` from `orderById`
+- `sales_rec_sheets` = `formatOrderItemCbmOrSqm(orderItemById.get(order_item_id))`
+
+### Pass 2 — CROSSCUT direct sales
+
+For each row, look up `row.crosscut_done_id` in `crosscutDirectOrderByCrosscutId`. Applies the same fields only if `sales_rec_sheets` is still blank (LOG sales take priority).
+
+### Cleanup
+
+After both passes, `log_inventory_item_id` and `crosscut_done_id` are deleted from every row before the data is written to Excel.
 
 ---
 
@@ -346,7 +388,9 @@ Other CMT/SQM fields use the raw database values (already stored as rounded numb
 - **Peeling `output` shows SQM**, not leaves. `peeling_done_items.cmt` stores the SQM value (length × width × leaves). `no_of_leaves` is separately shown in `peeling_rec_leaf`.
 - **Pressing multi-group:** Only `pressing_done_consumed_items_details` covers all groups in a multi-group pressing run. Using `pressing_done_details.group_no` alone misses secondary groups.
 - **Map key type:** All `groupByKey` calls for ObjectId-based fields explicitly use `String(objectId)` — mixing raw ObjectId instances with string lookups causes silent misses.
-- **Order tracking stages:** `order_id` is only stored in history models from Grouping onwards (Grouping, Tapping, Pressing, CNC, Colour). Log, Crosscut, Flitch, Slicing, Peeling, Smoking, and Dressing schemas have no order association — sales columns will always be blank for rows that terminate before Grouping.
+- **Sales columns scope:** Sales columns are populated **only** from LOG and CROSSCUT direct-order issuances (`issued_for_order_items`). Factory-path stages (Grouping, Tapping, Pressing, CNC, Colour → Packing) do not contribute to the Sales columns, even if those stages have linked order IDs.
+- **Sales column format:** `sales_rec_sheets` contains a formatted string (e.g. `"12.345 CBM"`) rather than a number. The column is excluded from Excel numeric-sum totals accordingly.
+- **Revert safety:** `finished_ready_for_packing` is deleted by `revert_finished_ready_for_packing`, making it the correct signal for "order is no longer active". After packing-done is reverted (`revert_packing_done_items`), the record remains with `is_packing_done = false` (order still active). Only after ready-for-packing is reverted does the order disappear.
 - **Console DEBUG blocks:** The controller still contains `console.log` blocks for slicing/flitch/pressing debugging. These should be removed or gated behind an environment flag before production deployment.
 - **Performance note:** Wide date ranges can fan out across many collections in parallel. Monitor query count and heap usage on large datasets.
 

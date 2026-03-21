@@ -101,7 +101,7 @@ export const createLogItemFurtherProcessReportExcel = async (
       { key: 'cnc_type',                width: 13 },  // 51
       { key: 'cnc_rec_sheets',          width: 12 },  // 52
       { key: 'colour_rec_sheets',       width: 12 },  // 53
-      { key: 'sales_rec_sheets',        width: 12 },  // 54
+      { key: 'sales_rec_sheets',        width: 16 },  // 54 — order line CBM / SQM
       { key: 'jwc_veneer',              width: 12 },  // 55
       { key: 'awc_pressing_sheets',     width: 16 },  // 56
     ];
@@ -299,7 +299,7 @@ export const createLogItemFurtherProcessReportExcel = async (
       'Cnc Type',                          // 51
       'REC (Sheets)',                      // 52
       'REC (Sheets)',                      // 53
-      'REC (Sheets)',                      // 54
+      'Order (CBM / SQM)',                 // 54
       'Veneer',                            // 55
       'Pressing Sheets',                   // 56
     ];
@@ -321,7 +321,7 @@ export const createLogItemFurtherProcessReportExcel = async (
       30, 31, 32, 33, 35, 36,   // grouping
       37, 38, 39, 40, 42, 43,   // splicing
       44, 45, 46, 47, 49, 50,   // pressing
-      52, 53, 54,       // cnc, colour, sales
+      52, 53,                  // cnc, colour (sales col 54 is text: CBM/SQM)
     ]);
 
     // Columns to MERGE vertically (parent-level columns)

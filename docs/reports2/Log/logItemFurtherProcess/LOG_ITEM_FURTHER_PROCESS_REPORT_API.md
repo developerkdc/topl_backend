@@ -96,8 +96,8 @@ Each row object contains the following keys. Groups correspond to Excel header g
 |-----|--------|
 | `cc_log_no` | Crosscut `log_no_code` |
 | `cc_rec` | `crosscut_cmt` |
-| `cc_issue_for` | CC CMT issued (populated when `issue_status` is `flitching` or `peeling`) |
-| `cc_status` | `flitching` or `peeling` |
+| `cc_issue_for` | CC CMT issued (populated when `issue_status` is `flitching`, `peeling`, or `order`) |
+| `cc_status` | `flitching`, `peeling`, or `order` |
 
 ### Flitch
 
@@ -189,18 +189,23 @@ Each row object contains the following keys. Groups correspond to Excel header g
 
 ### Sales / Order
 
-These columns are populated when the log's lineage was issued to a customer order at any stage from Grouping onwards. The most-downstream stage with an order takes priority: **Colour → CNC → Pressing → Tapping → Grouping**.
+These columns are populated **only** when a log or crosscut item was directly issued to a customer order via `issued_for_order_items`. Factory-path stages (Grouping, Tapping, Pressing, CNC, Colour) do **not** contribute to these columns.
 
 | Key | Source |
 |-----|--------|
 | `sales_order_no` | `orders.order_no` |
 | `sales_order_date` | `orders.orderDate` formatted as `DD/MM/YYYY` |
 | `sales_customer` | `orders.owner_name` |
-| `sales_rec_sheets` | Total sheets issued from pressing (`pressing_done_history` sum of `no_of_sheets`) |
+| `sales_rec_sheets` | Order item CBM or SQM formatted as `"12.345 CBM"` / `"12.345 SQM"` (from `raw_order_item_details`, `decorative_order_item_details`, or `series_product_order_item_details`) |
 | `jwc_veneer` | Reserved — always blank |
 | `awc_pressing_sheets` | Reserved — always blank |
 
-> **Blank when:** the item has not been issued to any order (e.g. still in stock, or processing did not reach Grouping).
+**Sources and priority:**
+
+1. **LOG direct** — `issued_for_order_items` where `issued_from = "LOG"` and `item_details._id` matches the log inventory item. Applied to all rows sharing that log.
+2. **CROSSCUT direct** — `issued_for_order_items` where `issued_from = "CROSSCUTTING"` and `item_details._id` matches the crosscut record. Applied only to rows that have that crosscut in their lineage; only fills when `sales_rec_sheets` is still empty (LOG takes priority).
+
+> **Blank when:** neither the log nor any of its crosscuts were issued directly to a customer order.
 
 ---
 

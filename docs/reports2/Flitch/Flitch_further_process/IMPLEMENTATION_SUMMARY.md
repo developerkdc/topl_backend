@@ -77,7 +77,7 @@ All queries within each wave run via `Promise.all` for parallel execution.
 | 31–37 | Pressing | no_of_sheets, sqm, balances; issue status from `pressing_done_history` when issued to CNC/COLOR/etc. |
 | 38–39 | CNC | product_type, no_of_sheets |
 | 40 | COLOUR | no_of_sheets |
-| 41 | Sales | placeholder |
+| 41 | Sales | `sales_order_no` — resolved order number via `finished_ready_for_packing_model` (Colour/CNC/Pressing) and history models (Tapping/Grouping); priority: Colour → CNC → Pressing → Tapping → Grouping |
 
 ---
 
@@ -117,7 +117,6 @@ The `inward_id` / `flitch_no` values are shown in **Row 3** of the report title 
 | Column | Reason blank |
 |---|---|
 | Grouping: Issue Status (col 21) | `issued_for` from latest `grouping_done_history` row per `grouping_done_item_id` (ORDER / STOCK / SAMPLE) |
-| Sales (col 41) | Schema/model not yet identified |
 
 ---
 
