@@ -256,7 +256,7 @@ export const createLogItemFurtherProcessReportExcel = async (
       'CC REC',                            // 8
       'Issue For Flitch/Peeling',          // 9
       'Status',                            // 10
-      'Flitch No.',                        // 11
+      'Log No code',                       // 11
       'REC',                               // 12
       'Issue For Slicing/Peeling',         // 13
       'Status',                            // 14

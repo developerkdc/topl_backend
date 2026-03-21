@@ -36,16 +36,16 @@ POST /api/V1/reports2/log/download-excel-log-item-further-process-report
 | 2 | Inward in(CMT) | LogNo | Merged vertically |
 | 3 | Inward in(CMT) | Indian CMT | |
 | 4 | Inward in(CMT) | RECE CMT | |
-| 5 | Inward in(CMT) | Issue For Cross cut/Flitch/Peeling/Sales | |
+| 5 | Inward in(CMT) | Issue For Cross cut/Flitch/Peeling/Sales | From log's issue_status and physical_cmt fields |
 | 6 | Inward in(CMT) | Issue Status | |
 | 7 | Cross Cut Issue in(CMT) | Cross Cut Log No | Merged vertically |
 | 8 | Cross Cut Issue in(CMT) | CC REC | |
-| 9 | Cross Cut Issue in(CMT) | Issue For Flitch/Peeling | |
-| 10 | Cross Cut Issue in(CMT) | Status | |
-| 11 | Flitch Issue in(CMT) | Flitch No. | Merged vertically |
-| 12 | Flitch Issue in(CMT) | REC | |
-| 13 | Flitch Issue in(CMT) | Issue For Slicing/Peeling | |
-| 14 | Flitch Issue in(CMT) | Status | |
+| 9 | Cross Cut Issue in(CMT) | Issue For Flitch/Peeling | `crosscut_cmt` if `issue_status` is peeling or flitching |
+| 10 | Cross Cut Issue in(CMT) | Status | Same row’s `issue_status` (when col 9 filled) |
+| 11 | Flitch Issue in(CMT) | Log No code | `log_no_code` (merged vertically) |
+| 12 | Flitch Issue in(CMT) | REC | `flitch_cmt` |
+| 13 | Flitch Issue in(CMT) | Issue For Slicing/Peeling | `flitch_cmt` (quantity issued) |
+| 14 | Flitch Issue in(CMT) | Status | `issue_status` (slicing, peeling, order, or challan) |
 | 15 | Slicing Issue in(CMT) | Side | Merged vertically |
 | 16 | Slicing Issue in(CMT) | Process Cmt | Placeholder |
 | 17 | Slicing Issue in(CMT) | Balance Cmt | Placeholder |
@@ -75,13 +75,13 @@ POST /api/V1/reports2/log/download-excel-log-item-further-process-report
 | 41 | Splicing | Issue Status | |
 | 42 | Splicing | Balance (Sheets) | |
 | 43 | Splicing | Balance (Sq. Mtr.) | |
-| 44 | Pressing | Pressing (Sheets) | |
-| 45 | Pressing | Pressing (Sq.mtr.) | |
-| 46 | Pressing | Issue (Sheets) | |
-| 47 | Pressing | Issue (Sq. Mtr.) | |
-| 48 | Pressing | Issue Status | |
-| 49 | Pressing | Balance (Sheets) | |
-| 50 | Pressing | Balance (Sq. Mtr.) | |
+| 44 | Pressing | Pressing (Sheets) | `pressing_done_details` sum |
+| 45 | Pressing | Pressing (Sq.mtr.) | `pressing_done_details` sum |
+| 46 | Pressing | Issue (Sheets) | `pressing_done_history` sum |
+| 47 | Pressing | Issue (Sq. Mtr.) | `pressing_done_history` sum |
+| 48 | Pressing | Issue Status | `pressing_done_history` |
+| 49 | Pressing | Balance (Sheets) | received − issued (hist.) |
+| 50 | Pressing | Balance (Sq. Mtr.) | received − issued (hist.) |
 | 51 | CNC | Cnc Type | |
 | 52 | CNC | REC (Sheets) | |
 | 53 | COLOUR | REC (Sheets) | |
@@ -127,6 +127,7 @@ POST /api/V1/reports2/log/download-excel-log-item-further-process-report
 | `grouping_done_items_details_model` | Clipping / Grouping |
 | `tapping_done_items_details_model` | Splicing (tapping) |
 | `tapping_done_other_details_model` | Splicing type lookup |
-| `pressing_done_details_model` | Pressing |
+| `pressing_done_details_model` | Pressing (received) |
+| `pressing_done_history_model` | Pressing issue / issue status / balances |
 | `cnc_done_details_model` | CNC |
 | `color_done_details_model` | Colour |

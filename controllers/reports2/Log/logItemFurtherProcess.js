@@ -9,8 +9,11 @@ import { peeling_done_items_model } from '../../../database/schema/factory/peeli
 import { dressing_done_items_model } from '../../../database/schema/factory/dressing/dressing_done/dressing.done.schema.js';
 import { process_done_items_details_model } from '../../../database/schema/factory/smoking_dying/smoking_dying_done.schema.js';
 import { grouping_done_items_details_model } from '../../../database/schema/factory/grouping/grouping_done.schema.js';
+import grouping_done_history_model from '../../../database/schema/factory/grouping/grouping_done_history.schema.js';
 import { tapping_done_items_details_model } from '../../../database/schema/factory/tapping/tapping_done/tapping_done.schema.js';
+import { tapping_done_history_model } from '../../../database/schema/factory/tapping/tapping_history/tapping_done_history.schema.js';
 import { pressing_done_details_model } from '../../../database/schema/factory/pressing/pressing_done/pressing_done.schema.js';
+import { pressing_done_history_model } from '../../../database/schema/factory/pressing/pressing_history/pressing_done_history.schema.js';
 import { cnc_done_details_model } from '../../../database/schema/factory/cnc/cnc_done/cnc_done.schema.js';
 import { color_done_details_model } from '../../../database/schema/factory/colour/colour_done/colour_done.schema.js';
 import { createLogItemFurtherProcessReportExcel } from '../../../config/downloadExcel/reports2/Log/logItemFurtherProcess.js';
@@ -42,6 +45,58 @@ const buildChildPattern = (code) => {
   const escaped = code.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   return new RegExp(`^${escaped}[A-Z]+$`);
 };
+
+/**
+ * Cross Cut Issue in(CMT) — cols 9–10: Issue For Flitch/Peeling + Status.
+ * Populated from crosscutting_done (crosscut done history) only when issued
+ * onward to flitching or peeling.
+ */
+const crosscutIssueForFlitchPeeling = (cc) => {
+  if (!cc) return { issue_for: '', status: '' };
+  const s = cc.issue_status;
+  if (s === 'peeling' || s === 'flitching') {
+    return { issue_for: cc.crosscut_cmt ?? '', status: s };
+  }
+  return { issue_for: '', status: '' };
+};
+
+/** Splicing Issue Status: tapping → pressing from `tapping_done_history` (not tapping line `issued_for`). */
+function formatTappingPressingIssueLabel(issueStatus, issuedFor) {
+  if (!issueStatus && !issuedFor) return '';
+  const cap = (s) =>
+    s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : '';
+  const stage = issueStatus ? cap(String(issueStatus)) : '';
+  const dest = issuedFor ? String(issuedFor).trim() : '';
+  if (stage && dest) return `${stage} / ${dest}`;
+  return stage || dest;
+}
+
+function resolveSplicingIssueStatusFromHistory(tappingItems, tappingIssueStatusByItemId) {
+  if (!tappingItems?.length || !tappingIssueStatusByItemId?.size) return '';
+  for (const t of tappingItems) {
+    const v = tappingIssueStatusByItemId.get(String(t._id));
+    if (v) return v;
+  }
+  return '';
+}
+
+/** Pressing Issue Status: only after issue to next factory; from `pressing_done_history` (not `pressing_done_details.issued_for`). */
+function formatPressingIssueLabel(issueStatus, issuedFor) {
+  if (!issueStatus && !issuedFor) return '';
+  const stage = issueStatus ? String(issueStatus).trim() : '';
+  const dest = issuedFor ? String(issuedFor).trim() : '';
+  if (stage && dest) return `${stage} / ${dest}`;
+  return stage || dest;
+}
+
+function resolvePressingIssueStatusFromHistory(pressingItems, pressingIssueStatusByItemId) {
+  if (!pressingItems?.length || !pressingIssueStatusByItemId?.size) return '';
+  for (const p of pressingItems) {
+    const v = pressingIssueStatusByItemId.get(String(p._id));
+    if (v) return v;
+  }
+  return '';
+}
 
 // Empty data for all columns from Grouping/Clipping onwards
 const emptyDownstream = () => ({
@@ -115,7 +170,12 @@ function buildGroupingData(
   tappingByGroupNo,
   pressingByGroupNo,
   cncByPressingId,
-  colourByPressingId
+  colourByPressingId,
+  groupingIssuedForByItemId,
+  tappingIssueStatusByItemId,
+  pressingIssuedSheetsByItemId,
+  pressingIssuedSqmByItemId,
+  pressingIssueStatusByItemId
 ) {
   const groupNo = groupItem.group_no;
   const recSheets = groupItem.no_of_sheets || 0;
@@ -147,22 +207,32 @@ function buildGroupingData(
     0,
     sumField(tappingItems, 'sqm') - splicingAvailSqm
   );
-  const splicingIssueStatus =
-    tappingItems.find((t) => t.issued_for)?.issued_for || '';
+  // Use history-based issue status for tapping/splicing
+  const splicingIssueStatus = resolveSplicingIssueStatusFromHistory(
+    tappingItems,
+    tappingIssueStatusByItemId
+  );
 
-  // Pressing
+  // Pressing: received from pressing_done_details; issued + status from pressing_done_history
   const pressingItems = pressingByGroupNo.get(groupNo) || [];
   const pressingSheets = sumField(pressingItems, 'no_of_sheets');
   const pressingSqm = sumField(pressingItems, 'sqm');
-  const pressingAvailSheets = sumField(
-    pressingItems,
-    'available_details.no_of_sheets'
+  const pressingIssueSheets = pressingItems.reduce(
+    (acc, p) =>
+      acc + (pressingIssuedSheetsByItemId.get(String(p._id)) ?? 0),
+    0
   );
-  const pressingAvailSqm = sumField(pressingItems, 'available_details.sqm');
-  const pressingIssueSheets = Math.max(0, pressingSheets - pressingAvailSheets);
-  const pressingIssueSqm = Math.max(0, pressingSqm - pressingAvailSqm);
-  const pressingIssueStatus =
-    pressingItems.find((p) => p.issued_for)?.issued_for || '';
+  const pressingIssueSqm = pressingItems.reduce(
+    (acc, p) =>
+      acc + (pressingIssuedSqmByItemId.get(String(p._id)) ?? 0),
+    0
+  );
+  const pressingBalanceSheets = Math.max(0, pressingSheets - pressingIssueSheets);
+  const pressingBalanceSqm = Math.max(0, pressingSqm - pressingIssueSqm);
+  const pressingIssueStatus = resolvePressingIssueStatusFromHistory(
+    pressingItems,
+    pressingIssueStatusByItemId
+  );
 
   // CNC & Colour via pressing._id
   const pressingIds = pressingItems.map((p) => String(p._id));
@@ -195,8 +265,8 @@ function buildGroupingData(
     pressing_issue_sheets: pressingIssueSheets || '',
     pressing_issue_sqm: pressingIssueSqm || '',
     pressing_issue_status: pressingIssueStatus,
-    pressing_balance_sheets: pressingAvailSheets || '',
-    pressing_balance_sqm: pressingAvailSqm || '',
+    pressing_balance_sheets: pressingBalanceSheets || '',
+    pressing_balance_sqm: pressingBalanceSqm || '',
     cnc_type: cncType,
     cnc_rec_sheets: cncRecSheets || '',
     colour_rec_sheets: colourRecSheets || '',
@@ -241,7 +311,12 @@ function buildSlicingSideRows(
   tappingByGroupNo,
   pressingByGroupNo,
   cncByPressingId,
-  colourByPressingId
+  colourByPressingId,
+  groupingIssuedForByItemId,
+  tappingIssueStatusByItemId,
+  pressingIssuedSheetsByItemId,
+  pressingIssuedSqmByItemId,
+  pressingIssueStatusByItemId
 ) {
   const sideCode = side.log_no_code;
 
@@ -270,7 +345,12 @@ function buildSlicingSideRows(
         tappingByGroupNo,
         pressingByGroupNo,
         cncByPressingId,
-        colourByPressingId
+        colourByPressingId,
+        groupingIssuedForByItemId,
+        tappingIssueStatusByItemId,
+        pressingIssuedSheetsByItemId,
+        pressingIssuedSqmByItemId,
+        pressingIssueStatusByItemId
       ),
     }));
   }
@@ -302,7 +382,12 @@ function buildPeelingRow(
   tappingByGroupNo,
   pressingByGroupNo,
   cncByPressingId,
-  colourByPressingId
+  colourByPressingId,
+  groupingIssuedForByItemId,
+  tappingIssueStatusByItemId,
+  pressingIssuedSheetsByItemId,
+  pressingIssuedSqmByItemId,
+  pressingIssueStatusByItemId
 ) {
   const peelingCode = peel.log_no_code;
 
@@ -333,7 +418,12 @@ function buildPeelingRow(
         tappingByGroupNo,
         pressingByGroupNo,
         cncByPressingId,
-        colourByPressingId
+        colourByPressingId,
+        groupingIssuedForByItemId,
+        tappingIssueStatusByItemId,
+        pressingIssuedSheetsByItemId,
+        pressingIssuedSqmByItemId,
+        pressingIssueStatusByItemId
       ),
     };
   }
@@ -363,16 +453,25 @@ function buildFlitchRows(
   tappingByGroupNo,
   pressingByGroupNo,
   cncByPressingId,
-  colourByPressingId
+  colourByPressingId,
+  groupingIssuedForByItemId,
+  tappingIssueStatusByItemId,
+  pressingIssuedSheetsByItemId,
+  pressingIssuedSqmByItemId,
+  pressingIssueStatusByItemId
 ) {
+  // Flitch Issue in(CMT): flitching_done — col 11 = log_no_code, 12–14 from flitch row
+  // Display log_no_code in column, but match children using the same code
   const flitchBase = {
-    flitch_no: flitch.flitch_code,
-    flitch_rec: flitch.flitch_cmt || '',
-    flitch_issue_for: flitch.flitch_cmt || '',
-    flitch_status: flitch.issue_status || '',
+    flitch_no: flitch.log_no_code ?? flitch.flitch_code ?? '',
+    flitch_rec: flitch.flitch_cmt ?? '',
+    flitch_issue_for: flitch.flitch_cmt ?? '',
+    flitch_status: flitch.issue_status ?? '',
   };
 
-  const childPattern = buildChildPattern(flitch.flitch_code);
+  // Use log_no_code for matching children (slicing/peeling sides that descended from this flitch)
+  const flitchCodeForMatching = flitch.log_no_code ?? flitch.flitch_code ?? '';
+  const childPattern = buildChildPattern(flitchCodeForMatching);
   const allSlicingForLog = slicingByLogNo.get(logBase.log_no) || [];
   const slicingSides = allSlicingForLog.filter((s) =>
     childPattern.test(s.log_no_code)
@@ -398,7 +497,12 @@ function buildFlitchRows(
         tappingByGroupNo,
         pressingByGroupNo,
         cncByPressingId,
-        colourByPressingId
+        colourByPressingId,
+        groupingIssuedForByItemId,
+        tappingIssueStatusByItemId,
+        pressingIssuedSheetsByItemId,
+        pressingIssuedSqmByItemId,
+        pressingIssueStatusByItemId
       )
     );
   }
@@ -416,7 +520,12 @@ function buildFlitchRows(
         tappingByGroupNo,
         pressingByGroupNo,
         cncByPressingId,
-        colourByPressingId
+        colourByPressingId,
+        groupingIssuedForByItemId,
+        tappingIssueStatusByItemId,
+        pressingIssuedSheetsByItemId,
+        pressingIssuedSqmByItemId,
+        pressingIssueStatusByItemId
       )
     );
   }
@@ -507,6 +616,7 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
       }
 
       const logNos = [...new Set(logs.map((l) => l.log_no))];
+      const logIds = logs.map((l) => l._id).filter(Boolean);
 
       // ── Step 2: Bulk-fetch all processing stage data ──────────────────────
       const [crosscuts, flitches, slicingItems, peelingItems] =
@@ -515,7 +625,7 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
             .find({ log_no: { $in: logNos }, deleted_at: null })
             .lean(),
           flitching_done_model
-            .find({ log_no: { $in: logNos }, deleted_at: null })
+            .find({ log_inventory_item_id: { $in: logIds }, $or: [{ deleted_at: null }, { deleted_at: { $exists: false } }] })
             .lean(),
           slicing_done_items_model
             .find({ log_no: { $in: logNos } })
@@ -582,6 +692,77 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
           : [],
       ]);
 
+      // ── History-based queries for issue tracking ─────────────────────────
+      const groupingItemIds = groupingItems.map((g) => g._id).filter(Boolean);
+      const groupingIssuedForAgg =
+        groupingItemIds.length > 0
+          ? await grouping_done_history_model.aggregate([
+              { $match: { grouping_done_item_id: { $in: groupingItemIds } } },
+              { $sort: { updatedAt: -1 } },
+              {
+                $group: {
+                  _id: '$grouping_done_item_id',
+                  issued_for: { $first: '$issued_for' },
+                },
+              },
+            ])
+          : [];
+      const groupingIssuedForByItemId = new Map(
+        groupingIssuedForAgg.map((r) => [String(r._id), r.issued_for || ''])
+      );
+
+      const tappingItemIds = tappingRaw.map((t) => t._id).filter(Boolean);
+      const tappingHistoryAgg =
+        tappingItemIds.length > 0
+          ? await tapping_done_history_model.aggregate([
+              { $match: { tapping_done_item_id: { $in: tappingItemIds } } },
+              { $sort: { updatedAt: -1 } },
+              {
+                $group: {
+                  _id: '$tapping_done_item_id',
+                  issue_status: { $first: '$issue_status' },
+                  issued_for: { $first: '$issued_for' },
+                },
+              },
+            ])
+          : [];
+      const tappingIssueStatusByItemId = new Map(
+        tappingHistoryAgg.map((r) => [
+          String(r._id),
+          formatTappingPressingIssueLabel(r.issue_status, r.issued_for),
+        ])
+      );
+
+      const pressingDetailIds = pressingItems.map((p) => p._id).filter(Boolean);
+      const pressingHistoryAgg =
+        pressingDetailIds.length > 0
+          ? await pressing_done_history_model.aggregate([
+              { $match: { issued_item_id: { $in: pressingDetailIds } } },
+              { $sort: { updatedAt: -1 } },
+              {
+                $group: {
+                  _id: '$issued_item_id',
+                  issued_sheets: { $sum: '$no_of_sheets' },
+                  issued_sqm: { $sum: '$sqm' },
+                  issue_status: { $first: '$issue_status' },
+                  issued_for: { $first: '$issued_for' },
+                },
+              },
+            ])
+          : [];
+      const pressingIssuedSheetsByItemId = new Map(
+        pressingHistoryAgg.map((r) => [String(r._id), r.issued_sheets || 0])
+      );
+      const pressingIssuedSqmByItemId = new Map(
+        pressingHistoryAgg.map((r) => [String(r._id), r.issued_sqm || 0])
+      );
+      const pressingIssueStatusByItemId = new Map(
+        pressingHistoryAgg.map((r) => [
+          String(r._id),
+          formatPressingIssueLabel(r.issue_status, r.issued_for),
+        ])
+      );
+
       const pressingIds = pressingItems.map((p) => p._id);
       const [cncItems, colourItems] = await Promise.all([
         pressingIds.length
@@ -600,9 +781,9 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
       const crosscutsByLogNo = groupByKey(crosscuts, 'log_no');
       const flitchesByCrosscutId = groupByKey(
         flitches.filter((f) => f.crosscut_done_id),
-        (f) => String(f.crosscut_done_id)
+        'crosscut_done_id'
       );
-      const flitchesByLogNo = groupByKey(flitches, 'log_no');
+      const flitchesByLogInventoryItemId = groupByKey(flitches, 'log_inventory_item_id');
       const slicingByLogNo = groupByKey(slicingItems, 'log_no');
       const peelingByLogNo = groupByKey(peelingItems, 'log_no');
       const dressingByCode = groupByKey(dressingItems, 'log_no_code');
@@ -610,39 +791,119 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
       const groupingByCode = groupByKey(groupingItems, 'log_no_code');
       const tappingByGroupNo = groupByKey(tappingRaw, 'group_no');
       const pressingByGroupNo = groupByKey(pressingItems, 'group_no');
-      const cncByPressingId = groupByKey(cncItems, (c) =>
-        String(c.pressing_details_id)
+      const cncByPressingId = groupByKey(cncItems, (c) => String(c.pressing_details_id));
+      const colourByPressingId = groupByKey(colourItems, (c) => String(c.pressing_details_id));
+
+      // ── Step 3_DEBUG: Log flitch data for troubleshooting ─────────────────────────────────────────
+      // DEBUG: Log flitch data for troubleshooting
+      console.log(
+        'DEBUG [Flitch Query]',
+        `Total logs: ${logs.length}, Total flitches fetched: ${flitches.length}`
       );
-      const colourByPressingId = groupByKey(colourItems, (c) =>
-        String(c.pressing_details_id)
+      if (flitches.length > 0) {
+        console.log('DEBUG [Flitch Details]');
+        flitches.slice(0, 3).forEach((f, i) => {
+          console.log(`  Flitch ${i}: log_no="${f.log_no}", log_no_code="${f.log_no_code}", flitch_cmt=${f.flitch_cmt}, issue_status="${f.issue_status}", crosscut_done_id=${f.crosscut_done_id}`);
+        });
+      } else {
+        console.log('DEBUG [No flitches found in database]');
+      }
+
+      console.log(
+        'DEBUG [Flitch Maps]',
+        `flitchesByCrosscutId: ${flitchesByCrosscutId.size}, flitchesByLogInventoryItemId: ${flitchesByLogInventoryItemId.size}`
       );
+      if (flitchesByLogInventoryItemId.size > 0) {
+        console.log('DEBUG [Flitches by log inventory item ID]:');
+        [...flitchesByLogInventoryItemId.entries()].slice(0, 3).forEach(([logId, items]) => {
+          console.log(`  Log ID ${logId}: ${items.length} flitch(es)`);
+        });
+      }
+
+      // ── Step 3 PRESSING DEBUG ─────────────────────────────────────────────
+      console.log(
+        'DEBUG [Pressing Data]',
+        `groupingItems: ${groupingItems.length}, groupNos: ${groupNos.length}, pressingItems: ${pressingItems.length}`
+      );
+      if (pressingItems.length > 0) {
+        console.log('DEBUG [Pressing Details - First 3]:');
+        pressingItems.slice(0, 3).forEach((p, i) => {
+          console.log(`  Pressing ${i}: group_no="${p.group_no}", _id="${p._id}", no_of_sheets=${p.no_of_sheets}, sqm=${p.sqm}`);
+        });
+      } else {
+        console.log('DEBUG [No pressing items found]');
+      }
+
+      console.log(
+        'DEBUG [Pressing Maps]',
+        `pressingByGroupNo size: ${pressingByGroupNo.size}, cncByPressingId size: ${cncByPressingId.size}, colourByPressingId size: ${colourByPressingId.size}`
+      );
+      if (pressingByGroupNo.size > 0) {
+        console.log('DEBUG [Pressing by group number]:');
+        [...pressingByGroupNo.entries()].slice(0, 3).forEach(([groupNo, items]) => {
+          console.log(`  Group ${groupNo}: ${items.length} pressing item(s)`);
+        });
+      }
+
+      // ── Step 3b: Helper function to get issued_for_cmt from log ────────────
+      // Column 5 uses log.issue_status to determine which process it was issued for
+      // and log.physical_cmt as the CMT quantity for that issuance
+      const getIssuedForCmt = (issueStatus, physicalCmt) => {
+        // If log has an issue_status, it means it was issued for that process
+        // with the complete physical_cmt as the issue amount
+        if (issueStatus === 'crosscutting' || issueStatus === 'flitching' || issueStatus === 'peeling') {
+          return physicalCmt || 0;
+        }
+        // For now, log with no issue_status means not yet issued
+        return null;
+      };
 
       // ── Step 4: Build flat hierarchical rows ──────────────────────────────
       const allRows = [];
 
       for (const log of logs) {
         const logNo = log.log_no;
+        const issuedForCmt = getIssuedForCmt(
+          log.issue_status,
+          log.physical_cmt
+        );
         const logBase = {
           item_name: log.item_name || '',
           log_no: logNo,
           indian_cmt: log.indian_cmt ?? '',
           rece_cmt: log.physical_cmt ?? '',
-          inward_issue_for: log.physical_cmt ?? '',
+          inward_issue_for: issuedForCmt ?? '',
           inward_issue_status: log.issue_status || '',
         };
 
         const crosscutsForLog = crosscutsByLogNo.get(logNo) || [];
-        const flitchesForLog = flitchesByLogNo.get(logNo) || [];
+        const flitchesForLog = flitchesByLogInventoryItemId.get(String(log._id)) || [];
         const peelingForLog = peelingByLogNo.get(logNo) || [];
+
+        // DEBUG: Log flitch availability per log
+        if (flitchesForLog.length > 0) {
+          console.log(
+            `DEBUG [Log ${logNo}] Has ${flitchesForLog.length} direct flitches`,
+            flitchesForLog.map((f) => ({
+              log_no_code: f.log_no_code,
+              flitch_cmt: f.flitch_cmt,
+              issue_status: f.issue_status,
+            }))
+          );
+        }
 
         if (crosscutsForLog.length > 0) {
           // Log went through crosscutting
+          // Track which flitches are linked to a crosscut
+          const linkedFlitchIds = new Set();
+
           for (const cc of crosscutsForLog) {
+            const ccFp = crosscutIssueForFlitchPeeling(cc);
             const ccBase = {
               cc_log_no: cc.log_no_code,
               cc_rec: cc.crosscut_cmt || '',
-              cc_issue_for: cc.crosscut_cmt || '',
-              cc_status: cc.issue_status || '',
+              cc_issue_for: ccFp.issue_for,
+              cc_status: ccFp.status,
             };
 
             const flitchesForCc =
@@ -650,6 +911,7 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
 
             if (flitchesForCc.length > 0) {
               for (const flitch of flitchesForCc) {
+                linkedFlitchIds.add(String(flitch._id));
                 allRows.push(
                   ...buildFlitchRows(
                     logBase,
@@ -663,7 +925,12 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
                     tappingByGroupNo,
                     pressingByGroupNo,
                     cncByPressingId,
-                    colourByPressingId
+                    colourByPressingId,
+                    groupingIssuedForByItemId,
+                    tappingIssueStatusByItemId,
+                    pressingIssuedSheetsByItemId,
+                    pressingIssuedSqmByItemId,
+                    pressingIssueStatusByItemId
                   )
                 );
               }
@@ -680,7 +947,7 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
                     buildPeelingRow(
                       logBase,
                       ccBase,
-                      null,
+                      emptyFlitch(),
                       peel,
                       dressingByCode,
                       smokingByCode,
@@ -688,7 +955,12 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
                       tappingByGroupNo,
                       pressingByGroupNo,
                       cncByPressingId,
-                      colourByPressingId
+                      colourByPressingId,
+                      groupingIssuedForByItemId,
+                      tappingIssueStatusByItemId,
+                      pressingIssuedSheetsByItemId,
+                      pressingIssuedSqmByItemId,
+                      pressingIssueStatusByItemId
                     )
                   );
                 }
@@ -718,6 +990,42 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
               });
             }
           }
+
+          // Also process direct flitches (not linked to any crosscut)
+          const directFlitches = flitchesForLog.filter(
+            (f) => !linkedFlitchIds.has(String(f._id))
+          );
+          if (directFlitches.length > 0) {
+            const ccBase = {
+              cc_log_no: '',
+              cc_rec: '',
+              cc_issue_for: '',
+              cc_status: '',
+            };
+            for (const flitch of directFlitches) {
+              allRows.push(
+                ...buildFlitchRows(
+                  logBase,
+                  ccBase,
+                  flitch,
+                  slicingByLogNo,
+                  peelingByLogNo,
+                  dressingByCode,
+                  smokingByCode,
+                  groupingByCode,
+                  tappingByGroupNo,
+                  pressingByGroupNo,
+                  cncByPressingId,
+                  colourByPressingId,
+                  groupingIssuedForByItemId,
+                  tappingIssueStatusByItemId,
+                  pressingIssuedSheetsByItemId,
+                  pressingIssuedSqmByItemId,
+                  pressingIssueStatusByItemId
+                )
+              );
+            }
+          }
         } else if (flitchesForLog.length > 0) {
           // Log went directly to flitching (no crosscut)
           const ccBase = {
@@ -740,7 +1048,12 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
                 tappingByGroupNo,
                 pressingByGroupNo,
                 cncByPressingId,
-                colourByPressingId
+                colourByPressingId,
+                groupingIssuedForByItemId,
+                tappingIssueStatusByItemId,
+                pressingIssuedSheetsByItemId,
+                pressingIssuedSqmByItemId,
+                pressingIssueStatusByItemId
               )
             );
           }
@@ -765,7 +1078,12 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
                 tappingByGroupNo,
                 pressingByGroupNo,
                 cncByPressingId,
-                colourByPressingId
+                colourByPressingId,
+                groupingIssuedForByItemId,
+                tappingIssueStatusByItemId,
+                pressingIssuedSheetsByItemId,
+                pressingIssuedSqmByItemId,
+                pressingIssueStatusByItemId
               )
             );
           }
