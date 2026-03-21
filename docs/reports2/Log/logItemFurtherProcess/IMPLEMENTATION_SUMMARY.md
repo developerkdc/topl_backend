@@ -44,10 +44,12 @@ are **blanked on non-first rows** and **merged vertically** in the Excel output.
 8. Grouping      ← grouping_done_items_details     (log_no_code IN allLeafCodes)
 9. Tapping       ← tapping_done_items_details      (group_no IN groupNos)
                     + $lookup tapping_done_other_details (splicing_type)
-10. Pressing     ← pressing_done_details           (group_no IN groupNos)
+10. Pressing     ← pressing_done_details (group_no IN groupNos); **pressing_done_history** (issued_item_id IN pressing ids) for issue sheets/sqm/status and balances
 11. CNC          ← cnc_done_details                (pressing_details_id IN pressingIds)
 12. Colour       ← color_done_details              (pressing_details_id IN pressingIds)
 ```
+
+**Note on Column 5**: Issuance CMT is read directly from log's `issue_status` and `physical_cmt` fields — no separate issued_for_* queries needed.
 
 All queries within each tier run via `Promise.all` for parallel execution.
 
@@ -97,16 +99,16 @@ For any stage not reached, the downstream columns are left **empty** (not zero).
 | Range | Section | Key Fields |
 |---|---|---|
 | 1 | Item Name | Merged vertically per species |
-| 2–6 | Inward in(CMT) | log_no, indian_cmt, physical_cmt, issue_status |
-| 7–10 | Cross Cut Issue in(CMT) | log_no_code, crosscut_cmt, issue_status |
-| 11–14 | Flitch Issue in(CMT) | flitch_code, flitch_cmt, issue_status |
+| 2–6 | Inward in(CMT) | log_no, indian_cmt, physical_cmt, **issue_status** (determines Column 5), physical_cmt (for Column 5 issuance) |
+| 7–10 | Cross Cut Issue in(CMT) | `crosscutting_done`: cols 9–10 use `crosscut_cmt` + `issue_status` **only** when `issue_status` ∈ {`peeling`, `flitching`} |
+| 11–14 | Flitch Issue in(CMT) | `flitching_done`: col 11 `log_no_code`, 12 `flitch_cmt`, cols 13–14 always show `flitch_cmt` + `issue_status` (regardless of where issue was directed) |
 | 15–18 | Slicing Issue in(CMT) | log_no_code (side), no_of_leaves |
 | 19–22 | Peeling | output_type, no_of_leaves |
 | 23–25 | Dressing | SUM(sqm), issue_status |
 | 26–28 | Smoking/Dying | process_name, SUM(sqm), issue_status |
 | 29–36 | Clipping/Grouping | group_no, no_of_sheets, sqm, available balances |
 | 37–43 | Splicing | machine/hand sqm, sheets, available balances |
-| 44–50 | Pressing | no_of_sheets, sqm, available balances, issued_for |
+| 44–50 | Pressing | Received: `pressing_done_details` sums; Issue + status: `pressing_done_history`; Balance: received − issued (history sums) |
 | 51–52 | CNC | product_type, no_of_sheets |
 | 53 | COLOUR | no_of_sheets |
 | 54 | Sales | placeholder |

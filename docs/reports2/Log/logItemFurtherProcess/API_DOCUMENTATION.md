@@ -92,36 +92,45 @@
 ### Cols 2–6 — Inward in(CMT)
 
 
-| Col | Header                                   | Source                                                                          |
-| --- | ---------------------------------------- | ------------------------------------------------------------------------------- |
-| 2   | LogNo                                    | `log_inventory_items_details.log_no`                                            |
-| 3   | Indian CMT                               | `log_inventory_items_details.indian_cmt`                                        |
-| 4   | RECE CMT                                 | `log_inventory_items_details.physical_cmt`                                      |
-| 5   | Issue For Cross cut/Flitch/Peeling/Sales | `physical_cmt` (total issued)                                                   |
-| 6   | Issue Status                             | `log_inventory_items_details.issue_status` (crosscutting / flitching / peeling) |
+| Col | Header                                   | Source                                                                                                                                  |
+| --- | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| 2   | LogNo                                    | `log_inventory_items_details.log_no`                                                                                                    |
+| 3   | Indian CMT                               | `log_inventory_items_details.indian_cmt`                                                                                                |
+| 4   | RECE CMT                                 | `log_inventory_items_details.physical_cmt`                                                                                              |
+| 5   | Issue For Cross cut/Flitch/Peeling/Sales | `log_inventory_items_details.physical_cmt` if `issue_status` IN ['crosscutting', 'flitching', 'peeling']; blank if no issuance recorded |
+| 6   | Issue Status                             | `log_inventory_items_details.issue_status` (crosscutting / flitching / peeling)                                                         |
 
+
+> **Column 5 — Issuance Logic**: 
+>
+> - If log's `issue_status` is 'crosscutting', 'flitching', or 'peeling', Column 5 shows the log's `physical_cmt` (the complete quantity issued for that process)
+> - Otherwise, leave blank (log not yet issued)
+> - Note: Direct sales via orders/challans tracked in `log_invoice_details.issue_status` (handled separately if needed)
 
 ### Cols 7–10 — Cross Cut Issue in(CMT)
 
+Source: **crosscutting_done** (crosscut done history), same collection as the crosscut done listing.
 
-| Col | Header                   | Source                                                 |
-| --- | ------------------------ | ------------------------------------------------------ |
-| 7   | Cross Cut Log No         | `crosscutting_done.log_no_code`                        |
-| 8   | CC REC                   | `crosscutting_done.crosscut_cmt`                       |
-| 9   | Issue For Flitch/Peeling | `crosscut_cmt` (whole piece issued)                    |
-| 10  | Status                   | `crosscutting_done.issue_status` (flitching / peeling) |
+
+| Col | Header                   | Source                                                                                                   |
+| --- | ------------------------ | -------------------------------------------------------------------------------------------------------- |
+| 7   | Cross Cut Log No         | `crosscutting_done.log_no_code`                                                                          |
+| 8   | CC REC                   | `crosscutting_done.crosscut_cmt`                                                                         |
+| 9   | Issue For Flitch/Peeling | `crosscutting_done.crosscut_cmt` **only if** `issue_status` is `peeling` or `flitching`; otherwise blank |
+| 10  | Status                   | `crosscutting_done.issue_status` **only when** col 9 is shown (same condition: `peeling` or `flitching`) |
 
 
 ### Cols 11–14 — Flitch Issue in(CMT)
 
+Source: **flitching_done** (`flitchings` collection).
 
-| Col | Header                    | Source                                                                  |
-| --- | ------------------------- | ----------------------------------------------------------------------- |
-| 11  | Flitch No.                | `flitchings.flitch_code`                                                |
-| 12  | REC                       | `flitchings.flitch_cmt`                                                 |
-| 13  | Issue For Slicing/Peeling | `flitch_cmt` (whole flitch issued)                                      |
-| 14  | Status                    | `flitchings.issue_status` (slicing / slicing_peeling / order / challan) |
 
+| Col | Header                    | Source                                                                 |
+| --- | ------------------------- | ---------------------------------------------------------------------- |
+| 11  | Log No code               | `flitchings.log_no_code`                                               |
+| 12  | REC                       | `flitchings.flitch_cmt`                                                |
+| 13  | Issue For Slicing/Peeling | `flitchings.flitch_cmt` (quantity issued for next process or sale)       |
+| 14  | Status                    | `flitchings.issue_status` (slicing, slicing_peeling, order, or challan) |
 
 ### Cols 15–18 — Slicing Issue in(CMT)
 
@@ -198,16 +207,18 @@
 
 ### Cols 44–50 — Pressing
 
+Received figures come from **`pressing_done_details`**. Issued quantities and issue status come from **`pressing_done_history`** (`issued_item_id` → `pressing_done_details._id`).
 
-| Col | Header             | Source                                                          |
-| --- | ------------------ | --------------------------------------------------------------- |
-| 44  | Pressing (Sheets)  | `SUM(pressing_done_details.no_of_sheets)` grouped by `group_no` |
-| 45  | Pressing (Sq.mtr.) | `SUM(pressing_done_details.sqm)`                                |
-| 46  | Issue (Sheets)     | `no_of_sheets - available_details.no_of_sheets`                 |
-| 47  | Issue (Sq. Mtr.)   | `sqm - available_details.sqm`                                   |
-| 48  | Issue Status       | `pressing_done_details.issued_for`                              |
-| 49  | Balance (Sheets)   | `SUM(pressing_done_details.available_details.no_of_sheets)`     |
-| 50  | Balance (Sq. Mtr.) | `SUM(pressing_done_details.available_details.sqm)`              |
+
+| Col | Header             | Source |
+| --- | ------------------ | ------ |
+| 44  | Pressing (Sheets)  | `SUM(pressing_done_details.no_of_sheets)` for the row’s `group_no` |
+| 45  | Pressing (Sq.mtr.) | `SUM(pressing_done_details.sqm)` for that `group_no` |
+| 46  | Issue (Sheets)     | `SUM(pressing_done_history.no_of_sheets)` over history rows for those pressing lines |
+| 47  | Issue (Sq. Mtr.)   | `SUM(pressing_done_history.sqm)` over the same history rows |
+| 48  | Issue Status       | From pressing history: `issue_status` / `issued_for` (latest row per pressing line used for label; see report formatter) |
+| 49  | Balance (Sheets)   | Pressing received (col 44) − issued sheets (col 46) |
+| 50  | Balance (Sq. Mtr.) | Pressing received sqm (col 45) − issued sqm (col 47) |
 
 
 ### Cols 51–52 — CNC
@@ -302,7 +313,7 @@ All stage data is fetched in **bulk** (not N+1 per log) using `$in` queries:
 5. Bulk-fetch dressing, smoking, grouping for those codes
 6. Collect all `group_no` values from grouping
 7. Bulk-fetch tapping (with lookup for splicing type), pressing for those group_nos
-8. Collect all `pressing._id` values
+8. Collect all `pressing_done_details._id` values; bulk-fetch **`pressing_done_history`** for those IDs (sums per `issued_item_id`)
 9. Bulk-fetch CNC and colour for those pressing IDs
 
 ---
