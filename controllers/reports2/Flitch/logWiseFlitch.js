@@ -9,6 +9,13 @@ import { slicing_done_other_details_model } from '../../../database/schema/facto
 import issue_for_slicing_wastage_model from '../../../database/schema/factory/slicing/issue_for_slicing/issue_for_slicing_wastage_schema.js';
 import { createLogWiseFlitchReportExcel } from '../../../config/downloadExcel/reports2/Flitch/logWiseFlitch.js';
 
+/** Issue − received style variances are never negative in the report output. */
+function nonNegativeDiff(minuend, subtrahend) {
+  const a = parseFloat(minuend) || 0;
+  const b = parseFloat(subtrahend) || 0;
+  return Math.max(0, a - b);
+}
+
 /**
  * Log Wise Flitch Report Export (v4)
  * Generates a 19-column Excel report tracking individual log journey through factory:
@@ -397,10 +404,10 @@ export const LogWiseFlitchReportExcel = catchAsync(async (req, res, next) => {
           recover_from_rejected: 0,           // placeholder – no source defined
           issue_for_flitch: issueForFlitch,
           flitch_received: totalFlitchReceived,
-          flitch_diff: issueForFlitch - totalFlitchReceived,
+          flitch_diff: nonNegativeDiff(issueForFlitch, totalFlitchReceived),
           issue_for_slicing: issueForSlicing,
           slicing_received: slicingReceivedCmt,
-          slicing_diff: issueForSlicing - slicingReceivedCmt,
+          slicing_diff: nonNegativeDiff(issueForSlicing, slicingReceivedCmt),
           issue_for_sqedge: 0,                // placeholder – no source defined
           sales: salesCmt,
           rejected: totalRejected,
@@ -416,7 +423,7 @@ export const LogWiseFlitchReportExcel = catchAsync(async (req, res, next) => {
         log.flitch_received > 0 ||
         log.issue_for_flitch > 0 ||
         log.fl_closing > 0 ||
-        log.peel_received > 0 ||
+        log.slicing_received > 0 ||
         log.sales > 0 ||
         log.rejected > 0
     );

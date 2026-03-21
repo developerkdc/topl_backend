@@ -8,10 +8,10 @@ import dotenv from 'dotenv/config';
  *
  * 41 columns across 12 section groups:
  *  Col  1        : Item Name
- *  Cols  2- 5   : Flitch Inward in(CMT) → LogNo (original log_no), REC CMT, Issue For Slicing/Peeling, Issue Status
+ *  Cols  2- 5   : Flitch Inward in(CMT) → LogNo (original log_no), REC CMT, Issue For Slicing/Peeling/Sales, Issue Status
  *  Cols  6- 9   : Slicing Issue in(CMT) → Side, Process Cmt, Balance Cmt, REC (Leaf)
  *  Cols 10-12   : Dressing              → Rec Sq. Mtr., Issue (Sq.Mtr.), Issue Status
- *  Cols 13-15   : Smoking/Dying         → Process, Issue (Sq.Mtr.), Issue Status
+ *  Cols 13-15   : Smoking/Dying         → total SQM processed, issued SQM, issue status (issued rows only)
  *  Cols 16-23   : Clipping/Grouping     → New Group Number, Rec Sheets, Rec Sq.Mtr.,
  *                                          Issue (Sheets), Issue (Sq.Mtr.), Issue Status,
  *                                          Balance (Sheets), Balance Sq. Mtr.
@@ -23,7 +23,7 @@ import dotenv from 'dotenv/config';
  *                                          Balance (Sheets), Balance (Sq. Mtr.)
  *  Cols 38-39   : CNC                   → Cnc Type, REC (Sheets)
  *  Col  40      : COLOUR                → REC (Sheets)
- *  Col  41      : Sales                 → REC (Sheets)
+ *  Col  41      : Sales                 → Order line CBM or SQM
  *
  * Rows are one per leaf entity (grouping item / slicing side).
  * Parent columns are merged vertically for consecutive identical keys.
@@ -225,7 +225,7 @@ export const createFlitchItemFurtherProcessReportExcel = async (
       'Item Name',                          //  1
       'LogNo',                              //  2
       'REC CMT',                            //  3
-      'Issue For Slicing/Peeling',         //  4
+      'Issue For Slicing/Peeling/Sales',   //  4
       'Issue Status',                       //  5
       'Side',                               //  6
       'Process Cmt',                        //  7
@@ -262,7 +262,7 @@ export const createFlitchItemFurtherProcessReportExcel = async (
       'Cnc Type',                           // 38
       'REC (Sheets)',                       // 39
       'REC (Sheets)',                       // 40
-      'REC (Sheets)',                       // 41
+      'Sales (CBM / SQM)',                  // 41
     ];
 
     const headerRow = ws.addRow(colHdr);
@@ -274,11 +274,11 @@ export const createFlitchItemFurtherProcessReportExcel = async (
       3, 4,         // rece_cmt, issue_for
       7, 8, 9,      // slicing_process_cmt, slicing_balance_cmt, slicing_rec_leaf
       10, 11,       // dress_rec_sqm, dress_issue_sqm
-      14,           // smoking_issue_sqm
+      13, 14,       // smoking_process (total sqm), smoking_issue_sqm
       17, 18, 19, 20, 22, 23,  // grouping
       24, 25, 26, 27, 29, 30,  // splicing
       31, 32, 33, 34, 36, 37,  // pressing
-      39, 40, 41,   // cnc, colour, sales
+      39, 40,       // cnc, colour (sales/order number is text — not summed)
     ]);
 
     // Columns to MERGE vertically (parent-level columns)
@@ -331,7 +331,7 @@ export const createFlitchItemFurtherProcessReportExcel = async (
       row.cnc_type,
       row.cnc_rec_sheets,
       row.colour_rec_sheets,
-      row.sales_rec_sheets,
+      row.sales_order_no,
     ];
 
     // ── Helper: accumulate numeric values into totals object ─────────────────

@@ -35,6 +35,7 @@ Refactored per-log aggregations to align with Item Wise v4:
 - **Issue/Received for Slicing** (replaces Peeling): Aggregates from `issued_for_slicing_model` and `slicing_done_other_details_model`
 - **Rejected**: Sum of two wastage sources (Flitch: `wastage_info.wastage_sqm` + Slicing: `issue_for_slicing_wastage.cmt`)
 - **Closing Stock**: `MAX(0, Opening + Received − Issued − Sales)` inventory-flow formula
+- **Flitch / Slicing Diff**: `max(0, issue − received)` via `nonNegativeDiff` so variance columns never show negative values
 
 New imports: `issued_for_slicing_model`, `slicing_done_other_details_model`, `issue_for_slicing_wastage_model`
 
@@ -66,10 +67,10 @@ Restructured to:
 | 9 | `actual_cmt` | Actual (Round Log Detail) | Decimal | LOG: `log_data.physical_cmt` + CROSSCUT: `crosscut_done.crosscut_cmt` (period) |
 | 10 | `issue_for_flitch` | Issue for Flitch | Decimal | All issued (order/challan/issue_for_slicing/slicing) in period |
 | 11 | `flitch_received` | Flitch Received | Decimal | Inventory + factory flitch `flitch_cmt` (period) |
-| 12 | `flitch_diff` | Flitch Diff | Decimal | Col 10 − Col 11 |
+| 12 | `flitch_diff` | Flitch Diff | Decimal | `max(0, Col 10 − Col 11)` |
 | 13 | `issue_for_slicing` | Issue for Slicing | Decimal | `issued_for_slicing_model.cmt` matched to log (period) |
 | 14 | `slicing_received` | Slicing Received | Decimal | `slicing_done_other_details_model.total_cmt` (period) |
-| 15 | `slicing_diff` | Slicing Diff | Decimal | Col 13 − Col 14 |
+| 15 | `slicing_diff` | Slicing Diff | Decimal | `max(0, Col 13 − Col 14)` |
 | 16 | `issue_for_sqedge` | Issue for Sq.Edge | Decimal | **Placeholder 0** |
 | 17 | `sales` | Sales | Decimal | `order` / `challan` issued (period) |
 | 18 | `rejected` | Rejected | Decimal | Flitch wastage (`wastage_info.wastage_sqm`) + Slicing wastage (`issue_for_slicing_wastage.cmt`) (period) |

@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import catchAsync from '../../../utils/errors/catchAsync.js';
 import ApiError from '../../../utils/errors/apiError.js';
 import ApiResponse from '../../../utils/ApiResponse.js';
@@ -14,8 +15,14 @@ import { pressing_done_details_model } from '../../../database/schema/factory/pr
 import { pressing_done_history_model } from '../../../database/schema/factory/pressing/pressing_history/pressing_done_history.schema.js';
 import { cnc_done_details_model } from '../../../database/schema/factory/cnc/cnc_done/cnc_done.schema.js';
 import { color_done_details_model } from '../../../database/schema/factory/colour/colour_done/colour_done.schema.js';
+import finished_ready_for_packing_model from '../../../database/schema/packing/issue_for_packing/finished_ready_for_packing/finished_ready_for_packing.schema.js';
+import issue_for_order_model from '../../../database/schema/order/issue_for_order/issue_for_order.schema.js';
+import { OrderModel } from '../../../database/schema/order/orders.schema.js';
+import { RawOrderItemDetailsModel } from '../../../database/schema/order/raw_order/raw_order_item_details.schema.js';
+import { decorative_order_item_details_model } from '../../../database/schema/order/decorative_order/decorative_order_item_details.schema.js';
+import series_product_order_item_details_model from '../../../database/schema/order/series_product_order/series_product_order_item_details.schema.js';
 import { createFlitchItemFurtherProcessReportExcel } from '../../../config/downloadExcel/reports2/Flitch/flitchItemFurtherProcess.js';
-import { issue_for_slicing } from '../../../database/Utils/constants/constants.js';
+import { item_issued_from } from '../../../database/Utils/constants/constants.js';
 
 // ─────────────────────────── Utility helpers ────────────────────────────────
 
@@ -35,6 +42,61 @@ const getVal = (obj, path) =>
 
 const sumField = (arr, field) =>
   arr.reduce((acc, item) => acc + (parseFloat(getVal(item, field)) || 0), 0);
+
+const round3 = (n) => Math.round((n + Number.EPSILON) * 1000) / 1000;
+
+/** Sales column: order line quantity as CBM or SQM (same semantics as log further process report). */
+function formatOrderItemCbmOrSqm(item) {
+  if (!item) return '';
+  const cbm = parseFloat(item.cbm) || 0;
+  const sqm = parseFloat(item.sqm) || 0;
+  const unit = String(item.unit_name || '').toUpperCase();
+  const rawMat = String(item.raw_material || '').toUpperCase();
+  if (unit.includes('SQM') || unit.includes('SQ.M') || unit.includes('SQUARE')) {
+    if (sqm > 0) return `${round3(sqm)} SQM`;
+  }
+  if (unit.includes('CBM') || unit.includes('CUBIC')) {
+    if (cbm > 0) return `${round3(cbm)} CBM`;
+  }
+  if (rawMat === 'LOG' || rawMat === 'FLITCH') {
+    if (cbm > 0) return `${round3(cbm)} CBM`;
+    if (sqm > 0) return `${round3(sqm)} SQM`;
+  }
+  if (cbm > 0) return `${round3(cbm)} CBM`;
+  if (sqm > 0) return `${round3(sqm)} SQM`;
+  return '';
+}
+
+async function loadOrderItemDetailsByIds(orderItemIds) {
+  const idStrs = [
+    ...new Set(orderItemIds.filter(Boolean).map((id) => String(id))),
+  ].filter((s) => mongoose.isValidObjectId(s));
+  if (!idStrs.length) return new Map();
+  const oidList = idStrs.map((s) => new mongoose.Types.ObjectId(s));
+  const [rawItems, decItems, serItems] = await Promise.all([
+    RawOrderItemDetailsModel.find({ _id: { $in: oidList } })
+      .select({ cbm: 1, sqm: 1, unit_name: 1, raw_material: 1 })
+      .lean(),
+    decorative_order_item_details_model.find({ _id: { $in: oidList } })
+      .select({ cbm: 1, sqm: 1, unit_name: 1 })
+      .lean(),
+    series_product_order_item_details_model.find({ _id: { $in: oidList } })
+      .select({ cbm: 1, sqm: 1, unit_name: 1 })
+      .lean(),
+  ]);
+  const map = new Map();
+  for (const d of rawItems) map.set(String(d._id), d);
+  for (const d of decItems) if (!map.has(String(d._id))) map.set(String(d._id), d);
+  for (const d of serItems) if (!map.has(String(d._id))) map.set(String(d._id), d);
+  return map;
+}
+
+/** Stock / movement differences (received − available, issued − processed, etc.) never go below zero. */
+function nonNegativeDiff(minuend, subtrahend) {
+  const a = parseFloat(minuend) || 0;
+  const b = parseFloat(subtrahend) || 0;
+  return Math.max(0, a - b);
+}
 
 /**
  * Merge slicing_done rows by (flitch_inventory_item_id, log_no_code): sums process CMT across
@@ -124,7 +186,7 @@ const emptyDownstream = () => ({
   cnc_type: '',
   cnc_rec_sheets: '',
   colour_rec_sheets: '',
-  sales_rec_sheets: '',
+  sales_order_no: '',
   jwc_veneer: '',
   awc_pressing_sheets: '',
 });
@@ -158,7 +220,9 @@ function buildGroupingData(
   colourByPressingId,
   groupingIssuedForByItemId,
   tappingIssueStatusByItemId,
-  pressingIssueStatusByItemId
+  pressingIssueStatusByItemId,
+  orderMaps,
+  fallbackDirectFlitchOrderItemId = null
 ) {
   const groupNo = groupItem.group_no;
   const recSheets = groupItem.no_of_sheets || 0;
@@ -166,8 +230,8 @@ function buildGroupingData(
   const availSheets =
     getVal(groupItem, 'available_details.no_of_sheets') ?? recSheets;
   const availSqm = getVal(groupItem, 'available_details.sqm') ?? recSqm;
-  const issueSheets = Math.max(0, recSheets - availSheets);
-  const issueSqm = Math.max(0, recSqm - availSqm);
+  const issueSheets = nonNegativeDiff(recSheets, availSheets);
+  const issueSqm = nonNegativeDiff(recSqm, availSqm);
 
   // Splicing / Tapping
   const tappingItems = tappingByGroupNo.get(groupNo) || [];
@@ -182,11 +246,7 @@ function buildGroupingData(
   const splicingSheets = sumField(tappingItems, 'no_of_sheets');
   const splicingAvailSheets = sumField(tappingItems, 'available_details.no_of_sheets');
   const splicingAvailSqm = sumField(tappingItems, 'available_details.sqm');
-  const splicingIssueSheets = Math.max(0, splicingSheets - splicingAvailSheets);
-  const splicingIssueSqm = Math.max(
-    0,
-    sumField(tappingItems, 'sqm') - splicingAvailSqm
-  );
+  const splicingIssueSheets = nonNegativeDiff(splicingSheets, splicingAvailSheets);
   const splicingIssueStatus = resolveSplicingIssueStatusFromHistory(
     tappingItems,
     tappingIssueStatusByItemId
@@ -198,8 +258,8 @@ function buildGroupingData(
   const pressingSqm = sumField(pressingItems, 'sqm');
   const pressingAvailSheets = sumField(pressingItems, 'available_details.no_of_sheets');
   const pressingAvailSqm = sumField(pressingItems, 'available_details.sqm');
-  const pressingIssueSheets = Math.max(0, pressingSheets - pressingAvailSheets);
-  const pressingIssueSqm = Math.max(0, pressingSqm - pressingAvailSqm);
+  const pressingIssueSheets = nonNegativeDiff(pressingSheets, pressingAvailSheets);
+  const pressingIssueSqm = nonNegativeDiff(pressingSqm, pressingAvailSqm);
   const pressingIssueStatus = resolvePressingIssueStatusFromHistory(
     pressingItems,
     pressingIssueStatusByItemId
@@ -215,6 +275,69 @@ function buildGroupingData(
 
   const groupingIssueStatus =
     groupingIssuedForByItemId?.get(String(groupItem._id)) || '';
+
+  // ── Order / Sales resolution ────────────────────────────────────────────
+  // Priority (most-downstream first): Colour → CNC → Pressing → Tapping → Grouping
+  const {
+    groupingOrderItemIdByItemId,
+    tappingOrderItemIdByItemId,
+    pressingOrderItemIdByItemId,
+    cncOrderItemIdByItemId,
+    colourOrderItemIdByItemId,
+    orderItemById,
+  } = orderMaps || {};
+
+  let resolvedOrderItemId = null;
+  for (const c of colourItems) {
+    const iid = colourOrderItemIdByItemId?.get(String(c._id));
+    if (iid) {
+      resolvedOrderItemId = iid;
+      break;
+    }
+  }
+  if (!resolvedOrderItemId) {
+    for (const c of cncItems) {
+      const iid = cncOrderItemIdByItemId?.get(String(c._id));
+      if (iid) {
+        resolvedOrderItemId = iid;
+        break;
+      }
+    }
+  }
+  if (!resolvedOrderItemId) {
+    for (const p of pressingItems) {
+      const iid = pressingOrderItemIdByItemId?.get(String(p._id));
+      if (iid) {
+        resolvedOrderItemId = iid;
+        break;
+      }
+    }
+  }
+  if (!resolvedOrderItemId) {
+    for (const t of tappingItems) {
+      const iid = tappingOrderItemIdByItemId?.get(String(t._id));
+      if (iid) {
+        resolvedOrderItemId = iid;
+        break;
+      }
+    }
+  }
+  if (!resolvedOrderItemId) {
+    resolvedOrderItemId =
+      groupingOrderItemIdByItemId?.get(String(groupItem._id)) ?? null;
+  }
+  const salesOrderItem =
+    resolvedOrderItemId && orderItemById
+      ? orderItemById.get(String(resolvedOrderItemId))
+      : null;
+  const fallbackItem =
+    fallbackDirectFlitchOrderItemId && orderItemById
+      ? orderItemById.get(String(fallbackDirectFlitchOrderItemId))
+      : null;
+  const salesCbmSqm =
+    formatOrderItemCbmOrSqm(salesOrderItem) ||
+    formatOrderItemCbmOrSqm(fallbackItem) ||
+    '';
 
   return {
     grouping_new_group_no: groupNo,
@@ -242,7 +365,7 @@ function buildGroupingData(
     cnc_type: cncType,
     cnc_rec_sheets: cncRecSheets || '',
     colour_rec_sheets: colourRecSheets || '',
-    sales_rec_sheets: '',
+    sales_order_no: salesCbmSqm,
     jwc_veneer: '',
     awc_pressing_sheets: '',
   };
@@ -263,10 +386,15 @@ function getDressingData(logNoCode, dressingByCode) {
 function getSmokingData(logNoCode, smokingByCode) {
   const items = smokingByCode.get(logNoCode) || [];
   if (!items.length) return emptySmoking();
+  const issuedItems = items.filter((s) => s.issue_status);
+  const totalSqm = round3(sumField(items, 'sqm'));
+  const issuedSqm = issuedItems.length ? round3(sumField(issuedItems, 'sqm')) : '';
   return {
-    smoking_process: items.map((s) => s.process_name).filter(Boolean)[0] || '',
-    smoking_issue_sqm: sumField(items, 'sqm') || '',
-    smoking_issue_status: items.find((s) => s.issue_status)?.issue_status || '',
+    // Total SQM that passed through smoking/dying (same semantics as log further process report)
+    smoking_process: totalSqm || '',
+    // SQM issued onward from smoking (only rows with issue_status)
+    smoking_issue_sqm: issuedSqm,
+    smoking_issue_status: issuedItems[0]?.issue_status || '',
   };
 }
 
@@ -284,14 +412,16 @@ function buildSlicingSideRows(
   colourByPressingId,
   groupingIssuedForByItemId,
   tappingIssueStatusByItemId,
-  pressingIssueStatusByItemId
+  pressingIssueStatusByItemId,
+  orderMaps,
+  fallbackDirectFlitchOrderItemId = null
 ) {
   const sideCode = side.log_no_code;
 
   // Process Cmt = slicing done cmt; Balance Cmt = remaining cmt (issued - process)
   const processCmt = parseFloat(side.item_cmt ?? side.cmt) || 0;
   const issuedCmt = parseFloat(side.issued_for_slicing?.cmt) || 0;
-  const balanceCmt = Math.max(0, issuedCmt - processCmt);
+  const balanceCmt = nonNegativeDiff(issuedCmt, processCmt);
 
   const slicingBase = {
     slicing_side: sideCode,
@@ -318,10 +448,19 @@ function buildSlicingSideRows(
         colourByPressingId,
         groupingIssuedForByItemId,
         tappingIssueStatusByItemId,
-        pressingIssueStatusByItemId
+        pressingIssueStatusByItemId,
+        orderMaps,
+        fallbackDirectFlitchOrderItemId
       ),
     }));
   }
+
+  const directOnlySales =
+    fallbackDirectFlitchOrderItemId && orderMaps?.orderItemById
+      ? formatOrderItemCbmOrSqm(
+          orderMaps.orderItemById.get(String(fallbackDirectFlitchOrderItemId))
+        ) || ''
+      : '';
 
   return [
     {
@@ -330,6 +469,7 @@ function buildSlicingSideRows(
       ...dressingData,
       ...smokingData,
       ...emptyDownstream(),
+      ...(directOnlySales ? { sales_order_no: directOnlySales } : {}),
     },
   ];
 }
@@ -541,12 +681,25 @@ export const FlitchItemFurtherProcessReportExcel = catchAsync(
                 $group: {
                   _id: '$grouping_done_item_id',
                   issued_for: { $first: '$issued_for' },
+                  issue_status: { $first: '$issue_status' },
+                  order_id: { $first: '$order_id' },
+                  order_item_id: { $first: '$order_item_id' },
                 },
               },
             ])
           : [];
       const groupingIssuedForByItemId = new Map(
         groupingIssuedForAgg.map((r) => [String(r._id), r.issued_for || ''])
+      );
+      const groupingOrderIdByItemId = new Map(
+        groupingIssuedForAgg
+          .filter((r) => r.order_id)
+          .map((r) => [String(r._id), r.order_id])
+      );
+      const groupingOrderItemIdByItemId = new Map(
+        groupingIssuedForAgg
+          .filter((r) => r.order_id && r.order_item_id)
+          .map((r) => [String(r._id), r.order_item_id])
       );
 
       const groupNos = [...new Set(groupingItems.map((g) => g.group_no))];
@@ -589,6 +742,8 @@ export const FlitchItemFurtherProcessReportExcel = catchAsync(
                   _id: '$tapping_done_item_id',
                   issue_status: { $first: '$issue_status' },
                   issued_for: { $first: '$issued_for' },
+                  order_id: { $first: '$order_id' },
+                  order_item_id: { $first: '$order_item_id' },
                 },
               },
             ])
@@ -598,6 +753,16 @@ export const FlitchItemFurtherProcessReportExcel = catchAsync(
           String(r._id),
           formatTappingPressingIssueLabel(r.issue_status, r.issued_for),
         ])
+      );
+      const tappingOrderIdByItemId = new Map(
+        tappingHistoryAgg
+          .filter((r) => r.order_id)
+          .map((r) => [String(r._id), r.order_id])
+      );
+      const tappingOrderItemIdByItemId = new Map(
+        tappingHistoryAgg
+          .filter((r) => r.order_id && r.order_item_id)
+          .map((r) => [String(r._id), r.order_item_id])
       );
 
       const pressingDetailIds = pressingItems.map((p) => p._id).filter(Boolean);
@@ -611,6 +776,8 @@ export const FlitchItemFurtherProcessReportExcel = catchAsync(
                   _id: '$issued_item_id',
                   issue_status: { $first: '$issue_status' },
                   issued_for: { $first: '$issued_for' },
+                  order_id: { $first: '$order_id' },
+                  order_item_id: { $first: '$order_item_id' },
                 },
               },
             ])
@@ -620,6 +787,16 @@ export const FlitchItemFurtherProcessReportExcel = catchAsync(
           String(r._id),
           formatPressingIssueLabel(r.issue_status, r.issued_for),
         ])
+      );
+      const pressingOrderIdByItemId = new Map(
+        pressingHistoryAgg
+          .filter((r) => r.order_id)
+          .map((r) => [String(r._id), r.order_id])
+      );
+      const pressingOrderItemIdByItemId = new Map(
+        pressingHistoryAgg
+          .filter((r) => r.order_id && r.order_item_id)
+          .map((r) => [String(r._id), r.order_item_id])
       );
 
       const pressingIds = pressingItems.map((p) => p._id);
@@ -635,6 +812,151 @@ export const FlitchItemFurtherProcessReportExcel = catchAsync(
               .lean()
           : [],
       ]);
+
+      // ── Active packing orders (source of truth for order resolution) ──────
+      // finished_ready_for_packing is reliably updated/deleted on reverts,
+      // unlike history models which can retain stale order_id values.
+      const packingOrderRows = pressingIds.length
+        ? await finished_ready_for_packing_model
+            .find(
+              { pressing_details_id: { $in: pressingIds }, order_id: { $ne: null } },
+              {
+                pressing_details_id: 1,
+                issued_from_id: 1,
+                issued_from: 1,
+                order_id: 1,
+                order_item_id: 1,
+              }
+            )
+            .lean()
+        : [];
+
+      const colourOrderIdByItemId = new Map(
+        packingOrderRows
+          .filter((r) => r.issued_from === 'COLOR' && r.order_id)
+          .map((r) => [String(r.issued_from_id), r.order_id])
+      );
+      const colourOrderItemIdByItemId = new Map(
+        packingOrderRows
+          .filter((r) => r.issued_from === 'COLOR' && r.order_id && r.order_item_id)
+          .map((r) => [String(r.issued_from_id), r.order_item_id])
+      );
+      const cncOrderIdByItemId = new Map(
+        packingOrderRows
+          .filter((r) => r.issued_from === 'CNC' && r.order_id)
+          .map((r) => [String(r.issued_from_id), r.order_id])
+      );
+      const cncOrderItemIdByItemId = new Map(
+        packingOrderRows
+          .filter((r) => r.issued_from === 'CNC' && r.order_id && r.order_item_id)
+          .map((r) => [String(r.issued_from_id), r.order_item_id])
+      );
+      // Packing-sourced pressing data overrides history-sourced data (more reliable)
+      for (const r of packingOrderRows.filter(
+        (r) => r.issued_from === 'PRESSING_FACTORY' && r.order_id
+      )) {
+        pressingOrderIdByItemId.set(String(r.issued_from_id), r.order_id);
+      }
+      for (const r of packingOrderRows.filter(
+        (r) =>
+          r.issued_from === 'PRESSING_FACTORY' && r.order_id && r.order_item_id
+      )) {
+        pressingOrderItemIdByItemId.set(String(r.issued_from_id), r.order_item_id);
+      }
+
+      // Flitch issued to customer order (`issued_for_order_items`, issued_from FLITCH)
+      const flitchCodeSet = new Set();
+      for (const f of flitches) {
+        for (const c of [f.flitch_code, f.log_no, f.log_no_code]) {
+          if (c == null || String(c).trim() === '') continue;
+          flitchCodeSet.add(String(c).trim().toUpperCase());
+        }
+      }
+      const flitchCodeList = [...flitchCodeSet];
+      const flitchIssuedForOrderRows = flitchCodeList.length
+        ? await issue_for_order_model
+            .find(
+              {
+                issued_from: item_issued_from.flitch,
+                $or: [
+                  { 'item_details.log_no_code': { $in: flitchCodeList } },
+                  { 'item_details.flitch_code': { $in: flitchCodeList } },
+                ],
+              },
+              { order_id: 1, order_item_id: 1, item_details: 1 }
+            )
+            .lean()
+        : [];
+      const flitchDirectOrderByFlitchCode = new Map();
+      const flitchDirectOrderCmtByFlitchCode = new Map(); // code → total CMT issued to order
+      for (const row of flitchIssuedForOrderRows) {
+        const det = row.item_details;
+        if (!det) continue;
+        const issuedCmt =
+          parseFloat(det.flitch_cmt ?? det.cmt ?? det.physical_cmt ?? 0) || 0;
+        const payload = {
+          order_id: row.order_id,
+          order_item_id: row.order_item_id,
+        };
+        for (const code of [det.log_no_code, det.flitch_code]) {
+          if (code == null || String(code).trim() === '') continue;
+          const key = String(code).trim().toUpperCase();
+          flitchDirectOrderByFlitchCode.set(key, payload);
+          flitchDirectOrderCmtByFlitchCode.set(
+            key,
+            (flitchDirectOrderCmtByFlitchCode.get(key) || 0) + issuedCmt
+          );
+        }
+      }
+
+      // ── Bulk-fetch orders for all resolved order IDs ──────────────────────
+      const allOrderIds = [
+        ...new Set(
+          [
+            ...groupingOrderIdByItemId.values(),
+            ...tappingOrderIdByItemId.values(),
+            ...pressingOrderIdByItemId.values(),
+            ...cncOrderIdByItemId.values(),
+            ...colourOrderIdByItemId.values(),
+            ...[...flitchDirectOrderByFlitchCode.values()].map((d) => d.order_id),
+          ]
+            .filter(Boolean)
+            .map(String)
+        ),
+      ];
+      const orderDocs = allOrderIds.length
+        ? await OrderModel.find(
+            { _id: { $in: allOrderIds } },
+            { order_no: 1, orderDate: 1, owner_name: 1 }
+          ).lean()
+        : [];
+      const orderById = new Map(orderDocs.map((o) => [String(o._id), o]));
+
+      const allOrderItemIds = [
+        ...groupingOrderItemIdByItemId.values(),
+        ...tappingOrderItemIdByItemId.values(),
+        ...pressingOrderItemIdByItemId.values(),
+        ...cncOrderItemIdByItemId.values(),
+        ...colourOrderItemIdByItemId.values(),
+        ...[...flitchDirectOrderByFlitchCode.values()].map((d) => d.order_item_id),
+      ];
+      const orderItemById = await loadOrderItemDetailsByIds(allOrderItemIds);
+
+      const orderMaps = {
+        groupingOrderIdByItemId,
+        groupingOrderItemIdByItemId,
+        tappingOrderIdByItemId,
+        tappingOrderItemIdByItemId,
+        pressingOrderIdByItemId,
+        pressingOrderItemIdByItemId,
+        cncOrderIdByItemId,
+        cncOrderItemIdByItemId,
+        colourOrderIdByItemId,
+        colourOrderItemIdByItemId,
+        orderById,
+        orderItemById,
+        flitchDirectOrderByFlitchCode,
+      };
 
       // ── Step 3: Build lookup maps ─────────────────────────────────────────
       const slicingByFlitchId = groupByKey(
@@ -656,15 +978,32 @@ export const FlitchItemFurtherProcessReportExcel = catchAsync(
 
       for (const flitch of flitches) {
         const slicingCmt = issueForSlicingByFlitchId.get(String(flitch._id)) || 0;
-        const issueForSlicingPeeling = slicingCmt;
+
+        let directOrderCmt = 0;
+        for (const c of [flitch.flitch_code, flitch.log_no, flitch.log_no_code]) {
+          if (c == null || String(c).trim() === '') continue;
+          const v = flitchDirectOrderCmtByFlitchCode.get(String(c).trim().toUpperCase());
+          if (v) { directOrderCmt = v; break; }
+        }
+        const issueForTotal = round3(slicingCmt + directOrderCmt) || '';
 
         const flitchBase = {
           item_name: flitch.item_name || '',
           log_no: flitch.log_no || '',
           rece_cmt: flitch.flitch_cmt ?? '',
-          issue_for: issueForSlicingPeeling || '',
+          issue_for: issueForTotal,
           issue_status: flitch.issue_status || '',
         };
+
+        let fallbackDirectFlitchOrderItemId = null;
+        for (const c of [flitch.flitch_code, flitch.log_no, flitch.log_no_code]) {
+          if (c == null || String(c).trim() === '') continue;
+          const p = flitchDirectOrderByFlitchCode.get(String(c).trim().toUpperCase());
+          if (p?.order_item_id) {
+            fallbackDirectFlitchOrderItemId = p.order_item_id;
+            break;
+          }
+        }
 
         const allSlicingForFlitch =
           slicingByFlitchId.get(String(flitch._id)) || [];
@@ -686,19 +1025,26 @@ export const FlitchItemFurtherProcessReportExcel = catchAsync(
               colourByPressingId,
               groupingIssuedForByItemId,
               tappingIssueStatusByItemId,
-              pressingIssueStatusByItemId
+              pressingIssueStatusByItemId,
+              orderMaps,
+              fallbackDirectFlitchOrderItemId
             )
           );
         }
 
         if (!rows.length) {
-          // Flitch not yet processed further
+          const directSales = formatOrderItemCbmOrSqm(
+            fallbackDirectFlitchOrderItemId
+              ? orderItemById.get(String(fallbackDirectFlitchOrderItemId))
+              : null
+          );
           rows.push({
             ...flitchBase,
             ...emptySlicing(),
             ...emptyDressing(),
             ...emptySmoking(),
             ...emptyDownstream(),
+            ...(directSales ? { sales_order_no: directSales } : {}),
           });
         }
 
