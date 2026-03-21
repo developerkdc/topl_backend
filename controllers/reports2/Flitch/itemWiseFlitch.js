@@ -8,6 +8,13 @@ import { slicing_done_other_details_model } from '../../../database/schema/facto
 import issue_for_slicing_wastage_model from '../../../database/schema/factory/slicing/issue_for_slicing/issue_for_slicing_wastage_schema.js';
 import { createItemWiseFlitchReportExcel } from '../../../config/downloadExcel/reports2/Flitch/itemWiseFlitch.js';
 
+/** Issue − received style variances are never negative in the report output. */
+function nonNegativeDiff(minuend, subtrahend) {
+  const a = parseFloat(minuend) || 0;
+  const b = parseFloat(subtrahend) || 0;
+  return Math.max(0, a - b);
+}
+
 /**
  * Item Wise Flitch Report Export
  * Generates a 16-column Excel report with grouped headers:
@@ -390,10 +397,10 @@ export const ItemWiseFlitchReportExcel = catchAsync(async (req, res, next) => {
         recover_from_rejected: r.recover_from_rejected, // Hard-coded 0
         issue_for_flitch:      r.issue_for_flitch,
         flitch_received:       r.flitch_received,
-        flitch_diff:           r.issue_for_flitch - r.flitch_received,
+        flitch_diff:           nonNegativeDiff(r.issue_for_flitch, r.flitch_received),
         issue_for_slicing:     r.issue_for_slicing,
         slicing_received:      r.slicing_received,
-        slicing_diff:          r.issue_for_slicing - r.slicing_received,
+        slicing_diff:          nonNegativeDiff(r.issue_for_slicing, r.slicing_received),
         issue_for_sqedge:      r.issue_for_sqedge,     // Hard-coded 0
         sales:                 r.sales,
         rejected:              r.rejected,

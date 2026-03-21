@@ -92,7 +92,7 @@
 |---|---|---|
 | 6 | Side | `slicing_done_items.log_no_code` |
 | 7 | Process Cmt | Slicing done CMT for the side: per-item `cmt` when present, else `slicing_done_other_details.total_cmt` ÷ items in that slicing batch; **summed** across all slicing sessions (initial + re-slicing / history) for the same `log_no_code` |
-| 8 | Balance Cmt | Remaining CMT (issued `cmt` from linked `issued_for_slicing` − process CMT) |
+| 8 | Balance Cmt | Remaining CMT: `max(0, issued cmt from linked issued_for_slicing − process CMT)` |
 | 9 | REC (Leaf) | `slicing_done_items.no_of_leaves` |
 
 ### Cols 10–12 — Dressing
@@ -103,11 +103,14 @@
 | 12 | Issue Status | `dressing_done_items.issue_status` |
 
 ### Cols 13–15 — Smoking/Dying
+
+Aligned with the **log item further process** report: quantities are SQM-based; “Process” is total throughput, not `process_name`.
+
 | Col | Header | Source |
 |---|---|---|
-| 13 | Process | `process_done_items_details.process_name` |
-| 14 | Issue (Sq.Mtr.) | `SUM(process_done_items_details.sqm)` grouped by `log_no_code` |
-| 15 | Issue Status | `process_done_items_details.issue_status` |
+| 13 | Process | Total SQM processed: `SUM(process_done_items_details.sqm)` for all rows with this `log_no_code`, rounded to 3 decimal places |
+| 14 | Issue (Sq.Mtr.) | `SUM(sqm)` only for rows where `issue_status` is set; rounded to 3 d.p.; blank if nothing issued |
+| 15 | Issue Status | `issue_status` from the first **issued** row (same filter as col 14) |
 
 ### Cols 16–23 — Clipping/Grouping
 | Col | Header | Source |
@@ -115,8 +118,8 @@
 | 16 | New Group Number | `grouping_done_items_details.group_no` |
 | 17 | Rec Sheets | `grouping_done_items_details.no_of_sheets` |
 | 18 | Rec Sq.Mtr. | `grouping_done_items_details.sqm` |
-| 19 | Issue (Sheets) | `no_of_sheets - available_details.no_of_sheets` |
-| 20 | Issue (Sq.Mtr.) | `sqm - available_details.sqm` |
+| 19 | Issue (Sheets) | `max(0, no_of_sheets − available_details.no_of_sheets)` |
+| 20 | Issue (Sq.Mtr.) | `max(0, sqm − available_details.sqm)` |
 | 21 | Issue Status | Latest `issued_for` from `grouping_done_history` for this `grouping_done_items_details._id` (`ORDER`, `STOCK`, `SAMPLE`) |
 | 22 | Balance (Sheets) | `grouping_done_items_details.available_details.no_of_sheets` |
 | 23 | Balance Sq. Mtr. | `grouping_done_items_details.available_details.sqm` |
@@ -127,7 +130,7 @@
 | 24 | Rec Machine (Sq.mtr.) | `SUM(tapping.sqm WHERE splicing_type = 'MACHINE SPLICING')` |
 | 25 | Rec Hand (Sq.Mtr.) | `SUM(tapping.sqm WHERE splicing_type = 'HAND SPLICING')` |
 | 26 | Splicing Sheets | `SUM(tapping_done_items_details.no_of_sheets)` |
-| 27 | Issue (Sheets) | `no_of_sheets - available_details.no_of_sheets` |
+| 27 | Issue (Sheets) | `max(0, Σ no_of_sheets − Σ available_details.no_of_sheets)` per group |
 | 28 | Issue Status | Tapping → pressing: latest row in `tapping_done_history` per `tapping_done_items_details._id` — formatted as `issue_status` / `issued_for` (e.g. `Pressing / ORDER`) |
 | 29 | Balance (Sheets) | `SUM(tapping_done_items_details.available_details.no_of_sheets)` |
 | 30 | Balance (Sq. Mtr.) | `SUM(tapping_done_items_details.available_details.sqm)` |
@@ -137,8 +140,8 @@
 |---|---|---|
 | 31 | Pressing (Sheets) | `SUM(pressing_done_details.no_of_sheets)` grouped by `group_no` |
 | 32 | Pressing (Sq.mtr.) | `SUM(pressing_done_details.sqm)` |
-| 33 | Issue (Sheets) | `no_of_sheets - available_details.no_of_sheets` |
-| 34 | Issue (Sq. Mtr.) | `sqm - available_details.sqm` |
+| 33 | Issue (Sheets) | `max(0, Σ no_of_sheets − Σ available_details.no_of_sheets)` per group |
+| 34 | Issue (Sq. Mtr.) | `max(0, Σ sqm − Σ available_details.sqm)` per group |
 | 35 | Issue Status | Only when issued from pressing to the next factory: latest `pressing_done_history` row per `pressing_done_details._id` (`issued_item_id`) — `issue_status` / `issued_for` (e.g. `CNC / ORDER`). Blank if not issued further. |
 | 36 | Balance (Sheets) | `SUM(pressing_done_details.available_details.no_of_sheets)` |
 | 37 | Balance (Sq. Mtr.) | `SUM(pressing_done_details.available_details.sqm)` |
@@ -158,6 +161,23 @@
 | Col | Header | Source |
 |---|---|---|
 | 41 | REC (Sheets) | *(placeholder — schema not yet identified)* |
+
+---
+
+## Non-negative difference fields
+
+Any column whose value is computed as **one quantity minus another** (remaining balance after processing, or “issued” / moved quantity derived from received minus still-available stock) is **floored at zero** in the generated Excel. Negative values are never shown, including when source data is inconsistent (for example, available stock recorded higher than received). This applies at least to:
+
+| Col(s) | Section | Formula (conceptual) |
+|--------|---------|----------------------|
+| 8 | Slicing | `max(0, issued CMT − process CMT)` |
+| 19–20 | Grouping | `max(0, received − available)` for sheets and sqm |
+| 27 | Splicing | `max(0, total tapping sheets − total available sheets)` for the group |
+| 33–34 | Pressing | `max(0, received − available)` for sheets and sqm |
+
+Implementation uses a shared `nonNegativeDiff` helper in `flitchItemFurtherProcess.js` for these subtractions.
+
+Subtotal and grand total rows **sum** these already non-negative cell values per numeric column.
 
 ---
 

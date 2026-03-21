@@ -11,7 +11,7 @@ import dotenv from 'dotenv/config';
  *  Cols  2- 5   : Flitch Inward in(CMT) → LogNo (original log_no), REC CMT, Issue For Slicing/Peeling, Issue Status
  *  Cols  6- 9   : Slicing Issue in(CMT) → Side, Process Cmt, Balance Cmt, REC (Leaf)
  *  Cols 10-12   : Dressing              → Rec Sq. Mtr., Issue (Sq.Mtr.), Issue Status
- *  Cols 13-15   : Smoking/Dying         → Process, Issue (Sq.Mtr.), Issue Status
+ *  Cols 13-15   : Smoking/Dying         → total SQM processed, issued SQM, issue status (issued rows only)
  *  Cols 16-23   : Clipping/Grouping     → New Group Number, Rec Sheets, Rec Sq.Mtr.,
  *                                          Issue (Sheets), Issue (Sq.Mtr.), Issue Status,
  *                                          Balance (Sheets), Balance Sq. Mtr.
@@ -274,7 +274,7 @@ export const createFlitchItemFurtherProcessReportExcel = async (
       3, 4,         // rece_cmt, issue_for
       7, 8, 9,      // slicing_process_cmt, slicing_balance_cmt, slicing_rec_leaf
       10, 11,       // dress_rec_sqm, dress_issue_sqm
-      14,           // smoking_issue_sqm
+      13, 14,       // smoking_process (total sqm), smoking_issue_sqm
       17, 18, 19, 20, 22, 23,  // grouping
       24, 25, 26, 27, 29, 30,  // splicing
       31, 32, 33, 34, 36, 37,  // pressing

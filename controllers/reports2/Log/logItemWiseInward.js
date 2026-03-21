@@ -15,7 +15,7 @@ import { createLogItemWiseInwardReportExcel } from '../../../config/downloadExce
  * from inward receipt through crosscutting, flitching, peeling, and sales
  * Shows one row per log with item grouping
  * 
- * @route POST /api/V1/reports2/log/download-excel-log-item-wise-inward-daily-report
+ * @route POST /api/V1/report/download-excel-log-item-wise-inward-daily-report
  * @access Private
  */
 export const LogItemWiseInwardDailyReportExcel = catchAsync(async (req, res, next) => {

@@ -17,7 +17,7 @@ import { createItemWiseInwardReportExcel } from '../../../config/downloadExcel/r
  * Generates a comprehensive CSV/Excel report tracking complete journey of logs
  * from inward receipt through crosscutting, flitching, peeling, and sales
  * 
- * @route POST /api/V1/reports2/download-excel-item-wise-inward-daily-report
+ * @route POST /api/V1/report/download-excel-item-wise-inward-daily-report
  * @access Private
  */
 // export const ItemWiseInwardDailyReportExcel = catchAsync(async (req, res, next) => {

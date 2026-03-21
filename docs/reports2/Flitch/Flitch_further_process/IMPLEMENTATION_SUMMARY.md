@@ -50,6 +50,7 @@ non-first rows** and **merged vertically** in Excel.
                  (per-item cmt or total_cmt ÷ batch size; merged by flitch id + log_no_code)
 3. Dressing     ← dressing_done_items                (log_no_code IN allLeafCodes)
    Smoking      ← process_done_items_details         (log_no_code IN allLeafCodes)
+                 Cols 13–15: total sqm / issued sqm / status — `getSmokingData` (matches log report)
    Grouping     ← grouping_done_items_details        (log_no_code IN allLeafCodes)
 4. Tapping      ← tapping_done_items_details         (group_no IN groupNos)
                     + $lookup tapping_done_other_details (splicing_type)
@@ -70,7 +71,7 @@ All queries within each wave run via `Promise.all` for parallel execution.
 | 2–5 | Flitch Inward in(CMT) | log_no (original log number), flitch_cmt, Issue For Slicing (from issued_for_slicings), issue_status |
 | 6–9 | Slicing Issue in(CMT) | log_no_code (side), process_cmt (slicing done cmt), balance_cmt (remaining cmt), no_of_leaves |
 | 10–12 | Dressing | SUM(sqm), issue_status |
-| 13–15 | Smoking/Dying | process_name, SUM(sqm), issue_status |
+| 13–15 | Smoking/Dying | Total SQM (`SUM(sqm)`), issued SQM (`SUM(sqm)` where `issue_status` set), first issued row’s `issue_status` — same logic as log further process |
 | 16–23 | Clipping/Grouping | group_no, no_of_sheets, sqm, available balances |
 | 24–30 | Splicing | machine/hand sqm, sheets, balances; issue status from tapping→pressing history |
 | 31–37 | Pressing | no_of_sheets, sqm, balances; issue status from `pressing_done_history` when issued to CNC/COLOR/etc. |
@@ -106,6 +107,7 @@ The `inward_id` / `flitch_no` values are shown in **Row 3** of the report title 
 | Per-item total | Orange fill, `Total {item_name}` label |
 | Grand total | Yellow fill, `Total` label |
 | Empty vs zero | Stages not reached = blank cell (not `0`) |
+| Difference columns | Any “received − available” or “issued − processed” style value is floored at **0** (`nonNegativeDiff` in the controller); see API doc “Non-negative difference fields”. |
 | Vertical merges | Item Name, Flitch cols (2–5), Slicing Side + Dressing + Smoking cols |
 
 ---
