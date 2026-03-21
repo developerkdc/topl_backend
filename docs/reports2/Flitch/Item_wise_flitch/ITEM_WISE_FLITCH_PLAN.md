@@ -25,7 +25,7 @@ Slicing Details CMT (Issue, Received, Diff), Sales, Rejected, and Closing Stock.
 | 6 | Recover From Rejected | Round Log Detail | *(placeholder – 0)* | Data source TBD |
 | 7 | Issue for Flitch | Flitch Details | issues_for_flitching.cmt (createdAt in period) | CMT issued to flitching |
 | 8 | Flitch Received | Flitch Details | flitching_done.flitch_cmt (in period) | CMT completed by flitching |
-| 9 | Flitch Diff | Flitch Details | Issue for Flitch − Flitch Received | Variance |
+| 9 | Flitch Diff | Flitch Details | `max(0, Issue for Flitch − Flitch Received)` | Variance; never negative |
 | 10 | Issue for Slicing | Slicing Details | issued_for_slicing.cmt (createdAt in period) | CMT sent to slicing |
 | 11 | Slicing Received | Slicing Details | slicing_done_other_details.total_cmt (slicing_date in period) | CMT completed by slicing |
 | 12 | Slicing Diff | Slicing Details | Issue for Slicing − Slicing Received | Variance |
@@ -69,10 +69,10 @@ Slicing Details CMT (Issue, Received, Diff), Sales, Rejected, and Closing Stock.
 | **Invoice/Indian/Actual CMT** | `log_inventory` (LOG) or hardcoded 0 (CROSSCUT) | `worker_details.flitching_date` in period | Determined by `crosscut_done_id`: null=LOG, !=null=CROSSCUT |
 | **Issue for Flitch** | `issues_for_flitching` | `createdAt` in period | CMT sent to flitching station |
 | **Flitch Received** | `flitching_done` | `worker_details.flitching_date` in period, `deleted_at = null` | CMT completed at flitching |
-| **Flitch Diff** | *computed* | – | Issue for Flitch − Flitch Received |
+| **Flitch Diff** | *computed* | – | `max(0, Issue for Flitch − Flitch Received)` |
 | **Issue for Slicing** | `issued_for_slicing` | `createdAt` in period | CMT sent from flitching to slicing |
 | **Slicing Received** | `slicing_done_other_details.total_cmt` | `slicing_date` in period (lookup via `issue_for_slicing_id`) | CMT completed at slicing |
-| **Slicing Diff** | *computed* | – | Issue for Slicing − Slicing Received |
+| **Slicing Diff** | *computed* | – | `max(0, Issue for Slicing − Slicing Received)` |
 | **Sales** | `flitching_done` | `worker_details.flitching_date` in period, `issue_status IN ['order','challan']`, `deleted_at = null` | CMT invoiced or ordered |
 | **Rejected** | `flitching_done` (wastage) + `issue_for_slicing_wastage` | flitch: any in period; wastage: `createdAt` in period | Sum of `flitching_done.wastage_info.wastage_sqm` + `issue_for_slicing_wastage.cmt` |
 | **Closing Stock CMT** | *computed* | – | MAX(0, Opening Stock + Flitch Received − Issue for Slicing − Sales) |
@@ -110,7 +110,7 @@ Slicing Details CMT (Issue, Received, Diff), Sales, Rejected, and Closing Stock.
 8. **STEP 8:** Sales (flitching_done, issue_status IN [order,challan], in period)
 9. **STEP 9:** Rejected (flitch wastage: flitching_done.wastage_info.wastage_sqm + slicing wastage: issue_for_slicing_wastage.cmt)
 10. **STEP 10:** *(No query; closing calculated in STEP 11)*
-11. **STEP 11:** Build final 16-field report, compute diffs and closing stock, filter actives
+11. **STEP 11:** Build final 16-field report, compute diffs (`nonNegativeDiff`: issue − received, floored at 0) and closing stock, filter actives
 
 **Imports:** `issues_for_flitching_model`, `issued_for_slicing_model`, `slicing_done_other_details_model`, `issue_for_slicing_wastage_model`
 

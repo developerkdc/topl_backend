@@ -40,6 +40,8 @@ const getVal = (obj, path) =>
 const sumField = (arr, field) =>
   arr.reduce((acc, item) => acc + (parseFloat(getVal(item, field)) || 0), 0);
 
+const round3 = (n) => Math.round((n + Number.EPSILON) * 1000) / 1000;
+
 // Build regex pattern: code followed by one or more capital letters, end of string
 // e.g. flitch_code "L0702A1" → /^L0702A1[A-Z]+$/
 // Correctly distinguishes L0702A1A (matches) from L0702A10A (does NOT match for parent L0702A1
@@ -178,7 +180,8 @@ function buildGroupingData(
   tappingIssueStatusByItemId,
   pressingIssuedSheetsByItemId,
   pressingIssuedSqmByItemId,
-  pressingIssueStatusByItemId
+  pressingIssueStatusByItemId,
+  groupingIssueStatusByItemId
 ) {
   const groupNo = groupItem.group_no;
   const recSheets = groupItem.no_of_sheets || 0;
@@ -258,7 +261,7 @@ function buildGroupingData(
     grouping_rec_sqm: recSqm || '',
     grouping_issue_sheets: issueSheets || '',
     grouping_issue_sqm: issueSqm || '',
-    grouping_issue_status: '',
+    grouping_issue_status: groupingIssueStatusByItemId?.get(String(groupItem._id)) || '',
     // grouping was done → always show numeric (0 is meaningful here)
     grouping_balance_sheets: availSheets,
     grouping_balance_sqm: availSqm,
@@ -300,10 +303,15 @@ function getDressingData(logNoCode, dressingByCode) {
 function getSmokingData(logNoCode, smokingByCode) {
   const items = smokingByCode.get(logNoCode) || [];
   if (!items.length) return emptySmoking();
+  const issuedItems = items.filter((s) => s.issue_status);
+  const totalSqm = round3(sumField(items, 'sqm'));
+  const issuedSqm = issuedItems.length ? round3(sumField(issuedItems, 'sqm')) : '';
   return {
-    smoking_process: items.map((s) => s.process_name).filter(Boolean)[0] || '',
-    smoking_issue_sqm: sumField(items, 'sqm') || '',
-    smoking_issue_status: items.find((s) => s.issue_status)?.issue_status || '',
+    // Total SQM that passed through smoking/dying
+    smoking_process: totalSqm || '',
+    // SQM that has been issued out from smoking to a downstream process
+    smoking_issue_sqm: issuedSqm,
+    smoking_issue_status: issuedItems[0]?.issue_status || '',
   };
 }
 
@@ -325,7 +333,8 @@ function buildSlicingSideRows(
   tappingIssueStatusByItemId,
   pressingIssuedSheetsByItemId,
   pressingIssuedSqmByItemId,
-  pressingIssueStatusByItemId
+  pressingIssueStatusByItemId,
+  groupingIssueStatusByItemId
 ) {
   const sideCode = side.log_no_code;
 
@@ -367,7 +376,8 @@ function buildSlicingSideRows(
         tappingIssueStatusByItemId,
         pressingIssuedSheetsByItemId,
         pressingIssuedSqmByItemId,
-        pressingIssueStatusByItemId
+        pressingIssueStatusByItemId,
+        groupingIssueStatusByItemId
       ),
     }));
   }
@@ -404,15 +414,21 @@ function buildPeelingRow(
   tappingIssueStatusByItemId,
   pressingIssuedSheetsByItemId,
   pressingIssuedSqmByItemId,
-  pressingIssueStatusByItemId
+  pressingIssueStatusByItemId,
+  groupingIssueStatusByItemId
 ) {
   const peelingCode = peel.log_no_code;
+
+  // balance_rostroller is computed in the aggregate as issued_cmt - batch_total_cmt.
+  // Show numeric 0 when peeling was done; '' when issued CMT was unavailable.
+  const balanceRostroller =
+    peel.balance_rostroller != null ? peel.balance_rostroller : '';
 
   const peelingData = {
     ...emptySlicing(),
     peeling_process: peel.output_type || '',
-    peeling_balance_rostroller: '',
-    peeling_output: peel.no_of_leaves || '',
+    peeling_balance_rostroller: balanceRostroller,
+    peeling_output: peel.cmt || '',      // cmt stores SQM (length × width × leaves)
     peeling_rec_leaf: peel.no_of_leaves || '',
   };
 
@@ -440,7 +456,8 @@ function buildPeelingRow(
         tappingIssueStatusByItemId,
         pressingIssuedSheetsByItemId,
         pressingIssuedSqmByItemId,
-        pressingIssueStatusByItemId
+        pressingIssueStatusByItemId,
+        groupingIssueStatusByItemId
       ),
     };
   }
@@ -475,7 +492,8 @@ function buildFlitchRows(
   tappingIssueStatusByItemId,
   pressingIssuedSheetsByItemId,
   pressingIssuedSqmByItemId,
-  pressingIssueStatusByItemId
+  pressingIssueStatusByItemId,
+  groupingIssueStatusByItemId
 ) {
   // Flitch Issue in(CMT): flitching_done — col 11 = log_no_code, 12–14 from flitch row
   // Display log_no_code in column, but match children using the same code
@@ -520,7 +538,8 @@ function buildFlitchRows(
         tappingIssueStatusByItemId,
         pressingIssuedSheetsByItemId,
         pressingIssuedSqmByItemId,
-        pressingIssueStatusByItemId
+        pressingIssueStatusByItemId,
+        groupingIssueStatusByItemId
       )
     );
   }
@@ -543,7 +562,8 @@ function buildFlitchRows(
         tappingIssueStatusByItemId,
         pressingIssuedSheetsByItemId,
         pressingIssuedSqmByItemId,
-        pressingIssueStatusByItemId
+        pressingIssueStatusByItemId,
+        groupingIssueStatusByItemId
       )
     );
   }
@@ -575,7 +595,7 @@ function buildFlitchRows(
  * One row per leaf entity (grouping item / peeling item / slicing side).
  * Empty cells when a stage was not reached for that lineage.
  *
- * @route POST /api/V1/reports2/log/download-excel-log-item-further-process-report
+ * @route POST /api/V1/report/download-excel-log-item-further-process-report
  */
 export const LogItemFurtherProcessReportExcel = catchAsync(
   async (req, res, next) => {
@@ -645,9 +665,49 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
           flitching_done_model
             .find({ log_inventory_item_id: { $in: logIds }, $or: [{ deleted_at: null }, { deleted_at: { $exists: false } }] })
             .lean(),
-          peeling_done_items_model
-            .find({ log_no: { $in: logNos } })
-            .lean(),
+          // Use aggregate to join issues_for_peeling_available so we can
+          // populate balance_rostroller = issues_for_peeling_available.cmt.
+          // This record only exists when type = "rest_roller" was selected
+          // in the Reject / Available Details table during peeling done entry.
+          peeling_done_items_model.aggregate([
+            { $match: { log_no: { $in: logNos } } },
+            {
+              $lookup: {
+                from: 'peeling_done_other_details',
+                localField: 'peeling_done_other_details_id',
+                foreignField: '_id',
+                as: 'peeling_done_other_details',
+              },
+            },
+            {
+              $unwind: {
+                path: '$peeling_done_other_details',
+                preserveNullAndEmptyArrays: true,
+              },
+            },
+            // Join issues_for_peeling_available (only exists when type = "rest_roller")
+            {
+              $lookup: {
+                from: 'issues_for_peeling_available',
+                localField: 'peeling_done_other_details.issue_for_peeling_id',
+                foreignField: 'issue_for_peeling_id',
+                as: 'peeling_available',
+              },
+            },
+            {
+              $unwind: {
+                path: '$peeling_available',
+                preserveNullAndEmptyArrays: true,
+              },
+            },
+            {
+              $addFields: {
+                // Present only when type = "rest_roller"; null otherwise → '' in JS
+                balance_rostroller: { $ifNull: ['$peeling_available.cmt', null] },
+              },
+            },
+            { $project: { peeling_available: 0, peeling_done_other_details: 0 } },
+          ]),
         ]);
 
       // slicing_done_items.log_no stores the FLITCH code (e.g. "L2105A1"), NOT
@@ -838,12 +898,16 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
                 $group: {
                   _id: '$grouping_done_item_id',
                   issued_for: { $first: '$issued_for' },
+                  issue_status: { $first: '$issue_status' },
                 },
               },
             ])
           : [];
       const groupingIssuedForByItemId = new Map(
         groupingIssuedForAgg.map((r) => [String(r._id), r.issued_for || ''])
+      );
+      const groupingIssueStatusByItemId = new Map(
+        groupingIssuedForAgg.map((r) => [String(r._id), r.issue_status || ''])
       );
 
       const tappingItemIds = tappingRaw.map((t) => t._id).filter(Boolean);
@@ -1100,7 +1164,8 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
                     tappingIssueStatusByItemId,
                     pressingIssuedSheetsByItemId,
                     pressingIssuedSqmByItemId,
-                    pressingIssueStatusByItemId
+                    pressingIssueStatusByItemId,
+                    groupingIssueStatusByItemId
                   )
                 );
               }
@@ -1130,7 +1195,8 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
                       tappingIssueStatusByItemId,
                       pressingIssuedSheetsByItemId,
                       pressingIssuedSqmByItemId,
-                      pressingIssueStatusByItemId
+                      pressingIssueStatusByItemId,
+                      groupingIssueStatusByItemId
                     )
                   );
                 }
@@ -1191,7 +1257,8 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
                   tappingIssueStatusByItemId,
                   pressingIssuedSheetsByItemId,
                   pressingIssuedSqmByItemId,
-                  pressingIssueStatusByItemId
+                  pressingIssueStatusByItemId,
+                  groupingIssueStatusByItemId
                 )
               );
             }
@@ -1223,7 +1290,8 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
                 tappingIssueStatusByItemId,
                 pressingIssuedSheetsByItemId,
                 pressingIssuedSqmByItemId,
-                pressingIssueStatusByItemId
+                pressingIssueStatusByItemId,
+                groupingIssueStatusByItemId
               )
             );
           }
@@ -1253,7 +1321,8 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
                 tappingIssueStatusByItemId,
                 pressingIssuedSheetsByItemId,
                 pressingIssuedSqmByItemId,
-                pressingIssueStatusByItemId
+                pressingIssueStatusByItemId,
+                groupingIssueStatusByItemId
               )
             );
           }

@@ -93,7 +93,7 @@ POST /api/V1/reports2/flitch/download-excel-item-wise-flitch-report
 ## Report Structure
 
 ### Row 1: Report Title
-Merged across all 20 columns.
+Merged across all 16 columns.
 
 **Format:** `Inward Item Wise Report From DD/MM/YYYY to DD/MM/YYYY`
 
@@ -108,32 +108,28 @@ Merged across all 20 columns.
 | 3 – 5   | Round Log Detail CMT (Invoice, Indian, Actual) |
 | 7 – 9   | Flitch Details CMT (Issue for Flitch, Flitch Received, Flitch Diff) |
 | 10 – 12 | Slicing Details CMT (Issue for Slicing, Slicing Received, Slicing Diff) |
-| 1, 2, 6, 13, 14, 15, 16 | Standalone (ItemName, Opening Stock, Recover From rejected, Issue for Sq.Edge, Sales, Rejected, Closing Stock CMT) |
+| 1, 2, 6, 13, 14, 15, 16 | Standalone (Item Name, Opening Stock, Recover From rejected, Issue for Sq.Edge, Sales, Rejected, Closing Stock CMT) |
 
-### Row 4: Column Headers (20 columns)
+### Row 4: Column Headers (16 columns, v4)
 
 | # | Column | Description |
 |---|--------|-------------|
-| 1 | ItemName | Wood species name |
-| 2 | Opening Stock CMT | Physical CMT of logs (inward in period) |
-| 3 | Invoice | Invoice CMT of logs received in the period |
-| 4 | Indian | Indian CMT of logs received in the period |
-| 5 | Actual | Actual (physical) CMT of logs received in the period |
+| 1 | Item Name | Wood species (`item_name`) |
+| 2 | Opening Stock CMT | `flitching_done` with `issue_status=null` before period |
+| 3 | Invoice | LOG source: `invoice_cmt` in period; crosscut source: 0 |
+| 4 | Indian | LOG source: `indian_cmt` in period; crosscut source: 0 |
+| 5 | Actual | LOG: `physical_cmt`; crosscut: `crosscut_cmt` (period) |
 | 6 | Recover From rejected | Placeholder – 0 (data source TBD) |
-| 7 | Issue for CC | Log items issued for crosscutting (createdAt in period, issue_status crosscutting) |
-| 8 | CC Received | Crosscut completions (createdAt in period) |
-| 9 | CC Issue | Crosscut pieces issued forward (createdAt in period, issue_status not null) |
-| 10 | CC Diff | Issue for CC − CC Received |
-| 11 | Issue for Flitch | Records from `issues_for_flitching` (createdAt in period) |
-| 12 | Flitch Received | Flitching completions (createdAt in period, deleted_at null) |
-| 13 | Flitch Diff | Issue for Flitch − Flitch Received |
-| 14 | Issue for Peeling | Records from `issues_for_peeling` (createdAt in period) |
-| 15 | Peeling Received | Peeling completions via `peeling_done_items` (createdAt in period) |
-| 16 | Peeling Diff | Issue for Peeling − Peeling Received |
-| 17 | Issue for Sq.Edge | Placeholder – 0 (data source TBD) |
-| 18 | Sales | Log + Crosscut + Flitch with issue_status order/challan (createdAt in period) |
-| 19 | Rejected | Crosscut + Flitch + Peeling with is_rejected=true (createdAt in period) |
-| 20 | Closing Stock CMT | Logs in period with issue_status != null, minus Opening Stock |
+| 7 | Issue for Flitch | `issues_for_flitching` (`createdAt` in period) |
+| 8 | Flitch Received | `flitching_done.flitch_cmt` in period, `deleted_at` null |
+| 9 | Flitch Diff | `max(0, Issue for Flitch − Flitch Received)` |
+| 10 | Issue for Slicing | `issued_for_slicing` (`createdAt` in period) |
+| 11 | Slicing Received | `slicing_done_other_details.total_cmt` (`slicing_date` in period) |
+| 12 | Slicing Diff | `max(0, Issue for Slicing − Slicing Received)` |
+| 13 | Issue for Sq.Edge | Placeholder – 0 (data source TBD) |
+| 14 | Sales | `flitching_done` with `issue_status` order/challan in period |
+| 15 | Rejected | Flitch wastage (`wastage_info.wastage_sqm`) + slicing wastage (`issue_for_slicing_wastage.cmt`) in period |
+| 16 | Closing Stock CMT | `max(0, Opening + Flitch Received − Issue for Slicing − Sales)` |
 
 ### Rows 5+: Data rows (one per item, sorted alphabetically)
 
@@ -146,7 +142,7 @@ Merged across all 20 columns.
 - **16 columns** with grouped header row (Round Log Detail CMT, Flitch Details CMT, Slicing Details CMT, Sales, Rejected, Closing Stock)
 - **Item universe**: All items flitched in the period + all items with opening stock (issue_status=null created before period)
 - **Sorted data**: items sorted alphabetically by name
-- **Grand Total row**: sums 15 numeric columns, bold with gray background (#FFE0E0E0)
+- **Grand Total row**: sums numeric columns, bold with gray background (#FFE0E0E0)
 - **Gray background**: group header and column header rows (#FFD3D3D3)
 - **3 decimal precision**: all CMT values formatted to 3 decimal places
 - **Item filter**: optional `filter.item_name` narrows the report to one species
@@ -198,8 +194,9 @@ WHERE worker_details.flitching_date IN [startDate, endDate]
 
 ### Flitch Diff
 ```
-Flitch Diff = Issue for Flitch − Flitch Received
+Flitch Diff = max(0, Issue for Flitch − Flitch Received)
 ```
+Never negative in the Excel output (`nonNegativeDiff` in the controller).
 
 ### Issue for Slicing
 ```
@@ -216,8 +213,9 @@ WHERE slicing_date IN [startDate, endDate]
 
 ### Slicing Diff
 ```
-Slicing Diff = Issue for Slicing − Slicing Received
+Slicing Diff = max(0, Issue for Slicing − Slicing Received)
 ```
+Never negative in the Excel output.
 
 ### Sales
 ```
@@ -249,6 +247,10 @@ Closing Stock = MAX(0,
 )
 ```
 *Clamped to 0; no negative inventory values*
+
+### Non-negative difference columns
+
+**Flitch Diff** and **Slicing Diff** are issue-minus-received variances **floored at 0** (same rule as the Flitch Item Further Process report). Grand totals sum these columns across items.
 
 ### Placeholder Fields (always 0)
 - **Recover From Rejected** – data source TBD
@@ -368,7 +370,7 @@ public/upload/reports/reports2/Flitch/
 6. **Sorting:** Results sorted alphabetically by item name.
 7. **Placeholder columns:** Recover From rejected and Issue for Sq.Edge always output 0 until a data source is defined by the client.
 8. **Item universe:** Unique `item_name` values from items **inwarded in the date range** – union of log inward (`log_inventory_items` + `log_inventory_invoice_details.inward_date`) and flitch inward (`flitch_inventory_items` + `flitch_inventory_invoice_details.inward_date`).
-9. **Cross Cut section:** Issue for CC, CC Received, CC Issue, CC Diff are included (columns 7–10); data from `log_inventory_items` (issue_status crosscutting) and `crosscutting_done`.
+9. **v4 layout:** Cross Cut columns were removed; round-log actuals still use crosscut data where the flitch source is crosscut (`crosscut_done_id`).
 
 ---
 

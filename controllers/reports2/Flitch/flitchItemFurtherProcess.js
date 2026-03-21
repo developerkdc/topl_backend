@@ -36,6 +36,13 @@ const getVal = (obj, path) =>
 const sumField = (arr, field) =>
   arr.reduce((acc, item) => acc + (parseFloat(getVal(item, field)) || 0), 0);
 
+/** Stock / movement differences (received − available, issued − processed, etc.) never go below zero. */
+function nonNegativeDiff(minuend, subtrahend) {
+  const a = parseFloat(minuend) || 0;
+  const b = parseFloat(subtrahend) || 0;
+  return Math.max(0, a - b);
+}
+
 /**
  * Merge slicing_done rows by (flitch_inventory_item_id, log_no_code): sums process CMT across
  * initial slicing + re-slicing (multiple slicing_done_other_details for same side).
@@ -166,8 +173,8 @@ function buildGroupingData(
   const availSheets =
     getVal(groupItem, 'available_details.no_of_sheets') ?? recSheets;
   const availSqm = getVal(groupItem, 'available_details.sqm') ?? recSqm;
-  const issueSheets = Math.max(0, recSheets - availSheets);
-  const issueSqm = Math.max(0, recSqm - availSqm);
+  const issueSheets = nonNegativeDiff(recSheets, availSheets);
+  const issueSqm = nonNegativeDiff(recSqm, availSqm);
 
   // Splicing / Tapping
   const tappingItems = tappingByGroupNo.get(groupNo) || [];
@@ -182,11 +189,7 @@ function buildGroupingData(
   const splicingSheets = sumField(tappingItems, 'no_of_sheets');
   const splicingAvailSheets = sumField(tappingItems, 'available_details.no_of_sheets');
   const splicingAvailSqm = sumField(tappingItems, 'available_details.sqm');
-  const splicingIssueSheets = Math.max(0, splicingSheets - splicingAvailSheets);
-  const splicingIssueSqm = Math.max(
-    0,
-    sumField(tappingItems, 'sqm') - splicingAvailSqm
-  );
+  const splicingIssueSheets = nonNegativeDiff(splicingSheets, splicingAvailSheets);
   const splicingIssueStatus = resolveSplicingIssueStatusFromHistory(
     tappingItems,
     tappingIssueStatusByItemId
@@ -198,8 +201,8 @@ function buildGroupingData(
   const pressingSqm = sumField(pressingItems, 'sqm');
   const pressingAvailSheets = sumField(pressingItems, 'available_details.no_of_sheets');
   const pressingAvailSqm = sumField(pressingItems, 'available_details.sqm');
-  const pressingIssueSheets = Math.max(0, pressingSheets - pressingAvailSheets);
-  const pressingIssueSqm = Math.max(0, pressingSqm - pressingAvailSqm);
+  const pressingIssueSheets = nonNegativeDiff(pressingSheets, pressingAvailSheets);
+  const pressingIssueSqm = nonNegativeDiff(pressingSqm, pressingAvailSqm);
   const pressingIssueStatus = resolvePressingIssueStatusFromHistory(
     pressingItems,
     pressingIssueStatusByItemId
@@ -291,7 +294,7 @@ function buildSlicingSideRows(
   // Process Cmt = slicing done cmt; Balance Cmt = remaining cmt (issued - process)
   const processCmt = parseFloat(side.item_cmt ?? side.cmt) || 0;
   const issuedCmt = parseFloat(side.issued_for_slicing?.cmt) || 0;
-  const balanceCmt = Math.max(0, issuedCmt - processCmt);
+  const balanceCmt = nonNegativeDiff(issuedCmt, processCmt);
 
   const slicingBase = {
     slicing_side: sideCode,

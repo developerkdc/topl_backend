@@ -93,14 +93,22 @@ Row 4 (sub-headers):
 | 9  | `actual_cmt`            | Actual (Round Log Detail) | LOG: `log_data.physical_cmt` + CROSSCUT: `crosscut_done.crosscut_cmt` in period |
 | 10 | `issue_for_flitch`      | Issue for Flitch        | Total CMT issued from flitch stock in period |
 | 11 | `flitch_received`       | Flitch Received         | Total flitch CMT received in period (= Actual) |
-| 12 | `flitch_diff`           | Flitch Diff             | Issue for Flitch − Flitch Received |
+| 12 | `flitch_diff`           | Flitch Diff             | `max(0, Issue for Flitch − Flitch Received)` |
 | 13 | `issue_for_slicing`     | Issue for Slicing       | CMT issued from `issued_for_slicing_model` in period |
 | 14 | `slicing_received`      | Slicing Received        | CMT from `slicing_done_other_details_model` in period |
-| 15 | `slicing_diff`          | Slicing Diff            | Issue for Slicing − Slicing Received |
+| 15 | `slicing_diff`          | Slicing Diff            | `max(0, Issue for Slicing − Slicing Received)` |
 | 16 | `issue_for_sqedge`      | Issue for Sq.Edge       | Placeholder – 0.000 (data source TBD) |
 | 17 | `sales`                 | Sales                   | CMT issued for order/challan in period |
 | 18 | `rejected`              | Rejected                | Flitch wastage (`wastage_info.wastage_sqm`) + Slicing wastage (`issue_for_slicing_wastage.cmt`) in period |
 | 19 | `fl_closing`            | Closing Stock CMT       | Closing balance (CMT) |
+
+---
+
+## Non-negative difference fields
+
+**Flitch Diff** (col 12) and **Slicing Diff** (col 15) are computed as issue minus received but **floored at 0** in Excel (`nonNegativeDiff` in `logWiseFlitch.js`). The grand total row sums these per-column values (each row’s diff is already ≥ 0).
+
+**Closing Stock CMT** (col 19) is separately clamped with `MAX(0, …)` per the closing formula below.
 
 ---
 
@@ -162,8 +170,9 @@ Sum of `flitch_cmt` from both sources where `issue_status IN ['order','challan',
 
 ### Flitch Diff (col 12)
 ```
-Flitch Diff = Issue for Flitch − Flitch Received
+Flitch Diff = max(0, Issue for Flitch − Flitch Received)
 ```
+Never negative (floors at zero when received exceeds issue in the period).
 
 ### Issue for Slicing (col 13)
 Sum of `cmt` from `issued_for_slicing_model` matched by `log_no` and `date_of_issued` in period.
@@ -173,8 +182,9 @@ Sum of `total_cmt` from `slicing_done_other_details_model` where `slicing_date` 
 
 ### Slicing Diff (col 15)
 ```
-Slicing Diff = Issue for Slicing − Slicing Received
+Slicing Diff = max(0, Issue for Slicing − Slicing Received)
 ```
+Never negative (floors at zero when slicing received exceeds issue in the period).
 
 ### Sales (col 17)
 Sum of `flitch_cmt` from both sources where `issue_status IN ['order','challan']` and `updatedAt` in period.
@@ -229,10 +239,10 @@ Inward Item & Log Wise Report From 01/04/2025 To 15/07/2025
                     │         │ Received Flitch   │      Flitch Details CMT      │    Slicing Details CMT     │ Round log+Cross Cu │
 Item Name│Log No.│Date│Status │ Op.Stock│RecovRej│Inv│ Indian│ Actual │IssFlitch│FlRecvd│FlDiff │IssSlic│SlicRecvd│SlicDiff│IssSqEdge│Sales│Rej│ClStock
 ─────────┼───────┼────┼───────┼─────────┼────────┼───┼───────┼────────┼─────────┼───────┼───────┼────────┼─────────┼────────┼─────────┼─────┼───┼───────
-Red Oak  │ L1    │... │ Stock │  0.000  │  0.000 │ 1 │ 0.000 │ 0.357  │  0.000  │ 0.357 │-0.357 │  0.000 │  0.000  │  0.000 │  0.000  │0.000│0.0│ 0.357
+Red Oak  │ L1    │... │ Stock │  0.000  │  0.000 │ 1 │ 0.000 │ 0.357  │  0.000  │ 0.357 │ 0.000 │  0.000 │  0.000  │  0.000 │  0.000  │0.000│0.0│ 0.357
          │ L2    │... │ Slicing│ 0.000  │  0.000 │ 1 │ 0.000 │ 0.270  │  0.270  │ 0.270 │ 0.000 │  0.270 │  0.230  │  0.040 │  0.000  │0.000│0.0│ 0.000
 ─────────┼───────┼────┼───────┼─────────┼────────┼───┼───────┼────────┼─────────┼───────┼───────┼────────┼─────────┼────────┼─────────┼─────┼───┼───────
-Total    │       │    │       │ 0.000   │  0.000 │   │ 0.000 │ 0.627  │  0.270  │ 0.627 │-0.357 │  0.270 │  0.230  │  0.040 │  0.000  │0.000│0.0│ 0.357
+Total    │       │    │       │ 0.000   │  0.000 │   │ 0.000 │ 0.627  │  0.270  │ 0.627 │ 0.000 │  0.270 │  0.230  │  0.040 │  0.000  │0.000│0.0│ 0.357
 ```
 
 ---

@@ -106,6 +106,7 @@ The `inward_id` / `flitch_no` values are shown in **Row 3** of the report title 
 | Per-item total | Orange fill, `Total {item_name}` label |
 | Grand total | Yellow fill, `Total` label |
 | Empty vs zero | Stages not reached = blank cell (not `0`) |
+| Difference columns | Any “received − available” or “issued − processed” style value is floored at **0** (`nonNegativeDiff` in the controller); see API doc “Non-negative difference fields”. |
 | Vertical merges | Item Name, Flitch cols (2–5), Slicing Side + Dressing + Smoking cols |
 
 ---
