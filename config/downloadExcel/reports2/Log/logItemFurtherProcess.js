@@ -321,7 +321,7 @@ export const createLogItemFurtherProcessReportExcel = async (
       30, 31, 32, 33, 35, 36,   // grouping
       37, 38, 39, 40, 42, 43,   // splicing
       44, 45, 46, 47, 49, 50,   // pressing
-      52, 53,                  // cnc, colour (sales col 54 is text: CBM/SQM)
+      52, 53, 54,              // cnc, colour, sales
     ]);
 
     // Columns to MERGE vertically (parent-level columns)
@@ -426,7 +426,7 @@ export const createLogItemFurtherProcessReportExcel = async (
       row.cnc_type,
       row.cnc_rec_sheets,
       row.colour_rec_sheets,
-      row.sales_rec_sheets,
+      row.sales_value,
       row.jwc_veneer,
       row.awc_pressing_sheets,
     ];
