@@ -18,6 +18,7 @@ import mdfRoutes from './reports2/MDF/mdf.routes.js';
 import fleeceRoutes from './reports2/Fleece/fleece.routes.js';
 import otherGoodsRoutes from './reports2/Other_Goods/otherGoods.routes.js';
 import dashboardAnalyticsRoutes from './dashboard_analytics.routes.js';
+import displayReportsRoutes from '../../display_reports/routes/display_reports.routes.js';
 import express from 'express';
 
 const router = express.Router();
@@ -79,7 +80,11 @@ router.use(pressingRoutes);
 // Other goods routes (Other Goods Stock Report)
 router.use(otherGoodsRoutes);
 
+// display reports preview routes
+router.use(displayReportsRoutes);
+
 // dashboard analytics routes
 router.use(dashboardAnalyticsRoutes);
 
 export default router;
+
