@@ -28,6 +28,7 @@ import allPackingRoutes from './routes/packing/all_packing.routes.js';
 import dispatchRouter from './routes/dispatch/dispatch.routes.js';
 import { handle_photo_master_streams } from './controllers/masters/Photo/photo.controller.js';
 import reportRouter from './routes/report/reports2.routes.js';
+import displayReportsRoutes from './display_reports/routes/display_reports.routes.js';
 // import { start_worker_thread } from './utils/constants.js';
 
 const Configs = getConfigs();
@@ -98,6 +99,8 @@ app.use(`/api/${Configs.server.version}/challan`, all_challan_router);
 app.use(`/api/${Configs.server.version}/packing`, allPackingRoutes);
 //Dispatch
 app.use(`/api/${Configs.server.version}/dispatch`, dispatchRouter);
+// Display report preview compatibility mount
+app.use(`/api/${Configs.server.version}/report`, displayReportsRoutes);
 //Report
 app.use(`/api/${Configs.server.version}/report`, reportRouter);
 
@@ -120,3 +123,7 @@ io.on('connection', (socket) => {
 server.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
 });
+
+
+
+

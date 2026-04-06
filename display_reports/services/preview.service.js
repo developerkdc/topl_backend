@@ -84,6 +84,87 @@ const getProtocol = (req) => {
   return req?.protocol || 'http';
 };
 
+const getForwardedHost = (req) => {
+  const forwardedHost = req?.headers?.['x-forwarded-host'];
+  if (forwardedHost) {
+    return String(forwardedHost).split(',')[0].trim();
+  }
+  return req?.get?.('host') || '';
+};
+
+const getApiPrefix = (req) => {
+  const originalUrl = String(req?.originalUrl || '');
+  const matchedApiPrefix = originalUrl.match(/^(\/api\/[^/]+)/i);
+  if (matchedApiPrefix?.[1]) {
+    return matchedApiPrefix[1];
+  }
+
+  return String(req?.baseUrl || '').replace(/\/report(?:\/.*)?$/, '');
+};
+
+const normalizeBaseUrl = (value) => String(value || '').trim().replace(/\/+$/, '');
+
+const buildAbsoluteUrl = (baseUrl, pathname) => {
+  const normalizedBaseUrl = normalizeBaseUrl(baseUrl);
+  const normalizedPathname = `/${String(pathname || '').replace(/^\/+/, '')}`;
+  return `${normalizedBaseUrl}${normalizedPathname}`;
+};
+
+const buildRequestUrlCandidates = ({ req, endpoint }) => {
+  const apiPrefix = getApiPrefix(req);
+  const requestPath = `${apiPrefix}${endpoint}`;
+  const protocol = getProtocol(req);
+  const host = req?.get?.('host');
+  const forwardedHost = getForwardedHost(req);
+  const configuredOrigin = (() => {
+    try {
+      return process.env.APP_URL ? new URL(process.env.APP_URL).origin : '';
+    } catch {
+      return normalizeBaseUrl(process.env.APP_URL);
+    }
+  })();
+  const localPort = req?.socket?.localPort;
+
+  const candidates = new Set();
+
+  if (localPort) {
+    candidates.add(buildAbsoluteUrl(`http://127.0.0.1:${localPort}`, requestPath));
+    candidates.add(buildAbsoluteUrl(`http://localhost:${localPort}`, requestPath));
+  }
+
+  if (configuredOrigin) {
+    candidates.add(buildAbsoluteUrl(configuredOrigin, requestPath));
+  }
+
+  if (forwardedHost) {
+    candidates.add(buildAbsoluteUrl(`${protocol}://${forwardedHost}`, requestPath));
+    candidates.add(buildAbsoluteUrl(`https://${forwardedHost}`, requestPath));
+    candidates.add(buildAbsoluteUrl(`http://${forwardedHost}`, requestPath));
+  }
+
+  if (host) {
+    candidates.add(buildAbsoluteUrl(`${protocol}://${host}`, requestPath));
+    candidates.add(buildAbsoluteUrl(`https://${host}`, requestPath));
+    candidates.add(buildAbsoluteUrl(`http://${host}`, requestPath));
+  }
+
+  return [...candidates].filter(Boolean);
+};
+
+const isHtmlResponse = (response) => {
+  const contentType = String(response?.headers?.['content-type'] || '').toLowerCase();
+  if (contentType.includes('text/html')) return true;
+
+  const responseText = typeof response?.data === 'string' ? response.data : '';
+  return /<!doctype html>|<html/i.test(responseText);
+};
+
+const hasDownloadLink = (response) =>
+  Boolean(response?.data && typeof response.data.result === 'string' && response.data.result.trim());
+
+const hasJsonMessage = (response) =>
+  Boolean(response?.data && typeof response.data === 'object' && typeof response.data.message === 'string');
+
 export const buildDownloadPayload = ({ reportType, filters = {} }) => {
   if (reportType === 'RANGE') {
     return {
@@ -100,56 +181,103 @@ export const buildDownloadPayload = ({ reportType, filters = {} }) => {
 };
 
 export const requestDownloadForPreview = async ({ req, endpoint, payload }) => {
-  const protocol = getProtocol(req);
-  const host = req.get('host');
-  const apiPrefix = String(req.baseUrl || '').replace(/\/report$/, '');
-  const downloadPath = `${apiPrefix}${endpoint}`;
-  const requestUrl = `${protocol}://${host}${downloadPath}`;
+  const requestUrls = buildRequestUrlCandidates({ req, endpoint });
+  let lastResponse = null;
+  let lastError = null;
 
-  return axios.post(requestUrl, payload, {
-    timeout: 180000,
-    validateStatus: () => true,
-    headers: buildForwardHeaders(req.headers),
-  });
+  for (const requestUrl of requestUrls) {
+    try {
+      const response = await axios.post(requestUrl, payload, {
+        timeout: 180000,
+        validateStatus: () => true,
+        headers: buildForwardHeaders(req.headers),
+      });
+
+      lastResponse = response;
+
+      if (hasDownloadLink(response)) {
+        return response;
+      }
+
+      if (response.status >= 400) {
+        if (hasJsonMessage(response) || !isHtmlResponse(response)) {
+          return response;
+        }
+        continue;
+      }
+
+      if (isHtmlResponse(response)) {
+        continue;
+      }
+
+      if (hasJsonMessage(response)) {
+        return response;
+      }
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  if (lastError) {
+    throw lastError;
+  }
+
+  if (lastResponse) {
+    return lastResponse;
+  }
+
+  return {
+    status: 502,
+    data: {
+      message:
+        'Preview could not reach the existing report download endpoint. Check APP_URL, proxy headers, or server port configuration.',
+    },
+    headers: {
+      'content-type': 'application/json',
+    },
+  };
 };
 
 const buildPathCandidates = (pathnameValue) => {
-  const workingDir = process.cwd();
+  const rootCandidates = [process.cwd(), global?.config?.dirname].filter(Boolean);
   const normalizedPath = String(pathnameValue || '')
     .replace(/\\/g, '/')
     .replace(/^\/+/, '');
 
-  const candidates = new Set();
   if (!normalizedPath) return [];
 
-  candidates.add(path.resolve(workingDir, normalizedPath));
+  const candidates = new Set();
 
-  if (!normalizedPath.startsWith('public/')) {
-    candidates.add(path.resolve(workingDir, 'public', normalizedPath));
-  }
+  rootCandidates.forEach((rootPath) => {
+    candidates.add(path.resolve(rootPath, normalizedPath));
 
-  if (normalizedPath.startsWith('public/')) {
-    candidates.add(path.resolve(workingDir, normalizedPath));
-  }
+    if (!normalizedPath.startsWith('public/')) {
+      candidates.add(path.resolve(rootPath, 'public', normalizedPath));
+    }
 
-  if (normalizedPath.startsWith('upload/')) {
-    candidates.add(path.resolve(workingDir, normalizedPath));
-    candidates.add(path.resolve(workingDir, 'public', normalizedPath));
-  }
+    if (normalizedPath.startsWith('public/')) {
+      candidates.add(path.resolve(rootPath, normalizedPath));
+    }
 
-  if (normalizedPath.startsWith('reports/')) {
-    candidates.add(path.resolve(workingDir, 'public', normalizedPath));
-  }
+    if (normalizedPath.startsWith('upload/')) {
+      candidates.add(path.resolve(rootPath, normalizedPath));
+      candidates.add(path.resolve(rootPath, 'public', normalizedPath));
+    }
 
-  if (normalizedPath.startsWith('public/upload/')) {
-    const withoutPublic = normalizedPath.replace(/^public\//, '');
-    candidates.add(path.resolve(workingDir, withoutPublic));
-  }
+    if (normalizedPath.startsWith('reports/')) {
+      candidates.add(path.resolve(rootPath, 'public', normalizedPath));
+    }
 
-  if (normalizedPath.startsWith('public/reports/')) {
-    const withoutPublic = normalizedPath.replace(/^public\//, '');
-    candidates.add(path.resolve(workingDir, withoutPublic));
-  }
+    if (normalizedPath.startsWith('public/upload/')) {
+      const withoutPublic = normalizedPath.replace(/^public\//, '');
+      candidates.add(path.resolve(rootPath, withoutPublic));
+    }
+
+    if (normalizedPath.startsWith('public/reports/')) {
+      const withoutPublic = normalizedPath.replace(/^public\//, '');
+      candidates.add(path.resolve(rootPath, withoutPublic));
+    }
+  });
 
   return [...candidates];
 };

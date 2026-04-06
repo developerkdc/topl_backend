@@ -52,8 +52,11 @@ import {
   ConsumedGoodsReportExcel,
   OtherGoodsReportExcel,
 } from '../../controllers/report/otherGoods.js';
+import displayReportsRoutes from '../../display_reports/routes/display_reports.routes.js';
 
 const router = express.Router();
+
+router.use(displayReportsRoutes);
 
 // raw
 router.post('/download-excel-raw-veneer', RawReportExcel);
@@ -157,3 +160,4 @@ router.post('/download-excel-consumed-goods', ConsumedGoodsReportExcel);
 router.post('/download-excel-other-goods', OtherGoodsReportExcel);
 
 export default router;
+
