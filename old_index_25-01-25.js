@@ -35,6 +35,7 @@ import readySheetRouter from './routes/readySheetForm/readySheet.routes.js';
 import readyInventoryRouter from './routes/inventory/readyForDispatch/readyForDispatch.routes.js';
 import imagesRouter from './routes/image/image.routes.js';
 import reportRouter from './routes/report/report.routes.js';
+import displayReportsRoutes from './display_reports/routes/display_reports.routes.js';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import itemCategoryRouter from './routes/masters/item.cateory.routes.js';
@@ -231,6 +232,9 @@ app.use(`/api/${Configs.server.version}/dispatch`, dispatchRouter);
 // images
 app.use(`/api/${Configs.server.version}/image`, imagesRouter);
 
+// display report preview compatibility mount
+app.use(`/api/${Configs.server.version}/report`, displayReportsRoutes);
+
 // report
 app.use(`/api/${Configs.server.version}/report`, reportRouter);
 
@@ -275,3 +279,7 @@ io.on('connection', (socket) => {
 server.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
 });
+
+
+
+
