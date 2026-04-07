@@ -18,6 +18,8 @@ import { cnc_done_details_model } from '../../../database/schema/factory/cnc/cnc
 import { color_done_details_model } from '../../../database/schema/factory/colour/colour_done/colour_done.schema.js';
 import { issued_for_slicing_model } from '../../../database/schema/factory/slicing/issue_for_slicing/issuedForSlicing.js';
 import { issues_for_peeling_model } from '../../../database/schema/factory/peeling/issues_for_peeling/issues_for_peeling.schema.js';
+import issue_for_order_model from '../../../database/schema/order/issue_for_order/issue_for_order.schema.js';
+import issue_for_challan_model from '../../../database/schema/challan/issue_for_challan/issue_for_challan.schema.js';
 import { createLogItemFurtherProcessReportExcel } from '../../../config/downloadExcel/reports2/Log/logItemFurtherProcess.js';
 
 // ─────────────────────────── Utility helpers ────────────────────────────────
@@ -58,6 +60,16 @@ const crosscutIssueForFlitchPeeling = (cc) => {
   const s = cc.issue_status;
   if (s === 'peeling' || s === 'flitching') {
     return { issue_for: cc.crosscut_cmt ?? '', status: s };
+  }
+  return { issue_for: '', status: '' };
+};
+
+/** Flitch Issue in(CMT) — cols 13–14: Issue For Slicing/Peeling + Status. */
+const flitchIssueForSlicingPeeling = (f) => {
+  if (!f || !f.issue_status) return { issue_for: '', status: '' };
+  const s = String(f.issue_status).toLowerCase();
+  if (s === 'slicing' || s === 'slicing_peeling' || s === 'peeling') {
+    return { issue_for: f.flitch_cmt ?? 0, status: f.issue_status };
   }
   return { issue_for: '', status: '' };
 };
@@ -140,9 +152,6 @@ const emptyDownstream = () => ({
   cnc_type: '',
   cnc_rec_sheets: '',
   colour_rec_sheets: '',
-  sales_value: '',
-  jwc_veneer: '',
-  awc_pressing_sheets: '',
 });
 
 const emptyFlitch = () => ({
@@ -245,13 +254,9 @@ function buildGroupingData(groupItem, ctx) {
     pressing_issue_status: pressingIssueStatus,
     pressing_balance_sheets: pressingAvailSheets,
     pressing_balance_sqm: pressingAvailSqm,
-    sales_value: (pressingIssueStatus.toUpperCase().includes('ORDER')) ? pressingIssueSqm : '',
     cnc_type: cncItems[0]?.product_type || '',
     cnc_rec_sheets: sumField(cncItems, 'no_of_sheets'),
     colour_rec_sheets: sumField(colourItems, 'no_of_sheets'),
-    sales_rec_sheets: '',
-    jwc_veneer: '',
-    awc_pressing_sheets: '',
   };
 }
 
@@ -262,7 +267,6 @@ function getDressingData(logNoCode, dressingByCode) {
     dress_rec_sqm: sumField(items, 'sqm'),
     dress_issue_sqm: sumField(items.filter((d) => d.issue_status), 'sqm'),
     dress_issue_status: items.find((d) => d.issue_status)?.issue_status || '',
-    sales_value: items.find((d) => String(d.issue_status).toUpperCase().includes('ORDER')) ? sumField(items, 'sqm') : '',
   };
 }
 
@@ -292,20 +296,28 @@ function buildSlicingSideRows(logBase, ccBase, flitchBase, side, ctx) {
   const smokingData = getSmokingData(sideCode, ctx.smokingByCode);
   const groupingItems = ctx.groupingByCode.get(sideCode) || [];
 
+  // Check if dressing/grouping at this code was issued for order
+  const dressingLevelSales = ctx.salesCmtByDressingCode.get(sideCode) || '';
+
   if (groupingItems.length > 0) {
-    return groupingItems.map((g) => ({
-      ...logBase,
-      ...ccBase,
-      ...flitchBase,
-      ...slicingBase,
-      ...emptyPeeling(),
-      ...dressingData,
-      ...smokingData,
-      ...buildGroupingData(g, ctx),
-    }));
+    return groupingItems.map((g) => {
+      const row = {
+        ...logBase,
+        ...ccBase,
+        ...flitchBase,
+        ...slicingBase,
+        ...emptyPeeling(),
+        ...dressingData,
+        ...smokingData,
+        ...buildGroupingData(g, ctx),
+      };
+      // Apply dressing-level sales if no log/cc/flitch level sales exist
+      if (!row.sales_cmt_sqm && dressingLevelSales) row.sales_cmt_sqm = dressingLevelSales;
+      return row;
+    });
   }
 
-  return [{
+  const row = {
     ...logBase,
     ...ccBase,
     ...flitchBase,
@@ -314,7 +326,10 @@ function buildSlicingSideRows(logBase, ccBase, flitchBase, side, ctx) {
     ...dressingData,
     ...smokingData,
     ...emptyDownstream(),
-  }];
+  };
+  // Apply dressing-level sales if no log/cc/flitch level sales exist
+  if (!row.sales_cmt_sqm && dressingLevelSales) row.sales_cmt_sqm = dressingLevelSales;
+  return [row];
 }
 
 function buildPeelingRow(logBase, ccBase, flitchBase, peel, ctx) {
@@ -332,19 +347,26 @@ function buildPeelingRow(logBase, ccBase, flitchBase, peel, ctx) {
   const smokingData = getSmokingData(peelingCode, ctx.smokingByCode);
   const groupingItems = ctx.groupingByCode.get(peelingCode) || [];
 
+  // Check if dressing/grouping at this code was issued for order
+  const dressingLevelSales = ctx.salesCmtByDressingCode.get(peelingCode) || '';
+
   if (groupingItems.length > 0) {
-    return groupingItems.map((g) => ({
-      ...logBase,
-      ...ccBase,
-      ...resolvedFlitch,
-      ...peelingData,
-      ...dressingData,
-      ...smokingData,
-      ...buildGroupingData(g, ctx),
-    }));
+    return groupingItems.map((g) => {
+      const row = {
+        ...logBase,
+        ...ccBase,
+        ...resolvedFlitch,
+        ...peelingData,
+        ...dressingData,
+        ...smokingData,
+        ...buildGroupingData(g, ctx),
+      };
+      if (!row.sales_cmt_sqm && dressingLevelSales) row.sales_cmt_sqm = dressingLevelSales;
+      return row;
+    });
   }
 
-  return [{
+  const row = {
     ...logBase,
     ...ccBase,
     ...resolvedFlitch,
@@ -352,23 +374,45 @@ function buildPeelingRow(logBase, ccBase, flitchBase, peel, ctx) {
     ...dressingData,
     ...smokingData,
     ...emptyDownstream(),
-  }];
+  };
+  if (!row.sales_cmt_sqm && dressingLevelSales) row.sales_cmt_sqm = dressingLevelSales;
+  return [row];
 }
 
 function buildFlitchRows(logBase, ccBase, flitch, ctx) {
+  const flitchCode = flitch.log_no_code ?? flitch.flitch_code ?? '';
+  // Lookup by log_no_code only (flitch_code is a short suffix like 'A1' that collides across logs)
+  const flitchSales = ctx.salesCmtByFlitchCode.get(flitch.log_no_code) || '';
+  const flitchChallanFromMap = ctx.challanCmtByFlitchCode.get(flitch.log_no_code) || '';
+  const flitchChallan = flitchChallanFromMap || (String(flitch.issue_status).toLowerCase().includes('challan') ? (flitch.flitch_cmt ?? 0) : '');
+
+  const flitchIssue = flitchIssueForSlicingPeeling(flitch);
+  // Fallback: if not issued for slicing/peeling, check if issued for order or challan
+  const flitchIssueFor = flitchIssue.issue_for || (flitchSales ? (flitch.flitch_cmt ?? 0) : (flitchChallan ? (flitch.flitch_cmt ?? 0) : ''));
+  const flitchStatusVal = flitchIssue.status || (flitchSales ? 'order' : (flitchChallan ? 'challan' : ''));
   const flitchBase = {
-    flitch_no: flitch.log_no_code ?? flitch.flitch_code ?? '',
+    flitch_no: flitchCode,
     flitch_rec: flitch.flitch_cmt ?? 0,
-    flitch_issue_for: flitch.flitch_cmt ?? 0,
-    flitch_status: flitch.issue_status ?? '',
+    flitch_issue_for: flitchIssueFor,
+    flitch_status: flitchStatusVal,
   };
+
+  // Resolve sales & challan: flitch-level > crosscut-level > log-level
+  const resolvedSales = flitchSales || ccBase.sales_cmt_sqm || logBase.sales_cmt_sqm || '';
+  const resolvedChallan = flitchChallan || ccBase.challan_cmt_sqm || logBase.challan_cmt_sqm || '';
 
   // ID-BASED MAPPING for Slicing from Flitch
   const slicingSides = ctx.slicingByFlitchId.get(String(flitch._id)) || [];
 
   const rows = [];
   for (const side of slicingSides) {
-    rows.push(...buildSlicingSideRows(logBase, ccBase, flitchBase, side, ctx));
+    const sideRows = buildSlicingSideRows(logBase, ccBase, flitchBase, side, ctx);
+    // Apply sales & challan AFTER all spreads so emptyDownstream() can't overwrite
+    for (const r of sideRows) {
+      if (!r.sales_cmt_sqm) r.sales_cmt_sqm = resolvedSales;
+      if (!r.challan_cmt_sqm) r.challan_cmt_sqm = resolvedChallan;
+    }
+    rows.push(...sideRows);
   }
 
   if (!rows.length) {
@@ -381,6 +425,8 @@ function buildFlitchRows(logBase, ccBase, flitch, ctx) {
       ...emptyDressing(),
       ...emptySmoking(),
       ...emptyDownstream(),
+      sales_cmt_sqm: resolvedSales,
+      challan_cmt_sqm: resolvedChallan,
     });
   }
   return rows;
@@ -491,7 +537,7 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
           { $unwind: { path: '$items', preserveNullAndEmptyArrays: true } },
           { $lookup: { from: 'issue_for_slicing_available', localField: '_id', foreignField: 'issue_for_slicing_id', as: 'bal' } },
           { $unwind: { path: '$bal', preserveNullAndEmptyArrays: true } },
-          { $project: { _id: { $ifNull: ['$items._id', '$_id'] }, log_no: { $ifNull: ['$items.log_no', '$log_no'] }, log_no_code: { $ifNull: ['$items.log_no_code', '$log_no_code'] }, thickness: { $ifNull: ['$items.thickness', 0] }, no_of_leaves: { $ifNull: ['$items.no_of_leaves', 0] }, available_details: '$items.available_details', grade_name: { $ifNull: ['$items.grade_name', ''] }, remark: { $ifNull: ['$items.remark', ''] }, slicing_cmt: { $ifNull: ['$od.total_cmt', '$cmt'] }, slicing_balance_cmt: '$bal.cmt', issue_type: '$type', issue_cmt: '$cmt', flitching_done_id: 1, log_inventory_item_id: 1 } }
+          { $project: { _id: { $ifNull: ['$items._id', '$_id'] }, log_no: { $ifNull: ['$items.log_no', '$log_no'] }, log_no_code: { $ifNull: ['$items.log_no_code', '$log_no_code'] }, thickness: { $ifNull: ['$items.thickness', 0] }, no_of_leaves: { $ifNull: ['$items.no_of_leaves', 0] }, available_details: '$items.available_details', grade_name: { $ifNull: ['$items.grade_name', ''] }, remark: { $ifNull: ['$items.remark', ''] }, slicing_cmt: { $ifNull: ['$od.total_cmt', 0] }, slicing_balance_cmt: '$bal.cmt', issue_type: '$type', issue_cmt: '$cmt', flitching_done_id: 1, log_inventory_item_id: 1 } }
         ]),
         // STABLE ID ENRICHMENT FOR PEELING (Broad Match)
         issues_for_peeling_model.aggregate([
@@ -509,7 +555,7 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
           { $unwind: { path: '$items', preserveNullAndEmptyArrays: true } },
           { $lookup: { from: 'issues_for_peeling_available', localField: '_id', foreignField: 'issue_for_peeling_id', as: 'bal' } },
           { $unwind: { path: '$bal', preserveNullAndEmptyArrays: true } },
-          { $project: { _id: { $ifNull: ['$items._id', '$_id'] }, log_no: { $ifNull: ['$items.log_no', '$log_no'] }, log_no_code: { $ifNull: ['$items.log_no_code', '$log_no_code'] }, thickness: { $ifNull: ['$items.thickness', 0] }, no_of_leaves: { $ifNull: ['$items.no_of_leaves', 0] }, grade_name: { $ifNull: ['$items.grade_name', ''] }, remark: { $ifNull: ['$items.remark', ''] }, output_type: { $ifNull: ['$items.output_type', ''] }, peeling_cmt: { $cond: { if: { $gt: [{ $ifNull: ['$od.total_cmt', 0] }, 0] }, then: '$od.total_cmt', else: { $ifNull: ['$cmt', 0] } } }, peeling_balance_rostroller: '$bal.cmt', issue_type: '$type', issue_cmt: { $ifNull: ['$cmt', 0] }, crosscut_done_id: 1, log_inventory_item_id: 1 } }
+          { $project: { _id: { $ifNull: ['$items._id', '$_id'] }, log_no: { $ifNull: ['$items.log_no', '$log_no'] }, log_no_code: { $ifNull: ['$items.log_no_code', '$log_no_code'] }, thickness: { $ifNull: ['$items.thickness', 0] }, no_of_leaves: { $ifNull: ['$items.no_of_leaves', 0] }, grade_name: { $ifNull: ['$items.grade_name', ''] }, remark: { $ifNull: ['$items.remark', ''] }, output_type: { $ifNull: ['$items.output_type', ''] }, peeling_cmt: { $ifNull: ['$od.total_cmt', 0] }, peeling_balance_rostroller: '$bal.cmt', issue_type: '$type', issue_cmt: { $ifNull: ['$cmt', 0] }, crosscut_done_id: 1, log_inventory_item_id: 1 } }
         ]),
       ]);
 
@@ -565,6 +611,119 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
         pressingIds.length ? color_done_details_model.find({ pressing_details_id: { $in: pressingIds } }).lean() : [],
       ]);
 
+      // ── Fetch Sales/Order data from issued_for_order_items ──────────────
+      // This is the REAL source of truth for items issued for sales orders.
+      // Include codes from ALL stages so we can match orders at any level
+      const allLogNoCodes = [...new Set([
+        ...logNos,
+        ...crosscuts.map(c => c.log_no_code).filter(Boolean),
+        ...flitches.map(f => f.log_no_code).filter(Boolean),
+        ...allLeafCodes,   // slicing side + peeling codes (used by dressing/grouping)
+      ])];
+      const orderIssuedItems = allLogNoCodes.length ? await issue_for_order_model.find(
+        {
+          issued_from: { $in: ['LOG', 'CROSSCUTTING', 'FLITCH', 'FLITCHING_FACTORY', 'DRESSING_FACTORY', 'GROUPING_FACTORY'] },
+          $or: [
+            { 'item_details.log_no': { $in: logNos } },
+            { 'item_details.log_no_code': { $in: allLogNoCodes } },
+          ],
+        },
+        { issued_from: 1, item_details: 1 }
+      ).lean() : [];
+
+      console.log('=== SALES/ORDER DEBUG ===');
+      console.log('Sales records found:', orderIssuedItems.length);
+
+      // Build maps: log_no / log_no_code → CMT for each issued_from type
+      const salesCmtByLogNo = new Map();       // LOG items
+      const salesCmtByCcCode = new Map();       // CROSSCUTTING items
+      const salesCmtByFlitchCode = new Map();   // FLITCH / FLITCHING_FACTORY items
+      const salesCmtByDressingCode = new Map(); // DRESSING_FACTORY items (by log_no_code)
+      for (const oi of orderIssuedItems) {
+        const det = oi.item_details;
+        if (!det) { console.log('  SKIP: no item_details for', oi._id); continue; }
+        // Pick the best CMT/SQM field based on the stage
+        let cmt = 0;
+        if (oi.issued_from === 'LOG') cmt = parseFloat(det.physical_cmt ?? 0) || 0;
+        else if (oi.issued_from === 'CROSSCUTTING') cmt = parseFloat(det.crosscut_cmt ?? 0) || 0;
+        else if (oi.issued_from === 'FLITCH' || oi.issued_from === 'FLITCHING_FACTORY') cmt = parseFloat(det.flitch_cmt ?? 0) || 0;
+        else if (oi.issued_from === 'DRESSING_FACTORY') cmt = parseFloat(det.sqm ?? 0) || 0;
+        else if (oi.issued_from === 'GROUPING_FACTORY') cmt = parseFloat(det.issued_sqm ?? det.sqm ?? 0) || 0;
+        else cmt = parseFloat(det.sqm ?? det.physical_cmt ?? det.cmt ?? 0) || 0;
+        console.log(`  Sales record: issued_from=${oi.issued_from}, det.log_no=${det.log_no}, det.log_no_code=${det.log_no_code}, det.flitch_code=${det.flitch_code}, cmt=${cmt}, det.sqm=${det.sqm}, det.issued_sqm=${det.issued_sqm}, det.physical_cmt=${det.physical_cmt}, det.crosscut_cmt=${det.crosscut_cmt}, det.flitch_cmt=${det.flitch_cmt}`);
+        if (oi.issued_from === 'LOG') {
+          const key = det.log_no;
+          if (key) salesCmtByLogNo.set(key, (salesCmtByLogNo.get(key) || 0) + cmt);
+          console.log(`    LOG map: key=${key}, cmt=${cmt}`);
+        } else if (oi.issued_from === 'CROSSCUTTING') {
+          const key = det.log_no_code;
+          if (key) salesCmtByCcCode.set(key, (salesCmtByCcCode.get(key) || 0) + cmt);
+          console.log(`    CC map: key=${key}, cmt=${cmt}`);
+        } else if (oi.issued_from === 'FLITCH' || oi.issued_from === 'FLITCHING_FACTORY') {
+          const key = det.log_no_code;
+          if (key) salesCmtByFlitchCode.set(key, (salesCmtByFlitchCode.get(key) || 0) + cmt);
+          console.log(`    FLITCH map: key=${key}, cmt=${cmt}`);
+        } else if (oi.issued_from === 'DRESSING_FACTORY') {
+          const key = det.log_no_code;
+          if (key) salesCmtByDressingCode.set(key, (salesCmtByDressingCode.get(key) || 0) + cmt);
+          console.log(`    DRESSING map: key=${key}, cmt=${cmt}`);
+        } else if (oi.issued_from === 'GROUPING_FACTORY') {
+          // Grouping items may not have log_no_code; try grouping_no or log_no_code
+          const key = det.log_no_code || det.group_no;
+          if (key) salesCmtByDressingCode.set(key, (salesCmtByDressingCode.get(key) || 0) + cmt);
+          console.log(`    GROUPING map: key=${key}, cmt=${cmt}`);
+        }
+      }
+      console.log('salesCmtByLogNo:', Object.fromEntries(salesCmtByLogNo));
+      console.log('salesCmtByCcCode:', Object.fromEntries(salesCmtByCcCode));
+      console.log('salesCmtByFlitchCode:', Object.fromEntries(salesCmtByFlitchCode));
+      console.log('salesCmtByDressingCode:', Object.fromEntries(salesCmtByDressingCode));
+      console.log('=== END SALES/ORDER DEBUG ===');
+
+      // ── Fetch Challan data from issue_for_challan_details ───────────────
+      const challanIssuedItems = (logIds.length || allLogNoCodes.length) ? await issue_for_challan_model.find(
+        {
+          issued_from: { $in: ['LOG', 'CROSSCUTTING', 'FLITCHING_FACTORY'] },
+          $or: [
+            { 'issued_item_details.log_no': { $in: logNos } },
+            { 'issued_item_details.log_no_code': { $in: allLogNoCodes } },
+            { 'issued_item_details._id': { $in: logIds } },
+          ],
+        },
+        { issued_from: 1, issued_item_details: 1 }
+      ).lean() : [];
+      console.log('=== CHALLAN DEBUG ===');
+      console.log('Challan records found:', challanIssuedItems.length);
+      console.log('Search logNos:', logNos);
+      console.log('Search allLogNoCodes:', allLogNoCodes.slice(0, 10));
+
+      const challanCmtByLogNo = new Map();
+      const challanCmtByCcCode = new Map();
+      const challanCmtByFlitchCode = new Map();
+      for (const ci of challanIssuedItems) {
+        const det = ci.issued_item_details;
+        if (!det) { console.log('  SKIP: no issued_item_details for', ci._id); continue; }
+        const cmt = parseFloat(det.flitch_cmt ?? det.crosscut_cmt ?? det.physical_cmt ?? det.cmt ?? 0) || 0;
+        console.log(`  Challan record: issued_from=${ci.issued_from}, det.log_no=${det.log_no}, det.log_no_code=${det.log_no_code}, det.flitch_code=${det.flitch_code}, cmt=${cmt}, det.physical_cmt=${det.physical_cmt}, det.crosscut_cmt=${det.crosscut_cmt}, det.flitch_cmt=${det.flitch_cmt}`);
+        if (ci.issued_from === 'LOG') {
+          const key = det.log_no;
+          if (key) challanCmtByLogNo.set(key, (challanCmtByLogNo.get(key) || 0) + cmt);
+          console.log(`    LOG map: key=${key}, cmt=${cmt}`);
+        } else if (ci.issued_from === 'CROSSCUTTING') {
+          const key = det.log_no_code;
+          if (key) challanCmtByCcCode.set(key, (challanCmtByCcCode.get(key) || 0) + cmt);
+          console.log(`    CC map: key=${key}, cmt=${cmt}`);
+        } else if (ci.issued_from === 'FLITCHING_FACTORY') {
+          const key = det.log_no_code;
+          if (key) challanCmtByFlitchCode.set(key, (challanCmtByFlitchCode.get(key) || 0) + cmt);
+          console.log(`    FLITCH map: key=${key}, cmt=${cmt}`);
+        }
+      }
+      console.log('challanCmtByLogNo:', Object.fromEntries(challanCmtByLogNo));
+      console.log('challanCmtByCcCode:', Object.fromEntries(challanCmtByCcCode));
+      console.log('challanCmtByFlitchCode:', Object.fromEntries(challanCmtByFlitchCode));
+      console.log('=== END CHALLAN DEBUG ===');
+
       // ── Step 3: STABLE ID-BASED MAPS ────────────────────────────────────
       const ctx = {
         crosscutsByLogId: groupByKey(crosscuts, c => String(c.log_inventory_item_id)),
@@ -585,6 +744,13 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
         pressingIssuedSheetsByItemId,
         pressingIssuedSqmByItemId,
         pressingIssueStatusByItemId,
+        salesCmtByLogNo,
+        salesCmtByCcCode,
+        salesCmtByFlitchCode,
+        salesCmtByDressingCode,
+        challanCmtByLogNo,
+        challanCmtByCcCode,
+        challanCmtByFlitchCode,
       };
 
       const getIssuedForCmt = (issueStatus, physicalCmt) => {
@@ -595,7 +761,10 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
       // ── Step 4: Build hierarchical rows with stable ID mapping ───────────
       const allRows = [];
       for (const log of logs) {
-        const logSales = (String(log.issue_status).toLowerCase() === 'order') ? (log.physical_cmt || 0) : '';
+        const logSales = ctx.salesCmtByLogNo.get(log.log_no) || '';
+        // Challan: first try the map, then fall back to issue_status check
+        const logChallanFromMap = ctx.challanCmtByLogNo.get(log.log_no) || '';
+        const logChallan = logChallanFromMap || (String(log.issue_status).toLowerCase().includes('challan') ? (log.physical_cmt ?? 0) : '');
         const logBase = {
           item_name: log.item_name || '',
           log_no: log.log_no,
@@ -603,7 +772,8 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
           rece_cmt: log.physical_cmt ?? 0,
           inward_issue_for: getIssuedForCmt(log.issue_status, log.physical_cmt) ?? 0,
           inward_issue_status: log.issue_status || '',
-          sales_value: logSales,
+          sales_cmt_sqm: logSales,
+          challan_cmt_sqm: logChallan,
         };
 
         const logId = String(log._id);
@@ -615,13 +785,18 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
           const linkedFlitchIds = new Set();
           for (const cc of crosscutsForLog) {
             const ccFp = crosscutIssueForFlitchPeeling(cc);
-            const ccSales = (String(cc.issue_status).toLowerCase() === 'order') ? (cc.crosscut_cmt || 0) : '';
+            const ccSales = ctx.salesCmtByCcCode.get(cc.log_no_code) || '';
+            const ccChallan = ctx.challanCmtByCcCode.get(cc.log_no_code) || '';
+            // If crosscut was issued for order, show 'order' status + cmt
+            const ccIssueFor = ccFp.issue_for || (ccSales ? (cc.crosscut_cmt ?? 0) : (ccChallan ? (cc.crosscut_cmt ?? 0) : ''));
+            const ccStatus = ccFp.status || (ccSales ? 'order' : (ccChallan ? 'challan' : ''));
             const ccBase = { 
               cc_log_no: cc.log_no_code, 
               cc_rec: cc.crosscut_cmt ?? 0, 
-              cc_issue_for: ccFp.issue_for, 
-              cc_status: ccFp.status,
-              sales_value: ccSales || logBase.sales_value,
+              cc_issue_for: ccIssueFor, 
+              cc_status: ccStatus,
+              sales_cmt_sqm: ccSales || logBase.sales_cmt_sqm,
+              challan_cmt_sqm: ccChallan || logBase.challan_cmt_sqm,
             };
             const ccId = String(cc._id);
             const flitchesForCc = ctx.flitchesByCrosscutId.get(ccId) || [];
@@ -649,11 +824,11 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
           // Direct flitches not linked to any crosscut
           const directFlitches = flitchesForLog.filter(f => !linkedFlitchIds.has(String(f._id)));
           for (const flitch of directFlitches) {
-            allRows.push(...buildFlitchRows(logBase, { cc_log_no: '', cc_rec: 0, cc_issue_for: 0, cc_status: '' }, flitch, ctx));
+            allRows.push(...buildFlitchRows(logBase, { cc_log_no: '', cc_rec: 0, cc_issue_for: 0, cc_status: '', sales_cmt_sqm: logBase.sales_cmt_sqm, challan_cmt_sqm: logBase.challan_cmt_sqm }, flitch, ctx));
           }
         } else if (flitchesForLog.length > 0) {
           for (const flitch of flitchesForLog) {
-            allRows.push(...buildFlitchRows(logBase, { cc_log_no: '', cc_rec: 0, cc_issue_for: 0, cc_status: '' }, flitch, ctx));
+            allRows.push(...buildFlitchRows(logBase, { cc_log_no: '', cc_rec: 0, cc_issue_for: 0, cc_status: '', sales_cmt_sqm: logBase.sales_cmt_sqm, challan_cmt_sqm: logBase.challan_cmt_sqm }, flitch, ctx));
           }
         } else if (peelingForLog.length > 0) {
           for (const peel of peelingForLog) {
