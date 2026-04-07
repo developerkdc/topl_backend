@@ -386,11 +386,15 @@ function buildFlitchRows(logBase, ccBase, flitch, ctx) {
   const flitchChallanFromMap = ctx.challanCmtByFlitchCode.get(flitch.log_no_code) || '';
   const flitchChallan = flitchChallanFromMap || (String(flitch.issue_status).toLowerCase().includes('challan') ? (flitch.flitch_cmt ?? 0) : '');
 
+  const flitchIssue = flitchIssueForSlicingPeeling(flitch);
+  // Fallback: if not issued for slicing/peeling, check if issued for order or challan
+  const flitchIssueFor = flitchIssue.issue_for || (flitchSales ? (flitch.flitch_cmt ?? 0) : (flitchChallan ? (flitch.flitch_cmt ?? 0) : ''));
+  const flitchStatusVal = flitchIssue.status || (flitchSales ? 'order' : (flitchChallan ? 'challan' : ''));
   const flitchBase = {
     flitch_no: flitchCode,
     flitch_rec: flitch.flitch_cmt ?? 0,
-    flitch_issue_for: flitch.flitch_cmt ?? 0,
-    flitch_status: flitch.issue_status ?? '',
+    flitch_issue_for: flitchIssueFor,
+    flitch_status: flitchStatusVal,
   };
 
   // Resolve sales & challan: flitch-level > crosscut-level > log-level
@@ -533,7 +537,7 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
           { $unwind: { path: '$items', preserveNullAndEmptyArrays: true } },
           { $lookup: { from: 'issue_for_slicing_available', localField: '_id', foreignField: 'issue_for_slicing_id', as: 'bal' } },
           { $unwind: { path: '$bal', preserveNullAndEmptyArrays: true } },
-          { $project: { _id: { $ifNull: ['$items._id', '$_id'] }, log_no: { $ifNull: ['$items.log_no', '$log_no'] }, log_no_code: { $ifNull: ['$items.log_no_code', '$log_no_code'] }, thickness: { $ifNull: ['$items.thickness', 0] }, no_of_leaves: { $ifNull: ['$items.no_of_leaves', 0] }, available_details: '$items.available_details', grade_name: { $ifNull: ['$items.grade_name', ''] }, remark: { $ifNull: ['$items.remark', ''] }, slicing_cmt: { $ifNull: ['$od.total_cmt', '$cmt'] }, slicing_balance_cmt: '$bal.cmt', issue_type: '$type', issue_cmt: '$cmt', flitching_done_id: 1, log_inventory_item_id: 1 } }
+          { $project: { _id: { $ifNull: ['$items._id', '$_id'] }, log_no: { $ifNull: ['$items.log_no', '$log_no'] }, log_no_code: { $ifNull: ['$items.log_no_code', '$log_no_code'] }, thickness: { $ifNull: ['$items.thickness', 0] }, no_of_leaves: { $ifNull: ['$items.no_of_leaves', 0] }, available_details: '$items.available_details', grade_name: { $ifNull: ['$items.grade_name', ''] }, remark: { $ifNull: ['$items.remark', ''] }, slicing_cmt: { $ifNull: ['$od.total_cmt', 0] }, slicing_balance_cmt: '$bal.cmt', issue_type: '$type', issue_cmt: '$cmt', flitching_done_id: 1, log_inventory_item_id: 1 } }
         ]),
         // STABLE ID ENRICHMENT FOR PEELING (Broad Match)
         issues_for_peeling_model.aggregate([
@@ -551,7 +555,7 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
           { $unwind: { path: '$items', preserveNullAndEmptyArrays: true } },
           { $lookup: { from: 'issues_for_peeling_available', localField: '_id', foreignField: 'issue_for_peeling_id', as: 'bal' } },
           { $unwind: { path: '$bal', preserveNullAndEmptyArrays: true } },
-          { $project: { _id: { $ifNull: ['$items._id', '$_id'] }, log_no: { $ifNull: ['$items.log_no', '$log_no'] }, log_no_code: { $ifNull: ['$items.log_no_code', '$log_no_code'] }, thickness: { $ifNull: ['$items.thickness', 0] }, no_of_leaves: { $ifNull: ['$items.no_of_leaves', 0] }, grade_name: { $ifNull: ['$items.grade_name', ''] }, remark: { $ifNull: ['$items.remark', ''] }, output_type: { $ifNull: ['$items.output_type', ''] }, peeling_cmt: { $cond: { if: { $gt: [{ $ifNull: ['$od.total_cmt', 0] }, 0] }, then: '$od.total_cmt', else: { $ifNull: ['$cmt', 0] } } }, peeling_balance_rostroller: '$bal.cmt', issue_type: '$type', issue_cmt: { $ifNull: ['$cmt', 0] }, crosscut_done_id: 1, log_inventory_item_id: 1 } }
+          { $project: { _id: { $ifNull: ['$items._id', '$_id'] }, log_no: { $ifNull: ['$items.log_no', '$log_no'] }, log_no_code: { $ifNull: ['$items.log_no_code', '$log_no_code'] }, thickness: { $ifNull: ['$items.thickness', 0] }, no_of_leaves: { $ifNull: ['$items.no_of_leaves', 0] }, grade_name: { $ifNull: ['$items.grade_name', ''] }, remark: { $ifNull: ['$items.remark', ''] }, output_type: { $ifNull: ['$items.output_type', ''] }, peeling_cmt: { $ifNull: ['$od.total_cmt', 0] }, peeling_balance_rostroller: '$bal.cmt', issue_type: '$type', issue_cmt: { $ifNull: ['$cmt', 0] }, crosscut_done_id: 1, log_inventory_item_id: 1 } }
         ]),
       ]);
 
