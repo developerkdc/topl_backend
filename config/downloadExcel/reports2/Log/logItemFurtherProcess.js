@@ -492,9 +492,6 @@ export const createLogItemFurtherProcessReportExcel = async (
       const itemStartRow = ws.lastRow ? ws.lastRow.number + 1 : 6;
 
       for (const [logNo, rows] of ig.logGroups) {
-        const logTotals = {};
-        const logStartRow = ws.lastRow ? ws.lastRow.number + 1 : 6;
-
         // Track merge start rows for this log's data
         let curMItem   = null;
         let curMLog    = null;
@@ -553,7 +550,6 @@ export const createLogItemFurtherProcessReportExcel = async (
 
           // Accumulate totals (only first row of each parent group for parent cols)
           const fullCells = toCells(row); // un-blanked
-          accumulate(logTotals, fullCells);
           accumulate(itemTotals, fullCells);
           accumulate(grandTotals, fullCells);
 
@@ -578,14 +574,6 @@ export const createLogItemFurtherProcessReportExcel = async (
         if (curMCc)     merges.push(...CC_COLS.map(c     => ({ startRow: curMCc.startRow,     endRow: lastDataRow, col: c })));
         if (curMFlitch) merges.push(...FLITCH_COLS.map(c => ({ startRow: curMFlitch.startRow, endRow: lastDataRow, col: c })));
         if (curMSide)   merges.push(...SIDE_COLS.map(c   => ({ startRow: curMSide.startRow,   endRow: lastDataRow, col: c })));
-
-        // Per-log total row
-        addTotalRow(
-          ['', `Total ${logNo}`],
-          logTotals,
-          totalFill,
-          rows
-        );
       }
 
       // Per-item total row

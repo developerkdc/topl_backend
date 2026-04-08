@@ -51,12 +51,12 @@ function formatOrderItemVolumeOnly(item) {
   const sqm = parseFloat(item.sqm) || 0;
   const unit = String(item.unit_name || '').toUpperCase();
   const rawMat = String(item.raw_material || '').toUpperCase();
-  
+
   if (unit.includes('SQM') || unit.includes('SQ.M') || unit.includes('SQUARE')) return sqm > 0 ? round3(sqm) : '';
   if (unit.includes('CBM') || unit.includes('CUBIC')) return cbm > 0 ? round3(cbm) : '';
   if (rawMat === 'LOG' || rawMat === 'FLITCH') return cbm > 0 ? round3(cbm) : (sqm > 0 ? round3(sqm) : '');
   
-  return (cbm > 0 ? round3(cbm) : (sqm > 0 ? round3(sqm) : ''));
+  return cbm > 0 ? round3(cbm) : (sqm > 0 ? round3(sqm) : '');
 }
 
 /** Sales column: order line quantity as CBM or SQM (same semantics as log further process report). */
@@ -385,26 +385,26 @@ function buildGroupingData(
   return {
     grouping_new_group_no: groupNo,
     grouping_rec_sheets: recSheets || '',
-    grouping_rec_sqm: recSqm || '',
+    grouping_rec_sqm: round3(recSqm) || '',
     grouping_issue_sheets: issueSheets || '',
-    grouping_issue_sqm: issueSqm || '',
+    grouping_issue_sqm: round3(issueSqm) || '',
     grouping_issue_status: groupingIssueStatus,
     grouping_balance_sheets: availSheets || '',
-    grouping_balance_sqm: availSqm || '',
-    splicing_rec_machine_sqm: machineSqm || '',
-    splicing_rec_hand_sqm: handSqm || '',
+    grouping_balance_sqm: round3(availSqm) || '',
+    splicing_rec_machine_sqm: round3(machineSqm) || '',
+    splicing_rec_hand_sqm: round3(handSqm) || '',
     splicing_sheets: splicingSheets || '',
     splicing_issue_sheets: splicingIssueSheets || '',
     splicing_issue_status: splicingIssueStatus,
     splicing_balance_sheets: splicingAvailSheets || '',
-    splicing_balance_sqm: splicingAvailSqm || '',
+    splicing_balance_sqm: round3(splicingAvailSqm) || '',
     pressing_sheets: pressingSheets || '',
-    pressing_sqm: pressingSqm || '',
+    pressing_sqm: round3(pressingSqm) || '',
     pressing_issue_sheets: pressingIssueSheets || '',
-    pressing_issue_sqm: pressingIssueSqm || '',
+    pressing_issue_sqm: round3(pressingIssueSqm) || '',
     pressing_issue_status: pressingIssueStatus,
     pressing_balance_sheets: pressingAvailSheets || '',
-    pressing_balance_sqm: pressingAvailSqm || '',
+    pressing_balance_sqm: round3(pressingAvailSqm) || '',
     cnc_type: cncType,
     cnc_rec_sheets: cncRecSheets || '',
     colour_rec_sheets: colourRecSheets || '',
@@ -421,8 +421,8 @@ function getDressingData(logNoCode, dressingByCode) {
   const items = dressingByCode.get(logNoCode) || [];
   if (!items.length) return emptyDressing();
   return {
-    dress_rec_sqm: sumField(items, 'sqm') || '',
-    dress_issue_sqm: sumField(items.filter((d) => d.issue_status), 'sqm') || '',
+    dress_rec_sqm: round3(sumField(items, 'sqm')) || '',
+    dress_issue_sqm: round3(sumField(items.filter((d) => d.issue_status), 'sqm')) || '',
     dress_issue_status: items.find((d) => d.issue_status)?.issue_status || '',
   };
 }
@@ -463,9 +463,9 @@ function buildSlicingSideRows(
   const sideCode = side.log_no_code;
 
   // Process Cmt = slicing done cmt; Balance Cmt = remaining cmt (issued - process)
-  const processCmt = parseFloat(side.item_cmt ?? side.cmt) || 0;
-  const issuedCmt = parseFloat(side.issued_for_slicing?.cmt) || 0;
-  const balanceCmt = nonNegativeDiff(issuedCmt, processCmt);
+  const processCmt = round3(parseFloat(side.item_cmt ?? side.cmt) || 0);
+  const issuedCmt = round3(parseFloat(side.issued_for_slicing?.cmt) || 0);
+  const balanceCmt = round3(nonNegativeDiff(issuedCmt, processCmt));
 
   const slicingBase = {
     slicing_side: sideCode,

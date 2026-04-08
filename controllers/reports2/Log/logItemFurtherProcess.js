@@ -205,7 +205,16 @@ async function loadOrderItemDetailsByIds(orderItemIds) {
 
 const formatOrderItemVolumeOnly = (item) => {
   if (!item) return '';
-  return parseFloat(item.sqm ?? item.cmt ?? 0) || '';
+  const cbm = parseFloat(item.cbm) || 0;
+  const sqm = parseFloat(item.sqm) || 0;
+  const unit = String(item.unit_name || '').toUpperCase();
+  const rawMat = String(item.raw_material || '').toUpperCase();
+
+  if (unit.includes('SQM') || unit.includes('SQ.M') || unit.includes('SQUARE')) return sqm > 0 ? round3(sqm) : '';
+  if (unit.includes('CBM') || unit.includes('CUBIC')) return cbm > 0 ? round3(cbm) : '';
+  if (rawMat === 'LOG' || rawMat === 'FLITCH') return cbm > 0 ? round3(cbm) : (sqm > 0 ? round3(sqm) : '');
+  
+  return cbm > 0 ? round3(cbm) : (sqm > 0 ? round3(sqm) : '');
 };
 
 /** Splicing Issue Status: tapping → pressing from `tapping_done_history` (not tapping line `issued_for`). */
@@ -326,11 +335,11 @@ const emptySmoking = () => ({
 function buildGroupingData(groupItem, ctx) {
   const groupNo = groupItem.group_no;
   const recSheets = groupItem.no_of_sheets || 0;
-  const recSqm = groupItem.sqm || 0;
+  const recSqm = round3(groupItem.sqm || 0);
   const availSheets = getVal(groupItem, 'available_details.no_of_sheets') ?? recSheets;
   const availSqm = getVal(groupItem, 'available_details.sqm') ?? recSqm;
   const issueSheets = Math.max(0, recSheets - availSheets);
-  const issueSqm = Math.max(0, recSqm - availSqm);
+  const issueSqm = round3(Math.max(0, recSqm - availSqm));
 
   const tappingItems = ctx.tappingByGroupNo.get(groupNo) || [];
   const machineItems = tappingItems.filter((t) => {
@@ -342,22 +351,22 @@ function buildGroupingData(groupItem, ctx) {
     return st.includes('HAND');
   });
   
-  const machineSqm = sumField(machineItems, 'sqm');
-  const handSqm = sumField(handItems, 'sqm');
+  const machineSqm = round3(sumField(machineItems, 'sqm'));
+  const handSqm = round3(sumField(handItems, 'sqm'));
   const splicingSheets = sumField(tappingItems, 'no_of_sheets');
   const splicingAvailSheets = sumField(tappingItems, 'available_details.no_of_sheets');
-  const splicingAvailSqm = sumField(tappingItems, 'available_details.sqm');
+  const splicingAvailSqm = round3(sumField(tappingItems, 'available_details.sqm'));
   
   const splicingIssueSheets = Math.max(0, splicingSheets - splicingAvailSheets);
   const splicingIssueStatus = resolveSplicingIssueStatusFromHistory(tappingItems, ctx.tappingIssueStatusByItemId);
 
   const pressingItems = ctx.pressingByGroupNo.get(groupNo) || [];
   const pressingSheets = sumField(pressingItems, 'no_of_sheets');
-  const pressingSqm = sumField(pressingItems, 'sqm');
+  const pressingSqm = round3(sumField(pressingItems, 'sqm'));
   const pressingAvailSheets = sumField(pressingItems, 'available_details.no_of_sheets');
-  const pressingAvailSqm = sumField(pressingItems, 'available_details.sqm');
+  const pressingAvailSqm = round3(sumField(pressingItems, 'available_details.sqm'));
   const pressingIssueSheets = pressingItems.reduce((acc, p) => acc + (ctx.pressingIssuedSheetsByItemId.get(String(p._id)) ?? 0), 0);
-  const pressingIssueSqm = pressingItems.reduce((acc, p) => acc + (ctx.pressingIssuedSqmByItemId.get(String(p._id)) ?? 0), 0);
+  const pressingIssueSqm = round3(pressingItems.reduce((acc, p) => acc + (ctx.pressingIssuedSqmByItemId.get(String(p._id)) ?? 0), 0));
   const pressingIssueStatus = resolvePressingIssueStatusFromHistory(pressingItems, ctx.pressingIssueStatusByItemId);
 
   const pressingIds = pressingItems.map((p) => String(p._id));
@@ -374,22 +383,22 @@ function buildGroupingData(groupItem, ctx) {
     grouping_issue_sqm: issueSqm,
     grouping_issue_status: resolveGroupingIssueStatusFromHistory(groupItem, ctx.groupingIssuedForByItemId),
     grouping_balance_sheets: availSheets,
-    grouping_balance_sqm: availSqm,
-    splicing_rec_machine_sqm: machineSqm,
-    splicing_rec_hand_sqm: handSqm,
+    grouping_balance_sqm: round3(availSqm),
+    splicing_rec_machine_sqm: round3(machineSqm),
+    splicing_rec_hand_sqm: round3(handSqm),
     splicing_sheets: splicingSheets,
     splicing_rec_leaf: sumField(tappingItems, 'no_of_sheets'),
     splicing_balance_sheets: splicingAvailSheets,
-    splicing_balance_sqm: splicingAvailSqm,
+    splicing_balance_sqm: round3(splicingAvailSqm),
     splicing_issue_sheets: splicingIssueSheets,
     splicing_issue_status: splicingIssueStatus,
     pressing_sheets: pressingSheets,
-    pressing_sqm: pressingSqm,
+    pressing_sqm: round3(pressingSqm),
     pressing_issue_sheets: pressingIssueSheets,
-    pressing_issue_sqm: pressingIssueSqm,
+    pressing_issue_sqm: round3(pressingIssueSqm),
     pressing_issue_status: pressingIssueStatus,
     pressing_balance_sheets: pressingAvailSheets,
-    pressing_balance_sqm: pressingAvailSqm,
+    pressing_balance_sqm: round3(pressingAvailSqm),
     cnc_type: cncItems[0]?.product_type || '',
     cnc_rec_sheets: sumField(cncItems, 'no_of_sheets'),
     colour_rec_sheets: sumField(colourItems, 'no_of_sheets'),
@@ -401,8 +410,8 @@ function getDressingData(logNoCode, dressingByCode) {
   const items = dressingByCode.get(logNoCode) || [];
   if (!items.length) return emptyDressing();
   return {
-    dress_rec_sqm: sumField(items, 'sqm'),
-    dress_issue_sqm: sumField(items.filter((d) => d.issue_status), 'sqm'),
+    dress_rec_sqm: round3(sumField(items, 'sqm')),
+    dress_issue_sqm: round3(sumField(items.filter((d) => d.issue_status), 'sqm')),
     dress_issue_status: items.find((d) => d.issue_status)?.issue_status || '',
   };
 }
@@ -412,7 +421,7 @@ function getSmokingData(logNoCode, smokingByCode) {
   if (!items.length) return emptySmoking();
   return {
     smoking_process: items.map((s) => s.process_name).filter(Boolean)[0] || '',
-    smoking_issue_sqm: sumField(items, 'sqm'),
+    smoking_issue_sqm: round3(sumField(items, 'sqm')),
     smoking_issue_status: items.find((s) => s.issue_status)?.issue_status || '',
   };
 }
@@ -422,11 +431,11 @@ function buildSlicingSideRows(logBase, ccBase, flitchBase, side, ctx) {
   const sideCode = side.log_no_code;
   const slicingBase = {
     slicing_side: sideCode,
-    slicing_process_cmt: side.slicing_cmt ?? 0,
-    slicing_balance_cmt: side.slicing_balance_cmt ?? 0,
+    slicing_process_cmt: round3(side.slicing_cmt ?? 0),
+    slicing_balance_cmt: round3(side.slicing_balance_cmt ?? 0),
     slicing_rec_leaf: side.no_of_leaves ?? 0,
     slicing_balance_leaf: getVal(side, 'available_details.no_of_leaves') ?? 0,
-    slicing_balance_sqm: getVal(side, 'available_details.sqm') ?? 0,
+    slicing_balance_sqm: round3(getVal(side, 'available_details.sqm') ?? 0),
     sales_cmt_sqm: resolveRowSales(sideCode, side._id, ctx),
   };
 
@@ -467,8 +476,8 @@ function buildPeelingRow(logBase, ccBase, flitchBase, peel, ctx) {
   const peelingCode = peel.log_no_code;
   const peelingData = {
     ...emptySlicing(),
-    peeling_process: peel.peeling_cmt ?? 0,
-    peeling_balance_rostroller: peel.peeling_balance_rostroller ?? 0,
+    peeling_process: round3(peel.peeling_cmt ?? 0),
+    peeling_balance_rostroller: round3(peel.peeling_balance_rostroller ?? 0),
     peeling_output: peel.output_type || '',
     peeling_rec_leaf: peel.no_of_leaves ?? 0,
     sales_cmt_sqm: resolveRowSales(peelingCode, peel._id, ctx),
@@ -518,11 +527,11 @@ function buildFlitchRows(logBase, ccBase, flitch, ctx) {
   const flitchStatusVal = flitchIssue.status || (flitchSalesVal ? 'order' : (flitchChallan ? 'challan' : ''));
   const flitchBase = {
     flitch_no: flitchCode,
-    flitch_rec: flitch.flitch_cmt ?? 0,
-    flitch_issue_for: flitchIssueFor,
+    flitch_rec: round3(flitch.flitch_cmt ?? 0),
+    flitch_issue_for: round3(flitchIssueFor),
     flitch_status: flitchStatusVal,
     sales_cmt_sqm: flitchSalesVal,
-    challan_cmt_sqm: flitchChallan,
+    challan_cmt_sqm: round3(flitchChallan),
   };
 
   // ID-BASED MAPPING for Slicing from Flitch
