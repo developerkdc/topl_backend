@@ -134,6 +134,257 @@ const aggregateInventoryTotals = async ({
 };
 
 
+const INVENTORY_CONTEXT_ITEM_FIELDS = [
+  'item_name',
+  'sales_item_name',
+  'item_name.item_name',
+  'item_details.item_name',
+  'item_sub_category_name',
+  'product_category',
+  'raw_material',
+];
+
+const INVENTORY_CONTEXT_SERIES_FIELDS = [
+  'series_name',
+  'series_code',
+  'series_product_code',
+  'product_code',
+  'series_name.series_name',
+];
+
+const INVENTORY_CONTEXT_GRADE_FIELDS = ['grade', 'grade_name', 'grades_name', 'grade_id.grade_name'];
+
+const createEmptyInwardSummary = () => ({
+  inwardAmount: 0,
+  sqm: 0,
+  sheets: 0,
+  leaves: 0,
+  rolls: 0,
+  cmt: 0,
+  quantity: 0,
+  units: 0,
+});
+
+const normalizeInwardSummary = (summary = {}) => ({
+  inwardAmount: Number(summary?.inwardAmount || 0),
+  sqm: Number(summary?.sqm || 0),
+  sheets: Number(summary?.sheets || 0),
+  leaves: Number(summary?.leaves || 0),
+  rolls: Number(summary?.rolls || 0),
+  cmt: Number(summary?.cmt || 0),
+  quantity: Number(summary?.quantity || 0),
+  units: Number(summary?.units || 0),
+});
+
+const mergeInwardSummaries = (...summaries) =>
+  summaries.reduce((acc, summary) => {
+    const normalized = normalizeInwardSummary(summary);
+    return {
+      inwardAmount: Number(acc.inwardAmount || 0) + normalized.inwardAmount,
+      sqm: Number(acc.sqm || 0) + normalized.sqm,
+      sheets: Number(acc.sheets || 0) + normalized.sheets,
+      leaves: Number(acc.leaves || 0) + normalized.leaves,
+      rolls: Number(acc.rolls || 0) + normalized.rolls,
+      cmt: Number(acc.cmt || 0) + normalized.cmt,
+      quantity: Number(acc.quantity || 0) + normalized.quantity,
+      units: Number(acc.units || 0) + normalized.units,
+    };
+  }, createEmptyInwardSummary());
+
+const mapPrefixedFields = (fields = [], prefix = '') =>
+  fields.map((field) => `${prefix}${field}`);
+
+const buildInventoryContextMatchForPrefix = (filters = {}, prefix = '') =>
+  combineMatch(
+    buildStringFieldFilter(filters.itemName, mapPrefixedFields(INVENTORY_CONTEXT_ITEM_FIELDS, prefix)),
+    buildStringFieldFilter(
+      filters.series,
+      mapPrefixedFields(INVENTORY_CONTEXT_SERIES_FIELDS, prefix)
+    ),
+    buildStringFieldFilter(filters.grade, mapPrefixedFields(INVENTORY_CONTEXT_GRADE_FIELDS, prefix))
+  );
+
+const buildInventoryInwardBasePipeline = ({
+  source,
+  fromDate,
+  toDate,
+  contextualMatch = null,
+  sourceSupplierMatch = null,
+}) => {
+  const sourceDateField = source.dateField || 'createdAt';
+  const invoiceLookupStages = source.invoiceCollection
+    ? [
+        {
+          $lookup: {
+            from: source.invoiceCollection,
+            localField: 'invoice_id',
+            foreignField: '_id',
+            as: 'invoice_details',
+          },
+        },
+        {
+          $unwind: {
+            path: '$invoice_details',
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+      ]
+    : [];
+
+  const effectiveDateExpr = source.invoiceCollection
+    ? {
+        $ifNull: ['$invoice_details.inward_date', `$${sourceDateField}`],
+      }
+    : `$${sourceDateField}`;
+
+  return [
+    {
+      $match: combineMatch(contextualMatch, sourceSupplierMatch),
+    },
+    ...invoiceLookupStages,
+    {
+      $addFields: {
+        effective_inventory_date: effectiveDateExpr,
+      },
+    },
+    {
+      $match: dateMatch('effective_inventory_date', fromDate, toDate),
+    },
+  ];
+};
+
+const buildHistorySupplierMatch = (sourceSupplierMatch = null, itemPrefix = 'history_item_details.') => {
+  const invoiceCondition = sourceSupplierMatch?.invoice_id;
+  if (!invoiceCondition) return null;
+  return {
+    [`${itemPrefix}invoice_id`]: invoiceCondition,
+  };
+};
+
+const buildHistoryInwardBasePipeline = ({
+  source,
+  fromDate,
+  toDate,
+  filters = {},
+  sourceSupplierMatch = null,
+}) => {
+  if (!source?.historyCollection) return null;
+
+  const historyDateField = source.historyDateField || 'createdAt';
+  const hasHistoryItemLookup = Boolean(source.historyItemCollection && source.historyItemIdField);
+  const historyLookupStages = hasHistoryItemLookup
+    ? [
+        {
+          $lookup: {
+            from: source.historyItemCollection,
+            localField: source.historyItemIdField,
+            foreignField: '_id',
+            as: 'history_item_details',
+          },
+        },
+        {
+          $unwind: {
+            path: '$history_item_details',
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+      ]
+    : [];
+
+  const historyContextMatch = hasHistoryItemLookup
+    ? buildInventoryContextMatchForPrefix(filters, 'history_item_details.')
+    : buildInventoryContextMatch(filters);
+
+  const historySupplierMatch = hasHistoryItemLookup
+    ? buildHistorySupplierMatch(sourceSupplierMatch, 'history_item_details.')
+    : sourceSupplierMatch;
+
+  const includeMissingItemOnlyMatch =
+    source.historyIncludeWhenItemMissing && hasHistoryItemLookup
+      ? { 'history_item_details._id': { $exists: false } }
+      : null;
+
+  return [
+    {
+      $match: dateMatch(historyDateField, fromDate, toDate),
+    },
+    ...historyLookupStages,
+    {
+      $match: combineMatch(
+        historyContextMatch,
+        historySupplierMatch,
+        includeMissingItemOnlyMatch
+      ),
+    },
+  ];
+};
+
+const aggregateInventoryHistoryInwardSummary = async ({
+  source,
+  fromDate,
+  toDate,
+  filters = {},
+  sourceSupplierMatch = null,
+}) => {
+  const basePipeline = buildHistoryInwardBasePipeline({
+    source,
+    fromDate,
+    toDate,
+    filters,
+    sourceSupplierMatch,
+  });
+  if (!basePipeline) return createEmptyInwardSummary();
+
+  const [summary] = await safeAggregate(source.historyCollection, [
+    ...basePipeline,
+    {
+      $group: {
+        _id: null,
+        inwardAmount: { $sum: source.historyAmountExpr || 0 },
+        sqm: { $sum: source.historyQtyBreakdown?.sqm || 0 },
+        sheets: { $sum: source.historyQtyBreakdown?.sheets || 0 },
+        leaves: { $sum: source.historyQtyBreakdown?.leaves || 0 },
+        rolls: { $sum: source.historyQtyBreakdown?.rolls || 0 },
+        cmt: { $sum: source.historyQtyBreakdown?.cmt || 0 },
+        quantity: { $sum: source.historyQtyBreakdown?.quantity || 0 },
+      },
+    },
+  ]);
+
+  return normalizeInwardSummary(summary);
+};
+
+const aggregateInventoryHistoryInwardTrendRows = async ({
+  source,
+  fromDate,
+  toDate,
+  filters = {},
+  sourceSupplierMatch = null,
+}) => {
+  const basePipeline = buildHistoryInwardBasePipeline({
+    source,
+    fromDate,
+    toDate,
+    filters,
+    sourceSupplierMatch,
+  });
+  if (!basePipeline) return [];
+
+  const historyDateField = source.historyDateField || 'createdAt';
+  return safeAggregate(source.historyCollection, [
+    ...basePipeline,
+    {
+      $group: {
+        _id: {
+          $dateToString: { format: '%Y-%m', date: `$${historyDateField}` },
+        },
+        inwardValue: { $sum: source.historyAmountExpr || 0 },
+      },
+    },
+  ]);
+};
+
+
 const aggregateInventoryInwardValue = async ({
   fromDate,
   toDate,
@@ -144,23 +395,33 @@ const aggregateInventoryInwardValue = async ({
   const contextualMatch = buildInventoryContextMatch(filters);
   const rows = await Promise.all(
     sources.map(async (source) => {
-      const sourceDateField = source.dateField || 'createdAt';
-      const [summary] = await safeAggregate(source.collection, [
-        {
-          $match: combineMatch(
-            dateMatch(sourceDateField, fromDate, toDate),
+      const sourceSupplierMatch = supplierMatches.get(source.collection);
+      const [summary, historySummary] = await Promise.all([
+        safeAggregate(source.collection, [
+          ...buildInventoryInwardBasePipeline({
+            source,
+            fromDate,
+            toDate,
             contextualMatch,
-            supplierMatches.get(source.collection)
-          ),
-        },
-        {
-          $group: {
-            _id: null,
-            amount: { $sum: source.inwardAmountExpr || source.amountExpr || 0 },
+            sourceSupplierMatch,
+          }),
+          {
+            $group: {
+              _id: null,
+              amount: { $sum: source.inwardAmountExpr || source.amountExpr || 0 },
+            },
           },
-        },
+        ]).then((rows) => rows?.[0] || {}),
+        aggregateInventoryHistoryInwardSummary({
+          source,
+          fromDate,
+          toDate,
+          filters,
+          sourceSupplierMatch,
+        }),
       ]);
-      return Number(summary?.amount || 0);
+
+      return Number(summary?.amount || 0) + Number(historySummary?.inwardAmount || 0);
     })
   );
 
@@ -191,25 +452,36 @@ const aggregateInventoryMetrics = async ({
   const inwardMap = new Map();
 
   const inwardRows = await Promise.all(
-    sources.map((source) => {
-      const sourceDateField = source.dateField || 'createdAt';
-      return safeAggregate(source.collection, [
-        {
-          $match: combineMatch(
-            dateMatch(sourceDateField, trendFromDate, toDate),
+    sources.map(async (source) => {
+      const sourceSupplierMatch = supplierMatches.get(source.collection);
+      const [currentRows, historyRows] = await Promise.all([
+        safeAggregate(source.collection, [
+          ...buildInventoryInwardBasePipeline({
+            source,
+            fromDate: trendFromDate,
+            toDate,
             contextualMatch,
-            supplierMatches.get(source.collection)
-          ),
-        },
-        {
-          $group: {
-            _id: {
-              $dateToString: { format: '%Y-%m', date: `$${sourceDateField}` },
+            sourceSupplierMatch,
+          }),
+          {
+            $group: {
+              _id: {
+                $dateToString: { format: '%Y-%m', date: '$effective_inventory_date' },
+              },
+              inwardValue: { $sum: source.inwardAmountExpr || source.amountExpr || 0 },
             },
-            inwardValue: { $sum: source.inwardAmountExpr || source.amountExpr || 0 },
           },
-        },
+        ]),
+        aggregateInventoryHistoryInwardTrendRows({
+          source,
+          fromDate: trendFromDate,
+          toDate,
+          filters,
+          sourceSupplierMatch,
+        }),
       ]);
+
+      return [...currentRows, ...historyRows];
     })
   );
 
@@ -272,6 +544,7 @@ const aggregateInventorySubModuleCards = async ({
   const cards = await Promise.all(
     sources.map(async (source) => {
       const sourceDateField = source.dateField || 'createdAt';
+      const sourceSupplierMatch = supplierMatches.get(source.collection);
       const invoiceLookupStages = source.invoiceCollection
         ? [
             {
@@ -297,14 +570,23 @@ const aggregateInventorySubModuleCards = async ({
           }
         : `$${sourceDateField}`;
 
-      const [stockSummary, inwardSummary] = await Promise.all([
+      const [stockSummary, inwardSummary, historyInwardSummary] = await Promise.all([
         safeAggregate(source.collection, [
           {
             $match: combineMatch(
               source.activeMatch,
               contextualMatch,
-              supplierMatches.get(source.collection)
+              sourceSupplierMatch
             ),
+          },
+          ...invoiceLookupStages,
+          {
+            $addFields: {
+              effective_inventory_date: effectiveDateExpr,
+            },
+          },
+          {
+            $match: dateMatch('effective_inventory_date', fromDate, toDate),
           },
           {
             $group: {
@@ -320,48 +602,73 @@ const aggregateInventorySubModuleCards = async ({
           },
         ]).then((rows) => rows?.[0] || {}),
         safeAggregate(source.collection, [
-          {
-            $match: combineMatch(
-              contextualMatch,
-              supplierMatches.get(source.collection)
-            ),
-          },
-          ...invoiceLookupStages,
-          {
-            $addFields: {
-              effective_inventory_date: effectiveDateExpr,
-            },
-          },
-          {
-            $match: dateMatch('effective_inventory_date', fromDate, toDate),
-          },
+          ...buildInventoryInwardBasePipeline({
+            source,
+            fromDate,
+            toDate,
+            contextualMatch,
+            sourceSupplierMatch,
+          }),
           {
             $group: {
               _id: null,
               inwardAmount: { $sum: source.inwardAmountExpr || source.amountExpr || 0 },
-              sqm: { $sum: source.qtyBreakdown?.sqm || 0 },
-              sheets: { $sum: source.qtyBreakdown?.sheets || 0 },
-              leaves: { $sum: source.qtyBreakdown?.leaves || 0 },
-              rolls: { $sum: source.qtyBreakdown?.rolls || 0 },
-              cmt: { $sum: source.qtyBreakdown?.cmt || 0 },
-              quantity: { $sum: source.qtyBreakdown?.quantity || 0 },
+              sqm: {
+                $sum: source.inwardQtyBreakdown?.sqm || source.qtyBreakdown?.sqm || 0,
+              },
+              sheets: {
+                $sum: source.inwardQtyBreakdown?.sheets || source.qtyBreakdown?.sheets || 0,
+              },
+              leaves: {
+                $sum: source.inwardQtyBreakdown?.leaves || source.qtyBreakdown?.leaves || 0,
+              },
+              rolls: {
+                $sum: source.inwardQtyBreakdown?.rolls || source.qtyBreakdown?.rolls || 0,
+              },
+              cmt: {
+                $sum: source.inwardQtyBreakdown?.cmt || source.qtyBreakdown?.cmt || 0,
+              },
+              quantity: {
+                $sum:
+                  source.inwardQtyBreakdown?.quantity || source.qtyBreakdown?.quantity || 0,
+              },
             },
           },
         ]).then((rows) => rows?.[0] || {}),
+        aggregateInventoryHistoryInwardSummary({
+          source,
+          fromDate,
+          toDate,
+          filters,
+          sourceSupplierMatch,
+        }),
       ]);
 
+      const combinedInwardSummary = mergeInwardSummaries(inwardSummary, historyInwardSummary);
+
+      const roundQuantityByKey = (key, value) => {
+        const numericValue = Number(value || 0);
+        if (['sqm', 'cmt'].includes(String(key || '').toLowerCase())) {
+          return Number(numericValue.toFixed(3));
+        }
+        return round2(numericValue);
+      };
+
       const mapQuantities = (summary = {}) =>
-        INVENTORY_QUANTITY_FIELD_LABELS.map(({ key, label }) => ({
-          unit: label,
-          value: round2(summary?.[key] || 0),
-        })).filter((row) => Number(row.value || 0) > 0);
+        INVENTORY_QUANTITY_FIELD_LABELS.map(({ key, label }) => {
+          const value = roundQuantityByKey(key, summary?.[key] || 0);
+          return {
+            unit: label,
+            value,
+          };
+        }).filter((row) => Number(row.value || 0) > 0);
 
       return {
         module: source.module,
         label: INVENTORY_MODULE_LABELS[source.module] || source.module,
         inward: {
-          amount: round2(inwardSummary?.inwardAmount || 0),
-          quantities: mapQuantities(inwardSummary),
+          amount: round2(combinedInwardSummary?.inwardAmount || 0),
+          quantities: mapQuantities(combinedInwardSummary),
         },
         stockAvailable: {
           amount: round2(stockSummary?.stockAmount || 0),

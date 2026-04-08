@@ -59,11 +59,13 @@ const aggregateWipByStage = async ({ fromDate, toDate }) => {
   const rows = await Promise.all(
     WIP_STAGES.map(async (stage) => {
       const [summary] = await safeAggregate(stage.collection, [
+        ...(Array.isArray(stage.preMatchPipeline) ? stage.preMatchPipeline : []),
         {
-          $match: {
-            ...stage.baseMatch,
-            ...dateMatch(stage.dateField, fromDate, toDate),
-          },
+          $match: combineMatch(
+            stage.baseMatch || null,
+            dateMatch(stage.dateField, fromDate, toDate),
+            stage.extraMatch || null
+          ),
         },
         {
           $group: {
@@ -131,17 +133,57 @@ const aggregateProductionThroughput = async ({ fromDate, toDate }) => {
 const aggregateYieldByStage = async ({ fromDate, toDate }) => {
   const rows = await Promise.all(
     YIELD_STAGES.map(async (stage) => {
-      const [issued] = await safeAggregate(stage.issueCollection, [
-        { $match: dateMatch(stage.issueDateField, fromDate, toDate) },
-        { $group: { _id: null, qty: { $sum: stage.issuedQtyExpr || 0 } } },
-      ]);
-      const [done] = await safeAggregate(stage.doneCollection, [
-        { $match: dateMatch(stage.doneDateField, fromDate, toDate) },
-        { $group: { _id: null, qty: { $sum: stage.doneQtyExpr || 0 } } },
-      ]);
+      const issueSources =
+        Array.isArray(stage.issueSources) && stage.issueSources.length > 0
+          ? stage.issueSources
+          : [
+              {
+                collection: stage.issueCollection,
+                dateField: stage.issueDateField,
+                qtyExpr: stage.issuedQtyExpr,
+                preMatchPipeline: stage.issuePreMatchPipeline,
+                baseMatch: stage.issueBaseMatch,
+                extraMatch: stage.issueExtraMatch,
+              },
+            ];
 
-      const issuedQty = Number(issued?.qty || 0);
-      const doneQty = Number(done?.qty || 0);
+      const doneSources =
+        Array.isArray(stage.doneSources) && stage.doneSources.length > 0
+          ? stage.doneSources
+          : [
+              {
+                collection: stage.doneCollection,
+                dateField: stage.doneDateField,
+                qtyExpr: stage.doneQtyExpr,
+                preMatchPipeline: stage.donePreMatchPipeline,
+                baseMatch: stage.doneBaseMatch,
+                extraMatch: stage.doneExtraMatch,
+              },
+            ];
+
+      const aggregateSourceQty = async (sources = []) => {
+        const quantities = await Promise.all(
+          sources.map(async (source) => {
+            if (!source?.collection || !source?.dateField) return 0;
+            const [summary] = await safeAggregate(source.collection, [
+              ...(Array.isArray(source.preMatchPipeline) ? source.preMatchPipeline : []),
+              {
+                $match: combineMatch(
+                  dateMatch(source.dateField, fromDate, toDate),
+                  source.baseMatch || null,
+                  source.extraMatch || null
+                ),
+              },
+              { $group: { _id: null, qty: { $sum: source.qtyExpr || 0 } } },
+            ]);
+            return Number(summary?.qty || 0);
+          })
+        );
+        return quantities.reduce((total, qty) => total + Number(qty || 0), 0);
+      };
+
+      const issuedQty = await aggregateSourceQty(issueSources);
+      const doneQty = await aggregateSourceQty(doneSources);
       const yieldRate = issuedQty > 0 ? (doneQty / issuedQty) * 100 : 0;
 
       return {
@@ -160,15 +202,22 @@ const aggregateYieldByStage = async ({ fromDate, toDate }) => {
 
 const aggregateDamageWastageByStage = async ({ fromDate, toDate, wastageFilters = {} }) => {
   const contextualMatch = buildWastageContextMatch(wastageFilters);
+  const roundQuantityByUnit = (value, unit) => {
+    const normalizedUnit = String(unit || '').toUpperCase();
+    const precision = ['SQM', 'CMT'].includes(normalizedUnit) ? 3 : 2;
+    return Number((Number(value || 0)).toFixed(precision));
+  };
   const stageMap = new Map();
 
   await Promise.all(
     DAMAGE_WASTAGE_STAGES.map(async (stage) => {
       const [damage, issued] = await Promise.all([
         safeAggregate(stage.damageCollection, [
+          ...(Array.isArray(stage.damagePreMatchPipeline) ? stage.damagePreMatchPipeline : []),
           {
             $match: combineMatch(
               dateMatch(stage.damageDateField, fromDate, toDate),
+              stage.damageBaseMatch || null,
               contextualMatch
             ),
           },
@@ -181,9 +230,11 @@ const aggregateDamageWastageByStage = async ({ fromDate, toDate, wastageFilters 
           },
         ]).then((rows) => rows?.[0] || {}),
         safeAggregate(stage.issuedCollection, [
+          ...(Array.isArray(stage.issuedPreMatchPipeline) ? stage.issuedPreMatchPipeline : []),
           {
             $match: combineMatch(
               dateMatch(stage.issuedDateField, fromDate, toDate),
+              stage.issuedBaseMatch || null,
               contextualMatch
             ),
           },
@@ -229,9 +280,9 @@ const aggregateDamageWastageByStage = async ({ fromDate, toDate, wastageFilters 
     return {
       stage: row.stage,
       unit: row.unit,
-      wasteQty: round2(row.wasteQty),
-      damageQty: round2(row.damageQty),
-      issuedQty: round2(issuedQty),
+      wasteQty: roundQuantityByUnit(row.wasteQty, row.unit),
+      damageQty: roundQuantityByUnit(row.damageQty, row.unit),
+      issuedQty: roundQuantityByUnit(issuedQty, row.unit),
       damageAmount: round2(row.damageAmount),
       damageRate: round2(lossRate),
       wastePercentage: round2(lossRate),
@@ -259,9 +310,9 @@ const aggregateDamageWastageByStage = async ({ fromDate, toDate, wastageFilters 
     const totalLoss = Number(row.wasteQty || 0) + Number(row.damageQty || 0);
     return {
       unit: row.unit,
-      wasteQty: round2(row.wasteQty),
-      damageQty: round2(row.damageQty),
-      issuedQty: round2(row.issuedQty),
+      wasteQty: roundQuantityByUnit(row.wasteQty, row.unit),
+      damageQty: roundQuantityByUnit(row.damageQty, row.unit),
+      issuedQty: roundQuantityByUnit(row.issuedQty, row.unit),
       damageAmount: round2(row.damageAmount),
       wastePercentage:
         row.issuedQty > 0 ? round2((totalLoss / Number(row.issuedQty)) * 100) : 0,
@@ -296,15 +347,22 @@ const aggregateDamageWastageByStage = async ({ fromDate, toDate, wastageFilters 
 
 const aggregateWasteTrend = async ({ fromDate, toDate, wastageFilters = {} }) => {
   const contextualMatch = buildWastageContextMatch(wastageFilters);
+  const roundQuantityByUnit = (value, unit) => {
+    const normalizedUnit = String(unit || '').toUpperCase();
+    const precision = ['SQM', 'CMT'].includes(normalizedUnit) ? 3 : 2;
+    return Number((Number(value || 0)).toFixed(precision));
+  };
   const trendMap = new Map();
 
   await Promise.all(
     DAMAGE_WASTAGE_STAGES.map(async (stage) => {
       const [damageRows, issuedRows] = await Promise.all([
         safeAggregate(stage.damageCollection, [
+          ...(Array.isArray(stage.damagePreMatchPipeline) ? stage.damagePreMatchPipeline : []),
           {
             $match: combineMatch(
               dateMatch(stage.damageDateField, fromDate, toDate),
+              stage.damageBaseMatch || null,
               contextualMatch
             ),
           },
@@ -321,9 +379,11 @@ const aggregateWasteTrend = async ({ fromDate, toDate, wastageFilters = {} }) =>
           },
         ]),
         safeAggregate(stage.issuedCollection, [
+          ...(Array.isArray(stage.issuedPreMatchPipeline) ? stage.issuedPreMatchPipeline : []),
           {
             $match: combineMatch(
               dateMatch(stage.issuedDateField, fromDate, toDate),
+              stage.issuedBaseMatch || null,
               contextualMatch
             ),
           },
@@ -375,7 +435,10 @@ const aggregateWasteTrend = async ({ fromDate, toDate, wastageFilters = {} }) =>
         }
         const current = trendMap.get(key);
         current.wasteQty += Number(value.wasteQty || 0);
-        current.issuedQty += Number(value.issuedQty || 0);
+        current.issuedQty = Math.max(
+          Number(current.issuedQty || 0),
+          Number(value.issuedQty || 0)
+        );
       });
     })
   );
@@ -385,8 +448,8 @@ const aggregateWasteTrend = async ({ fromDate, toDate, wastageFilters = {} }) =>
       period: row.period,
       stage: row.stage,
       unit: row.unit,
-      wasteQty: round2(row.wasteQty),
-      issuedQty: round2(row.issuedQty),
+      wasteQty: roundQuantityByUnit(row.wasteQty, row.unit),
+      issuedQty: roundQuantityByUnit(row.issuedQty, row.unit),
       wastePercentage:
         row.issuedQty > 0 ? round2((Number(row.wasteQty) / Number(row.issuedQty)) * 100) : 0,
     }))
