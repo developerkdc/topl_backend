@@ -601,7 +601,7 @@ export const fetchSinglePhoto = catchAsync(async (req, res, next) => {
 });
 
 export const dropdownPhoto = catchAsync(async (req, res, next) => {
-  const { sub_category_type } = req.query;
+  const { sub_category_type, isAvailable } = req.query;
 
   const match_query = {
     status: true,
@@ -609,6 +609,10 @@ export const dropdownPhoto = catchAsync(async (req, res, next) => {
 
   if (sub_category.hybrid === sub_category_type) {
     match_query.sub_category_type = sub_category.hybrid;
+  }
+
+  if (isAvailable === "true") {
+    match_query.available_no_of_sheets = { $gt: 0 };
   }
 
   const photoList = await photoModel.aggregate([

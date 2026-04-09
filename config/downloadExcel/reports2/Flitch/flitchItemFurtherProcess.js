@@ -278,7 +278,7 @@ export const createFlitchItemFurtherProcessReportExcel = async (
       17, 18, 19, 20, 22, 23,  // grouping
       24, 25, 26, 27, 29, 30,  // splicing
       31, 32, 33, 34, 36, 37,  // pressing
-      39, 40,       // cnc, colour (sales/order number is text — not summed)
+      39, 40, 41,   // cnc, colour, sales
     ]);
 
     // Columns to MERGE vertically (parent-level columns)
@@ -397,8 +397,6 @@ export const createFlitchItemFurtherProcessReportExcel = async (
       const itemTotals = {};
 
       for (const [flitchNo, rows] of ig.flitchGroups) {
-        const flitchTotals = {};
-
         let curMItem   = null;
         let curMFlitch = null;
         let curMSide   = null;
@@ -443,7 +441,6 @@ export const createFlitchItemFurtherProcessReportExcel = async (
 
           // Accumulate totals using full (un-blanked) values
           const fullCells = toCells(row);
-          accumulate(flitchTotals, fullCells);
           accumulate(itemTotals, fullCells);
           accumulate(grandTotals, fullCells);
 
@@ -462,9 +459,6 @@ export const createFlitchItemFurtherProcessReportExcel = async (
         if (curMItem)   merges.push(...ITEM_COLS.map(c   => ({ startRow: curMItem.startRow,   endRow: lastDataRow, col: c })));
         if (curMFlitch) merges.push(...FLITCH_COLS.map(c => ({ startRow: curMFlitch.startRow, endRow: lastDataRow, col: c })));
         if (curMSide)   merges.push(...SIDE_COLS.map(c   => ({ startRow: curMSide.startRow,   endRow: lastDataRow, col: c })));
-
-        // Per-flitch total row
-        addTotalRow(['', `Total ${flitchNo}`], flitchTotals, totalFill);
       }
 
       // Per-item total row
