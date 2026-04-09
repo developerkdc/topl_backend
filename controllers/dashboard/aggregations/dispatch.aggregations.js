@@ -55,13 +55,54 @@ export const createDispatchAggregations = (context) => {
     aggregateDistinctStrings,
   } = context;
 
-const aggregateDispatchSummary = async ({ fromDate, toDate }) => {
+const aggregateDispatchSummary = async ({ fromDate, toDate, filters = {} }) => {
   const revenueExpr = {
     $ifNull: ['$final_row_amount', { $ifNull: ['$final_amount', { $ifNull: ['$amount', 0] }] }],
   };
+  const customerMatch = buildContainsStringFieldFilter(filters.customer, [
+    'dispatch_details.customer_details.company_name',
+    'dispatch_details.customer_details.customer_name',
+    'dispatch_details.customer_details.owner_name',
+    'dispatch_customer.company_name',
+    'dispatch_customer.customer_name',
+    'dispatch_customer.owner_name',
+  ]);
 
   const [summary] = await safeAggregate('dispatch_items', [
-    { $match: dateMatch('createdAt', fromDate, toDate) },
+    {
+      $lookup: {
+        from: 'dispatches',
+        localField: 'dispatch_id',
+        foreignField: '_id',
+        as: 'dispatch_details',
+      },
+    },
+    {
+      $unwind: {
+        path: '$dispatch_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $lookup: {
+        from: 'customers',
+        localField: 'dispatch_details.customer_id',
+        foreignField: '_id',
+        as: 'dispatch_customer',
+      },
+    },
+    {
+      $unwind: {
+        path: '$dispatch_customer',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $match: combineMatch(
+        dateMatch('createdAt', fromDate, toDate),
+        customerMatch
+      ),
+    },
     {
       $group: {
         _id: null,
@@ -82,14 +123,55 @@ const aggregateDispatchSummary = async ({ fromDate, toDate }) => {
 };
 
 
-const aggregateDispatchMetrics = async ({ fromDate, toDate }) => {
+const aggregateDispatchMetrics = async ({ fromDate, toDate, filters = {} }) => {
   const revenueExpr = {
     $ifNull: ['$final_row_amount', { $ifNull: ['$final_amount', { $ifNull: ['$amount', 0] }] }],
   };
-  const summary = await aggregateDispatchSummary({ fromDate, toDate });
+  const customerMatch = buildContainsStringFieldFilter(filters.customer, [
+    'dispatch_details.customer_details.company_name',
+    'dispatch_details.customer_details.customer_name',
+    'dispatch_details.customer_details.owner_name',
+    'dispatch_customer.company_name',
+    'dispatch_customer.customer_name',
+    'dispatch_customer.owner_name',
+  ]);
+  const summary = await aggregateDispatchSummary({ fromDate, toDate, filters });
 
   const itemSeriesMix = await safeAggregate('dispatch_items', [
-    { $match: dateMatch('createdAt', fromDate, toDate) },
+    {
+      $lookup: {
+        from: 'dispatches',
+        localField: 'dispatch_id',
+        foreignField: '_id',
+        as: 'dispatch_details',
+      },
+    },
+    {
+      $unwind: {
+        path: '$dispatch_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $lookup: {
+        from: 'customers',
+        localField: 'dispatch_details.customer_id',
+        foreignField: '_id',
+        as: 'dispatch_customer',
+      },
+    },
+    {
+      $unwind: {
+        path: '$dispatch_customer',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $match: combineMatch(
+        dateMatch('createdAt', fromDate, toDate),
+        customerMatch
+      ),
+    },
     {
       $project: {
         value: revenueExpr,
@@ -123,9 +205,37 @@ const aggregateDispatchMetrics = async ({ fromDate, toDate }) => {
 };
 
 
-const aggregateTopCustomers = async ({ fromDate, toDate }) => {
+const aggregateTopCustomers = async ({ fromDate, toDate, filters = {} }) => {
+  const customerMatch = buildContainsStringFieldFilter(filters.customer, [
+    'customer_details.company_name',
+    'customer_details.customer_name',
+    'customer_details.owner_name',
+    'customer_record.company_name',
+    'customer_record.customer_name',
+    'customer_record.owner_name',
+  ]);
+
   const rows = await safeAggregate('dispatches', [
-    { $match: dateMatch('invoice_date_time', fromDate, toDate) },
+    {
+      $lookup: {
+        from: 'customers',
+        localField: 'customer_id',
+        foreignField: '_id',
+        as: 'customer_record',
+      },
+    },
+    {
+      $unwind: {
+        path: '$customer_record',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $match: combineMatch(
+        dateMatch('invoice_date_time', fromDate, toDate),
+        customerMatch
+      ),
+    },
     {
       $group: {
         _id: {
@@ -155,9 +265,37 @@ const aggregateTopCustomers = async ({ fromDate, toDate }) => {
 };
 
 
-const aggregateDispatchStatus = async ({ fromDate, toDate }) => {
+const aggregateDispatchStatus = async ({ fromDate, toDate, filters = {} }) => {
+  const customerMatch = buildContainsStringFieldFilter(filters.customer, [
+    'customer_details.company_name',
+    'customer_details.customer_name',
+    'customer_details.owner_name',
+    'customer_record.company_name',
+    'customer_record.customer_name',
+    'customer_record.owner_name',
+  ]);
+
   const rows = await safeAggregate('dispatches', [
-    { $match: dateMatch('invoice_date_time', fromDate, toDate) },
+    {
+      $lookup: {
+        from: 'customers',
+        localField: 'customer_id',
+        foreignField: '_id',
+        as: 'customer_record',
+      },
+    },
+    {
+      $unwind: {
+        path: '$customer_record',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $match: combineMatch(
+        dateMatch('invoice_date_time', fromDate, toDate),
+        customerMatch
+      ),
+    },
     {
       $group: {
         _id: { $ifNull: ['$dispatch_status', 'PENDING'] },
@@ -176,13 +314,54 @@ const aggregateDispatchStatus = async ({ fromDate, toDate }) => {
 };
 
 
-const aggregateDispatchRevenueTrend = async ({ fromDate, toDate }) => {
+const aggregateDispatchRevenueTrend = async ({ fromDate, toDate, filters = {} }) => {
   const revenueExpr = {
     $ifNull: ['$final_row_amount', { $ifNull: ['$final_amount', { $ifNull: ['$amount', 0] }] }],
   };
+  const customerMatch = buildContainsStringFieldFilter(filters.customer, [
+    'dispatch_details.customer_details.company_name',
+    'dispatch_details.customer_details.customer_name',
+    'dispatch_details.customer_details.owner_name',
+    'dispatch_customer.company_name',
+    'dispatch_customer.customer_name',
+    'dispatch_customer.owner_name',
+  ]);
 
   const rows = await safeAggregate('dispatch_items', [
-    { $match: dateMatch('createdAt', fromDate, toDate) },
+    {
+      $lookup: {
+        from: 'dispatches',
+        localField: 'dispatch_id',
+        foreignField: '_id',
+        as: 'dispatch_details',
+      },
+    },
+    {
+      $unwind: {
+        path: '$dispatch_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $lookup: {
+        from: 'customers',
+        localField: 'dispatch_details.customer_id',
+        foreignField: '_id',
+        as: 'dispatch_customer',
+      },
+    },
+    {
+      $unwind: {
+        path: '$dispatch_customer',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $match: combineMatch(
+        dateMatch('createdAt', fromDate, toDate),
+        customerMatch
+      ),
+    },
     {
       $group: {
         _id: {
@@ -204,11 +383,60 @@ const aggregateDispatchRevenueTrend = async ({ fromDate, toDate }) => {
 };
 
 
-const aggregatePackedVsDispatchedTrend = async ({ fromDate, toDate }) => {
+const aggregatePackedVsDispatchedTrend = async ({ fromDate, toDate, filters = {} }) => {
   const dailyMap = new Map();
+  const packedCustomerMatch = buildContainsStringFieldFilter(filters.customer, [
+    'packing_details.customer_details.company_name',
+    'packing_details.customer_details.customer_name',
+    'packing_details.customer_details.owner_name',
+    'packing_customer.company_name',
+    'packing_customer.customer_name',
+    'packing_customer.owner_name',
+  ]);
+  const dispatchedCustomerMatch = buildContainsStringFieldFilter(filters.customer, [
+    'dispatch_details.customer_details.company_name',
+    'dispatch_details.customer_details.customer_name',
+    'dispatch_details.customer_details.owner_name',
+    'dispatch_customer.company_name',
+    'dispatch_customer.customer_name',
+    'dispatch_customer.owner_name',
+  ]);
 
   const packedRows = await safeAggregate('packing_done_items', [
-    { $match: dateMatch('createdAt', fromDate, toDate) },
+    {
+      $lookup: {
+        from: 'packing_done_other_details',
+        localField: 'packing_done_other_details_id',
+        foreignField: '_id',
+        as: 'packing_details',
+      },
+    },
+    {
+      $unwind: {
+        path: '$packing_details',
+        preserveNullAndEmptyArrays: false,
+      },
+    },
+    {
+      $lookup: {
+        from: 'customers',
+        localField: 'packing_details.customer_id',
+        foreignField: '_id',
+        as: 'packing_customer',
+      },
+    },
+    {
+      $unwind: {
+        path: '$packing_customer',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $match: combineMatch(
+        dateMatch('createdAt', fromDate, toDate),
+        packedCustomerMatch
+      ),
+    },
     {
       $group: {
         _id: {
@@ -235,7 +463,40 @@ const aggregatePackedVsDispatchedTrend = async ({ fromDate, toDate }) => {
   });
 
   const dispatchedRows = await safeAggregate('dispatch_items', [
-    { $match: dateMatch('createdAt', fromDate, toDate) },
+    {
+      $lookup: {
+        from: 'dispatches',
+        localField: 'dispatch_id',
+        foreignField: '_id',
+        as: 'dispatch_details',
+      },
+    },
+    {
+      $unwind: {
+        path: '$dispatch_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $lookup: {
+        from: 'customers',
+        localField: 'dispatch_details.customer_id',
+        foreignField: '_id',
+        as: 'dispatch_customer',
+      },
+    },
+    {
+      $unwind: {
+        path: '$dispatch_customer',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $match: combineMatch(
+        dateMatch('createdAt', fromDate, toDate),
+        dispatchedCustomerMatch
+      ),
+    },
     {
       $group: {
         _id: {
@@ -271,76 +532,155 @@ const aggregatePackedVsDispatchedTrend = async ({ fromDate, toDate }) => {
 };
 
 
-const aggregateDispatchLifecycleStatus = async ({ fromDate, toDate }) => {
-  const rows = await safeAggregate('dispatches', [
-    { $match: dateMatch('invoice_date_time', fromDate, toDate) },
+const aggregateDispatchLifecycleStatus = async ({ fromDate, toDate, filters = {} }) => {
+  const dispatchCustomerMatch = buildContainsStringFieldFilter(filters.customer, [
+    'customer_details.company_name',
+    'customer_details.customer_name',
+    'customer_details.owner_name',
+    'customer_record.company_name',
+    'customer_record.customer_name',
+    'customer_record.owner_name',
+  ]);
+  const packingCustomerMatch = buildContainsStringFieldFilter(filters.customer, [
+    'customer_details.company_name',
+    'customer_details.customer_name',
+    'customer_details.owner_name',
+    'packing_customer.company_name',
+    'packing_customer.customer_name',
+    'packing_customer.owner_name',
+  ]);
+
+  const [pendingPacking] = await safeAggregate('packing_done_other_details', [
     {
-      $project: {
-        status: {
-          $switch: {
-            branches: [
-              {
-                case: {
-                  $or: [
-                    { $eq: ['$dispatch_status', 'CANCELLED'] },
-                    { $eq: ['$irn_status', 'PENDING'] },
-                    { $eq: ['$eway_bill_status', 'PENDING'] },
-                    { $eq: ['$eway_bill_status', 'CANCELLED'] },
-                  ],
-                },
-                then: 'PENDING',
-              },
-              {
-                case: {
-                  $or: [
-                    { $eq: ['$irn_status', 'CREATED'] },
-                    { $eq: ['$eway_bill_status', 'CREATED'] },
-                  ],
-                },
-                then: 'IN TRANSIT',
-              },
-              {
-                case: {
-                  $eq: ['$eway_bill_status', 'EXPIRED'],
-                },
-                then: 'DELIVERED',
-              },
-            ],
-            default: 'DELIVERED',
-          },
-        },
-        value: { $ifNull: ['$final_total_amount', 0] },
+      $lookup: {
+        from: 'customers',
+        localField: 'customer_id',
+        foreignField: '_id',
+        as: 'packing_customer',
       },
     },
     {
+      $unwind: {
+        path: '$packing_customer',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $lookup: {
+        from: 'dispatch_items',
+        localField: '_id',
+        foreignField: 'packing_done_other_details_id',
+        as: 'dispatch_links',
+      },
+    },
+    {
+      $match: combineMatch(
+        dateMatch('packing_date', fromDate, toDate),
+        { 'dispatch_links.0': { $exists: false } },
+        packingCustomerMatch
+      ),
+    },
+    {
       $group: {
-        _id: '$status',
+        _id: null,
         count: { $sum: 1 },
-        value: { $sum: '$value' },
       },
     },
   ]);
 
-  const template = ['PENDING', 'IN TRANSIT', 'DELIVERED'].map((status) => ({
-    status,
-    count: 0,
-    value: 0,
-  }));
+  const [dispatchSummary] = await safeAggregate('dispatches', [
+    {
+      $lookup: {
+        from: 'customers',
+        localField: 'customer_id',
+        foreignField: '_id',
+        as: 'customer_record',
+      },
+    },
+    {
+      $unwind: {
+        path: '$customer_record',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $match: combineMatch(
+        dateMatch('invoice_date_time', fromDate, toDate),
+        dispatchCustomerMatch
+      ),
+    },
+    {
+      $group: {
+        _id: null,
+        dispatchedCount: {
+          $sum: {
+            $cond: [{ $eq: ['$dispatch_status', 'CANCELLED'] }, 0, 1],
+          },
+        },
+        dispatchedValue: {
+          $sum: {
+            $cond: [
+              { $eq: ['$dispatch_status', 'CANCELLED'] },
+              0,
+              { $ifNull: ['$final_total_amount', 0] },
+            ],
+          },
+        },
+      },
+    },
+  ]);
 
-  rows.forEach((row) => {
-    const index = template.findIndex((item) => item.status === row?._id);
-    if (index === -1) return;
-    template[index].count = Number(row?.count || 0);
-    template[index].value = round2(row?.value || 0);
-  });
+  const pendingCount = Number(pendingPacking?.count || 0);
+  const dispatchedCount = Number(dispatchSummary?.dispatchedCount || 0);
+
+  const template = [
+    {
+      status: 'PENDING',
+      count: pendingCount,
+      value: 0,
+    },
+    {
+      status: 'DISPATCHED',
+      count: dispatchedCount,
+      value: round2(dispatchSummary?.dispatchedValue || 0),
+    },
+  ];
 
   return template;
 };
 
 
-const aggregateDispatchDocumentSummary = async ({ fromDate, toDate }) => {
+const aggregateDispatchDocumentSummary = async ({ fromDate, toDate, filters = {} }) => {
+  const customerMatch = buildContainsStringFieldFilter(filters.customer, [
+    'customer_details.company_name',
+    'customer_details.customer_name',
+    'customer_details.owner_name',
+    'customer_record.company_name',
+    'customer_record.customer_name',
+    'customer_record.owner_name',
+  ]);
+
   const [summary] = await safeAggregate('dispatches', [
-    { $match: dateMatch('invoice_date_time', fromDate, toDate) },
+    {
+      $lookup: {
+        from: 'customers',
+        localField: 'customer_id',
+        foreignField: '_id',
+        as: 'customer_record',
+      },
+    },
+    {
+      $unwind: {
+        path: '$customer_record',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $match: combineMatch(
+        dateMatch('invoice_date_time', fromDate, toDate),
+        customerMatch
+      ),
+    },
     {
       $group: {
         _id: null,
