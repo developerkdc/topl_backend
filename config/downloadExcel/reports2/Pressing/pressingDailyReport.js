@@ -168,9 +168,9 @@ const GeneratePressingDailyReportExcel = async (pressingData, reportDate) => {
       row.getCell(5).value = r.side;
       row.getCell(6).value = r.size;
       row.getCell(7).value = r.sheets;
-      row.getCell(8).value = Math.round(r.sqm * 100) / 100;
-      row.getCell(4).numFmt = '0.00';
-      row.getCell(8).numFmt = '0.00';
+      row.getCell(8).value = Math.round(r.sqm * 1000) / 1000;
+      row.getCell(4).numFmt = '0.000';
+      row.getCell(8).numFmt = '0.000';
       catSheets += r.sheets;
       catSqm += r.sqm;
       currentRow++;
@@ -179,10 +179,10 @@ const GeneratePressingDailyReportExcel = async (pressingData, reportDate) => {
     catTotalRow.getCell(1).value = 'Total';
     catTotalRow.getCell(1).font = { bold: true };
     catTotalRow.getCell(7).value = catSheets;
-    catTotalRow.getCell(8).value = Math.round(catSqm * 100) / 100;
+    catTotalRow.getCell(8).value = Math.round(catSqm * 1000) / 1000;
     catTotalRow.getCell(7).font = { bold: true };
     catTotalRow.getCell(8).font = { bold: true };
-    catTotalRow.getCell(8).numFmt = '0.00';
+    catTotalRow.getCell(8).numFmt = '0.000';
     currentRow++;
     pressingDetailsTotalSheets += catSheets;
     pressingDetailsTotalSqm += catSqm;
@@ -192,10 +192,10 @@ const GeneratePressingDailyReportExcel = async (pressingData, reportDate) => {
   pressingDetailsGrandRow.getCell(1).value = 'Total';
   pressingDetailsGrandRow.getCell(1).font = { bold: true };
   pressingDetailsGrandRow.getCell(7).value = pressingDetailsTotalSheets;
-  pressingDetailsGrandRow.getCell(8).value = Math.round(pressingDetailsTotalSqm * 100) / 100;
+  pressingDetailsGrandRow.getCell(8).value = Math.round(pressingDetailsTotalSqm * 1000) / 1000;
   pressingDetailsGrandRow.getCell(7).font = { bold: true };
   pressingDetailsGrandRow.getCell(8).font = { bold: true };
-  pressingDetailsGrandRow.getCell(8).numFmt = '0.00';
+  pressingDetailsGrandRow.getCell(8).numFmt = '0.000';
   currentRow += 2;
 
   // ---- Section 2 header: Core - Face Consumption Sq.Mtr. ----
@@ -259,8 +259,8 @@ const GeneratePressingDailyReportExcel = async (pressingData, reportDate) => {
         row.getCell(2).value = r.thick;
         row.getCell(3).value = r.size;
         row.getCell(4).value = r.sheets;
-        row.getCell(5).value = Math.round(r.sqm * 100) / 100;
-        row.getCell(5).numFmt = '0.00';
+        row.getCell(5).value = Math.round(r.sqm * 1000) / 1000;
+        row.getCell(5).numFmt = '0.000';
         currentRow++;
       });
       faceTotalSheets += data.sheets;
@@ -271,10 +271,10 @@ const GeneratePressingDailyReportExcel = async (pressingData, reportDate) => {
   faceTotalRow.getCell(1).value = 'Total';
   faceTotalRow.getCell(1).font = { bold: true };
   faceTotalRow.getCell(4).value = faceTotalSheets;
-  faceTotalRow.getCell(5).value = Math.round(faceTotalSqm * 100) / 100;
+  faceTotalRow.getCell(5).value = Math.round(faceTotalSqm * 1000) / 1000;
   faceTotalRow.getCell(4).font = { bold: true };
   faceTotalRow.getCell(5).font = { bold: true };
-  faceTotalRow.getCell(5).numFmt = '0.00';
+  faceTotalRow.getCell(5).numFmt = '0.000';
   currentRow += 2;
 
   // ---- Section 3 header: Plywood Consumption Sq.Mtr. ----
@@ -336,8 +336,8 @@ const GeneratePressingDailyReportExcel = async (pressingData, reportDate) => {
         row.getCell(2).value = r.thick;
         row.getCell(3).value = r.size;
         row.getCell(4).value = r.sheets;
-        row.getCell(5).value = Math.round(r.sqm * 100) / 100;
-        row.getCell(5).numFmt = '0.00';
+        row.getCell(5).value = Math.round(r.sqm * 1000) / 1000;
+        row.getCell(5).numFmt = '0.000';
         currentRow++;
       });
       plywoodTotalSheets += data.sheets;
@@ -348,10 +348,10 @@ const GeneratePressingDailyReportExcel = async (pressingData, reportDate) => {
   plywoodTotalRow.getCell(1).value = 'Total';
   plywoodTotalRow.getCell(1).font = { bold: true };
   plywoodTotalRow.getCell(4).value = plywoodTotalSheets;
-  plywoodTotalRow.getCell(5).value = Math.round(plywoodTotalSqm * 100) / 100;
+  plywoodTotalRow.getCell(5).value = Math.round(plywoodTotalSqm * 1000) / 1000;
   plywoodTotalRow.getCell(4).font = { bold: true };
   plywoodTotalRow.getCell(5).font = { bold: true };
-  plywoodTotalRow.getCell(5).numFmt = '0.00';
+  plywoodTotalRow.getCell(5).numFmt = '0.000';
   currentRow += 2;
 
   worksheet.columns = [

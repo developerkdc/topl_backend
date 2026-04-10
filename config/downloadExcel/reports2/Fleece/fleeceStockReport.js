@@ -73,6 +73,9 @@ export const GenerateFleeceStockReportExcel = async (
     ];
 
     worksheet.columns = columnDefinitions;
+    [5, 7, 9, 11, 13, 15].forEach((columnIndex) => {
+      worksheet.getColumn(columnIndex).numFmt = '0.000';
+    });
 
     const filterRow = worksheet.addRow([title]);
     filterRow.font = { bold: true, size: 12 };
@@ -301,6 +304,9 @@ export const GenerateFleeceItemWiseStockReportExcel = async (
     ];
 
     worksheet.columns = columnDefinitions;
+    [6, 8, 10, 12, 14, 16].forEach((columnIndex) => {
+      worksheet.getColumn(columnIndex).numFmt = '0.000';
+    });
 
     const filterRow = worksheet.addRow([title]);
     filterRow.font = { bold: true, size: 12 };
@@ -570,6 +576,9 @@ export const GenerateFleeceStockReportByInwardExcel = async (
     ];
 
     worksheet.columns = columnDefinitions;
+    [6, 8, 10, 12, 14, 16].forEach((columnIndex) => {
+      worksheet.getColumn(columnIndex).numFmt = '0.000';
+    });
 
     const filterRow = worksheet.addRow([title]);
     filterRow.font = { bold: true, size: 12 };

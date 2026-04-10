@@ -328,6 +328,11 @@ export const GeneratePlywoodItemWiseStockReportExcel = async (
 
     worksheet.columns = columnDefinitions;
 
+    // Item-wise report precision requirements:
+    // Consumed Mtrs -> 2 decimals, Closing Metres -> 3 decimals.
+    worksheet.getColumn(10).numFmt = '0.00';
+    worksheet.getColumn(18).numFmt = '0.000';
+
     const filterRow = worksheet.addRow([title]);
     filterRow.font = { bold: true, size: 12 };
     filterRow.alignment = { vertical: 'middle', horizontal: 'left', wrapText: false };
