@@ -21,24 +21,39 @@ export const FlitchDailyReportExcel = catchAsync(
       });
     }
 
-    // Set up date filter for the specific day
-    const startOfDay = new Date(reportDate);
-    startOfDay.setHours(0, 0, 0, 0);
+    // Set up date filter for the specific day using local calendar date parts
+    const [year, month, day] = String(reportDate)
+      .split('-')
+      .map((part) => Number(part));
 
-    const endOfDay = new Date(reportDate);
-    endOfDay.setHours(23, 59, 59, 999);
+    if (!year || !month || !day) {
+      return res.status(400).json({
+        statusCode: 400,
+        status: 'error',
+        message: 'Invalid report date format',
+      });
+    }
+
+    const startOfDay = new Date(year, month - 1, day, 0, 0, 0, 0);
+    const endOfDay = new Date(year, month - 1, day, 23, 59, 59, 999);
 
     console.log('Flitch Daily Report - Date:', reportDate);
     console.log('Flitch Daily Report - Start:', startOfDay);
     console.log('Flitch Daily Report - End:', endOfDay);
 
     // Build match query
+    const dateRangeMatch = {
+      $gte: startOfDay,
+      $lte: endOfDay,
+    };
+
     const matchQuery = {
-      'flitch_invoice_details.inward_date': {
-        $gte: startOfDay,
-        $lte: endOfDay,
-      },
       deleted_at: null,
+      $or: [
+        { 'flitch_invoice_details.inward_date': dateRangeMatch },
+        { inward_date: dateRangeMatch },
+        { createdAt: dateRangeMatch },
+      ],
     };
 
     // Build aggregation pipeline

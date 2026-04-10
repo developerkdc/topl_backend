@@ -73,6 +73,9 @@ export const GenerateMdfStockReportExcel = async (
     ];
 
     worksheet.columns = columnDefinitions;
+    [5, 7, 9, 11, 13, 15].forEach((columnIndex) => {
+      worksheet.getColumn(columnIndex).numFmt = '0.00';
+    });
 
     const filterRow = worksheet.addRow([title]);
     filterRow.font = { bold: true, size: 12 };
@@ -302,6 +305,9 @@ export const GenerateMdfItemWiseStockReportExcel = async (
     ];
 
     worksheet.columns = columnDefinitions;
+    [6, 8, 10, 12, 14, 16].forEach((columnIndex) => {
+      worksheet.getColumn(columnIndex).numFmt = '0.00';
+    });
 
     const filterRow = worksheet.addRow([title]);
     filterRow.font = { bold: true, size: 12 };
@@ -570,6 +576,9 @@ export const GenerateMdfStockReportByPelletExcel = async (
     ];
 
     worksheet.columns = columnDefinitions;
+    [6, 8, 10, 12, 14, 16].forEach((columnIndex) => {
+      worksheet.getColumn(columnIndex).numFmt = '0.00';
+    });
 
     const filterRow = worksheet.addRow([title]);
     filterRow.font = { bold: true, size: 12 };

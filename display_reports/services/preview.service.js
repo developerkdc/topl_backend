@@ -3,6 +3,15 @@ import ExcelJS from 'exceljs';
 import fs from 'fs/promises';
 import path from 'path';
 
+const INVISIBLE_CHAR_REGEX = /[\u200B-\u200D\uFEFF]/g;
+
+const normalizeTextValue = (value) =>
+  String(value ?? '')
+    .replace(INVISIBLE_CHAR_REGEX, '')
+    .trim();
+
+const hasMeaningfulValue = (value) => normalizeTextValue(value) !== '';
+
 const parseCellAddress = (cellRef) => {
   const match = String(cellRef || '').match(/^([A-Z]+)(\d+)$/i);
   if (!match) return null;
@@ -29,8 +38,8 @@ const parseRange = (rangeRef) => {
 };
 
 const normalizeCellValue = (rawValue, textValue) => {
-  if (typeof textValue === 'string' && textValue.trim() !== '') {
-    return textValue.trim();
+  if (typeof textValue === 'string' && hasMeaningfulValue(textValue)) {
+    return normalizeTextValue(textValue);
   }
 
   if (rawValue == null) return '';
@@ -41,24 +50,43 @@ const normalizeCellValue = (rawValue, textValue) => {
 
   if (typeof rawValue === 'object') {
     if (Array.isArray(rawValue.richText)) {
-      return rawValue.richText.map((chunk) => chunk?.text || '').join('').trim();
+      return normalizeTextValue(rawValue.richText.map((chunk) => chunk?.text || '').join(''));
     }
-    if (rawValue.text) return String(rawValue.text).trim();
-    if (rawValue.result != null) return String(rawValue.result).trim();
-    if (rawValue.hyperlink) return String(rawValue.hyperlink).trim();
+    if (rawValue.text) return normalizeTextValue(rawValue.text);
+    if (rawValue.result != null) return normalizeTextValue(rawValue.result);
+    if (rawValue.hyperlink) return normalizeTextValue(rawValue.hyperlink);
   }
 
-  return String(rawValue).trim();
+  return normalizeTextValue(rawValue);
 };
 
 const getCellDisplayValue = (worksheet, row, col) => {
   const cell = worksheet.getRow(row).getCell(col);
+
+  if (cell.master) {
+    const isMasterCell = String(cell.address || '') === String(cell.master.address || '');
+    if (!isMasterCell) {
+      const cellAddress = parseCellAddress(cell.address);
+      const masterAddress = parseCellAddress(cell.master.address);
+
+      // Show merged text on subordinate cells only for vertical merges
+      // (same column, different row). For horizontal merges, keep blanks.
+      if (
+        cellAddress &&
+        masterAddress &&
+        cellAddress.col === masterAddress.col
+      ) {
+        return normalizeCellValue(cell.master.value, cell.master.text);
+      }
+
+      return '';
+    }
+  }
+
   const directValue = normalizeCellValue(cell.value, cell.text);
   if (directValue) return directValue;
 
-  if (cell.isMerged && cell.master) {
-    return normalizeCellValue(cell.master.value, cell.master.text);
-  }
+  if (cell.master) return normalizeCellValue(cell.master.value, cell.master.text);
 
   return '';
 };
@@ -314,22 +342,29 @@ const detectHeaderRowIndex = (worksheet, maxColumns) => {
   let bestScore = -1;
 
   for (let rowIndex = 1; rowIndex <= searchLimit; rowIndex += 1) {
-    let nonEmpty = 0;
+    const nonEmptyValues = [];
     let alphaCount = 0;
 
     for (let colIndex = 1; colIndex <= maxColumns; colIndex += 1) {
       const value = getCellDisplayValue(worksheet, rowIndex, colIndex);
-      if (!value) continue;
-      nonEmpty += 1;
+      if (!hasMeaningfulValue(value)) continue;
+      nonEmptyValues.push(value);
       if (/[A-Za-z]/.test(value)) alphaCount += 1;
     }
 
+    const nonEmpty = nonEmptyValues.length;
     if (nonEmpty < 2) continue;
+
+    const uniqueValueCount = new Set(
+      nonEmptyValues.map((value) => normalizeTextValue(value).toLowerCase())
+    ).size;
+
+    if (uniqueValueCount <= 1) continue;
 
     const alphaRatio = alphaCount / nonEmpty;
     if (alphaRatio < 0.3) continue;
 
-    const score = alphaCount * 2 + nonEmpty;
+    const score = alphaCount * 2 + nonEmpty + uniqueValueCount;
     if (score > bestScore || (score === bestScore && rowIndex > bestRow)) {
       bestScore = score;
       bestRow = rowIndex;
@@ -340,13 +375,28 @@ const detectHeaderRowIndex = (worksheet, maxColumns) => {
 
   let fallbackRow = 1;
   let fallbackCount = -1;
+  let fallbackUniqueCount = -1;
   for (let rowIndex = 1; rowIndex <= searchLimit; rowIndex += 1) {
+    const nonEmptyValues = [];
     let nonEmpty = 0;
     for (let colIndex = 1; colIndex <= maxColumns; colIndex += 1) {
-      if (getCellDisplayValue(worksheet, rowIndex, colIndex)) nonEmpty += 1;
+      const value = getCellDisplayValue(worksheet, rowIndex, colIndex);
+      if (hasMeaningfulValue(value)) {
+        nonEmpty += 1;
+        nonEmptyValues.push(value);
+      }
     }
-    if (nonEmpty > fallbackCount) {
+
+    const uniqueValueCount = new Set(
+      nonEmptyValues.map((value) => normalizeTextValue(value).toLowerCase())
+    ).size;
+
+    if (
+      nonEmpty > fallbackCount ||
+      (nonEmpty === fallbackCount && uniqueValueCount > fallbackUniqueCount)
+    ) {
       fallbackCount = nonEmpty;
+      fallbackUniqueCount = uniqueValueCount;
       fallbackRow = rowIndex;
     }
   }
@@ -358,11 +408,23 @@ const extractHeaderGroups = ({ worksheet, headerRowIndex, keepColumns }) => {
   const groupRowIndex = headerRowIndex - 1;
   if (groupRowIndex < 1) return [];
 
-  const merges = worksheet?.model?.merges || [];
-  if (!merges.length) return [];
+  const groupRowValues = keepColumns
+    .map((column) => normalizeTextValue(getCellDisplayValue(worksheet, groupRowIndex, column)))
+    .filter(Boolean);
 
+  const uniqueGroupRowValueCount = new Set(
+    groupRowValues.map((value) => value.toLowerCase())
+  ).size;
+
+  // Ignore banner rows (for example "Date: ...") that are not real grouped headers.
+  if (groupRowValues.length > 0 && uniqueGroupRowValueCount <= 1) {
+    return [];
+  }
+
+  const merges = worksheet?.model?.merges || [];
   const columnMap = new Map(keepColumns.map((col, index) => [col, index]));
   const groups = [];
+  const groupedIndexes = new Set();
 
   merges.forEach((mergeRef) => {
     const range = parseRange(mergeRef);
@@ -386,6 +448,27 @@ const extractHeaderGroups = ({ worksheet, headerRowIndex, keepColumns }) => {
       label,
       startIndex: Math.min(...coveredIndexes),
       endIndex: Math.max(...coveredIndexes),
+    });
+
+    coveredIndexes.forEach((index) => groupedIndexes.add(index));
+  });
+
+  keepColumns.forEach((originalColumn, normalizedIndex) => {
+    if (groupedIndexes.has(normalizedIndex)) return;
+
+    const topLabel = normalizeTextValue(getCellDisplayValue(worksheet, groupRowIndex, originalColumn));
+    if (!topLabel) return;
+
+    const headerLabel = normalizeTextValue(
+      getCellDisplayValue(worksheet, headerRowIndex, originalColumn)
+    );
+
+    if (topLabel.toLowerCase() === headerLabel.toLowerCase()) return;
+
+    groups.push({
+      label: topLabel,
+      startIndex: normalizedIndex,
+      endIndex: normalizedIndex,
     });
   });
 
@@ -423,10 +506,13 @@ export const buildPreviewFromWorkbook = async (filePath) => {
     const rowValues = [];
     for (let colIndex = 1; colIndex <= maxColumns; colIndex += 1) {
       const value = getCellDisplayValue(worksheet, rowIndex, colIndex);
-      if (value) rowValues.push(value);
+      if (hasMeaningfulValue(value)) rowValues.push(normalizeTextValue(value));
     }
 
-    if (rowValues.length === 1) {
+    if (!rowValues.length) continue;
+
+    const uniqueRowValues = new Set(rowValues.map((value) => value.toLowerCase()));
+    if (uniqueRowValues.size === 1) {
       title = rowValues[0];
       break;
     }
@@ -438,6 +524,8 @@ export const buildPreviewFromWorkbook = async (filePath) => {
   }
 
   const originalRows = [];
+  let blankRowStreak = 0;
+  const blankRowBreakThreshold = 150;
   for (let rowIndex = headerRowIndex + 1; rowIndex <= worksheet.rowCount; rowIndex += 1) {
     const rowObject = {};
     let hasAnyValue = false;
@@ -445,21 +533,32 @@ export const buildPreviewFromWorkbook = async (filePath) => {
     for (let colIndex = 1; colIndex <= maxColumns; colIndex += 1) {
       const value = getCellDisplayValue(worksheet, rowIndex, colIndex);
       rowObject[`c${colIndex}`] = value;
-      if (value) hasAnyValue = true;
+      if (hasMeaningfulValue(value)) hasAnyValue = true;
     }
 
     if (!hasAnyValue) {
-      if (originalRows.length > 0) break;
+      if (!originalRows.length) continue;
+
+      blankRowStreak += 1;
+      if (blankRowStreak >= blankRowBreakThreshold) {
+        break;
+      }
       continue;
     }
 
-    originalRows.push(rowObject);
+    blankRowStreak = 0;
+    originalRows.push({
+      excelRowIndex: rowIndex,
+      values: rowObject,
+    });
   }
 
   const keepColumns = [];
   for (let colIndex = 1; colIndex <= maxColumns; colIndex += 1) {
-    const hasHeader = String(originalHeaders[colIndex - 1] || '').trim() !== '';
-    const hasRowData = originalRows.some((row) => String(row[`c${colIndex}`] || '').trim() !== '');
+    const hasHeader = hasMeaningfulValue(originalHeaders[colIndex - 1]);
+    const hasRowData = originalRows.some((row) =>
+      hasMeaningfulValue(row?.values?.[`c${colIndex}`])
+    );
     if (hasHeader || hasRowData) keepColumns.push(colIndex);
   }
 
@@ -468,20 +567,24 @@ export const buildPreviewFromWorkbook = async (filePath) => {
     : [...Array(maxColumns).keys()].map((index) => index + 1);
 
   const headers = normalizedKeepColumns.map((originalCol, normalizedIndex) => {
-    const rawLabel = String(originalHeaders[originalCol - 1] || '').trim();
+    const rawLabel = normalizeTextValue(originalHeaders[originalCol - 1]);
     return {
       key: `c${normalizedIndex + 1}`,
       label: rawLabel || `Column ${normalizedIndex + 1}`,
     };
   });
 
-  const rows = originalRows.map((row) => {
-    const normalizedRow = {};
-    normalizedKeepColumns.forEach((originalCol, normalizedIndex) => {
-      normalizedRow[`c${normalizedIndex + 1}`] = row[`c${originalCol}`] || '';
+  const rows = [...originalRows]
+    .sort((left, right) => left.excelRowIndex - right.excelRowIndex)
+    .map((rowEntry) => {
+      const row = rowEntry?.values || {};
+      const normalizedRow = {};
+      normalizedKeepColumns.forEach((originalCol, normalizedIndex) => {
+        normalizedRow[`c${normalizedIndex + 1}`] = row[`c${originalCol}`] || '';
+      });
+      normalizedRow.__excelRowIndex = rowEntry.excelRowIndex;
+      return normalizedRow;
     });
-    return normalizedRow;
-  });
 
   const headerGroups = extractHeaderGroups({
     worksheet,

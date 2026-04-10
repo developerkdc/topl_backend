@@ -148,7 +148,7 @@ export const GenerateDressingStockRegisterExcel = async (
       r.getCell(13).value = sa;
       r.getCell(14).value = cb;
 
-      for (let col = 3; col <= 14; col++) r.getCell(col).numFmt = '0.00';
+      for (let col = 3; col <= 14; col++) r.getCell(col).numFmt = '0.000';
 
       grandTotals.opening_balance += ob;
       grandTotals.purchase += pu;
@@ -187,7 +187,7 @@ export const GenerateDressingStockRegisterExcel = async (
         pattern: 'solid',
         fgColor: { argb: 'FFE0E0E0' },
       };
-      if (cell.column >= 3) cell.numFmt = '0.00';
+      if (cell.column >= 3) cell.numFmt = '0.000';
     });
 
     worksheet.columns = [
