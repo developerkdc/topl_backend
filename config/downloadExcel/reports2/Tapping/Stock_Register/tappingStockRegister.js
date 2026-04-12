@@ -72,8 +72,8 @@ const GenerateTappingStockRegisterExcel = async (rows, startDate, endDate) => {
   const workbook = new ExcelJS.Workbook();
   const ws = workbook.addWorksheet('Stock Register');
 
-  const numFmt = '0.000';
-  const negFmt = '0.000;(0.000)';
+  const numFmt = '0.00';
+  const negFmt = '0.00;(0.00)';
   const TOTAL_COLS = 9;
 
   let r = 1;

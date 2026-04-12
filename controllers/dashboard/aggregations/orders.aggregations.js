@@ -62,6 +62,23 @@ const aggregateOrderFlowTables = async ({ fromDate, toDate, filters = {} }) => {
       const trimmed = value.trim();
       return trimmed || null;
     }
+    if (typeof value === 'object') {
+      if (typeof value.toHexString === 'function') {
+        const hex = String(value.toHexString() || '').trim();
+        return hex || null;
+      }
+      if (typeof value.valueOf === 'function') {
+        const primitive = value.valueOf();
+        if (typeof primitive === 'string') {
+          const trimmedPrimitive = primitive.trim();
+          if (trimmedPrimitive) return trimmedPrimitive;
+        }
+      }
+      if (typeof value.$oid === 'string') {
+        const oid = value.$oid.trim();
+        return oid || null;
+      }
+    }
     const asText = String(value).trim();
     return asText && asText !== '[object Object]' ? asText : null;
   };
@@ -69,19 +86,61 @@ const aggregateOrderFlowTables = async ({ fromDate, toDate, filters = {} }) => {
     [...idSet]
       .filter((id) => mongoose.Types.ObjectId.isValid(id))
       .map((id) => new mongoose.Types.ObjectId(id));
+  const normalizeLookupKey = (value) => String(value || '').trim().toUpperCase();
+  const buildIdReferenceFilters = ({
+    orderItemField = 'order_item_id',
+    orderField = 'order_id',
+    orderItemIds = [],
+    orderIds = [],
+    orderItemObjectIds = [],
+    orderObjectIds = [],
+  } = {}) => {
+    const referenceFilters = [];
+    const itemFilters = [];
+    const orderFilters = [];
+
+    if (orderItemObjectIds.length) {
+      itemFilters.push({ [orderItemField]: { $in: orderItemObjectIds } });
+    }
+    if (orderItemIds.length) {
+      itemFilters.push({ [orderItemField]: { $in: orderItemIds } });
+    }
+    if (itemFilters.length === 1) {
+      referenceFilters.push(itemFilters[0]);
+    } else if (itemFilters.length > 1) {
+      referenceFilters.push({ $or: itemFilters });
+    }
+
+    if (orderObjectIds.length) {
+      orderFilters.push({ [orderField]: { $in: orderObjectIds } });
+    }
+    if (orderIds.length) {
+      orderFilters.push({ [orderField]: { $in: orderIds } });
+    }
+    if (orderFilters.length === 1) {
+      referenceFilters.push(orderFilters[0]);
+    } else if (orderFilters.length > 1) {
+      referenceFilters.push({ $or: orderFilters });
+    }
+
+    return referenceFilters;
+  };
   const buildStageProcessLookup = async (
     collectionName,
     qtyExpr,
-    orderItemObjectIds,
-    orderObjectIds
+    {
+      orderItemIds = [],
+      orderIds = [],
+      orderItemObjectIds = [],
+      orderObjectIds = [],
+    } = {}
   ) => {
-    const referenceFilters = [];
-    if (orderItemObjectIds.length) {
-      referenceFilters.push({ order_item_id: { $in: orderItemObjectIds } });
-    }
-    if (orderObjectIds.length) {
-      referenceFilters.push({ order_id: { $in: orderObjectIds } });
-    }
+    const referenceFilters = buildIdReferenceFilters({
+      orderItemIds,
+      orderIds,
+      orderItemObjectIds,
+      orderObjectIds,
+    });
     if (!referenceFilters.length) {
       return {
         byItem: new Map(),
@@ -164,14 +223,160 @@ const aggregateOrderFlowTables = async ({ fromDate, toDate, filters = {} }) => {
       ),
     };
   };
-  const buildIssuedOrderMetricsLookup = async (orderItemObjectIds, orderObjectIds) => {
-    const referenceFilters = [];
-    if (orderItemObjectIds.length) {
-      referenceFilters.push({ order_item_id: { $in: orderItemObjectIds } });
-    }
-    if (orderObjectIds.length) {
-      referenceFilters.push({ order_id: { $in: orderObjectIds } });
-    }
+  const buildStageDoneHistoryLookup = async (
+    sources = [],
+    {
+      orderItemIds = [],
+      orderIds = [],
+      orderItemObjectIds = [],
+      orderObjectIds = [],
+    } = {}
+  ) => {
+    const buildStageQtyLookup = async (
+      collectionName,
+      {
+        prePipeline = [],
+        orderItemExpr = '$order_item_id',
+        orderExpr = '$order_id',
+        qtyExpr = { $ifNull: ['$no_of_sheets', 0] },
+      } = {}
+    ) => {
+      const referenceFilters = buildIdReferenceFilters({
+        orderItemField: 'orderItemId',
+        orderField: 'orderId',
+        orderItemIds,
+        orderIds,
+        orderItemObjectIds,
+        orderObjectIds,
+      });
+      if (!referenceFilters.length) {
+        return {
+          byItem: new Map(),
+          byOrder: new Map(),
+        };
+      }
+
+      const [lookup = {}] = await safeAggregate(collectionName, [
+        ...prePipeline,
+        {
+          $project: {
+            orderItemId: orderItemExpr,
+            orderId: orderExpr,
+            stageQty: qtyExpr,
+          },
+        },
+        {
+          $match:
+            referenceFilters.length === 1
+              ? referenceFilters[0]
+              : { $or: referenceFilters },
+        },
+        {
+          $project: {
+            orderItemKey: {
+              $convert: {
+                input: '$orderItemId',
+                to: 'string',
+                onError: null,
+                onNull: null,
+              },
+            },
+            orderKey: {
+              $convert: {
+                input: '$orderId',
+                to: 'string',
+                onError: null,
+                onNull: null,
+              },
+            },
+            stageQty: 1,
+          },
+        },
+        {
+          $facet: {
+            byItem: [
+              { $match: { orderItemKey: { $ne: null } } },
+              {
+                $group: {
+                  _id: '$orderItemKey',
+                  stageQty: { $sum: '$stageQty' },
+                },
+              },
+            ],
+            byOrder: [
+              { $match: { orderKey: { $ne: null } } },
+              {
+                $group: {
+                  _id: '$orderKey',
+                  stageQty: { $sum: '$stageQty' },
+                },
+              },
+            ],
+          },
+        },
+      ]);
+
+      return {
+        byItem: new Map(
+          (lookup?.byItem || []).map((row) => [
+            row._id,
+            { stageQty: Number(row?.stageQty || 0) },
+          ])
+        ),
+        byOrder: new Map(
+          (lookup?.byOrder || []).map((row) => [
+            row._id,
+            { stageQty: Number(row?.stageQty || 0) },
+          ])
+        ),
+      };
+    };
+
+    const lookups = await Promise.all(
+      (sources || []).map((source) =>
+        buildStageQtyLookup(source.collection, {
+          prePipeline: source.prePipeline || [],
+          orderItemExpr: source.orderItemExpr,
+          orderExpr: source.orderExpr,
+          qtyExpr: source.qtyExpr,
+        })
+      )
+    );
+
+    const merged = {
+      byItem: new Map(),
+      byOrder: new Map(),
+    };
+
+    lookups.forEach((lookup) => {
+      lookup.byItem.forEach((payload, id) => {
+        const current = merged.byItem.get(id) || { stageQty: 0 };
+        merged.byItem.set(id, {
+          stageQty: current.stageQty + Number(payload?.stageQty || 0),
+        });
+      });
+      lookup.byOrder.forEach((payload, id) => {
+        const current = merged.byOrder.get(id) || { stageQty: 0 };
+        merged.byOrder.set(id, {
+          stageQty: current.stageQty + Number(payload?.stageQty || 0),
+        });
+      });
+    });
+
+    return merged;
+  };
+  const buildIssuedOrderMetricsLookup = async ({
+    orderItemIds = [],
+    orderIds = [],
+    orderItemObjectIds = [],
+    orderObjectIds = [],
+  } = {}) => {
+    const referenceFilters = buildIdReferenceFilters({
+      orderItemIds,
+      orderIds,
+      orderItemObjectIds,
+      orderObjectIds,
+    });
     if (!referenceFilters.length) {
       return {
         byItem: new Map(),
@@ -279,7 +484,157 @@ const aggregateOrderFlowTables = async ({ fromDate, toDate, filters = {} }) => {
       ),
     };
   };
-  const buildProcessDamageLookup = async (orderItemObjectIds, orderObjectIds) => {
+  const buildDispatchedOrderMetricsLookup = async ({
+    orderItemIds = [],
+    orderIds = [],
+    orderItemObjectIds = [],
+    orderObjectIds = [],
+  } = {}) => {
+    const referenceFilters = buildIdReferenceFilters({
+      orderItemIds,
+      orderIds,
+      orderItemObjectIds,
+      orderObjectIds,
+    });
+    if (!referenceFilters.length) {
+      return {
+        byItem: new Map(),
+        byOrder: new Map(),
+        byOrderNoItem: new Map(),
+      };
+    }
+
+    const [lookup = {}] = await safeAggregate('dispatch_items', [
+      {
+        $match: referenceFilters.length === 1 ? referenceFilters[0] : { $or: referenceFilters },
+      },
+      {
+        $project: {
+          orderItemKey: {
+            $convert: {
+              input: '$order_item_id',
+              to: 'string',
+              onError: null,
+              onNull: null,
+            },
+          },
+          orderKey: {
+            $convert: {
+              input: '$order_id',
+              to: 'string',
+              onError: null,
+              onNull: null,
+            },
+          },
+          dispatchedSheets: { $ifNull: ['$no_of_sheets', 0] },
+          dispatchedCmt: { $ifNull: ['$cmt', { $ifNull: ['$cbm', 0] }] },
+          dispatchedQuantity: { $ifNull: ['$quantity', 0] },
+          orderNoKey: {
+            $trim: {
+              input: {
+                $toUpper: {
+                  $ifNull: ['$order_no', ''],
+                },
+              },
+            },
+          },
+          itemNameKey: {
+            $trim: {
+              input: {
+                $toUpper: {
+                  $ifNull: ['$item_name', { $ifNull: ['$sales_item_name', ''] }],
+                },
+              },
+            },
+          },
+        },
+      },
+      {
+        $facet: {
+          byItem: [
+            { $match: { orderItemKey: { $ne: null } } },
+            {
+              $group: {
+                _id: '$orderItemKey',
+                dispatchedSheets: { $sum: '$dispatchedSheets' },
+                dispatchedCmt: { $sum: '$dispatchedCmt' },
+                dispatchedQuantity: { $sum: '$dispatchedQuantity' },
+              },
+            },
+          ],
+          byOrder: [
+            { $match: { orderKey: { $ne: null } } },
+            {
+              $group: {
+                _id: '$orderKey',
+                dispatchedSheets: { $sum: '$dispatchedSheets' },
+                dispatchedCmt: { $sum: '$dispatchedCmt' },
+                dispatchedQuantity: { $sum: '$dispatchedQuantity' },
+              },
+            },
+          ],
+          byOrderNoItem: [
+            {
+              $match: {
+                orderNoKey: { $ne: '' },
+                itemNameKey: { $ne: '' },
+              },
+            },
+            {
+              $group: {
+                _id: {
+                  orderNoKey: '$orderNoKey',
+                  itemNameKey: '$itemNameKey',
+                },
+                dispatchedSheets: { $sum: '$dispatchedSheets' },
+                dispatchedCmt: { $sum: '$dispatchedCmt' },
+                dispatchedQuantity: { $sum: '$dispatchedQuantity' },
+              },
+            },
+          ],
+        },
+      },
+    ]);
+
+    return {
+      byItem: new Map(
+        (lookup?.byItem || []).map((row) => [
+          row._id,
+          {
+            dispatchedSheets: Number(row?.dispatchedSheets || 0),
+            dispatchedCmt: Number(row?.dispatchedCmt || 0),
+            dispatchedQuantity: Number(row?.dispatchedQuantity || 0),
+          },
+        ])
+      ),
+      byOrder: new Map(
+        (lookup?.byOrder || []).map((row) => [
+          row._id,
+          {
+            dispatchedSheets: Number(row?.dispatchedSheets || 0),
+            dispatchedCmt: Number(row?.dispatchedCmt || 0),
+            dispatchedQuantity: Number(row?.dispatchedQuantity || 0),
+          },
+        ])
+      ),
+      byOrderNoItem: new Map(
+        (lookup?.byOrderNoItem || []).map((row) => [
+          `${normalizeLookupKey(row?._id?.orderNoKey)}::${normalizeLookupKey(row?._id?.itemNameKey)}`,
+          {
+            dispatchedSheets: Number(row?.dispatchedSheets || 0),
+            dispatchedCmt: Number(row?.dispatchedCmt || 0),
+            dispatchedQuantity: Number(row?.dispatchedQuantity || 0),
+          },
+        ])
+      ),
+    };
+  };
+  const buildProcessDamageLookup = async ({
+    orderItemIds = [],
+    orderIds = [],
+    orderItemObjectIds = [],
+    orderObjectIds = [],
+  } = {}) => {
     const buildDamageLookup = async (
       collectionName,
       {
@@ -289,13 +644,14 @@ const aggregateOrderFlowTables = async ({ fromDate, toDate, filters = {} }) => {
         qtyExpr = { $ifNull: ['$no_of_sheets', 0] },
       } = {}
     ) => {
-      const referenceFilters = [];
-      if (orderItemObjectIds.length) {
-        referenceFilters.push({ orderItemId: { $in: orderItemObjectIds } });
-      }
-      if (orderObjectIds.length) {
-        referenceFilters.push({ orderId: { $in: orderObjectIds } });
-      }
+      const referenceFilters = buildIdReferenceFilters({
+        orderItemField: 'orderItemId',
+        orderField: 'orderId',
+        orderItemIds,
+        orderIds,
+        orderItemObjectIds,
+        orderObjectIds,
+      });
       if (!referenceFilters.length) {
         return {
           byItem: new Map(),
@@ -402,8 +758,37 @@ const aggregateOrderFlowTables = async ({ fromDate, toDate, filters = {} }) => {
       return merged;
     };
 
-    const [pressingDamageLookup, cncDamageLookup, colourDamageLookup] =
+    const [
+      tappingDamageLookup,
+      pressingDamageLookup,
+      cncDamageLookup,
+      colourDamageLookup,
+      bunitoDamageLookup,
+      canvasDamageLookup,
+      polishingDamageLookup,
+    ] =
       await Promise.all([
+        buildDamageLookup('issue_for_tapping_wastages', {
+          prePipeline: [
+            {
+              $lookup: {
+                from: 'issue_for_tappings',
+                localField: 'issue_for_tapping_item_id',
+                foreignField: '_id',
+                as: 'tappingIssue',
+              },
+            },
+            {
+              $unwind: {
+                path: '$tappingIssue',
+                preserveNullAndEmptyArrays: false,
+              },
+            },
+          ],
+          orderItemExpr: '$tappingIssue.order_item_id',
+          orderExpr: '$tappingIssue.order_id',
+          qtyExpr: { $ifNull: ['$no_of_sheets', 0] },
+        }),
         buildDamageLookup('pressing_damage', {
           prePipeline: [
             {
@@ -494,16 +879,124 @@ const aggregateOrderFlowTables = async ({ fromDate, toDate, filters = {} }) => {
           },
           orderExpr: '$colourIssue.order_id',
         }),
+        buildDamageLookup('bunito_damage_details', {
+          prePipeline: [
+            {
+              $lookup: {
+                from: 'bunito_done_details',
+                localField: 'bunito_done_id',
+                foreignField: '_id',
+                as: 'bunitoDone',
+              },
+            },
+            {
+              $unwind: {
+                path: '$bunitoDone',
+                preserveNullAndEmptyArrays: false,
+              },
+            },
+            {
+              $lookup: {
+                from: 'issued_for_bunito_details',
+                localField: 'bunitoDone.issue_for_bunito_id',
+                foreignField: '_id',
+                as: 'bunitoIssue',
+              },
+            },
+            {
+              $unwind: {
+                path: '$bunitoIssue',
+                preserveNullAndEmptyArrays: false,
+              },
+            },
+          ],
+          orderItemExpr: '$bunitoIssue.order_item_id',
+          orderExpr: '$bunitoIssue.order_id',
+        }),
+        buildDamageLookup('canvas_damage_details', {
+          prePipeline: [
+            {
+              $lookup: {
+                from: 'canvas_done_details',
+                localField: 'canvas_done_id',
+                foreignField: '_id',
+                as: 'canvasDone',
+              },
+            },
+            {
+              $unwind: {
+                path: '$canvasDone',
+                preserveNullAndEmptyArrays: false,
+              },
+            },
+            {
+              $lookup: {
+                from: 'issued_for_canvas_details',
+                localField: 'canvasDone.issue_for_canvas_id',
+                foreignField: '_id',
+                as: 'canvasIssue',
+              },
+            },
+            {
+              $unwind: {
+                path: '$canvasIssue',
+                preserveNullAndEmptyArrays: false,
+              },
+            },
+          ],
+          orderItemExpr: '$canvasIssue.order_item_id',
+          orderExpr: '$canvasIssue.order_id',
+        }),
+        buildDamageLookup('polishing_damage_details', {
+          prePipeline: [
+            {
+              $lookup: {
+                from: 'polishing_done_details',
+                localField: 'polishing_done_id',
+                foreignField: '_id',
+                as: 'polishingDone',
+              },
+            },
+            {
+              $unwind: {
+                path: '$polishingDone',
+                preserveNullAndEmptyArrays: false,
+              },
+            },
+            {
+              $lookup: {
+                from: 'issued_for_polishing_details',
+                localField: 'polishingDone.issue_for_polishing_id',
+                foreignField: '_id',
+                as: 'polishingIssue',
+              },
+            },
+            {
+              $unwind: {
+                path: '$polishingIssue',
+                preserveNullAndEmptyArrays: false,
+              },
+            },
+          ],
+          orderItemExpr: '$polishingIssue.order_item_id',
+          orderExpr: '$polishingIssue.order_id',
+        }),
       ]);
 
     return mergeLookupPayloads([
+      tappingDamageLookup,
       pressingDamageLookup,
       cncDamageLookup,
       colourDamageLookup,
+      bunitoDamageLookup,
+      canvasDamageLookup,
+      polishingDamageLookup,
     ]);
   };
   const resolveLookupPayload = (lookup, orderItemId, orderId) =>
     lookup.byItem.get(orderItemId) || lookup.byOrder.get(orderId) || null;
+  const resolveLookupPayloadByItem = (lookup, orderItemId) =>
+    lookup?.byItem?.get(orderItemId) || null;
 
   const customerMatch = buildContainsStringFieldFilter(filters.customer, [
     'order_details.owner_name',
@@ -577,9 +1070,32 @@ const aggregateOrderFlowTables = async ({ fromDate, toDate, filters = {} }) => {
               $ifNull: ['$cmt', { $ifNull: ['$cbm', 0] }],
             },
             qtySqm: { $ifNull: ['$sqm', 0] },
-            dispatchedSheets: { $ifNull: ['$dispatch_no_of_sheets', 0] },
+            dispatchedSheets: {
+              $ifNull: [
+                '$dispatch_no_of_sheets',
+                { $ifNull: ['$dispatch_no_of_sheet', 0] },
+              ],
+            },
             damageSheets: {
-              $ifNull: ['$damage_no_of_sheets', { $ifNull: ['$damage', 0] }],
+              $ifNull: [
+                '$damage_no_of_sheets',
+                {
+                  $ifNull: [
+                    '$damage_no_of_sheet',
+                    {
+                      $ifNull: [
+                        '$damage_sheets',
+                        {
+                          $ifNull: [
+                            '$no_of_damage_sheets',
+                            { $ifNull: ['$damage', 0] },
+                          ],
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
             },
             orderId: {
               $ifNull: ['$order_id', '$order_details._id'],
@@ -638,36 +1154,131 @@ const aggregateOrderFlowTables = async ({ fromDate, toDate, filters = {} }) => {
     });
   });
 
+  const orderItemIdList = [...orderItemIds];
+  const orderIdList = [...orderIds];
   const orderItemObjectIds = toObjectIds(orderItemIds);
   const orderObjectIds = toObjectIds(orderIds);
+  const lookupIds = {
+    orderItemIds: orderItemIdList,
+    orderIds: orderIdList,
+    orderItemObjectIds,
+    orderObjectIds,
+  };
   const [
     pressingIssueLookup,
     cncIssueLookup,
     colourIssueLookup,
+    pressingDoneHistoryLookup,
+    cncDoneHistoryLookup,
+    colourDoneHistoryLookup,
     issuedOrderLookup,
+    dispatchedOrderLookup,
     processDamageLookup,
   ] =
     await Promise.all([
       buildStageProcessLookup(
         'issues_for_pressings',
         { $ifNull: ['$no_of_sheets', 0] },
-        orderItemObjectIds,
-        orderObjectIds
+        lookupIds
       ),
       buildStageProcessLookup(
         'issued_for_cnc_details',
         { $ifNull: ['$issued_sheets', { $ifNull: ['$no_of_sheets', 0] }] },
-        orderItemObjectIds,
-        orderObjectIds
+        lookupIds
       ),
       buildStageProcessLookup(
         'issued_for_color_details',
         { $ifNull: ['$issued_sheets', { $ifNull: ['$no_of_sheets', 0] }] },
-        orderItemObjectIds,
-        orderObjectIds
+        lookupIds
       ),
-      buildIssuedOrderMetricsLookup(orderItemObjectIds, orderObjectIds),
-      buildProcessDamageLookup(orderItemObjectIds, orderObjectIds),
+      buildStageDoneHistoryLookup(
+        [
+          {
+            collection: 'pressing_done_details',
+            orderItemExpr: '$order_item_id',
+            orderExpr: '$order_id',
+            qtyExpr: { $ifNull: ['$no_of_sheets', 0] },
+          },
+          {
+            collection: 'pressing_done_history',
+            orderItemExpr: '$order_item_id',
+            orderExpr: '$order_id',
+            qtyExpr: { $ifNull: ['$no_of_sheets', 0] },
+          },
+        ],
+        lookupIds
+      ),
+      buildStageDoneHistoryLookup(
+        [
+          {
+            collection: 'cnc_done_details',
+            prePipeline: [
+              {
+                $lookup: {
+                  from: 'issued_for_cnc_details',
+                  localField: 'issue_for_cnc_id',
+                  foreignField: '_id',
+                  as: 'cncIssue',
+                },
+              },
+              {
+                $unwind: {
+                  path: '$cncIssue',
+                  preserveNullAndEmptyArrays: false,
+                },
+              },
+            ],
+            orderItemExpr: '$cncIssue.order_item_id',
+            orderExpr: '$cncIssue.order_id',
+            qtyExpr: { $ifNull: ['$no_of_sheets', 0] },
+          },
+          {
+            collection: 'cnc_history_details',
+            orderItemExpr: '$order_item_id',
+            orderExpr: '$order_id',
+            qtyExpr: { $ifNull: ['$no_of_sheets', 0] },
+          },
+        ],
+        lookupIds
+      ),
+      buildStageDoneHistoryLookup(
+        [
+          {
+            collection: 'color_done_details',
+            prePipeline: [
+              {
+                $lookup: {
+                  from: 'issued_for_color_details',
+                  localField: 'issue_for_color_id',
+                  foreignField: '_id',
+                  as: 'colourIssue',
+                },
+              },
+              {
+                $unwind: {
+                  path: '$colourIssue',
+                  preserveNullAndEmptyArrays: true,
+                },
+              },
+            ],
+            orderItemExpr: {
+              $ifNull: ['$order_item_id', '$colourIssue.order_item_id'],
+            },
+            orderExpr: '$colourIssue.order_id',
+            qtyExpr: { $ifNull: ['$no_of_sheets', 0] },
+          },
+          {
+            collection: 'color_history_details',
+            orderItemExpr: '$order_item_id',
+            orderExpr: '$order_id',
+            qtyExpr: { $ifNull: ['$no_of_sheets', 0] },
+          },
+        ],
+        lookupIds
+      ),
+      buildIssuedOrderMetricsLookup(lookupIds),
+      buildDispatchedOrderMetricsLookup(lookupIds),
+      buildProcessDamageLookup(lookupIds),
     ]);
 
   rowsByCollection.forEach(({ key, rows }) => {
@@ -676,6 +1287,7 @@ const aggregateOrderFlowTables = async ({ fromDate, toDate, filters = {} }) => {
       const orderId = normalizeId(row?.orderId);
       const rawMaterial = String(row?.rawMaterial || '').trim().toUpperCase();
       const isRaw = key === 'RAW';
+      const isDecorativeOrSeries = key === 'DECORATIVE' || key === 'SERIES';
       const isRawLogOrFlitch = isRaw && ['LOG', 'FLITCH'].includes(rawMaterial);
       const isRawStore = isRaw && ['STORE', 'OTHER_GOODS', 'OTHER GOODS'].includes(rawMaterial);
 
@@ -684,25 +1296,109 @@ const aggregateOrderFlowTables = async ({ fromDate, toDate, filters = {} }) => {
         orderItemId,
         orderId
       );
-      const pressingStage = resolveLookupPayload(pressingIssueLookup, orderItemId, orderId);
-      const cncStage = resolveLookupPayload(cncIssueLookup, orderItemId, orderId);
-      const colourStage = resolveLookupPayload(colourIssueLookup, orderItemId, orderId);
+      const issuedOrderMetricsByItem = resolveLookupPayloadByItem(
+        issuedOrderLookup,
+        orderItemId
+      );
+      const dispatchedOrderMetrics = resolveLookupPayloadByItem(
+        dispatchedOrderLookup,
+        orderItemId
+      );
+      const dispatchedByOrderNoItem =
+        dispatchedOrderLookup?.byOrderNoItem?.get(
+          `${normalizeLookupKey(row?.orderNo)}::${normalizeLookupKey(row?.itemName)}`
+        ) || null;
+      const pressingStageForDispatch = resolveLookupPayload(
+        pressingIssueLookup,
+        orderItemId,
+        orderId
+      );
+      const cncStageForDispatch = resolveLookupPayload(
+        cncIssueLookup,
+        orderItemId,
+        orderId
+      );
+      const colourStageForDispatch = resolveLookupPayload(
+        colourIssueLookup,
+        orderItemId,
+        orderId
+      );
+      const pressingStage = resolveLookupPayload(
+        pressingDoneHistoryLookup,
+        orderItemId,
+        orderId
+      );
+      const cncStage = resolveLookupPayload(
+        cncDoneHistoryLookup,
+        orderItemId,
+        orderId
+      );
+      const colourStage = resolveLookupPayload(
+        colourDoneHistoryLookup,
+        orderItemId,
+        orderId
+      );
       const processDamage = resolveLookupPayload(processDamageLookup, orderItemId, orderId);
 
       const sheetsOrdered = round2(row?.sheetsOrdered || 0);
       const orderedCmt = round2(row?.orderedCmt || 0);
       const orderedQuantity = round2(row?.orderedQuantity || 0);
 
-      const dispatchedSheets = round2(
-        issuedOrderMetrics?.issuedSheets || row?.dispatchedSheets || 0
+      const stageIssuedSheets = Math.max(
+        Number(pressingStageForDispatch?.issuedQty || 0),
+        Number(cncStageForDispatch?.issuedQty || 0),
+        Number(colourStageForDispatch?.issuedQty || 0)
       );
-      const dispatchedCmt = round2(issuedOrderMetrics?.issuedCmt || 0);
-      const dispatchedQuantity = round2(issuedOrderMetrics?.issuedQuantity || 0);
+      const dispatchSheetsFromDispatchRecords = Math.max(
+        Number(dispatchedByOrderNoItem?.dispatchedSheets || 0),
+        Number(dispatchedOrderMetrics?.dispatchedSheets || 0),
+        Number(row?.dispatchedSheets || 0)
+      );
+      const dispatchSheetsFromFallbackIssued = Math.max(
+        Number(issuedOrderMetricsByItem?.issuedSheets || 0),
+        Number(issuedOrderMetrics?.issuedSheets || 0),
+        Number(stageIssuedSheets || 0)
+      );
+      const dispatchSheetsCandidate = isDecorativeOrSeries
+        ? dispatchSheetsFromDispatchRecords
+        : Math.max(dispatchSheetsFromDispatchRecords, dispatchSheetsFromFallbackIssued);
+      const dispatchedSheets = round2(
+        Math.min(
+          Number(sheetsOrdered || 0),
+          Number(dispatchSheetsCandidate || 0)
+        )
+      );
+      const dispatchedCmt = round2(
+        Math.min(
+          Number(orderedCmt || 0),
+          Math.max(
+            Number(dispatchedByOrderNoItem?.dispatchedCmt || 0),
+            Number(dispatchedOrderMetrics?.dispatchedCmt || 0),
+            Number(issuedOrderMetricsByItem?.issuedCmt || 0),
+            Number(issuedOrderMetrics?.issuedCmt || 0)
+          )
+        )
+      );
+      const dispatchedQuantity = round2(
+        Math.min(
+          Number(orderedQuantity || 0),
+          Math.max(
+            Number(dispatchedByOrderNoItem?.dispatchedQuantity || 0),
+            Number(dispatchedOrderMetrics?.dispatchedQuantity || 0),
+            Number(issuedOrderMetricsByItem?.issuedQuantity || 0),
+            Number(issuedOrderMetrics?.issuedQuantity || 0)
+          )
+        )
+      );
 
       const itemLevelDamageSheets = round2(row?.damageSheets || 0);
       const processDamageSheets = round2(processDamage?.damageQty || 0);
       const damageSheets = round2(
-        Math.max(itemLevelDamageSheets, processDamageSheets)
+        isDecorativeOrSeries
+          ? processDamageSheets > 0
+            ? processDamageSheets
+            : itemLevelDamageSheets
+          : itemLevelDamageSheets
       );
 
       const orderedDisplay = isRawLogOrFlitch
@@ -710,28 +1406,26 @@ const aggregateOrderFlowTables = async ({ fromDate, toDate, filters = {} }) => {
         : isRawStore
           ? orderedQuantity
           : sheetsOrdered;
-      const dispatchedDisplay = isRawLogOrFlitch
+      const dispatchedDisplayBase = isRawLogOrFlitch
         ? dispatchedCmt
         : isRawStore
           ? dispatchedQuantity
           : dispatchedSheets;
-      const damageDisplay = isRaw ? 0 : damageSheets;
-      const balance = round2(
-        Math.max(orderedDisplay - dispatchedDisplay - damageDisplay, 0)
+      const damageDisplay = damageSheets;
+      const dispatchedDisplay = round2(
+        Math.min(Number(dispatchedDisplayBase || 0), Number(orderedDisplay || 0))
       );
+      const balance = round2(Math.max(orderedDisplay - dispatchedDisplay, 0));
+      const resolveStageDisplayQty = (stagePayload) => {
+        if (isRaw) return null;
+        const doneQty = round2(stagePayload?.stageQty || 0);
+        return doneQty > 0 ? doneQty : 0;
+      };
 
       const priority = normalizeOrderPriorityLabel(row?.priorityRaw);
-      const rawStatus = String(row?.statusRaw || '').trim();
-      const status = rawStatus
-        ? rawStatus
-            .toLowerCase()
-            .split(/[\s_]+/)
-            .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-            .join(' ')
-        : orderedDisplay > 0
-          ? balance > 0
-            ? 'Pending'
-            : 'Completed'
+      const status =
+        Math.abs(Number(orderedDisplay || 0) - Number(dispatchedDisplay || 0)) <= 0.01
+          ? 'Completed'
           : 'Pending';
 
       return {
@@ -756,14 +1450,14 @@ const aggregateOrderFlowTables = async ({ fromDate, toDate, filters = {} }) => {
         balance,
         priority,
         pressing:
-          isRaw ? null : round2(pressingStage?.issuedQty || 0),
+          resolveStageDisplayQty(pressingStage),
         cnc:
-          isRaw ? null : round2(cncStage?.issuedQty || 0),
+          resolveStageDisplayQty(cncStage),
         colour:
-          isRaw ? null : round2(colourStage?.issuedQty || 0),
-        pressingDate: pressingStage?.issueDate || null,
-        cncDate: cncStage?.issueDate || null,
-        colourDate: colourStage?.issueDate || null,
+          resolveStageDisplayQty(colourStage),
+        pressingDate: pressingStageForDispatch?.issueDate || null,
+        cncDate: cncStageForDispatch?.issueDate || null,
+        colourDate: colourStageForDispatch?.issueDate || null,
         status,
       };
     });
@@ -779,8 +1473,9 @@ const aggregateOrderFlowTables = async ({ fromDate, toDate, filters = {} }) => {
     .slice(0, 500)
     .map((row) => {
       const pressingDate = asDate(row?.pressingDate);
+      const scheduleBalanceSheets = round2(row?.balance || 0);
       const computedStatus =
-        Number(row?.balance || 0) <= 0
+        Number(scheduleBalanceSheets || 0) <= 0
           ? 'Completed'
           : pressingDate && pressingDate < todayStart
             ? 'Overdue'
@@ -795,7 +1490,7 @@ const aggregateOrderFlowTables = async ({ fromDate, toDate, filters = {} }) => {
         pressingScheduleDate: row?.pressingDate || null,
         cncScheduleDate: row?.cncDate || null,
         colourScheduleDate: row?.colourDate || null,
-        balanceSheets: round2(row?.balance || 0),
+        balanceSheets: scheduleBalanceSheets,
         status: computedStatus,
       };
     });

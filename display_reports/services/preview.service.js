@@ -60,8 +60,54 @@ const normalizeCellValue = (rawValue, textValue) => {
   return normalizeTextValue(rawValue);
 };
 
+const buildMergeLookup = (worksheet) => {
+  const lookup = new Map();
+  const merges = worksheet?.model?.merges || [];
+
+  merges.forEach((mergeRef) => {
+    const range = parseRange(mergeRef);
+    if (!range) return;
+
+    for (let row = range.startRow; row <= range.endRow; row += 1) {
+      for (let col = range.startCol; col <= range.endCol; col += 1) {
+        lookup.set(`${row}:${col}`, {
+          startRow: range.startRow,
+          startCol: range.startCol,
+          isTopLeft: row === range.startRow && col === range.startCol,
+        });
+      }
+    }
+  });
+
+  return lookup;
+};
+
+const getMergeLookup = (worksheet) => {
+  if (!worksheet) return new Map();
+
+  if (!worksheet.__previewMergeLookup) {
+    worksheet.__previewMergeLookup = buildMergeLookup(worksheet);
+  }
+
+  return worksheet.__previewMergeLookup;
+};
+
 const getCellDisplayValue = (worksheet, row, col) => {
   const cell = worksheet.getRow(row).getCell(col);
+  const mergeLookup = getMergeLookup(worksheet);
+  const mergedCellInfo = mergeLookup.get(`${row}:${col}`);
+
+  if (mergedCellInfo && !mergedCellInfo.isTopLeft) {
+    // For vertical merges, replicate the master value in each row.
+    // For horizontal merges, keep subordinate cells blank.
+    if (mergedCellInfo.startCol === col) {
+      const masterCell = worksheet
+        .getRow(mergedCellInfo.startRow)
+        .getCell(mergedCellInfo.startCol);
+      return normalizeCellValue(masterCell.value, masterCell.text);
+    }
+    return '';
+  }
 
   if (cell.master) {
     const isMasterCell = String(cell.address || '') === String(cell.master.address || '');
@@ -476,6 +522,29 @@ const extractHeaderGroups = ({ worksheet, headerRowIndex, keepColumns }) => {
   return groups;
 };
 
+const isDuplicateHeaderDataRow = ({ rowEntry, keepColumns, originalHeaders }) => {
+  const rowValues = rowEntry?.values || {};
+  const normalizedHeaderValues = keepColumns.map((column) =>
+    normalizeTextValue(originalHeaders[column - 1])
+  );
+
+  let nonEmptyCellCount = 0;
+  let headerMatchCount = 0;
+
+  keepColumns.forEach((column, index) => {
+    const cellValue = normalizeTextValue(rowValues[`c${column}`]);
+    if (!cellValue) return;
+
+    nonEmptyCellCount += 1;
+    const headerValue = normalizeTextValue(normalizedHeaderValues[index]);
+    if (headerValue && cellValue.toLowerCase() === headerValue.toLowerCase()) {
+      headerMatchCount += 1;
+    }
+  });
+
+  return nonEmptyCellCount >= 2 && headerMatchCount === nonEmptyCellCount;
+};
+
 export const buildPreviewFromWorkbook = async (filePath) => {
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.readFile(filePath);
@@ -574,7 +643,17 @@ export const buildPreviewFromWorkbook = async (filePath) => {
     };
   });
 
-  const rows = [...originalRows]
+  const filteredOriginalRows = [...originalRows]
+    .filter(
+      (rowEntry) =>
+        !isDuplicateHeaderDataRow({
+          rowEntry,
+          keepColumns: normalizedKeepColumns,
+          originalHeaders,
+        })
+    );
+
+  const rows = [...filteredOriginalRows]
     .sort((left, right) => left.excelRowIndex - right.excelRowIndex)
     .map((rowEntry) => {
       const row = rowEntry?.values || {};

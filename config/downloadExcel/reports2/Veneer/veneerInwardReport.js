@@ -111,18 +111,18 @@ export const createVeneerInwardReportExcel = async (
 
     // Header row 2: sub-column labels under Smoking and Grouping
     const headerRow2 = worksheet.addRow([
-      'Item Name',
-      'Opening',
-      'Purchase',
-      'Issue Total',
+      '',
+      '',
+      '',
+      '',
       'Issue to Smoke',
       'Smoke Done',
       'Issue to group',
       'Issue to group Done',
-      'Sales',
-      'Job Work Challan',
-      'Damage',
-      'Closing',
+      '',
+      '',
+      '',
+      '',
     ]);
     headerRow2.font = { bold: true };
     headerRow2.alignment = { vertical: 'middle', horizontal: 'center' };

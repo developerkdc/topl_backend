@@ -540,6 +540,7 @@ const aggregateInventorySubModuleCards = async ({
   supplierMatches = new Map(),
 }) => {
   const contextualMatch = buildInventoryContextMatch(filters);
+  const stockSnapshotDate = dayEnd(new Date());
 
   const cards = await Promise.all(
     sources.map(async (source) => {
@@ -586,7 +587,11 @@ const aggregateInventorySubModuleCards = async ({
             },
           },
           {
-            $match: dateMatch('effective_inventory_date', fromDate, toDate),
+            $match: {
+              effective_inventory_date: {
+                $lte: stockSnapshotDate,
+              },
+            },
           },
           {
             $group: {
