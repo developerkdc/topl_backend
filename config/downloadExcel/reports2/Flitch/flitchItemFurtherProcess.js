@@ -106,6 +106,8 @@ export const createFlitchItemFurtherProcessReportExcel = async (
     };
 
     const numFmt = '#,##0.000';
+    const balanceNumFmt = '#,##0.00';
+    const BALANCE_NUMERIC_COLS = new Set([8, 22, 23, 29, 30, 36, 37]);
 
     const headerFill = {
       type: 'pattern',
@@ -260,8 +262,8 @@ export const createFlitchItemFurtherProcessReportExcel = async (
       'Balance (Sheets)',                   // 36
       'Balance (Sq. Mtr.)',                // 37
       'Cnc Type',                           // 38
-      'REC (Sheets)',                       // 39
-      'REC (Sheets)',                       // 40
+      'CNC Rec (Sheets)',                   // 39
+      'Colour Rec (Sheets)',                // 40
       'Sales (CBM / SQM)',                  // 41
     ];
 
@@ -351,7 +353,8 @@ export const createFlitchItemFurtherProcessReportExcel = async (
       NUMERIC_COLS.forEach((colIdx1) => {
         const key = `c${colIdx1}`;
         if (totals[key] != null) {
-          cells[colIdx1 - 1] = parseFloat(totals[key].toFixed(3));
+          const precision = BALANCE_NUMERIC_COLS.has(colIdx1) ? 2 : 3;
+          cells[colIdx1 - 1] = parseFloat(totals[key].toFixed(precision));
         }
       });
       const wsRow = ws.addRow(cells);
@@ -361,7 +364,9 @@ export const createFlitchItemFurtherProcessReportExcel = async (
           bold: true,
           fill,
           align: NUMERIC_COLS.has(colNum) ? 'right' : 'left',
-          numFmt: NUMERIC_COLS.has(colNum) ? numFmt : undefined,
+          numFmt: NUMERIC_COLS.has(colNum)
+            ? (BALANCE_NUMERIC_COLS.has(colNum) ? balanceNumFmt : numFmt)
+            : undefined,
         });
       });
       const isGrandTotal = label[0] === 'Total' && label[1] === '';
@@ -433,7 +438,9 @@ export const createFlitchItemFurtherProcessReportExcel = async (
           wsRow.eachCell({ includeEmpty: true }, (cell, colNum) => {
             styleCell(cell, {
               align: NUMERIC_COLS.has(colNum) ? 'right' : 'left',
-              numFmt: NUMERIC_COLS.has(colNum) ? numFmt : undefined,
+              numFmt: NUMERIC_COLS.has(colNum)
+                ? (BALANCE_NUMERIC_COLS.has(colNum) ? balanceNumFmt : numFmt)
+                : undefined,
               borderType: 'data',
             });
           });

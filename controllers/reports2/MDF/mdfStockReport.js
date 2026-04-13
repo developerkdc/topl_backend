@@ -19,6 +19,9 @@ const roundStock = (v, decimals = 4) => {
   return Math.abs(rounded) < 1e-10 ? 0 : rounded;
 };
 
+/** MDF report metre/SQM precision is fixed to 2 decimals. */
+const roundMetricValue = (v) => roundStock(v, 2);
+
 /**
  * MDF Stock Report – Excel download.
  * Uses startDate, endDate and optional filter (item_sub_category_name).
@@ -187,19 +190,19 @@ export const mdfStockReportCsv = catchAsync(async (req, res, next) => {
           thickness,
           size: `${length} X ${width}`,
           opening_sheets: Math.max(0, roundStock(openingSheets, 0)),
-          opening_sqm: Math.max(0, roundStock(openingSqm)),
+          opening_sqm: Math.max(0, roundMetricValue(openingSqm)),
           receive_sheets: receiveSheets,
-          receive_sqm: receiveSqm,
+          receive_sqm: roundMetricValue(receiveSqm),
           consume_sheets: consumeSheets,
-          consume_sqm: consumeSqm,
+          consume_sqm: roundMetricValue(consumeSqm),
           challan_sheets: challanSheets,
-          challan_sqm: challanSqm,
+          challan_sqm: roundMetricValue(challanSqm),
           order_sheets: orderSheets,
-          order_sqm: orderSqm,
+          order_sqm: roundMetricValue(orderSqm),
           issue_pressing_sheets: issuePressingSheets,
-          issue_pressing_sqm: issuePressingSqm,
+          issue_pressing_sqm: roundMetricValue(issuePressingSqm),
           closing_sheets: Math.max(0, roundStock(closingSheets, 0)),
-          closing_sqm: Math.max(0, roundStock(closingSqm)),
+          closing_sqm: Math.max(0, roundMetricValue(closingSqm)),
         };
       })
     );
@@ -406,19 +409,19 @@ export const mdfItemWiseStockReportCsv = catchAsync(async (req, res, next) => {
           thickness,
           size: `${length} X ${width}`,
           opening_sheets: Math.max(0, roundStock(openingSheets, 0)),
-          opening_sqm: Math.max(0, roundStock(openingSqm)),
+          opening_sqm: Math.max(0, roundMetricValue(openingSqm)),
           receive_sheets: receiveSheets,
-          receive_sqm: receiveSqm,
+          receive_sqm: roundMetricValue(receiveSqm),
           consume_sheets: consumeSheets,
-          consume_sqm: consumeSqm,
+          consume_sqm: roundMetricValue(consumeSqm),
           challan_sheets: challanSheets,
-          challan_sqm: challanSqm,
+          challan_sqm: roundMetricValue(challanSqm),
           order_sheets: orderSheets,
-          order_sqm: orderSqm,
+          order_sqm: roundMetricValue(orderSqm),
           issue_pressing_sheets: issuePressingSheets,
-          issue_pressing_sqm: issuePressingSqm,
+          issue_pressing_sqm: roundMetricValue(issuePressingSqm),
           closing_sheets: Math.max(0, roundStock(closingSheets, 0)),
-          closing_sqm: Math.max(0, roundStock(closingSqm)),
+          closing_sqm: Math.max(0, roundMetricValue(closingSqm)),
         };
       })
     );
@@ -610,19 +613,19 @@ export const mdfStockReportByPelletCsv = catchAsync(async (req, res, next) => {
           thickness: item.thickness,
           size: `${item.length} X ${item.width}`,
           opening_sheets: Math.max(0, roundStock(openingSheets, 0)),
-          opening_sqm: Math.max(0, roundStock(openingSqm)),
+          opening_sqm: Math.max(0, roundMetricValue(openingSqm)),
           receive_sheets: receiveSheets,
-          receive_sqm: receiveSqm,
+          receive_sqm: roundMetricValue(receiveSqm),
           consume_sheets: consumeSheets,
-          consume_sqm: consumeSqm,
+          consume_sqm: roundMetricValue(consumeSqm),
           challan_sheets: challanSheets,
-          challan_sqm: challanSqm,
+          challan_sqm: roundMetricValue(challanSqm),
           order_sheets: orderSheets,
-          order_sqm: orderSqm,
+          order_sqm: roundMetricValue(orderSqm),
           issue_pressing_sheets: issuePressingSheets,
-          issue_pressing_sqm: issuePressingSqm,
+          issue_pressing_sqm: roundMetricValue(issuePressingSqm),
           closing_sheets: Math.max(0, roundStock(closingSheets, 0)),
-          closing_sqm: Math.max(0, roundStock(closingSqm)),
+          closing_sqm: Math.max(0, roundMetricValue(closingSqm)),
         };
       })
     );

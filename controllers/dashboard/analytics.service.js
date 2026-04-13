@@ -646,7 +646,7 @@ const YIELD_STAGES = [
       },
     ],
     issuedQtyExpr: {
-      $ifNull: ['$available_quantity.physical_cmt', { $ifNull: ['$physical_cmt', 0] }],
+      $ifNull: ['$physical_cmt', { $ifNull: ['$available_quantity.physical_cmt', 0] }],
     },
     doneCollection: 'crosscutting_dones',
     doneDateField: 'worker_details.crosscut_date',
@@ -657,11 +657,31 @@ const YIELD_STAGES = [
     stage: 'FLITCHING',
     issueCollection: 'issues_for_flitchings',
     issueDateField: 'createdAt',
-    issuedQtyExpr: { $ifNull: ['$available_quantity.cmt', { $ifNull: ['$cmt', 0] }] },
+    issuedQtyExpr: { $ifNull: ['$cmt', { $ifNull: ['$available_quantity.cmt', 0] }] },
     doneCollection: 'flitchings',
-    doneDateField: 'createdAt',
+    doneDateField: 'worker_details.flitching_date',
     doneQtyExpr: { $ifNull: ['$flitch_cmt', 0] },
     unit: 'cmt',
+  },
+  {
+    stage: 'SLICING',
+    issueCollection: 'issued_for_slicings',
+    issueDateField: 'createdAt',
+    issuedQtyExpr: { $ifNull: ['$cmt', 0] },
+    doneCollection: 'slicing_done_other_details',
+    doneDateField: 'slicing_date',
+    doneQtyExpr: { $ifNull: ['$total_cmt', 0] },
+    unit: 'cmt',
+  },
+  {
+    stage: 'PEELING',
+    issueCollection: 'issues_for_peelings',
+    issueDateField: 'createdAt',
+    issuedQtyExpr: { $ifNull: ['$cmt', 0] },
+    doneCollection: 'peeling_done_other_details',
+    doneDateField: 'peeling_date',
+    doneQtyExpr: { $ifNull: ['$total_cmt', 0] },
+    unit: 'sqm',
   },
   {
     stage: 'GROUPING',
@@ -713,18 +733,16 @@ const YIELD_STAGES = [
     stage: 'DRESSING',
     issueCollection: 'issue_for_dressing',
     issueDateField: 'createdAt',
-    issuedQtyExpr: {
-      $ifNull: ['$sqm', { $ifNull: ['$available_details.sqm', { $ifNull: ['$no_of_leaves', 0] }] }],
-    },
+    issuedQtyExpr: { $ifNull: ['$sqm', 0] },
     doneCollection: 'dressing_done_items',
     doneDateField: 'createdAt',
-    doneQtyExpr: { $ifNull: ['$sqm', { $ifNull: ['$no_of_leaves', 0] }] },
+    doneQtyExpr: { $ifNull: ['$sqm', 0] },
     doneSources: [
       {
         collection: 'dressing_done_items',
         dateField: 'createdAt',
         baseMatch: { issue_status: null },
-        qtyExpr: { $ifNull: ['$sqm', { $ifNull: ['$no_of_leaves', 0] }] },
+        qtyExpr: { $ifNull: ['$sqm', 0] },
       },
       {
         collection: 'dressing_done_history',
@@ -745,12 +763,7 @@ const YIELD_STAGES = [
             },
           },
         ],
-        qtyExpr: {
-          $ifNull: [
-            '$bundle_details.sqm',
-            { $ifNull: ['$bundle_details.no_of_leaves', 0] },
-          ],
-        },
+        qtyExpr: { $ifNull: ['$bundle_details.sqm', 0] },
       },
     ],
     unit: 'sqm',
@@ -759,16 +772,16 @@ const YIELD_STAGES = [
     stage: 'SMOKING_DYING',
     issueCollection: 'issues_for_smoking_dyings',
     issueDateField: 'createdAt',
-    issuedQtyExpr: { $ifNull: ['$sqm', { $ifNull: ['$no_of_leaves', 0] }] },
+    issuedQtyExpr: { $ifNull: ['$sqm', 0] },
     doneCollection: 'process_done_items_details',
     doneDateField: 'createdAt',
-    doneQtyExpr: { $ifNull: ['$sqm', { $ifNull: ['$no_of_leaves', 0] }] },
+    doneQtyExpr: { $ifNull: ['$sqm', 0] },
     doneSources: [
       {
         collection: 'process_done_items_details',
         dateField: 'createdAt',
         baseMatch: { issue_status: null },
-        qtyExpr: { $ifNull: ['$sqm', { $ifNull: ['$no_of_leaves', 0] }] },
+        qtyExpr: { $ifNull: ['$sqm', 0] },
       },
       {
         collection: 'process_done_history',
@@ -789,12 +802,7 @@ const YIELD_STAGES = [
             },
           },
         ],
-        qtyExpr: {
-          $ifNull: [
-            '$bundle_details.sqm',
-            { $ifNull: ['$bundle_details.no_of_leaves', 0] },
-          ],
-        },
+        qtyExpr: { $ifNull: ['$bundle_details.sqm', 0] },
       },
     ],
     unit: 'sqm',
@@ -829,13 +837,13 @@ const YIELD_STAGES = [
     issuedQtyExpr: { $ifNull: ['$total_sq_meter', { $ifNull: ['$available_sqm', 0] }] },
     doneCollection: 'plywood_production',
     doneDateField: 'createdAt',
-    doneQtyExpr: { $ifNull: ['$total_sqm', { $ifNull: ['$available_total_sqm', 0] }] },
+    doneQtyExpr: { $ifNull: ['$total_sqm', 0] },
     doneSources: [
       {
         collection: 'plywood_production',
         dateField: 'createdAt',
         baseMatch: { issue_status: null },
-        qtyExpr: { $ifNull: ['$total_sqm', { $ifNull: ['$available_total_sqm', 0] }] },
+        qtyExpr: { $ifNull: ['$total_sqm', 0] },
       },
       {
         collection: 'plywood_production_history_details',
@@ -849,16 +857,16 @@ const YIELD_STAGES = [
     stage: 'PRESSING',
     issueCollection: 'issues_for_pressings',
     issueDateField: 'createdAt',
-    issuedQtyExpr: { $ifNull: ['$sqm', { $ifNull: ['$available_details.sqm', 0] }] },
+    issuedQtyExpr: { $ifNull: ['$sqm', 0] },
     doneCollection: 'pressing_done_details',
     doneDateField: 'createdAt',
-    doneQtyExpr: { $ifNull: ['$sqm', { $ifNull: ['$available_details.sqm', 0] }] },
+    doneQtyExpr: { $ifNull: ['$sqm', 0] },
     doneSources: [
       {
         collection: 'pressing_done_details',
         dateField: 'createdAt',
         baseMatch: { issue_status: null },
-        qtyExpr: { $ifNull: ['$sqm', { $ifNull: ['$available_details.sqm', 0] }] },
+        qtyExpr: { $ifNull: ['$sqm', 0] },
       },
       {
         collection: 'pressing_done_history',
@@ -872,7 +880,7 @@ const YIELD_STAGES = [
     stage: 'CNC',
     issueCollection: 'issued_for_cnc_details',
     issueDateField: 'createdAt',
-    issuedQtyExpr: { $ifNull: ['$issued_sqm', { $ifNull: ['$sqm', 0] }] },
+    issuedQtyExpr: { $ifNull: ['$issued_sqm', 0] },
     doneCollection: 'cnc_done_details',
     doneDateField: 'createdAt',
     doneQtyExpr: { $ifNull: ['$sqm', 0] },
@@ -895,7 +903,7 @@ const YIELD_STAGES = [
     stage: 'COLOUR',
     issueCollection: 'issued_for_color_details',
     issueDateField: 'createdAt',
-    issuedQtyExpr: { $ifNull: ['$issued_sqm', { $ifNull: ['$sqm', 0] }] },
+    issuedQtyExpr: { $ifNull: ['$issued_sqm', 0] },
     doneCollection: 'color_done_details',
     doneDateField: 'createdAt',
     doneQtyExpr: { $ifNull: ['$sqm', 0] },
@@ -918,7 +926,7 @@ const YIELD_STAGES = [
     stage: 'BUNITO',
     issueCollection: 'issued_for_bunito_details',
     issueDateField: 'createdAt',
-    issuedQtyExpr: { $ifNull: ['$issued_sqm', { $ifNull: ['$sqm', 0] }] },
+    issuedQtyExpr: { $ifNull: ['$issued_sqm', 0] },
     doneCollection: 'bunito_done_details',
     doneDateField: 'createdAt',
     doneQtyExpr: { $ifNull: ['$sqm', 0] },
@@ -941,7 +949,7 @@ const YIELD_STAGES = [
     stage: 'CANVAS',
     issueCollection: 'issued_for_canvas_details',
     issueDateField: 'createdAt',
-    issuedQtyExpr: { $ifNull: ['$issued_sqm', { $ifNull: ['$sqm', 0] }] },
+    issuedQtyExpr: { $ifNull: ['$issued_sqm', 0] },
     doneCollection: 'canvas_done_details',
     doneDateField: 'createdAt',
     doneQtyExpr: { $ifNull: ['$sqm', 0] },
@@ -967,13 +975,13 @@ const YIELD_STAGES = [
     issuedQtyExpr: { $ifNull: ['$issued_sqm', 0] },
     doneCollection: 'polishing_done_details',
     doneDateField: 'createdAt',
-    doneQtyExpr: { $ifNull: ['$sqm', { $ifNull: ['$available_details.sqm', 0] }] },
+    doneQtyExpr: { $ifNull: ['$sqm', 0] },
     doneSources: [
       {
         collection: 'polishing_done_details',
         dateField: 'createdAt',
         baseMatch: { issue_status: null },
-        qtyExpr: { $ifNull: ['$sqm', { $ifNull: ['$available_details.sqm', 0] }] },
+        qtyExpr: { $ifNull: ['$sqm', 0] },
       },
       {
         collection: 'polishing_history_details',
@@ -1016,7 +1024,7 @@ const DAMAGE_WASTAGE_STAGES = [
       },
     ],
     issuedQtyExpr: {
-      $ifNull: ['$available_quantity.physical_cmt', { $ifNull: ['$physical_cmt', 0] }],
+      $ifNull: ['$physical_cmt', { $ifNull: ['$available_quantity.physical_cmt', 0] }],
     },
     unit: 'cmt',
   },
@@ -1046,7 +1054,7 @@ const DAMAGE_WASTAGE_STAGES = [
       },
     ],
     issuedQtyExpr: {
-      $ifNull: ['$available_quantity.physical_cmt', { $ifNull: ['$physical_cmt', 0] }],
+      $ifNull: ['$physical_cmt', { $ifNull: ['$available_quantity.physical_cmt', 0] }],
     },
     unit: 'cmt',
   },
@@ -1054,15 +1062,18 @@ const DAMAGE_WASTAGE_STAGES = [
     stage: 'FLITCHING',
     metricType: 'WASTAGE',
     damageCollection: 'flitchings',
-    damageDateField: 'createdAt',
-    damageQtyExpr: { $ifNull: ['$wastage_info.wastage_sqm', 0] },
+    damageDateField: 'worker_details.flitching_date',
+    damageQtyExpr: {
+      $multiply: [
+        { $ifNull: ['$wastage_info.wastage_sqm', 0] },
+        { $ifNull: ['$sqm_factor', 1] },
+      ],
+    },
     damageAmountExpr: 0,
     issuedCollection: 'issues_for_flitchings',
     issuedDateField: 'createdAt',
-    issuedQtyExpr: {
-      $multiply: [{ $ifNull: ['$cmt', 0] }, { $ifNull: ['$sqm_factor', 0] }],
-    },
-    unit: 'sqm',
+    issuedQtyExpr: { $ifNull: ['$cmt', { $ifNull: ['$available_quantity.cmt', 0] }] },
+    unit: 'cmt',
   },
   {
     stage: 'PEELING',
@@ -1076,7 +1087,7 @@ const DAMAGE_WASTAGE_STAGES = [
     issuedCollection: 'issues_for_peelings',
     issuedDateField: 'createdAt',
     issuedQtyExpr: { $ifNull: ['$cmt', 0] },
-    unit: 'cmt',
+    unit: 'sqm',
   },
   {
     stage: 'SLICING',
@@ -1098,7 +1109,7 @@ const DAMAGE_WASTAGE_STAGES = [
     damageCollection: 'grouping_done_items_details',
     damageDateField: 'updatedAt',
     damageBaseMatch: { is_damaged: true },
-    damageQtyExpr: { $ifNull: ['$sqm', { $ifNull: ['$available_details.sqm', 0] }] },
+    damageQtyExpr: { $ifNull: ['$sqm', 0] },
     damageAmountExpr: { $ifNull: ['$amount', 0] },
     issuedCollection: 'issues_for_groupings',
     issuedDateField: 'createdAt',
@@ -1126,7 +1137,7 @@ const DAMAGE_WASTAGE_STAGES = [
     damageAmountExpr: { $ifNull: ['$amount', 0] },
     issuedCollection: 'issues_for_pressings',
     issuedDateField: 'createdAt',
-    issuedQtyExpr: { $ifNull: ['$sqm', { $ifNull: ['$available_details.sqm', 0] }] },
+    issuedQtyExpr: { $ifNull: ['$sqm', 0] },
     unit: 'sqm',
   },
   {
@@ -1138,7 +1149,7 @@ const DAMAGE_WASTAGE_STAGES = [
     damageAmountExpr: { $ifNull: ['$amount', 0] },
     issuedCollection: 'issued_for_cnc_details',
     issuedDateField: 'createdAt',
-    issuedQtyExpr: { $ifNull: ['$issued_sqm', { $ifNull: ['$sqm', 0] }] },
+    issuedQtyExpr: { $ifNull: ['$issued_sqm', 0] },
     unit: 'sqm',
   },
   {
@@ -1150,7 +1161,7 @@ const DAMAGE_WASTAGE_STAGES = [
     damageAmountExpr: { $ifNull: ['$amount', 0] },
     issuedCollection: 'issued_for_color_details',
     issuedDateField: 'createdAt',
-    issuedQtyExpr: { $ifNull: ['$issued_sqm', { $ifNull: ['$sqm', 0] }] },
+    issuedQtyExpr: { $ifNull: ['$issued_sqm', 0] },
     unit: 'sqm',
   },
   {
@@ -1162,7 +1173,7 @@ const DAMAGE_WASTAGE_STAGES = [
     damageAmountExpr: { $ifNull: ['$amount', 0] },
     issuedCollection: 'issued_for_bunito_details',
     issuedDateField: 'createdAt',
-    issuedQtyExpr: { $ifNull: ['$issued_sqm', { $ifNull: ['$sqm', 0] }] },
+    issuedQtyExpr: { $ifNull: ['$issued_sqm', 0] },
     unit: 'sqm',
   },
   {
@@ -1174,7 +1185,7 @@ const DAMAGE_WASTAGE_STAGES = [
     damageAmountExpr: { $ifNull: ['$amount', 0] },
     issuedCollection: 'issued_for_canvas_details',
     issuedDateField: 'createdAt',
-    issuedQtyExpr: { $ifNull: ['$issued_sqm', { $ifNull: ['$sqm', 0] }] },
+    issuedQtyExpr: { $ifNull: ['$issued_sqm', 0] },
     unit: 'sqm',
   },
   {
@@ -1194,7 +1205,7 @@ const DAMAGE_WASTAGE_STAGES = [
     metricType: 'DAMAGE',
     damageCollection: 'plywood_production_damage',
     damageDateField: 'createdAt',
-    damageQtyExpr: { $ifNull: ['$damage_sqm', 0] },
+    damageQtyExpr: { $ifNull: ['$total_sqm', 0] },
     damageAmountExpr: 0,
     issuedCollection: 'plywood_production_consumed_item',
     issuedDateField: 'createdAt',
@@ -1251,8 +1262,18 @@ const FACTORY_SUBMODULE_CARD_SPECS = [
   { key: 'FLITCHING', label: 'Flitching', sourceStage: 'FLITCHING' },
   { key: 'SLICING', label: 'Slicing', sourceStage: 'SLICING' },
   { key: 'PEELING', label: 'Peeling', sourceStage: 'PEELING' },
-  { key: 'DRESSING', label: 'Dressing', sourceStage: 'DRESSING' },
-  { key: 'SMOKING_DYING', label: 'Smoking and Dying', sourceStage: 'SMOKING_DYING' },
+  {
+    key: 'DRESSING',
+    label: 'Dressing',
+    sourceStage: 'DRESSING',
+    damageDisplay: 'NA',
+  },
+  {
+    key: 'SMOKING_DYING',
+    label: 'Smoking and Dying',
+    sourceStage: 'SMOKING_DYING',
+    damageDisplay: 'NA',
+  },
   { key: 'GROUPING', label: 'Grouping', sourceStage: 'GROUPING' },
   { key: 'TAPPING', label: 'Tapping', sourceStage: 'TAPPING' },
   { key: 'RESIZING', label: 'Re-sizing', sourceStage: 'RESIZING' },
@@ -1260,6 +1281,7 @@ const FACTORY_SUBMODULE_CARD_SPECS = [
     key: 'PLYWOOD_PRODUCTION',
     label: 'Plywood Production',
     sourceStage: 'PLYWOOD_PRODUCTION',
+    issueDisplay: 'NA',
   },
   { key: 'PRESSING', label: 'Pressing', sourceStage: 'PRESSING' },
   { key: 'CNC', label: 'CNC', sourceStage: 'CNC' },
@@ -1602,28 +1624,39 @@ const combineMatch = (...conditions) => {
 };
 
 const normalizeOrderPriorityLabel = (value) => {
-  if (value === null || value === undefined) return 'Third';
+  if (value === null || value === undefined) return null;
 
   if (typeof value === 'number') {
     if (value <= 1) return 'High Priority';
     if (value === 2) return 'First';
-    if (value === 3) return 'Secod';
+    if (value === 3) return 'Second';
     return 'Third';
   }
 
   const normalized = String(value || '').trim().toUpperCase();
-  if (!normalized) return 'Third';
+  if (!normalized) return null;
 
   if (
-    ['HIGH', 'HIGH PRIORITY', 'URGENT', 'P1', '1', 'TOP'].includes(normalized)
+    [
+      'HIGH',
+      'HIGH PRIORITY',
+      'MOST PRIORITY',
+      'MOST_PRIORITY',
+      'MOSTPRIORITY',
+      'TOP PRIORITY',
+      'URGENT',
+      'P1',
+      '1',
+      'TOP',
+    ].includes(normalized)
   ) {
     return 'High Priority';
   }
   if (['FIRST', 'P2', '2'].includes(normalized)) return 'First';
-  if (['SECOND', 'SECOND', 'SECOD', 'P3', '3'].includes(normalized)) return 'Secod';
+  if (['SECOND', 'SECOND', 'SECOND', 'P3', '3'].includes(normalized)) return 'Second';
   if (['THIRD', 'P4', '4', 'LOW', 'NORMAL'].includes(normalized)) return 'Third';
 
-  return 'Third';
+  return null;
 };
 
 const buildWastageContextMatch = (filters = {}) =>
@@ -2171,9 +2204,11 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
       ? aggregateOrderMetrics({ fromDate: monthFromDate, toDate: monthToDate })
       : Promise.resolve(emptyOrderMetrics),
     includeOrders ? aggregateAllocationMetrics({ fromDate, toDate }) : Promise.resolve(emptyAllocation),
-    includePacking ? aggregatePackingMetrics({ fromDate, toDate }) : Promise.resolve(emptyPacking),
     includePacking
-      ? aggregatePackingGoodsTypeMetrics({ fromDate, toDate })
+      ? aggregatePackingMetrics({ fromDate, toDate, filters: dashboardFilters })
+      : Promise.resolve(emptyPacking),
+    includePacking
+      ? aggregatePackingGoodsTypeMetrics({ fromDate, toDate, filters: dashboardFilters })
       : Promise.resolve({
           summaryByType: {
             'FINISHED GOODS': {
@@ -2196,13 +2231,17 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
           recordsByType: { 'FINISHED GOODS': [], 'RAW GOODS': [] },
         }),
     includeDispatch
-      ? aggregateDispatchMetrics({ fromDate, toDate })
+      ? aggregateDispatchMetrics({ fromDate, toDate, filters: dashboardFilters })
       : Promise.resolve(emptyDispatch),
     includeDispatch
-      ? aggregateDispatchSummary({ fromDate: monthFromDate, toDate: monthToDate })
+      ? aggregateDispatchSummary({
+          fromDate: monthFromDate,
+          toDate: monthToDate,
+          filters: dashboardFilters,
+        })
       : Promise.resolve({ revenue: 0, qtySheets: 0, qtySqm: 0, qtyCmt: 0 }),
     includeDispatch
-      ? aggregateDispatchDocumentSummary({ fromDate, toDate })
+      ? aggregateDispatchDocumentSummary({ fromDate, toDate, filters: dashboardFilters })
       : Promise.resolve({ count: 0, value: 0 }),
     includeOrders && includeDispatch
       ? aggregateOrderDispatchCycle({ fromDate, toDate })
@@ -2234,7 +2273,9 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
           supplierMatches: inventorySupplierMatches,
         })
       : Promise.resolve([]),
-    includeDispatch ? aggregateTopCustomers({ fromDate, toDate }) : Promise.resolve([]),
+    includeDispatch
+      ? aggregateTopCustomers({ fromDate, toDate, filters: dashboardFilters })
+      : Promise.resolve([]),
     includeInventory
       ? aggregateTopSuppliers({
           fromDate,
@@ -2259,10 +2300,18 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
     includeOrders
       ? aggregateApprovedOrderSummary({ fromDate, toDate })
       : Promise.resolve({ total: 0, approved: 0 }),
-    includeDispatch ? aggregateDispatchRevenueTrend({ fromDate, toDate }) : Promise.resolve([]),
-    includeDispatch ? aggregatePackedVsDispatchedTrend({ fromDate, toDate }) : Promise.resolve([]),
-    includeDispatch ? aggregateDispatchLifecycleStatus({ fromDate, toDate }) : Promise.resolve([]),
-    includeDispatch ? aggregateDispatchStatus({ fromDate, toDate }) : Promise.resolve([]),
+    includeDispatch
+      ? aggregateDispatchRevenueTrend({ fromDate, toDate, filters: dashboardFilters })
+      : Promise.resolve([]),
+    includeDispatch
+      ? aggregatePackedVsDispatchedTrend({ fromDate, toDate, filters: dashboardFilters })
+      : Promise.resolve([]),
+    includeDispatch
+      ? aggregateDispatchLifecycleStatus({ fromDate, toDate, filters: dashboardFilters })
+      : Promise.resolve([]),
+    includeDispatch
+      ? aggregateDispatchStatus({ fromDate, toDate, filters: dashboardFilters })
+      : Promise.resolve([]),
     includeInventory
       ? aggregateLowStockItems({
           toDate,
@@ -2313,16 +2362,29 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
       ? aggregateAllocationMetrics(previousMonthRange)
       : Promise.resolve(emptyAllocation),
     includePacking
-      ? aggregatePackingMetrics(previousMonthRange)
+      ? aggregatePackingMetrics({
+          fromDate: previousMonthRange.fromDate,
+          toDate: previousMonthRange.toDate,
+          filters: dashboardFilters,
+        })
       : Promise.resolve(emptyPacking),
     includeDispatch
-      ? aggregateDispatchMetrics(previousMonthRange)
+      ? aggregateDispatchMetrics({
+          ...previousMonthRange,
+          filters: dashboardFilters,
+        })
       : Promise.resolve(emptyDispatch),
     includeDispatch
-      ? aggregateDispatchSummary(previousMonthRange)
+      ? aggregateDispatchSummary({
+          ...previousMonthRange,
+          filters: dashboardFilters,
+        })
       : Promise.resolve({ revenue: 0, qtySheets: 0, qtySqm: 0, qtyCmt: 0 }),
     includeDispatch
-      ? aggregateDispatchDocumentSummary(previousMonthRange)
+      ? aggregateDispatchDocumentSummary({
+          ...previousMonthRange,
+          filters: dashboardFilters,
+        })
       : Promise.resolve({ count: 0, value: 0 }),
     includeProduction ? aggregateWipByStage(previousMonthRange) : Promise.resolve([]),
     includeProduction
@@ -2428,7 +2490,7 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
   filteredDamageByStage.forEach((row) => {
     const stage = String(row?.stage || '').toUpperCase();
     if (!stage) return;
-    damageByStage.set(stage, Number(row?.damageQty || row?.wasteQty || 0));
+    damageByStage.set(stage, Number(row?.damageQty || 0) + Number(row?.wasteQty || 0));
   });
 
   const normalizeFactoryUnit = (unit) => {
@@ -2491,6 +2553,9 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
       issue: round2(issueByStage.get(stageKey) || 0),
       complete: round2(completeByStage.get(stageKey) || 0),
       damage: round2(damageByStage.get(stageKey) || 0),
+      issueDisplay: spec.issueDisplay ?? null,
+      completeDisplay: spec.completeDisplay ?? null,
+      damageDisplay: spec.damageDisplay ?? null,
       unit: stageUnitByStage.get(stageKey) || stageDefaultUnit.get(stageKey) || '--',
     };
   });

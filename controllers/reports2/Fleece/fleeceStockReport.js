@@ -19,6 +19,9 @@ const roundStock = (v, decimals = 4) => {
   return Math.abs(rounded) < 1e-10 ? 0 : rounded;
 };
 
+/** Fleece report metre/SQM precision is fixed to 3 decimals. */
+const roundMetricValue = (v) => roundStock(v, 3);
+
 /**
  * Fleece Stock Report – Excel download.
  * Uses startDate, endDate and optional filter (item_sub_category_name).
@@ -187,19 +190,19 @@ export const fleeceStockReportCsv = catchAsync(async (req, res, next) => {
           thickness,
           size: `${length} X ${width}`,
           opening_rolls: Math.max(0, roundStock(openingRolls, 0)),
-          opening_sqm: Math.max(0, roundStock(openingSqm)),
+          opening_sqm: Math.max(0, roundMetricValue(openingSqm)),
           receive_rolls: receiveRolls,
-          receive_sqm: receiveSqm,
+          receive_sqm: roundMetricValue(receiveSqm),
           consume_rolls: consumeRolls,
-          consume_sqm: consumeSqm,
+          consume_sqm: roundMetricValue(consumeSqm),
           challan_rolls: challanRolls,
-          challan_sqm: challanSqm,
+          challan_sqm: roundMetricValue(challanSqm),
           order_rolls: orderRolls,
-          order_sqm: orderSqm,
+          order_sqm: roundMetricValue(orderSqm),
           issue_pressing_rolls: issuePressingRolls,
-          issue_pressing_sqm: issuePressingSqm,
+          issue_pressing_sqm: roundMetricValue(issuePressingSqm),
           closing_rolls: Math.max(0, roundStock(closingRolls, 0)),
-          closing_sqm: Math.max(0, roundStock(closingSqm)),
+          closing_sqm: Math.max(0, roundMetricValue(closingSqm)),
         };
       })
     );
@@ -406,19 +409,19 @@ export const fleeceItemWiseStockReportCsv = catchAsync(async (req, res, next) =>
           thickness,
           size: `${length} X ${width}`,
           opening_rolls: Math.max(0, roundStock(openingRolls, 0)),
-          opening_sqm: Math.max(0, roundStock(openingSqm)),
+          opening_sqm: Math.max(0, roundMetricValue(openingSqm)),
           receive_rolls: receiveRolls,
-          receive_sqm: receiveSqm,
+          receive_sqm: roundMetricValue(receiveSqm),
           consume_rolls: consumeRolls,
-          consume_sqm: consumeSqm,
+          consume_sqm: roundMetricValue(consumeSqm),
           challan_rolls: challanRolls,
-          challan_sqm: challanSqm,
+          challan_sqm: roundMetricValue(challanSqm),
           order_rolls: orderRolls,
-          order_sqm: orderSqm,
+          order_sqm: roundMetricValue(orderSqm),
           issue_pressing_rolls: issuePressingRolls,
-          issue_pressing_sqm: issuePressingSqm,
+          issue_pressing_sqm: roundMetricValue(issuePressingSqm),
           closing_rolls: Math.max(0, roundStock(closingRolls, 0)),
-          closing_sqm: Math.max(0, roundStock(closingSqm)),
+          closing_sqm: Math.max(0, roundMetricValue(closingSqm)),
         };
       })
     );
@@ -616,19 +619,19 @@ export const fleeceStockReportByInwardCsv = catchAsync(async (req, res, next) =>
           thickness: thickness ?? '',
           size: `${length ?? ''} X ${width ?? ''}`,
           opening_rolls: Math.max(0, roundStock(openingRolls, 0)),
-          opening_sqm: Math.max(0, roundStock(openingSqm)),
+          opening_sqm: Math.max(0, roundMetricValue(openingSqm)),
           receive_rolls: receiveRolls,
-          receive_sqm: receiveSqm,
+          receive_sqm: roundMetricValue(receiveSqm),
           consume_rolls: consumeRolls,
-          consume_sqm: consumeSqm,
+          consume_sqm: roundMetricValue(consumeSqm),
           challan_rolls: challanRolls,
-          challan_sqm: challanSqm,
+          challan_sqm: roundMetricValue(challanSqm),
           order_rolls: orderRolls,
-          order_sqm: orderSqm,
+          order_sqm: roundMetricValue(orderSqm),
           issue_pressing_rolls: issuePressingRolls,
-          issue_pressing_sqm: issuePressingSqm,
+          issue_pressing_sqm: roundMetricValue(issuePressingSqm),
           closing_rolls: Math.max(0, roundStock(closingRolls, 0)),
-          closing_sqm: Math.max(0, roundStock(closingSqm)),
+          closing_sqm: Math.max(0, roundMetricValue(closingSqm)),
         };
       })
     );

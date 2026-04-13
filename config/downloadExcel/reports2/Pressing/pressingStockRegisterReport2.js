@@ -129,7 +129,7 @@ export const GeneratePressingStockRegisterReport2Excel = async (
       tr.getCell(10).value = totals.pressing_received;
       tr.getCell(11).value = totals.pressing_waste;
       tr.getCell(12).value = totals.closing_sqm;
-      for (let c = NUMERIC_START_COL; c <= NUM_COLS; c++) tr.getCell(c).numFmt = '0.00';
+      for (let c = NUMERIC_START_COL; c <= NUM_COLS; c++) tr.getCell(c).numFmt = '0.000';
       tr.eachCell((cell) => Object.assign(cell, totalRowStyle));
     };
 
@@ -170,9 +170,9 @@ export const GeneratePressingStockRegisterReport2Excel = async (
       r.getCell(11).value = row.pressing_waste;
       r.getCell(12).value = row.closing_sqm;
 
-      r.getCell(5).numFmt = '0.00';
-      r.getCell(6).numFmt = '0.00';
-      for (let c = NUMERIC_START_COL; c <= NUM_COLS; c++) r.getCell(c).numFmt = '0.00';
+      r.getCell(5).numFmt = '0.000';
+      r.getCell(6).numFmt = '0.000';
+      for (let c = NUMERIC_START_COL; c <= NUM_COLS; c++) r.getCell(c).numFmt = '0.000';
 
       itemTotals.opening_sqm += row.opening_sqm;
       itemTotals.issued_for_pressing += row.issued_for_pressing;
@@ -215,7 +215,7 @@ export const GeneratePressingStockRegisterReport2Excel = async (
     gr.getCell(12).value = grandTotals.closing_sqm;
     gr.eachCell((cell) => {
       Object.assign(cell, totalRowStyle);
-      if (cell.col >= NUMERIC_START_COL) cell.numFmt = '0.00';
+      if (cell.col >= NUMERIC_START_COL) cell.numFmt = '0.000';
     });
 
     worksheet.columns = [

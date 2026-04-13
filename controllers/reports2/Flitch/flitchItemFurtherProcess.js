@@ -44,6 +44,7 @@ const sumField = (arr, field) =>
   arr.reduce((acc, item) => acc + (parseFloat(getVal(item, field)) || 0), 0);
 
 const round3 = (n) => Math.round((n + Number.EPSILON) * 1000) / 1000;
+const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
 
 function formatOrderItemVolumeOnly(item) {
   if (!item) return '';
@@ -390,21 +391,21 @@ function buildGroupingData(
     grouping_issue_sqm: round3(issueSqm) || '',
     grouping_issue_status: groupingIssueStatus,
     grouping_balance_sheets: availSheets || '',
-    grouping_balance_sqm: round3(availSqm) || '',
+    grouping_balance_sqm: round2(availSqm) || '',
     splicing_rec_machine_sqm: round3(machineSqm) || '',
     splicing_rec_hand_sqm: round3(handSqm) || '',
     splicing_sheets: splicingSheets || '',
     splicing_issue_sheets: splicingIssueSheets || '',
     splicing_issue_status: splicingIssueStatus,
     splicing_balance_sheets: splicingAvailSheets || '',
-    splicing_balance_sqm: round3(splicingAvailSqm) || '',
+    splicing_balance_sqm: round2(splicingAvailSqm) || '',
     pressing_sheets: pressingSheets || '',
     pressing_sqm: round3(pressingSqm) || '',
     pressing_issue_sheets: pressingIssueSheets || '',
     pressing_issue_sqm: round3(pressingIssueSqm) || '',
     pressing_issue_status: pressingIssueStatus,
     pressing_balance_sheets: pressingAvailSheets || '',
-    pressing_balance_sqm: round3(pressingAvailSqm) || '',
+    pressing_balance_sqm: round2(pressingAvailSqm) || '',
     cnc_type: cncType,
     cnc_rec_sheets: cncRecSheets || '',
     colour_rec_sheets: colourRecSheets || '',
@@ -465,7 +466,7 @@ function buildSlicingSideRows(
   // Process Cmt = slicing done cmt; Balance Cmt = remaining cmt (issued - process)
   const processCmt = round3(parseFloat(side.item_cmt ?? side.cmt) || 0);
   const issuedCmt = round3(parseFloat(side.issued_for_slicing?.cmt) || 0);
-  const balanceCmt = round3(nonNegativeDiff(issuedCmt, processCmt));
+  const balanceCmt = round2(nonNegativeDiff(issuedCmt, processCmt));
 
   const slicingBase = {
     slicing_side: sideCode,
