@@ -119,7 +119,7 @@ const resolveRowSales = (code, id, ctx) => {
     : (finalOrderItem ? formatOrderItemVolumeOnly(finalOrderItem) : '');
 };
 
-const resolveGroupingSales = (groupItem, ctx) => {
+const resolveGroupingSales = (groupItem, ctx, issueSqm) => {
   const gn = String(groupItem.group_no || '').trim().toUpperCase();
   const idKey = String(groupItem._id);
   const visitedTerminalIds = new Set();
@@ -149,10 +149,10 @@ const resolveGroupingSales = (groupItem, ctx) => {
   const directOrderRef = ctx.orderRefsByCode.get(gn) || ctx.orderRefsByCode.get(idKey);
 
   const finalOrderItem = directOrderRef?.order_item_id ? ctx.orderItemById.get(String(directOrderRef.order_item_id)) : null;
-
-  return directOrderCmt > 0
-    ? round3(directOrderCmt)
-    : (finalOrderItem ? formatOrderItemVolumeOnly(finalOrderItem) : '');
+  
+  return (directOrderCmt > 0 || finalOrderItem)
+    ? round3(issueSqm || directOrderCmt || (finalOrderItem ? formatOrderItemVolumeOnly(finalOrderItem) : 0))
+    : '';
 };
 
 /**
@@ -373,7 +373,7 @@ function buildGroupingData(groupItem, ctx) {
   const cncItems = pressingIds.flatMap((id) => ctx.cncByPressingId.get(id) || []);
   const colourItems = pressingIds.flatMap((id) => ctx.colourByPressingId.get(id) || []);
 
-  const salesVal = resolveGroupingSales(groupItem, ctx);
+  const salesVal = resolveGroupingSales(groupItem, ctx, issueSqm);
 
   return {
     grouping_new_group_no: groupNo,
