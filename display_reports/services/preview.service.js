@@ -3,14 +3,130 @@ import ExcelJS from 'exceljs';
 import fs from 'fs/promises';
 import path from 'path';
 
-const INVISIBLE_CHAR_REGEX = /[\u200B-\u200D\uFEFF]/g;
+const INVISIBLE_CHAR_REGEX = /[\u200B-\u200D\uFEFF\u00A0]/g;
+const DATE_TOKEN_REGEX = /\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b/i;
+const HEADER_METADATA_REGEX = /\b(date|from|to|report)\b/i;
+const NUMERIC_TEXT_REGEX = /^-?\d+(?:,\d{3})*(?:\.\d+)?$/;
+const HEADER_HINT_REGEX =
+  /\b(item|supplier|invoice|physical|opening|closing|issue|done|balance|sales|challan|sqm|cmt|cbm|mtr|sheets?|rolls?|leaves?|thickness|group|log|name|date|remarks?|id|qty|quantity)\b/i;
+const TOTAL_OR_SUMMARY_REGEX = /\b(total|grand total|summary)\b/i;
 
 const normalizeTextValue = (value) =>
   String(value ?? '')
     .replace(INVISIBLE_CHAR_REGEX, '')
+    .replace(/\s+/g, ' ')
     .trim();
 
 const hasMeaningfulValue = (value) => normalizeTextValue(value) !== '';
+
+const addThousandsSeparators = (value) => {
+  const [integerPartRaw, decimalPart = ''] = String(value || '').split('.');
+  const isNegative = integerPartRaw.startsWith('-');
+  const integerPart = isNegative ? integerPartRaw.slice(1) : integerPartRaw;
+  const groupedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  const signedInteger = isNegative ? `-${groupedInteger}` : groupedInteger;
+  return decimalPart ? `${signedInteger}.${decimalPart}` : signedInteger;
+};
+
+const formatNumberUsingExcelNumFmt = (rawNumber, numFmtValue) => {
+  if (typeof rawNumber !== 'number' || !Number.isFinite(rawNumber)) return null;
+
+  const numFmt = String(numFmtValue || '').trim();
+  if (!numFmt) return null;
+
+  const primarySection = numFmt.split(';')[0] || '';
+  const normalizedSection = primarySection
+    .replace(/"[^"]*"/g, '')
+    .replace(/\[[^\]]*]/g, '')
+    .replace(/\\./g, '')
+    .trim();
+
+  if (!normalizedSection) return null;
+  if (/%/.test(normalizedSection)) return null;
+  if (/[dyhms]/i.test(normalizedSection)) return null;
+  if (/general/i.test(normalizedSection)) return null;
+
+  const decimalMatch = normalizedSection.match(/\.([0#]+)/);
+  const decimalPlaces = decimalMatch ? decimalMatch[1].length : 0;
+  const usesGrouping = normalizedSection.includes(',');
+
+  const fixedValue = rawNumber.toFixed(decimalPlaces);
+  return usesGrouping ? addThousandsSeparators(fixedValue) : fixedValue;
+};
+
+const isNumericText = (value) => NUMERIC_TEXT_REGEX.test(normalizeTextValue(value));
+
+const normalizeFloatingPointArtifact = (value) => {
+  const normalized = normalizeTextValue(value);
+  if (!isNumericText(normalized)) return normalized;
+
+  const hasGrouping = normalized.includes(',');
+  const numericSource = normalized.replace(/,/g, '');
+  const [integerPart = '', decimalPart = ''] = numericSource.split('.');
+  if (!decimalPart || decimalPart.length < 7) return normalized;
+
+  const numericValue = Number(numericSource);
+  if (!Number.isFinite(numericValue)) return normalized;
+
+  // Only collapse precision when this is very likely JS floating-point residue,
+  // e.g. 6.732000000000001 or 1934.9199999999998.
+  const tolerance = Math.max(1e-12, Math.abs(numericValue) * 1e-12);
+  const maxDecimalsToCheck = Math.min(12, decimalPart.length);
+  let bestCandidate = null;
+
+  for (let decimals = 0; decimals <= maxDecimalsToCheck; decimals += 1) {
+    const roundedString = numericValue.toFixed(decimals);
+    const roundedValue = Number(roundedString);
+    if (!Number.isFinite(roundedValue)) continue;
+    if (Math.abs(numericValue - roundedValue) > tolerance) continue;
+
+    const compact = roundedString
+      .replace(/(\.\d*?[1-9])0+$/g, '$1')
+      .replace(/\.0+$/g, '');
+    bestCandidate = compact || '0';
+    break;
+  }
+
+  if (!bestCandidate) return normalized;
+  if (bestCandidate.length + 3 > numericSource.length) return normalized;
+
+  return hasGrouping ? addThousandsSeparators(bestCandidate) : bestCandidate;
+};
+
+const isMeaningfulNonZeroDataValue = (value) => {
+  const normalized = normalizeTextValue(value);
+  if (!normalized) return false;
+
+  if (!isNumericText(normalized)) return true;
+
+  const numericValue = Number(normalized.replace(/,/g, ''));
+  if (!Number.isFinite(numericValue)) return true;
+  return Math.abs(numericValue) > 0;
+};
+
+const isLikelyMetadataHeaderRow = (rowValues = []) => {
+  const normalizedValues = rowValues
+    .map((value) => normalizeTextValue(value))
+    .filter(Boolean);
+
+  if (!normalizedValues.length) return false;
+
+  const joined = normalizedValues.join(' ').toLowerCase();
+  const uniqueCount = new Set(normalizedValues.map((value) => value.toLowerCase())).size;
+  const hasMetadataWords = HEADER_METADATA_REGEX.test(joined);
+  const hasDateToken = DATE_TOKEN_REGEX.test(joined);
+  const hasReportWord = /\breport\b/i.test(joined);
+
+  if (uniqueCount <= 1 && (hasMetadataWords || hasDateToken || hasReportWord)) {
+    return true;
+  }
+
+  if (normalizedValues.length <= 4 && hasMetadataWords && (hasDateToken || hasReportWord)) {
+    return true;
+  }
+
+  return false;
+};
 
 const parseCellAddress = (cellRef) => {
   const match = String(cellRef || '').match(/^([A-Z]+)(\d+)$/i);
@@ -37,9 +153,48 @@ const parseRange = (rangeRef) => {
   };
 };
 
-const normalizeCellValue = (rawValue, textValue) => {
+const getHorizontalMergeRangesForRow = (worksheet, rowIndex) => {
+  if (!worksheet || rowIndex < 1) return [];
+
+  const merges = worksheet?.model?.merges || [];
+  return merges
+    .map((mergeRef) => parseRange(mergeRef))
+    .filter(
+      (range) =>
+        range &&
+        range.startRow === rowIndex &&
+        range.endRow === rowIndex &&
+        range.endCol > range.startCol
+    );
+};
+
+const getRowProfile = (worksheet, rowIndex, maxColumns) => {
+  const values = [];
+  let alphaCount = 0;
+
+  for (let colIndex = 1; colIndex <= maxColumns; colIndex += 1) {
+    const value = getCellDisplayValue(worksheet, rowIndex, colIndex);
+    if (!hasMeaningfulValue(value)) continue;
+    values.push(value);
+    if (/[A-Za-z]/.test(String(value || ''))) alphaCount += 1;
+  }
+
+  return {
+    values,
+    nonEmpty: values.length,
+    unique: new Set(values.map((value) => normalizeTextValue(value).toLowerCase())).size,
+    alphaCount,
+  };
+};
+
+const normalizeCellValue = (rawValue, textValue, numFmtValue) => {
+  const numFmtFormattedNumber = formatNumberUsingExcelNumFmt(rawValue, numFmtValue);
+  if (numFmtFormattedNumber != null) {
+    return normalizeTextValue(numFmtFormattedNumber);
+  }
+
   if (typeof textValue === 'string' && hasMeaningfulValue(textValue)) {
-    return normalizeTextValue(textValue);
+    return normalizeFloatingPointArtifact(textValue);
   }
 
   if (rawValue == null) return '';
@@ -53,11 +208,20 @@ const normalizeCellValue = (rawValue, textValue) => {
       return normalizeTextValue(rawValue.richText.map((chunk) => chunk?.text || '').join(''));
     }
     if (rawValue.text) return normalizeTextValue(rawValue.text);
-    if (rawValue.result != null) return normalizeTextValue(rawValue.result);
+    if (rawValue.result != null) {
+      const resultFormattedNumber = formatNumberUsingExcelNumFmt(
+        rawValue.result,
+        numFmtValue
+      );
+      if (resultFormattedNumber != null) {
+        return normalizeTextValue(resultFormattedNumber);
+      }
+      return normalizeFloatingPointArtifact(rawValue.result);
+    }
     if (rawValue.hyperlink) return normalizeTextValue(rawValue.hyperlink);
   }
 
-  return normalizeTextValue(rawValue);
+  return normalizeFloatingPointArtifact(rawValue);
 };
 
 const buildMergeLookup = (worksheet) => {
@@ -104,7 +268,7 @@ const getCellDisplayValue = (worksheet, row, col) => {
       const masterCell = worksheet
         .getRow(mergedCellInfo.startRow)
         .getCell(mergedCellInfo.startCol);
-      return normalizeCellValue(masterCell.value, masterCell.text);
+      return normalizeCellValue(masterCell.value, masterCell.text, masterCell.numFmt);
     }
     return '';
   }
@@ -122,17 +286,19 @@ const getCellDisplayValue = (worksheet, row, col) => {
         masterAddress &&
         cellAddress.col === masterAddress.col
       ) {
-        return normalizeCellValue(cell.master.value, cell.master.text);
+        return normalizeCellValue(cell.master.value, cell.master.text, cell.master.numFmt);
       }
 
       return '';
     }
   }
 
-  const directValue = normalizeCellValue(cell.value, cell.text);
+  const directValue = normalizeCellValue(cell.value, cell.text, cell.numFmt);
   if (directValue) return directValue;
 
-  if (cell.master) return normalizeCellValue(cell.master.value, cell.master.text);
+  if (cell.master) {
+    return normalizeCellValue(cell.master.value, cell.master.text, cell.master.numFmt);
+  }
 
   return '';
 };
@@ -401,6 +567,8 @@ const detectHeaderRowIndex = (worksheet, maxColumns) => {
     const nonEmpty = nonEmptyValues.length;
     if (nonEmpty < 2) continue;
 
+    if (isLikelyMetadataHeaderRow(nonEmptyValues)) continue;
+
     const uniqueValueCount = new Set(
       nonEmptyValues.map((value) => normalizeTextValue(value).toLowerCase())
     ).size;
@@ -411,13 +579,30 @@ const detectHeaderRowIndex = (worksheet, maxColumns) => {
     if (alphaRatio < 0.3) continue;
 
     const score = alphaCount * 2 + nonEmpty + uniqueValueCount;
-    if (score > bestScore || (score === bestScore && rowIndex > bestRow)) {
+    if (score > bestScore || (score === bestScore && rowIndex < bestRow)) {
       bestScore = score;
       bestRow = rowIndex;
     }
   }
 
-  if (bestScore >= 0) return bestRow;
+  if (bestScore >= 0) {
+    const nextRowIndex = bestRow + 1;
+    const horizontalMergesOnBestRow = getHorizontalMergeRangesForRow(worksheet, bestRow);
+
+    if (horizontalMergesOnBestRow.length > 0 && nextRowIndex <= (worksheet.rowCount || 0)) {
+      const nextRowProfile = getRowProfile(worksheet, nextRowIndex, maxColumns);
+      const hasSubHeaderLikeRow =
+        nextRowProfile.nonEmpty >= Math.max(2, horizontalMergesOnBestRow.length) &&
+        nextRowProfile.unique > 1 &&
+        !isLikelyMetadataHeaderRow(nextRowProfile.values);
+
+      if (hasSubHeaderLikeRow) {
+        return nextRowIndex;
+      }
+    }
+
+    return bestRow;
+  }
 
   let fallbackRow = 1;
   let fallbackCount = -1;
@@ -437,9 +622,13 @@ const detectHeaderRowIndex = (worksheet, maxColumns) => {
       nonEmptyValues.map((value) => normalizeTextValue(value).toLowerCase())
     ).size;
 
+    if (isLikelyMetadataHeaderRow(nonEmptyValues)) continue;
+
     if (
       nonEmpty > fallbackCount ||
-      (nonEmpty === fallbackCount && uniqueValueCount > fallbackUniqueCount)
+      (nonEmpty === fallbackCount &&
+        (uniqueValueCount > fallbackUniqueCount ||
+          (uniqueValueCount === fallbackUniqueCount && rowIndex < fallbackRow)))
     ) {
       fallbackCount = nonEmpty;
       fallbackUniqueCount = uniqueValueCount;
@@ -463,7 +652,10 @@ const extractHeaderGroups = ({ worksheet, headerRowIndex, keepColumns }) => {
   ).size;
 
   // Ignore banner rows (for example "Date: ...") that are not real grouped headers.
-  if (groupRowValues.length > 0 && uniqueGroupRowValueCount <= 1) {
+  if (
+    (groupRowValues.length > 0 && uniqueGroupRowValueCount <= 1) ||
+    isLikelyMetadataHeaderRow(groupRowValues)
+  ) {
     return [];
   }
 
@@ -509,6 +701,10 @@ const extractHeaderGroups = ({ worksheet, headerRowIndex, keepColumns }) => {
       getCellDisplayValue(worksheet, headerRowIndex, originalColumn)
     );
 
+    // When the lower header row is blank, this is effectively a single-row header
+    // (for example "Item Group Name") and should stay in the second header row only.
+    if (!headerLabel) return;
+
     if (topLabel.toLowerCase() === headerLabel.toLowerCase()) return;
 
     groups.push({
@@ -518,15 +714,29 @@ const extractHeaderGroups = ({ worksheet, headerRowIndex, keepColumns }) => {
     });
   });
 
-  groups.sort((left, right) => left.startIndex - right.startIndex);
-  return groups;
+  const sortedGroups = [...groups].sort((left, right) => left.startIndex - right.startIndex);
+  const mergedGroups = [];
+
+  sortedGroups.forEach((group) => {
+    const previous = mergedGroups[mergedGroups.length - 1];
+    const previousLabel = normalizeTextValue(previous?.label || '').toLowerCase();
+    const currentLabel = normalizeTextValue(group?.label || '').toLowerCase();
+    const areAdjacent = previous && group.startIndex <= previous.endIndex + 1;
+
+    if (previous && areAdjacent && previousLabel && previousLabel === currentLabel) {
+      previous.endIndex = Math.max(previous.endIndex, group.endIndex);
+      return;
+    }
+
+    mergedGroups.push({ ...group });
+  });
+
+  return mergedGroups;
 };
 
-const isDuplicateHeaderDataRow = ({ rowEntry, keepColumns, originalHeaders }) => {
+const isDuplicateHeaderDataRow = ({ rowEntry, keepColumns, headerLabelsByColumn = [] }) => {
   const rowValues = rowEntry?.values || {};
-  const normalizedHeaderValues = keepColumns.map((column) =>
-    normalizeTextValue(originalHeaders[column - 1])
-  );
+  const comparableColumns = Math.max(0, Number(keepColumns?.length || 0));
 
   let nonEmptyCellCount = 0;
   let headerMatchCount = 0;
@@ -536,13 +746,61 @@ const isDuplicateHeaderDataRow = ({ rowEntry, keepColumns, originalHeaders }) =>
     if (!cellValue) return;
 
     nonEmptyCellCount += 1;
-    const headerValue = normalizeTextValue(normalizedHeaderValues[index]);
+    const headerValue = normalizeTextValue(headerLabelsByColumn[index] || '');
     if (headerValue && cellValue.toLowerCase() === headerValue.toLowerCase()) {
       headerMatchCount += 1;
     }
   });
 
-  return nonEmptyCellCount >= 2 && headerMatchCount === nonEmptyCellCount;
+  const minimumMatchCount = Math.min(4, Math.max(2, comparableColumns));
+  if (nonEmptyCellCount < minimumMatchCount || headerMatchCount < minimumMatchCount) {
+    return false;
+  }
+
+  const matchRatio = headerMatchCount / nonEmptyCellCount;
+  return matchRatio >= 0.8;
+};
+
+const getRowComparableValues = (rowEntry, keepColumns) => {
+  const rowValues = rowEntry?.values || {};
+  return (keepColumns || [])
+    .map((column) => normalizeTextValue(rowValues?.[`c${column}`]))
+    .filter(Boolean);
+};
+
+const isLikelySecondarySectionHeaderRow = ({
+  rowEntry,
+  keepColumns,
+  previousRows = [],
+}) => {
+  const comparableValues = getRowComparableValues(rowEntry, keepColumns);
+  if (comparableValues.length < 3) return false;
+
+  const joined = comparableValues.join(' ').toLowerCase();
+  if (TOTAL_OR_SUMMARY_REGEX.test(joined)) return false;
+
+  const alphaCellCount = comparableValues.filter((value) => /[a-z]/i.test(value)).length;
+  const numericCellCount = comparableValues.filter((value) => NUMERIC_TEXT_REGEX.test(value)).length;
+  const headerHintCount = comparableValues.filter((value) => HEADER_HINT_REGEX.test(value)).length;
+
+  const alphaRatio = alphaCellCount / comparableValues.length;
+  if (alphaRatio < 0.7) return false;
+
+  if (numericCellCount > Math.floor(comparableValues.length * 0.35)) return false;
+
+  if (headerHintCount < 2) return false;
+
+  const previousCombined = previousRows
+    .flatMap((candidateRow) => getRowComparableValues(candidateRow, keepColumns))
+    .join(' ')
+    .toLowerCase();
+  const hasBreakContext =
+    Number(rowEntry?.blankRowsBefore || 0) > 0 ||
+    TOTAL_OR_SUMMARY_REGEX.test(previousCombined);
+
+  if (!hasBreakContext && previousRows.length < 2) return false;
+
+  return true;
 };
 
 export const buildPreviewFromWorkbook = async (filePath) => {
@@ -592,6 +850,22 @@ export const buildPreviewFromWorkbook = async (filePath) => {
     originalHeaders.push(getCellDisplayValue(worksheet, headerRowIndex, colIndex));
   }
 
+  const groupRowIndex = headerRowIndex - 1;
+  const topHeaderValues = [];
+  for (let colIndex = 1; colIndex <= maxColumns; colIndex += 1) {
+    topHeaderValues.push(
+      groupRowIndex >= 1 ? getCellDisplayValue(worksheet, groupRowIndex, colIndex) : ''
+    );
+  }
+  const topHeaderNonEmptyValues = topHeaderValues
+    .map((value) => normalizeTextValue(value))
+    .filter(Boolean);
+  const canUseTopHeaderAsFallback =
+    groupRowIndex >= 1 &&
+    topHeaderNonEmptyValues.length > 0 &&
+    new Set(topHeaderNonEmptyValues.map((value) => value.toLowerCase())).size > 1 &&
+    !isLikelyMetadataHeaderRow(topHeaderNonEmptyValues);
+
   const originalRows = [];
   let blankRowStreak = 0;
   const blankRowBreakThreshold = 150;
@@ -615,53 +889,84 @@ export const buildPreviewFromWorkbook = async (filePath) => {
       continue;
     }
 
+    const blankRowsBefore = blankRowStreak;
     blankRowStreak = 0;
     originalRows.push({
       excelRowIndex: rowIndex,
+      blankRowsBefore,
       values: rowObject,
     });
   }
 
   const keepColumns = [];
   for (let colIndex = 1; colIndex <= maxColumns; colIndex += 1) {
-    const hasHeader = hasMeaningfulValue(originalHeaders[colIndex - 1]);
-    const hasRowData = originalRows.some((row) =>
-      hasMeaningfulValue(row?.values?.[`c${colIndex}`])
+    const primaryHeader = normalizeTextValue(originalHeaders[colIndex - 1]);
+    const fallbackHeader = canUseTopHeaderAsFallback
+      ? normalizeTextValue(topHeaderValues[colIndex - 1])
+      : '';
+    const hasHeader = Boolean(primaryHeader || fallbackHeader);
+    const hasMeaningfulData = originalRows.some((row) =>
+      isMeaningfulNonZeroDataValue(row?.values?.[`c${colIndex}`])
     );
-    if (hasHeader || hasRowData) keepColumns.push(colIndex);
+    if (hasHeader || hasMeaningfulData) keepColumns.push(colIndex);
   }
 
   const normalizedKeepColumns = keepColumns.length
     ? keepColumns
     : [...Array(maxColumns).keys()].map((index) => index + 1);
 
-  const headers = normalizedKeepColumns.map((originalCol, normalizedIndex) => {
+  const resolvedHeaderLabels = normalizedKeepColumns.map((originalCol) => {
     const rawLabel = normalizeTextValue(originalHeaders[originalCol - 1]);
+    if (rawLabel) return rawLabel;
+
+    if (canUseTopHeaderAsFallback) {
+      const fallbackLabel = normalizeTextValue(topHeaderValues[originalCol - 1]);
+      if (fallbackLabel) return fallbackLabel;
+    }
+
+    return '';
+  });
+
+  const headers = normalizedKeepColumns.map((originalCol, normalizedIndex) => {
+    const rawLabel = resolvedHeaderLabels[normalizedIndex];
     return {
       key: `c${normalizedIndex + 1}`,
       label: rawLabel || `Column ${normalizedIndex + 1}`,
     };
   });
 
-  const filteredOriginalRows = [...originalRows]
-    .filter(
-      (rowEntry) =>
-        !isDuplicateHeaderDataRow({
-          rowEntry,
-          keepColumns: normalizedKeepColumns,
-          originalHeaders,
-        })
-    );
+  const sortedOriginalRows = [...originalRows].sort(
+    (left, right) => left.excelRowIndex - right.excelRowIndex
+  );
 
-  const rows = [...filteredOriginalRows]
-    .sort((left, right) => left.excelRowIndex - right.excelRowIndex)
-    .map((rowEntry) => {
+  const rows = sortedOriginalRows
+    .map((rowEntry, rowIndex) => {
       const row = rowEntry?.values || {};
       const normalizedRow = {};
+      const isDuplicateHeaderRow = isDuplicateHeaderDataRow({
+        rowEntry,
+        keepColumns: normalizedKeepColumns,
+        headerLabelsByColumn: resolvedHeaderLabels,
+      });
+      const previousRows = sortedOriginalRows.slice(Math.max(0, rowIndex - 3), rowIndex);
+      const isSecondarySectionHeaderRow = !isDuplicateHeaderRow &&
+        isLikelySecondarySectionHeaderRow({
+          rowEntry,
+          keepColumns: normalizedKeepColumns,
+          previousRows,
+        });
+      const isSectionHeaderRow = isDuplicateHeaderRow || isSecondarySectionHeaderRow;
+
+      const rowGapSize = isSectionHeaderRow
+        ? Math.min(3, Math.max(2, Number(rowEntry?.blankRowsBefore || 0)))
+        : 0;
+
       normalizedKeepColumns.forEach((originalCol, normalizedIndex) => {
         normalizedRow[`c${normalizedIndex + 1}`] = row[`c${originalCol}`] || '';
       });
       normalizedRow.__excelRowIndex = rowEntry.excelRowIndex;
+      normalizedRow.__isSectionHeader = isSectionHeaderRow;
+      normalizedRow.__sectionGapRows = rowGapSize;
       return normalizedRow;
     });
 

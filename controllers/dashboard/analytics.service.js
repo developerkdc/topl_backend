@@ -672,23 +672,8 @@ const YIELD_STAGES = [
   {
     stage: 'FLITCHING',
     issueCollection: 'issues_for_flitchings',
-    issueDateField: 'log_invoice_details.inward_date',
-    issuePreMatchPipeline: [
-      {
-        $lookup: {
-          from: 'log_inventory_invoice_details',
-          localField: 'invoice_id',
-          foreignField: '_id',
-          as: 'log_invoice_details',
-        },
-      },
-      {
-        $unwind: {
-          path: '$log_invoice_details',
-          preserveNullAndEmptyArrays: false,
-        },
-      },
-    ],
+    // Use issue record date for dashboard date filters.
+    issueDateField: 'createdAt',
     issuedQtyExpr: { $ifNull: ['$cmt', { $ifNull: ['$available_quantity.cmt', 0] }] },
     doneCollection: 'flitchings',
     doneDateField: 'worker_details.flitching_date',
@@ -746,19 +731,6 @@ const YIELD_STAGES = [
     doneCollection: 'tapping_done_items_details',
     doneDateField: 'createdAt',
     doneQtyExpr: { $ifNull: ['$sqm', 0] },
-    doneSources: [
-      {
-        collection: 'tapping_done_items_details',
-        dateField: 'createdAt',
-        baseMatch: { issue_status: null },
-        qtyExpr: { $ifNull: ['$available_details.sqm', { $ifNull: ['$sqm', 0] }] },
-      },
-      {
-        collection: 'tapping_done_history',
-        dateField: 'createdAt',
-        qtyExpr: { $ifNull: ['$sqm', 0] },
-      },
-    ],
     unit: 'sqm',
   },
   {
@@ -916,19 +888,6 @@ const YIELD_STAGES = [
     doneCollection: 'cnc_done_details',
     doneDateField: 'createdAt',
     doneQtyExpr: { $ifNull: ['$sqm', 0] },
-    doneSources: [
-      {
-        collection: 'cnc_done_details',
-        dateField: 'createdAt',
-        baseMatch: { issue_status: null },
-        qtyExpr: { $ifNull: ['$available_details.sqm', { $ifNull: ['$sqm', 0] }] },
-      },
-      {
-        collection: 'cnc_history_details',
-        dateField: 'createdAt',
-        qtyExpr: { $ifNull: ['$sqm', 0] },
-      },
-    ],
     unit: 'sqm',
   },
   {
@@ -939,19 +898,6 @@ const YIELD_STAGES = [
     doneCollection: 'color_done_details',
     doneDateField: 'createdAt',
     doneQtyExpr: { $ifNull: ['$sqm', 0] },
-    doneSources: [
-      {
-        collection: 'color_done_details',
-        dateField: 'createdAt',
-        baseMatch: { issue_status: null },
-        qtyExpr: { $ifNull: ['$available_details.sqm', { $ifNull: ['$sqm', 0] }] },
-      },
-      {
-        collection: 'color_history_details',
-        dateField: 'createdAt',
-        qtyExpr: { $ifNull: ['$sqm', 0] },
-      },
-    ],
     unit: 'sqm',
   },
   {
@@ -962,19 +908,6 @@ const YIELD_STAGES = [
     doneCollection: 'bunito_done_details',
     doneDateField: 'createdAt',
     doneQtyExpr: { $ifNull: ['$sqm', 0] },
-    doneSources: [
-      {
-        collection: 'bunito_done_details',
-        dateField: 'createdAt',
-        baseMatch: { issue_status: null },
-        qtyExpr: { $ifNull: ['$available_details.sqm', { $ifNull: ['$sqm', 0] }] },
-      },
-      {
-        collection: 'bunito_history_details',
-        dateField: 'createdAt',
-        qtyExpr: { $ifNull: ['$sqm', 0] },
-      },
-    ],
     unit: 'sqm',
   },
   {
@@ -985,19 +918,6 @@ const YIELD_STAGES = [
     doneCollection: 'canvas_done_details',
     doneDateField: 'createdAt',
     doneQtyExpr: { $ifNull: ['$sqm', 0] },
-    doneSources: [
-      {
-        collection: 'canvas_done_details',
-        dateField: 'createdAt',
-        baseMatch: { issue_status: null },
-        qtyExpr: { $ifNull: ['$available_details.sqm', { $ifNull: ['$sqm', 0] }] },
-      },
-      {
-        collection: 'canvas_history_details',
-        dateField: 'createdAt',
-        qtyExpr: { $ifNull: ['$sqm', 0] },
-      },
-    ],
     unit: 'sqm',
   },
   {
@@ -1103,23 +1023,8 @@ const DAMAGE_WASTAGE_STAGES = [
     },
     damageAmountExpr: 0,
     issuedCollection: 'issues_for_flitchings',
-    issuedDateField: 'log_invoice_details.inward_date',
-    issuedPreMatchPipeline: [
-      {
-        $lookup: {
-          from: 'log_inventory_invoice_details',
-          localField: 'invoice_id',
-          foreignField: '_id',
-          as: 'log_invoice_details',
-        },
-      },
-      {
-        $unwind: {
-          path: '$log_invoice_details',
-          preserveNullAndEmptyArrays: false,
-        },
-      },
-    ],
+    // Use issue record date for dashboard date filters.
+    issuedDateField: 'createdAt',
     issuedQtyExpr: { $ifNull: ['$cmt', { $ifNull: ['$available_quantity.cmt', 0] }] },
     unit: 'cmt',
   },
@@ -1253,7 +1158,7 @@ const DAMAGE_WASTAGE_STAGES = [
     metricType: 'DAMAGE',
     damageCollection: 'plywood_production_damage',
     damageDateField: 'createdAt',
-    damageQtyExpr: { $ifNull: ['$damage_sqm', { $ifNull: ['$total_sqm', 0] }] },
+    damageQtyExpr: { $ifNull: ['$damage_sqm', 0] },
     damageAmountExpr: 0,
     issuedCollection: 'plywood_production_consumed_item',
     issuedDateField: 'createdAt',

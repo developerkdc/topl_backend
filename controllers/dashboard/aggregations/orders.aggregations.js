@@ -1070,6 +1070,7 @@ const aggregateOrderFlowTables = async ({ fromDate, toDate, filters = {} }) => {
               $ifNull: ['$cmt', { $ifNull: ['$cbm', 0] }],
             },
             qtySqm: { $ifNull: ['$sqm', 0] },
+            amount: { $ifNull: ['$amount', 0] },
             dispatchedSheets: {
               $ifNull: [
                 '$dispatch_no_of_sheets',
@@ -1359,35 +1360,49 @@ const aggregateOrderFlowTables = async ({ fromDate, toDate, filters = {} }) => {
         Number(issuedOrderMetrics?.issuedSheets || 0),
         Number(stageIssuedSheets || 0)
       );
-      const dispatchSheetsCandidate = isDecorativeOrSeries
+      const dispatchSheetsCandidate = isRaw
         ? dispatchSheetsFromDispatchRecords
-        : Math.max(dispatchSheetsFromDispatchRecords, dispatchSheetsFromFallbackIssued);
+        : isDecorativeOrSeries
+          ? dispatchSheetsFromDispatchRecords
+          : Math.max(dispatchSheetsFromDispatchRecords, dispatchSheetsFromFallbackIssued);
       const dispatchedSheets = round2(
         Math.min(
           Number(sheetsOrdered || 0),
           Number(dispatchSheetsCandidate || 0)
         )
       );
+      const dispatchCmtFromDispatchRecords = Math.max(
+        Number(dispatchedByOrderNoItem?.dispatchedCmt || 0),
+        Number(dispatchedOrderMetrics?.dispatchedCmt || 0)
+      );
+      const dispatchCmtFromFallbackIssued = Math.max(
+        Number(issuedOrderMetricsByItem?.issuedCmt || 0),
+        Number(issuedOrderMetrics?.issuedCmt || 0)
+      );
+      const dispatchCmtCandidate = isRaw
+        ? dispatchCmtFromDispatchRecords
+        : Math.max(dispatchCmtFromDispatchRecords, dispatchCmtFromFallbackIssued);
       const dispatchedCmt = round2(
         Math.min(
           Number(orderedCmt || 0),
-          Math.max(
-            Number(dispatchedByOrderNoItem?.dispatchedCmt || 0),
-            Number(dispatchedOrderMetrics?.dispatchedCmt || 0),
-            Number(issuedOrderMetricsByItem?.issuedCmt || 0),
-            Number(issuedOrderMetrics?.issuedCmt || 0)
-          )
+          Number(dispatchCmtCandidate || 0)
         )
       );
+      const dispatchQuantityFromDispatchRecords = Math.max(
+        Number(dispatchedByOrderNoItem?.dispatchedQuantity || 0),
+        Number(dispatchedOrderMetrics?.dispatchedQuantity || 0)
+      );
+      const dispatchQuantityFromFallbackIssued = Math.max(
+        Number(issuedOrderMetricsByItem?.issuedQuantity || 0),
+        Number(issuedOrderMetrics?.issuedQuantity || 0)
+      );
+      const dispatchQuantityCandidate = isRaw
+        ? dispatchQuantityFromDispatchRecords
+        : Math.max(dispatchQuantityFromDispatchRecords, dispatchQuantityFromFallbackIssued);
       const dispatchedQuantity = round2(
         Math.min(
           Number(orderedQuantity || 0),
-          Math.max(
-            Number(dispatchedByOrderNoItem?.dispatchedQuantity || 0),
-            Number(dispatchedOrderMetrics?.dispatchedQuantity || 0),
-            Number(issuedOrderMetricsByItem?.issuedQuantity || 0),
-            Number(issuedOrderMetrics?.issuedQuantity || 0)
-          )
+          Number(dispatchQuantityCandidate || 0)
         )
       );
 
@@ -1415,18 +1430,76 @@ const aggregateOrderFlowTables = async ({ fromDate, toDate, filters = {} }) => {
       const dispatchedDisplay = round2(
         Math.min(Number(dispatchedDisplayBase || 0), Number(orderedDisplay || 0))
       );
-      const balance = round2(Math.max(orderedDisplay - dispatchedDisplay, 0));
-      const resolveStageDisplayQty = (stagePayload) => {
-        if (isRaw) return null;
-        const doneQty = round2(stagePayload?.stageQty || 0);
-        return doneQty > 0 ? doneQty : 0;
-      };
+      const hasDamagedSheets = Number(damageDisplay || 0) > 0;
+      const damageForBalance =
+        isDecorativeOrSeries && hasDamagedSheets ? Number(damageDisplay || 0) : 0;
+      const balance = round2(
+        Math.max(orderedDisplay - dispatchedDisplay - damageForBalance, 0)
+      );
+      let pressingDisplayQty = null;
+      let cncDisplayQty = null;
+      let colourDisplayQty = null;
+
+      if (!isRaw) {
+        // Use issue-flow quantity first (actual movement to next process), and
+        // keep done/history as fallback for legacy records.
+        const resolveStageFlowQty = (issuePayload, donePayload) => {
+          const issueQty = round2(issuePayload?.issuedQty || 0);
+          if (issueQty > 0) return issueQty;
+          const doneQty = round2(donePayload?.stageQty || 0);
+          return doneQty > 0 ? doneQty : 0;
+        };
+
+        const flowCapQty = round2(
+          Math.max(
+            Number(orderedDisplay || 0) -
+              (isDecorativeOrSeries && hasDamagedSheets ? Number(damageDisplay || 0) : 0),
+            0
+          )
+        );
+
+        const pressingQtyRaw = resolveStageFlowQty(pressingStageForDispatch, pressingStage);
+        pressingDisplayQty = round2(
+          Math.min(Number(pressingQtyRaw || 0), Number(flowCapQty || 0))
+        );
+
+        const cncQtyRaw = resolveStageFlowQty(cncStageForDispatch, cncStage);
+        const cncUpperBound =
+          Number(pressingDisplayQty || 0) > 0
+            ? Number(pressingDisplayQty || 0)
+            : Number(flowCapQty || 0);
+        cncDisplayQty = round2(
+          Math.min(Number(cncQtyRaw || 0), Number(cncUpperBound || 0))
+        );
+
+        const colourQtyRaw = resolveStageFlowQty(colourStageForDispatch, colourStage);
+        const colourUpperBound =
+          Number(cncDisplayQty || 0) > 0
+            ? Number(cncDisplayQty || 0)
+            : Number(cncUpperBound || 0);
+        colourDisplayQty = round2(
+          Math.min(Number(colourQtyRaw || 0), Number(colourUpperBound || 0))
+        );
+      }
 
       const priority = normalizeOrderPriorityLabel(row?.priorityRaw);
-      const status =
-        Math.abs(Number(orderedDisplay || 0) - Number(dispatchedDisplay || 0)) <= 0.01
+      const rawIsFullyDispatched =
+        Number(orderedDisplay || 0) > 0 &&
+        Number(dispatchedDisplay || 0) >= Number(orderedDisplay || 0) - 0.01;
+      const dispatchStatus = isRaw
+        ? rawIsFullyDispatched
+          ? 'Completed'
+          : 'Pending'
+        : Number(balance || 0) <= 0.01
           ? 'Completed'
           : 'Pending';
+      const normalizedRawOrderStatus = String(row?.statusRaw || '').trim().toUpperCase();
+      const hasCancelledStatus = normalizedRawOrderStatus.includes('CANCEL');
+      const orderStatus = hasCancelledStatus
+        ? 'Cancelled'
+        : dispatchStatus === 'Completed'
+          ? 'Closed'
+          : '-';
 
       return {
         productCategory: row?.productCategory || ORDER_TABLE_SOURCES.find((source) => source.key === key)?.label || key,
@@ -1445,20 +1518,20 @@ const aggregateOrderFlowTables = async ({ fromDate, toDate, filters = {} }) => {
           ? round2(row?.qtyCmt || row?.orderedCmt || 0)
           : round2(row?.qtyCmt || 0),
         qtySqm: round2(row?.qtySqm || 0),
+        amount: round2(row?.amount || 0),
         dispatched: dispatchedDisplay,
         damage: damageDisplay,
         balance,
         priority,
-        pressing:
-          resolveStageDisplayQty(pressingStage),
-        cnc:
-          resolveStageDisplayQty(cncStage),
-        colour:
-          resolveStageDisplayQty(colourStage),
+        pressing: pressingDisplayQty,
+        cnc: cncDisplayQty,
+        colour: colourDisplayQty,
         pressingDate: pressingStageForDispatch?.issueDate || null,
         cncDate: cncStageForDispatch?.issueDate || null,
         colourDate: colourStageForDispatch?.issueDate || null,
-        status,
+        orderStatus,
+        dispatchStatus,
+        status: dispatchStatus,
       };
     });
   });
@@ -1728,13 +1801,34 @@ const aggregateOrdersByCategory = async ({ fromDate, toDate }) => {
   const itemRows = await Promise.all(
     ORDER_CATEGORY_SOURCES.map(async (source) => {
       const [summary] = await safeAggregate(source.collection, [
-        { $match: dateMatch('createdAt', fromDate, toDate) },
+        {
+          $lookup: {
+            from: 'orders',
+            localField: 'order_id',
+            foreignField: '_id',
+            as: 'order_details',
+          },
+        },
+        {
+          $unwind: {
+            path: '$order_details',
+            preserveNullAndEmptyArrays: false,
+          },
+        },
+        { $match: dateMatch('order_details.orderDate', fromDate, toDate) },
+        {
+          $group: {
+            _id: '$order_id',
+            qty: { $sum: source.qtyExpr || 0 },
+            amount: { $sum: source.amountExpr || 0 },
+          },
+        },
         {
           $group: {
             _id: null,
-            qty: { $sum: source.qtyExpr || 0 },
-            amount: { $sum: source.amountExpr || 0 },
-            items: { $sum: 1 },
+            qty: { $sum: '$qty' },
+            amount: { $sum: '$amount' },
+            orders: { $sum: 1 },
           },
         },
       ]);
@@ -1742,6 +1836,7 @@ const aggregateOrdersByCategory = async ({ fromDate, toDate }) => {
         category: source.category,
         qty: Number(summary?.qty || 0),
         amount: Number(summary?.amount || 0),
+        orders: Number(summary?.orders || 0),
       };
     })
   );
@@ -1751,34 +1846,8 @@ const aggregateOrdersByCategory = async ({ fromDate, toDate }) => {
       category: row.category,
       amount: round2(row.amount),
       qty: round2(row.qty),
-      orders: 0,
+      orders: Number(row.orders || 0),
     });
-  });
-
-  const orderRows = await safeAggregate('orders', [
-    { $match: dateMatch('orderDate', fromDate, toDate) },
-    {
-      $group: {
-        _id: {
-          $toUpper: { $ifNull: ['$order_category', 'UNKNOWN'] },
-        },
-        orders: { $sum: 1 },
-      },
-    },
-  ]);
-
-  orderRows.forEach((row) => {
-    const key = row?._id === 'SERIES_PRODUCT' ? 'SERIES PRODUCT' : row?._id;
-    if (!categoryMap.has(key)) {
-      categoryMap.set(key, {
-        category: key,
-        amount: 0,
-        qty: 0,
-        orders: 0,
-      });
-    }
-    const current = categoryMap.get(key);
-    current.orders += Number(row?.orders || 0);
   });
 
   return [...categoryMap.values()].sort((a, b) => b.amount - a.amount);
