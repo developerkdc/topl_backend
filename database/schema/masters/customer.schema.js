@@ -87,6 +87,12 @@ const customerSchema = new mongoose.Schema(
       trim: true,
       required: [true, 'Company name is required'],
     },
+    tally_name: {
+      type: String,
+      uppercase: true,
+      trim: true,
+      default: null,
+    },
     customer_type: {
       type: [String],
       uppercase: true,

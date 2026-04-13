@@ -11,6 +11,8 @@ import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import { StatusCodes } from '../../../utils/constants.js';
 import axios from 'axios';
 import { EInvoiceHeaderVariable } from '../../../middlewares/eInvoiceAuth.middleware.js';
+import { CustomerJSONtoXML } from '../../../utils/tally-utils/TallyLedgerCreation.js';
+import { sendToTally } from '../../../utils/tally-utils/TallyService.js';
 
 export const addCustomer = catchAsync(async (req, res, next) => {
   const session = await mongoose.startSession();
@@ -82,6 +84,12 @@ export const addCustomer = catchAsync(async (req, res, next) => {
       customer_client: addedCustomerClients,
     });
 
+    try {
+      await create_customer_ledger_helper(addedCustomer[0]._id);
+    } catch (err) {
+      console.error("Tally sync failed manually update customer to sync it to tally:", addedCustomer[0]._id, err.message);
+    }
+
     return res.status(201).json(response);
   } catch (error) {
     await session.abortTransaction();
@@ -139,6 +147,7 @@ export const editCustomer = catchAsync(async (req, res, next) => {
     credit_schedule: customer?.credit_schedule,
     freight: customer?.freight,
     local_freight: customer?.local_freight,
+    tally_name: customer?.tally_name,
   };
 
   const updateCustomerData = await customer_model.updateOne(
@@ -163,6 +172,12 @@ export const editCustomer = catchAsync(async (req, res, next) => {
     'Customer Update Successfully',
     updateCustomerData
   );
+
+  try {
+    await create_customer_ledger_helper(id);
+  } catch (err) {
+    console.error("Tally sync failed:", id, err.message);
+  }
 
   return res.status(200).json(response);
 });
@@ -739,3 +754,84 @@ export const fetch_single_customer_by_id = catchAsync(async (req, res, next) => 
   return res.status(StatusCodes.OK).json(updated_payload);
 });
 
+
+//tally ledger creation ONLY FOR TESTING API
+export const create_customer_ledger = catchAsync(async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ error: "Invalid ID" });
+    }
+    const pipeline = [
+      {
+        $match: {
+          _id: mongoose.Types.ObjectId.createFromHexString(id),
+        },
+      },
+      {
+        $lookup: {
+          from: 'customer_clients',
+          localField: '_id',
+          foreignField: 'customer_id',
+          as: 'customer_clients_details',
+        }
+      }
+    ];
+    const result = await customer_model.aggregate(pipeline);
+    const customer = result[0];
+    console.log("customer: ", customer);
+    if (!customer) return res.status(404).json({ error: "Customer not found" });
+    const xml = CustomerJSONtoXML(customer);
+
+    if (!xml)
+      return res.status(500).json({ error: "XML generation failed" });
+
+    const response = await sendToTally(xml);
+    // console.log("Tally Response:", response);
+    res.status(200).json({
+      success: true,
+      message: "Invoice pushed to Tally",
+      response,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+//tally ledger creation helper
+export const create_customer_ledger_helper = async (customerId) => {
+  const pipeline = [
+    {
+      $match: {
+        _id: mongoose.Types.ObjectId.createFromHexString(customerId.toString()),
+      },
+    },
+    {
+      $lookup: {
+        from: 'customer_clients',
+        localField: '_id',
+        foreignField: 'customer_id',
+        as: 'customer_clients_details',
+      },
+    },
+  ];
+
+  const result = await customer_model.aggregate(pipeline);
+  const customer = result[0];
+  console.log("customer: ", customer);
+  if (!customer) throw new Error("Customer not found");
+
+  const xml = CustomerJSONtoXML(customer);
+  if (!xml) throw new Error("XML generation failed");
+
+  const response = await sendToTally(xml);
+  console.log("Tally Response:", response);
+
+  if (response.includes("<ERRORS>0</ERRORS>")) {
+    await customer_model.findByIdAndUpdate(customerId, {
+      tally_name: customer.company_name,
+    });
+  }
+
+  return response;
+};

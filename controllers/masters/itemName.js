@@ -7,6 +7,8 @@ import XLSX from 'xlsx';
 import ApiError from '../../utils/errors/apiError.js';
 import ApiResponse from '../../utils/ApiResponse.js';
 import { StatusCodes } from '../../utils/constants.js';
+import { StockItemJSONtoXML } from '../../utils/tally-utils/TallyLedgerCreation.js';
+import { sendToTally } from '../../utils/tally-utils/TallyService.js';
 
 export const AddItemNameMaster = catchAsync(async (req, res) => {
   const authUserDetail = req.userDetails;
@@ -39,6 +41,13 @@ export const AddItemNameMaster = catchAsync(async (req, res) => {
   };
   const newItemNameList = new ItemNameModel(itemNameData);
   const savedItemName = await newItemNameList.save();
+
+  try {
+    await create_stock_item_helper(savedItemName._id);
+  } catch (err) {
+    console.error("Tally sync failed manually update item to sync it to tally:", savedItemName._id, err.message);
+  }
+
   return res
     .status(201)
     .json(
@@ -58,16 +67,25 @@ export const UpdateItemNameMaster = catchAsync(async (req, res) => {
       .status(400)
       .json(new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, 'Invalid id'));
   }
+
   const ItemName = await ItemNameModel.findByIdAndUpdate(
     ItemNameId,
     { $set: updateData },
     { new: true, runValidators: true }
   );
+
   if (!ItemName) {
     return res
       .status(404)
       .json(new ApiResponse(StatusCodes.NOT_FOUND, 'Item Not found...'));
   }
+
+  try {
+    await create_stock_item_helper(ItemName._id);
+  } catch (err) {
+    console.error("Tally sync failed:", ItemName._id, err.message);
+  }
+
   res
     .status(200)
     .json(new ApiResponse(StatusCodes.OK, 'Item Updated successfully...'));
@@ -417,3 +435,89 @@ export const BulkUploadItemMaster = catchAsync(async (req, res, next) => {
     });
   }
 });
+
+// add tally item name ONLY FOR TESTING API
+export const create_stock_item = catchAsync(async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ error: "Invalid ID" });
+    }
+    const pipeline = [
+      {
+        $match: {
+          _id: mongoose.Types.ObjectId.createFromHexString(id),
+        },
+      },
+      {
+        $lookup: {
+          from: 'item_name',
+          localField: '_id',
+          foreignField: 'item_id',
+          as: 'item_name_details',
+        },
+        // $lookup: {
+        //   from: 'item_categories',
+        //   localField: 'category',
+        //   foreignField: '_id',
+        //   as: 'categoryDetails',
+        // },
+      },
+      {
+        $unwind: { path: '$item_name_details', preserveNullAndEmptyArrays: true },
+      },
+      // {
+      //   $unwind: { path: '$categoryDetails', preserveNullAndEmptyArrays: true },
+      // },
+    ];
+    const result = await ItemNameModel.aggregate(pipeline);
+    const item = result[0];
+    console.log("item: ", item);
+    if (!item) return res.status(404).json({ error: "Item not found" });
+    const xml = StockItemJSONtoXML(item);
+
+    if (!xml)
+      return res.status(500).json({ error: "XML generation failed" });
+
+    const response = await sendToTally(xml);
+    // console.log("Tally Response:", response);
+    res.status(200).json({
+      success: true,
+      message: "Invoice pushed to Tally",
+      response,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// add tally item name
+export const create_stock_item_helper = async (itemId) => {
+  const pipeline = [
+    { $match: { _id: mongoose.Types.ObjectId.createFromHexString(itemId.toString()) } },
+    {
+      $lookup: {
+        from: 'item_name',
+        localField: '_id',
+        foreignField: 'item_id',
+        as: 'item_name_details',
+      },
+    },
+    { $unwind: { path: '$item_name_details', preserveNullAndEmptyArrays: true } },
+  ];
+
+  const result = await ItemNameModel.aggregate(pipeline);
+  const item = result[0];
+  if (!item) throw new Error(`Item not found: ${itemId}`);
+
+  const xml = StockItemJSONtoXML(item);
+  if (!xml) throw new Error("XML generation failed");
+
+  const response = await sendToTally(xml);
+  if (response.includes("<ERRORS>0</ERRORS>")) {
+    await ItemNameModel.findByIdAndUpdate(itemId, {
+      tally_item_name: item.item_name,
+    });
+  }
+  return response;
+};

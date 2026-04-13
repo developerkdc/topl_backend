@@ -33,7 +33,12 @@ const ItemNameSchema = new mongoose.Schema(
       uppercase: true,
       default: null,
     },
-
+    tally_item_name: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      default: null,
+    },
     color: {
       color_id: {
         type: mongoose.Schema.Types.ObjectId,

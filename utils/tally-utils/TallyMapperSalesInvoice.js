@@ -174,8 +174,9 @@ export function DispatchJSONtoXML(dispatch) {
     // console.log("Rounding:", rounding);
     // console.log("==========================");
 
-
+    const declaration = `<?xml version="1.0" encoding="UTF-8"?>`;
     const xml = `
+    ${declaration}
     <ENVELOPE>
     <HEADER>
     <TALLYREQUEST>Import Data</TALLYREQUEST>
