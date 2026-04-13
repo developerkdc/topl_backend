@@ -78,20 +78,45 @@ export const approval_status = {
 
 
 
-export const format_date = (serial) => {
-  if (!serial || isNaN(serial)) return null;
-  // Excel's day 1 is 1900-01-01, but JS's Date epoch starts 1970
-  const utc_days = Math.floor(serial - 25569);
-  const utc_value = utc_days * 86400; // seconds
-  const date_info = new Date(utc_value * 1000);
+export const format_date = (value) => {
+  if (!value) return null;
 
-  // Handle time part (for non-whole numbers like 45972.5)
-  const fractional_day = serial - Math.floor(serial);
-  const total_seconds = Math.floor(86400 * fractional_day);
-  const seconds = total_seconds % 60;
-  const minutes = Math.floor(total_seconds / 60) % 60;
-  const hours = Math.floor(total_seconds / (60 * 60));
+  // 1. If it's already a Date object (ExcelJS often does this)
+  if (value instanceof Date && !isNaN(value.getTime())) {
+    return value;
+  }
 
-  date_info.setUTCHours(hours, minutes, seconds);
-  return date_info;
+  // 2. If it's a number (Excel Serial Format)
+  if (typeof value === 'number' || (!isNaN(value) && !isNaN(parseFloat(value)))) {
+    const serial = parseFloat(value);
+    const utc_days = Math.floor(serial - 25569);
+    const utc_value = utc_days * 86400;
+    const date_info = new Date(utc_value * 1000);
+    const fractional_day = serial - Math.floor(serial);
+    const total_seconds = Math.floor(86400 * fractional_day);
+    const seconds = total_seconds % 60;
+    const minutes = Math.floor(total_seconds / 60) % 60;
+    const hours = Math.floor(total_seconds / (60 * 60));
+    date_info.setUTCHours(hours, minutes, seconds);
+    return date_info;
+  }
+
+  // 3. If it's a string (e.g., "13-04-2026" or "2026-04-13")
+  if (typeof value === 'string') {
+    // Try DD-MM-YYYY or DD/MM/YYYY
+    const ddmmyyyy = /^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/.exec(value.trim());
+    if (ddmmyyyy) {
+      const day = parseInt(ddmmyyyy[1], 10);
+      const month = parseInt(ddmmyyyy[2], 10) - 1; // JS months are 0-indexed
+      const year = parseInt(ddmmyyyy[3], 10);
+      const d = new Date(year, month, day);
+      if (!isNaN(d.getTime())) return d;
+    }
+
+    // Try native parsing for ISO or other standard formats
+    const d = new Date(value);
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  return null;
 }
