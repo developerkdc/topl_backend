@@ -338,10 +338,14 @@ const aggregatePackingGoodsTypeMetrics = async ({ fromDate, toDate, filters = {}
         customerName: 1,
         orderCategory: '$packing_details.order_category',
         noOfSheets: { $ifNull: ['$no_of_sheets', 0] },
+        noOfLeaves: { $ifNull: ['$no_of_leaves', 0] },
+        numberOfRolls: {
+          $ifNull: ['$number_of_rolls', { $ifNull: ['$number_of_roll', 0] }],
+        },
         sqm: { $ifNull: ['$sqm', 0] },
         quantity: { $ifNull: ['$quantity', 0] },
         cmt: { $ifNull: ['$cmt', 0] },
-        cbm: { $ifNull: ['$cbm', 0] },
+        cbm: { $ifNull: ['$cbm', { $ifNull: ['$cmt', 0] }] },
         productType: {
           $ifNull: ['$product_type', '-'],
         },
@@ -385,6 +389,21 @@ const aggregatePackingGoodsTypeMetrics = async ({ fromDate, toDate, filters = {}
   rows.forEach((row) => {
     const goodsType = String(row?.goodsType || 'FINISHED GOODS').toUpperCase();
     const normalizedGoodsType = goodsType === 'RAW GOODS' ? 'RAW GOODS' : 'FINISHED GOODS';
+    const productType = String(row?.productType || '')
+      .trim()
+      .toUpperCase();
+    const sheetsValue = round2(row?.noOfSheets || 0);
+    const leavesValue = round2(row?.noOfLeaves || 0);
+    const rollsValue = round2(row?.numberOfRolls || 0);
+    const quantityValue = round2(row?.quantity || 0);
+    const sqmValue = round2(row?.sqm || 0);
+    const cbmValue = round2(row?.cbm || 0);
+    const cmtValue = round2(row?.cmt || 0);
+    const displaySheetLikeQty = sheetsValue > 0
+      ? sheetsValue
+      : leavesValue > 0
+        ? leavesValue
+        : 0;
 
     const record = {
       packingId: row?.packingId || '-',
@@ -393,38 +412,38 @@ const aggregatePackingGoodsTypeMetrics = async ({ fromDate, toDate, filters = {}
       orderCategory: row?.orderCategory || [],
       productType: row?.productType || '-',
       itemName: row?.itemName || '-',
-      noOfSheets: round2(row?.noOfSheets || 0),
-      sqm: round2(row?.sqm || 0),
-      quantity: round2(row?.quantity || 0),
-      cmt: round2(row?.cmt || 0),
-      cbm: round2(row?.cbm || 0),
+      noOfSheets: displaySheetLikeQty,
+      noOfLeaves: leavesValue,
+      numberOfRolls: rollsValue,
+      sqm: sqmValue,
+      quantity: quantityValue,
+      cmt: cmtValue,
+      cbm: cbmValue,
       amount: round2(row?.amount || 0),
     };
 
     const preferredUnit =
-      Number(row?.noOfSheets || 0) > 0
+      sheetsValue > 0
         ? 'SHEETS'
-        : Number(row?.sqm || 0) > 0
-          ? 'SQM'
-          : Number(row?.quantity || 0) > 0
+        : leavesValue > 0
+          ? 'LEAVES'
+          : rollsValue > 0
+            ? 'ROLLS'
+            : quantityValue > 0
             ? 'QUANTITY'
-            : Number(row?.cmt || 0) > 0
-              ? 'CMT'
-              : Number(row?.cbm || 0) > 0
+            : cbmValue > 0 || cmtValue > 0
+              ? 'CBM'
+              : ['LOG', 'FLITCH', 'CROSSCUTTING', 'FLITCHING'].includes(productType)
                 ? 'CBM'
-                : ['LOG', 'FLITCH'].includes(
-                    String(row?.productType || '')
-                      .trim()
-                      .toUpperCase()
-                  )
-                  ? 'CBM'
-                  : ['STORE', 'OTHER_GOODS', 'OTHER GOODS'].includes(
-                        String(row?.productType || '')
-                          .trim()
-                          .toUpperCase()
-                      )
-                    ? 'QUANTITY'
-                    : 'SHEETS';
+                : ['VENEER', 'DRESSING', 'DRESSING_FACTORY'].includes(productType)
+                  ? 'LEAVES'
+                  : ['FLEECE_PAPER', 'FLEECE PAPER'].includes(productType)
+                    ? 'ROLLS'
+                    : ['STORE', 'OTHER_GOODS', 'OTHER GOODS'].includes(productType)
+                      ? 'QUANTITY'
+                      : sqmValue > 0
+                        ? 'SQM'
+                        : 'SHEETS';
 
     record.unit = preferredUnit;
 

@@ -55,6 +55,7 @@ const inventory_config_model = {
         invoice_model: 'log_inventory_invoice_details',
         fields: [
             'inward_sr_no',
+            'item_sr_no',
             'supplier_item_name',
             'supplier_log_no',
             'item_sub_category_name',
@@ -83,6 +84,7 @@ const inventory_config_model = {
         item_model: 'flitch_inventory_items_details',
         fields: [
             'inward_sr_no',
+            'item_sr_no',
             'supplier_item_name',
             'supplier_flitch_no',
             'item_name',
@@ -98,7 +100,7 @@ const inventory_config_model = {
             'width3',
             'height',
             'flitch_cmt',
-            'rate_in_currency',
+            'currency',
             'exchange_rate',
             'rate_in_inr',
             'amount',
@@ -112,6 +114,7 @@ const inventory_config_model = {
         item_model: 'plywood_inventory_items_details',
         fields: [
             'inward_sr_no',
+            'item_sr_no',
             'supplier_item_name',
             'item_name',
             'color_name',
@@ -137,6 +140,7 @@ const inventory_config_model = {
         item_model: 'mdf_inventory_items_details',
         fields: [
             'inward_sr_no',
+            'item_sr_no',
             'supplier_item_name',
             'item_name',
             'item_sub_category_name',
@@ -161,6 +165,7 @@ const inventory_config_model = {
         item_model: 'face_inventory_items_details',
         fields: [
             'inward_sr_no',
+            'item_sr_no',
             'supplier_item_name',
             'item_name',
             'length',
@@ -168,12 +173,12 @@ const inventory_config_model = {
             'thickness',
             'number_of_sheets',
             'total_sq_meter',
-            'grade_name',
-            'rate_in_currency',
-            'exchange_rate',
-            'rate_in_inr',
-            'amount',
-            'remark',
+            'grade_name', // J
+            'rate_in_currency', // K
+            'exchange_rate', // L
+            'rate_in_inr', // M
+            'amount', // N
+            'remark', // O
         ],
         filepath: '/bulk_uploads/inventory/face/',
         handler: add_face_inventory_details,
@@ -183,6 +188,7 @@ const inventory_config_model = {
         item_model: 'core_inventory_items_details',
         fields: [
             'inward_sr_no',
+            'item_sr_no',
             'supplier_item_name',
             'item_name',
             'length',
@@ -205,6 +211,7 @@ const inventory_config_model = {
         item_model: 'fleece_inventory_items_details',
         fields: [
             'inward_sr_no',
+            'item_sr_no',
             'supplier_item_name',
             'item_name',
             'item_sub_category_name',
@@ -228,6 +235,7 @@ const inventory_config_model = {
         item_model: 'othergoods_inventory_items_details',
         fields: [
             'inward_sr_no',
+            'item_sr_no',
             'supplier_item_name',
             'item_name',
             'item_sub_category_name',
@@ -348,7 +356,7 @@ const fetch_grade_details_by_name = async (name, session) => {
         .lean()
         .session(session);
     if (!details) {
-        throw new ApiError(`Color not found -> ${name}`, StatusCodes.BAD_REQUEST);
+        throw new ApiError(`Grade not found -> ${name}`, StatusCodes.BAD_REQUEST);
     }
     return details;
 };
@@ -379,10 +387,8 @@ const fetch_machine_details_by_name = async (name, session) => {
 //utility to add inventory invoice data
 const add_inventory_invoice_data = async (doc, session) => {
     const invoice_data = {};
-    console.log("inward_date => ", doc.inward_date)
-    // // doc.inward_date = moment.parseZone(doc?.inward_date, 'DD/MM/YYYY').toDate();
     doc.inward_date = format_date(doc?.inward_date);
-    doc.inward_date = format_date(doc?.inward_date);
+    
     if (doc.workers_details) {
         invoice_data.workers_details = {
             no_of_workers: doc.workers_details.no_of_workers,
@@ -427,12 +433,7 @@ const add_inventory_invoice_data = async (doc, session) => {
 
     if (doc.invoice_Details) {
         invoice_data.invoice_Details = { ...doc.invoice_Details };
-
-        // let updated_invoice_date = moment
-        //     .parseZone(doc.invoice_Details.invoice_date, 'DD/MM/YYYY')
-        //     .toDate();
         let updated_invoice_date = format_date(doc.invoice_Details.invoice_date)
-
         invoice_data.invoice_Details.invoice_date = updated_invoice_date;
         for (let field of [
             'isFreightInclude',
@@ -462,7 +463,6 @@ const add_inventory_invoice_data = async (doc, session) => {
             invoice_data[key] = doc[key];
         }
     }
-    console.log("invoice data => ", invoice_data)
     return invoice_data;
 };
 
@@ -487,7 +487,15 @@ async function add_log_inventory_details(doc, session, sr_no_set) {
         color_name: color_details?.name,
     };
 
-    doc.invoice_id = sr_no_set.get(doc.inward_sr_no);
+    // Handle missing exchange rate and rates
+    doc.exchange_rate = doc.exchange_rate || 1;
+    if ((!doc.rate_in_currency || doc.rate_in_currency == 0) && doc.rate_in_inr) {
+        doc.rate_in_currency = doc.rate_in_inr / doc.exchange_rate;
+    }
+    doc.rate_in_inr = doc.rate_in_inr || doc.rate_in_currency;
+
+    const key = String(doc.inward_sr_no).trim();
+    doc.invoice_id = sr_no_set.get(key);
 
     if (!doc.inward_sr_no) {
         throw new ApiError(
@@ -516,7 +524,16 @@ async function add_flitch_inventory_details(doc, session, sr_no_set) {
         color_id: color_details?._id,
         color_name: color_details?.name,
     };
-    doc.invoice_id = sr_no_set.get(doc.inward_sr_no);
+
+    // Handle missing exchange rate and rates
+    doc.exchange_rate = doc.exchange_rate || 1;
+    if ((!doc.rate_in_currency || doc.rate_in_currency == 0) && doc.rate_in_inr) {
+        doc.rate_in_currency = doc.rate_in_inr / doc.exchange_rate;
+    }
+    doc.rate_in_inr = doc.rate_in_inr || doc.rate_in_currency;
+
+    const key = String(doc.inward_sr_no).trim();
+    doc.invoice_id = sr_no_set.get(key);
 
     if (!doc.inward_sr_no) {
         throw new ApiError(
@@ -545,7 +562,16 @@ async function add_plywood_inventory_details(doc, session, sr_no_set) {
         color_id: color_details?._id,
         color_name: color_details?.name,
     };
-    doc.invoice_id = sr_no_set.get(doc.inward_sr_no);
+
+    // Handle missing exchange rate and rates
+    doc.exchange_rate = doc.exchange_rate || 1;
+    if ((!doc.rate_in_currency || doc.rate_in_currency == 0) && doc.rate_in_inr) {
+        doc.rate_in_currency = doc.rate_in_inr / doc.exchange_rate;
+    }
+    doc.rate_in_inr = doc.rate_in_inr || doc.rate_in_currency;
+
+    const key = String(doc.inward_sr_no).trim();
+    doc.invoice_id = sr_no_set.get(key);
 
     if (!doc.inward_sr_no) {
         throw new ApiError(
@@ -567,7 +593,15 @@ async function add_mdf_inventory_details(doc, session, sr_no_set) {
     doc.item_sub_category_id = subcategory_details?._id;
     doc.item_sub_category_name = subcategory_details?.name;
 
-    doc.invoice_id = sr_no_set.get(doc.inward_sr_no);
+    // Handle missing exchange rate and rates
+    doc.exchange_rate = doc.exchange_rate || 1;
+    if ((!doc.rate_in_currency || doc.rate_in_currency == 0) && doc.rate_in_inr) {
+        doc.rate_in_currency = doc.rate_in_inr / doc.exchange_rate;
+    }
+    doc.rate_in_inr = doc.rate_in_inr || doc.rate_in_currency;
+
+    const key = String(doc.inward_sr_no).trim();
+    doc.invoice_id = sr_no_set.get(key);
 
     if (!doc.inward_sr_no) {
         throw new ApiError(
@@ -588,7 +622,15 @@ async function add_face_inventory_details(doc, session, sr_no_set) {
     doc.item_id = item_details?._id;
     doc.grade_id = grade_details?._id;
     doc.grade_name = grade_details?.grade_name;
-    doc.invoice_id = sr_no_set.get(doc.inward_sr_no);
+
+    // Handle missing exchange rate and rates
+    doc.exchange_rate = doc.exchange_rate || 1;
+    if ((!doc.rate_in_currency || doc.rate_in_currency == 0) && doc.rate_in_inr) {
+        doc.rate_in_currency = doc.rate_in_inr / doc.exchange_rate;
+    }
+    doc.rate_in_inr = doc.rate_in_inr || doc.rate_in_currency;
+    const key = String(doc.inward_sr_no).trim();
+    doc.invoice_id = sr_no_set.get(key);
 
     if (!doc.inward_sr_no) {
         throw new ApiError(
@@ -609,7 +651,16 @@ async function add_core_inventory_details(doc, session, sr_no_set) {
     doc.item_id = item_details?._id;
     doc.grade_id = grade_details?._id;
     doc.grade_name = grade_details?.grade_name;
-    doc.invoice_id = sr_no_set.get(doc.inward_sr_no);
+
+    // Handle missing exchange rate and rates
+    doc.exchange_rate = doc.exchange_rate || 1;
+    if ((!doc.rate_in_currency || doc.rate_in_currency == 0) && doc.rate_in_inr) {
+        doc.rate_in_currency = doc.rate_in_inr / doc.exchange_rate;
+    }
+    doc.rate_in_inr = doc.rate_in_inr || doc.rate_in_currency;
+
+    const key = String(doc.inward_sr_no).trim();
+    doc.invoice_id = sr_no_set.get(key);
 
     if (!doc.inward_sr_no) {
         throw new ApiError(
@@ -631,7 +682,15 @@ async function add_fleece_paper_inventory_details(doc, session, sr_no_set) {
     doc.item_sub_category_id = subcategory_details?._id;
     doc.item_sub_category_name = subcategory_details?.name;
 
-    doc.invoice_id = sr_no_set.get(doc.inward_sr_no);
+    // Handle missing exchange rate and rates
+    doc.exchange_rate = doc.exchange_rate || 1;
+    if ((!doc.rate_in_currency || doc.rate_in_currency == 0) && doc.rate_in_inr) {
+        doc.rate_in_currency = doc.rate_in_inr / doc.exchange_rate;
+    }
+    doc.rate_in_inr = doc.rate_in_inr || doc.rate_in_currency;
+
+    const key = String(doc.inward_sr_no).trim();
+    doc.invoice_id = sr_no_set.get(key);
 
     if (!doc.inward_sr_no) {
         throw new ApiError(
@@ -665,7 +724,15 @@ async function add_other_goods_inventory_details(doc, session, sr_no_set) {
     doc.machine_name = machine_details?.machine_name;
     doc.machine_id = machine_details?._id;
 
-    doc.invoice_id = sr_no_set.get(doc.inward_sr_no);
+    // Handle missing exchange rate and rates
+    doc.exchange_rate = doc.exchange_rate || 1;
+    if ((!doc.rate_in_currency || doc.rate_in_currency == 0) && doc.rate_in_inr) {
+        doc.rate_in_currency = doc.rate_in_inr / doc.exchange_rate;
+    }
+    doc.rate_in_inr = doc.rate_in_inr || doc.rate_in_currency;
+
+    const key = String(doc.inward_sr_no).trim();
+    doc.invoice_id = sr_no_set.get(key);
 
     if (!doc.inward_sr_no) {
         throw new ApiError(
@@ -676,7 +743,7 @@ async function add_other_goods_inventory_details(doc, session, sr_no_set) {
     return doc;
 }
 
-export const bulk_upload_inventory = catchAsync(async (req, res) => {
+export const bulk_upload_inventory = catchAsync(async (req, res, next) => {
     const { inventory_name } = req.query;
     const user = req.userDetails;
     const configs = inventory_config_model[inventory_name];
@@ -700,19 +767,18 @@ export const bulk_upload_inventory = catchAsync(async (req, res) => {
             return `${name}_${Date.now()}${ext}`;
         },
     });
+
     if (!inventory_name) {
         throw new ApiError('Inventory name is required', StatusCodes.BAD_REQUEST);
     }
-
     if (!inventory_config_model[inventory_name]) {
         throw new ApiError('Invalid Inventory name', StatusCodes.BAD_REQUEST);
     }
+
     const session = await mongoose.startSession();
-    let file_path = null;
     try {
         const { files } = await parse_form(req, form);
         const file = files.file?.[0];
-        file_path = file?.filepath;
         if (!file) {
             throw new ApiError('File is required', StatusCodes.BAD_REQUEST);
         }
@@ -724,135 +790,107 @@ export const bulk_upload_inventory = catchAsync(async (req, res) => {
 
         session.startTransaction();
         try {
-            const workbook_reader = new exceljs.stream.xlsx.WorkbookReader(
-                file.filepath,
-                {
-                    entries: 'emit',
-                    sharedStrings: 'cache',
-                    hyperlinks: 'ignore',
-                    styles: 'ignore',
-                }
-            );
+            const workbook = new exceljs.Workbook();
+            console.log("Loading file from:", file.filepath);
+            await workbook.xlsx.readFile(file.filepath);
+            
+            console.log("Worksheets found:", workbook.worksheets.map(w => w.name));
 
             const maxNumber = await model(configs?.item_model).aggregate([
-                {
-                    $group: {
-                        _id: null,
-                        max: { $max: '$item_sr_no' },
-                    },
-                },
+                { $group: { _id: null, max: { $max: '$item_sr_no' } } }
             ]);
 
             let max_sr_no = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1;
-            for await (const worksheet of workbook_reader) {
-                //handle invoice details
-                if (worksheet?.name === 'Invoice Details') {
-                    for await (const row of worksheet) {
-                        if (row.number === 1) continue;
-                        let invoice_doc = {};
-                        invoice_fields.forEach((field, index) => {
-                            let raw_value = row.getCell(index + 1).value ?? null;
-                            handle_nested_values(invoice_doc, field, raw_value);
-                        });
-                        const invoice_Details = await add_inventory_invoice_data(
-                            invoice_doc,
-                            session
-                        );
+            
+            const invWorksheet = workbook.getWorksheet('Invoice Details');
+            if (invWorksheet) {
+                const rows = invWorksheet.getRows(2, invWorksheet.rowCount) || [];
+                for (const row of rows) {
+                    const inwardSrNo = row.getCell(1).value;
+                    if (!inwardSrNo) continue; 
 
-                        invoice_buffer_data.push({
-                            ...invoice_Details,
-                            created_by: user?._id,
-                            updated_by: user?._id,
-                        });
-                        if (invoice_buffer_data?.length === batch_size) {
-                            const create_invoice_result = await model(
-                                configs?.invoice_model
-                            ).insertMany(invoice_buffer_data, { session });
-                            if (create_invoice_result?.length === 0) {
-                                throw new ApiError(
-                                    'Failed to add invoice details',
-                                    StatusCodes.BAD_REQUEST
-                                );
-                            }
-                            // console.log("create_invoice_result => ", create_invoice_result)
-                            create_invoice_result?.forEach((inv) => {
-                                inward_sr_no_set.set(inv?.inward_sr_no, inv?._id);
-                            });
-                            invoice_buffer_data = [];
+                    let invoice_doc = {};
+                    invoice_fields.forEach((field, index) => {
+                        let cell = row.getCell(index + 1);
+                        let raw_value = cell.value ?? null;
+                        if (raw_value && typeof raw_value === 'object') {
+                            if (raw_value.result !== undefined) raw_value = raw_value.result;
+                            else if (raw_value.richText) raw_value = raw_value.richText.map(t => t.text).join('');
                         }
-                    }
-                    if (invoice_buffer_data?.length > 0) {
-                        const create_invoice_result = await model(
-                            configs?.invoice_model
-                        ).insertMany(invoice_buffer_data, { session });
-                        if (create_invoice_result?.length === 0) {
-                            throw new ApiError(
-                                'Failed to add invoice details',
-                                StatusCodes.BAD_REQUEST
-                            );
-                        }
-                        create_invoice_result?.forEach((inv) => {
-                            inward_sr_no_set.set(inv?.inward_sr_no, inv?._id);
-                        });
-                        invoice_buffer_data = [];
-                    }
-                }
-            }
-
-            for await (const worksheet of workbook_reader) {
-                //handle item details
-                if (worksheet?.name === 'Invoice Item Details') {
-                    for await (const row of worksheet) {
-                        if (row.number === 1) continue;
-                        let item_doc = { item_sr_no: max_sr_no++ };
-
-                        configs?.fields.forEach((field, index) => {
-                            let raw_value = row.getCell(index + 1).value ?? null;
-                            item_doc[field] = raw_value;
-                        });
-
-                        //here each config will have its own handler to handle item details
-                        await configs?.handler(item_doc, session, inward_sr_no_set);
-
-                        item_doc.created_by = user?._id;
-                        item_doc.updated_by = user?._id;
-                        buffer_data.push(item_doc);
-
-                        //insert in batches
-                        if (buffer_data.length === batch_size) {
-                            await model(configs?.item_model).insertMany(buffer_data, {
-                                session,
-                            });
-                            total += buffer_data.length;
-                            buffer_data = [];
-                        }
-                    }
-                }
-                //if any buffer data is left to be inserted
-                if (buffer_data?.length > 0) {
-                    await model(configs?.item_model)?.insertMany(buffer_data, {
-                        session,
+                        handle_nested_values(invoice_doc, field, raw_value);
                     });
-                    total += buffer_data?.length;
+
+                    const invoice_Details = await add_inventory_invoice_data(invoice_doc, session);
+                    invoice_buffer_data.push({
+                        ...invoice_Details,
+                        created_by: user?._id,
+                        updated_by: user?._id,
+                    });
                 }
             }
-            const response = new ApiResponse(
-                StatusCodes.OK,
-                `${inventory_name?.split('_')?.join(' ')?.toUpperCase()} uploaded successfully`,
-                total
-            );
+
+            if (invoice_buffer_data.length > 0) {
+                const results = await model(configs?.invoice_model).insertMany(invoice_buffer_data, { session });
+                results.forEach(inv => {
+                    const key = String(inv.inward_sr_no).trim();
+                    inward_sr_no_set.set(key, inv._id);
+                });
+                console.log(`Saved ${results.length} invoices.`);
+            }
+
+            const itemWorksheet = workbook.worksheets.find(w => w.name !== 'Invoice Details');
+            if (itemWorksheet) {
+                const rows = itemWorksheet.getRows(2, itemWorksheet.rowCount) || [];
+                for (const row of rows) {
+                    if (!row.getCell(1).value) continue;
+
+                    let item_doc = {};
+                    configs?.fields.forEach((field, index) => {
+                        let cell = row.getCell(index + 1);
+                        let raw_value = cell.value ?? null;
+                        if (raw_value && typeof raw_value === 'object') {
+                            if (raw_value.result !== undefined) raw_value = raw_value.result;
+                            else if (raw_value.richText) raw_value = raw_value.richText.map(t => t.text).join('');
+                        }
+                        handle_nested_values(item_doc, field, raw_value);
+                    });
+
+                    const key = String(item_doc.inward_sr_no).trim();
+                    if (!inward_sr_no_set.has(key)) {
+                        throw new ApiError(`No Invoice found for Inward SR No: ${key}. Please check if it matches the Invoice sheet.`, StatusCodes.BAD_REQUEST);
+                    }
+
+                    const item_Details = await configs?.handler(item_doc, session, inward_sr_no_set);
+                    buffer_data.push({
+                        ...item_Details,
+                        item_sr_no: item_Details.item_sr_no || max_sr_no++,
+                        created_by: user?._id,
+                        updated_by: user?._id,
+                    });
+
+                    if (buffer_data.length >= batch_size) {
+                        await model(configs?.item_model).insertMany(buffer_data, { session });
+                        total += buffer_data.length;
+                        buffer_data = [];
+                    }
+                }
+            }
+
+            if (buffer_data.length > 0) {
+                await model(configs?.item_model).insertMany(buffer_data, { session });
+                total += buffer_data.length;
+            }
+
             await session.commitTransaction();
-            return res.status(response.statusCode).json(response);
+            res.status(StatusCodes.OK).json(new ApiResponse(StatusCodes.OK, `Successfully uploaded ${total} items`, null));
         } catch (error) {
             await session.abortTransaction();
             throw error;
+        } finally {
+            session.endSession();
         }
     } catch (error) {
-        if (file_path) {
-            fs.unlinkSync(file_path);
-        }
-        throw error;
-    } finally {
-        await session.endSession();
+        console.error('Bulk upload error:', error);
+        return next(new ApiError(error.message || 'Bulk upload failed', StatusCodes.INTERNAL_SERVER_ERROR));
     }
 });

@@ -153,7 +153,7 @@ export const GeneratePressingStockRegisterExcel = async (
           tr.getCell(8).value = groupTotals.process_waste;
           tr.getCell(9).value = groupTotals.new_sqmtr;
           tr.getCell(10).value = groupTotals.closing_balance;
-          for (let col = 4; col <= 10; col++) tr.getCell(col).numFmt = '0.000';
+          for (let col = 4; col <= 10; col++) tr.getCell(col).numFmt = '0.00';
           tr.eachCell((cell) => {
             Object.assign(cell, totalRowStyle);
           });
@@ -204,7 +204,7 @@ export const GeneratePressingStockRegisterExcel = async (
       r.getCell(8).value = pw;
       r.getCell(9).value = nw;
       r.getCell(10).value = cb;
-      for (let col = 4; col <= 10; col++) r.getCell(col).numFmt = '0.000';
+      for (let col = 4; col <= 10; col++) r.getCell(col).numFmt = '0.00';
 
       groupTotals.opening_balance += ob;
       groupTotals.received += re;
@@ -239,7 +239,7 @@ export const GeneratePressingStockRegisterExcel = async (
       tr.getCell(8).value = groupTotals.process_waste;
       tr.getCell(9).value = groupTotals.new_sqmtr;
       tr.getCell(10).value = groupTotals.closing_balance;
-      for (let col = 4; col <= 10; col++) tr.getCell(col).numFmt = '0.000';
+      for (let col = 4; col <= 10; col++) tr.getCell(col).numFmt = '0.00';
       tr.eachCell((cell) => Object.assign(cell, totalRowStyle));
       mergeRanges.itemGroup.push({ start: itemGroupStartRow, end: currentRow - 1 });
       currentRow++;
@@ -266,7 +266,7 @@ export const GeneratePressingStockRegisterExcel = async (
     totalRow.getCell(10).value = grandTotals.closing_balance;
     totalRow.eachCell((cell) => {
       Object.assign(cell, totalRowStyle);
-      if (cell.column >= 4) cell.numFmt = '0.000';
+      if (cell.column >= 4) cell.numFmt = '0.00';
     });
 
     worksheet.columns = [
