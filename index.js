@@ -104,7 +104,6 @@ app.use(`/api/${Configs.server.version}/report`, displayReportsRoutes);
 //Report
 app.use(`/api/${Configs.server.version}/report`, reportRouter);
 
-
 app.use(globalErrorHandler);
 
 // Error handling for the server

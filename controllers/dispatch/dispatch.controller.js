@@ -37,6 +37,8 @@ import { parseGovEwayDate } from '../../utils/date/govDateConverter.js';
 import { DispatchJSONtoXML } from '../../utils/tally-utils/TallyMapperSalesInvoice.js';
 import { sendToTally } from '../../utils/tally-utils/TallyService.js';
 import UnitModel from '../../database/schema/masters/unit.schema.js';
+// import { logTally } from '../../utils/tally-utils/loggerHelper.js';
+import { XMLParser } from 'fast-xml-parser';
 
 const OTHER_HSN_CODE = "440139"; // wood hsn code(other)
 
@@ -2089,7 +2091,7 @@ export const generate_irn_no = catchAsync(async (req, res, next) => {
     const sgstAmt = Number(Number(item?.gst_details?.sgst_amount || 0).toFixed(2));
     const cgstAmt = Number(Number(item?.gst_details?.cgst_amount || 0).toFixed(2));
 
-    const unit = item?.calculate_unit; 
+    const unit = item?.calculate_unit;
     //find this unit in unit master to get symbolic name
     const unitSymbolicName = unit_map[unit] || 'OTH';
 
@@ -4081,11 +4083,28 @@ export const dispatch_tally = catchAsync(async (req, res, next) => {
       return res.status(500).json({ error: "XML generation failed" });
 
     const response = await sendToTally(xml);
-    // console.log("Tally Response:", response);
+    const parser = new XMLParser();
+    const parsed = parser.parse(response);
+    const msg = parsed?.message ||
+      parsed?.RESPONSE ||
+      parsed?.ENVELOPE?.BODY?.DATA?.IMPORTDATA?.RESPONSE ||
+      {};
+
+    const isSuccess = msg?.CREATED > 0 || msg?.ALTERED > 0;
+
+    await dispatchModel.findByIdAndUpdate(
+      id,
+      {
+        $set: {
+          tally_sync_status: isSuccess ? "SUCCESSFUL" : "FAILED",
+        },
+      },
+      { new: true }
+    );
     res.status(200).json({
       success: true,
       message: "Invoice pushed to Tally",
-      response,
+      tallyResponse: msg,
     });
   } catch (err) {
     next(err);

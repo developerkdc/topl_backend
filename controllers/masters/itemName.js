@@ -9,6 +9,7 @@ import ApiResponse from '../../utils/ApiResponse.js';
 import { StatusCodes } from '../../utils/constants.js';
 import { StockItemJSONtoXML } from '../../utils/tally-utils/TallyLedgerCreation.js';
 import { sendToTally } from '../../utils/tally-utils/TallyService.js';
+import { XMLParser } from 'fast-xml-parser';
 
 export const AddItemNameMaster = catchAsync(async (req, res) => {
   const authUserDetail = req.userDetails;
@@ -42,10 +43,13 @@ export const AddItemNameMaster = catchAsync(async (req, res) => {
   const newItemNameList = new ItemNameModel(itemNameData);
   const savedItemName = await newItemNameList.save();
 
+  let tallyResponse = null;
+
   try {
-    await create_stock_item_helper(savedItemName._id);
+    tallyResponse = await create_stock_item_helper(savedItemName._id);
   } catch (err) {
     console.error("Tally sync failed manually update item to sync it to tally:", savedItemName._id, err.message);
+    tallyResponse = err.message;
   }
 
   return res
@@ -54,7 +58,10 @@ export const AddItemNameMaster = catchAsync(async (req, res) => {
       new ApiResponse(
         StatusCodes.OK,
         'Item created successfully..',
-        savedItemName
+        {
+          savedItemName,
+          tallyResponse
+        }
       )
     );
 });
@@ -80,15 +87,20 @@ export const UpdateItemNameMaster = catchAsync(async (req, res) => {
       .json(new ApiResponse(StatusCodes.NOT_FOUND, 'Item Not found...'));
   }
 
+  let tallyResponse = null;
+
   try {
-    await create_stock_item_helper(ItemName._id);
+    tallyResponse = await create_stock_item_helper(ItemName._id);
   } catch (err) {
     console.error("Tally sync failed:", ItemName._id, err.message);
+    tallyResponse = err.message;
   }
 
   res
     .status(200)
-    .json(new ApiResponse(StatusCodes.OK, 'Item Updated successfully...'));
+    .json(new ApiResponse(StatusCodes.OK, 'Item Updated successfully...', {
+      tallyResponse
+    }));
 });
 
 export const ListItemNameMaster = catchAsync(async (req, res) => {
@@ -172,6 +184,7 @@ export const ListItemNameMaster = catchAsync(async (req, res) => {
         alternate_item_name_details: 1,
         createdAt: 1,
         created_by: 1,
+        tally_sync_status: 1,
         'userDetails.first_name': 1,
         'userDetails.user_name': 1,
         'categoryDetails._id': 1,
@@ -436,61 +449,6 @@ export const BulkUploadItemMaster = catchAsync(async (req, res, next) => {
   }
 });
 
-// add tally item name ONLY FOR TESTING API
-export const create_stock_item = catchAsync(async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    if (!mongoose.isValidObjectId(id)) {
-      return res.status(400).json({ error: "Invalid ID" });
-    }
-    const pipeline = [
-      {
-        $match: {
-          _id: mongoose.Types.ObjectId.createFromHexString(id),
-        },
-      },
-      {
-        $lookup: {
-          from: 'item_name',
-          localField: '_id',
-          foreignField: 'item_id',
-          as: 'item_name_details',
-        },
-        // $lookup: {
-        //   from: 'item_categories',
-        //   localField: 'category',
-        //   foreignField: '_id',
-        //   as: 'categoryDetails',
-        // },
-      },
-      {
-        $unwind: { path: '$item_name_details', preserveNullAndEmptyArrays: true },
-      },
-      // {
-      //   $unwind: { path: '$categoryDetails', preserveNullAndEmptyArrays: true },
-      // },
-    ];
-    const result = await ItemNameModel.aggregate(pipeline);
-    const item = result[0];
-    console.log("item: ", item);
-    if (!item) return res.status(404).json({ error: "Item not found" });
-    const xml = StockItemJSONtoXML(item);
-
-    if (!xml)
-      return res.status(500).json({ error: "XML generation failed" });
-
-    const response = await sendToTally(xml);
-    // console.log("Tally Response:", response);
-    res.status(200).json({
-      success: true,
-      message: "Invoice pushed to Tally",
-      response,
-    });
-  } catch (err) {
-    next(err);
-  }
-});
-
 // add tally item name
 export const create_stock_item_helper = async (itemId) => {
   const pipeline = [
@@ -519,5 +477,45 @@ export const create_stock_item_helper = async (itemId) => {
       tally_item_name: item.item_name,
     });
   }
-  return response;
+
+  const parser = new XMLParser();
+  const parsed = parser.parse(response);
+  const msg = parsed?.message ||
+    parsed?.RESPONSE ||
+    parsed?.ENVELOPE?.BODY?.DATA?.IMPORTDATA?.RESPONSE ||
+    {};
+
+  const isSuccess = msg?.CREATED > 0 || msg?.ALTERED > 0;
+
+  await ItemNameModel.findByIdAndUpdate(
+    itemId,
+    {
+      $set: {
+        tally_sync_status: isSuccess ? "SUCCESSFUL" : "FAILED",
+      },
+    },
+    { new: true }
+  );
+
+  return parsed.RESPONSE || parsed.ENVELOPE?.BODY?.DATA?.IMPORTDATA?.RESPONSE || parsed;
 };
+
+// retry api for tally item name
+export const create_stock_item = catchAsync(async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ error: "Invalid ID" });
+    }
+
+    const response = await create_stock_item_helper(id);
+
+    res.status(200).json({
+      success: true,
+      message: "Invoice pushed to Tally",
+      response,
+    });
+  } catch (err) {
+    next(err);
+  }
+});

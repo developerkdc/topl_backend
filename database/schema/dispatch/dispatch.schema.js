@@ -454,6 +454,14 @@ const dispatchSchema = new mongoose.Schema(
       trim: true,
       uppercase: true,
     },
+    tally_sync_status: {
+      type: String,
+      enum: {
+        values: ['PENDING', 'SUCCESSFUL', 'FAILED'],
+        message: 'Invalid status {{VALUE}}. It must be "PENDING" or "SUCCESSFUL" or "FAILED"',
+      },
+      default: "PENDING",
+    },
     approval_status: approval_status,
     created_by: {
       type: mongoose.Types.ObjectId,

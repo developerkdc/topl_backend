@@ -93,6 +93,14 @@ const customerSchema = new mongoose.Schema(
       trim: true,
       default: null,
     },
+    tally_sync_status: {
+      type: String,
+      enum: {
+        values: ['PENDING', 'SUCCESSFUL', 'FAILED'],
+        message: 'Invalid status {{VALUE}}. It must be "PENDING" or "SUCCESSFUL" or "FAILED"',
+      },
+      default: "PENDING",
+    },
     customer_type: {
       type: [String],
       uppercase: true,
