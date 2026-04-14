@@ -361,7 +361,23 @@ const WIP_STAGES = [
   {
     stage: 'FLITCHING',
     collection: 'issues_for_flitchings',
-    dateField: 'createdAt',
+    dateField: 'log_invoice_details.inward_date',
+    preMatchPipeline: [
+      {
+        $lookup: {
+          from: 'log_inventory_invoice_details',
+          localField: 'invoice_id',
+          foreignField: '_id',
+          as: 'log_invoice_details',
+        },
+      },
+      {
+        $unwind: {
+          path: '$log_invoice_details',
+          preserveNullAndEmptyArrays: false,
+        },
+      },
+    ],
     baseMatch: { flitching_completed: false },
     amountExpr: { $ifNull: ['$available_quantity.amount', 0] },
     qtyUnitsExpr: { $ifNull: ['$available_quantity.cmt', 0] },
@@ -656,6 +672,7 @@ const YIELD_STAGES = [
   {
     stage: 'FLITCHING',
     issueCollection: 'issues_for_flitchings',
+    // Use issue record date for dashboard date filters.
     issueDateField: 'createdAt',
     issuedQtyExpr: { $ifNull: ['$cmt', { $ifNull: ['$available_quantity.cmt', 0] }] },
     doneCollection: 'flitchings',
@@ -714,19 +731,6 @@ const YIELD_STAGES = [
     doneCollection: 'tapping_done_items_details',
     doneDateField: 'createdAt',
     doneQtyExpr: { $ifNull: ['$sqm', 0] },
-    doneSources: [
-      {
-        collection: 'tapping_done_items_details',
-        dateField: 'createdAt',
-        baseMatch: { issue_status: null },
-        qtyExpr: { $ifNull: ['$sqm', 0] },
-      },
-      {
-        collection: 'tapping_done_history',
-        dateField: 'createdAt',
-        qtyExpr: { $ifNull: ['$sqm', 0] },
-      },
-    ],
     unit: 'sqm',
   },
   {
@@ -884,19 +888,6 @@ const YIELD_STAGES = [
     doneCollection: 'cnc_done_details',
     doneDateField: 'createdAt',
     doneQtyExpr: { $ifNull: ['$sqm', 0] },
-    doneSources: [
-      {
-        collection: 'cnc_done_details',
-        dateField: 'createdAt',
-        baseMatch: { issue_status: null },
-        qtyExpr: { $ifNull: ['$sqm', 0] },
-      },
-      {
-        collection: 'cnc_history_details',
-        dateField: 'createdAt',
-        qtyExpr: { $ifNull: ['$sqm', 0] },
-      },
-    ],
     unit: 'sqm',
   },
   {
@@ -907,19 +898,6 @@ const YIELD_STAGES = [
     doneCollection: 'color_done_details',
     doneDateField: 'createdAt',
     doneQtyExpr: { $ifNull: ['$sqm', 0] },
-    doneSources: [
-      {
-        collection: 'color_done_details',
-        dateField: 'createdAt',
-        baseMatch: { issue_status: null },
-        qtyExpr: { $ifNull: ['$sqm', 0] },
-      },
-      {
-        collection: 'color_history_details',
-        dateField: 'createdAt',
-        qtyExpr: { $ifNull: ['$sqm', 0] },
-      },
-    ],
     unit: 'sqm',
   },
   {
@@ -930,19 +908,6 @@ const YIELD_STAGES = [
     doneCollection: 'bunito_done_details',
     doneDateField: 'createdAt',
     doneQtyExpr: { $ifNull: ['$sqm', 0] },
-    doneSources: [
-      {
-        collection: 'bunito_done_details',
-        dateField: 'createdAt',
-        baseMatch: { issue_status: null },
-        qtyExpr: { $ifNull: ['$sqm', 0] },
-      },
-      {
-        collection: 'bunito_history_details',
-        dateField: 'createdAt',
-        qtyExpr: { $ifNull: ['$sqm', 0] },
-      },
-    ],
     unit: 'sqm',
   },
   {
@@ -953,19 +918,6 @@ const YIELD_STAGES = [
     doneCollection: 'canvas_done_details',
     doneDateField: 'createdAt',
     doneQtyExpr: { $ifNull: ['$sqm', 0] },
-    doneSources: [
-      {
-        collection: 'canvas_done_details',
-        dateField: 'createdAt',
-        baseMatch: { issue_status: null },
-        qtyExpr: { $ifNull: ['$sqm', 0] },
-      },
-      {
-        collection: 'canvas_history_details',
-        dateField: 'createdAt',
-        qtyExpr: { $ifNull: ['$sqm', 0] },
-      },
-    ],
     unit: 'sqm',
   },
   {
@@ -1071,6 +1023,7 @@ const DAMAGE_WASTAGE_STAGES = [
     },
     damageAmountExpr: 0,
     issuedCollection: 'issues_for_flitchings',
+    // Use issue record date for dashboard date filters.
     issuedDateField: 'createdAt',
     issuedQtyExpr: { $ifNull: ['$cmt', { $ifNull: ['$available_quantity.cmt', 0] }] },
     unit: 'cmt',
@@ -1205,7 +1158,7 @@ const DAMAGE_WASTAGE_STAGES = [
     metricType: 'DAMAGE',
     damageCollection: 'plywood_production_damage',
     damageDateField: 'createdAt',
-    damageQtyExpr: { $ifNull: ['$total_sqm', 0] },
+    damageQtyExpr: { $ifNull: ['$damage_sqm', 0] },
     damageAmountExpr: 0,
     issuedCollection: 'plywood_production_consumed_item',
     issuedDateField: 'createdAt',
@@ -2063,11 +2016,16 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
   const includeOrders = ['ALL', 'EXECUTIVE', 'ORDERS'].includes(moduleFilter);
   const includePacking = ['ALL', 'EXECUTIVE', 'PACKING'].includes(moduleFilter);
   const includeDispatch = ['ALL', 'EXECUTIVE', 'DISPATCH'].includes(moduleFilter);
-  const wastageFilters = {
-    itemName: wastageItemNameFilter,
+  const productionDamageFilters = {
+    itemName: '',
     series: dashboardFilters.series,
     grade: dashboardFilters.grade,
   };
+  const wastageFilters = {
+    ...productionDamageFilters,
+    itemName: wastageItemNameFilter,
+  };
+  const hasWastageItemFilter = Boolean(wastageItemNameFilter);
   const inventorySupplierMatches = includeInventory
     ? await buildInventorySourceSupplierMatches({
         sources: inventorySources,
@@ -2138,6 +2096,8 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
     yieldByStage,
     damageWastage,
     wasteTrend,
+    graphDamageWastageResult,
+    graphWasteTrendRowsResult,
     wipAging,
     inventoryAging,
     topCustomers,
@@ -2255,15 +2215,29 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
       : Promise.resolve([]),
     includeProduction ? aggregateYieldByStage({ fromDate, toDate }) : Promise.resolve([]),
     includeProduction
-      ? aggregateDamageWastageByStage({ fromDate, toDate, wastageFilters })
+      ? aggregateDamageWastageByStage({
+          fromDate,
+          toDate,
+          wastageFilters: productionDamageFilters,
+        })
       : Promise.resolve({
           byStage: [],
           byUnit: [],
           totals: { damageQty: 0, issuedQty: 0, damageAmount: 0, damageRate: null },
         }),
     includeProduction
-      ? aggregateWasteTrend({ fromDate, toDate, wastageFilters })
+      ? aggregateWasteTrend({
+          fromDate,
+          toDate,
+          wastageFilters: productionDamageFilters,
+        })
       : Promise.resolve([]),
+    includeProduction && hasWastageItemFilter
+      ? aggregateDamageWastageByStage({ fromDate, toDate, wastageFilters })
+      : Promise.resolve(null),
+    includeProduction && hasWastageItemFilter
+      ? aggregateWasteTrend({ fromDate, toDate, wastageFilters })
+      : Promise.resolve(null),
     includeProduction ? aggregateWipAging({ toDate }) : Promise.resolve([]),
     includeInventory
       ? aggregateInventoryAging({
@@ -2417,6 +2391,9 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
       : Promise.resolve(0),
   ]);
 
+  const graphDamageWastage = graphDamageWastageResult || damageWastage;
+  const graphWasteTrendRows = graphWasteTrendRowsResult || wasteTrend;
+
   const matchesFilter = (value, filter) => {
     if (!filter) return true;
     return String(value || '').toUpperCase().includes(filter);
@@ -2433,7 +2410,8 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
   const filteredYieldByStage = yieldByStage.filter(stageFilter);
   const filteredPreviousYieldByStage = previousYieldByStage.filter(stageFilter);
   const filteredDamageByStage = damageWastage.byStage.filter(stageFilter);
-  const filteredWasteTrendRows = wasteTrend.filter(stageFilter);
+  const filteredDamageByStageForWastageGraph = graphDamageWastage.byStage.filter(stageFilter);
+  const filteredWasteTrendRowsForWastageGraph = graphWasteTrendRows.filter(stageFilter);
 
   const filteredTopSuppliers = topSuppliers.filter((row) =>
     matchesFilter(row?.label, dashboardFilters.supplier)
@@ -2720,7 +2698,7 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
     productionThroughput: filteredProductionThroughput,
   });
 
-  const damagePareto = [...filteredDamageByStage].sort(
+  const damagePareto = [...filteredDamageByStageForWastageGraph].sort(
     (a, b) => Number(b.damageAmount || 0) - Number(a.damageAmount || 0)
   );
 
@@ -2731,7 +2709,7 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
     return Number(Number(value || 0).toFixed(precision));
   };
 
-  const damageByStageRows = filteredDamageByStage.reduce((map, row) => {
+  const damageByStageRows = filteredDamageByStageForWastageGraph.reduce((map, row) => {
     const stageKey = String(row?.stage || '').toUpperCase();
     if (!stageKey) return map;
 
@@ -2789,7 +2767,7 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
   });
 
 
-  const wastageByUnit = [...filteredDamageByStage.reduce((map, row) => {
+  const wastageByUnit = [...filteredDamageByStageForWastageGraph.reduce((map, row) => {
     const unit = toUnitLabel(row?.unit);
     if (!map.has(unit)) {
       map.set(unit, {
@@ -2819,7 +2797,7 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
       return Number(b.wastePercentage || 0) - Number(a.wastePercentage || 0);
     });
 
-  const wasteTrendByUnit = [...filteredWasteTrendRows.reduce((map, row) => {
+  const wasteTrendByUnit = [...filteredWasteTrendRowsForWastageGraph.reduce((map, row) => {
     const period = row?.period;
     if (!period) return map;
     const unit = toUnitLabel(row?.unit);
@@ -3007,7 +2985,7 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
     itemSeriesMix: dispatch.itemSeriesMix,
     wipByStage: filteredWipByStage,
     productionThroughput: filteredProductionThroughput,
-    damageWastageByStage: filteredDamageByStage,
+    damageWastageByStage: filteredDamageByStageForWastageGraph,
     wipAging,
     fulfillmentFunnel,
     legacyDispatchStatus: dispatchStatusBreakdown,

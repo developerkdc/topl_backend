@@ -125,7 +125,7 @@ const styleDataCell = (cell) => {
  *   Col 14: Remarks
  *
  * Summery table: 8 columns, 2-row header
- *   Cols 1–4: Item Name | Thickness | Length | Width
+ *   Cols 1–4: Item Name | Tickness | Length | Width
  *   Cols 5–6: Issue → Sheets | SQ Mtr
  *   Cols 7–8: Production → Sheets | SQ Mtr
  */
@@ -134,7 +134,7 @@ const GenerateTappingDailyReportExcel = async (details, reportDate) => {
   const ws = workbook.addWorksheet('Splicing Report');
 
   const formattedDate = formatDate(reportDate);
-  const numFmt = '0.000';
+  const numFmt = '0.00';
   const TOTAL_COLS = 14;
 
   let r = 1; // current row tracker
@@ -330,10 +330,10 @@ const GenerateTappingDailyReportExcel = async (details, reportDate) => {
   const sHRow1 = r;
   const sHRow2 = r + 1;
 
-  // Cols 1–4: merged vertically (Item Name, Thickness, Length, Width)
+  // Cols 1–4: merged vertically (Item Name, Tickness, Length, Width)
   const summerySingleCols = [
     { col: 1, label: 'Item Name' },
-    { col: 2, label: 'Thickness' },
+    { col: 2, label: 'Tickness' },
     { col: 3, label: 'Length' },
     { col: 4, label: 'Width' },
   ];

@@ -125,20 +125,6 @@ const GenerateGroupingStockRegisterThicknessWiseExcel = async (
       setCellStyle(cell);
     });
   }
-
-  // Merge key headers vertically across super/sub header rows.
-  for (let col = 1; col <= 3; col++) {
-    worksheet.mergeCells(currentRow - 1, col, currentRow, col);
-    const mergedHeaderCell = worksheet.getCell(currentRow - 1, col);
-    mergedHeaderCell.font = { bold: true };
-    mergedHeaderCell.alignment = {
-      horizontal: 'center',
-      vertical: 'middle',
-      wrapText: true,
-    };
-    mergedHeaderCell.fill = grayFill;
-    setCellStyle(mergedHeaderCell, true);
-  }
   currentRow++;
 
   // Totals accumulator (sheets + SQM)
@@ -183,7 +169,7 @@ const GenerateGroupingStockRegisterThicknessWiseExcel = async (
 
     numericCols.forEach((col) => {
       const c = dataRow.getCell(col);
-      if (typeof c.value === 'number') c.numFmt = '0.000';
+      if (typeof c.value === 'number') c.numFmt = '0.00';
     });
 
     for (let col = 1; col <= numCols; col++) setCellStyle(dataRow.getCell(col));
@@ -238,7 +224,7 @@ const GenerateGroupingStockRegisterThicknessWiseExcel = async (
       right: { style: 'thin' },
     };
     if (col >= 4 && typeof cell.value === 'number') {
-      cell.numFmt = '0.000';
+      cell.numFmt = '0.00';
     }
   }
 

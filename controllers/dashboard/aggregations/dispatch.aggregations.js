@@ -549,6 +549,9 @@ const aggregateDispatchLifecycleStatus = async ({ fromDate, toDate, filters = {}
     'packing_customer.customer_name',
     'packing_customer.owner_name',
   ]);
+  const dispatchCreatedDateMatch = dateMatch('createdAt', fromDate, toDate);
+  const hasDispatchCreatedDateFilter =
+    dispatchCreatedDateMatch && Object.keys(dispatchCreatedDateMatch).length > 0;
 
   const [pendingPacking] = await safeAggregate('packing_done_other_details', [
     {
@@ -574,9 +577,33 @@ const aggregateDispatchLifecycleStatus = async ({ fromDate, toDate, filters = {}
       },
     },
     {
+      $lookup: {
+        from: 'dispatches',
+        let: {
+          dispatch_ids: '$dispatch_links.dispatch_id',
+        },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $in: ['$_id', { $ifNull: ['$$dispatch_ids', []] }],
+              },
+            },
+          },
+          ...(hasDispatchCreatedDateFilter ? [{ $match: dispatchCreatedDateMatch }] : []),
+          {
+            $match: {
+              dispatch_status: { $ne: 'CANCELLED' },
+            },
+          },
+        ],
+        as: 'dispatches_in_range',
+      },
+    },
+    {
       $match: combineMatch(
         dateMatch('packing_date', fromDate, toDate),
-        { 'dispatch_links.0': { $exists: false } },
+        { 'dispatches_in_range.0': { $exists: false } },
         packingCustomerMatch
       ),
     },
@@ -605,7 +632,8 @@ const aggregateDispatchLifecycleStatus = async ({ fromDate, toDate, filters = {}
     },
     {
       $match: combineMatch(
-        dateMatch('invoice_date_time', fromDate, toDate),
+        // Dispatch graph should classify dispatched records using dispatch created date.
+        dateMatch('createdAt', fromDate, toDate),
         dispatchCustomerMatch
       ),
     },

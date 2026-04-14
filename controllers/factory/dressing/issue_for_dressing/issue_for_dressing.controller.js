@@ -1,5 +1,6 @@
 import {
   extractDataFromMDBFile,
+  format_date,
   StatusCodes,
 } from '../../../../utils/constants.js';
 import ApiResponse from '../../../../utils/ApiResponse.js';
@@ -327,27 +328,26 @@ export const bulk_upload_machine_raw_data_new = async (req, res, next) => {
   }
 
   const tableName = 'paquetes';
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  const session = await dressing_raw_machine_data_model.db.startSession();
+  await session.startTransaction();
 
   try {
-    console.log('✅ Transaction Started');
     const dressing_items = extractDataFromMDBFile(file.path, tableName);
 
-    if (!dressing_items.length) {
+    if (!dressing_items || !dressing_items.length) {
       throw new ApiError('No Items Found', StatusCodes.NOT_FOUND);
     }
 
     //formatting date
     const formatted_items_dates = dressing_items?.map((item) => {
-      // const jsDate = new Date((item?.Fecha - 25569) * 86400 * 1000)
-      const jsDate = new Date(item?.Fecha)?.toISOString()?.split('T')?.[0];
+      const jsDate = format_date(item?.Fecha);
+      const dressingString = jsDate?.toISOString()?.split('T')?.[0];
       return {
         ...item,
-        DressingDate: jsDate,
+        Fecha: jsDate,
+        DressingDate: dressingString,
       };
     });
-
     //extract unique dates
     const unique_dressing_date_set = [
       ...new Set(formatted_items_dates?.map((item) => item?.DressingDate)),
@@ -355,8 +355,14 @@ export const bulk_upload_machine_raw_data_new = async (req, res, next) => {
 
     //extract sr_no
     const existingMaxSrNo = await dressing_raw_machine_data_model?.aggregate([
-      { $match: { DressingDate: { $in: unique_dressing_date_set } } },
-      { $group: { _id: 'DressingDate', max_sr_no: { $max: '$ItemSrNo' } } },
+      {
+        $match: {
+          DressingDate: {
+            $in: unique_dressing_date_set.map((d) => new Date(d)),
+          },
+        },
+      },
+      { $group: { _id: '$DressingDate', max_sr_no: { $max: '$ItemSrNo' } } },
     ]);
 
     //creating a new map for holding sr_no with date
@@ -370,8 +376,11 @@ export const bulk_upload_machine_raw_data_new = async (req, res, next) => {
       const dateKey = item?.DressingDate;
       const current_sr_no = sr_no_map?.get(dateKey) || 0;
       sr_no_map?.set(dateKey, current_sr_no + 1);
+      
+      const { _id: removed_id, ...rest } = item;
+
       return {
-        ...item,
+        ...rest,
         ItemSrNo: sr_no_map?.get(dateKey),
         created_by: _id,
         updated_by: _id,
@@ -380,53 +389,41 @@ export const bulk_upload_machine_raw_data_new = async (req, res, next) => {
 
     for (let i = 0; i < updated_dressing_items?.length; i += batch_size) {
       const batch = updated_dressing_items.slice(i, i + batch_size);
-      console.log(
-        `Processing batch ${i / batch_size + 1}: ${batch.length} records`
-      );
+      
+      // ✅ Graceful duplicate check against DB
+      const duplicatesInDB = await dressing_raw_machine_data_model.find({
+        $or: batch.map(b => ({ 
+           DressingDate: new Date(b.DressingDate), 
+           Identificador: b.Identificador 
+        }))
+      }).lean();
 
-      const duplicateCheck = await dressing_raw_machine_data_model
-        .find({
-          $or: batch?.map((item) => ({
-            Tronco: item?.Tronco,
-            Partida: item?.Partida,
-            NumPaqTronco: item?.NumPaqTronco,
-          })),
-        })
-        .lean();
-
-      if (duplicateCheck?.length > 0) {
-        const duplicateDetails = duplicateCheck
-          .map(
-            (dup) =>
-              `Tronco: ${dup?.Tronco}, Partida: ${dup?.Partida}, NumPaqTronco: ${dup?.NumPaqTronco}`
-          )
-          .join(' | ');
-        throw new ApiError(
-          `Duplicate found in (Tronco + Partida + NumPaqTronco).Details :${duplicateDetails}`,
-          StatusCodes.BAD_REQUEST
-        );
+      if (duplicatesInDB.length > 0) {
+          const details = duplicatesInDB.map(d => `ID ${d.Identificador}`).join(', ');
+          console.log(`⚠️ Skipping ${duplicatesInDB.length} duplicates: ${details}`);
       }
-      // try {
 
-      await dressing_raw_machine_data_model.insertMany(batch, {
-        ordered: false,
-        // session,
-      });
-      console.log(`✅ Batch ${i / batch_size + 1} inserted successfully`);
+      // Filter out items that already exist in DB
+      const newItems = batch.filter(b => 
+        !duplicatesInDB.some(d => 
+          d.Identificador == b.Identificador && 
+          d.DressingDate.toISOString().split('T')[0] === b.DressingDate
+        )
+      );
+      if (newItems.length > 0) {
+        await dressing_raw_machine_data_model.collection.insertMany(newItems, {
+          ordered: false
+        });
+      }
     }
-    await session.commitTransaction();
-    console.log('✅ Transaction Committed');
+
     const response = new ApiResponse(
       StatusCodes?.OK,
       'Bulk Uploaded Successfully'
     );
     return res.status(StatusCodes.OK).json(response);
   } catch (error) {
-    await session.abortTransaction();
-    console.log('❌ Transaction Aborted');
     return next(error);
-  } finally {
-    await session.endSession();
   }
 };
 

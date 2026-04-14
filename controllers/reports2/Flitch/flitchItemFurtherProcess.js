@@ -371,7 +371,7 @@ function buildGroupingData(
     const gSaleVolume = salesCmtByCode?.get(groupKey) || salesCmtByCode?.get(idKey) || 0;
     
     if (gSaleVolume > 0 || groupingOrderItemIdByItemId?.get(idKey)) {
-      stageIssuedCmt = gSaleVolume > 0 ? gSaleVolume : (groupItem.sqm || 0);
+      stageIssuedCmt = issueSqm || gSaleVolume || 0;
       resolvedOrderItemId = (orderRefsByCode?.get(groupKey) || orderRefsByCode?.get(idKey))?.order_item_id || groupingOrderItemIdByItemId?.get(idKey);
     }
   }

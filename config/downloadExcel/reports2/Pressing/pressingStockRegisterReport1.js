@@ -184,7 +184,7 @@ export const GeneratePressingStockRegisterReport1Excel = async (
       tr.getCell(9).value = totals.damage;
       tr.getCell(10).value = totals.process_waste;
       tr.getCell(11).value = totals.closing_sqm;
-      for (let c = 5; c <= NUM_COLS; c++) tr.getCell(c).numFmt = '0.000';
+      for (let c = 5; c <= NUM_COLS; c++) tr.getCell(c).numFmt = '0.00';
       tr.eachCell((cell) => Object.assign(cell, totalRowStyle));
     };
 
@@ -233,8 +233,8 @@ export const GeneratePressingStockRegisterReport1Excel = async (
       r.getCell(9).value = damage;
       r.getCell(10).value = waste;
       r.getCell(11).value = closing;
-      r.getCell(3).numFmt = '0.000';
-      for (let c = 5; c <= NUM_COLS; c++) r.getCell(c).numFmt = '0.000';
+      r.getCell(3).numFmt = '0.00';
+      for (let c = 5; c <= NUM_COLS; c++) r.getCell(c).numFmt = '0.00';
 
       itemTotals.opening_sqm += ob;
       itemTotals.pressing_sqm += pressing;
@@ -281,7 +281,7 @@ export const GeneratePressingStockRegisterReport1Excel = async (
     totalRow.getCell(11).value = grandTotals.closing_sqm;
     totalRow.eachCell((cell) => {
       Object.assign(cell, totalRowStyle);
-      if (cell.col >= 5) cell.numFmt = '0.000';
+      if (cell.col >= 5) cell.numFmt = '0.00';
     });
 
     worksheet.columns = [

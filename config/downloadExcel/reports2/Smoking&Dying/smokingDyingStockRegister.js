@@ -138,7 +138,7 @@ const GenerateSmokingDyingStockRegisterExcel = async (rows, startDate, endDate) 
       subtotalRow.getCell(LEAVES_COL).font = { bold: true };
       subtotalRow.getCell(SQM_COL).value = itemSqm;
       subtotalRow.getCell(SQM_COL).font = { bold: true };
-      subtotalRow.getCell(SQM_COL).numFmt = '0.000';
+      subtotalRow.getCell(SQM_COL).numFmt = '0.00';
       for (let col = 1; col <= numDetailCols; col++) {
         setCellStyle(subtotalRow.getCell(col), col === 1 || col === LEAVES_COL || col === SQM_COL);
       }
@@ -174,10 +174,10 @@ const GenerateSmokingDyingStockRegisterExcel = async (rows, startDate, endDate) 
     dataRow.getCell(13).value = r.series_name ?? '';
     dataRow.getCell(14).value = r.remark ?? '';
 
-    if (typeof dataRow.getCell(4).value === 'number') dataRow.getCell(4).numFmt = '0.000';
-    if (typeof dataRow.getCell(5).value === 'number') dataRow.getCell(5).numFmt = '0.000';
-    if (typeof dataRow.getCell(6).value === 'number') dataRow.getCell(6).numFmt = '0.000';
-    if (typeof dataRow.getCell(8).value === 'number') dataRow.getCell(8).numFmt = '0.000';
+    if (typeof dataRow.getCell(4).value === 'number') dataRow.getCell(4).numFmt = '0.00';
+    if (typeof dataRow.getCell(5).value === 'number') dataRow.getCell(5).numFmt = '0.00';
+    if (typeof dataRow.getCell(6).value === 'number') dataRow.getCell(6).numFmt = '0.00';
+    if (typeof dataRow.getCell(8).value === 'number') dataRow.getCell(8).numFmt = '0.00';
 
     itemLeaves += Number(r.no_of_leaves) || 0;
     itemSqm += Number(r.sqm) || 0;
@@ -198,7 +198,7 @@ const GenerateSmokingDyingStockRegisterExcel = async (rows, startDate, endDate) 
     subtotalRow.getCell(LEAVES_COL).font = { bold: true };
     subtotalRow.getCell(SQM_COL).value = itemSqm;
     subtotalRow.getCell(SQM_COL).font = { bold: true };
-    subtotalRow.getCell(SQM_COL).numFmt = '0.000';
+    subtotalRow.getCell(SQM_COL).numFmt = '0.00';
     for (let col = 1; col <= numDetailCols; col++) {
       setCellStyle(subtotalRow.getCell(col), col === 1 || col === LEAVES_COL || col === SQM_COL);
     }
@@ -218,7 +218,7 @@ const GenerateSmokingDyingStockRegisterExcel = async (rows, startDate, endDate) 
   grandTotalRow.getCell(LEAVES_COL).font = { bold: true };
   grandTotalRow.getCell(SQM_COL).value = totalSqm;
   grandTotalRow.getCell(SQM_COL).font = { bold: true };
-  grandTotalRow.getCell(SQM_COL).numFmt = '0.000';
+  grandTotalRow.getCell(SQM_COL).numFmt = '0.00';
   for (let col = 1; col <= numDetailCols; col++) {
     setCellStyle(grandTotalRow.getCell(col), col === 1 || col === LEAVES_COL || col === SQM_COL);
   }
@@ -243,11 +243,11 @@ const GenerateSmokingDyingStockRegisterExcel = async (rows, startDate, endDate) 
     const summaryRow = worksheet.getRow(currentRow);
     summaryRow.getCell(1).value = item.item_name ?? '';
     summaryRow.getCell(2).value = item.sqm ?? 0;
-    summaryRow.getCell(2).numFmt = '0.000';
+    summaryRow.getCell(2).numFmt = '0.00';
     summaryRow.getCell(3).value = item.process_name ?? '';
     summaryRow.getCell(4).value = item.leaves ?? 0;
     summaryRow.getCell(5).value = item.sqm ?? 0;
-    summaryRow.getCell(5).numFmt = '0.000';
+    summaryRow.getCell(5).numFmt = '0.00';
     for (let col = 1; col <= 5; col++) {
       setCellStyle(summaryRow.getCell(col));
     }
@@ -261,13 +261,13 @@ const GenerateSmokingDyingStockRegisterExcel = async (rows, startDate, endDate) 
   summaryTotalRow.getCell(1).font = { bold: true };
   summaryTotalRow.getCell(2).value = summaryTotalSqm;
   summaryTotalRow.getCell(2).font = { bold: true };
-  summaryTotalRow.getCell(2).numFmt = '0.000';
+  summaryTotalRow.getCell(2).numFmt = '0.00';
   summaryTotalRow.getCell(3).value = '';
   summaryTotalRow.getCell(4).value = summaryTotalLeaves;
   summaryTotalRow.getCell(4).font = { bold: true };
   summaryTotalRow.getCell(5).value = summaryTotalSqm;
   summaryTotalRow.getCell(5).font = { bold: true };
-  summaryTotalRow.getCell(5).numFmt = '0.000';
+  summaryTotalRow.getCell(5).numFmt = '0.00';
   for (let col = 1; col <= 5; col++) {
     setCellStyle(summaryTotalRow.getCell(col), col === 1 || col === 2 || col === 4 || col === 5);
   }
