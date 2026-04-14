@@ -9,6 +9,10 @@ import {
   resolveExcelPathFromLink,
 } from '../services/preview.service.js';
 
+const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+const getTodayDateString = () => new Date().toISOString().split('T')[0];
+const isValidDateInput = (value) => ISO_DATE_REGEX.test(String(value || '').trim());
+
 export const PreviewDisplayReport = catchAsync(async (req, res, next) => {
   const { reportId, filters = {} } = req.body || {};
 
@@ -30,11 +34,44 @@ export const PreviewDisplayReport = catchAsync(async (req, res, next) => {
     return next(new ApiError('startDate and endDate are required for range reports', 400));
   }
 
+  if (reportConfig.type === 'RANGE') {
+    const startDate = String(payload?.startDate || '').trim();
+    const endDate = String(payload?.endDate || '').trim();
+    const todayDate = getTodayDateString();
+
+    if (!isValidDateInput(startDate) || !isValidDateInput(endDate)) {
+      return next(
+        new ApiError('startDate and endDate must be valid dates in YYYY-MM-DD format', 400)
+      );
+    }
+
+    if (startDate > endDate) {
+      return next(new ApiError('startDate cannot be greater than endDate', 400));
+    }
+
+    if (startDate > todayDate || endDate > todayDate) {
+      return next(new ApiError('Future dates are not allowed', 400));
+    }
+  }
+
   if (
     reportConfig.type === 'DATE' &&
     !payload?.filters?.reportDate
   ) {
     return next(new ApiError('reportDate is required for date reports', 400));
+  }
+
+  if (reportConfig.type === 'DATE') {
+    const reportDate = String(payload?.filters?.reportDate || '').trim();
+    const todayDate = getTodayDateString();
+
+    if (!isValidDateInput(reportDate)) {
+      return next(new ApiError('reportDate must be a valid date in YYYY-MM-DD format', 400));
+    }
+
+    if (reportDate > todayDate) {
+      return next(new ApiError('Future dates are not allowed', 400));
+    }
   }
 
   const downloadResponse = await requestDownloadForPreview({
