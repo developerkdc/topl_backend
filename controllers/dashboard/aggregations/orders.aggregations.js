@@ -1064,7 +1064,20 @@ const aggregateOrderFlowTables = async ({ fromDate, toDate, filters = {} }) => {
             },
             qtySheets: source.qtyExpr,
             qtyRolls: {
-              $ifNull: ['$number_of_roll', { $ifNull: ['$no_of_roll', 0] }],
+              $ifNull: [
+                '$number_of_roll',
+                {
+                  $ifNull: [
+                    '$no_of_roll',
+                    {
+                      $ifNull: [
+                        '$number_of_rolls',
+                        { $ifNull: ['$no_of_rolls', 0] },
+                      ],
+                    },
+                  ],
+                },
+              ],
             },
             qtyCmt: {
               $ifNull: ['$cmt', { $ifNull: ['$cbm', 0] }],
@@ -1511,7 +1524,7 @@ const aggregateOrderFlowTables = async ({ fromDate, toDate, filters = {} }) => {
         rawMaterial: row?.rawMaterial || null,
         unitName: row?.unitName || null,
         orderedQuantity,
-        sheetsOrdered: orderedDisplay,
+        sheetsOrdered,
         qtySheets: isRawStore ? orderedQuantity : round2(row?.qtySheets || 0),
         qtyRolls: round2(row?.qtyRolls || 0),
         qtyCmt: isRawLogOrFlitch
