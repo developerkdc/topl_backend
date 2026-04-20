@@ -1219,7 +1219,6 @@ const FACTORY_SUBMODULE_CARD_SPECS = [
     key: 'DRESSING',
     label: 'Dressing',
     sourceStage: 'DRESSING',
-    damageDisplay: 'NA',
   },
   {
     key: 'SMOKING_DYING',
@@ -2517,6 +2516,37 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
   );
 
   const normalizedProcessStage = String(dashboardFilters.processStage || '').toUpperCase();
+  const issueByStageSheetLike = new Map();
+  filteredWipByStage.forEach((row) => {
+    const stage = String(row?.stage || '').toUpperCase();
+    if (!stage) return;
+    const qtySheets = Number(row?.qtySheets || 0);
+    const qtyUnits = Number(row?.qtyUnits || 0);
+    issueByStageSheetLike.set(stage, qtySheets !== 0 ? qtySheets : qtyUnits);
+  });
+
+  const completeByStageSheetLike = new Map();
+  filteredProductionThroughput.forEach((row) => {
+    const stage = String(row?.stage || '').toUpperCase();
+    if (!stage) return;
+    const qtySheets = Number(row?.qtySheets || 0);
+    const qtyUnits = Number(row?.qtyUnits || 0);
+    completeByStageSheetLike.set(stage, qtySheets !== 0 ? qtySheets : qtyUnits);
+  });
+
+  const damageByStageSheetLike = new Map();
+  filteredDamageByStage.forEach((row) => {
+    const stage = String(row?.stage || '').toUpperCase();
+    if (!stage) return;
+    const unit = normalizeFactoryUnit(row?.unit);
+    const isSheetLikeUnit = unit === 'SHEETS' || unit === 'UNITS' || unit === 'LEAVES';
+    if (!isSheetLikeUnit) return;
+    damageByStageSheetLike.set(
+      stage,
+      Number(row?.damageQty || 0) + Number(row?.wasteQty || 0)
+    );
+  });
+
   const factorySubModuleCards = FACTORY_SUBMODULE_CARD_SPECS.filter((spec) => {
     if (!normalizedProcessStage) return true;
     return (
@@ -2525,16 +2555,28 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
     );
   }).map((spec) => {
     const stageKey = String(spec.sourceStage || spec.key || '').toUpperCase();
+    const isDressing = stageKey === 'DRESSING';
+    const issueQty = isDressing
+      ? Number(issueByStageSheetLike.get(stageKey) || 0)
+      : Number(issueByStage.get(stageKey) || 0);
+    const completeQty = isDressing
+      ? Number(completeByStageSheetLike.get(stageKey) || 0)
+      : Number(completeByStage.get(stageKey) || 0);
+    const damageQty = isDressing
+      ? Number(damageByStageSheetLike.get(stageKey) || 0)
+      : Number(damageByStage.get(stageKey) || 0);
     return {
       module: spec.key,
       label: spec.label || formatStageLabel(spec.key),
-      issue: round2(issueByStage.get(stageKey) || 0),
-      complete: round2(completeByStage.get(stageKey) || 0),
-      damage: round2(damageByStage.get(stageKey) || 0),
+      issue: round2(issueQty),
+      complete: round2(completeQty),
+      damage: round2(damageQty),
       issueDisplay: spec.issueDisplay ?? null,
       completeDisplay: spec.completeDisplay ?? null,
       damageDisplay: spec.damageDisplay ?? null,
-      unit: stageUnitByStage.get(stageKey) || stageDefaultUnit.get(stageKey) || '--',
+      unit: isDressing
+        ? 'SHEETS'
+        : stageUnitByStage.get(stageKey) || stageDefaultUnit.get(stageKey) || '--',
     };
   });
 

@@ -19,11 +19,11 @@ const formatDate = (dateString) => {
 /**
  * Group aggregated data for:
  *  - Main table: byItem (item_name → rows)
- *  - Summery table: summeryMap (item_name|thickness|length|width → {issue, production})
+ *  - Summary table: SummaryMap (item_name|thickness|length|width → {issue, production})
  */
 const groupData = (data) => {
   const byItem = {};
-  const summeryMap = {};
+  const SummaryMap = {};
 
   data.forEach((record) => {
     const item = record.items;
@@ -51,10 +51,10 @@ const groupData = (data) => {
       remark: item?.remark ?? '',
     });
 
-    // Summery grouping key
-    const summeryKey = `${itemName}||${thickness}||${length}||${width}`;
-    if (!summeryMap[summeryKey]) {
-      summeryMap[summeryKey] = {
+    // Summary grouping key
+    const SummaryKey = `${itemName}||${thickness}||${length}||${width}`;
+    if (!SummaryMap[SummaryKey]) {
+      SummaryMap[SummaryKey] = {
         item_name: itemName,
         thickness,
         length,
@@ -68,15 +68,15 @@ const groupData = (data) => {
 
     // Issue from issueSource (issue_for_tapping)
     const issueSource = record.issueSource?.[0];
-    summeryMap[summeryKey].issue_sheets += Number(issueSource?.no_of_sheets) || 0;
-    summeryMap[summeryKey].issue_sqm += Number(issueSource?.sqm) || 0;
+    SummaryMap[SummaryKey].issue_sheets += Number(issueSource?.no_of_sheets) || 0;
+    SummaryMap[SummaryKey].issue_sqm += Number(issueSource?.sqm) || 0;
 
     // Production from tapping_done_items_details
-    summeryMap[summeryKey].production_sheets += sheets;
-    summeryMap[summeryKey].production_sqm += sqm;
+    SummaryMap[SummaryKey].production_sheets += sheets;
+    SummaryMap[SummaryKey].production_sqm += sqm;
   });
 
-  return { byItem, summeryRows: Object.values(summeryMap) };
+  return { byItem, SummaryRows: Object.values(SummaryMap) };
 };
 
 /**
@@ -124,7 +124,7 @@ const styleDataCell = (cell) => {
  *   Col 13: Series
  *   Col 14: Remarks
  *
- * Summery table: 8 columns, 2-row header
+ * Summary table: 8 columns, 2-row header
  *   Cols 1–4: Item Name | Tickness | Length | Width
  *   Cols 5–6: Issue → Sheets | SQ Mtr
  *   Cols 7–8: Production → Sheets | SQ Mtr
@@ -215,7 +215,7 @@ const GenerateTappingDailyReportExcel = async (details, reportDate) => {
   r += 3;
 
   // ─── Main Table Data ──────────────────────────────────────────────────────
-  const { byItem, summeryRows } = groupData(details);
+  const { byItem, SummaryRows } = groupData(details);
 
   let grandSheets = 0;
   let grandMachineSheets = 0;
@@ -317,13 +317,13 @@ const GenerateTappingDailyReportExcel = async (details, reportDate) => {
   for (let col = 1; col <= TOTAL_COLS; col++) styleDataCell(grandRow.getCell(col));
   r += 2;
 
-  // ─── Summery Section ──────────────────────────────────────────────────────
-  // "Summery" label
+  // ─── Summary Section ──────────────────────────────────────────────────────
+  // "Summary" label
   ws.mergeCells(r, 1, r, 8);
-  const summeryLabel = ws.getCell(r, 1);
-  summeryLabel.value = 'Summery';
-  summeryLabel.font = { bold: true };
-  summeryLabel.alignment = { horizontal: 'left', vertical: 'middle' };
+  const SummaryLabel = ws.getCell(r, 1);
+  SummaryLabel.value = 'Summary';
+  SummaryLabel.font = { bold: true };
+  SummaryLabel.alignment = { horizontal: 'left', vertical: 'middle' };
   ws.getRow(r).height = 18;
   r++;
 
@@ -331,13 +331,13 @@ const GenerateTappingDailyReportExcel = async (details, reportDate) => {
   const sHRow2 = r + 1;
 
   // Cols 1–4: merged vertically (Item Name, Tickness, Length, Width)
-  const summerySingleCols = [
+  const SummarySingleCols = [
     { col: 1, label: 'Item Name' },
-    { col: 2, label: 'Tickness' },
+    { col: 2, label: 'Thickness' },
     { col: 3, label: 'Length' },
     { col: 4, label: 'Width' },
   ];
-  summerySingleCols.forEach(({ col, label }) => {
+  SummarySingleCols.forEach(({ col, label }) => {
     ws.mergeCells(sHRow1, col, sHRow2, col);
     const cell = ws.getCell(sHRow1, col);
     cell.value = label;
@@ -366,13 +366,13 @@ const GenerateTappingDailyReportExcel = async (details, reportDate) => {
   [sHRow1, sHRow2].forEach((rowNum) => { ws.getRow(rowNum).height = 18; });
   r += 2;
 
-  // Summery data rows
+  // Summary data rows
   let sumIssueSheets = 0;
   let sumIssueSqm = 0;
   let sumProdSheets = 0;
   let sumProdSqm = 0;
 
-  summeryRows
+  SummaryRows
     .sort((a, b) => a.item_name.localeCompare(b.item_name) || a.length - b.length || a.width - b.width)
     .forEach((s) => {
       const row = ws.getRow(r);
@@ -399,7 +399,7 @@ const GenerateTappingDailyReportExcel = async (details, reportDate) => {
       r++;
     });
 
-  // Summery Total row
+  // Summary Total row
   const sTotalRow = ws.getRow(r);
   sTotalRow.getCell(1).value = 'Total';
   sTotalRow.getCell(5).value = sumIssueSheets;
