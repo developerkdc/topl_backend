@@ -40,6 +40,20 @@ export function DispatchJSONtoXML(dispatch) {
     const sgst_charges = Number(dispatch.total_sgst_amt || 0);
     const igst_charges = Number(dispatch.total_igst_amt || 0);
     const items = dispatch.dispatch_items_details || [];
+    let ledgerType = "Sales";
+    if (dispatch.supp_type === "B2B" || dispatch.supp_type === "B2C") {
+        ledgerType = "Sales GST";
+    } else if (dispatch.supp_type === "SEZWP") {
+        ledgerType = "No GST";
+    } else if (dispatch.supp_type === "SEZWOP") {
+        ledgerType = "GST";
+    } else if (dispatch.supp_type === "EXPWP") {
+        ledgerType = "IGST";
+    } else if (dispatch.supp_type === "EXPWOP") {
+        ledgerType = "No GST";
+    } else {
+        ledgerType = "Sales";
+    }
     // console.log("items: ", items);
     // Calculate total safely
     const totalAmount = items.reduce((sum, it) => {
@@ -74,7 +88,7 @@ export function DispatchJSONtoXML(dispatch) {
   <AMOUNT>${amount.toFixed(2)}</AMOUNT>
 
   <ACCOUNTINGALLOCATIONS.LIST>
-    <LEDGERNAME>Sales</LEDGERNAME>
+    <LEDGERNAME>${ledgerType}</LEDGERNAME>
     <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
     <AMOUNT>${amount.toFixed(2)}</AMOUNT>
   </ACCOUNTINGALLOCATIONS.LIST>

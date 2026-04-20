@@ -95,104 +95,153 @@ export function StockItemJSONtoXML(stockItem) {
 
     // const baseUnit = escape(stockItem.unit || "NOS");
 
-    const hsnCode = stockItem.hsn_code ? escape(stockItem.hsn_code) : "";
-    const hsnSrc = hsnCode ? "User Defined" : "As per Company/Stock Group";
+    const hsnCode = stockItem.product_hsn_code ? escape(stockItem.product_hsn_code) : "";
+    const hsnSrc = hsnCode ? "Specify Details Here" : "As per Company/Stock Group";
 
-    const gstRate = stockItem.gst_rate ?? 0;
+    const gstRate = stockItem.gst_percentage ?? 0;
     const cgstRate = gstRate / 2;
     const sgstRate = gstRate / 2;
 
     // If tally_name exists, use it to identify/alter the existing ledger; otherwise create a new one using company_name
-    const ledgerIdentifier = stockItem.tally_item_name || stockItem.item_name;
+    const ledgerIdentifier = stockItem.tally_item_name || stockItem.category;
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
-        <ENVELOPE>
-        <HEADER>
-            <TALLYREQUEST>Import Data</TALLYREQUEST>
-        </HEADER>
-        <BODY>
-            <IMPORTDATA>
-            <REQUESTDESC>
-                <REPORTNAME>All Masters</REPORTNAME>
-                <STATICVARIABLES>
-                <SVCURRENTCOMPANY>Natural Veneers</SVCURRENTCOMPANY>
-                </STATICVARIABLES>
-            </REQUESTDESC>
-            <REQUESTDATA>
-                <TALLYMESSAGE xmlns:UDF="TallyUDF">
-                <STOCKITEM NAME="${escape(ledgerIdentifier)}" ACTION="CreateOrAlter">
+<ENVELOPE>
+<HEADER>
+    <TALLYREQUEST>Import Data</TALLYREQUEST>
+</HEADER>
+<BODY>
+    <IMPORTDATA>
+    <REQUESTDESC>
+        <REPORTNAME>All Masters</REPORTNAME>
+        <STATICVARIABLES>
+        <SVCURRENTCOMPANY>Natural Veneers</SVCURRENTCOMPANY>
+        </STATICVARIABLES>
+    </REQUESTDESC>
+    <REQUESTDATA>
+        <TALLYMESSAGE xmlns:UDF="TallyUDF">
+        <STOCKITEM NAME="${escape(ledgerIdentifier)}" ACTION="CreateOrAlter">
 
-                    <LANGUAGENAME.LIST>
-                        <NAME.LIST TYPE="String">
-                            <NAME>${escape(stockItem.item_name)}</NAME>
-                            ${stockItem.alternate_item_name_details?.map(
+            <LANGUAGENAME.LIST>
+                <NAME.LIST TYPE="String">
+                    <NAME>${escape(stockItem.category)}</NAME>
+                    ${stockItem.alternate_item_name_details?.map(
         item => `<NAME>${escape(item.alternate_item_name)}</NAME>`
-    ).join("") || ""
-        }
-                        </NAME.LIST>
-                        <LANGUAGEID>1033</LANGUAGEID>
-                    </LANGUAGENAME.LIST>
-                    <PARENT>${escape(stockItem.stock_group || "")}</PARENT>
+    ).join("") || ""}
+                </NAME.LIST>
+                <LANGUAGEID>1033</LANGUAGEID>
+            </LANGUAGENAME.LIST>
 
-                    <GSTAPPLICABLE>&#4; Applicable</GSTAPPLICABLE>
-                    <GSTTYPEOFSUPPLY>Goods</GSTTYPEOFSUPPLY>
-                    <COSTINGMETHOD>Avg. Cost</COSTINGMETHOD>
-                    <VALUATIONMETHOD>Avg. Price</VALUATIONMETHOD>
+            <PARENT>${escape(stockItem.stock_group || "")}</PARENT>
+            <CATEGORY>&#4; Not Applicable</CATEGORY>
+            <GSTAPPLICABLE>&#4; Applicable</GSTAPPLICABLE>
+            <TAXCLASSIFICATIONNAME>&#4; Not Applicable</TAXCLASSIFICATIONNAME>
+            <GSTTYPEOFSUPPLY>Goods</GSTTYPEOFSUPPLY>
+            <EXCISEAPPLICABILITY>&#4; Not Applicable</EXCISEAPPLICABILITY>
+            <COSTINGMETHOD>Avg. Cost</COSTINGMETHOD>
+            <VALUATIONMETHOD>Avg. Price</VALUATIONMETHOD>
+            <BASEUNITS>&#4; Not Applicable</BASEUNITS>
+            <ADDITIONALUNITS>&#4; Not Applicable</ADDITIONALUNITS>
+            <EXCISEITEMCLASSIFICATION>&#4; Not Applicable</EXCISEITEMCLASSIFICATION>
 
+            <ISCOSTCENTRESON>No</ISCOSTCENTRESON>
+            <ISBATCHWISEON>No</ISBATCHWISEON>
+            <ISPERISHABLEON>No</ISPERISHABLEON>
+            <ISENTRYTAXAPPLICABLE>No</ISENTRYTAXAPPLICABLE>
+            <ISCOSTTRACKINGON>No</ISCOSTTRACKINGON>
+            <ISUPDATINGTARGETID>No</ISUPDATINGTARGETID>
+            <ISDELETED>No</ISDELETED>
+            <ISSECURITYONWHENENTERED>No</ISSECURITYONWHENENTERED>
+            <ASORIGINAL>Yes</ASORIGINAL>
+            <ISRATEINCLUSIVEVAT>No</ISRATEINCLUSIVEVAT>
+            <IGNOREPHYSICALDIFFERENCE>No</IGNOREPHYSICALDIFFERENCE>
+            <IGNORENEGATIVESTOCK>No</IGNORENEGATIVESTOCK>
+            <TREATSALESASMANUFACTURED>No</TREATSALESASMANUFACTURED>
+            <TREATPURCHASESASCONSUMED>No</TREATPURCHASESASCONSUMED>
+            <TREATREJECTSASSCRAP>No</TREATREJECTSASSCRAP>
+            <HASMFGDATE>No</HASMFGDATE>
+            <ALLOWUSEOFEXPIREDITEMS>No</ALLOWUSEOFEXPIREDITEMS>
+            <IGNOREBATCHES>No</IGNOREBATCHES>
+            <IGNOREGODOWNS>No</IGNOREGODOWNS>
+            <ADJDIFFINFIRSTSALELEDGER>No</ADJDIFFINFIRSTSALELEDGER>
+            <ADJDIFFINFIRSTPURCLEDGER>No</ADJDIFFINFIRSTPURCLEDGER>
+            <CALCONMRP>No</CALCONMRP>
+            <EXCLUDEJRNLFORVALUATION>No</EXCLUDEJRNLFORVALUATION>
+            <ISMRPINCLOFTAX>No</ISMRPINCLOFTAX>
+            <ISADDLTAXEXEMPT>No</ISADDLTAXEXEMPT>
+            <ISSUPPLEMENTRYDUTYON>No</ISSUPPLEMENTRYDUTYON>
+            <GVATISEXCISEAPPL>No</GVATISEXCISEAPPL>
+            <ISADDITIONALTAX>No</ISADDITIONALTAX>
+            <ISCESSEXEMPTED>No</ISCESSEXEMPTED>
+            <REORDERASHIGHER>No</REORDERASHIGHER>
+            <MINORDERASHIGHER>No</MINORDERASHIGHER>
+            <ISEXCISECALCULATEONMRP>No</ISEXCISECALCULATEONMRP>
+            <INCLUSIVETAX>No</INCLUSIVETAX>
+            <GSTCALCSLABONMRP>No</GSTCALCSLABONMRP>
+            <MODIFYMRPRATE>No</MODIFYMRPRATE>
 
-                    <ISBATCHWISEON>No</ISBATCHWISEON>
-                    <ISCOSTCENTRESON>No</ISCOSTCENTRESON>
-                    <ISCOSTTRACKINGON>No</ISCOSTTRACKINGON>
+            <DENOMINATOR>1</DENOMINATOR>
+            <RATEOFVAT>0</RATEOFVAT>
 
-                    <!-- GST DETAILS — mirrors GSTDETAILS.LIST from export -->
-                    <GSTDETAILS.LIST>
-                    <APPLICABLEFROM>${applicableFrom}</APPLICABLEFROM>
-                    <SRCOFGSTDETAILS>${stockItem.hsn_code ? "User Defined" : "As per Company/Stock Group"}</SRCOFGSTDETAILS>
-                    <GSTCALCSLABONMRP>No</GSTCALCSLABONMRP>
-                    <ISREVERSECHARGEAPPLICABLE>No</ISREVERSECHARGEAPPLICABLE>
-                    <ISNONGSTGOODS>No</ISNONGSTGOODS>
-                    <GSTINELIGIBLEITC>Yes</GSTINELIGIBLEITC>
-                    <INCLUDEEXPFORSLABCALC>No</INCLUDEEXPFORSLABCALC>
-                    <STATEWISEDETAILS.LIST>
-                        <STATENAME>&#4; Any</STATENAME>
-                        <RATEDETAILS.LIST>
+            <SERVICETAXDETAILS.LIST>      </SERVICETAXDETAILS.LIST>
+            <VATDETAILS.LIST>      </VATDETAILS.LIST>
+            <SALESTAXCESSDETAILS.LIST>      </SALESTAXCESSDETAILS.LIST>
+
+            <!-- GST DETAILS -->
+            <GSTDETAILS.LIST>
+                <APPLICABLEFROM>${applicableFrom}</APPLICABLEFROM>
+                <TAXABILITY>Taxable</TAXABILITY>
+                <SRCOFGSTDETAILS>Specify Details Here</SRCOFGSTDETAILS>
+                <GSTCALCSLABONMRP>No</GSTCALCSLABONMRP>
+                <ISREVERSECHARGEAPPLICABLE>No</ISREVERSECHARGEAPPLICABLE>
+                <ISNONGSTGOODS>No</ISNONGSTGOODS>
+                <GSTINELIGIBLEITC>Yes</GSTINELIGIBLEITC>
+                <INCLUDEEXPFORSLABCALC>No</INCLUDEEXPFORSLABCALC>
+                <STATEWISEDETAILS.LIST>
+                    <STATENAME>&#4; Any</STATENAME>
+                    <RATEDETAILS.LIST>
                         <GSTRATEDUTYHEAD>CGST</GSTRATEDUTYHEAD>
                         <GSTRATEVALUATIONTYPE>Based on Value</GSTRATEVALUATIONTYPE>
                         <GSTRATE>${cgstRate}</GSTRATE>
-                        </RATEDETAILS.LIST>
-                        <RATEDETAILS.LIST>
+                    </RATEDETAILS.LIST>
+                    <RATEDETAILS.LIST>
                         <GSTRATEDUTYHEAD>SGST/UTGST</GSTRATEDUTYHEAD>
                         <GSTRATEVALUATIONTYPE>Based on Value</GSTRATEVALUATIONTYPE>
                         <GSTRATE>${sgstRate}</GSTRATE>
-                        </RATEDETAILS.LIST>
-                        <RATEDETAILS.LIST>
+                    </RATEDETAILS.LIST>
+                    <RATEDETAILS.LIST>
                         <GSTRATEDUTYHEAD>IGST</GSTRATEDUTYHEAD>
                         <GSTRATEVALUATIONTYPE>Based on Value</GSTRATEVALUATIONTYPE>
                         <GSTRATE>${gstRate}</GSTRATE>
-                        </RATEDETAILS.LIST>
-                        <RATEDETAILS.LIST>
+                    </RATEDETAILS.LIST>
+                    <RATEDETAILS.LIST>
                         <GSTRATEDUTYHEAD>Cess</GSTRATEDUTYHEAD>
                         <GSTRATEVALUATIONTYPE>&#4; Not Applicable</GSTRATEVALUATIONTYPE>
-                        </RATEDETAILS.LIST>
-                        <RATEDETAILS.LIST>
+                    </RATEDETAILS.LIST>
+                    <RATEDETAILS.LIST>
                         <GSTRATEDUTYHEAD>State Cess</GSTRATEDUTYHEAD>
                         <GSTRATEVALUATIONTYPE>Based on Value</GSTRATEVALUATIONTYPE>
-                        </RATEDETAILS.LIST>
-                    </STATEWISEDETAILS.LIST>
-                    </GSTDETAILS.LIST>
+                    </RATEDETAILS.LIST>
+                    <GSTSLABRATES.LIST>        </GSTSLABRATES.LIST>
+                </STATEWISEDETAILS.LIST>
+                <TEMPGSTITEMSLABRATES.LIST>       </TEMPGSTITEMSLABRATES.LIST>
+                <TEMPGSTDETAILSLABRATES.LIST>       </TEMPGSTDETAILSLABRATES.LIST>
+            </GSTDETAILS.LIST>
 
-                    <!-- HSN DETAILS -->
-                    <HSNDETAILS.LIST>
-                    <APPLICABLEFROM>${applicableFrom}</APPLICABLEFROM>
-                    <SRCOFHSNDETAILS>${hsnSrc}</SRCOFHSNDETAILS>
-                    ${hsnCode ? `<HSNCODE>${hsnCode}</HSNCODE>` : ""}
-                    </HSNDETAILS.LIST>
+            <!-- HSN DETAILS -->
+            <HSNDETAILS.LIST>
+                <APPLICABLEFROM>${applicableFrom}</APPLICABLEFROM>
+                <SRCOFHSNDETAILS>${hsnSrc}</SRCOFHSNDETAILS>
+                ${hsnCode ? `<HSNCODE>${hsnCode}</HSNCODE>
+                <HSN>${hsnCode}</HSN>
+               ` : ""}
+            </HSNDETAILS.LIST>
 
-                </STOCKITEM>
-                </TALLYMESSAGE>
-            </REQUESTDATA>
-            </IMPORTDATA>
-        </BODY>
-        </ENVELOPE>`;
+        </STOCKITEM>
+        </TALLYMESSAGE>
+    </REQUESTDATA>
+    </IMPORTDATA>
+</BODY>
+</ENVELOPE>`;
 
     return xml;
 }

@@ -33,20 +33,6 @@ const ItemNameSchema = new mongoose.Schema(
       uppercase: true,
       default: null,
     },
-    tally_item_name: {
-      type: String,
-      trim: true,
-      uppercase: true,
-      default: null,
-    },
-    tally_sync_status: {
-      type: String,
-      enum: {
-        values: ['PENDING', 'SUCCESSFUL', 'FAILED'],
-        message: 'Invalid status {{VALUE}}. It must be "PENDING" or "SUCCESSFUL" or "FAILED"',
-      },
-      default: "PENDING",
-    },
     color: {
       color_id: {
         type: mongoose.Schema.Types.ObjectId,

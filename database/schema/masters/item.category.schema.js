@@ -19,6 +19,20 @@ const itemCategorySchema = new mongoose.Schema(
       trim: true,
       // uppercase: true,
     },
+    tally_item_name: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      default: null,
+    },
+    tally_sync_status: {
+      type: String,
+      enum: {
+        values: ['PENDING', 'SUCCESSFUL', 'FAILED'],
+        message: 'Invalid status {{VALUE}}. It must be "PENDING" or "SUCCESSFUL" or "FAILED"',
+      },
+      default: "PENDING",
+    },
     product_hsn_code: {
       type: String,
       required: [true, 'hsn code is required'],
