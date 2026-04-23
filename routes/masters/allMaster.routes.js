@@ -28,6 +28,8 @@ import sizeRouter from './Size/size.routes.js';
 import salesItemNameRouter from './SalesItemName/salesItemName.routes.js';
 import AuthMiddleware from '../../middlewares/verifyToken.js';
 import { bulk_upload_masters } from '../../controllers/bulk_uploads/masters/masters_bulk_upload.controller.js';
+import { create_customer_ledger } from '../../controllers/masters/Customers/customers.controller.js';
+import { create_stock_item } from '../../controllers/masters/itemCategory.controller.js';
 
 const allMasterRouter = express.Router();
 
@@ -61,5 +63,9 @@ allMasterRouter.use(`/size-master`, sizeRouter);
 
 //masters bulk upload routes
 allMasterRouter.use('/masters/bulk-upload', AuthMiddleware, bulk_upload_masters)
+
+//tally ledgers
+allMasterRouter.post('/tally-customer-ledger/:id', AuthMiddleware, create_customer_ledger)
+allMasterRouter.post('/tally-stock-item/:id', AuthMiddleware, create_stock_item)
 
 export default allMasterRouter;
