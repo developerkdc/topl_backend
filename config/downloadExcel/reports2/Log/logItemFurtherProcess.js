@@ -6,7 +6,7 @@ import dotenv from 'dotenv/config';
 /**
  * Create Inward Log Item Further Process Report Excel
  *
- * 56 columns across 16 section groups:
+ * 55 columns across 16 section groups:
  *  Col 1        : Item Name
  *  Cols  2- 6   : Inward in(CMT)
  *  Cols  7-10   : Cross Cut Issue in(CMT)
@@ -21,8 +21,7 @@ import dotenv from 'dotenv/config';
  *  Cols 51-52   : CNC
  *  Col  53      : COLOUR
  *  Col  54      : Sales
- *  Col  55      : Job Work Challan
- *  Col  56      : Adv Work Challan
+ *  Col  55      : Challan
  *
  * Rows are one per leaf entity (grouping item / peeling item / slicing side).
  * Parent columns are merged vertically for consecutive identical keys.
@@ -46,7 +45,7 @@ export const createLogItemFurtherProcessReportExcel = async (
       views: [{ state: 'frozen', xSplit: 2, ySplit: 5 }],
     });
 
-    // ── Column definitions (56 total) ────────────────────────────────────────
+    // ── Column definitions (55 total) ────────────────────────────────────────
     ws.columns = [
       { key: 'item_name',               width: 22 },  // 1
       { key: 'log_no',                  width: 13 },  // 2
@@ -101,9 +100,8 @@ export const createLogItemFurtherProcessReportExcel = async (
       { key: 'cnc_type',                width: 13 },  // 51
       { key: 'cnc_rec_sheets',          width: 12 },  // 52
       { key: 'colour_rec_sheets',       width: 12 },  // 53
-      { key: 'sales_rec_sheets',        width: 16 },  // 54 — order line CBM / SQM
-      { key: 'jwc_veneer',              width: 12 },  // 55
-      { key: 'awc_pressing_sheets',     width: 16 },  // 56
+      { key: 'sales_cmt_sqm',           width: 16 },  // 54 — order line CBM / SQM
+      { key: 'challan_cmt_sqm',          width: 16 },  // 55 — challan issued SQM/CBM
     ];
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -182,7 +180,7 @@ export const createLogItemFurtherProcessReportExcel = async (
     titleRow.font = { bold: true, size: 12 };
     titleRow.alignment = { vertical: 'middle', horizontal: 'left' };
     titleRow.height = 22;
-    ws.mergeCells(1, 1, 1, 56);
+    ws.mergeCells(1, 1, 1, 55);
 
     // ── Row 2: Date range ─────────────────────────────────────────────────────
     const dateRangeRow = ws.addRow([
@@ -191,7 +189,7 @@ export const createLogItemFurtherProcessReportExcel = async (
     dateRangeRow.font = { size: 10 };
     dateRangeRow.alignment = { vertical: 'middle', horizontal: 'left' };
     dateRangeRow.height = 16;
-    ws.mergeCells(2, 1, 2, 56);
+    ws.mergeCells(2, 1, 2, 55);
 
     // ── Row 3: Filter label (only when inward_id or log_no is provided) ───────
     const filterLabel = filter.inward_id
@@ -203,13 +201,13 @@ export const createLogItemFurtherProcessReportExcel = async (
     filterRow.font = { size: 10 };
     filterRow.alignment = { vertical: 'middle', horizontal: 'left' };
     filterRow.height = 16;
-    ws.mergeCells(3, 1, 3, 56);
+    ws.mergeCells(3, 1, 3, 55);
 
     // ── Row 3: Section group headers ─────────────────────────────────────────
-    //  The row values map to column positions 1..56.
+    //  The row values map to column positions 1..55.
     //  We'll fill col 1 with '' and put the section label at the FIRST column
     //  of each section (others remain '').
-    const secHdr = new Array(56).fill('');
+    const secHdr = new Array(55).fill('');
     secHdr[0]  = '';                    // 1  Item Name – no group label
     secHdr[1]  = 'Inward in(CMT)';     // 2-6
     secHdr[6]  = 'Cross Cut Issue in(CMT)'; // 7-10
@@ -224,8 +222,7 @@ export const createLogItemFurtherProcessReportExcel = async (
     secHdr[50] = 'CNC';                      // 51-52
     secHdr[52] = 'COLOUR';                   // 53
     secHdr[53] = 'Sales';                    // 54
-    secHdr[54] = 'Job Work Challan';         // 55
-    secHdr[55] = 'Adv Work Challan';         // 56
+    secHdr[54] = 'Challan';                  // 55
 
     const groupRow = ws.addRow(secHdr);
     groupRow.height = 22;
@@ -300,8 +297,7 @@ export const createLogItemFurtherProcessReportExcel = async (
       'REC (Sheets)',                      // 52
       'REC (Sheets)',                      // 53
       'Order (CBM / SQM)',                 // 54
-      'Veneer',                            // 55
-      'Pressing Sheets',                   // 56
+      'SQM/CBM',                            // 55
     ];
 
     const headerRow = ws.addRow(colHdr);
@@ -321,7 +317,7 @@ export const createLogItemFurtherProcessReportExcel = async (
       30, 31, 32, 33, 35, 36,   // grouping
       37, 38, 39, 40, 42, 43,   // splicing
       44, 45, 46, 47, 49, 50,   // pressing
-      52, 53,                  // cnc, colour (sales col 54 is text: CBM/SQM)
+      52, 53, 54, 55,             // cnc, colour, sales, challan
     ]);
 
     // Columns to MERGE vertically (parent-level columns)
@@ -371,7 +367,7 @@ export const createLogItemFurtherProcessReportExcel = async (
       }
     };
 
-    // Helper: convert row object to cell value array (56 elements, 0-indexed)
+    // Helper: convert row object to cell value array (55 elements, 0-indexed)
     const toCells = (row) => [
       row.item_name,
       row.log_no,
@@ -426,9 +422,8 @@ export const createLogItemFurtherProcessReportExcel = async (
       row.cnc_type,
       row.cnc_rec_sheets,
       row.colour_rec_sheets,
-      row.sales_rec_sheets,
-      row.jwc_veneer,
-      row.awc_pressing_sheets,
+      row.sales_cmt_sqm,
+      row.challan_cmt_sqm,
     ];
 
     // Per-log and per-item total accumulators
@@ -460,7 +455,7 @@ export const createLogItemFurtherProcessReportExcel = async (
     // Helper: add a styled total row
     const addTotalRow = (label, totals, fill, dataRows) => {
       // Build cell array from totals, only populating numeric columns
-      const cells = new Array(56).fill('');
+      const cells = new Array(55).fill('');
       cells[0] = label[0];
       cells[1] = label[1] || '';
       NUMERIC_COLS.forEach((colIdx1) => {
@@ -481,7 +476,7 @@ export const createLogItemFurtherProcessReportExcel = async (
         });
       });
       const isGrandTotal = label[0] === 'Total' && label[1] === '';
-      applyRowBorders(wsRow, 1, 56, {
+      applyRowBorders(wsRow, 1, 55, {
         top: true,
         bottom: true,
         bottomStyle: isGrandTotal ? 'medium' : 'thin',
@@ -497,9 +492,6 @@ export const createLogItemFurtherProcessReportExcel = async (
       const itemStartRow = ws.lastRow ? ws.lastRow.number + 1 : 6;
 
       for (const [logNo, rows] of ig.logGroups) {
-        const logTotals = {};
-        const logStartRow = ws.lastRow ? ws.lastRow.number + 1 : 6;
-
         // Track merge start rows for this log's data
         let curMItem   = null;
         let curMLog    = null;
@@ -554,11 +546,10 @@ export const createLogItemFurtherProcessReportExcel = async (
               borderType: 'data',
             });
           });
-          applyRowBorders(wsRow, 1, 56, { top: false, bottom: true });
+          applyRowBorders(wsRow, 1, 55, { top: false, bottom: true });
 
           // Accumulate totals (only first row of each parent group for parent cols)
           const fullCells = toCells(row); // un-blanked
-          accumulate(logTotals, fullCells);
           accumulate(itemTotals, fullCells);
           accumulate(grandTotals, fullCells);
 
@@ -583,14 +574,6 @@ export const createLogItemFurtherProcessReportExcel = async (
         if (curMCc)     merges.push(...CC_COLS.map(c     => ({ startRow: curMCc.startRow,     endRow: lastDataRow, col: c })));
         if (curMFlitch) merges.push(...FLITCH_COLS.map(c => ({ startRow: curMFlitch.startRow, endRow: lastDataRow, col: c })));
         if (curMSide)   merges.push(...SIDE_COLS.map(c   => ({ startRow: curMSide.startRow,   endRow: lastDataRow, col: c })));
-
-        // Per-log total row
-        addTotalRow(
-          ['', `Total ${logNo}`],
-          logTotals,
-          totalFill,
-          rows
-        );
       }
 
       // Per-item total row

@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import catchAsync from '../../../utils/errors/catchAsync.js';
 import ApiError from '../../../utils/errors/apiError.js';
 import ApiResponse from '../../../utils/ApiResponse.js';
@@ -16,7 +17,16 @@ import { pressing_done_details_model } from '../../../database/schema/factory/pr
 import { pressing_done_history_model } from '../../../database/schema/factory/pressing/pressing_history/pressing_done_history.schema.js';
 import { cnc_done_details_model } from '../../../database/schema/factory/cnc/cnc_done/cnc_done.schema.js';
 import { color_done_details_model } from '../../../database/schema/factory/colour/colour_done/colour_done.schema.js';
+import { issued_for_slicing_model } from '../../../database/schema/factory/slicing/issue_for_slicing/issuedForSlicing.js';
+import { issues_for_peeling_model } from '../../../database/schema/factory/peeling/issues_for_peeling/issues_for_peeling.schema.js';
+import issue_for_order_model from '../../../database/schema/order/issue_for_order/issue_for_order.schema.js';
+import issue_for_challan_model from '../../../database/schema/challan/issue_for_challan/issue_for_challan.schema.js';
+import finished_ready_for_packing_model from '../../../database/schema/packing/issue_for_packing/finished_ready_for_packing/finished_ready_for_packing.schema.js';
 import { createLogItemFurtherProcessReportExcel } from '../../../config/downloadExcel/reports2/Log/logItemFurtherProcess.js';
+import { OrderModel } from '../../../database/schema/order/orders.schema.js';
+import { RawOrderItemDetailsModel } from '../../../database/schema/order/raw_order/raw_order_item_details.schema.js';
+import { decorative_order_item_details_model } from '../../../database/schema/order/decorative_order/decorative_order_item_details.schema.js';
+import series_product_order_item_details_model from '../../../database/schema/order/series_product_order/series_product_order_item_details.schema.js';
 
 // ─────────────────────────── Utility helpers ────────────────────────────────
 
@@ -43,7 +53,106 @@ const sumField = (arr, field) =>
 // because "10" has a digit after the base code)
 const buildChildPattern = (code) => {
   const escaped = code.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return new RegExp(`^${escaped}[A-Z]+$`);
+  return new RegExp(`^${escaped}[A-Z0-9]+$`);
+};
+
+const round3 = (v) => (v ? Math.round(v * 1000) / 1000 : 0);
+const nonNegativeDiff = (a, b) => Math.max(0, round3((parseFloat(a) || 0) - (parseFloat(b) || 0)));
+
+const resolveRowSales = (code, id, ctx) => {
+  const normCode = (code || '').trim().toUpperCase();
+
+  let terminalSales = 0;
+  let hasTerminal = false;
+  const visitedTerminalIds = new Set();
+
+  // 1. Gather all terminal stage sales linked to this code/id via groups
+  const relatedGroups = ctx.groupingByCode.get(normCode) || [];
+  for (const g of relatedGroups) {
+    const gn = String(g.group_no || '').trim().toUpperCase();
+    const terminalItems = ctx.terminalByGroupNo.get(gn) || [];
+    
+    for (const item of terminalItems) {
+      // Use pressing_details_id as the uniqueness key to avoid counting the same piece twice (e.g. CNC + Packing)
+      const pId = String(item.pressing_details_id || item.issued_from_id || item._id);
+      if (visitedTerminalIds.has(pId)) continue;
+
+      const key = String(item._id);
+      const parentKey = String(item.issued_from_id);
+      const itemCmt = ctx.salesCmtByCode.get(key) || ctx.salesCmtByCode.get(parentKey) || 0;
+      if (itemCmt > 0) {
+        terminalSales += itemCmt;
+        hasTerminal = true;
+        visitedTerminalIds.add(pId);
+      }
+    }
+
+    // Also check direct Group-level sales if this group hasn't reached a terminal stage
+    if (!hasTerminal) {
+       const gid = String(g._id);
+       const gCmt = ctx.salesCmtByCode.get(gn) || ctx.salesCmtByCode.get(gid) || 0;
+       if (gCmt > 0) {
+         terminalSales += gCmt;
+         hasTerminal = true;
+       }
+    }
+  }
+
+  if (hasTerminal) return round3(terminalSales);
+
+  // 2. Fallback to direct ID/Code match (Log/CC/Flitch level)
+  const idKeys = [String(id)];
+  let idBasedCmt = 0;
+  for (const key of idKeys) {
+    idBasedCmt += ctx.salesCmtByCode.get(key) || 0;
+  }
+
+  const directOrderCmt = ctx.salesCmtByCode.get(normCode) || idBasedCmt || 0;
+  const directOrderRef = ctx.orderRefsByCode.get(normCode) || ctx.orderRefsByCode.get(String(id));
+
+  const finalOrderItem = directOrderRef?.order_item_id
+    ? ctx.orderItemById.get(String(directOrderRef.order_item_id))
+    : null;
+
+  return directOrderCmt > 0
+    ? round3(directOrderCmt)
+    : (finalOrderItem ? formatOrderItemVolumeOnly(finalOrderItem) : '');
+};
+
+const resolveGroupingSales = (groupItem, ctx, issueSqm) => {
+  const gn = String(groupItem.group_no || '').trim().toUpperCase();
+  const idKey = String(groupItem._id);
+  const visitedTerminalIds = new Set();
+
+  // 1. Check terminal-stage items for this group (Source of truth)
+  let terminalSales = 0;
+  let hasTerminal = false;
+  const terminalItems = ctx.terminalByGroupNo.get(gn) || [];
+  for (const item of terminalItems) {
+    const pId = String(item.pressing_details_id || item.issued_from_id || item._id);
+    if (visitedTerminalIds.has(pId)) continue;
+
+    const key = String(item._id);
+    const parentKey = String(item.issued_from_id);
+    const itemCmt = ctx.salesCmtByCode.get(key) || ctx.salesCmtByCode.get(parentKey) || 0;
+    if (itemCmt > 0) {
+      terminalSales += itemCmt;
+      hasTerminal = true;
+      visitedTerminalIds.add(pId);
+    }
+  }
+
+  if (hasTerminal) return round3(terminalSales);
+
+  // 2. Direct match on Group No or Group Item ID (if no terminal reached)
+  const directOrderCmt = ctx.salesCmtByCode.get(gn) || ctx.salesCmtByCode.get(idKey) || 0;
+  const directOrderRef = ctx.orderRefsByCode.get(gn) || ctx.orderRefsByCode.get(idKey);
+
+  const finalOrderItem = directOrderRef?.order_item_id ? ctx.orderItemById.get(String(directOrderRef.order_item_id)) : null;
+  
+  return (directOrderCmt > 0 || finalOrderItem)
+    ? round3(issueSqm || directOrderCmt || (finalOrderItem ? formatOrderItemVolumeOnly(finalOrderItem) : 0))
+    : '';
 };
 
 /**
@@ -58,6 +167,54 @@ const crosscutIssueForFlitchPeeling = (cc) => {
     return { issue_for: cc.crosscut_cmt ?? '', status: s };
   }
   return { issue_for: '', status: '' };
+};
+
+/** Flitch Issue in(CMT) — cols 13–14: Issue For Slicing/Peeling + Status. */
+const flitchIssueForSlicingPeeling = (f) => {
+  if (!f || !f.issue_status) return { issue_for: '', status: '' };
+  const s = String(f.issue_status).toLowerCase();
+  if (s === 'slicing' || s === 'slicing_peeling' || s === 'peeling') {
+    return { issue_for: f.flitch_cmt ?? 0, status: f.issue_status };
+  }
+  return { issue_for: '', status: '' };
+};
+
+async function loadOrderItemDetailsByIds(orderItemIds) {
+  const idStrs = [
+    ...new Set(orderItemIds.filter(Boolean).map((id) => String(id))),
+  ].filter((s) => mongoose.isValidObjectId(s));
+  if (!idStrs.length) return new Map();
+  const oidList = idStrs.map((s) => new mongoose.Types.ObjectId(s));
+  const [rawItems, decItems, serItems] = await Promise.all([
+    RawOrderItemDetailsModel.find({ _id: { $in: oidList } })
+      .select({ cbm: 1, sqm: 1, unit_name: 1, raw_material: 1 })
+      .lean(),
+    decorative_order_item_details_model.find({ _id: { $in: oidList } })
+      .select({ cbm: 1, sqm: 1, unit_name: 1 })
+      .lean(),
+    series_product_order_item_details_model.find({ _id: { $in: oidList } })
+      .select({ cbm: 1, sqm: 1, unit_name: 1 })
+      .lean(),
+  ]);
+  const map = new Map();
+  for (const d of rawItems) map.set(String(d._id), d);
+  for (const d of decItems) if (!map.has(String(d._id))) map.set(String(d._id), d);
+  for (const d of serItems) if (!map.has(String(d._id))) map.set(String(d._id), d);
+  return map;
+}
+
+const formatOrderItemVolumeOnly = (item) => {
+  if (!item) return '';
+  const cbm = parseFloat(item.cbm) || 0;
+  const sqm = parseFloat(item.sqm) || 0;
+  const unit = String(item.unit_name || '').toUpperCase();
+  const rawMat = String(item.raw_material || '').toUpperCase();
+
+  if (unit.includes('SQM') || unit.includes('SQ.M') || unit.includes('SQUARE')) return sqm > 0 ? round3(sqm) : '';
+  if (unit.includes('CBM') || unit.includes('CUBIC')) return cbm > 0 ? round3(cbm) : '';
+  if (rawMat === 'LOG' || rawMat === 'FLITCH') return cbm > 0 ? round3(cbm) : (sqm > 0 ? round3(sqm) : '');
+  
+  return cbm > 0 ? round3(cbm) : (sqm > 0 ? round3(sqm) : '');
 };
 
 /** Splicing Issue Status: tapping → pressing from `tapping_done_history` (not tapping line `issued_for`). */
@@ -98,6 +255,19 @@ function resolvePressingIssueStatusFromHistory(pressingItems, pressingIssueStatu
   return '';
 }
 
+function formatGroupingIssueLabel(issueStatus, issuedFor) {
+  if (!issueStatus && !issuedFor) return '';
+  const stage = issueStatus ? String(issueStatus).trim() : '';
+  const dest = issuedFor ? String(issuedFor).trim() : '';
+  if (stage && dest) return `${stage} / ${dest}`;
+  return stage || dest;
+}
+
+function resolveGroupingIssueStatusFromHistory(groupItem, groupingIssueStatusByItemId) {
+  if (!groupItem || !groupingIssueStatusByItemId?.size) return '';
+  return groupingIssueStatusByItemId.get(String(groupItem._id)) || '';
+}
+
 // Empty data for all columns from Grouping/Clipping onwards
 const emptyDownstream = () => ({
   grouping_new_group_no: '',
@@ -125,9 +295,6 @@ const emptyDownstream = () => ({
   cnc_type: '',
   cnc_rec_sheets: '',
   colour_rec_sheets: '',
-  sales_rec_sheets: '',
-  jwc_veneer: '',
-  awc_pressing_sheets: '',
 });
 
 const emptyFlitch = () => ({
@@ -165,125 +332,86 @@ const emptySmoking = () => ({
 
 // ─────────────────────── Grouping + downstream builder ──────────────────────
 
-function buildGroupingData(
-  groupItem,
-  tappingByGroupNo,
-  pressingByGroupNo,
-  cncByPressingId,
-  colourByPressingId,
-  groupingIssuedForByItemId,
-  tappingIssueStatusByItemId,
-  pressingIssuedSheetsByItemId,
-  pressingIssuedSqmByItemId,
-  pressingIssueStatusByItemId
-) {
+function buildGroupingData(groupItem, ctx) {
   const groupNo = groupItem.group_no;
   const recSheets = groupItem.no_of_sheets || 0;
-  const recSqm = groupItem.sqm || 0;
-  const availSheets =
-    getVal(groupItem, 'available_details.no_of_sheets') ?? recSheets;
+  const recSqm = round3(groupItem.sqm || 0);
+  const availSheets = getVal(groupItem, 'available_details.no_of_sheets') ?? recSheets;
   const availSqm = getVal(groupItem, 'available_details.sqm') ?? recSqm;
   const issueSheets = Math.max(0, recSheets - availSheets);
-  const issueSqm = Math.max(0, recSqm - availSqm);
+  const issueSqm = round3(Math.max(0, recSqm - availSqm));
 
-  // Splicing / Tapping
-  const tappingItems = tappingByGroupNo.get(groupNo) || [];
-  const machineItems = tappingItems.filter(
-    (t) => getVal(t, 'tapping_details.splicing_type') === 'MACHINE SPLICING'
-  );
-  const handItems = tappingItems.filter(
-    (t) => getVal(t, 'tapping_details.splicing_type') === 'HAND SPLICING'
-  );
-  const machineSqm = sumField(machineItems, 'sqm');
-  const handSqm = sumField(handItems, 'sqm');
+  const tappingItems = ctx.tappingByGroupNo.get(groupNo) || [];
+  const machineItems = tappingItems.filter((t) => {
+    const st = String(getVal(t, 'tapping_details.splicing_type') || t.splicing_type || '').toUpperCase();
+    return st.includes('MACHINE');
+  });
+  const handItems = tappingItems.filter((t) => {
+    const st = String(getVal(t, 'tapping_details.splicing_type') || t.splicing_type || '').toUpperCase();
+    return st.includes('HAND');
+  });
+  
+  const machineSqm = round3(sumField(machineItems, 'sqm'));
+  const handSqm = round3(sumField(handItems, 'sqm'));
   const splicingSheets = sumField(tappingItems, 'no_of_sheets');
-  const splicingAvailSheets = sumField(
-    tappingItems,
-    'available_details.no_of_sheets'
-  );
-  const splicingAvailSqm = sumField(tappingItems, 'available_details.sqm');
+  const splicingAvailSheets = sumField(tappingItems, 'available_details.no_of_sheets');
+  const splicingAvailSqm = round3(sumField(tappingItems, 'available_details.sqm'));
+  
   const splicingIssueSheets = Math.max(0, splicingSheets - splicingAvailSheets);
-  const splicingIssueSqm = Math.max(
-    0,
-    sumField(tappingItems, 'sqm') - splicingAvailSqm
-  );
-  // Use history-based issue status for tapping/splicing
-  const splicingIssueStatus = resolveSplicingIssueStatusFromHistory(
-    tappingItems,
-    tappingIssueStatusByItemId
-  );
+  const splicingIssueStatus = resolveSplicingIssueStatusFromHistory(tappingItems, ctx.tappingIssueStatusByItemId);
 
-  // Pressing: received from pressing_done_details; issued + status from pressing_done_history
-  const pressingItems = pressingByGroupNo.get(groupNo) || [];
+  const pressingItems = ctx.pressingByGroupNo.get(groupNo) || [];
   const pressingSheets = sumField(pressingItems, 'no_of_sheets');
-  const pressingSqm = sumField(pressingItems, 'sqm');
-  const pressingIssueSheets = pressingItems.reduce(
-    (acc, p) =>
-      acc + (pressingIssuedSheetsByItemId.get(String(p._id)) ?? 0),
-    0
-  );
-  const pressingIssueSqm = pressingItems.reduce(
-    (acc, p) =>
-      acc + (pressingIssuedSqmByItemId.get(String(p._id)) ?? 0),
-    0
-  );
-  const pressingBalanceSheets = Math.max(0, pressingSheets - pressingIssueSheets);
-  const pressingBalanceSqm = Math.max(0, pressingSqm - pressingIssueSqm);
-  const pressingIssueStatus = resolvePressingIssueStatusFromHistory(
-    pressingItems,
-    pressingIssueStatusByItemId
-  );
+  const pressingSqm = round3(sumField(pressingItems, 'sqm'));
+  const pressingAvailSheets = sumField(pressingItems, 'available_details.no_of_sheets');
+  const pressingAvailSqm = round3(sumField(pressingItems, 'available_details.sqm'));
+  const pressingIssueSheets = pressingItems.reduce((acc, p) => acc + (ctx.pressingIssuedSheetsByItemId.get(String(p._id)) ?? 0), 0);
+  const pressingIssueSqm = round3(pressingItems.reduce((acc, p) => acc + (ctx.pressingIssuedSqmByItemId.get(String(p._id)) ?? 0), 0));
+  const pressingIssueStatus = resolvePressingIssueStatusFromHistory(pressingItems, ctx.pressingIssueStatusByItemId);
 
-  // CNC & Colour via pressing._id
   const pressingIds = pressingItems.map((p) => String(p._id));
-  const cncItems = pressingIds.flatMap((id) => cncByPressingId.get(id) || []);
-  const colourItems = pressingIds.flatMap(
-    (id) => colourByPressingId.get(id) || []
-  );
-  const cncType = cncItems[0]?.product_type || '';
-  const cncRecSheets = sumField(cncItems, 'no_of_sheets');
-  const colourRecSheets = sumField(colourItems, 'no_of_sheets');
+  const cncItems = pressingIds.flatMap((id) => ctx.cncByPressingId.get(id) || []);
+  const colourItems = pressingIds.flatMap((id) => ctx.colourByPressingId.get(id) || []);
+
+  const salesVal = resolveGroupingSales(groupItem, ctx, issueSqm);
 
   return {
     grouping_new_group_no: groupNo,
-    grouping_rec_sheets: recSheets || '',
-    grouping_rec_sqm: recSqm || '',
-    grouping_issue_sheets: issueSheets || '',
-    grouping_issue_sqm: issueSqm || '',
-    grouping_issue_status: '',
-    grouping_balance_sheets: availSheets || '',
-    grouping_balance_sqm: availSqm || '',
-    splicing_rec_machine_sqm: machineSqm || '',
-    splicing_rec_hand_sqm: handSqm || '',
-    splicing_sheets: splicingSheets || '',
-    splicing_issue_sheets: splicingIssueSheets || '',
+    grouping_rec_sheets: recSheets,
+    grouping_rec_sqm: recSqm,
+    grouping_issue_sheets: issueSheets,
+    grouping_issue_sqm: issueSqm,
+    grouping_issue_status: resolveGroupingIssueStatusFromHistory(groupItem, ctx.groupingIssuedForByItemId),
+    grouping_balance_sheets: availSheets,
+    grouping_balance_sqm: round3(availSqm),
+    splicing_rec_machine_sqm: round3(machineSqm),
+    splicing_rec_hand_sqm: round3(handSqm),
+    splicing_sheets: splicingSheets,
+    splicing_rec_leaf: sumField(tappingItems, 'no_of_sheets'),
+    splicing_balance_sheets: splicingAvailSheets,
+    splicing_balance_sqm: round3(splicingAvailSqm),
+    splicing_issue_sheets: splicingIssueSheets,
     splicing_issue_status: splicingIssueStatus,
-    splicing_balance_sheets: splicingAvailSheets || '',
-    splicing_balance_sqm: splicingAvailSqm || '',
-    pressing_sheets: pressingSheets || '',
-    pressing_sqm: pressingSqm || '',
-    pressing_issue_sheets: pressingIssueSheets || '',
-    pressing_issue_sqm: pressingIssueSqm || '',
+    pressing_sheets: pressingSheets,
+    pressing_sqm: round3(pressingSqm),
+    pressing_issue_sheets: pressingIssueSheets,
+    pressing_issue_sqm: round3(pressingIssueSqm),
     pressing_issue_status: pressingIssueStatus,
-    pressing_balance_sheets: pressingBalanceSheets || '',
-    pressing_balance_sqm: pressingBalanceSqm || '',
-    cnc_type: cncType,
-    cnc_rec_sheets: cncRecSheets || '',
-    colour_rec_sheets: colourRecSheets || '',
-    sales_rec_sheets: '',
-    jwc_veneer: '',
-    awc_pressing_sheets: '',
+    pressing_balance_sheets: pressingAvailSheets,
+    pressing_balance_sqm: round3(pressingAvailSqm),
+    cnc_type: cncItems[0]?.product_type || '',
+    cnc_rec_sheets: sumField(cncItems, 'no_of_sheets'),
+    colour_rec_sheets: sumField(colourItems, 'no_of_sheets'),
+    sales_cmt_sqm: salesVal,
   };
 }
-
-// ─────────────────────── Dressing + Smoking aggregators ─────────────────────
 
 function getDressingData(logNoCode, dressingByCode) {
   const items = dressingByCode.get(logNoCode) || [];
   if (!items.length) return emptyDressing();
   return {
-    dress_rec_sqm: sumField(items, 'sqm') || '',
-    dress_issue_sqm: sumField(items.filter((d) => d.issue_status), 'sqm') || '',
+    dress_rec_sqm: round3(sumField(items, 'sqm')),
+    dress_issue_sqm: round3(sumField(items.filter((d) => d.issue_status), 'sqm')),
     dress_issue_status: items.find((d) => d.issue_status)?.issue_status || '',
   };
 }
@@ -293,142 +421,89 @@ function getSmokingData(logNoCode, smokingByCode) {
   if (!items.length) return emptySmoking();
   return {
     smoking_process: items.map((s) => s.process_name).filter(Boolean)[0] || '',
-    smoking_issue_sqm: sumField(items, 'sqm') || '',
+    smoking_issue_sqm: round3(sumField(items, 'sqm')),
     smoking_issue_status: items.find((s) => s.issue_status)?.issue_status || '',
   };
 }
 
-// ─────────────────────── Slicing side rows builder ──────────────────────────
-
-function buildSlicingSideRows(
-  logBase,
-  ccBase,
-  flitchBase,
-  side,
-  dressingByCode,
-  smokingByCode,
-  groupingByCode,
-  tappingByGroupNo,
-  pressingByGroupNo,
-  cncByPressingId,
-  colourByPressingId,
-  groupingIssuedForByItemId,
-  tappingIssueStatusByItemId,
-  pressingIssuedSheetsByItemId,
-  pressingIssuedSqmByItemId,
-  pressingIssueStatusByItemId
-) {
+function buildSlicingSideRows(logBase, ccBase, flitchBase, side, ctx) {
+  const flitchId = String(side.flitching_done_id);
   const sideCode = side.log_no_code;
-
   const slicingBase = {
     slicing_side: sideCode,
-    slicing_process_cmt: '',
-    slicing_balance_cmt: '',
-    slicing_rec_leaf: side.no_of_leaves || '',
+    slicing_process_cmt: round3(side.slicing_cmt ?? 0),
+    slicing_balance_cmt: round3(side.slicing_balance_cmt ?? 0),
+    slicing_rec_leaf: side.no_of_leaves ?? 0,
+    slicing_balance_leaf: getVal(side, 'available_details.no_of_leaves') ?? 0,
+    slicing_balance_sqm: round3(getVal(side, 'available_details.sqm') ?? 0),
+    sales_cmt_sqm: resolveRowSales(sideCode, side._id, ctx),
   };
 
-  const dressingData = getDressingData(sideCode, dressingByCode);
-  const smokingData = getSmokingData(sideCode, smokingByCode);
-  const groupingItems = groupingByCode.get(sideCode) || [];
+  const dressingData = getDressingData(sideCode, ctx.dressingByCode);
+  const smokingData = getSmokingData(sideCode, ctx.smokingByCode);
+  const groupingItems = ctx.groupingByCode.get(sideCode) || [];
 
   if (groupingItems.length > 0) {
-    return groupingItems.map((g) => ({
-      ...logBase,
-      ...ccBase,
-      ...flitchBase,
-      ...slicingBase,
-      ...emptyPeeling(),
-      ...dressingData,
-      ...smokingData,
-      ...buildGroupingData(
-        g,
-        tappingByGroupNo,
-        pressingByGroupNo,
-        cncByPressingId,
-        colourByPressingId,
-        groupingIssuedForByItemId,
-        tappingIssueStatusByItemId,
-        pressingIssuedSheetsByItemId,
-        pressingIssuedSqmByItemId,
-        pressingIssueStatusByItemId
-      ),
-    }));
+    return groupingItems.map((g) => {
+      const row = {
+        ...logBase,
+        ...ccBase,
+        ...flitchBase,
+        ...slicingBase,
+        ...emptyPeeling(),
+        ...dressingData,
+        ...smokingData,
+        ...buildGroupingData(g, ctx),
+      };
+      return row;
+    });
   }
 
-  return [
-    {
-      ...logBase,
-      ...ccBase,
-      ...flitchBase,
-      ...slicingBase,
-      ...emptyPeeling(),
-      ...dressingData,
-      ...smokingData,
-      ...emptyDownstream(),
-    },
-  ];
+  const row = {
+    ...logBase,
+    ...ccBase,
+    ...flitchBase,
+    ...slicingBase,
+    ...emptyPeeling(),
+    ...dressingData,
+    ...smokingData,
+    ...emptyDownstream(),
+  };
+  return [row];
 }
 
-// ─────────────────────── Peeling row builder ────────────────────────────────
-
-function buildPeelingRow(
-  logBase,
-  ccBase,
-  flitchBase,
-  peel,
-  dressingByCode,
-  smokingByCode,
-  groupingByCode,
-  tappingByGroupNo,
-  pressingByGroupNo,
-  cncByPressingId,
-  colourByPressingId,
-  groupingIssuedForByItemId,
-  tappingIssueStatusByItemId,
-  pressingIssuedSheetsByItemId,
-  pressingIssuedSqmByItemId,
-  pressingIssueStatusByItemId
-) {
+function buildPeelingRow(logBase, ccBase, flitchBase, peel, ctx) {
   const peelingCode = peel.log_no_code;
-
   const peelingData = {
     ...emptySlicing(),
-    peeling_process: peel.output_type || '',
-    peeling_balance_rostroller: '',
-    peeling_output: peel.no_of_leaves || '',
-    peeling_rec_leaf: peel.no_of_leaves || '',
+    peeling_process: round3(peel.peeling_cmt ?? 0),
+    peeling_balance_rostroller: round3(peel.peeling_balance_rostroller ?? 0),
+    peeling_output: peel.output_type || '',
+    peeling_rec_leaf: peel.no_of_leaves ?? 0,
+    sales_cmt_sqm: resolveRowSales(peelingCode, peel._id, ctx),
   };
 
-  const dressingData = getDressingData(peelingCode, dressingByCode);
-  const smokingData = getSmokingData(peelingCode, smokingByCode);
-  const groupingItems = groupingByCode.get(peelingCode) || [];
-
   const resolvedFlitch = flitchBase || emptyFlitch();
+  const dressingData = getDressingData(peelingCode, ctx.dressingByCode);
+  const smokingData = getSmokingData(peelingCode, ctx.smokingByCode);
+  const groupingItems = ctx.groupingByCode.get(peelingCode) || [];
 
   if (groupingItems.length > 0) {
-    return {
-      ...logBase,
-      ...ccBase,
-      ...resolvedFlitch,
-      ...peelingData,
-      ...dressingData,
-      ...smokingData,
-      ...buildGroupingData(
-        groupingItems[0],
-        tappingByGroupNo,
-        pressingByGroupNo,
-        cncByPressingId,
-        colourByPressingId,
-        groupingIssuedForByItemId,
-        tappingIssueStatusByItemId,
-        pressingIssuedSheetsByItemId,
-        pressingIssuedSqmByItemId,
-        pressingIssueStatusByItemId
-      ),
-    };
+    return groupingItems.map((g) => {
+      const row = {
+        ...logBase,
+        ...ccBase,
+        ...resolvedFlitch,
+        ...peelingData,
+        ...dressingData,
+        ...smokingData,
+        ...buildGroupingData(g, ctx),
+      };
+      return row;
+    });
   }
 
-  return {
+  const row = {
     ...logBase,
     ...ccBase,
     ...resolvedFlitch,
@@ -437,101 +512,38 @@ function buildPeelingRow(
     ...smokingData,
     ...emptyDownstream(),
   };
+  return [row];
 }
 
-// ─────────────────────── Flitch rows builder ────────────────────────────────
+function buildFlitchRows(logBase, ccBase, flitch, ctx) {
+  const flitchCode = flitch.log_no_code ?? flitch.flitch_code ?? '';
+  const flitchSalesVal = resolveRowSales(flitchCode, flitch._id, ctx);
+  const flitchChallanFromMap = ctx.challanCmtByFlitchCode.get(flitch.log_no_code) || '';
+  const flitchChallan = flitchChallanFromMap || (String(flitch.issue_status).toLowerCase().includes('challan') ? (flitch.flitch_cmt ?? 0) : '');
 
-function buildFlitchRows(
-  logBase,
-  ccBase,
-  flitch,
-  slicingByLogNo,
-  peelingByLogNo,
-  dressingByCode,
-  smokingByCode,
-  groupingByCode,
-  tappingByGroupNo,
-  pressingByGroupNo,
-  cncByPressingId,
-  colourByPressingId,
-  groupingIssuedForByItemId,
-  tappingIssueStatusByItemId,
-  pressingIssuedSheetsByItemId,
-  pressingIssuedSqmByItemId,
-  pressingIssueStatusByItemId
-) {
-  // Flitch Issue in(CMT): flitching_done — col 11 = log_no_code, 12–14 from flitch row
-  // Display log_no_code in column, but match children using the same code
+  const flitchIssue = flitchIssueForSlicingPeeling(flitch);
+  // Fallback: if not issued for slicing/peeling, check if issued for order or challan
+  const flitchIssueFor = flitchIssue.issue_for || (flitchSalesVal ? (flitch.flitch_cmt ?? 0) : (flitchChallan ? (flitch.flitch_cmt ?? 0) : ''));
+  const flitchStatusVal = flitchIssue.status || (flitchSalesVal ? 'order' : (flitchChallan ? 'challan' : ''));
   const flitchBase = {
-    flitch_no: flitch.log_no_code ?? flitch.flitch_code ?? '',
-    flitch_rec: flitch.flitch_cmt ?? '',
-    flitch_issue_for: flitch.flitch_cmt ?? '',
-    flitch_status: flitch.issue_status ?? '',
+    flitch_no: flitchCode,
+    flitch_rec: round3(flitch.flitch_cmt ?? 0),
+    flitch_issue_for: round3(flitchIssueFor),
+    flitch_status: flitchStatusVal,
+    sales_cmt_sqm: flitchSalesVal,
+    challan_cmt_sqm: round3(flitchChallan),
   };
 
-  // Use log_no_code for matching children (slicing/peeling sides that descended from this flitch)
-  const flitchCodeForMatching = flitch.log_no_code ?? flitch.flitch_code ?? '';
-  const childPattern = buildChildPattern(flitchCodeForMatching);
-  const allSlicingForLog = slicingByLogNo.get(logBase.log_no) || [];
-  const slicingSides = allSlicingForLog.filter((s) =>
-    childPattern.test(s.log_no_code)
-  );
-
-  const allPeelingForLog = peelingByLogNo.get(logBase.log_no) || [];
-  const peelingForFlitch = allPeelingForLog.filter((p) =>
-    childPattern.test(p.log_no_code)
-  );
+  // ID-BASED MAPPING for Slicing from Flitch
+  const slicingSides = ctx.slicingByFlitchId.get(String(flitch._id)) || [];
 
   const rows = [];
-
   for (const side of slicingSides) {
-    rows.push(
-      ...buildSlicingSideRows(
-        logBase,
-        ccBase,
-        flitchBase,
-        side,
-        dressingByCode,
-        smokingByCode,
-        groupingByCode,
-        tappingByGroupNo,
-        pressingByGroupNo,
-        cncByPressingId,
-        colourByPressingId,
-        groupingIssuedForByItemId,
-        tappingIssueStatusByItemId,
-        pressingIssuedSheetsByItemId,
-        pressingIssuedSqmByItemId,
-        pressingIssueStatusByItemId
-      )
-    );
-  }
-
-  for (const peel of peelingForFlitch) {
-    rows.push(
-      buildPeelingRow(
-        logBase,
-        ccBase,
-        flitchBase,
-        peel,
-        dressingByCode,
-        smokingByCode,
-        groupingByCode,
-        tappingByGroupNo,
-        pressingByGroupNo,
-        cncByPressingId,
-        colourByPressingId,
-        groupingIssuedForByItemId,
-        tappingIssueStatusByItemId,
-        pressingIssuedSheetsByItemId,
-        pressingIssuedSqmByItemId,
-        pressingIssueStatusByItemId
-      )
-    );
+    const sideRows = buildSlicingSideRows(logBase, ccBase, flitchBase, side, ctx);
+    rows.push(...sideRows);
   }
 
   if (!rows.length) {
-    // Flitch not yet processed further
     rows.push({
       ...logBase,
       ...ccBase,
@@ -541,11 +553,13 @@ function buildFlitchRows(
       ...emptyDressing(),
       ...emptySmoking(),
       ...emptyDownstream(),
+      sales_cmt_sqm: flitchSalesVal,
+      challan_cmt_sqm: flitchChallan,
     });
   }
-
   return rows;
 }
+
 
 // ─────────────────────── Main controller ────────────────────────────────────
 
@@ -618,526 +632,482 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
       const logNos = [...new Set(logs.map((l) => l.log_no))];
       const logIds = logs.map((l) => l._id).filter(Boolean);
 
-      // ── Step 2: Bulk-fetch all processing stage data ──────────────────────
-      const [crosscuts, flitches, slicingItems, peelingItems] =
-        await Promise.all([
-          crosscutting_done_model
-            .find({ log_no: { $in: logNos }, deleted_at: null })
-            .lean(),
-          flitching_done_model
-            .find({ log_inventory_item_id: { $in: logIds }, $or: [{ deleted_at: null }, { deleted_at: { $exists: false } }] })
-            .lean(),
-          slicing_done_items_model
-            .find({ log_no: { $in: logNos } })
-            .lean(),
-          peeling_done_items_model
-            .find({ log_no: { $in: logNos } })
-            .lean(),
-        ]);
+      const logNoPrefixPatterns = logNos.map(no => `^${no.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`);
+      const logNoRegex = new RegExp(logNoPrefixPatterns.join('|'));
 
-      const allLeafCodes = [
-        ...new Set([
-          ...slicingItems.map((s) => s.log_no_code),
-          ...peelingItems.map((p) => p.log_no_code),
+      // ── Step 2: Bulk-fetch Crosscuts and Flitches FIRST ──────────────────
+      const [crosscuts, flitches] = await Promise.all([
+        crosscutting_done_model.find({ log_no: logNoRegex, deleted_at: null }).lean(),
+        flitching_done_model.find({ 
+          log_inventory_item_id: { $in: logIds }, 
+          $or: [{ deleted_at: null }, { deleted_at: { $exists: false } }] 
+        }).lean(),
+      ]);
+
+      const ccIds = crosscuts.map(c => c._id).filter(Boolean);
+      const flitchIds = flitches.map(f => f._id).filter(Boolean);
+
+      // ── Step 3: Bulk-fetch Slicing and Peeling based on all parent IDs ──────
+      const [slicingItems, peelingItems] = await Promise.all([
+        // STABLE ID ENRICHMENT FOR SLICING (Broad Match)
+        issued_for_slicing_model.aggregate([
+          { 
+            $match: { 
+              $or: [
+                { log_inventory_item_id: { $in: logIds } },
+                { flitching_done_id: { $in: flitchIds } }
+              ]
+            } 
+          },
+          { $lookup: { from: 'slicing_done_other_details', localField: '_id', foreignField: 'issue_for_slicing_id', as: 'od' } },
+          { $unwind: { path: '$od', preserveNullAndEmptyArrays: true } },
+          { $lookup: { from: 'slicing_done_items', localField: 'od._id', foreignField: 'slicing_done_other_details_id', as: 'items' } },
+          { $unwind: { path: '$items', preserveNullAndEmptyArrays: true } },
+          { $lookup: { from: 'issue_for_slicing_available', localField: '_id', foreignField: 'issue_for_slicing_id', as: 'bal' } },
+          { $unwind: { path: '$bal', preserveNullAndEmptyArrays: true } },
+          { $project: { _id: { $ifNull: ['$items._id', '$_id'] }, log_no: { $ifNull: ['$items.log_no', '$log_no'] }, log_no_code: { $ifNull: ['$items.log_no_code', '$log_no_code'] }, thickness: { $ifNull: ['$items.thickness', 0] }, no_of_leaves: { $ifNull: ['$items.no_of_leaves', 0] }, available_details: '$items.available_details', grade_name: { $ifNull: ['$items.grade_name', ''] }, remark: { $ifNull: ['$items.remark', ''] }, slicing_cmt: { $ifNull: ['$od.total_cmt', 0] }, slicing_balance_cmt: '$bal.cmt', issue_type: '$type', issue_cmt: '$cmt', flitching_done_id: 1, log_inventory_item_id: 1 } }
         ]),
-      ];
+        // STABLE ID ENRICHMENT FOR PEELING (Broad Match)
+        issues_for_peeling_model.aggregate([
+          { 
+            $match: { 
+              $or: [
+                { log_inventory_item_id: { $in: logIds } },
+                { crosscut_done_id: { $in: ccIds } }
+              ]
+            } 
+          },
+          { $lookup: { from: 'peeling_done_other_details', localField: '_id', foreignField: 'issue_for_peeling_id', as: 'od' } },
+          { $unwind: { path: '$od', preserveNullAndEmptyArrays: true } },
+          { $lookup: { from: 'peeling_done_items', localField: 'od._id', foreignField: 'peeling_done_other_details_id', as: 'items' } },
+          { $unwind: { path: '$items', preserveNullAndEmptyArrays: true } },
+          { $lookup: { from: 'issues_for_peeling_available', localField: '_id', foreignField: 'issue_for_peeling_id', as: 'bal' } },
+          { $unwind: { path: '$bal', preserveNullAndEmptyArrays: true } },
+          { $project: { _id: { $ifNull: ['$items._id', '$_id'] }, log_no: { $ifNull: ['$items.log_no', '$log_no'] }, log_no_code: { $ifNull: ['$items.log_no_code', '$log_no_code'] }, thickness: { $ifNull: ['$items.thickness', 0] }, no_of_leaves: { $ifNull: ['$items.no_of_leaves', 0] }, grade_name: { $ifNull: ['$items.grade_name', ''] }, remark: { $ifNull: ['$items.remark', ''] }, output_type: { $ifNull: ['$items.output_type', ''] }, peeling_cmt: { $ifNull: ['$od.total_cmt', 0] }, peeling_balance_rostroller: '$bal.cmt', issue_type: '$type', issue_cmt: { $ifNull: ['$cmt', 0] }, crosscut_done_id: 1, log_inventory_item_id: 1 } }
+        ]),
+      ]);
 
-      const [dressingItems, smokingItems, groupingItems] =
-        await Promise.all([
-          allLeafCodes.length
-            ? dressing_done_items_model
-                .find({ log_no_code: { $in: allLeafCodes } })
-                .lean()
-            : [],
-          allLeafCodes.length
-            ? process_done_items_details_model
-                .find({ log_no_code: { $in: allLeafCodes } })
-                .lean()
-            : [],
-          allLeafCodes.length
-            ? grouping_done_items_details_model
-                .find({ log_no_code: { $in: allLeafCodes } })
-                .lean()
-            : [],
-        ]);
+      const allLeafCodes = [...new Set([...slicingItems.map(s => s.log_no_code), ...peelingItems.map(p => p.log_no_code)])];
 
-      const groupNos = [
-        ...new Set(groupingItems.map((g) => g.group_no)),
-      ];
+      const [dressingItems, smokingItems, groupingItems] = await Promise.all([
+        allLeafCodes.length ? dressing_done_items_model.find({ log_no_code: { $in: allLeafCodes } }).lean() : [],
+        allLeafCodes.length ? process_done_items_details_model.find({ log_no_code: { $in: allLeafCodes } }).lean() : [],
+        allLeafCodes.length ? grouping_done_items_details_model.find({ log_no_code: { $in: allLeafCodes } }).lean() : [],
+      ]);
+
+      const groupNos = [...new Set(groupingItems.map((g) => g.group_no))];
 
       const [tappingRaw, pressingItems] = await Promise.all([
-        groupNos.length
-          ? tapping_done_items_details_model.aggregate([
-              { $match: { group_no: { $in: groupNos } } },
-              {
-                $lookup: {
-                  from: 'tapping_done_other_details',
-                  localField: 'tapping_done_other_details_id',
-                  foreignField: '_id',
-                  as: 'tapping_details',
-                },
-              },
-              {
-                $unwind: {
-                  path: '$tapping_details',
-                  preserveNullAndEmptyArrays: true,
-                },
-              },
-            ])
-          : [],
-        groupNos.length
-          ? pressing_done_details_model
-              .find({ group_no: { $in: groupNos } })
-              .lean()
+        groupNos.length ? tapping_done_items_details_model.aggregate([
+          { $match: { group_no: { $in: groupNos } } },
+          { $lookup: { from: 'tapping_done_other_details', localField: 'tapping_done_other_details_id', foreignField: '_id', as: 'tapping_details' } },
+          { $unwind: { path: '$tapping_details', preserveNullAndEmptyArrays: true } },
+        ]) : [],
+        groupNos.length ? pressing_done_details_model.find({ group_no: { $in: groupNos } }).lean() : [],
+      ]);
+
+      // Map enrichment for history
+      const groupingItemIds = groupingItems.map(g => g._id).filter(Boolean);
+      const groupingIssuedForAgg = groupingItemIds.length ? await grouping_done_history_model.aggregate([
+        { $match: { grouping_done_item_id: { $in: groupingItemIds } } },
+        { $sort: { updatedAt: -1 } },
+        { $group: { _id: '$grouping_done_item_id', issue_status: { $first: '$issue_status' }, issued_for: { $first: '$issued_for' } } },
+      ]) : [];
+      const groupingIssuedForByItemId = new Map(groupingIssuedForAgg.map(r => [String(r._id), formatGroupingIssueLabel(r.issue_status, r.issued_for)]));
+
+      const tappingItemIds = tappingRaw.map(t => t._id).filter(Boolean);
+      // ── Build Order / ID maps for all stages ────────────────────────────
+      const tappingHistoryAgg = tappingItemIds.length ? await tapping_done_history_model.aggregate([
+        { $match: { tapping_done_item_id: { $in: tappingItemIds } } },
+        { $sort: { updatedAt: -1 } },
+        { $group: { _id: '$tapping_done_item_id', issue_status: { $first: '$issue_status' }, issued_for: { $first: '$issued_for' }, order_id: { $first: '$order_id' }, order_item_id: { $first: '$order_item_id' } } }
+      ]) : [];
+      const tappingIssueStatusByItemId = new Map(tappingHistoryAgg.map(r => [String(r._id), formatTappingPressingIssueLabel(r.issue_status, r.issued_for)]));
+      const tappingOrderIdByItemId = new Map(tappingHistoryAgg.filter(r => r.order_id).map(r => [String(r._id), r.order_id]));
+      const tappingOrderItemIdByItemId = new Map(tappingHistoryAgg.filter(r => r.order_item_id).map(r => [String(r._id), r.order_item_id]));
+
+      const pressingDetailIds = pressingItems.map(p => p._id).filter(Boolean);
+      const pressingHistoryAgg = pressingDetailIds.length ? await pressing_done_history_model.aggregate([
+        { $match: { issued_item_id: { $in: pressingDetailIds } } },
+        { $sort: { updatedAt: -1 } },
+        { $group: { _id: '$issued_item_id', issued_sheets: { $sum: '$no_of_sheets' }, issued_sqm: { $sum: '$sqm' }, issue_status: { $first: '$issue_status' }, issued_for: { $first: '$issued_for' }, order_id: { $first: '$order_id' }, order_item_id: { $first: '$order_item_id' } } }
+      ]) : [];
+      const pressingIssuedSheetsByItemId = new Map(pressingHistoryAgg.map(r => [String(r._id), r.issued_sheets || 0]));
+      const pressingIssuedSqmByItemId = new Map(pressingHistoryAgg.map(r => [String(r._id), r.issued_sqm || 0]));
+      const pressingIssueStatusByItemId = new Map(pressingHistoryAgg.map(r => [String(r._id), formatPressingIssueLabel(r.issue_status, r.issued_for)]));
+      const pressingOrderIdByItemId = new Map(pressingHistoryAgg.filter(r => r.order_id).map(r => [String(r._id), r.order_id]));
+      const pressingOrderItemIdByItemId = new Map(pressingHistoryAgg.filter(r => r.order_item_id).map(r => [String(r._id), r.order_item_id]));
+
+      const pressingDetailIdStrings = pressingDetailIds.map(id => String(id));
+
+      const [cncDoneItems, colorDoneItems, packingItemsRes] = await Promise.all([
+        pressingDetailIds.length ? cnc_done_details_model.find({ pressing_details_id: { $in: pressingDetailIds } }).lean() : [],
+        pressingDetailIds.length ? color_done_details_model.find({ pressing_details_id: { $in: pressingDetailIds } }).lean() : [],
+        (pressingDetailIds.length || groupNos.length) 
+          ? finished_ready_for_packing_model.find({ 
+              $or: [
+                { pressing_details_id: { $in: [...pressingDetailIds, ...pressingDetailIdStrings] } },
+                { group_no: { $in: groupNos } }
+              ]
+            }).lean() 
           : [],
       ]);
 
-      // ── History-based queries for issue tracking ─────────────────────────
-      const groupingItemIds = groupingItems.map((g) => g._id).filter(Boolean);
-      const groupingIssuedForAgg =
-        groupingItemIds.length > 0
-          ? await grouping_done_history_model.aggregate([
-              { $match: { grouping_done_item_id: { $in: groupingItemIds } } },
-              { $sort: { updatedAt: -1 } },
-              {
-                $group: {
-                  _id: '$grouping_done_item_id',
-                  issued_for: { $first: '$issued_for' },
-                },
-              },
-            ])
-          : [];
-      const groupingIssuedForByItemId = new Map(
-        groupingIssuedForAgg.map((r) => [String(r._id), r.issued_for || ''])
-      );
+      // Merge into stage arrays
+      const cncItemsRaw = [
+        ...cncDoneItems,
+        ...packingItemsRes.filter(p => ['CNC', 'CNC_FACTORY'].includes(p.issued_from?.toUpperCase()))
+      ];
+      const colourItemsRaw = [
+        ...colorDoneItems,
+        ...packingItemsRes.filter(p => ['COLOR', 'COLOR_FACTORY', 'COLOUR', 'COLOUR_FACTORY'].includes(p.issued_from?.toUpperCase()))
+      ];
 
-      const tappingItemIds = tappingRaw.map((t) => t._id).filter(Boolean);
-      const tappingHistoryAgg =
-        tappingItemIds.length > 0
-          ? await tapping_done_history_model.aggregate([
-              { $match: { tapping_done_item_id: { $in: tappingItemIds } } },
-              { $sort: { updatedAt: -1 } },
-              {
-                $group: {
-                  _id: '$tapping_done_item_id',
-                  issue_status: { $first: '$issue_status' },
-                  issued_for: { $first: '$issued_for' },
-                },
-              },
-            ])
-          : [];
-      const tappingIssueStatusByItemId = new Map(
-        tappingHistoryAgg.map((r) => [
-          String(r._id),
-          formatTappingPressingIssueLabel(r.issue_status, r.issued_for),
-        ])
-      );
+      // Build Order-ID Maps AFTER merging, so Packing items are included
+      const cncOrderIdByItemId = new Map(cncItemsRaw.filter(r => r.order_id).map(r => [String(r._id), r.order_id]));
+      const cncOrderItemIdByItemId = new Map(cncItemsRaw.filter(r => r.order_item_id).map(r => [String(r._id), r.order_item_id]));
+      const colourOrderIdByItemId = new Map(colourItemsRaw.filter(r => r.order_id).map(r => [String(r._id), r.order_id]));
+      const colourOrderItemIdByItemId = new Map(colourItemsRaw.filter(r => r.order_item_id).map(r => [String(r._id), r.order_item_id]));
 
-      const pressingDetailIds = pressingItems.map((p) => p._id).filter(Boolean);
-      const pressingHistoryAgg =
-        pressingDetailIds.length > 0
-          ? await pressing_done_history_model.aggregate([
-              { $match: { issued_item_id: { $in: pressingDetailIds } } },
-              { $sort: { updatedAt: -1 } },
-              {
-                $group: {
-                  _id: '$issued_item_id',
-                  issued_sheets: { $sum: '$no_of_sheets' },
-                  issued_sqm: { $sum: '$sqm' },
-                  issue_status: { $first: '$issue_status' },
-                  issued_for: { $first: '$issued_for' },
-                },
-              },
-            ])
-          : [];
-      const pressingIssuedSheetsByItemId = new Map(
-        pressingHistoryAgg.map((r) => [String(r._id), r.issued_sheets || 0])
-      );
-      const pressingIssuedSqmByItemId = new Map(
-        pressingHistoryAgg.map((r) => [String(r._id), r.issued_sqm || 0])
-      );
-      const pressingIssueStatusByItemId = new Map(
-        pressingHistoryAgg.map((r) => [
-          String(r._id),
-          formatPressingIssueLabel(r.issue_status, r.issued_for),
-        ])
-      );
+      // ── Active packing orders (source of truth for order resolution) ──────
+      const packingOrderRows = pressingDetailIds.length
+        ? await finished_ready_for_packing_model
+            .find(
+              { pressing_details_id: { $in: pressingDetailIds }, order_id: { $ne: null } },
+              { pressing_details_id: 1, issued_from_id: 1, issued_from: 1, order_id: 1, order_item_id: 1 }
+            )
+            .lean()
+        : [];
 
-      const pressingIds = pressingItems.map((p) => p._id);
-      const [cncItems, colourItems] = await Promise.all([
-        pressingIds.length
-          ? cnc_done_details_model
-              .find({ pressing_details_id: { $in: pressingIds } })
-              .lean()
-          : [],
-        pressingIds.length
-          ? color_done_details_model
-              .find({ pressing_details_id: { $in: pressingIds } })
-              .lean()
-          : [],
-      ]);
-
-      // ── Step 3: Build lookup maps ─────────────────────────────────────────
-      const crosscutsByLogNo = groupByKey(crosscuts, 'log_no');
-      const flitchesByCrosscutId = groupByKey(
-        flitches.filter((f) => f.crosscut_done_id),
-        'crosscut_done_id'
-      );
-      const flitchesByLogInventoryItemId = groupByKey(flitches, 'log_inventory_item_id');
-      const slicingByLogNo = groupByKey(slicingItems, 'log_no');
-      const peelingByLogNo = groupByKey(peelingItems, 'log_no');
-      const dressingByCode = groupByKey(dressingItems, 'log_no_code');
-      const smokingByCode = groupByKey(smokingItems, 'log_no_code');
-      const groupingByCode = groupByKey(groupingItems, 'log_no_code');
-      const tappingByGroupNo = groupByKey(tappingRaw, 'group_no');
-      const pressingByGroupNo = groupByKey(pressingItems, 'group_no');
-      const cncByPressingId = groupByKey(cncItems, (c) => String(c.pressing_details_id));
-      const colourByPressingId = groupByKey(colourItems, (c) => String(c.pressing_details_id));
-
-      // ── Step 3_DEBUG: Log flitch data for troubleshooting ─────────────────────────────────────────
-      // DEBUG: Log flitch data for troubleshooting
-      console.log(
-        'DEBUG [Flitch Query]',
-        `Total logs: ${logs.length}, Total flitches fetched: ${flitches.length}`
-      );
-      if (flitches.length > 0) {
-        console.log('DEBUG [Flitch Details]');
-        flitches.slice(0, 3).forEach((f, i) => {
-          console.log(`  Flitch ${i}: log_no="${f.log_no}", log_no_code="${f.log_no_code}", flitch_cmt=${f.flitch_cmt}, issue_status="${f.issue_status}", crosscut_done_id=${f.crosscut_done_id}`);
-        });
-      } else {
-        console.log('DEBUG [No flitches found in database]');
+      // Update Pressing Order Maps with top-priority packing data
+      for (const r of packingOrderRows.filter(r => r.issued_from === 'PRESSING_FACTORY')) {
+        pressingOrderIdByItemId.set(String(r.issued_from_id), r.order_id);
+        pressingOrderItemIdByItemId.set(String(r.issued_from_id), r.order_item_id);
       }
 
-      console.log(
-        'DEBUG [Flitch Maps]',
-        `flitchesByCrosscutId: ${flitchesByCrosscutId.size}, flitchesByLogInventoryItemId: ${flitchesByLogInventoryItemId.size}`
-      );
-      if (flitchesByLogInventoryItemId.size > 0) {
-        console.log('DEBUG [Flitches by log inventory item ID]:');
-        [...flitchesByLogInventoryItemId.entries()].slice(0, 3).forEach(([logId, items]) => {
-          console.log(`  Log ID ${logId}: ${items.length} flitch(es)`);
-        });
-      }
+      // Grouping Order ID maps
+      const groupingOrderIdByItemId = new Map(packingOrderRows.filter(r => r.issued_from === 'GROUPING_FACTORY').map(r => [String(r.issued_from_id), r.order_id]));
+      const groupingOrderItemIdByItemId = new Map(packingOrderRows.filter(r => r.issued_from === 'GROUPING_FACTORY').map(r => [String(r.issued_from_id), r.order_item_id]));
 
-      // ── Step 3 PRESSING DEBUG ─────────────────────────────────────────────
-      console.log(
-        'DEBUG [Pressing Data]',
-        `groupingItems: ${groupingItems.length}, groupNos: ${groupNos.length}, pressingItems: ${pressingItems.length}`
-      );
-      if (pressingItems.length > 0) {
-        console.log('DEBUG [Pressing Details - First 3]:');
-        pressingItems.slice(0, 3).forEach((p, i) => {
-          console.log(`  Pressing ${i}: group_no="${p.group_no}", _id="${p._id}", no_of_sheets=${p.no_of_sheets}, sqm=${p.sqm}`);
-        });
-      } else {
-        console.log('DEBUG [No pressing items found]');
-      }
+      // ── Fetch Sales/Order data from issued_for_order_items ──────────────
+      const allStageItemIds = [
+        ...tappingItemIds,
+        ...pressingDetailIds,
+        ...cncItemsRaw.map(i => i._id),
+        ...colourItemsRaw.map(i => i._id)
+      ];
 
-      console.log(
-        'DEBUG [Pressing Maps]',
-        `pressingByGroupNo size: ${pressingByGroupNo.size}, cncByPressingId size: ${cncByPressingId.size}, colourByPressingId size: ${colourByPressingId.size}`
-      );
-      if (pressingByGroupNo.size > 0) {
-        console.log('DEBUG [Pressing by group number]:');
-        [...pressingByGroupNo.entries()].slice(0, 3).forEach(([groupNo, items]) => {
-          console.log(`  Group ${groupNo}: ${items.length} pressing item(s)`);
-        });
-      }
+      const allStageItemIdsNorm = [
+        ...allStageItemIds.map(id => String(id)),
+        ...allStageItemIds.filter(id => mongoose.Types.ObjectId.isValid(id)).map(id => new mongoose.Types.ObjectId(id))
+      ];
 
-      // ── Step 3b: Helper function to get issued_for_cmt from log ────────────
-      // Column 5 uses log.issue_status to determine which process it was issued for
-      // and log.physical_cmt as the CMT quantity for that issuance
-      const getIssuedForCmt = (issueStatus, physicalCmt) => {
-        // If log has an issue_status, it means it was issued for that process
-        // with the complete physical_cmt as the issue amount
-        if (issueStatus === 'crosscutting' || issueStatus === 'flitching' || issueStatus === 'peeling') {
-          return physicalCmt || 0;
+      const allLogNoCodes = [...new Set([
+        ...logNos,
+        ...crosscuts.map(c => c.log_no_code).filter(Boolean),
+        ...flitches.map(f => f.log_no).filter(Boolean),
+        ...flitches.map(f => f.log_no_code).filter(Boolean),
+        ...allLeafCodes,
+        ...groupNos,
+      ])];
+
+      const allLogNoCodesNorm = allLogNoCodes.map(c => String(c).trim().toUpperCase());
+      const groupNoRegexPatterns = groupNos.map(gn => `^${gn.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`);
+      const groupNoRegexMatch = new RegExp(groupNoRegexPatterns.join('|'), 'i');
+
+      const orderIssuedItems = (allLogNoCodes.length || allStageItemIdsNorm.length) ? await issue_for_order_model.find(
+        {
+          $or: [
+            { 'item_details.log_no': { $in: allLogNoCodesNorm } },
+            { 'item_details.log_no_code': { $in: allLogNoCodesNorm } },
+            { 'item_details.group_no': { $in: [...allLogNoCodesNorm, groupNoRegexMatch] } },
+            { 'item_details.finished_no': { $in: allLogNoCodesNorm } },
+            { 'item_details.issued_from_id': { $in: allStageItemIdsNorm } },
+            { 'item_details.pressing_details_id': { $in: allStageItemIdsNorm } },
+            { 'item_details.issued_item_id': { $in: allStageItemIdsNorm } },
+            { 'item_details._id': { $in: allStageItemIdsNorm } }
+          ],
+        },
+        { issued_from: 1, item_details: 1, order_id: 1, order_item_id: 1 }
+      ).lean() : [];
+
+      console.log('=== SALES/ORDER DEBUG ===');
+      console.log('Sales records found:', orderIssuedItems.length);
+
+      // Build maps: Unique Identifier → CMT/SQM
+      const salesCmtByCode = new Map();
+      const orderRefsByCode = new Map(); 
+
+      for (const oi of orderIssuedItems) {
+        const det = oi.item_details;
+        if (!det) continue;
+
+        let cmt = parseFloat(det.sqm ?? det.cmt ?? det.issued_sqm ?? det.flitch_cmt ?? det.physical_cmt ?? det.crosscut_cmt ?? 0) || 0;
+
+        // Map by IDs
+        const idKeys = [
+          det.issued_from_id ? String(det.issued_from_id) : null,
+          det.ref_item_id ? String(det.ref_item_id) : null,
+          det._id ? String(det._id) : null,
+          det.issued_item_id ? String(det.issued_item_id) : null,
+          det.pressing_details_id ? String(det.pressing_details_id) : null
+        ].filter(Boolean);
+
+        // Map by Codes
+        const codeKeys = [
+          (det.log_no_code || '').trim().toUpperCase(),
+          (det.log_no || '').trim().toUpperCase(),
+          (det.group_no || '').trim().toUpperCase(),
+          (det.finished_no || '').trim().toUpperCase(),
+        ].filter(Boolean);
+
+        const allKeys = [...new Set([...idKeys, ...codeKeys])];
+
+        for (const key of allKeys) {
+          salesCmtByCode.set(key, (salesCmtByCode.get(key) || 0) + cmt);
+          orderRefsByCode.set(key, { order_id: oi.order_id, order_item_id: oi.order_item_id });
         }
-        // For now, log with no issue_status means not yet issued
+      }
+
+      // ── ✅ NEW: Enrich Sales with Packing data (Terminal Stage for Pressing/CNC/Color) ──
+      for (const pi of packingItemsRes) {
+        if (!pi.order_id) continue;
+        const cmt = parseFloat(pi.sqm ?? pi.cmt ?? pi.issued_sqm ?? 0) || 0;
+        if (cmt <= 0) continue;
+
+        const idKeys = [
+          String(pi._id),
+          pi.issued_from_id ? String(pi.issued_from_id) : null,
+          pi.pressing_details_id ? String(pi.pressing_details_id) : null
+        ].filter(Boolean);
+
+        const codeKeys = [
+          (pi.group_no || '').trim().toUpperCase(),
+          (pi.finished_no || '').trim().toUpperCase()
+        ].filter(Boolean);
+
+        const allKeys = [...new Set([...idKeys, ...codeKeys])];
+
+        for (const key of allKeys) {
+          // If we already have a direct order record for this ID/Code, packing is usually the same.
+          // We prioritize direct order cmts if they exist, or add if distinct.
+          if (!salesCmtByCode.has(key)) {
+            salesCmtByCode.set(key, cmt);
+            orderRefsByCode.set(key, { order_id: pi.order_id, order_item_id: pi.order_item_id });
+          }
+        }
+      }
+
+      // Bulk-fetch Orders
+      const allOrderIds = [...new Set([...orderRefsByCode.values()].map(d => String(d.order_id)))];
+      const orderDocs = allOrderIds.length ? await OrderModel.find({ _id: { $in: allOrderIds } }).lean() : [];
+      const orderById = new Map(orderDocs.map(o => [String(o._id), o]));
+
+      const allOrderItemIds = [...new Set([...orderRefsByCode.values()].map(d => String(d.order_item_id)))];
+      const orderItemById = await loadOrderItemDetailsByIds(allOrderItemIds);
+
+      const terminalByGroupNo = new Map();
+      [...cncItemsRaw, ...colourItemsRaw, ...packingItemsRes].forEach(item => {
+        const gn = String(item.group_no || '').trim().toUpperCase();
+        if (!gn) return;
+        const list = terminalByGroupNo.get(gn) || [];
+        list.push(item);
+        terminalByGroupNo.set(gn, list);
+      });
+
+      console.log('=== END SALES/ORDER DEBUG ===');
+
+      // ── Fetch Challan data from issue_for_challan_details ───────────────
+      const challanIssuedItems = (logIds.length || allLogNoCodes.length) ? await issue_for_challan_model.find(
+        {
+          issued_from: { $in: ['LOG', 'CROSSCUTTING', 'FLITCHING_FACTORY'] },
+          $or: [
+            { 'issued_item_details.log_no': { $in: logNos } },
+            { 'issued_item_details.log_no_code': { $in: allLogNoCodes } },
+            { 'issued_item_details._id': { $in: logIds } },
+          ],
+        },
+        { issued_from: 1, issued_item_details: 1 }
+      ).lean() : [];
+
+      const challanCmtByLogNo = new Map();
+      const challanCmtByCcCode = new Map();
+      const challanCmtByFlitchCode = new Map();
+      for (const ci of challanIssuedItems) {
+        const det = ci.issued_item_details;
+        if (!det) continue;
+        const cmt = parseFloat(det.flitch_cmt ?? det.crosscut_cmt ?? det.physical_cmt ?? det.cmt ?? 0) || 0;
+        if (ci.issued_from === 'LOG') {
+          const key = det.log_no;
+          if (key) challanCmtByLogNo.set(key, (challanCmtByLogNo.get(key) || 0) + cmt);
+        } else if (ci.issued_from === 'CROSSCUTTING') {
+          const key = det.log_no_code;
+          if (key) challanCmtByCcCode.set(key, (challanCmtByCcCode.get(key) || 0) + cmt);
+        } else if (ci.issued_from === 'FLITCHING_FACTORY') {
+          const key = det.log_no_code;
+          if (key) challanCmtByFlitchCode.set(key, (challanCmtByFlitchCode.get(key) || 0) + cmt);
+        }
+      }
+
+      // ── Step 3: STABLE ID-BASED MAPS ────────────────────────────────────
+      const ctx = {
+        crosscutsByLogId: groupByKey(crosscuts, c => String(c.log_inventory_item_id)),
+        flitchesByCrosscutId: groupByKey(flitches.filter(f => f.crosscut_done_id), f => String(f.crosscut_done_id)),
+        flitchesByLogId: groupByKey(flitches, f => String(f.log_inventory_item_id)),
+        slicingByFlitchId: groupByKey(slicingItems.filter(s => s.flitching_done_id), s => String(s.flitching_done_id)),
+        peelingByCcId: groupByKey(peelingItems.filter(p => p.crosscut_done_id), p => String(p.crosscut_done_id)),
+        peelingByLogId: groupByKey(peelingItems.filter(p => p.log_inventory_item_id && !p.crosscut_done_id), p => String(p.log_inventory_item_id)),
+        dressingByCode: groupByKey(dressingItems, 'log_no_code'),
+        smokingByCode: groupByKey(smokingItems, 'log_no_code'),
+        groupingByCode: groupByKey(groupingItems, 'log_no_code'),
+        tappingByGroupNo: groupByKey(tappingRaw, 'group_no'),
+        pressingByGroupNo: groupByKey(pressingItems, 'group_no'),
+        cncByPressingId: groupByKey(cncItemsRaw, (c) => String(c.pressing_details_id)),
+        colourByPressingId: groupByKey(colourItemsRaw, (c) => String(c.pressing_details_id)),
+        groupingIssuedForByItemId,
+        groupingOrderIdByItemId,
+        groupingOrderItemIdByItemId,
+        tappingIssueStatusByItemId,
+        tappingOrderIdByItemId,
+        tappingOrderItemIdByItemId,
+        pressingIssuedSheetsByItemId,
+        pressingIssuedSqmByItemId,
+        pressingIssueStatusByItemId,
+        pressingOrderIdByItemId,
+        pressingOrderItemIdByItemId,
+        cncOrderIdByItemId,
+        cncOrderItemIdByItemId,
+        colourOrderIdByItemId,
+        colourOrderItemIdByItemId,
+        orderById,
+        orderItemById,
+        salesCmtByCode,
+        orderRefsByCode,
+        terminalByGroupNo,
+        challanCmtByLogNo,
+        challanCmtByCcCode,
+        challanCmtByFlitchCode,
+      };
+
+      const getIssuedForCmt = (issueStatus, physicalCmt) => {
+        if (['crosscutting', 'flitching', 'peeling'].includes(issueStatus)) return physicalCmt || 0;
         return null;
       };
 
-      // ── Step 4: Build flat hierarchical rows ──────────────────────────────
+      // ── Step 4: Build hierarchical rows with stable ID mapping ───────────
       const allRows = [];
-
       for (const log of logs) {
-        const logNo = log.log_no;
-        const issuedForCmt = getIssuedForCmt(
-          log.issue_status,
-          log.physical_cmt
-        );
+        const logSalesVolume = resolveRowSales(log.log_no, log._id, ctx);
+        const logChallanFromMap = ctx.challanCmtByLogNo.get(log.log_no) || '';
+        const logChallan = logChallanFromMap || (String(log.issue_status).toLowerCase().includes('challan') ? (log.physical_cmt ?? 0) : '');
+        
         const logBase = {
           item_name: log.item_name || '',
-          log_no: logNo,
-          indian_cmt: log.indian_cmt ?? '',
-          rece_cmt: log.physical_cmt ?? '',
-          inward_issue_for: issuedForCmt ?? '',
+          log_no: log.log_no,
+          indian_cmt: log.indian_cmt ?? 0,
+          rece_cmt: log.physical_cmt ?? 0,
+          inward_issue_for: getIssuedForCmt(log.issue_status, log.physical_cmt) ?? 0,
           inward_issue_status: log.issue_status || '',
+          sales_cmt_sqm: logSalesVolume,
+          challan_cmt_sqm: logChallan,
         };
 
-        const crosscutsForLog = crosscutsByLogNo.get(logNo) || [];
-        const flitchesForLog = flitchesByLogInventoryItemId.get(String(log._id)) || [];
-        const peelingForLog = peelingByLogNo.get(logNo) || [];
-
-        // DEBUG: Log flitch availability per log
-        if (flitchesForLog.length > 0) {
-          console.log(
-            `DEBUG [Log ${logNo}] Has ${flitchesForLog.length} direct flitches`,
-            flitchesForLog.map((f) => ({
-              log_no_code: f.log_no_code,
-              flitch_cmt: f.flitch_cmt,
-              issue_status: f.issue_status,
-            }))
-          );
-        }
+        const logId = String(log._id);
+        const crosscutsForLog = ctx.crosscutsByLogId.get(logId) || [];
+        const flitchesForLog = ctx.flitchesByLogId.get(logId) || [];
+        const peelingForLog = ctx.peelingByLogId.get(logId) || [];
 
         if (crosscutsForLog.length > 0) {
-          // Log went through crosscutting
-          // Track which flitches are linked to a crosscut
           const linkedFlitchIds = new Set();
-
           for (const cc of crosscutsForLog) {
             const ccFp = crosscutIssueForFlitchPeeling(cc);
-            const ccBase = {
-              cc_log_no: cc.log_no_code,
-              cc_rec: cc.crosscut_cmt || '',
-              cc_issue_for: ccFp.issue_for,
-              cc_status: ccFp.status,
+            const ccSalesVolume = resolveRowSales(cc.log_no_code, cc._id, ctx);
+            const ccChallan = ctx.challanCmtByCcCode.get(cc.log_no_code) || '';
+            
+            const ccIssueFor = ccFp.issue_for || (ccSalesVolume ? (cc.crosscut_cmt ?? 0) : (ccChallan ? (cc.crosscut_cmt ?? 0) : ''));
+            const ccStatus = ccFp.status || (ccSalesVolume ? 'order' : (ccChallan ? 'challan' : ''));
+            
+            const ccBase = { 
+              cc_log_no: cc.log_no_code, 
+              cc_rec: cc.crosscut_cmt ?? 0, 
+              cc_issue_for: ccIssueFor, 
+              cc_status: ccStatus,
+              sales_cmt_sqm: ccSalesVolume,
+              challan_cmt_sqm: ccChallan,
             };
+            const ccId = String(cc._id);
+            const flitchesForCc = ctx.flitchesByCrosscutId.get(ccId) || [];
+            const peelingForCc = ctx.peelingByCcId.get(ccId) || [];
 
-            const flitchesForCc =
-              flitchesByCrosscutId.get(String(cc._id)) || [];
-
+            let hasDownstream = false;
             if (flitchesForCc.length > 0) {
+              hasDownstream = true;
               for (const flitch of flitchesForCc) {
                 linkedFlitchIds.add(String(flitch._id));
-                allRows.push(
-                  ...buildFlitchRows(
-                    logBase,
-                    ccBase,
-                    flitch,
-                    slicingByLogNo,
-                    peelingByLogNo,
-                    dressingByCode,
-                    smokingByCode,
-                    groupingByCode,
-                    tappingByGroupNo,
-                    pressingByGroupNo,
-                    cncByPressingId,
-                    colourByPressingId,
-                    groupingIssuedForByItemId,
-                    tappingIssueStatusByItemId,
-                    pressingIssuedSheetsByItemId,
-                    pressingIssuedSqmByItemId,
-                    pressingIssueStatusByItemId
-                  )
-                );
+                allRows.push(...buildFlitchRows(logBase, ccBase, flitch, ctx));
               }
-            } else if (cc.issue_status === 'peeling') {
-              // Crosscut went directly to peeling
-              const ccPattern = buildChildPattern(cc.log_no_code);
-              const peelingForCc = peelingForLog.filter((p) =>
-                ccPattern.test(p.log_no_code)
-              );
-
-              if (peelingForCc.length > 0) {
-                for (const peel of peelingForCc) {
-                  allRows.push(
-                    buildPeelingRow(
-                      logBase,
-                      ccBase,
-                      emptyFlitch(),
-                      peel,
-                      dressingByCode,
-                      smokingByCode,
-                      groupingByCode,
-                      tappingByGroupNo,
-                      pressingByGroupNo,
-                      cncByPressingId,
-                      colourByPressingId,
-                      groupingIssuedForByItemId,
-                      tappingIssueStatusByItemId,
-                      pressingIssuedSheetsByItemId,
-                      pressingIssuedSqmByItemId,
-                      pressingIssueStatusByItemId
-                    )
-                  );
-                }
-              } else {
-                allRows.push({
-                  ...logBase,
-                  ...ccBase,
-                  ...emptyFlitch(),
-                  ...emptySlicing(),
-                  ...emptyPeeling(),
-                  ...emptyDressing(),
-                  ...emptySmoking(),
-                  ...emptyDownstream(),
-                });
+            } 
+            if (peelingForCc.length > 0) {
+              hasDownstream = true;
+              for (const peel of peelingForCc) {
+                allRows.push(...buildPeelingRow(logBase, ccBase, emptyFlitch(), peel, ctx));
               }
-            } else {
-              // Crosscut not yet processed further
-              allRows.push({
-                ...logBase,
-                ...ccBase,
-                ...emptyFlitch(),
-                ...emptySlicing(),
-                ...emptyPeeling(),
-                ...emptyDressing(),
-                ...emptySmoking(),
+            } 
+            
+            if (!hasDownstream) {
+              allRows.push({ 
+                ...logBase, 
+                ...ccBase, 
+                ...emptyFlitch(), 
+                ...emptySlicing(), 
+                ...emptyPeeling(), 
+                ...emptyDressing(), 
+                ...emptySmoking(), 
                 ...emptyDownstream(),
+                 sales_cmt_sqm: ccSalesVolume,
+                 challan_cmt_sqm: ccChallan,
               });
             }
           }
-
-          // Also process direct flitches (not linked to any crosscut)
-          const directFlitches = flitchesForLog.filter(
-            (f) => !linkedFlitchIds.has(String(f._id))
-          );
-          if (directFlitches.length > 0) {
-            const ccBase = {
-              cc_log_no: '',
-              cc_rec: '',
-              cc_issue_for: '',
-              cc_status: '',
-            };
-            for (const flitch of directFlitches) {
-              allRows.push(
-                ...buildFlitchRows(
-                  logBase,
-                  ccBase,
-                  flitch,
-                  slicingByLogNo,
-                  peelingByLogNo,
-                  dressingByCode,
-                  smokingByCode,
-                  groupingByCode,
-                  tappingByGroupNo,
-                  pressingByGroupNo,
-                  cncByPressingId,
-                  colourByPressingId,
-                  groupingIssuedForByItemId,
-                  tappingIssueStatusByItemId,
-                  pressingIssuedSheetsByItemId,
-                  pressingIssuedSqmByItemId,
-                  pressingIssueStatusByItemId
-                )
-              );
-            }
+          // Direct flitches not linked to any crosscut
+          const directFlitches = flitchesForLog.filter(f => !linkedFlitchIds.has(String(f._id)));
+          for (const flitch of directFlitches) {
+            allRows.push(...buildFlitchRows(logBase, { cc_log_no: '', cc_rec: 0, cc_issue_for: 0, cc_status: '' }, flitch, ctx));
           }
         } else if (flitchesForLog.length > 0) {
-          // Log went directly to flitching (no crosscut)
-          const ccBase = {
-            cc_log_no: '',
-            cc_rec: '',
-            cc_issue_for: '',
-            cc_status: '',
-          };
           for (const flitch of flitchesForLog) {
-            allRows.push(
-              ...buildFlitchRows(
-                logBase,
-                ccBase,
-                flitch,
-                slicingByLogNo,
-                peelingByLogNo,
-                dressingByCode,
-                smokingByCode,
-                groupingByCode,
-                tappingByGroupNo,
-                pressingByGroupNo,
-                cncByPressingId,
-                colourByPressingId,
-                groupingIssuedForByItemId,
-                tappingIssueStatusByItemId,
-                pressingIssuedSheetsByItemId,
-                pressingIssuedSqmByItemId,
-                pressingIssueStatusByItemId
-              )
-            );
+            allRows.push(...buildFlitchRows(logBase, { cc_log_no: '', cc_rec: 0, cc_issue_for: 0, cc_status: '' }, flitch, ctx));
           }
         } else if (peelingForLog.length > 0) {
-          // Log went directly to peeling (no crosscut, no flitch)
-          const ccBase = {
-            cc_log_no: '',
-            cc_rec: '',
-            cc_issue_for: '',
-            cc_status: '',
-          };
           for (const peel of peelingForLog) {
-            allRows.push(
-              buildPeelingRow(
-                logBase,
-                ccBase,
-                null,
-                peel,
-                dressingByCode,
-                smokingByCode,
-                groupingByCode,
-                tappingByGroupNo,
-                pressingByGroupNo,
-                cncByPressingId,
-                colourByPressingId,
-                groupingIssuedForByItemId,
-                tappingIssueStatusByItemId,
-                pressingIssuedSheetsByItemId,
-                pressingIssuedSqmByItemId,
-                pressingIssueStatusByItemId
-              )
-            );
+            allRows.push(...buildPeelingRow(logBase, { cc_log_no: '', cc_rec: 0, cc_issue_for: 0, cc_status: '' }, null, peel, ctx));
           }
         } else {
-          // No further processing recorded yet
-          allRows.push({
-            ...logBase,
-            cc_log_no: '',
-            cc_rec: '',
-            cc_issue_for: '',
-            cc_status: '',
-            ...emptyFlitch(),
-            ...emptySlicing(),
-            ...emptyPeeling(),
-            ...emptyDressing(),
-            ...emptySmoking(),
-            ...emptyDownstream(),
+          allRows.push({ 
+            ...logBase, 
+            cc_log_no: '', 
+            cc_rec: 0, 
+            cc_issue_for: 0, 
+            cc_status: '', 
+            ...emptyFlitch(), 
+            ...emptySlicing(), 
+            ...emptyPeeling(), 
+            ...emptyDressing(), 
+            ...emptySmoking(), 
+            ...emptyDownstream(), 
+            sales_cmt_sqm: logSalesVolume, 
+            challan_cmt_sqm: logChallan 
           });
         }
       }
 
-      if (!allRows.length) {
-        return res
-          .status(404)
-          .json(
-            new ApiResponse(
-              404,
-              'No log data found for the selected period'
-            )
-          );
-      }
+      if (!allRows.length) return res.status(404).json(new ApiResponse(404, 'No log data found for the selected period'));
 
-      const excelLink = await createLogItemFurtherProcessReportExcel(
-        allRows,
-        startDate,
-        endDate,
-        filter
-      );
-
-      return res.json(
-        new ApiResponse(
-          200,
-          'Log item further process report generated successfully',
-          excelLink
-        )
-      );
+      const excelLink = await createLogItemFurtherProcessReportExcel(allRows, startDate, endDate, filter);
+      return res.json(new ApiResponse(200, 'Log item further process report generated successfully', excelLink));
     } catch (error) {
-      console.error(
-        'Error generating log item further process report:',
-        error
-      );
-      return next(
-        new ApiError(error.message || 'Failed to generate report', 500)
-      );
+      console.error('Error generating report:', error);
+      return next(new ApiError(error.message || 'Failed to generate report', 500));
     }
   }
 );

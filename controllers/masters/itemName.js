@@ -8,6 +8,7 @@ import ApiError from '../../utils/errors/apiError.js';
 import ApiResponse from '../../utils/ApiResponse.js';
 import { StatusCodes } from '../../utils/constants.js';
 
+
 export const AddItemNameMaster = catchAsync(async (req, res) => {
   const authUserDetail = req.userDetails;
   const { item_name, category, color, item_subcategory, item_name_code } =
@@ -39,6 +40,8 @@ export const AddItemNameMaster = catchAsync(async (req, res) => {
   };
   const newItemNameList = new ItemNameModel(itemNameData);
   const savedItemName = await newItemNameList.save();
+
+
   return res
     .status(201)
     .json(
@@ -58,16 +61,19 @@ export const UpdateItemNameMaster = catchAsync(async (req, res) => {
       .status(400)
       .json(new ApiResponse(StatusCodes.INTERNAL_SERVER_ERROR, 'Invalid id'));
   }
+
   const ItemName = await ItemNameModel.findByIdAndUpdate(
     ItemNameId,
     { $set: updateData },
     { new: true, runValidators: true }
   );
+
   if (!ItemName) {
     return res
       .status(404)
       .json(new ApiResponse(StatusCodes.NOT_FOUND, 'Item Not found...'));
   }
+
   res
     .status(200)
     .json(new ApiResponse(StatusCodes.OK, 'Item Updated successfully...'));
@@ -417,3 +423,4 @@ export const BulkUploadItemMaster = catchAsync(async (req, res, next) => {
     });
   }
 });
+
