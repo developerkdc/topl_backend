@@ -335,6 +335,7 @@ const aggregatePackingGoodsTypeMetrics = async ({ fromDate, toDate, filters = {}
         goodsType: 1,
         packingId: '$packing_details.packing_id',
         packingDate: '$packing_details.packing_date',
+        isDispatchDone: { $ifNull: ['$packing_details.is_dispatch_done', false] },
         customerName: 1,
         orderCategory: '$packing_details.order_category',
         noOfSheets: { $ifNull: ['$no_of_sheets', 0] },
@@ -405,6 +406,15 @@ const aggregatePackingGoodsTypeMetrics = async ({ fromDate, toDate, filters = {}
         ? leavesValue
         : 0;
 
+    const dispatchDoneRaw = row?.isDispatchDone;
+    const normalizedDispatchDone =
+      dispatchDoneRaw === true ||
+      dispatchDoneRaw === 1 ||
+      String(dispatchDoneRaw || '')
+        .trim()
+        .toLowerCase() === 'true' ||
+      String(dispatchDoneRaw || '').trim() === '1';
+
     const record = {
       packingId: row?.packingId || '-',
       packingDate: row?.packingDate || null,
@@ -420,6 +430,8 @@ const aggregatePackingGoodsTypeMetrics = async ({ fromDate, toDate, filters = {}
       cmt: cmtValue,
       cbm: cbmValue,
       amount: round2(row?.amount || 0),
+      isDispatchDone: normalizedDispatchDone,
+      dispatchStatus: normalizedDispatchDone ? 'DISPATCHED' : 'PENDING',
     };
 
     const preferredUnit =
