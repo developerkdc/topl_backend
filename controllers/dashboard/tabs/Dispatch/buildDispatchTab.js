@@ -1,4 +1,8 @@
-export const buildDispatchTab = ({ kpis = {}, charts = {} }) => ({
+export const buildDispatchTab = ({
+  kpis = {},
+  charts = {},
+  packingGoodsTypeMetrics = {},
+}) => ({
   kpis: {
     dispatchRevenueMtd: kpis.dispatchRevenueMtd,
     dispatchQuantity: kpis.dispatchQuantity,
@@ -11,5 +15,11 @@ export const buildDispatchTab = ({ kpis = {}, charts = {} }) => ({
     packedVsDispatched: charts.packedVsDispatched,
     dispatchStatusBreakdown: charts.dispatchStatusBreakdown,
     topCustomers: charts.topCustomers,
+  },
+  tables: {
+    packingDoneRowsByType: packingGoodsTypeMetrics.recordsByType || {
+      'FINISHED GOODS': [],
+      'RAW GOODS': [],
+    },
   },
 });

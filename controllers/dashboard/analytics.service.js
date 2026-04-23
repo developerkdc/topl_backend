@@ -2013,7 +2013,7 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
   const includeInventory = ['ALL', 'EXECUTIVE', 'INVENTORY'].includes(moduleFilter);
   const includeProduction = ['ALL', 'EXECUTIVE', 'PRODUCTION'].includes(moduleFilter);
   const includeOrders = ['ALL', 'EXECUTIVE', 'ORDERS'].includes(moduleFilter);
-  const includePacking = ['ALL', 'EXECUTIVE', 'PACKING'].includes(moduleFilter);
+  const includePacking = ['ALL', 'EXECUTIVE', 'PACKING', 'DISPATCH'].includes(moduleFilter);
   const includeDispatch = ['ALL', 'EXECUTIVE', 'DISPATCH'].includes(moduleFilter);
   const productionDamageFilters = {
     itemName: '',

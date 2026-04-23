@@ -34,5 +34,6 @@ export const buildTabsPayload = ({
   DISPATCH: buildDispatchTab({
     kpis,
     charts,
+    packingGoodsTypeMetrics,
   }),
 });
