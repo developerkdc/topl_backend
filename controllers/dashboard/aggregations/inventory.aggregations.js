@@ -675,6 +675,9 @@ const aggregateInventorySubModuleCards = async ({
           amount: round2(combinedInwardSummary?.inwardAmount || 0),
           quantities: mapQuantities(combinedInwardSummary),
         },
+        issuedForFurtherProcess: {
+          quantities: mapQuantities(historyInwardSummary),
+        },
         stockAvailable: {
           amount: round2(stockSummary?.stockAmount || 0),
           quantities: mapQuantities(stockSummary),

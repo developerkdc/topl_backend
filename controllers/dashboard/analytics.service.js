@@ -2547,6 +2547,31 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
     );
   });
 
+  const stageSequence = FACTORY_SUBMODULE_CARD_SPECS.map((spec) =>
+    String(spec.sourceStage || spec.key || '').toUpperCase()
+  ).filter(Boolean);
+  const nextStageByStage = new Map(
+    stageSequence.map((stage, index) => [stage, stageSequence[index + 1] || null])
+  );
+
+  const resolveNextStageIssuedQty = (stageKey) => {
+    if (!stageKey) return 0;
+    const nextStageKey = nextStageByStage.get(stageKey);
+    if (!nextStageKey) return 0;
+
+    const nextStageUnit =
+      stageUnitByStage.get(nextStageKey) || stageDefaultUnit.get(nextStageKey) || null;
+    const isNextStageSheetLike =
+      nextStageKey === 'DRESSING' ||
+      ['SHEETS', 'UNITS', 'LEAVES'].includes(String(nextStageUnit || '').toUpperCase());
+
+    if (isNextStageSheetLike) {
+      return Number(issueByStageSheetLike.get(nextStageKey) || issueByStage.get(nextStageKey) || 0);
+    }
+
+    return Number(issueByStage.get(nextStageKey) || issueByStageSheetLike.get(nextStageKey) || 0);
+  };
+
   const factorySubModuleCards = FACTORY_SUBMODULE_CARD_SPECS.filter((spec) => {
     if (!normalizedProcessStage) return true;
     return (
@@ -2565,12 +2590,15 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
     const damageQty = isDressing
       ? Number(damageByStageSheetLike.get(stageKey) || 0)
       : Number(damageByStage.get(stageKey) || 0);
+    const issuedForNextProcessQty = resolveNextStageIssuedQty(stageKey);
+
     return {
       module: spec.key,
       label: spec.label || formatStageLabel(spec.key),
       issue: round2(issueQty),
       complete: round2(completeQty),
       damage: round2(damageQty),
+      issuedForNextProcess: round2(issuedForNextProcessQty),
       issueDisplay: spec.issueDisplay ?? null,
       completeDisplay: spec.completeDisplay ?? null,
       damageDisplay: spec.damageDisplay ?? null,
