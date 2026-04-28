@@ -335,7 +335,7 @@ const WIP_STAGES = [
   {
     stage: 'CROSSCUTTING',
     collection: 'issues_for_crosscuttings',
-    dateField: 'log_invoice_details.inward_date',
+    dateField: 'createdAt',
     preMatchPipeline: [
       {
         $lookup: {
@@ -361,7 +361,7 @@ const WIP_STAGES = [
   {
     stage: 'FLITCHING',
     collection: 'issues_for_flitchings',
-    dateField: 'log_invoice_details.inward_date',
+    dateField: 'createdAt',
     preMatchPipeline: [
       {
         $lookup: {
@@ -644,7 +644,7 @@ const YIELD_STAGES = [
   {
     stage: 'CROSSCUTTING',
     issueCollection: 'issues_for_crosscuttings',
-    issueDateField: 'log_invoice_details.inward_date',
+    issueDateField: 'createdAt',
     issuePreMatchPipeline: [
       {
         $lookup: {
@@ -958,7 +958,7 @@ const DAMAGE_WASTAGE_STAGES = [
       $ifNull: ['$rejected_quantity.amount', { $ifNull: ['$amount', 0] }],
     },
     issuedCollection: 'issues_for_crosscuttings',
-    issuedDateField: 'log_invoice_details.inward_date',
+    issuedDateField: 'createdAt',
     issuedPreMatchPipeline: [
       {
         $lookup: {
@@ -988,7 +988,7 @@ const DAMAGE_WASTAGE_STAGES = [
     damageQtyExpr: { $ifNull: ['$wastage_info.wastage_sqm', 0] },
     damageAmountExpr: 0,
     issuedCollection: 'issues_for_crosscuttings',
-    issuedDateField: 'log_invoice_details.inward_date',
+    issuedDateField: 'createdAt',
     issuedPreMatchPipeline: [
       {
         $lookup: {
