@@ -191,6 +191,140 @@ const mergeInwardSummaries = (...summaries) =>
     };
   }, createEmptyInwardSummary());
 
+const INVENTORY_PROCESS_ISSUED_SOURCES = {
+  LOG: [
+    {
+      collection: 'issues_for_crosscuttings',
+      dateField: 'createdAt',
+      baseMatch: { issued_from: 'log' },
+      qtyBreakdown: {
+        cmt: {
+          $ifNull: ['$physical_cmt', { $ifNull: ['$available_quantity.physical_cmt', 0] }],
+        },
+      },
+    },
+    {
+      collection: 'issues_for_flitchings',
+      dateField: 'createdAt',
+      baseMatch: { issued_from: 'log' },
+      qtyBreakdown: {
+        cmt: { $ifNull: ['$cmt', { $ifNull: ['$available_quantity.cmt', 0] }] },
+      },
+    },
+    {
+      collection: 'issues_for_peelings',
+      dateField: 'createdAt',
+      baseMatch: { issued_from: 'log' },
+      qtyBreakdown: {
+        cmt: { $ifNull: ['$cmt', 0] },
+      },
+    },
+  ],
+  FLITCH: [
+    {
+      collection: 'issued_for_slicings',
+      dateField: 'createdAt',
+      baseMatch: { issued_from: 'flitching' },
+      qtyBreakdown: {
+        cmt: { $ifNull: ['$cmt', 0] },
+      },
+    },
+  ],
+  VENEER: [
+    {
+      collection: 'issues_for_smoking_dyings',
+      dateField: 'createdAt',
+      baseMatch: { issued_from: 'veneer' },
+      qtyBreakdown: {
+        sqm: { $ifNull: ['$sqm', 0] },
+        leaves: { $ifNull: ['$no_of_leaves', 0] },
+      },
+    },
+    {
+      collection: 'issues_for_groupings',
+      dateField: 'createdAt',
+      baseMatch: { issued_from: 'veneer' },
+      qtyBreakdown: {
+        sqm: { $ifNull: ['$sqm', 0] },
+        leaves: { $ifNull: ['$no_of_leaves', 0] },
+      },
+    },
+  ],
+  PLYWOOD: [
+    {
+      collection: 'issued_for_plywood_resizing_items',
+      dateField: 'createdAt',
+      baseMatch: { issued_from: 'PLYWOOD' },
+      qtyBreakdown: {
+        sqm: { $ifNull: ['$sqm', 0] },
+        sheets: { $ifNull: ['$no_of_sheets', 0] },
+      },
+    },
+  ],
+};
+
+const aggregateInventoryIssuedForFurtherProcessByModule = async ({
+  fromDate,
+  toDate,
+  filters = {},
+}) => {
+  const issuedContextualMatch = buildWastageContextMatch(filters);
+  const summaryByModule = new Map();
+
+  const moduleEntries = Object.entries(INVENTORY_PROCESS_ISSUED_SOURCES);
+  await Promise.all(
+    moduleEntries.map(async ([moduleKey, sources]) => {
+      const sourceRows = await Promise.all(
+        (sources || []).map(async (source) => {
+          const [summary] = await safeAggregate(source.collection, [
+            ...(Array.isArray(source.preMatchPipeline) ? source.preMatchPipeline : []),
+            {
+              $match: combineMatch(
+                dateMatch(source.dateField || 'createdAt', fromDate, toDate),
+                source.baseMatch || null,
+                issuedContextualMatch
+              ),
+            },
+            {
+              $group: {
+                _id: null,
+                sqm: { $sum: source.qtyBreakdown?.sqm || 0 },
+                sheets: { $sum: source.qtyBreakdown?.sheets || 0 },
+                leaves: { $sum: source.qtyBreakdown?.leaves || 0 },
+                rolls: { $sum: source.qtyBreakdown?.rolls || 0 },
+                cmt: { $sum: source.qtyBreakdown?.cmt || 0 },
+                quantity: { $sum: source.qtyBreakdown?.quantity || 0 },
+                units: { $sum: source.qtyBreakdown?.units || 0 },
+              },
+            },
+          ]);
+
+          return summary || {};
+        })
+      );
+
+      const merged = sourceRows.reduce(
+        (acc, row) =>
+          mergeInwardSummaries(acc, {
+            inwardAmount: 0,
+            sqm: Number(row?.sqm || 0),
+            sheets: Number(row?.sheets || 0),
+            leaves: Number(row?.leaves || 0),
+            rolls: Number(row?.rolls || 0),
+            cmt: Number(row?.cmt || 0),
+            quantity: Number(row?.quantity || 0),
+            units: Number(row?.units || 0),
+          }),
+        createEmptyInwardSummary()
+      );
+
+      summaryByModule.set(moduleKey, merged);
+    })
+  );
+
+  return summaryByModule;
+};
+
 const mapPrefixedFields = (fields = [], prefix = '') =>
   fields.map((field) => `${prefix}${field}`);
 
@@ -541,6 +675,11 @@ const aggregateInventorySubModuleCards = async ({
 }) => {
   const contextualMatch = buildInventoryContextMatch(filters);
   const stockSnapshotDate = dayEnd(new Date());
+  const issuedProcessSummaryByModule = await aggregateInventoryIssuedForFurtherProcessByModule({
+    fromDate,
+    toDate,
+    filters,
+  });
 
   const cards = await Promise.all(
     sources.map(async (source) => {
@@ -650,6 +789,10 @@ const aggregateInventorySubModuleCards = async ({
       ]);
 
       const combinedInwardSummary = mergeInwardSummaries(inwardSummary, historyInwardSummary);
+      const combinedIssuedForFurtherProcessSummary = mergeInwardSummaries(
+        historyInwardSummary,
+        issuedProcessSummaryByModule.get(source.module) || createEmptyInwardSummary()
+      );
 
       const roundQuantityByKey = (key, value) => {
         const numericValue = Number(value || 0);
@@ -676,7 +819,7 @@ const aggregateInventorySubModuleCards = async ({
           quantities: mapQuantities(combinedInwardSummary),
         },
         issuedForFurtherProcess: {
-          quantities: mapQuantities(historyInwardSummary),
+          quantities: mapQuantities(combinedIssuedForFurtherProcessSummary),
         },
         stockAvailable: {
           amount: round2(stockSummary?.stockAmount || 0),
