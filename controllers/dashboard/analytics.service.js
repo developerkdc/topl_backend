@@ -698,7 +698,7 @@ const YIELD_STAGES = [
     doneCollection: 'peeling_done_other_details',
     doneDateField: 'peeling_date',
     doneQtyExpr: { $ifNull: ['$total_cmt', 0] },
-    unit: 'sqm',
+    unit: 'cmt',
   },
   {
     stage: 'GROUPING',
@@ -707,20 +707,7 @@ const YIELD_STAGES = [
     issuedQtyExpr: { $ifNull: ['$sqm', 0] },
     doneCollection: 'grouping_done_items_details',
     doneDateField: 'createdAt',
-    doneQtyExpr: { $ifNull: ['$sqm', 0] },
-    doneSources: [
-      {
-        collection: 'grouping_done_items_details',
-        dateField: 'createdAt',
-        baseMatch: { issue_status: null, is_damaged: false },
-        qtyExpr: { $ifNull: ['$sqm', 0] },
-      },
-      {
-        collection: 'grouping_done_history',
-        dateField: 'createdAt',
-        qtyExpr: { $ifNull: ['$sqm', 0] },
-      },
-    ],
+    doneQtyExpr: { $ifNull: ['$available_details.sqm', { $ifNull: ['$sqm', 0] }] },
     unit: 'sqm',
   },
   {
@@ -737,7 +724,7 @@ const YIELD_STAGES = [
     stage: 'DRESSING',
     issueCollection: 'issue_for_dressing',
     issueDateField: 'createdAt',
-    issuedQtyExpr: { $ifNull: ['$sqm', 0] },
+    issuedQtyExpr: { $ifNull: ['$available_no_of_leaves', { $ifNull: ['$no_of_leaves', 0] }] },
     doneCollection: 'dressing_done_items',
     doneDateField: 'createdAt',
     doneQtyExpr: { $ifNull: ['$sqm', 0] },
@@ -780,35 +767,6 @@ const YIELD_STAGES = [
     doneCollection: 'process_done_items_details',
     doneDateField: 'createdAt',
     doneQtyExpr: { $ifNull: ['$sqm', 0] },
-    doneSources: [
-      {
-        collection: 'process_done_items_details',
-        dateField: 'createdAt',
-        baseMatch: { issue_status: null },
-        qtyExpr: { $ifNull: ['$sqm', 0] },
-      },
-      {
-        collection: 'process_done_history',
-        dateField: 'createdAt',
-        preMatchPipeline: [
-          {
-            $lookup: {
-              from: 'process_done_items_details',
-              localField: 'bundles',
-              foreignField: '_id',
-              as: 'bundle_details',
-            },
-          },
-          {
-            $unwind: {
-              path: '$bundle_details',
-              preserveNullAndEmptyArrays: false,
-            },
-          },
-        ],
-        qtyExpr: { $ifNull: ['$bundle_details.sqm', 0] },
-      },
-    ],
     unit: 'sqm',
   },
   {
@@ -818,20 +776,7 @@ const YIELD_STAGES = [
     issuedQtyExpr: { $ifNull: ['$sqm', 0] },
     doneCollection: 'plywood_resizing_done_details',
     doneDateField: 'createdAt',
-    doneQtyExpr: { $ifNull: ['$sqm', 0] },
-    doneSources: [
-      {
-        collection: 'plywood_resizing_done_details',
-        dateField: 'createdAt',
-        baseMatch: { issue_status: null },
-        qtyExpr: { $ifNull: ['$sqm', 0] },
-      },
-      {
-        collection: 'plywood_resizing_history_details',
-        dateField: 'createdAt',
-        qtyExpr: { $ifNull: ['$issued_sqm', 0] },
-      },
-    ],
+    doneQtyExpr: { $ifNull: ['$available_details.sqm', { $ifNull: ['$sqm', 0] }] },
     unit: 'sqm',
   },
   {
@@ -841,20 +786,7 @@ const YIELD_STAGES = [
     issuedQtyExpr: { $ifNull: ['$total_sq_meter', { $ifNull: ['$available_sqm', 0] }] },
     doneCollection: 'plywood_production',
     doneDateField: 'createdAt',
-    doneQtyExpr: { $ifNull: ['$total_sqm', 0] },
-    doneSources: [
-      {
-        collection: 'plywood_production',
-        dateField: 'createdAt',
-        baseMatch: { issue_status: null },
-        qtyExpr: { $ifNull: ['$total_sqm', 0] },
-      },
-      {
-        collection: 'plywood_production_history_details',
-        dateField: 'createdAt',
-        qtyExpr: { $ifNull: ['$issued_sqm', 0] },
-      },
-    ],
+    doneQtyExpr: { $ifNull: ['$available_total_sqm', { $ifNull: ['$total_sqm', 0] }] },
     unit: 'sqm',
   },
   {
@@ -864,20 +796,7 @@ const YIELD_STAGES = [
     issuedQtyExpr: { $ifNull: ['$sqm', 0] },
     doneCollection: 'pressing_done_details',
     doneDateField: 'createdAt',
-    doneQtyExpr: { $ifNull: ['$sqm', 0] },
-    doneSources: [
-      {
-        collection: 'pressing_done_details',
-        dateField: 'createdAt',
-        baseMatch: { issue_status: null },
-        qtyExpr: { $ifNull: ['$sqm', 0] },
-      },
-      {
-        collection: 'pressing_done_history',
-        dateField: 'createdAt',
-        qtyExpr: { $ifNull: ['$sqm', 0] },
-      },
-    ],
+    doneQtyExpr: { $ifNull: ['$available_details.sqm', { $ifNull: ['$sqm', 0] }] },
     unit: 'sqm',
   },
   {
@@ -927,20 +846,7 @@ const YIELD_STAGES = [
     issuedQtyExpr: { $ifNull: ['$issued_sqm', 0] },
     doneCollection: 'polishing_done_details',
     doneDateField: 'createdAt',
-    doneQtyExpr: { $ifNull: ['$sqm', 0] },
-    doneSources: [
-      {
-        collection: 'polishing_done_details',
-        dateField: 'createdAt',
-        baseMatch: { issue_status: null },
-        qtyExpr: { $ifNull: ['$sqm', 0] },
-      },
-      {
-        collection: 'polishing_history_details',
-        dateField: 'createdAt',
-        qtyExpr: { $ifNull: ['$sqm', 0] },
-      },
-    ],
+    doneQtyExpr: { $ifNull: ['$available_details.sqm', { $ifNull: ['$sqm', 0] }] },
     unit: 'sqm',
   },
 ];
@@ -2568,6 +2474,9 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
     const qtyUnits = Number(row?.qtyUnits || 0);
     issueByStageSheetLike.set(stage, qtySheets !== 0 ? qtySheets : qtyUnits);
   });
+  if (issueByStage.has('DRESSING')) {
+    issueByStageSheetLike.set('DRESSING', Number(issueByStage.get('DRESSING') || 0));
+  }
 
   const completeByStageSheetLike = new Map();
   filteredProductionThroughput.forEach((row) => {
@@ -2636,6 +2545,22 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
   };
 
   const issueFlowSpecs = [
+    {
+      collection: 'crosscutting_dones',
+      dateField: 'updatedAt',
+      sourceStageExpr: 'CROSSCUTTING',
+      match: { issue_status: 'challan' },
+      qtyExpr: { $ifNull: ['$crosscut_cmt', 0] },
+      unit: 'CMT',
+    },
+    {
+      collection: 'flitchings',
+      dateField: 'updatedAt',
+      sourceStageExpr: 'FLITCHING',
+      match: { issue_status: 'challan' },
+      qtyExpr: { $ifNull: ['$flitch_cmt', 0] },
+      unit: 'CMT',
+    },
     {
       collection: 'issues_for_flitchings',
       dateField: 'createdAt',
@@ -2795,6 +2720,173 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
     })
   );
 
+  const issuedForNextSingleFlowSpecs = [
+    {
+      stage: 'SMOKING_DYING',
+      collection: 'issues_for_groupings',
+      dateField: 'createdAt',
+      sourceField: 'issued_from',
+      qtyExpr: { $ifNull: ['$sqm', 0] },
+      unit: 'SQM',
+    },
+    {
+      stage: 'GROUPING',
+      collection: 'issue_for_tappings',
+      dateField: 'createdAt',
+      sourceField: 'issued_from',
+      qtyExpr: { $ifNull: ['$sqm', 0] },
+      unit: 'SQM',
+    },
+    {
+      stage: 'TAPPING',
+      collection: 'issues_for_pressings',
+      dateField: 'createdAt',
+      sourceField: 'issued_from',
+      qtyExpr: { $ifNull: ['$sqm', 0] },
+      unit: 'SQM',
+    },
+    {
+      stage: 'RESIZING',
+      collection: 'plywood_production_consumed_item',
+      dateField: 'createdAt',
+      sourceField: 'issued_from',
+      qtyExpr: { $ifNull: ['$total_sq_meter', { $ifNull: ['$available_sqm', 0] }] },
+      unit: 'SQM',
+    },
+    {
+      stage: 'RESIZING',
+      collection: 'pressing_done_consumed_items_details',
+      dateField: 'createdAt',
+      sourceStageExpr: 'RESIZING',
+      preMatchPipeline: [
+        {
+          $unwind: {
+            path: '$base_details',
+            preserveNullAndEmptyArrays: false,
+          },
+        },
+      ],
+      match: { 'base_details.consumed_from': 'RESIZING' },
+      qtyExpr: { $ifNull: ['$base_details.sqm', 0] },
+      unit: 'SQM',
+    },
+    {
+      stage: 'PLYWOOD_PRODUCTION',
+      collection: 'pressing_done_consumed_items_details',
+      dateField: 'createdAt',
+      sourceStageExpr: 'PLYWOOD_PRODUCTION',
+      preMatchPipeline: [
+        {
+          $unwind: {
+            path: '$base_details',
+            preserveNullAndEmptyArrays: false,
+          },
+        },
+      ],
+      match: {
+        $expr: {
+          $eq: [
+            { $trim: { input: { $toUpper: { $ifNull: ['$base_details.consumed_from', ''] } } } },
+            'PRODUCTION',
+          ],
+        },
+      },
+      qtyExpr: { $ifNull: ['$base_details.sqm', 0] },
+      unit: 'SQM',
+    },
+    {
+      stage: 'PRESSING',
+      collection: 'issued_for_cnc_details',
+      dateField: 'createdAt',
+      sourceField: 'issued_from',
+      qtyExpr: { $ifNull: ['$issued_sqm', 0] },
+      unit: 'SQM',
+    },
+    {
+      stage: 'CNC',
+      collection: 'issued_for_color_details',
+      dateField: 'createdAt',
+      sourceField: 'issued_from',
+      qtyExpr: { $ifNull: ['$issued_sqm', 0] },
+      unit: 'SQM',
+    },
+    {
+      stage: 'COLOUR',
+      collection: 'issued_for_bunito_details',
+      dateField: 'createdAt',
+      sourceField: 'issued_from',
+      qtyExpr: { $ifNull: ['$issued_sqm', 0] },
+      unit: 'SQM',
+    },
+    {
+      stage: 'BUNITO',
+      collection: 'issued_for_canvas_details',
+      dateField: 'createdAt',
+      sourceField: 'issued_from',
+      qtyExpr: { $ifNull: ['$issued_sqm', 0] },
+      unit: 'SQM',
+    },
+    {
+      stage: 'CANVAS',
+      collection: 'issued_for_polishing_details',
+      dateField: 'createdAt',
+      sourceField: 'issued_from',
+      qtyExpr: { $ifNull: ['$issued_sqm', 0] },
+      unit: 'SQM',
+    },
+    {
+      stage: 'POLISHING',
+      collection: 'finished_ready_for_packing_details',
+      dateField: 'createdAt',
+      sourceStageExpr: 'POLISHING',
+      match: { issued_from: { $in: ['POLISHING', 'polishing'] } },
+      qtyExpr: { $ifNull: ['$sqm', 0] },
+      unit: 'SQM',
+    },
+  ];
+
+  const issuedForNextSingleFlowByStage = new Map();
+  const issuedForNextSingleFlowStages = new Set(
+    issuedForNextSingleFlowSpecs.map((spec) => String(spec?.stage || '').toUpperCase()).filter(Boolean)
+  );
+
+  await Promise.all(
+    issuedForNextSingleFlowSpecs.map(async (spec) => {
+      const stageKey = String(spec?.stage || '').toUpperCase();
+      if (!stageKey || !spec?.collection || !spec?.dateField || !spec?.qtyExpr) return;
+      const groupIdExpr = spec.sourceStageExpr || `$${spec.sourceField || 'issued_from'}`;
+      const rows = await safeAggregate(spec.collection, [
+        ...(Array.isArray(spec.preMatchPipeline) ? spec.preMatchPipeline : []),
+        {
+          $match: combineMatch(
+            dateMatch(spec.dateField, fromDate, toDate),
+            spec.match || null
+          ),
+        },
+        {
+          $group: {
+            _id: groupIdExpr,
+            qty: { $sum: spec.qtyExpr },
+          },
+        },
+      ]);
+
+      rows.forEach((row) => {
+        const sourceStage = spec.sourceStageExpr
+          ? String(row?._id || '').toUpperCase() || null
+          : normalizeIssuedFromStageKey(row?._id);
+        if (sourceStage !== stageKey) return;
+        if (!issuedForNextSingleFlowByStage.has(stageKey)) {
+          issuedForNextSingleFlowByStage.set(stageKey, new Map());
+        }
+        const unitMap = issuedForNextSingleFlowByStage.get(stageKey);
+        const unit = normalizeFactoryUnit(spec.unit) || '--';
+        const existing = Number(unitMap.get(unit) || 0);
+        unitMap.set(unit, existing + Number(row?.qty || 0));
+      });
+    })
+  );
+
   const factorySubModuleCards = FACTORY_SUBMODULE_CARD_SPECS.filter((spec) => {
     if (!normalizedProcessStage) return true;
     return (
@@ -2829,7 +2921,9 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
       stageMetricUnit
     );
 
-    const issuedForNextProcessUnitMap = issuedForNextProcessByStage.get(stageKey) || new Map();
+    const issuedForNextProcessUnitMap = issuedForNextSingleFlowStages.has(stageKey)
+      ? issuedForNextSingleFlowByStage.get(stageKey) || new Map()
+      : issuedForNextProcessByStage.get(stageKey) || new Map();
     const issuedForNextProcessQuantities = buildFactoryMetricQuantities(
       issuedForNextProcessUnitMap,
       null

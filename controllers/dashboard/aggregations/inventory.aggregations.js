@@ -219,6 +219,14 @@ const INVENTORY_PROCESS_ISSUED_SOURCES = {
         cmt: { $ifNull: ['$cmt', 0] },
       },
     },
+    {
+      collection: 'log_inventory_items_details',
+      dateField: 'updatedAt',
+      baseMatch: { issue_status: 'challan' },
+      qtyBreakdown: {
+        cmt: { $ifNull: ['$physical_cmt', 0] },
+      },
+    },
   ],
   FLITCH: [
     {
@@ -227,6 +235,14 @@ const INVENTORY_PROCESS_ISSUED_SOURCES = {
       baseMatch: { issued_from: 'flitching' },
       qtyBreakdown: {
         cmt: { $ifNull: ['$cmt', 0] },
+      },
+    },
+    {
+      collection: 'flitch_inventory_items_details',
+      dateField: 'updatedAt',
+      baseMatch: { issue_status: 'challan' },
+      qtyBreakdown: {
+        cmt: { $ifNull: ['$flitch_cmt', 0] },
       },
     },
   ],
@@ -247,6 +263,17 @@ const INVENTORY_PROCESS_ISSUED_SOURCES = {
       qtyBreakdown: {
         sqm: { $ifNull: ['$sqm', 0] },
         leaves: { $ifNull: ['$no_of_leaves', 0] },
+      },
+    },
+    {
+      collection: 'veneer_inventory_items_details',
+      dateField: 'updatedAt',
+      baseMatch: { issue_status: 'challan' },
+      qtyBreakdown: {
+        sqm: { $ifNull: ['$total_sq_meter', { $ifNull: ['$available_sqm', 0] }] },
+        leaves: {
+          $ifNull: ['$number_of_leaves', { $ifNull: ['$available_number_of_leaves', 0] }],
+        },
       },
     },
   ],
@@ -401,6 +428,8 @@ const buildHistoryInwardBasePipeline = ({
   toDate,
   filters = {},
   sourceSupplierMatch = null,
+  includeMissingItemOnly = true,
+  additionalMatch = null,
 }) => {
   if (!source?.historyCollection) return null;
 
@@ -434,7 +463,7 @@ const buildHistoryInwardBasePipeline = ({
     : sourceSupplierMatch;
 
   const includeMissingItemOnlyMatch =
-    source.historyIncludeWhenItemMissing && hasHistoryItemLookup
+    includeMissingItemOnly && source.historyIncludeWhenItemMissing && hasHistoryItemLookup
       ? { 'history_item_details._id': { $exists: false } }
       : null;
 
@@ -447,7 +476,8 @@ const buildHistoryInwardBasePipeline = ({
       $match: combineMatch(
         historyContextMatch,
         historySupplierMatch,
-        includeMissingItemOnlyMatch
+        includeMissingItemOnlyMatch,
+        additionalMatch
       ),
     },
   ];
@@ -466,6 +496,45 @@ const aggregateInventoryHistoryInwardSummary = async ({
     toDate,
     filters,
     sourceSupplierMatch,
+  });
+  if (!basePipeline) return createEmptyInwardSummary();
+
+  const [summary] = await safeAggregate(source.historyCollection, [
+    ...basePipeline,
+    {
+      $group: {
+        _id: null,
+        inwardAmount: { $sum: source.historyAmountExpr || 0 },
+        sqm: { $sum: source.historyQtyBreakdown?.sqm || 0 },
+        sheets: { $sum: source.historyQtyBreakdown?.sheets || 0 },
+        leaves: { $sum: source.historyQtyBreakdown?.leaves || 0 },
+        rolls: { $sum: source.historyQtyBreakdown?.rolls || 0 },
+        cmt: { $sum: source.historyQtyBreakdown?.cmt || 0 },
+        quantity: { $sum: source.historyQtyBreakdown?.quantity || 0 },
+      },
+    },
+  ]);
+
+  return normalizeInwardSummary(summary);
+};
+
+const aggregateInventoryHistoryIssuedSummary = async ({
+  source,
+  fromDate,
+  toDate,
+  filters = {},
+  sourceSupplierMatch = null,
+}) => {
+  if (!source?.historyCollection) return createEmptyInwardSummary();
+
+  const basePipeline = buildHistoryInwardBasePipeline({
+    source,
+    fromDate,
+    toDate,
+    filters,
+    sourceSupplierMatch,
+    includeMissingItemOnly: false,
+    additionalMatch: { issue_status: { $ne: null } },
   });
   if (!basePipeline) return createEmptyInwardSummary();
 
@@ -710,7 +779,8 @@ const aggregateInventorySubModuleCards = async ({
           }
         : `$${sourceDateField}`;
 
-      const [stockSummary, inwardSummary, historyInwardSummary] = await Promise.all([
+      const [stockSummary, inwardSummary, historyInwardSummary, historyIssuedSummary] =
+        await Promise.all([
         safeAggregate(source.collection, [
           {
             $match: combineMatch(
@@ -786,11 +856,18 @@ const aggregateInventorySubModuleCards = async ({
           filters,
           sourceSupplierMatch,
         }),
+        aggregateInventoryHistoryIssuedSummary({
+          source,
+          fromDate,
+          toDate,
+          filters,
+          sourceSupplierMatch,
+        }),
       ]);
 
       const combinedInwardSummary = mergeInwardSummaries(inwardSummary, historyInwardSummary);
       const combinedIssuedForFurtherProcessSummary = mergeInwardSummaries(
-        historyInwardSummary,
+        historyIssuedSummary,
         issuedProcessSummaryByModule.get(source.module) || createEmptyInwardSummary()
       );
 
