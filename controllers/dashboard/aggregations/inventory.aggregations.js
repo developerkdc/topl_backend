@@ -866,9 +866,15 @@ const aggregateInventorySubModuleCards = async ({
       ]);
 
       const combinedInwardSummary = mergeInwardSummaries(inwardSummary, historyInwardSummary);
+      // Avoid double counting: modules with inventory history already record
+      // process/challan issues in history rows, so process-source aggregation
+      // should only supplement modules that do not have history.
+      const processIssuedSummary = source?.historyCollection
+        ? createEmptyInwardSummary()
+        : issuedProcessSummaryByModule.get(source.module) || createEmptyInwardSummary();
       const combinedIssuedForFurtherProcessSummary = mergeInwardSummaries(
         historyIssuedSummary,
-        issuedProcessSummaryByModule.get(source.module) || createEmptyInwardSummary()
+        processIssuedSummary
       );
 
       const roundQuantityByKey = (key, value) => {
