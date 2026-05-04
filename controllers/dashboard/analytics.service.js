@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import {
   dispatch_status,
+  issues_for_status,
   order_status,
 } from '../../database/Utils/constants/constants.js';
 import { buildTabsPayload } from './tabs/buildTabsPayload.js';
@@ -85,6 +86,12 @@ const INVENTORY_SOURCES = [
     qtyBreakdown: {
       sqm: { $ifNull: ['$available_sqm', 0] },
       leaves: { $ifNull: ['$available_number_of_leaves', 0] },
+    },
+    inwardQtyBreakdown: {
+      sqm: { $ifNull: ['$total_sq_meter', { $ifNull: ['$available_sqm', 0] }] },
+      leaves: {
+        $ifNull: ['$number_of_leaves', { $ifNull: ['$available_number_of_leaves', 0] }],
+      },
     },
     activeMatch: {
       issue_status: { $in: [null, 'veneer'] },
@@ -272,6 +279,10 @@ const INVENTORY_SOURCES = [
       sqm: { $ifNull: ['$available_sqm', 0] },
       rolls: { $ifNull: ['$available_number_of_roll', 0] },
     },
+    inwardQtyBreakdown: {
+      sqm: { $ifNull: ['$total_sq_meter', { $ifNull: ['$available_sqm', 0] }] },
+      rolls: { $ifNull: ['$number_of_roll', { $ifNull: ['$available_number_of_roll', 0] }] },
+    },
     activeMatch: {
       available_sqm: { $ne: 0 },
     },
@@ -304,6 +315,20 @@ const INVENTORY_SOURCES = [
       quantity: { $ifNull: ['$available_quantity', 0] },
       units: { $ifNull: ['$available_quantity', 0] },
     },
+    inwardQtyBreakdown: {
+      quantity: {
+        $ifNull: [
+          '$total_quantity',
+          { $ifNull: ['$received_quantity', { $ifNull: ['$quantity', { $ifNull: ['$available_quantity', 0] }] }] },
+        ],
+      },
+      units: {
+        $ifNull: [
+          '$total_quantity',
+          { $ifNull: ['$received_quantity', { $ifNull: ['$quantity', { $ifNull: ['$available_quantity', 0] }] }] },
+        ],
+      },
+    },
     activeMatch: {
       available_quantity: { $ne: 0 },
     },
@@ -335,7 +360,7 @@ const WIP_STAGES = [
   {
     stage: 'CROSSCUTTING',
     collection: 'issues_for_crosscuttings',
-    dateField: 'log_invoice_details.inward_date',
+    dateField: 'createdAt',
     preMatchPipeline: [
       {
         $lookup: {
@@ -361,7 +386,7 @@ const WIP_STAGES = [
   {
     stage: 'FLITCHING',
     collection: 'issues_for_flitchings',
-    dateField: 'log_invoice_details.inward_date',
+    dateField: 'createdAt',
     preMatchPipeline: [
       {
         $lookup: {
@@ -586,9 +611,9 @@ const THROUGHPUT_STAGES = [
     stage: 'PLYWOOD_PRODUCTION',
     collection: 'plywood_production',
     dateField: 'createdAt',
-    amountExpr: { $ifNull: ['$amount', { $ifNull: ['$available_amount', 0] }] },
-    qtySheetsExpr: { $ifNull: ['$no_of_sheets', { $ifNull: ['$available_no_of_sheets', 0] }] },
-    qtySqmExpr: { $ifNull: ['$total_sqm', { $ifNull: ['$available_total_sqm', 0] }] },
+    amountExpr: { $ifNull: ['$amount', 0] },
+    qtySheetsExpr: { $ifNull: ['$no_of_sheets', 0] },
+    qtySqmExpr: { $ifNull: ['$total_sqm', 0] },
   },
   {
     stage: 'PRESSING',
@@ -644,7 +669,7 @@ const YIELD_STAGES = [
   {
     stage: 'CROSSCUTTING',
     issueCollection: 'issues_for_crosscuttings',
-    issueDateField: 'log_invoice_details.inward_date',
+    issueDateField: 'createdAt',
     issuePreMatchPipeline: [
       {
         $lookup: {
@@ -698,7 +723,7 @@ const YIELD_STAGES = [
     doneCollection: 'peeling_done_other_details',
     doneDateField: 'peeling_date',
     doneQtyExpr: { $ifNull: ['$total_cmt', 0] },
-    unit: 'sqm',
+    unit: 'cmt',
   },
   {
     stage: 'GROUPING',
@@ -708,19 +733,6 @@ const YIELD_STAGES = [
     doneCollection: 'grouping_done_items_details',
     doneDateField: 'createdAt',
     doneQtyExpr: { $ifNull: ['$sqm', 0] },
-    doneSources: [
-      {
-        collection: 'grouping_done_items_details',
-        dateField: 'createdAt',
-        baseMatch: { issue_status: null, is_damaged: false },
-        qtyExpr: { $ifNull: ['$sqm', 0] },
-      },
-      {
-        collection: 'grouping_done_history',
-        dateField: 'createdAt',
-        qtyExpr: { $ifNull: ['$sqm', 0] },
-      },
-    ],
     unit: 'sqm',
   },
   {
@@ -737,7 +749,7 @@ const YIELD_STAGES = [
     stage: 'DRESSING',
     issueCollection: 'issue_for_dressing',
     issueDateField: 'createdAt',
-    issuedQtyExpr: { $ifNull: ['$sqm', 0] },
+    issuedQtyExpr: { $ifNull: ['$available_no_of_leaves', { $ifNull: ['$no_of_leaves', 0] }] },
     doneCollection: 'dressing_done_items',
     doneDateField: 'createdAt',
     doneQtyExpr: { $ifNull: ['$sqm', 0] },
@@ -780,35 +792,6 @@ const YIELD_STAGES = [
     doneCollection: 'process_done_items_details',
     doneDateField: 'createdAt',
     doneQtyExpr: { $ifNull: ['$sqm', 0] },
-    doneSources: [
-      {
-        collection: 'process_done_items_details',
-        dateField: 'createdAt',
-        baseMatch: { issue_status: null },
-        qtyExpr: { $ifNull: ['$sqm', 0] },
-      },
-      {
-        collection: 'process_done_history',
-        dateField: 'createdAt',
-        preMatchPipeline: [
-          {
-            $lookup: {
-              from: 'process_done_items_details',
-              localField: 'bundles',
-              foreignField: '_id',
-              as: 'bundle_details',
-            },
-          },
-          {
-            $unwind: {
-              path: '$bundle_details',
-              preserveNullAndEmptyArrays: false,
-            },
-          },
-        ],
-        qtyExpr: { $ifNull: ['$bundle_details.sqm', 0] },
-      },
-    ],
     unit: 'sqm',
   },
   {
@@ -819,19 +802,6 @@ const YIELD_STAGES = [
     doneCollection: 'plywood_resizing_done_details',
     doneDateField: 'createdAt',
     doneQtyExpr: { $ifNull: ['$sqm', 0] },
-    doneSources: [
-      {
-        collection: 'plywood_resizing_done_details',
-        dateField: 'createdAt',
-        baseMatch: { issue_status: null },
-        qtyExpr: { $ifNull: ['$sqm', 0] },
-      },
-      {
-        collection: 'plywood_resizing_history_details',
-        dateField: 'createdAt',
-        qtyExpr: { $ifNull: ['$issued_sqm', 0] },
-      },
-    ],
     unit: 'sqm',
   },
   {
@@ -842,19 +812,6 @@ const YIELD_STAGES = [
     doneCollection: 'plywood_production',
     doneDateField: 'createdAt',
     doneQtyExpr: { $ifNull: ['$total_sqm', 0] },
-    doneSources: [
-      {
-        collection: 'plywood_production',
-        dateField: 'createdAt',
-        baseMatch: { issue_status: null },
-        qtyExpr: { $ifNull: ['$total_sqm', 0] },
-      },
-      {
-        collection: 'plywood_production_history_details',
-        dateField: 'createdAt',
-        qtyExpr: { $ifNull: ['$issued_sqm', 0] },
-      },
-    ],
     unit: 'sqm',
   },
   {
@@ -865,19 +822,6 @@ const YIELD_STAGES = [
     doneCollection: 'pressing_done_details',
     doneDateField: 'createdAt',
     doneQtyExpr: { $ifNull: ['$sqm', 0] },
-    doneSources: [
-      {
-        collection: 'pressing_done_details',
-        dateField: 'createdAt',
-        baseMatch: { issue_status: null },
-        qtyExpr: { $ifNull: ['$sqm', 0] },
-      },
-      {
-        collection: 'pressing_done_history',
-        dateField: 'createdAt',
-        qtyExpr: { $ifNull: ['$sqm', 0] },
-      },
-    ],
     unit: 'sqm',
   },
   {
@@ -928,19 +872,6 @@ const YIELD_STAGES = [
     doneCollection: 'polishing_done_details',
     doneDateField: 'createdAt',
     doneQtyExpr: { $ifNull: ['$sqm', 0] },
-    doneSources: [
-      {
-        collection: 'polishing_done_details',
-        dateField: 'createdAt',
-        baseMatch: { issue_status: null },
-        qtyExpr: { $ifNull: ['$sqm', 0] },
-      },
-      {
-        collection: 'polishing_history_details',
-        dateField: 'createdAt',
-        qtyExpr: { $ifNull: ['$sqm', 0] },
-      },
-    ],
     unit: 'sqm',
   },
 ];
@@ -958,7 +889,7 @@ const DAMAGE_WASTAGE_STAGES = [
       $ifNull: ['$rejected_quantity.amount', { $ifNull: ['$amount', 0] }],
     },
     issuedCollection: 'issues_for_crosscuttings',
-    issuedDateField: 'log_invoice_details.inward_date',
+    issuedDateField: 'createdAt',
     issuedPreMatchPipeline: [
       {
         $lookup: {
@@ -988,7 +919,7 @@ const DAMAGE_WASTAGE_STAGES = [
     damageQtyExpr: { $ifNull: ['$wastage_info.wastage_sqm', 0] },
     damageAmountExpr: 0,
     issuedCollection: 'issues_for_crosscuttings',
-    issuedDateField: 'log_invoice_details.inward_date',
+    issuedDateField: 'createdAt',
     issuedPreMatchPipeline: [
       {
         $lookup: {
@@ -2455,13 +2386,6 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
     if (!stage) return;
     completeByStage.set(stage, Number(row?.doneQty || 0));
   });
-  filteredProductionThroughput.forEach((row) => {
-    const stage = String(row?.stage || '').toUpperCase();
-    if (!stage) return;
-    const existing = Number(completeByStage.get(stage) || 0);
-    if (existing > 0) return;
-    completeByStage.set(stage, Number(row?.primaryQty || 0));
-  });
 
   const damageByStage = new Map();
   filteredDamageByStage.forEach((row) => {
@@ -2479,6 +2403,50 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
     if (normalized === 'CMT') return 'CMT';
     if (normalized === 'SQM') return 'SQM';
     return normalized;
+  };
+
+  const getFactoryMetricPrecision = (unit) =>
+    ['SQM', 'CMT'].includes(String(unit || '').toUpperCase()) ? 3 : 2;
+
+  const roundFactoryMetricQuantity = (value, unit) =>
+    Number(Number(value || 0).toFixed(getFactoryMetricPrecision(unit)));
+
+  const FACTORY_METRIC_UNIT_ORDER = ['CMT', 'SQM', 'SHEETS', 'LEAVES', 'UNITS', '--'];
+
+  const sortFactoryMetricQuantities = (rows = []) =>
+    [...rows].sort((left, right) => {
+      const leftUnit = String(left?.unit || '--').toUpperCase();
+      const rightUnit = String(right?.unit || '--').toUpperCase();
+      const leftIndex = FACTORY_METRIC_UNIT_ORDER.indexOf(leftUnit);
+      const rightIndex = FACTORY_METRIC_UNIT_ORDER.indexOf(rightUnit);
+      const normalizedLeftIndex =
+        leftIndex >= 0 ? leftIndex : FACTORY_METRIC_UNIT_ORDER.length + 1;
+      const normalizedRightIndex =
+        rightIndex >= 0 ? rightIndex : FACTORY_METRIC_UNIT_ORDER.length + 1;
+      if (normalizedLeftIndex !== normalizedRightIndex) {
+        return normalizedLeftIndex - normalizedRightIndex;
+      }
+      return leftUnit.localeCompare(rightUnit);
+    });
+
+  const buildFactoryMetricQuantities = (unitQuantityMap, fallbackUnit = null) => {
+    const rows = [...(unitQuantityMap || new Map()).entries()]
+      .map(([unit, quantity]) => ({
+        unit: String(unit || '').toUpperCase(),
+        quantity: roundFactoryMetricQuantity(quantity, unit),
+      }))
+      .filter((row) => row.unit && row.quantity !== 0);
+
+    if (!rows.length && fallbackUnit) {
+      return [
+        {
+          unit: String(fallbackUnit || '').toUpperCase(),
+          quantity: 0,
+        },
+      ];
+    }
+
+    return sortFactoryMetricQuantities(rows);
   };
 
   const inferThroughputUnit = (row = {}) => {
@@ -2515,6 +2483,36 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
     ].map(([stage, unit]) => [stage, normalizeFactoryUnit(unit)])
   );
 
+  const resolveThroughputQtyByUnit = (row = {}, unit = null) => {
+    const normalizedUnit = normalizeFactoryUnit(unit);
+    if (normalizedUnit === 'SQM') return Number(row?.qtySqm || 0);
+    if (normalizedUnit === 'CMT') return Number(row?.qtyUnits || 0);
+    if (normalizedUnit === 'SHEETS') return Number(row?.qtySheets || 0);
+    if (normalizedUnit === 'LEAVES' || normalizedUnit === 'UNITS') {
+      return Number(row?.qtyUnits || 0);
+    }
+
+    const qtySqm = Number(row?.qtySqm || 0);
+    if (qtySqm !== 0) return qtySqm;
+    const qtyUnits = Number(row?.qtyUnits || 0);
+    if (qtyUnits !== 0) return qtyUnits;
+    return Number(row?.qtySheets || 0);
+  };
+
+  filteredProductionThroughput.forEach((row) => {
+    const stage = String(row?.stage || '').toUpperCase();
+    if (!stage) return;
+    if (completeByStage.has(stage)) return;
+
+    const preferredUnit =
+      normalizeFactoryUnit(stageUnitByStage.get(stage)) ||
+      normalizeFactoryUnit(stageDefaultUnit.get(stage));
+    const fallbackQty = resolveThroughputQtyByUnit(row, preferredUnit);
+    if (fallbackQty !== 0) {
+      completeByStage.set(stage, fallbackQty);
+    }
+  });
+
   const normalizedProcessStage = String(dashboardFilters.processStage || '').toUpperCase();
   const issueByStageSheetLike = new Map();
   filteredWipByStage.forEach((row) => {
@@ -2547,6 +2545,409 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
     );
   });
 
+  const normalizeIssuedFromStageKey = (value) => {
+    const normalized = String(value || '')
+      .trim()
+      .toUpperCase()
+      .replace(/[\s-]+/g, '_');
+
+    if (!normalized) return null;
+    if (normalized === 'CROSSCUTTING' || normalized === 'CROSSCUT_DONE') return 'CROSSCUTTING';
+    if (
+      normalized === 'FLITCHING' ||
+      normalized === 'FLITCHING_DONE' ||
+      normalized === 'FLITCHING_FACTORY' ||
+      normalized === 'REFLITCHING'
+    ) {
+      return 'FLITCHING';
+    }
+    if (normalized === 'SLICING' || normalized === 'SLICING_DONE') return 'SLICING';
+    if (normalized === 'PEELING' || normalized === 'PEELING_DONE') return 'PEELING';
+    if (normalized === 'DRESSING' || normalized === 'DRESSING_FACTORY') return 'DRESSING';
+    if (normalized === 'SMOKING_DYING' || normalized === 'SMOKING_DYEING') {
+      return 'SMOKING_DYING';
+    }
+    if (normalized === 'GROUPING' || normalized === 'GROUPING_FACTORY') return 'GROUPING';
+    if (normalized === 'TAPPING') return 'TAPPING';
+    if (normalized === 'PRESSING' || normalized === 'PRESSING_FACTORY') return 'PRESSING';
+    if (normalized === 'CNC' || normalized === 'CNC_FACTORY') return 'CNC';
+    if (normalized === 'COLOUR' || normalized === 'COLOR' || normalized === 'COLOR_FACTORY') {
+      return 'COLOUR';
+    }
+    if (normalized === 'BUNITO') return 'BUNITO';
+    if (normalized === 'CANVAS') return 'CANVAS';
+    if (normalized === 'POLISHING' || normalized === 'POLISHING_FACTORY') return 'POLISHING';
+    if (
+      normalized === 'PLYWOOD_RESIZING' ||
+      normalized === 'RESIZING' ||
+      normalized === 'RE_SIZING' ||
+      normalized === 'PLYWOOD_RESIZING_FACTORY'
+    ) {
+      return 'RESIZING';
+    }
+    if (normalized === 'PLYWOOD_PRODUCTION' || normalized === 'PRODUCTION') {
+      return 'PLYWOOD_PRODUCTION';
+    }
+    return null;
+  };
+
+  const resolveFlowSourceStage = (value) => {
+    const normalized = normalizeIssuedFromStageKey(value);
+    if (normalized) return normalized;
+    const fallback = String(value || '')
+      .trim()
+      .toUpperCase()
+      .replace(/[\s-]+/g, '_');
+    return fallback || null;
+  };
+
+  const issuedFromWithDefault = (defaultSourceStage) => ({
+    $let: {
+      vars: {
+        source: {
+          $trim: {
+            input: { $ifNull: ['$issued_from', ''] },
+          },
+        },
+      },
+      in: {
+        $cond: [{ $eq: ['$$source', ''] }, defaultSourceStage, '$$source'],
+      },
+    },
+  });
+
+  const issueFlowSpecs = [
+    {
+      collection: 'issues_for_crosscuttings',
+      dateField: 'createdAt',
+      sourceExpr: issuedFromWithDefault('LOG'),
+      targetStage: 'CROSSCUTTING',
+      qtyExpr: {
+        $ifNull: ['$physical_cmt', { $ifNull: ['$available_quantity.physical_cmt', 0] }],
+      },
+      unit: 'CMT',
+    },
+    {
+      collection: 'crosscutting_dones',
+      dateField: 'updatedAt',
+      sourceExpr: 'CROSSCUTTING',
+      match: { issue_status: 'challan' },
+      qtyExpr: { $ifNull: ['$crosscut_cmt', 0] },
+      unit: 'CMT',
+    },
+    {
+      collection: 'issues_for_flitchings',
+      dateField: 'createdAt',
+      sourceExpr: issuedFromWithDefault('CROSSCUTTING'),
+      targetStage: 'FLITCHING',
+      qtyExpr: { $ifNull: ['$cmt', { $ifNull: ['$available_quantity.cmt', 0] }] },
+      unit: 'CMT',
+    },
+    {
+      collection: 'flitchings',
+      dateField: 'updatedAt',
+      sourceExpr: 'FLITCHING',
+      match: { issue_status: 'challan' },
+      qtyExpr: { $ifNull: ['$flitch_cmt', 0] },
+      unit: 'CMT',
+    },
+    {
+      collection: 'issues_for_peelings',
+      dateField: 'createdAt',
+      sourceExpr: issuedFromWithDefault('FLITCHING'),
+      targetStage: 'PEELING',
+      qtyExpr: { $ifNull: ['$cmt', 0] },
+      unit: 'CMT',
+    },
+    {
+      collection: 'issued_for_slicings',
+      dateField: 'createdAt',
+      sourceExpr: issuedFromWithDefault('FLITCHING'),
+      targetStage: 'SLICING',
+      qtyExpr: { $ifNull: ['$cmt', 0] },
+      unit: 'CMT',
+    },
+    {
+      collection: 'slicing_done_items',
+      dateField: 'updatedAt',
+      match: {
+        issue_status: issues_for_status?.dressing,
+      },
+      sourceExpr: 'SLICING',
+      targetStage: 'DRESSING',
+      qtyExpr: { $ifNull: ['$no_of_leaves', 0] },
+      unit: 'SHEETS',
+    },
+    {
+      collection: 'peeling_done_items',
+      dateField: 'updatedAt',
+      match: {
+        issue_status: issues_for_status?.dressing,
+      },
+      sourceExpr: 'PEELING',
+      targetStage: 'DRESSING',
+      qtyExpr: { $ifNull: ['$no_of_leaves', 0] },
+      unit: 'SHEETS',
+    },
+    {
+      collection: 'issues_for_smoking_dyings',
+      dateField: 'createdAt',
+      sourceExpr: issuedFromWithDefault('DRESSING'),
+      targetStage: 'SMOKING_DYING',
+      qtyExpr: { $ifNull: ['$sqm', 0] },
+      unit: 'SQM',
+    },
+    {
+      collection: 'issues_for_groupings',
+      dateField: 'createdAt',
+      sourceExpr: issuedFromWithDefault('SMOKING_DYING'),
+      targetStage: 'GROUPING',
+      qtyExpr: { $ifNull: ['$sqm', 0] },
+      unit: 'SQM',
+    },
+    {
+      collection: 'issue_for_tappings',
+      dateField: 'createdAt',
+      sourceExpr: issuedFromWithDefault('GROUPING'),
+      targetStage: 'TAPPING',
+      qtyExpr: { $ifNull: ['$sqm', 0] },
+      unit: 'SQM',
+    },
+    {
+      collection: 'issued_for_plywood_resizing_items',
+      dateField: 'createdAt',
+      sourceExpr: issuedFromWithDefault('PLYWOOD'),
+      targetStage: 'RESIZING',
+      qtyExpr: { $ifNull: ['$sqm', 0] },
+      unit: 'SQM',
+    },
+    {
+      collection: 'plywood_production_consumed_item',
+      dateField: 'createdAt',
+      sourceExpr: issuedFromWithDefault('RESIZING'),
+      targetStage: 'PLYWOOD_PRODUCTION',
+      qtyExpr: { $ifNull: ['$total_sq_meter', { $ifNull: ['$available_sqm', 0] }] },
+      unit: 'SQM',
+    },
+    {
+      collection: 'issues_for_pressings',
+      dateField: 'createdAt',
+      sourceExpr: issuedFromWithDefault('TAPPING'),
+      targetStage: 'PRESSING',
+      qtyExpr: { $ifNull: ['$sqm', 0] },
+      unit: 'SQM',
+    },
+    {
+      collection: 'pressing_done_consumed_items_details',
+      dateField: 'createdAt',
+      sourceExpr: {
+        $trim: { input: { $toUpper: { $ifNull: ['$base_details.consumed_from', ''] } } },
+      },
+      // Do not add base-details consumption into "Pressing Received".
+      targetStage: null,
+      preMatchPipeline: [
+        {
+          $unwind: {
+            path: '$base_details',
+            preserveNullAndEmptyArrays: false,
+          },
+        },
+      ],
+      qtyExpr: { $ifNull: ['$base_details.sqm', 0] },
+      unit: 'SQM',
+    },
+    {
+      collection: 'issued_for_cnc_details',
+      dateField: 'createdAt',
+      sourceExpr: issuedFromWithDefault('PRESSING_FACTORY'),
+      targetStage: 'CNC',
+      qtyExpr: { $ifNull: ['$issued_sqm', 0] },
+      unit: 'SQM',
+    },
+    {
+      collection: 'issued_for_color_details',
+      dateField: 'createdAt',
+      sourceExpr: issuedFromWithDefault('PRESSING_FACTORY'),
+      targetStage: 'COLOUR',
+      qtyExpr: { $ifNull: ['$issued_sqm', 0] },
+      unit: 'SQM',
+    },
+    {
+      collection: 'issued_for_bunito_details',
+      dateField: 'createdAt',
+      sourceExpr: issuedFromWithDefault('PRESSING_FACTORY'),
+      targetStage: 'BUNITO',
+      qtyExpr: { $ifNull: ['$issued_sqm', 0] },
+      unit: 'SQM',
+    },
+    {
+      collection: 'issued_for_canvas_details',
+      dateField: 'createdAt',
+      sourceExpr: issuedFromWithDefault('PRESSING_FACTORY'),
+      targetStage: 'CANVAS',
+      qtyExpr: { $ifNull: ['$issued_sqm', 0] },
+      unit: 'SQM',
+    },
+    {
+      collection: 'issued_for_polishing_details',
+      dateField: 'createdAt',
+      sourceExpr: issuedFromWithDefault('PRESSING_FACTORY'),
+      targetStage: 'POLISHING',
+      qtyExpr: { $ifNull: ['$issued_sqm', 0] },
+      unit: 'SQM',
+    },
+    {
+      collection: 'finished_ready_for_packing_details',
+      dateField: 'createdAt',
+      sourceExpr: issuedFromWithDefault('PRESSING_FACTORY'),
+      qtyExpr: { $ifNull: ['$sqm', 0] },
+      unit: 'SQM',
+    },
+  ];
+
+  const issuedForNextProcessByStage = new Map();
+  const receivedByStageByUnit = new Map();
+
+  const addStageUnitQuantity = (stageMap, stageKey, qty, unit) => {
+    if (!stageKey) return;
+    const normalizedUnit = normalizeFactoryUnit(unit) || '--';
+    const numericQty = Number(qty || 0);
+    if (Number.isNaN(numericQty) || numericQty === 0) return;
+    if (!stageMap.has(stageKey)) {
+      stageMap.set(stageKey, new Map());
+    }
+    const unitMap = stageMap.get(stageKey);
+    const existing = Number(unitMap.get(normalizedUnit) || 0);
+    unitMap.set(normalizedUnit, existing + numericQty);
+  };
+
+  await Promise.all(
+    issueFlowSpecs.map(async (spec) => {
+      if (!spec?.collection || !spec?.dateField || !spec?.qtyExpr || !spec?.sourceExpr) return;
+
+      const rows = await safeAggregate(spec.collection, [
+        ...(Array.isArray(spec.preMatchPipeline) ? spec.preMatchPipeline : []),
+        {
+          $match: combineMatch(
+            dateMatch(spec.dateField, fromDate, toDate),
+            spec.match || null
+          ),
+        },
+        {
+          $group: {
+            _id: spec.sourceExpr,
+            qty: { $sum: spec.qtyExpr },
+          },
+        },
+      ]);
+
+      rows.forEach((row) => {
+        const sourceStageKey = resolveFlowSourceStage(row?._id);
+        addStageUnitQuantity(issuedForNextProcessByStage, sourceStageKey, row?.qty, spec.unit);
+        const targetStageKey = String(spec?.targetStage || '').toUpperCase() || null;
+        addStageUnitQuantity(receivedByStageByUnit, targetStageKey, row?.qty, spec.unit);
+      });
+    })
+  );
+
+  const resolveSheetLikeIssuedForNextQty = (stageKey) => {
+    const unitMap = issuedForNextProcessByStage.get(stageKey) || new Map();
+    const sheetLikeQty =
+      Number(unitMap.get('SHEETS') || 0) +
+      Number(unitMap.get('LEAVES') || 0) +
+      Number(unitMap.get('UNITS') || 0);
+    if (sheetLikeQty !== 0) return sheetLikeQty;
+    if (stageKey === 'SLICING' || stageKey === 'PEELING') {
+      return Number(completeByStageSheetLike.get(stageKey) || 0);
+    }
+    return 0;
+  };
+
+  const dressingReceivedFromDefaultFlow =
+    resolveSheetLikeIssuedForNextQty('SLICING') +
+    resolveSheetLikeIssuedForNextQty('PEELING');
+  if (dressingReceivedFromDefaultFlow !== 0) {
+    const currentDressingReceived = Number(issueByStageSheetLike.get('DRESSING') || 0);
+    issueByStageSheetLike.set(
+      'DRESSING',
+      Math.max(currentDressingReceived, dressingReceivedFromDefaultFlow)
+    );
+  }
+
+  const resolveSingleStageUnitEntry = (
+    unitMap = new Map(),
+    preferredUnit = null,
+    fallbackUnit = '--'
+  ) => {
+    const normalizedPreferred = normalizeFactoryUnit(preferredUnit);
+    if (normalizedPreferred) {
+      const preferredQty = Number(unitMap.get(normalizedPreferred) || 0);
+      if (preferredQty !== 0) {
+        return { unit: normalizedPreferred, quantity: preferredQty };
+      }
+    }
+
+    const nonZeroRows = sortFactoryMetricQuantities(
+      [...unitMap.entries()]
+        .map(([unit, quantity]) => ({
+          unit: String(unit || '--').toUpperCase(),
+          quantity: Number(quantity || 0),
+        }))
+        .filter((row) => row.quantity !== 0)
+    );
+
+    if (nonZeroRows.length) {
+      return nonZeroRows[0];
+    }
+
+    return {
+      unit: normalizeFactoryUnit(fallbackUnit) || '--',
+      quantity: 0,
+    };
+  };
+
+  FACTORY_SUBMODULE_CARD_SPECS.forEach((spec) => {
+    const stageKey = String(spec.sourceStage || spec.key || '').toUpperCase();
+    if (!stageKey) return;
+    const unitMap = receivedByStageByUnit.get(stageKey);
+    if (!unitMap || !unitMap.size) return;
+
+    if (stageKey === 'DRESSING') {
+      const sheetLikePriority = ['SHEETS', 'LEAVES', 'UNITS'];
+      let resolvedSheetLikeQty = 0;
+      for (const unit of sheetLikePriority) {
+        const qty = Number(unitMap.get(unit) || 0);
+        if (qty !== 0) {
+          resolvedSheetLikeQty = qty;
+          break;
+        }
+      }
+      if (resolvedSheetLikeQty === 0) {
+        resolvedSheetLikeQty = Number(
+          resolveSingleStageUnitEntry(unitMap, 'SHEETS', 'SHEETS')?.quantity || 0
+        );
+      }
+      if (resolvedSheetLikeQty !== 0) {
+        const existingSheetLikeQty = Number(issueByStageSheetLike.get(stageKey) || 0);
+        issueByStageSheetLike.set(
+          stageKey,
+          Math.max(existingSheetLikeQty, resolvedSheetLikeQty)
+        );
+      }
+      return;
+    }
+
+    const preferredUnit =
+      normalizeFactoryUnit(stageUnitByStage.get(stageKey)) ||
+      normalizeFactoryUnit(stageDefaultUnit.get(stageKey));
+    const resolvedQty = Number(
+      resolveSingleStageUnitEntry(unitMap, preferredUnit, preferredUnit || '--')?.quantity || 0
+    );
+    if (resolvedQty !== 0) {
+      issueByStage.set(stageKey, resolvedQty);
+    }
+  });
+
   const factorySubModuleCards = FACTORY_SUBMODULE_CARD_SPECS.filter((spec) => {
     if (!normalizedProcessStage) return true;
     return (
@@ -2556,27 +2957,101 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
   }).map((spec) => {
     const stageKey = String(spec.sourceStage || spec.key || '').toUpperCase();
     const isDressing = stageKey === 'DRESSING';
+    const isPeeling = stageKey === 'PEELING';
+    const stageMetricUnit = isDressing
+      ? 'SHEETS'
+      : stageUnitByStage.get(stageKey) || stageDefaultUnit.get(stageKey) || '--';
     const issueQty = isDressing
       ? Number(issueByStageSheetLike.get(stageKey) || 0)
       : Number(issueByStage.get(stageKey) || 0);
-    const completeQty = isDressing
+    const completeQty = isDressing || isPeeling
       ? Number(completeByStageSheetLike.get(stageKey) || 0)
       : Number(completeByStage.get(stageKey) || 0);
-    const damageQty = isDressing
-      ? Number(damageByStageSheetLike.get(stageKey) || 0)
+    const damageQty = isDressing || isPeeling
+      ? Number(
+          damageByStageSheetLike.get(stageKey) ??
+            (isPeeling ? Number(damageByStage.get(stageKey) || 0) : 0)
+        )
       : Number(damageByStage.get(stageKey) || 0);
+    const completeDisplayUnit = isDressing || isPeeling ? 'SHEETS' : stageMetricUnit;
+    const damageDisplayUnit = isDressing || isPeeling ? 'SHEETS' : stageMetricUnit;
+    const issueQuantities = buildFactoryMetricQuantities(
+      new Map([[stageMetricUnit, issueQty]]),
+      stageMetricUnit
+    );
+    const completeQuantities = buildFactoryMetricQuantities(
+      new Map([[completeDisplayUnit, completeQty]]),
+      completeDisplayUnit
+    );
+    const damageQuantities = buildFactoryMetricQuantities(
+      new Map([[damageDisplayUnit, damageQty]]),
+      damageDisplayUnit
+    );
+
+    let issuedForNextProcessUnitMap = issuedForNextProcessByStage.get(stageKey) || new Map();
+    if (stageKey === 'PEELING' || stageKey === 'SLICING') {
+      const hasExplicitIssuedFlow = [...issuedForNextProcessUnitMap.values()].some(
+        (qty) => Number(qty || 0) !== 0
+      );
+      const sheetLikeCompleteQty = Number(completeByStageSheetLike.get(stageKey) || 0);
+      if (!hasExplicitIssuedFlow && sheetLikeCompleteQty !== 0) {
+        issuedForNextProcessUnitMap = new Map([
+          ['SHEETS', sheetLikeCompleteQty],
+        ]);
+      }
+    }
+    const isSheetOnlyIssuedStage = stageKey === 'SLICING' || stageKey === 'PEELING';
+    let issuedForNextEntry = null;
+    if (isSheetOnlyIssuedStage) {
+      const sheetLikePriority = ['SHEETS', 'LEAVES', 'UNITS'];
+      let sheetLikeQty = 0;
+      for (const unit of sheetLikePriority) {
+        const qty = Number(issuedForNextProcessUnitMap.get(unit) || 0);
+        if (qty !== 0) {
+          sheetLikeQty = qty;
+          break;
+        }
+      }
+      issuedForNextEntry = {
+        unit: 'SHEETS',
+        quantity: sheetLikeQty,
+      };
+    } else {
+      const issuedForNextPreferredUnit = stageMetricUnit;
+      issuedForNextEntry = resolveSingleStageUnitEntry(
+        issuedForNextProcessUnitMap,
+        issuedForNextPreferredUnit,
+        issuedForNextPreferredUnit
+      );
+    }
+    const issuedForNextProcessQty = Number(issuedForNextEntry?.quantity || 0);
+    const issuedForNextProcessQuantities = isSheetOnlyIssuedStage
+      ? buildFactoryMetricQuantities(
+          new Map([['SHEETS', issuedForNextProcessQty]]),
+          'SHEETS'
+        )
+      : issuedForNextProcessQty
+        ? buildFactoryMetricQuantities(
+            new Map([[issuedForNextEntry.unit, issuedForNextProcessQty]]),
+            null
+          )
+        : [];
+
     return {
       module: spec.key,
       label: spec.label || formatStageLabel(spec.key),
       issue: round2(issueQty),
+      issueQuantities,
       complete: round2(completeQty),
+      completeQuantities,
       damage: round2(damageQty),
+      damageQuantities,
+      issuedForNextProcess: round2(issuedForNextProcessQty),
+      issuedForNextProcessQuantities,
       issueDisplay: spec.issueDisplay ?? null,
       completeDisplay: spec.completeDisplay ?? null,
       damageDisplay: spec.damageDisplay ?? null,
-      unit: isDressing
-        ? 'SHEETS'
-        : stageUnitByStage.get(stageKey) || stageDefaultUnit.get(stageKey) || '--',
+      unit: stageMetricUnit,
     };
   });
 

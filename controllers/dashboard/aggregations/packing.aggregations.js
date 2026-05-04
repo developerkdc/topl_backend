@@ -264,6 +264,54 @@ const aggregatePackingGoodsTypeMetrics = async ({ fromDate, toDate, filters = {}
       },
     },
     {
+      $lookup: {
+        from: 'dispatches',
+        let: {
+          packingDoneOtherDetailsId: '$packing_done_other_details_id',
+          packingDoneIdString: {
+            $toString: { $ifNull: ['$packing_details.packing_id', ''] },
+          },
+        },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $or: [
+                  {
+                    $in: [
+                      '$$packingDoneOtherDetailsId',
+                      { $ifNull: ['$packing_done_ids.packing_done_other_details_id', []] },
+                    ],
+                  },
+                  {
+                    $in: [
+                      '$$packingDoneIdString',
+                      {
+                        $map: {
+                          input: { $ifNull: ['$packing_done_ids', []] },
+                          as: 'entry',
+                          in: { $toString: '$$entry.packing_done_id' },
+                        },
+                      },
+                    ],
+                  },
+                ],
+              },
+            },
+          },
+          { $sort: { createdAt: -1 } },
+          { $limit: 1 },
+          {
+            $project: {
+              _id: 0,
+              final_total_amount: 1,
+            },
+          },
+        ],
+        as: 'dispatch_details',
+      },
+    },
+    {
       $unwind: {
         path: '$packing_customer',
         preserveNullAndEmptyArrays: true,
@@ -354,6 +402,9 @@ const aggregatePackingGoodsTypeMetrics = async ({ fromDate, toDate, filters = {}
           $ifNull: ['$item_name', '-'],
         },
         amount: { $ifNull: ['$amount', 0] },
+        dispatchFinalTotalAmount: {
+          $ifNull: [{ $arrayElemAt: ['$dispatch_details.final_total_amount', 0] }, null],
+        },
       },
     },
   ]);
@@ -430,6 +481,10 @@ const aggregatePackingGoodsTypeMetrics = async ({ fromDate, toDate, filters = {}
       cmt: cmtValue,
       cbm: cbmValue,
       amount: round2(row?.amount || 0),
+      dispatchFinalTotalAmount:
+        row?.dispatchFinalTotalAmount === null || row?.dispatchFinalTotalAmount === undefined
+          ? null
+          : round2(row.dispatchFinalTotalAmount),
       isDispatchDone: normalizedDispatchDone,
       dispatchStatus: normalizedDispatchDone ? 'DISPATCHED' : 'PENDING',
     };
