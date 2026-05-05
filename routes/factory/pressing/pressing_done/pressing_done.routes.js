@@ -8,6 +8,7 @@ import {
   fetch_pressing_done_consumed_item_details,
   revert_pressing_done_details,
 } from '../../../../controllers/factory/pressing/pressing_done/pressing_done.controller.js';
+import { bulk_upload_pressing_done } from '../../../../controllers/factory/pressing/pressing_done/pressing_done_bulk_upload.controller.js';
 
 const pressing_done_router = express.Router();
 
@@ -50,6 +51,12 @@ pressing_done_router.post(
   '/list-pressing-done-items-history',
   AuthMiddleware,
   fetch_all_pressing_done_items_history
+);
+
+pressing_done_router.post(
+  '/bulk-upload-pressing-done',
+  AuthMiddleware,
+  bulk_upload_pressing_done
 );
 
 export default pressing_done_router;
