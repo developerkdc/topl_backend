@@ -3,6 +3,11 @@ import catchAsync from '../../utils/errors/catchAsync.js';
 import ApiResponse from '../../utils/ApiResponse.js';
 import { StatusCodes } from '../../utils/constants.js';
 import itemCategoryModel from '../../database/schema/masters/item.category.schema.js';
+import { StockItemJSONtoXML } from '../../utils/tally-utils/TallyLedgerCreation.js';
+import { sendToTally } from '../../utils/tally-utils/TallyService.js';
+import { XMLParser } from 'fast-xml-parser';
+import mongoose from 'mongoose';
+
 export const addItems = catchAsync(async (req, res) => {
   const { category, product_hsn_code, calculate_unit } = req.body;
 
@@ -47,12 +52,23 @@ export const addItems = catchAsync(async (req, res) => {
     created_by,
   });
   await newItemCatgory.save();
+  let tallyResponse = null;
+
+  try {
+    tallyResponse = await create_stock_item_helper(newItemCatgory._id);
+  } catch (err) {
+    console.error("Tally sync failed manually update item to sync it to tally:", newItemCatgory._id, err.message);
+    tallyResponse = err.message;
+  }
 
   return res.json(
     new ApiResponse(
       StatusCodes.OK,
       'Item category created successfully',
-      newItemCatgory
+      {
+        newItemCatgory,
+        tallyResponse
+      }
     )
   );
 });
@@ -90,8 +106,18 @@ export const editItemCatgory = catchAsync(async (req, res) => {
         )
       );
   }
+  let tallyResponse = null;
+
+  try {
+    tallyResponse = await create_stock_item_helper(updatedData._id);
+  } catch (err) {
+    console.error("Tally sync failed manually update item to sync it to tally:", updatedData._id, err.message);
+    tallyResponse = err.message;
+  }
   return res.json(
-    new ApiResponse(StatusCodes.OK, 'category updated successfully')
+    new ApiResponse(StatusCodes.OK, 'category updated successfully', {
+      tallyResponse
+    })
   );
 });
 
@@ -113,43 +139,43 @@ export const listItemCategories = catchAsync(async (req, res) => {
     : { updatedAt: -1 };
   const searchQuery = query
     ? {
-        $or: [
-          { category: { $regex: query, $options: 'i' } },
-          { calculate_unit: { $regex: query, $options: 'i' } },
-          { product_hsn_code: { $regex: query, $options: 'i' } },
-          // { gst_percentage: Number(query) },
-          {
-            $expr: {
-              $regexMatch: {
-                input: { $toString: `$gst_percentage` },
-                regex: new RegExp(query.toString()),
-                options: 'i',
-              },
+      $or: [
+        { category: { $regex: query, $options: 'i' } },
+        { calculate_unit: { $regex: query, $options: 'i' } },
+        { product_hsn_code: { $regex: query, $options: 'i' } },
+        // { gst_percentage: Number(query) },
+        {
+          $expr: {
+            $regexMatch: {
+              input: { $toString: `$gst_percentage` },
+              regex: new RegExp(query.toString()),
+              options: 'i',
             },
           },
-          {
-            $expr: {
-              $regexMatch: {
-                input: { $toString: `$sr_no` },
-                regex: new RegExp(query.toString()),
-                options: 'i',
-              },
+        },
+        {
+          $expr: {
+            $regexMatch: {
+              input: { $toString: `$sr_no` },
+              regex: new RegExp(query.toString()),
+              options: 'i',
             },
           },
-          { 'userDetails.user_name': { $regex: query, $options: 'i' } },
+        },
+        { 'userDetails.user_name': { $regex: query, $options: 'i' } },
 
-          ...(isValidDate(query)
-            ? [
-                {
-                  createdAt: {
-                    $gte: new Date(new Date(query).setHours(0, 0, 0, 0)), // Start of the day
-                    $lt: new Date(new Date(query).setHours(23, 59, 59, 999)), // End of the day
-                  },
-                },
-              ]
-            : []),
-        ],
-      }
+        ...(isValidDate(query)
+          ? [
+            {
+              createdAt: {
+                $gte: new Date(new Date(query).setHours(0, 0, 0, 0)), // Start of the day
+                $lt: new Date(new Date(query).setHours(23, 59, 59, 999)), // End of the day
+              },
+            },
+          ]
+          : []),
+      ],
+    }
     : {};
 
   function isValidDate(dateString) {
@@ -179,6 +205,7 @@ export const listItemCategories = catchAsync(async (req, res) => {
         category: 1,
         calculate_unit: 1,
         product_hsn_code: 1,
+        tally_sync_status: 1,
         gst_percentage: 1,
         createdAt: 1,
         created_by: 1,
@@ -227,8 +254,8 @@ export const DropdownItemCategoryNameMaster = catchAsync(async (req, res) => {
 
   const searchQuery = type
     ? {
-        $or: [{ category: { $regex: type, $options: 'i' } }],
-      }
+      $or: [{ category: { $regex: type, $options: 'i' } }],
+    }
     : {};
 
   const list = await itemCategoryModel.aggregate([
@@ -259,4 +286,76 @@ export const DropdownItemCategoryNameMaster = catchAsync(async (req, res) => {
         list
       )
     );
+});
+
+// add tally item name
+export const create_stock_item_helper = async (itemId) => {
+  const pipeline = [
+    { $match: { _id: mongoose.Types.ObjectId.createFromHexString(itemId.toString()) } },
+    {
+      $lookup: {
+        from: 'item_category',
+        localField: '_id',
+        foreignField: '_id',
+        as: 'item_category_details',
+      },
+    },
+    { $unwind: { path: '$item_category_details', preserveNullAndEmptyArrays: true } },
+  ];
+
+  const result = await itemCategoryModel.aggregate(pipeline);
+  const item = result[0];
+  if (!item) throw new Error(`Item not found: ${itemId}`);
+  // console.log("res: ", item);
+  const xml = StockItemJSONtoXML(item);
+  // console.log("xml: ", xml);
+  if (!xml) throw new Error("XML generation failed");
+
+  const response = await sendToTally(xml);
+  if (response.includes("<ERRORS>0</ERRORS>")) {
+    await itemCategoryModel.findByIdAndUpdate(itemId, {
+      tally_item_name: item.category,
+    });
+  }
+
+  const parser = new XMLParser();
+  const parsed = parser.parse(response);
+  const msg = parsed?.message ||
+    parsed?.RESPONSE ||
+    parsed?.ENVELOPE?.BODY?.DATA?.IMPORTDATA?.RESPONSE ||
+    {};
+
+  const isSuccess = msg?.CREATED > 0 || msg?.ALTERED > 0;
+
+  await itemCategoryModel.findByIdAndUpdate(
+    itemId,
+    {
+      $set: {
+        tally_sync_status: isSuccess ? "SUCCESSFUL" : "FAILED",
+      },
+    },
+    { new: true }
+  );
+
+  return parsed.RESPONSE || parsed.ENVELOPE?.BODY?.DATA?.IMPORTDATA?.RESPONSE || parsed;
+};
+
+// retry api for tally item name
+export const create_stock_item = catchAsync(async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ error: "Invalid ID" });
+    }
+
+    const response = await create_stock_item_helper(id);
+
+    res.status(200).json({
+      success: true,
+      message: "Invoice pushed to Tally",
+      response,
+    });
+  } catch (err) {
+    next(err);
+  }
 });

@@ -33,7 +33,6 @@ const ItemNameSchema = new mongoose.Schema(
       uppercase: true,
       default: null,
     },
-
     color: {
       color_id: {
         type: mongoose.Schema.Types.ObjectId,

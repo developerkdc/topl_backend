@@ -264,6 +264,54 @@ const aggregatePackingGoodsTypeMetrics = async ({ fromDate, toDate, filters = {}
       },
     },
     {
+      $lookup: {
+        from: 'dispatches',
+        let: {
+          packingDoneOtherDetailsId: '$packing_done_other_details_id',
+          packingDoneIdString: {
+            $toString: { $ifNull: ['$packing_details.packing_id', ''] },
+          },
+        },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $or: [
+                  {
+                    $in: [
+                      '$$packingDoneOtherDetailsId',
+                      { $ifNull: ['$packing_done_ids.packing_done_other_details_id', []] },
+                    ],
+                  },
+                  {
+                    $in: [
+                      '$$packingDoneIdString',
+                      {
+                        $map: {
+                          input: { $ifNull: ['$packing_done_ids', []] },
+                          as: 'entry',
+                          in: { $toString: '$$entry.packing_done_id' },
+                        },
+                      },
+                    ],
+                  },
+                ],
+              },
+            },
+          },
+          { $sort: { createdAt: -1 } },
+          { $limit: 1 },
+          {
+            $project: {
+              _id: 0,
+              final_total_amount: 1,
+            },
+          },
+        ],
+        as: 'dispatch_details',
+      },
+    },
+    {
       $unwind: {
         path: '$packing_customer',
         preserveNullAndEmptyArrays: true,
@@ -335,6 +383,7 @@ const aggregatePackingGoodsTypeMetrics = async ({ fromDate, toDate, filters = {}
         goodsType: 1,
         packingId: '$packing_details.packing_id',
         packingDate: '$packing_details.packing_date',
+        isDispatchDone: { $ifNull: ['$packing_details.is_dispatch_done', false] },
         customerName: 1,
         orderCategory: '$packing_details.order_category',
         noOfSheets: { $ifNull: ['$no_of_sheets', 0] },
@@ -353,6 +402,9 @@ const aggregatePackingGoodsTypeMetrics = async ({ fromDate, toDate, filters = {}
           $ifNull: ['$item_name', '-'],
         },
         amount: { $ifNull: ['$amount', 0] },
+        dispatchFinalTotalAmount: {
+          $ifNull: [{ $arrayElemAt: ['$dispatch_details.final_total_amount', 0] }, null],
+        },
       },
     },
   ]);
@@ -405,6 +457,15 @@ const aggregatePackingGoodsTypeMetrics = async ({ fromDate, toDate, filters = {}
         ? leavesValue
         : 0;
 
+    const dispatchDoneRaw = row?.isDispatchDone;
+    const normalizedDispatchDone =
+      dispatchDoneRaw === true ||
+      dispatchDoneRaw === 1 ||
+      String(dispatchDoneRaw || '')
+        .trim()
+        .toLowerCase() === 'true' ||
+      String(dispatchDoneRaw || '').trim() === '1';
+
     const record = {
       packingId: row?.packingId || '-',
       packingDate: row?.packingDate || null,
@@ -420,6 +481,12 @@ const aggregatePackingGoodsTypeMetrics = async ({ fromDate, toDate, filters = {}
       cmt: cmtValue,
       cbm: cbmValue,
       amount: round2(row?.amount || 0),
+      dispatchFinalTotalAmount:
+        row?.dispatchFinalTotalAmount === null || row?.dispatchFinalTotalAmount === undefined
+          ? null
+          : round2(row.dispatchFinalTotalAmount),
+      isDispatchDone: normalizedDispatchDone,
+      dispatchStatus: normalizedDispatchDone ? 'DISPATCHED' : 'PENDING',
     };
 
     const preferredUnit =
