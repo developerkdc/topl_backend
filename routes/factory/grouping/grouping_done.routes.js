@@ -18,6 +18,7 @@ import {
   download_excel_factory_grouping_history,
   group_no_dropdown_for_hybrid_photo_master
 } from '../../../controllers/factory/grouping/grouping_done.controller.js';
+import { bulk_upload_grouping_done } from '../../../controllers/factory/grouping/grouping_done_bulk_upload.controller.js';
 import AuthMiddleware from '../../../middlewares/verifyToken.js';
 import {
   fetch_all_group_no_by_item_name,
@@ -130,6 +131,15 @@ groupingDoneRouter.post(
   '/download-factory-grouping-history-excel',
   AuthMiddleware,
   download_excel_factory_grouping_history
+);
+
+// ─── Bulk Upload ─────────────────────────────────────────────────────────────
+// POST /factory/grouping/bulk-upload-grouping-done?sub_category=natural|hybrid
+// Form-data: file = <Excel file>
+groupingDoneRouter.post(
+  '/bulk-upload-grouping-done',
+  AuthMiddleware,
+  bulk_upload_grouping_done
 );
 
 export default groupingDoneRouter;
