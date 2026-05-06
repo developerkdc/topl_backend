@@ -588,6 +588,137 @@ const aggregateInventoryHistoryInwardTrendRows = async ({
 };
 
 
+
+const aggregateInventoryExpenseInvoiceSummary = async ({
+  source,
+  fromDate,
+  toDate,
+  contextualMatch = null,
+  sourceSupplierMatch = null,
+  applyDateRange = true,
+}) => {
+  const itemCollection = source?.collection;
+  const invoiceCollection = source?.invoiceCollection;
+
+  if (!itemCollection || !invoiceCollection) {
+    return {
+      expenseAmount: 0,
+      invoiceAmount: 0,
+    };
+  }
+
+  const sourceDateField = source?.dateField || 'createdAt';
+
+  const [summary] = await safeAggregate(itemCollection, [
+    {
+      $match: combineMatch(source.activeMatch, contextualMatch, sourceSupplierMatch),
+    },
+    {
+      $lookup: {
+        from: invoiceCollection,
+        localField: 'invoice_id',
+        foreignField: '_id',
+        as: 'invoice_details',
+      },
+    },
+    {
+      $unwind: {
+        path: '$invoice_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $addFields: {
+        effective_inventory_date: {
+          $ifNull: ['$invoice_details.inward_date', `$${sourceDateField}`],
+        },
+      },
+    },
+        ...(applyDateRange
+      ? [
+          {
+            $match: dateMatch('effective_inventory_date', fromDate, toDate),
+          },
+        ]
+      : []),
+    {
+      $addFields: {
+        inward_sr_no_key: { $ifNull: ['$invoice_details.inward_sr_no', null] },
+        item_sr_no_key: {
+          $ifNull: [
+            '$item_sr_no',
+            { $ifNull: ['$log_sr_no', { $ifNull: ['$log_no', null] }] },
+          ],
+        },
+        // Expense amount source: log_inventory_items_details.expense_amount
+        expense_amount_key: { $ifNull: ['$expense_amount', 0] },
+        // Invoice amount source: <module>_inventory_invoice_details.invoice_Details.invoice_value_with_gst
+        // Rounded to 0 decimals first, matching UI-visible per-item invoice values.
+        invoice_amount_key: {
+          $round: [
+            {
+              $ifNull: [
+                '$invoice_details.invoice_Details.invoice_value_with_gst',
+                { $ifNull: ['$invoice_details.invoice_Details.total_item_amount', 0] },
+              ],
+            },
+            0,
+          ],
+        },
+      },
+    },
+    {
+      $facet: {
+        expense: [
+          {
+            $group: {
+              _id: '$_id',
+              expenseAmount: { $max: '$expense_amount_key' },
+            },
+          },
+          {
+            $group: {
+              _id: null,
+              totalExpenseAmount: { $sum: '$expenseAmount' },
+            },
+          },
+        ],
+        invoice: [
+          {
+            $group: {
+              _id: {
+                invoice_id: '$invoice_id',
+                inward_sr_no: '$inward_sr_no_key',
+              },
+              invoiceAmount: { $max: '$invoice_amount_key' },
+            },
+          },
+          {
+            $group: {
+              _id: null,
+              totalInvoiceAmount: { $sum: '$invoiceAmount' },
+            },
+          },
+        ],
+      },
+    },
+    {
+      $project: {
+        totalExpenseAmount: {
+          $ifNull: [{ $arrayElemAt: ['$expense.totalExpenseAmount', 0] }, 0],
+        },
+        totalInvoiceAmount: {
+          $ifNull: [{ $arrayElemAt: ['$invoice.totalInvoiceAmount', 0] }, 0],
+        },
+      },
+    },
+  ]);
+
+  return {
+    expenseAmount: Number(summary?.totalExpenseAmount || 0),
+    invoiceAmount: Number(summary?.totalInvoiceAmount || 0),
+  };
+};
 const aggregateInventoryInwardValue = async ({
   fromDate,
   toDate,
@@ -779,7 +910,13 @@ const aggregateInventorySubModuleCards = async ({
           }
         : `$${sourceDateField}`;
 
-      const [stockSummary, inwardSummary, historyInwardSummary, historyIssuedSummary] =
+      const [
+        stockSummary,
+        inwardSummary,
+        historyInwardSummary,
+        historyIssuedSummary,
+        expenseInvoiceSummary,
+      ] =
         await Promise.all([
         safeAggregate(source.collection, [
           {
@@ -863,6 +1000,14 @@ const aggregateInventorySubModuleCards = async ({
           filters,
           sourceSupplierMatch,
         }),
+        aggregateInventoryExpenseInvoiceSummary({
+          source,
+          fromDate,
+          toDate,
+          contextualMatch,
+          sourceSupplierMatch,
+        }),
+
       ]);
 
       const combinedInwardSummary = mergeInwardSummaries(inwardSummary, historyInwardSummary);
@@ -898,7 +1043,10 @@ const aggregateInventorySubModuleCards = async ({
         module: source.module,
         label: INVENTORY_MODULE_LABELS[source.module] || source.module,
         inward: {
-          amount: round2(combinedInwardSummary?.inwardAmount || 0),
+          amount: round2(
+            Number(expenseInvoiceSummary?.invoiceAmount || 0) +
+              Number(expenseInvoiceSummary?.expenseAmount || 0)
+          ),
           quantities: mapQuantities(combinedInwardSummary),
         },
         issuedForFurtherProcess: {
