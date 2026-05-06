@@ -84,6 +84,9 @@ const aggregateWipByStage = async ({ fromDate, toDate }) => {
         qtySheets: round2(summary?.qtySheets || 0),
         qtySqm: round2(summary?.qtySqm || 0),
         qtyUnits: round2(summary?.qtyUnits || 0),
+        qtySheetsRaw: Number(summary?.qtySheets || 0),
+        qtySqmRaw: Number(summary?.qtySqm || 0),
+        qtyUnitsRaw: Number(summary?.qtyUnits || 0),
       };
     })
   );
@@ -613,3 +616,4 @@ const aggregateProductionThroughputTrend = async ({ fromDate, toDate }) => {
     aggregateProductionThroughputTrend,
   };
 };
+

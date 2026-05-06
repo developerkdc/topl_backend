@@ -2021,6 +2021,7 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
     dispatchDocSummary,
     orderToDispatchCycle,
     wipByStage,
+    factoryCurrentWipByStage,
     productionThroughput,
     productionThroughputTrend,
     yieldByStage,
@@ -2137,6 +2138,9 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
       ? aggregateOrderDispatchCycle({ fromDate, toDate })
       : Promise.resolve({ avgDays: 0, samples: 0 }),
     includeProduction ? aggregateWipByStage({ fromDate, toDate }) : Promise.resolve([]),
+    includeProduction
+      ? aggregateWipByStage({ fromDate: new Date(0), toDate: dayEnd(new Date()) })
+      : Promise.resolve([]),
     includeProduction
       ? aggregateProductionThroughput({ fromDate, toDate })
       : Promise.resolve([]),
@@ -2334,6 +2338,7 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
     !selectedProcessStage || String(row?.stage || '').toUpperCase() === selectedProcessStage;
 
   const filteredWipByStage = wipByStage.filter(stageFilter);
+  const filteredFactoryCurrentWipByStage = factoryCurrentWipByStage.filter(stageFilter);
   const filteredPreviousWipByStage = previousWipByStage.filter(stageFilter);
   const filteredProductionThroughput = productionThroughput.filter(stageFilter);
   const filteredPreviousProductionThroughput = previousProductionThroughput.filter(stageFilter);
@@ -2448,6 +2453,10 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
 
     return sortFactoryMetricQuantities(rows);
   };
+
+  const factoryCurrentWipByStageMap = new Map(
+    (filteredFactoryCurrentWipByStage || []).map((row) => [String(row?.stage || '').toUpperCase(), row])
+  );
 
   const inferThroughputUnit = (row = {}) => {
     if (Number(row?.qtySqm || 0) > 0) return 'SQM';
@@ -3037,6 +3046,27 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
           )
         : [];
 
+    const currentWipStageRow = factoryCurrentWipByStageMap.get(stageKey) || {};
+    const currentAvailableStockQty =
+      stageMetricUnit === 'SQM'
+        ? Number(currentWipStageRow?.qtySqmRaw ?? currentWipStageRow?.qtySqm ?? 0)
+        : stageMetricUnit === 'CMT'
+          ? Number(currentWipStageRow?.qtyUnitsRaw ?? currentWipStageRow?.qtyUnits ?? 0)
+          : Number(
+              currentWipStageRow?.qtySheetsRaw ??
+                currentWipStageRow?.qtySheets ??
+                currentWipStageRow?.qtyUnitsRaw ??
+                currentWipStageRow?.qtyUnits ??
+                0
+            );
+    const currentAvailableStockQuantities = [
+      {
+        unit: String(stageMetricUnit || '--').toUpperCase(),
+        quantity: Number(currentAvailableStockQty || 0),
+      },
+    ];
+    const currentAvailableAmount = Number(currentWipStageRow?.amount || 0);
+
     return {
       module: spec.key,
       label: spec.label || formatStageLabel(spec.key),
@@ -3048,6 +3078,9 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
       damageQuantities,
       issuedForNextProcess: round2(issuedForNextProcessQty),
       issuedForNextProcessQuantities,
+      currentAvailableStock: Number(currentAvailableStockQty || 0),
+      currentAvailableStockQuantities,
+      currentAvailableAmount: round2(currentAvailableAmount),
       issueDisplay: spec.issueDisplay ?? null,
       completeDisplay: spec.completeDisplay ?? null,
       damageDisplay: spec.damageDisplay ?? null,
@@ -3549,3 +3582,5 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
     },
   };
 };
+
+
