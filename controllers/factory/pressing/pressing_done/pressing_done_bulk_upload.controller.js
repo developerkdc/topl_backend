@@ -19,6 +19,7 @@ import { fleece_inventory_items_modal } from '../../../../database/schema/invent
 import {
   base_type_constants,
   consumed_from_constants,
+  item_issued_for,
 } from '../../../../database/Utils/constants/constants.js';
 
 // ─── Safe helpers ─────────────────────────────────────────────────────────────
@@ -140,6 +141,7 @@ const resolve_row = async (row, created_by, session) => {
     no_of_sheets: sheets,
     sqm,
     amount,
+    issued_for: item_issued_for.stock,
     remark: 'BULK_UPLOAD',
     created_by,
     updated_by: created_by,

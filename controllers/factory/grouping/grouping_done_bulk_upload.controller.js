@@ -297,6 +297,26 @@ export const bulk_upload_grouping_done = catchAsync(async (req, res) => {
     session.startTransaction();
 
     try {
+      // 1. Fetch Grade "A" for all bulk upload items
+      const gradeA = await mongoose.model('grade').findOne({ grade_name: 'A' }).lean().session(session);
+      if (!gradeA) {
+        throw new ApiError('Grade "A" not found in masters', StatusCodes.BAD_REQUEST);
+      }
+
+      // 2. Determine starting Pallet Number (highest existing numeric pallet number for BULK_UPLOAD)
+      const maxPalletAgg = await grouping_done_items_details_model.aggregate([
+        { 
+          $match: { 
+            remark: 'BULK_UPLOAD',
+            pallet_number: { $exists: true, $ne: null, $regex: /^[0-9]+$/ } 
+          } 
+        },
+        { $project: { pallet_num: { $toInt: '$pallet_number' } } },
+        { $group: { _id: null, maxVal: { $max: '$pallet_num' } } }
+      ]).session(session);
+
+      let currentPalletCounter = maxPalletAgg.length > 0 ? maxPalletAgg[0].maxVal : 0;
+
       // ── Create ONE header record for this bulk upload ──────────────────
       const header_doc = await grouping_done_details_model.create(
         [
@@ -396,6 +416,8 @@ export const bulk_upload_grouping_done = catchAsync(async (req, res) => {
               session
             );
 
+            currentPalletCounter++;
+
             buffer.push({
               grouping_done_other_details_id: header_id,
               group_no: resolved.group_no,
@@ -408,8 +430,8 @@ export const bulk_upload_grouping_done = catchAsync(async (req, res) => {
               item_sub_category_name: resolved.item_sub_category_name,
               series_id: resolved.series_id,
               series_name: resolved.series_name,
-              grade_id: resolved.grade_id,
-              grade_name: resolved.grade_name,
+              grade_id: gradeA._id,
+              grade_name: gradeA.grade_name,
               character_id: resolved.character_id,
               character_name: resolved.character_name,
               process_id: resolved.process_id,
@@ -429,7 +451,7 @@ export const bulk_upload_grouping_done = catchAsync(async (req, res) => {
                 sqm: resolved.sqm,
                 amount: resolved.amount,
               },
-              pallet_number: null,
+              pallet_number: currentPalletCounter.toString(),
               remark: 'BULK_UPLOAD',
               is_damaged: false,
               created_by: userDetails._id,
