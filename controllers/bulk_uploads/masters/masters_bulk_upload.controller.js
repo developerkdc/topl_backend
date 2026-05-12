@@ -9,6 +9,15 @@ import fs from 'fs';
 import exceljs from 'exceljs';
 import moment from 'moment';
 
+const toBoolean = (val) => {
+    if (typeof val === 'string') {
+        const low = val.trim().toLowerCase();
+        if (low === 'yes' || low === 'true') return true;
+        if (low === 'no' || low === 'false') return false;
+    }
+    return val;
+};
+
 const master_config_model = {
     polish_master: {
         model: 'polish',
@@ -480,6 +489,8 @@ async function supplier_branches_master(doc, session) {
         delete doc.contact_person_designation;
     }
 
+    doc.is_main_branch = toBoolean(doc.is_main_branch);
+
     return doc;
 }
 async function machine_master(doc, session) {
@@ -538,8 +549,19 @@ async function customer_master(doc, session) {
             );
         }
         doc.preferable_transport_for_part_load = transporter_doc._id;
-        doc.dob = moment.parseZone(doc?.dob, 'DD/MM/YYYY').toDate();
     }
+
+    if (doc.dob) {
+        let parsedDate = moment(doc.dob, ['DD/MM/YYYY', 'YYYY-MM-DD'], true);
+        if (!parsedDate.isValid()) {
+            parsedDate = moment(doc.dob);
+        }
+        doc.dob = parsedDate.isValid() ? parsedDate.toDate() : null;
+    }
+
+    doc.is_tcs_applicable = toBoolean(doc.is_tcs_applicable);
+    doc.is_insurance_applicable = toBoolean(doc.is_insurance_applicable);
+
     doc.photo_type = {
         photo_type_a: doc?.photo_type_a ?? null,
         photo_type_b: doc?.photo_type_b ?? null,
@@ -873,6 +895,11 @@ export const bulk_upload_masters = catchAsync(async (req, res) => {
                     for (let i = 0; i < configs?.fields?.length; i++) {
                         const excel_field = configs?.fields[i];
                         let raw_value = row.getCell(i + 1).value ?? null;
+
+                        if (raw_value && typeof raw_value === 'object' && 'result' in raw_value) {
+                            raw_value = raw_value.result;
+                        }
+
                         doc[excel_field] = raw_value;
                     }
                     const is_empty = Object.values(doc)

@@ -67,19 +67,18 @@ async function lookupMaster({ collection, query, label, session }) {
  *  Col 16 → cost            → skipped
  *  Col 17 → AMT             → amount
  */
-async function resolve_row(raw, subCategory, session) {
+async function resolve_row(raw, subCategory, caches, session) {
   const item_name_str = toStr(raw.item_name);
   const logx_no = toStr(raw.logx_no); // used for BOTH group_no and log_no_code
   const sub_category_name = toStr(subCategory);
   const series_name = toStr(raw.series_name);
-  const grade_name = null;                          // not in client Excel
   const character_name = toStr(raw.character_name);  // only for HYBRID
   const process_name = toStr(raw.process_name);
   const process_color_name = toStr(raw.process_color_name);
   const pattern_name = toStr(raw.pattern_name);
   const photo_no = toStr(raw.photo_no);
 
-  // Validate logx_no (mandatory – becomes group_no + log_no_code)
+  // Validate logx_no
   if (!logx_no) {
     throw new ApiError('logx no (Group No / Log No Code) is required', StatusCodes.BAD_REQUEST);
   }
@@ -89,124 +88,86 @@ async function resolve_row(raw, subCategory, session) {
     throw new ApiError('ITEM NAME is required', StatusCodes.BAD_REQUEST);
   }
 
-  // 1. Item name
-  const item_doc = await lookupMaster({
-    collection: 'item_name',
-    query: { item_name: item_name_str },
-    label: 'Item Name',
-    session,
-  });
+  // 1. Item name from cache
+  const item_doc = caches.itemNameMap.get(item_name_str);
+  if (!item_doc) {
+    throw new ApiError(`Item Name "${item_name_str}" not found`, StatusCodes.BAD_REQUEST);
+  }
 
-  // 2. Sub-category
-  const sub_cat_doc = await lookupMaster({
-    collection: 'item_subcategory',
-    query: { name: sub_category_name },
-    label: 'Item Sub-Category',
-    session,
-  });
+  // 2. Sub-category from cache
+  const sub_cat_doc = caches.subCategoryMap.get(sub_category_name);
+  if (!sub_cat_doc) {
+    throw new ApiError(`Sub-Category "${sub_category_name}" not found`, StatusCodes.BAD_REQUEST);
+  }
 
-  // 3. Series
+  // 3. Series from cache
   if (!series_name) {
     throw new ApiError('Series is required', StatusCodes.BAD_REQUEST);
   }
-  const series_doc = await lookupMaster({
-    collection: 'series_master',
-    query: { series_name: series_name },
-    label: 'Series',
-    session,
-  });
+  const series_doc = caches.seriesMap.get(series_name);
+  if (!series_doc) {
+    throw new ApiError(`Series "${series_name}" not found`, StatusCodes.BAD_REQUEST);
+  }
 
-  // 4. Grade – NOT in client Excel, kept null
+  // 4. Grade & Character
   let grade_id = null;
   let resolved_grade_name = null;
   let character_id = null;
   let resolved_character_name = null;
-  if (sub_category_name === 'HYBRID') {
-    if (character_name) {
-      const char_doc = await model('characters')
-        .findOne({ name: character_name })
-        .lean()
-        .session(session);
-      if (char_doc) {
-        character_id = char_doc._id;
-        resolved_character_name = char_doc.name;
-      }
+  if (sub_category_name === 'HYBRID' && character_name) {
+    const char_doc = caches.characterMap.get(character_name);
+    if (char_doc) {
+      character_id = char_doc._id;
+      resolved_character_name = char_doc.name;
     }
   }
 
-  // 5. Process (optional)
+  // 5. Process
   let process_id = null;
   let resolved_process_name = null;
   if (process_name) {
-    const proc_doc = await model('process')
-      .findOne({ name: process_name })
-      .lean()
-      .session(session);
+    const proc_doc = caches.processMap.get(process_name);
     if (proc_doc) {
       process_id = proc_doc._id;
       resolved_process_name = proc_doc.name;
     }
   }
 
-  // 6. Process Color (optional)
+  // 6. Color
   let color_id = null;
   let resolved_color_name = null;
   if (process_color_name) {
-    const color_doc = await model('colors')
-      .findOne({ name: process_color_name })
-      .lean()
-      .session(session);
+    const color_doc = caches.colorMap.get(process_color_name);
     if (color_doc) {
       color_id = color_doc._id;
       resolved_color_name = color_doc.name;
     }
   }
 
-  // 7. Pattern (optional)
+  // 7. Pattern
   let pattern_id = null;
   let resolved_pattern_name = null;
   if (pattern_name) {
-    const pat_doc = await model('patterns')
-      .findOne({ name: pattern_name })
-      .lean()
-      .session(session);
+    const pat_doc = caches.patternMap.get(pattern_name);
     if (pat_doc) {
       pattern_id = pat_doc._id;
       resolved_pattern_name = pat_doc.name;
     }
   }
 
-  // 8. Photo (optional for NATURAL, required for HYBRID)
   let photo_no_id = null;
-  if (photo_no) {
-    const photo_doc = await model('photos')
-      .findOne({ photo_number: photo_no })
-      .lean()
-      .session(session);
-    if (!photo_doc && sub_category_name === 'HYBRID') {
-      throw new ApiError(
-        `Photo number "${photo_no}" not found in photo master (required for HYBRID)`,
-        StatusCodes.BAD_REQUEST
-      );
-    }
-    if (photo_doc) photo_no_id = photo_doc._id;
-  }
 
-  // 9. Group No – must NOT already exist
-  const existing_group = await grouping_done_items_details_model
-    .findOne({ group_no: logx_no })
-    .lean()
-    .session(session);
-  if (existing_group) {
+  // 9. Group No check against cache
+  if (caches.existingGroupNoSet.has(logx_no)) {
     throw new ApiError(
-      `Group No "${logx_no}" already exists in grouping_done_items_details`,
+      `Group No "${logx_no}" already exists in system`,
       StatusCodes.BAD_REQUEST
     );
   }
 
   return {
     group_no: logx_no,
-    log_no_code: logx_no, // same as group_no
+    log_no_code: logx_no,
     photo_no: photo_no || null,
     photo_no_id,
     item_name: item_doc.item_name,
@@ -294,16 +255,38 @@ export const bulk_upload_grouping_done = catchAsync(async (req, res) => {
       throw new ApiError('Excel file is required', StatusCodes.BAD_REQUEST);
     file_path = file.filepath;
 
-    session.startTransaction();
+    // 1. Fetch Masters & Existing Groups for caching (BEFORE starting transaction)
+    const [gradeA, itemNames, subCategories, series, characters, processes, colors, patterns, existingGroups] = await Promise.all([
+        model('grade').findOne({ grade_name: 'A' }).lean(),
+        model('item_name').find().lean(),
+        model('item_subcategory').find().lean(),
+        model('series_master').find().lean(),
+        model('characters').find().lean(),
+        model('process').find().lean(),
+        model('colors').find().lean(),
+        model('patterns').find().lean(),
+        grouping_done_items_details_model.distinct('group_no')
+      ]);
 
-    try {
-      // 1. Fetch Grade "A" for all bulk upload items
-      const gradeA = await mongoose.model('grade').findOne({ grade_name: 'A' }).lean().session(session);
       if (!gradeA) {
         throw new ApiError('Grade "A" not found in masters', StatusCodes.BAD_REQUEST);
       }
 
-      // 2. Determine starting Pallet Number (highest existing numeric pallet number for BULK_UPLOAD)
+      const caches = {
+        itemNameMap: new Map(itemNames.map(i => [i.item_name.trim().toUpperCase(), i])),
+        subCategoryMap: new Map(subCategories.map(s => [s.name.trim().toUpperCase(), s])),
+        seriesMap: new Map(series.map(s => [s.series_name.trim().toUpperCase(), s])),
+        characterMap: new Map(characters.map(c => [c.name.trim().toUpperCase(), c])),
+        processMap: new Map(processes.map(p => [p.name.trim().toUpperCase(), p])),
+        colorMap: new Map(colors.map(c => [c.name.trim().toUpperCase(), c])),
+        patternMap: new Map(patterns.map(p => [p.name.trim().toUpperCase(), p])),
+        existingGroupNoSet: new Set(existingGroups.map(g => String(g).trim().toUpperCase())),
+      };
+
+      session.startTransaction();
+
+      try {
+        // 2. Determine starting Pallet Number
       const maxPalletAgg = await grouping_done_items_details_model.aggregate([
         { 
           $match: { 
@@ -317,13 +300,11 @@ export const bulk_upload_grouping_done = catchAsync(async (req, res) => {
 
       let currentPalletCounter = maxPalletAgg.length > 0 ? maxPalletAgg[0].maxVal : 0;
 
-      // ── Create ONE header record for this bulk upload ──────────────────
+      // Create header
       const header_doc = await grouping_done_details_model.create(
         [
           {
             grouping_done_date: new Date(),
-            issue_for_grouping_unique_identifier: null,
-            issue_for_grouping_pallet_number: null,
             no_of_workers: 1,
             no_of_working_hours: 1,
             no_of_total_hours: 1,
@@ -339,50 +320,28 @@ export const bulk_upload_grouping_done = catchAsync(async (req, res) => {
       const header = header_doc[0];
       const header_id = header._id;
 
-      // ── Stream through Excel rows ─────────────────────────────────────
-      const workbook_reader = new exceljs.stream.xlsx.WorkbookReader(
-        file_path,
-        {
-          entries: 'emit',
-          sharedStrings: 'cache',
-          hyperlinks: 'ignore',
-          styles: 'ignore',
-        }
-      );
+      const workbook_reader = new exceljs.stream.xlsx.WorkbookReader(file_path, {
+        entries: 'emit',
+        sharedStrings: 'cache',
+        hyperlinks: 'ignore',
+        styles: 'ignore',
+      });
 
       const BATCH_SIZE = 200;
       let buffer = [];
       let total_inserted = 0;
       const errors = [];
+      const seenGroupNosInExcel = new Set();
 
       for await (const worksheet of workbook_reader) {
         let row_number = 0;
         for await (const row of worksheet) {
           row_number++;
-          if (row_number === 1) continue; // Skip header row
+          if (row_number === 1) continue;
 
-          // Map Excel columns to raw object (exact client format – 17 cols)
-          // Col 1:  SR.NO (skipped)
-          // Col 2:  ITEM NAME
-          // Col 3:  Other Item Name (SKIPPED)
-          // Col 4:  logx no → group_no + log_no_code
-          // Col 5:  PHOTO
-          // Col 6:  LENGTH
-          // Col 7:  WEDTH (width)
-          // Col 8:  THICKNESS
-          // Col 9:  process
-          // Col 10: ProcessColor
-          // Col 11: Series
-          // Col 12: NATURAL → PLAIN (skipped) | HYBRID → Charactor (character)
-          // Col 13: Pattarn (pattern)
-          // Col 14: SHEET
-          // Col 15: Sq. mtr
-          // Col 16: cost (skipped)
-          // Col 17: AMT
           const col12_value = row.getCell(12).value;
           const raw = {
             item_name: row.getCell(2).value,
-            // Column 3 (Other Item Name) → skipped
             logx_no: row.getCell(4).value,
             photo_no: row.getCell(5).value,
             length: row.getCell(6).value,
@@ -391,33 +350,30 @@ export const bulk_upload_grouping_done = catchAsync(async (req, res) => {
             process_name: row.getCell(9).value,
             process_color_name: row.getCell(10).value,
             series_name: row.getCell(11).value,
-            // Col 12 – NATURAL: skipped | HYBRID: character_name
             grade_name: null,
             character_name: sub_category_upper === 'HYBRID' ? col12_value : null,
             pattern_name: row.getCell(13).value,
             no_of_sheets: row.getCell(14).value,
-            // Use .result if cell contains a formula/number object
             sqm: (row.getCell(15).value && row.getCell(15).value.result) ? row.getCell(15).value.result : row.getCell(15).value,
-            // Col 16 (cost) → skipped
-            // Use .result for amount as well
             amount: (row.getCell(17).value && row.getCell(17).value.result) ? row.getCell(17).value.result : row.getCell(17).value,
           };
 
-          // Skip completely empty rows
-          const is_empty = Object.values(raw).every(
-            (v) => v === null || v === undefined || v === ''
-          );
+          const is_empty = Object.values(raw).every(v => v === null || v === undefined || v === '');
           if (is_empty) continue;
 
+          // Local Excel Duplicate Check
+          const logx_str = String(raw.logx_no || '').trim().toUpperCase();
+          if (logx_str) {
+            if (seenGroupNosInExcel.has(logx_str)) {
+               errors.push({ row: row_number, message: `Duplicate Group No "${logx_str}" within Excel file` });
+               break;
+            }
+            seenGroupNosInExcel.add(logx_str);
+          }
+
           try {
-            const resolved = await resolve_row(
-              raw,
-              sub_category_upper,
-              session
-            );
-
+            const resolved = await resolve_row(raw, sub_category_upper, caches, session);
             currentPalletCounter++;
-
             buffer.push({
               grouping_done_other_details_id: header_id,
               group_no: resolved.group_no,
@@ -459,14 +415,11 @@ export const bulk_upload_grouping_done = catchAsync(async (req, res) => {
             });
           } catch (row_err) {
             errors.push({ row: row_number, message: row_err.message });
+            break; // Stop immediately
           }
 
-          // Flush batch
           if (buffer.length >= BATCH_SIZE) {
-            if (errors.length > 0) break;
-            await grouping_done_items_details_model.insertMany(buffer, {
-              session,
-            });
+            await grouping_done_items_details_model.insertMany(buffer, { session });
             total_inserted += buffer.length;
             buffer = [];
           }
