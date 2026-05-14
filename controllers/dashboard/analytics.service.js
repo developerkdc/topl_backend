@@ -1150,6 +1150,8 @@ const FACTORY_SUBMODULE_CARD_SPECS = [
     key: 'DRESSING',
     label: 'Dressing',
     sourceStage: 'DRESSING',
+    damageDisplay: 'NA',
+    totalAmountDisplay: 'NA',
   },
   {
     key: 'SMOKING_DYING',
@@ -3019,7 +3021,7 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
         )
       : Number(damageByStage.get(stageKey) || 0);
     const completeDisplayUnit = isDressing || isPeeling ? 'SHEETS' : stageMetricUnit;
-    const damageDisplayUnit = isDressing || isPeeling ? 'SHEETS' : stageMetricUnit;
+    const damageDisplayUnit = isDressing ? 'SHEETS' : isPeeling ? 'SQM' : stageMetricUnit;
     const issueQuantities = buildFactoryMetricQuantities(
       new Map([[stageMetricUnit, issueQty]]),
       stageMetricUnit
@@ -3180,6 +3182,7 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
       issueDisplay: spec.issueDisplay ?? null,
       completeDisplay: spec.completeDisplay ?? null,
       damageDisplay: spec.damageDisplay ?? null,
+      totalAmountDisplay: spec.totalAmountDisplay ?? null,
       unit: stageMetricUnit,
     };
   });
@@ -3678,12 +3681,3 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
     },
   };
 };
-
-
-
-
-
-
-
-
-
