@@ -1150,6 +1150,8 @@ const FACTORY_SUBMODULE_CARD_SPECS = [
     key: 'DRESSING',
     label: 'Dressing',
     sourceStage: 'DRESSING',
+    damageDisplay: 'NA',
+    totalAmountDisplay: 'NA',
   },
   {
     key: 'SMOKING_DYING',
@@ -2021,6 +2023,8 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
     dispatchDocSummary,
     orderToDispatchCycle,
     wipByStage,
+    factoryCurrentWipByStage,
+    plywoodProductionDoneCurrentStock,
     productionThroughput,
     productionThroughputTrend,
     yieldByStage,
@@ -2137,6 +2141,30 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
       ? aggregateOrderDispatchCycle({ fromDate, toDate })
       : Promise.resolve({ avgDays: 0, samples: 0 }),
     includeProduction ? aggregateWipByStage({ fromDate, toDate }) : Promise.resolve([]),
+    includeProduction
+      ? aggregateWipByStage({ fromDate: new Date(0), toDate: dayEnd(new Date()) })
+      : Promise.resolve([]),
+    includeProduction
+      ? safeAggregate('plywood_production', [
+          {
+            $match: {
+              available_no_of_sheets: { $gt: 0 },
+            },
+          },
+          {
+            $group: {
+              _id: null,
+              qtySheets: { $sum: { $ifNull: ['$available_no_of_sheets', 0] } },
+              qtySqm: { $sum: { $ifNull: ['$available_total_sqm', 0] } },
+              amount: {
+                $sum: {
+                  $ifNull: ['$available_amount', { $ifNull: ['$amount', 0] }],
+                },
+              },
+            },
+          },
+        ]).then((rows) => rows?.[0] || { qtySheets: 0, qtySqm: 0, amount: 0 })
+      : Promise.resolve({ qtySheets: 0, qtySqm: 0, amount: 0 }),
     includeProduction
       ? aggregateProductionThroughput({ fromDate, toDate })
       : Promise.resolve([]),
@@ -2334,6 +2362,7 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
     !selectedProcessStage || String(row?.stage || '').toUpperCase() === selectedProcessStage;
 
   const filteredWipByStage = wipByStage.filter(stageFilter);
+  const filteredFactoryCurrentWipByStage = factoryCurrentWipByStage.filter(stageFilter);
   const filteredPreviousWipByStage = previousWipByStage.filter(stageFilter);
   const filteredProductionThroughput = productionThroughput.filter(stageFilter);
   const filteredPreviousProductionThroughput = previousProductionThroughput.filter(stageFilter);
@@ -2448,6 +2477,24 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
 
     return sortFactoryMetricQuantities(rows);
   };
+
+  const factoryCurrentWipByStageMap = new Map(
+    (filteredFactoryCurrentWipByStage || []).map((row) => [String(row?.stage || '').toUpperCase(), row])
+  );
+
+  const productionThroughputByStageMap = new Map(
+    (filteredProductionThroughput || []).map((row) => [String(row?.stage || '').toUpperCase(), row])
+  );
+
+  const plywoodProductionDoneStockQtySqm = Number(
+    plywoodProductionDoneCurrentStock?.qtySqm || 0
+  );
+  const plywoodProductionDoneStockQtySheets = Number(
+    plywoodProductionDoneCurrentStock?.qtySheets || 0
+  );
+  const plywoodProductionDoneStockAmount = Number(
+    plywoodProductionDoneCurrentStock?.amount || 0
+  );
 
   const inferThroughputUnit = (row = {}) => {
     if (Number(row?.qtySqm || 0) > 0) return 'SQM';
@@ -2974,7 +3021,7 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
         )
       : Number(damageByStage.get(stageKey) || 0);
     const completeDisplayUnit = isDressing || isPeeling ? 'SHEETS' : stageMetricUnit;
-    const damageDisplayUnit = isDressing || isPeeling ? 'SHEETS' : stageMetricUnit;
+    const damageDisplayUnit = isDressing ? 'SHEETS' : isPeeling ? 'SQM' : stageMetricUnit;
     const issueQuantities = buildFactoryMetricQuantities(
       new Map([[stageMetricUnit, issueQty]]),
       stageMetricUnit
@@ -3037,6 +3084,87 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
           )
         : [];
 
+    const currentWipStageRow = factoryCurrentWipByStageMap.get(stageKey) || {};
+    const throughputStageRow = productionThroughputByStageMap.get(stageKey) || {};
+
+    const selectFirstNonZero = (...candidates) => {
+      for (const candidate of candidates) {
+        const numericCandidate = Number(candidate || 0);
+        if (numericCandidate !== 0) return numericCandidate;
+      }
+      return 0;
+    };
+
+    let currentAvailableStockQty =
+      stageMetricUnit === 'SQM'
+        ? selectFirstNonZero(
+            currentWipStageRow?.qtySqmRaw,
+            currentWipStageRow?.qtySqm,
+            currentWipStageRow?.qtySheetsRaw,
+            currentWipStageRow?.qtySheets,
+            currentWipStageRow?.qtyUnitsRaw,
+            currentWipStageRow?.qtyUnits
+          )
+        : stageMetricUnit === 'CMT'
+          ? selectFirstNonZero(
+              currentWipStageRow?.qtyUnitsRaw,
+              currentWipStageRow?.qtyUnits,
+              currentWipStageRow?.qtySqmRaw,
+              currentWipStageRow?.qtySqm,
+              currentWipStageRow?.qtySheetsRaw,
+              currentWipStageRow?.qtySheets
+            )
+          : selectFirstNonZero(
+              currentWipStageRow?.qtySheetsRaw,
+              currentWipStageRow?.qtySheets,
+              currentWipStageRow?.qtyUnitsRaw,
+              currentWipStageRow?.qtyUnits,
+              currentWipStageRow?.qtySqmRaw,
+              currentWipStageRow?.qtySqm
+            );
+
+    if (stageKey === 'DRESSING' && currentAvailableStockQty === 0 && issueQty !== 0) {
+      currentAvailableStockQty = Number(issueQty || 0);
+    }
+
+    if (stageKey === 'PLYWOOD_PRODUCTION') {
+      const doneTabStockQty =
+        stageMetricUnit === 'SQM'
+          ? selectFirstNonZero(
+              plywoodProductionDoneStockQtySqm,
+              plywoodProductionDoneStockQtySheets
+            )
+          : selectFirstNonZero(
+              plywoodProductionDoneStockQtySheets,
+              plywoodProductionDoneStockQtySqm
+            );
+
+      currentAvailableStockQty = selectFirstNonZero(
+        doneTabStockQty,
+        currentAvailableStockQty,
+        throughputStageRow?.qtySqm,
+        throughputStageRow?.qtySheets,
+        throughputStageRow?.qtyUnits,
+        throughputStageRow?.primaryQty
+      );
+    }
+
+    const currentAvailableStockQuantities = [
+      {
+        unit: String(stageMetricUnit || '--').toUpperCase(),
+        quantity: Number(currentAvailableStockQty || 0),
+      },
+    ];
+
+    let currentAvailableAmount = Number(currentWipStageRow?.amount || 0);
+    if (stageKey === 'PLYWOOD_PRODUCTION') {
+      currentAvailableAmount = selectFirstNonZero(
+        plywoodProductionDoneStockAmount,
+        currentAvailableAmount,
+        throughputStageRow?.amount
+      );
+    }
+
     return {
       module: spec.key,
       label: spec.label || formatStageLabel(spec.key),
@@ -3048,9 +3176,13 @@ export const fetchDashboardAnalyticsData = async (query = {}) => {
       damageQuantities,
       issuedForNextProcess: round2(issuedForNextProcessQty),
       issuedForNextProcessQuantities,
+      currentAvailableStock: Number(currentAvailableStockQty || 0),
+      currentAvailableStockQuantities,
+      currentAvailableAmount: Number(currentAvailableAmount || 0),
       issueDisplay: spec.issueDisplay ?? null,
       completeDisplay: spec.completeDisplay ?? null,
       damageDisplay: spec.damageDisplay ?? null,
+      totalAmountDisplay: spec.totalAmountDisplay ?? null,
       unit: stageMetricUnit,
     };
   });
