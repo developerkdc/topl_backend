@@ -25,8 +25,15 @@ import {
   fetch_group_details_by_id,
   issue_for_tapping_from_grouping_for_order,
 } from '../../../controllers/factory/grouping/grouping.issue_for_order.controller.js';
+import { mapGroupingToPhoto } from '../../../controllers/temporaryapi/groupingtophotomapping.js';
 
 const groupingDoneRouter = express.Router();
+
+groupingDoneRouter.post(
+  '/map-grouping-to-photo',
+  AuthMiddleware,
+  mapGroupingToPhoto
+);
 
 groupingDoneRouter.post(
   '/add-grouping-done',

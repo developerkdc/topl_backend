@@ -862,6 +862,7 @@ export const bulk_upload_masters = catchAsync(async (req, res) => {
         const batch_size = 1000;
         let buffer_data = [];
         let total = 0;
+        const photoMap = new Map();
 
         session.startTransaction();
         try {
@@ -955,19 +956,136 @@ export const bulk_upload_masters = catchAsync(async (req, res) => {
                         doc.created_by = user?._id;
                     }
                     doc.updated_by = user?._id;
-                    buffer_data?.push(doc);
 
-                    if (buffer_data?.length >= batch_size) {
-                        await model(configs?.model)?.insertMany(buffer_data, { session });
-                        total += buffer_data?.length;
-                        buffer_data = [];
+                    if (master_name === 'photo_master') {
+                        if (!doc.photo_number) {
+                            throw new ApiError('Photo number is required in Excel row', StatusCodes.BAD_REQUEST);
+                        }
+                        if (doc.sub_category_type) {
+                            doc.sub_category_type = doc.sub_category_type.toString().trim().toUpperCase();
+                        }
+                        const photoKey = doc.photo_number.toString().trim().toUpperCase();
+                        if (photoMap.has(photoKey)) {
+                            const entry = photoMap.get(photoKey);
+                            const targetDoc = entry.doc;
+                            if (targetDoc.sub_category_type === 'HYBRID') {
+                                if (doc.group_id) {
+                                    const isMainGroup = targetDoc.group_id && targetDoc.group_id.toString() === doc.group_id.toString();
+                                    const isInHybrid = targetDoc.hybrid_group_no.some(
+                                        (g) => g._id && g._id.toString() === doc.group_id.toString()
+                                    );
+                                    if (!isMainGroup && !isInHybrid) {
+                                        targetDoc.hybrid_group_no.push({
+                                            _id: doc.group_id,
+                                            group_no: doc.group_no,
+                                        });
+                                    }
+                                }
+                                targetDoc.no_of_sheets = (Number(targetDoc.no_of_sheets) || 0) + (Number(doc.no_of_sheets) || 0);
+                                targetDoc.available_no_of_sheets = (Number(targetDoc.available_no_of_sheets) || 0) + (Number(doc.available_no_of_sheets) || 0);
+                                targetDoc.updated_by = user?._id;
+                            } else {
+                                throw new ApiError(
+                                    `Duplicate photo number "${doc.photo_number}" found for non-hybrid subcategory`,
+                                    StatusCodes.BAD_REQUEST
+                                );
+                            }
+                        } else {
+                            let existingPhoto = await model('photos')
+                                .findOne({ photo_number: photoKey })
+                                .session(session);
+                            if (existingPhoto) {
+                                existingPhoto = existingPhoto.toObject();
+                                if (existingPhoto.sub_category_type === 'HYBRID') {
+                                    if (doc.group_id) {
+                                        const isMainGroup = existingPhoto.group_id && existingPhoto.group_id.toString() === doc.group_id.toString();
+                                        const isInHybrid = existingPhoto.hybrid_group_no.some(
+                                            (g) => g._id && g._id.toString() === doc.group_id.toString()
+                                        );
+                                        if (!isMainGroup && !isInHybrid) {
+                                            existingPhoto.hybrid_group_no.push({
+                                                _id: doc.group_id,
+                                                group_no: doc.group_no,
+                                            });
+                                        }
+                                    }
+                                    existingPhoto.no_of_sheets = (Number(existingPhoto.no_of_sheets) || 0) + (Number(doc.no_of_sheets) || 0);
+                                    existingPhoto.available_no_of_sheets = (Number(existingPhoto.available_no_of_sheets) || 0) + (Number(doc.available_no_of_sheets) || 0);
+                                    existingPhoto.updated_by = user?._id;
+                                    photoMap.set(photoKey, { doc: existingPhoto, isNew: false });
+                                } else {
+                                    throw new ApiError(
+                                        `Photo number "${doc.photo_number}" already exists in database and is not hybrid`,
+                                        StatusCodes.BAD_REQUEST
+                                    );
+                                }
+                            } else {
+                                doc._id = new mongoose.Types.ObjectId();
+                                doc.hybrid_group_no = doc.hybrid_group_no || [];
+                                doc.created_by = user?._id;
+                                doc.updated_by = user?._id;
+                                photoMap.set(photoKey, { doc, isNew: true });
+                            }
+                        }
+                    } else {
+                        buffer_data?.push(doc);
+
+                        if (buffer_data?.length >= batch_size) {
+                            await model(configs?.model)?.insertMany(buffer_data, { session });
+                            total += buffer_data?.length;
+                            buffer_data = [];
+                        }
                     }
                 }
             }
 
-            if (buffer_data?.length > 0) {
-                await model(configs?.model)?.insertMany(buffer_data, { session });
-                total += buffer_data?.length;
+            if (master_name === 'photo_master') {
+                for (const [photoKey, entry] of photoMap.entries()) {
+                    if (entry.isNew) {
+                        const newPhoto = new (model('photos'))(entry.doc);
+                        await newPhoto.save({ session });
+                        total++;
+                    } else {
+                        await model('photos').updateOne(
+                            { _id: entry.doc._id },
+                            {
+                                $set: {
+                                    hybrid_group_no: entry.doc.hybrid_group_no,
+                                    no_of_sheets: entry.doc.no_of_sheets,
+                                    available_no_of_sheets: entry.doc.available_no_of_sheets,
+                                    updated_by: entry.doc.updated_by,
+                                },
+                            },
+                            { session }
+                        );
+                        total++;
+                    }
+
+                    // Link the groups back to the photo
+                    let groupIdsToUpdate = [entry.doc.group_id];
+                    if (entry.doc.sub_category_type === 'HYBRID' && entry.doc.hybrid_group_no?.length > 0) {
+                        const hybridIds = entry.doc.hybrid_group_no.map((g) => g._id);
+                        groupIdsToUpdate = [...groupIdsToUpdate, ...hybridIds];
+                    }
+                    groupIdsToUpdate = groupIdsToUpdate.filter((id) => id); // Remove null/undefined
+                    if (groupIdsToUpdate.length > 0) {
+                        await model('grouping_done_items_details').updateMany(
+                            { _id: { $in: groupIdsToUpdate } },
+                            {
+                                $set: {
+                                    photo_no: entry.doc.photo_number,
+                                    photo_no_id: entry.doc._id,
+                                },
+                            },
+                            { session }
+                        );
+                    }
+                }
+            } else {
+                if (buffer_data?.length > 0) {
+                    await model(configs?.model)?.insertMany(buffer_data, { session });
+                    total += buffer_data?.length;
+                }
             }
 
             const response = new ApiResponse(
