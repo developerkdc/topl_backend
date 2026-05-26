@@ -791,24 +791,41 @@ async function photo_master(doc, session) {
 
     for (const field of fieldMap) {
         if (doc[field.key]) {
-            const found = await model(field.model)
-                .findOne({ [field.queryField]: doc[field.key] })
-                .session(session);
-
-            if (!found) {
-                throw new ApiError(
-                    `${doc[field.key]} not found in ${field.model}`,
-                    StatusCodes.NOT_FOUND
-                );
-            }
-
             if (field.assignArray) {
-                field.assignArray.push({
-                    [field.arrayId]: found._id,
-                    [field.arrayName]: found[field.assignName || field.queryField],
-                });
+                const values = typeof doc[field.key] === 'string'
+                    ? doc[field.key].split(',').map(v => v.trim()).filter(Boolean)
+                    : [doc[field.key]];
+
+                for (const val of values) {
+                    const found = await model(field.model)
+                        .findOne({ [field.queryField]: val })
+                        .session(session);
+
+                    if (!found) {
+                        throw new ApiError(
+                            `${val} not found in ${field.model}`,
+                            StatusCodes.NOT_FOUND
+                        );
+                    }
+
+                    field.assignArray.push({
+                        [field.arrayId]: found._id,
+                        [field.arrayName]: found[field.assignName || field.queryField],
+                    });
+                }
                 doc[field.key] = field.assignArray;
             } else {
+                const found = await model(field.model)
+                    .findOne({ [field.queryField]: doc[field.key] })
+                    .session(session);
+
+                if (!found) {
+                    throw new ApiError(
+                        `${doc[field.key]} not found in ${field.model}`,
+                        StatusCodes.NOT_FOUND
+                    );
+                }
+
                 doc[field.assignId] = found?._id;
                 // if (field.assignName)
                 //     doc[field.assignName] = found[field.assignName || field.queryField];
