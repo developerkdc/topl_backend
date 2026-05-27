@@ -37,6 +37,11 @@ mongo_service();
 const app = express();
 const server = http.createServer(app);
 
+// Increase timeouts to 10 minutes (600,000 ms) to handle bulk uploads
+server.timeout = 600000;
+server.keepAliveTimeout = 600000;
+server.headersTimeout = 605000; // Must be slightly higher than keepAliveTimeout
+
 export const io = new Server(server, {
   cors: {
     origin: Configs?.cors?.origin,
