@@ -13,17 +13,16 @@ export function ChallanJSONtoXML(challan) {
             .replace(/'/g, "&apos;");
 
     const formatDate = (val) => {
-        if (!val) return "20250401";
-        const d = new Date(val);
-        return (
-            d.getFullYear().toString() +
-            String(d.getMonth() + 1).padStart(2, "0") +
-            String(d.getDate()).padStart(2, "0")
-        );
+        // if (!val) return "20250401";
+        const d = val ? new Date(val) : new Date();
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, "0");
+        const dd = String(d.getDate()).padStart(2, "0");
+        return `${yyyy}${mm}${dd}`;
     };
 
-    // const date = formatDate(challan.challan_date);
-    const date = "20250401";
+    const date = formatDate(challan.challan_date);
+    // const date = "20250401";
     const voucherNo = escape(challan.challan_no || "DN-001");
     const partyName = escape(
         challan.customer_details?.company_name || "Cash"
@@ -33,6 +32,10 @@ export function ChallanJSONtoXML(challan) {
 
     const stockLedger = "Stock-in-Hand"; // Must exist in Tally
     const godown = "Main Location";
+
+    const startYear = 2016;
+    const currentYear = new Date().getFullYear().toString().slice(-2);
+    const companyName = `THRAKHIA OVRSEAS PVT.LTD. (${startYear}-${currentYear})`;
 
     const items = challan.issue_for_challan_item_details || [];
     console.log("Raw Items Array:", items);
@@ -94,7 +97,7 @@ export function ChallanJSONtoXML(challan) {
         <REQUESTDESC>
             <REPORTNAME>Vouchers</REPORTNAME>
             <STATICVARIABLES>
-            <SVCURRENTCOMPANY>Natural Veneers</SVCURRENTCOMPANY>
+            <SVCURRENTCOMPANY>${companyName}</SVCURRENTCOMPANY>
             </STATICVARIABLES>
         </REQUESTDESC>
         <REQUESTDATA>

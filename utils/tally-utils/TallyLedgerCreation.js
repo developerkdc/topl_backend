@@ -1,3 +1,8 @@
+function getCompanyName() {
+    const startYear = 2016;
+    const currentYear = new Date().getFullYear().toString().slice(-2);
+    return `THRAKHIA OVRSEAS PVT.LTD. (${startYear}-${currentYear})`;
+}
 export function CustomerJSONtoXML(customer) {
     const escape = (str) =>
         String(str || "")
@@ -16,6 +21,8 @@ export function CustomerJSONtoXML(customer) {
     // If tally_name exists, use it to identify/alter the existing ledger; otherwise create a new one using company_name
     const ledgerIdentifier = customer.tally_name || customer.company_name;
 
+    const companyName = getCompanyName();
+
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
         <ENVELOPE>
         <HEADER>
@@ -26,7 +33,7 @@ export function CustomerJSONtoXML(customer) {
             <REQUESTDESC>
                 <REPORTNAME>All Masters</REPORTNAME>
                 <STATICVARIABLES>
-                <SVCURRENTCOMPANY>Natural Veneers</SVCURRENTCOMPANY>
+                <SVCURRENTCOMPANY>${companyName}</SVCURRENTCOMPANY>
                 </STATICVARIABLES>
             </REQUESTDESC>
             <REQUESTDATA>
@@ -102,6 +109,8 @@ export function StockItemJSONtoXML(stockItem) {
     const cgstRate = gstRate / 2;
     const sgstRate = gstRate / 2;
 
+    const companyName = getCompanyName();
+
     // If tally_name exists, use it to identify/alter the existing ledger; otherwise create a new one using company_name
     const ledgerIdentifier = stockItem.tally_item_name || stockItem.category;
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -114,7 +123,7 @@ export function StockItemJSONtoXML(stockItem) {
     <REQUESTDESC>
         <REPORTNAME>All Masters</REPORTNAME>
         <STATICVARIABLES>
-        <SVCURRENTCOMPANY>Natural Veneers</SVCURRENTCOMPANY>
+        <SVCURRENTCOMPANY>${companyName}</SVCURRENTCOMPANY>
         </STATICVARIABLES>
     </REQUESTDESC>
     <REQUESTDATA>

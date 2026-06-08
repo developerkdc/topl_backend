@@ -4120,7 +4120,7 @@ export const dispatch_tally = catchAsync(async (req, res, next) => {
     });
 
     const xml = DispatchJSONtoXML(dispatch);
-    console.log("stuff: ", dispatch);
+    // console.log("stuff: ", dispatch);
     if (!xml)
       return res.status(500).json({ error: "XML generation failed" });
 

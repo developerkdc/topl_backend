@@ -14,16 +14,15 @@ export function DispatchJSONtoXML(dispatch) {
             .replace(/'/g, "&apos;");
 
     const formatDate = (val) => {
-        if (!val) return "20250401"; // edu fallback
-        const d = new Date(val);
-        return (
-            d.getFullYear().toString() +
-            String(d.getMonth() + 1).padStart(2, "0") +
-            String(d.getDate()).padStart(2, "0")
-        );
+        // if (!val) return "20250401"; // edu fallback
+        const d = val ? new Date(val) : new Date();
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, "0");
+        const dd = String(d.getDate()).padStart(2, "0");
+        return `${yyyy}${mm}${dd}`;
     };
 
-    const date = formatDate(dispatch.invoice_date);
+    const date = formatDate(dispatch.invoice_date_time || dispatch.invoice_date);
     const voucherNo = escape(dispatch.invoice_no);
     const partyName = escape(
         dispatch.customer_details?.company_name || "Cash"
@@ -188,6 +187,10 @@ export function DispatchJSONtoXML(dispatch) {
     // console.log("Rounding:", rounding);
     // console.log("==========================");
 
+    const startYear = 2016;
+    const currentYear = new Date().getFullYear().toString().slice(-2);
+    const companyName = `THRAKHIA OVRSEAS PVT.LTD. (${startYear}-${currentYear})`;
+
     const declaration = `<?xml version="1.0" encoding="UTF-8"?>`;
     const xml = `
     ${declaration}
@@ -202,7 +205,7 @@ export function DispatchJSONtoXML(dispatch) {
     <REQUESTDESC>
         <REPORTNAME>Vouchers</REPORTNAME>
         <STATICVARIABLES>
-        <SVCURRENTCOMPANY>Natural Veneers</SVCURRENTCOMPANY>
+        <SVCURRENTCOMPANY>${companyName}</SVCURRENTCOMPANY>
         </STATICVARIABLES>
     </REQUESTDESC>
 
