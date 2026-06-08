@@ -191,6 +191,167 @@ const mergeInwardSummaries = (...summaries) =>
     };
   }, createEmptyInwardSummary());
 
+const INVENTORY_PROCESS_ISSUED_SOURCES = {
+  LOG: [
+    {
+      collection: 'issues_for_crosscuttings',
+      dateField: 'createdAt',
+      baseMatch: { issued_from: 'log' },
+      qtyBreakdown: {
+        cmt: {
+          $ifNull: ['$physical_cmt', { $ifNull: ['$available_quantity.physical_cmt', 0] }],
+        },
+      },
+    },
+    {
+      collection: 'issues_for_flitchings',
+      dateField: 'createdAt',
+      baseMatch: { issued_from: 'log' },
+      qtyBreakdown: {
+        cmt: { $ifNull: ['$cmt', { $ifNull: ['$available_quantity.cmt', 0] }] },
+      },
+    },
+    {
+      collection: 'issues_for_peelings',
+      dateField: 'createdAt',
+      baseMatch: { issued_from: 'log' },
+      qtyBreakdown: {
+        cmt: { $ifNull: ['$cmt', 0] },
+      },
+    },
+    {
+      collection: 'log_inventory_items_details',
+      dateField: 'updatedAt',
+      baseMatch: { issue_status: 'challan' },
+      qtyBreakdown: {
+        cmt: { $ifNull: ['$physical_cmt', 0] },
+      },
+    },
+  ],
+  FLITCH: [
+    {
+      collection: 'issued_for_slicings',
+      dateField: 'createdAt',
+      baseMatch: { issued_from: 'flitching' },
+      qtyBreakdown: {
+        cmt: { $ifNull: ['$cmt', 0] },
+      },
+    },
+    {
+      collection: 'flitch_inventory_items_details',
+      dateField: 'updatedAt',
+      baseMatch: { issue_status: 'challan' },
+      qtyBreakdown: {
+        cmt: { $ifNull: ['$flitch_cmt', 0] },
+      },
+    },
+  ],
+  VENEER: [
+    {
+      collection: 'issues_for_smoking_dyings',
+      dateField: 'createdAt',
+      baseMatch: { issued_from: 'veneer' },
+      qtyBreakdown: {
+        sqm: { $ifNull: ['$sqm', 0] },
+        leaves: { $ifNull: ['$no_of_leaves', 0] },
+      },
+    },
+    {
+      collection: 'issues_for_groupings',
+      dateField: 'createdAt',
+      baseMatch: { issued_from: 'veneer' },
+      qtyBreakdown: {
+        sqm: { $ifNull: ['$sqm', 0] },
+        leaves: { $ifNull: ['$no_of_leaves', 0] },
+      },
+    },
+    {
+      collection: 'veneer_inventory_items_details',
+      dateField: 'updatedAt',
+      baseMatch: { issue_status: 'challan' },
+      qtyBreakdown: {
+        sqm: { $ifNull: ['$total_sq_meter', { $ifNull: ['$available_sqm', 0] }] },
+        leaves: {
+          $ifNull: ['$number_of_leaves', { $ifNull: ['$available_number_of_leaves', 0] }],
+        },
+      },
+    },
+  ],
+  PLYWOOD: [
+    {
+      collection: 'issued_for_plywood_resizing_items',
+      dateField: 'createdAt',
+      baseMatch: { issued_from: 'PLYWOOD' },
+      qtyBreakdown: {
+        sqm: { $ifNull: ['$sqm', 0] },
+        sheets: { $ifNull: ['$no_of_sheets', 0] },
+      },
+    },
+  ],
+};
+
+const aggregateInventoryIssuedForFurtherProcessByModule = async ({
+  fromDate,
+  toDate,
+  filters = {},
+}) => {
+  const issuedContextualMatch = buildWastageContextMatch(filters);
+  const summaryByModule = new Map();
+
+  const moduleEntries = Object.entries(INVENTORY_PROCESS_ISSUED_SOURCES);
+  await Promise.all(
+    moduleEntries.map(async ([moduleKey, sources]) => {
+      const sourceRows = await Promise.all(
+        (sources || []).map(async (source) => {
+          const [summary] = await safeAggregate(source.collection, [
+            ...(Array.isArray(source.preMatchPipeline) ? source.preMatchPipeline : []),
+            {
+              $match: combineMatch(
+                dateMatch(source.dateField || 'createdAt', fromDate, toDate),
+                source.baseMatch || null,
+                issuedContextualMatch
+              ),
+            },
+            {
+              $group: {
+                _id: null,
+                sqm: { $sum: source.qtyBreakdown?.sqm || 0 },
+                sheets: { $sum: source.qtyBreakdown?.sheets || 0 },
+                leaves: { $sum: source.qtyBreakdown?.leaves || 0 },
+                rolls: { $sum: source.qtyBreakdown?.rolls || 0 },
+                cmt: { $sum: source.qtyBreakdown?.cmt || 0 },
+                quantity: { $sum: source.qtyBreakdown?.quantity || 0 },
+                units: { $sum: source.qtyBreakdown?.units || 0 },
+              },
+            },
+          ]);
+
+          return summary || {};
+        })
+      );
+
+      const merged = sourceRows.reduce(
+        (acc, row) =>
+          mergeInwardSummaries(acc, {
+            inwardAmount: 0,
+            sqm: Number(row?.sqm || 0),
+            sheets: Number(row?.sheets || 0),
+            leaves: Number(row?.leaves || 0),
+            rolls: Number(row?.rolls || 0),
+            cmt: Number(row?.cmt || 0),
+            quantity: Number(row?.quantity || 0),
+            units: Number(row?.units || 0),
+          }),
+        createEmptyInwardSummary()
+      );
+
+      summaryByModule.set(moduleKey, merged);
+    })
+  );
+
+  return summaryByModule;
+};
+
 const mapPrefixedFields = (fields = [], prefix = '') =>
   fields.map((field) => `${prefix}${field}`);
 
@@ -267,6 +428,8 @@ const buildHistoryInwardBasePipeline = ({
   toDate,
   filters = {},
   sourceSupplierMatch = null,
+  includeMissingItemOnly = true,
+  additionalMatch = null,
 }) => {
   if (!source?.historyCollection) return null;
 
@@ -300,7 +463,7 @@ const buildHistoryInwardBasePipeline = ({
     : sourceSupplierMatch;
 
   const includeMissingItemOnlyMatch =
-    source.historyIncludeWhenItemMissing && hasHistoryItemLookup
+    includeMissingItemOnly && source.historyIncludeWhenItemMissing && hasHistoryItemLookup
       ? { 'history_item_details._id': { $exists: false } }
       : null;
 
@@ -313,7 +476,8 @@ const buildHistoryInwardBasePipeline = ({
       $match: combineMatch(
         historyContextMatch,
         historySupplierMatch,
-        includeMissingItemOnlyMatch
+        includeMissingItemOnlyMatch,
+        additionalMatch
       ),
     },
   ];
@@ -332,6 +496,45 @@ const aggregateInventoryHistoryInwardSummary = async ({
     toDate,
     filters,
     sourceSupplierMatch,
+  });
+  if (!basePipeline) return createEmptyInwardSummary();
+
+  const [summary] = await safeAggregate(source.historyCollection, [
+    ...basePipeline,
+    {
+      $group: {
+        _id: null,
+        inwardAmount: { $sum: source.historyAmountExpr || 0 },
+        sqm: { $sum: source.historyQtyBreakdown?.sqm || 0 },
+        sheets: { $sum: source.historyQtyBreakdown?.sheets || 0 },
+        leaves: { $sum: source.historyQtyBreakdown?.leaves || 0 },
+        rolls: { $sum: source.historyQtyBreakdown?.rolls || 0 },
+        cmt: { $sum: source.historyQtyBreakdown?.cmt || 0 },
+        quantity: { $sum: source.historyQtyBreakdown?.quantity || 0 },
+      },
+    },
+  ]);
+
+  return normalizeInwardSummary(summary);
+};
+
+const aggregateInventoryHistoryIssuedSummary = async ({
+  source,
+  fromDate,
+  toDate,
+  filters = {},
+  sourceSupplierMatch = null,
+}) => {
+  if (!source?.historyCollection) return createEmptyInwardSummary();
+
+  const basePipeline = buildHistoryInwardBasePipeline({
+    source,
+    fromDate,
+    toDate,
+    filters,
+    sourceSupplierMatch,
+    includeMissingItemOnly: false,
+    additionalMatch: { issue_status: { $ne: null } },
   });
   if (!basePipeline) return createEmptyInwardSummary();
 
@@ -385,6 +588,137 @@ const aggregateInventoryHistoryInwardTrendRows = async ({
 };
 
 
+
+const aggregateInventoryExpenseInvoiceSummary = async ({
+  source,
+  fromDate,
+  toDate,
+  contextualMatch = null,
+  sourceSupplierMatch = null,
+  applyDateRange = true,
+}) => {
+  const itemCollection = source?.collection;
+  const invoiceCollection = source?.invoiceCollection;
+
+  if (!itemCollection || !invoiceCollection) {
+    return {
+      expenseAmount: 0,
+      invoiceAmount: 0,
+    };
+  }
+
+  const sourceDateField = source?.dateField || 'createdAt';
+
+  const [summary] = await safeAggregate(itemCollection, [
+    {
+      $match: combineMatch(source.activeMatch, contextualMatch, sourceSupplierMatch),
+    },
+    {
+      $lookup: {
+        from: invoiceCollection,
+        localField: 'invoice_id',
+        foreignField: '_id',
+        as: 'invoice_details',
+      },
+    },
+    {
+      $unwind: {
+        path: '$invoice_details',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $addFields: {
+        effective_inventory_date: {
+          $ifNull: ['$invoice_details.inward_date', `$${sourceDateField}`],
+        },
+      },
+    },
+        ...(applyDateRange
+      ? [
+          {
+            $match: dateMatch('effective_inventory_date', fromDate, toDate),
+          },
+        ]
+      : []),
+    {
+      $addFields: {
+        inward_sr_no_key: { $ifNull: ['$invoice_details.inward_sr_no', null] },
+        item_sr_no_key: {
+          $ifNull: [
+            '$item_sr_no',
+            { $ifNull: ['$log_sr_no', { $ifNull: ['$log_no', null] }] },
+          ],
+        },
+        // Expense amount source: log_inventory_items_details.expense_amount
+        expense_amount_key: { $ifNull: ['$expense_amount', 0] },
+        // Invoice amount source: <module>_inventory_invoice_details.invoice_Details.invoice_value_with_gst
+        // Rounded to 0 decimals first, matching UI-visible per-item invoice values.
+        invoice_amount_key: {
+          $round: [
+            {
+              $ifNull: [
+                '$invoice_details.invoice_Details.invoice_value_with_gst',
+                { $ifNull: ['$invoice_details.invoice_Details.total_item_amount', 0] },
+              ],
+            },
+            0,
+          ],
+        },
+      },
+    },
+    {
+      $facet: {
+        expense: [
+          {
+            $group: {
+              _id: '$_id',
+              expenseAmount: { $max: '$expense_amount_key' },
+            },
+          },
+          {
+            $group: {
+              _id: null,
+              totalExpenseAmount: { $sum: '$expenseAmount' },
+            },
+          },
+        ],
+        invoice: [
+          {
+            $group: {
+              _id: {
+                invoice_id: '$invoice_id',
+                inward_sr_no: '$inward_sr_no_key',
+              },
+              invoiceAmount: { $max: '$invoice_amount_key' },
+            },
+          },
+          {
+            $group: {
+              _id: null,
+              totalInvoiceAmount: { $sum: '$invoiceAmount' },
+            },
+          },
+        ],
+      },
+    },
+    {
+      $project: {
+        totalExpenseAmount: {
+          $ifNull: [{ $arrayElemAt: ['$expense.totalExpenseAmount', 0] }, 0],
+        },
+        totalInvoiceAmount: {
+          $ifNull: [{ $arrayElemAt: ['$invoice.totalInvoiceAmount', 0] }, 0],
+        },
+      },
+    },
+  ]);
+
+  return {
+    expenseAmount: Number(summary?.totalExpenseAmount || 0),
+    invoiceAmount: Number(summary?.totalInvoiceAmount || 0),
+  };
+};
 const aggregateInventoryInwardValue = async ({
   fromDate,
   toDate,
@@ -541,6 +875,11 @@ const aggregateInventorySubModuleCards = async ({
 }) => {
   const contextualMatch = buildInventoryContextMatch(filters);
   const stockSnapshotDate = dayEnd(new Date());
+  const issuedProcessSummaryByModule = await aggregateInventoryIssuedForFurtherProcessByModule({
+    fromDate,
+    toDate,
+    filters,
+  });
 
   const cards = await Promise.all(
     sources.map(async (source) => {
@@ -571,7 +910,14 @@ const aggregateInventorySubModuleCards = async ({
           }
         : `$${sourceDateField}`;
 
-      const [stockSummary, inwardSummary, historyInwardSummary] = await Promise.all([
+      const [
+        stockSummary,
+        inwardSummary,
+        historyInwardSummary,
+        historyIssuedSummary,
+        expenseInvoiceSummary,
+      ] =
+        await Promise.all([
         safeAggregate(source.collection, [
           {
             $match: combineMatch(
@@ -647,9 +993,34 @@ const aggregateInventorySubModuleCards = async ({
           filters,
           sourceSupplierMatch,
         }),
+        aggregateInventoryHistoryIssuedSummary({
+          source,
+          fromDate,
+          toDate,
+          filters,
+          sourceSupplierMatch,
+        }),
+        aggregateInventoryExpenseInvoiceSummary({
+          source,
+          fromDate,
+          toDate,
+          contextualMatch,
+          sourceSupplierMatch,
+        }),
+
       ]);
 
       const combinedInwardSummary = mergeInwardSummaries(inwardSummary, historyInwardSummary);
+      // Avoid double counting: modules with inventory history already record
+      // process/challan issues in history rows, so process-source aggregation
+      // should only supplement modules that do not have history.
+      const processIssuedSummary = source?.historyCollection
+        ? createEmptyInwardSummary()
+        : issuedProcessSummaryByModule.get(source.module) || createEmptyInwardSummary();
+      const combinedIssuedForFurtherProcessSummary = mergeInwardSummaries(
+        historyIssuedSummary,
+        processIssuedSummary
+      );
 
       const roundQuantityByKey = (key, value) => {
         const numericValue = Number(value || 0);
@@ -672,11 +1043,14 @@ const aggregateInventorySubModuleCards = async ({
         module: source.module,
         label: INVENTORY_MODULE_LABELS[source.module] || source.module,
         inward: {
-          amount: round2(combinedInwardSummary?.inwardAmount || 0),
+          amount: round2(
+            Number(expenseInvoiceSummary?.invoiceAmount || 0) +
+              Number(expenseInvoiceSummary?.expenseAmount || 0)
+          ),
           quantities: mapQuantities(combinedInwardSummary),
         },
         issuedForFurtherProcess: {
-          quantities: mapQuantities(historyInwardSummary),
+          quantities: mapQuantities(combinedIssuedForFurtherProcessSummary),
         },
         stockAvailable: {
           amount: round2(stockSummary?.stockAmount || 0),

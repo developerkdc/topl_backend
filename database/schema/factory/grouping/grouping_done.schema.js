@@ -8,13 +8,15 @@ const grouping_done_details_schema = new mongoose.Schema(
     },
     issue_for_grouping_unique_identifier: {
       type: mongoose.Schema.Types.ObjectId,
-      required: [true, 'Issues for smoking unique identifier is required'],
+      default: null,
+      // required: [true, 'Issues for smoking unique identifier is required'],
     },
     issue_for_grouping_pallet_number: {
       type: String,
       uppercase: true,
       trim: true,
-      required: [true, 'Issues for smoking pallet number is required'],
+      default: null,
+      // required: [true, 'Issues for smoking pallet number is required'],
     },
     no_of_workers: {
       type: Number,
@@ -161,7 +163,8 @@ const grouping_done_items_details_schema = new mongoose.Schema(
       type: String,
       trim: true,
       uppercase: true,
-      required: [true, 'pallet_number is required'],
+      default: null,
+      // required: [true, 'pallet_number is required'],
     },
     process_id: {
       type: mongoose.Schema.Types.ObjectId,
@@ -225,13 +228,15 @@ const grouping_done_items_details_schema = new mongoose.Schema(
     },
     grade_id: {
       type: mongoose.Schema.Types.ObjectId,
-      required: [true, 'Grade ID is required'],
+      default: null,
+      // required: [true, 'Grade ID is required'],
     },
     grade_name: {
       type: String,
       uppercase: true,
       trim: true,
-      required: [true, 'Grade Name is required'],
+      default: null,
+      // required: [true, 'Grade Name is required'],
     },
     is_damaged: {
       type: Boolean,

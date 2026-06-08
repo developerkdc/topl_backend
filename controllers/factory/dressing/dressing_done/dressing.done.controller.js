@@ -1581,7 +1581,7 @@ export const create_dressing_items_from_dressing_report = catchAsync(
                 update: {
                   $set: {
                     process_status:
-                      dressing_error_types?.no_of_leaves_missmatch,
+                      dressing_error_types?.no_of_leaves_mismatch,
                     updated_by: userDetails?._id,
                   },
                 },
@@ -1597,7 +1597,7 @@ export const create_dressing_items_from_dressing_report = catchAsync(
                 filter: { _id: item?._id },
                 update: {
                   $set: {
-                    process_status: dressing_error_types?.thickness_missmatch,
+                    process_status: dressing_error_types?.thickness_mismatch,
                     updated_by: userDetails?._id,
                   },
                 },
@@ -1810,7 +1810,7 @@ export const create_dressing_items_from_dressing_report = catchAsync(
                 update: {
                   $set: {
                     process_status:
-                      dressing_error_types?.no_of_leaves_missmatch,
+                      dressing_error_types?.no_of_leaves_mismatch,
                     updated_by: userDetails?._id,
                   },
                 },
@@ -1826,7 +1826,7 @@ export const create_dressing_items_from_dressing_report = catchAsync(
                 filter: { _id: item?._id },
                 update: {
                   $set: {
-                    process_status: dressing_error_types?.thickness_missmatch,
+                    process_status: dressing_error_types?.thickness_mismatch,
                     updated_by: userDetails?._id,
                   },
                 },
