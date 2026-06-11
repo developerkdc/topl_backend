@@ -1,8 +1,8 @@
 function getCompanyName() {
     const startYear = 2016;
     const currentYear = new Date().getFullYear().toString().slice(-2);
-    // return `TURAKHIA OVERSEAS PVT.LTD. (${startYear}-${currentYear})`;
-    return "Natural Veneers"
+    return `TURAKHIA OVERSEAS PVT.LTD. (${startYear}-${currentYear})`;
+    // return "Natural Veneers"
 }
 export function CustomerJSONtoXML(customer) {
     const escape = (str) =>

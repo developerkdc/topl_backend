@@ -199,8 +199,8 @@ export function DispatchJSONtoXML(dispatch) {
 
     const startYear = 2016;
     const currentYear = new Date().getFullYear().toString().slice(-2);
-    // const companyName = `TURAKHIA OVRSEAS PVT.LTD. (${startYear}-${currentYear})`;
-    const companyName = "Natural Veneers"
+    const companyName = `TURAKHIA OVRSEAS PVT.LTD. (${startYear}-${currentYear})`;
+    // const companyName = "Natural Veneers"
     const declaration = `<?xml version="1.0" encoding="UTF-8"?>`;
     const xml = `
     ${declaration}

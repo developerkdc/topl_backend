@@ -35,11 +35,11 @@ export function ChallanJSONtoXML(challan) {
 
     const startYear = 2016;
     const currentYear = new Date().getFullYear().toString().slice(-2);
-    // const companyName = `TURAKHIA OVRSEAS PVT.LTD. (${startYear}-${currentYear})`;
-    const companyName = "Natural Veneers"
+    const companyName = `TURAKHIA OVRSEAS PVT.LTD. (${startYear}-${currentYear})`;
+    // const companyName = "Natural Veneers"
 
     const items = challan.issue_for_challan_item_details || [];
-    console.log("Raw Items Array:", items);
+    // console.log("Raw Items Array:", items);
     const qty = Number(challan.total_sqm || 0);
     const inventoryXML = challan.issue_for_challan_item_details
         .map((row) => {
