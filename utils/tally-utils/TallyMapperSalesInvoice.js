@@ -30,6 +30,7 @@ export function DispatchJSONtoXML(dispatch) {
     const narration = escape(
         `Invoice ${dispatch.invoice_no}`
     );
+    const DEFAULT_GODOWN = "Main Location";
 
     const freight_charges = Number(dispatch.freight_details.freight_amount || 0);
     const other_charges = Number(dispatch.other_amount_details.other_charges || 0);
@@ -85,6 +86,15 @@ export function DispatchJSONtoXML(dispatch) {
 
   <RATE>${rate.toFixed(2)}/${unit}</RATE>
   <AMOUNT>${amount.toFixed(2)}</AMOUNT>
+
+ <BATCHALLOCATIONS.LIST>
+        <GODOWNNAME>${DEFAULT_GODOWN}</GODOWNNAME>
+        <BATCHNAME>Primary Batch</BATCHNAME>
+        <DESTINATIONGODOWNNAME>${DEFAULT_GODOWN}</DESTINATIONGODOWNNAME>
+        <AMOUNT>${amount.toFixed(2)}</AMOUNT>
+        <ACTUALQTY>${qty} ${unit}</ACTUALQTY>
+        <BILLEDQTY>${qty} ${unit}</BILLEDQTY>
+    </BATCHALLOCATIONS.LIST>
 
   <ACCOUNTINGALLOCATIONS.LIST>
     <LEDGERNAME>${ledgerType}</LEDGERNAME>
@@ -189,8 +199,8 @@ export function DispatchJSONtoXML(dispatch) {
 
     const startYear = 2016;
     const currentYear = new Date().getFullYear().toString().slice(-2);
-    const companyName = `THRAKHIA OVRSEAS PVT.LTD. (${startYear}-${currentYear})`;
-
+    // const companyName = `TURAKHIA OVRSEAS PVT.LTD. (${startYear}-${currentYear})`;
+    const companyName = "Natural Veneers"
     const declaration = `<?xml version="1.0" encoding="UTF-8"?>`;
     const xml = `
     ${declaration}

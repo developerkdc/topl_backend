@@ -35,7 +35,8 @@ export function ChallanJSONtoXML(challan) {
 
     const startYear = 2016;
     const currentYear = new Date().getFullYear().toString().slice(-2);
-    const companyName = `THRAKHIA OVRSEAS PVT.LTD. (${startYear}-${currentYear})`;
+    // const companyName = `TURAKHIA OVRSEAS PVT.LTD. (${startYear}-${currentYear})`;
+    const companyName = "Natural Veneers"
 
     const items = challan.issue_for_challan_item_details || [];
     console.log("Raw Items Array:", items);

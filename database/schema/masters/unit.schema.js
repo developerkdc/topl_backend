@@ -32,6 +32,11 @@ const UnitSchema = new mongoose.Schema({
     enum: ['active', 'inactive'],
     default: 'active',
   },
+  tally_sync_status: {
+    type: String,
+    enum: ['PENDING', 'SUCCESSFUL', 'FAILED'],
+    default: 'PENDING',
+  },
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now },
   deleted_at: { type: Date, default: null },

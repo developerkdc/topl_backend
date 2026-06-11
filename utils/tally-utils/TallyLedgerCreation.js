@@ -1,7 +1,8 @@
 function getCompanyName() {
     const startYear = 2016;
     const currentYear = new Date().getFullYear().toString().slice(-2);
-    return `THRAKHIA OVRSEAS PVT.LTD. (${startYear}-${currentYear})`;
+    // return `TURAKHIA OVERSEAS PVT.LTD. (${startYear}-${currentYear})`;
+    return "Natural Veneers"
 }
 export function CustomerJSONtoXML(customer) {
     const escape = (str) =>
@@ -110,7 +111,7 @@ export function StockItemJSONtoXML(stockItem) {
     const sgstRate = gstRate / 2;
 
     const companyName = getCompanyName();
-
+    const baseUnit = escape(stockItem.calculate_unit || "NOS");
     // If tally_name exists, use it to identify/alter the existing ledger; otherwise create a new one using company_name
     const ledgerIdentifier = stockItem.tally_item_name || stockItem.category;
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -148,7 +149,7 @@ export function StockItemJSONtoXML(stockItem) {
             <EXCISEAPPLICABILITY>&#4; Not Applicable</EXCISEAPPLICABILITY>
             <COSTINGMETHOD>Avg. Cost</COSTINGMETHOD>
             <VALUATIONMETHOD>Avg. Price</VALUATIONMETHOD>
-            <BASEUNITS>&#4; Not Applicable</BASEUNITS>
+            <BASEUNITS>${baseUnit}</BASEUNITS>
             <ADDITIONALUNITS>&#4; Not Applicable</ADDITIONALUNITS>
             <EXCISEITEMCLASSIFICATION>&#4; Not Applicable</EXCISEITEMCLASSIFICATION>
 
@@ -255,3 +256,41 @@ export function StockItemJSONtoXML(stockItem) {
     return xml;
 }
 
+export function UnitJSONtoXML(unit) {
+    const escape = (str) =>
+        String(str || "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&apos;");
+
+    const company_name = getCompanyName();
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<ENVELOPE>
+  <HEADER>
+    <TALLYREQUEST>Import Data</TALLYREQUEST>
+  </HEADER>
+  <BODY>
+    <IMPORTDATA>
+      <REQUESTDESC>
+        <REPORTNAME>All Masters</REPORTNAME>
+        <STATICVARIABLES>
+          <SVCURRENTCOMPANY>${company_name}</SVCURRENTCOMPANY>
+        </STATICVARIABLES>
+      </REQUESTDESC>
+      <REQUESTDATA>
+        <TALLYMESSAGE xmlns:UDF="TallyUDF">
+            <UNIT NAME="${escape(unit.unit_symbolic_name)}" ACTION="CreateOrAlter">
+        <NAME>${escape(unit.unit_symbolic_name)}</NAME>
+        <ISSIMPLEUNIT>Yes</ISSIMPLEUNIT>
+        <ISDELETED>No</ISDELETED>
+        </UNIT>
+        </TALLYMESSAGE>
+      </REQUESTDATA>
+    </IMPORTDATA>
+  </BODY>
+</ENVELOPE>`
+
+    return xml;
+}
