@@ -90,6 +90,10 @@ const cnc_done_schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Transporter ID is required.'],
     },
+    is_part_b: {
+      type: Boolean,
+      default: false,
+    },
     vehicle_name: {
       type: String,
       uppercase: true,
