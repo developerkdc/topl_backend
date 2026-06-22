@@ -319,6 +319,7 @@ export const update_plywood_production_done = catchAsync(async (req, res) => {
             width: plywood_production_details?.width,
             thickness: plywood_production_details?.thickness,
             no_of_sheets: plywood_production_details?.no_of_sheets,
+            plywood_production_date: plywood_production_details?.plywood_production_date,
             total_sqm: plywood_production_details?.total_sqm,
             amount: plywood_production_details?.amount,
             available_sheets: plywood_production_details?.available_sheets,
@@ -446,8 +447,8 @@ export const update_plywood_production_done = catchAsync(async (req, res) => {
           available_sqm: { $gte: item.issued_sqm },
           available_amount: { $gte: item.issued_amount },
         })
-        .session(session)
-        .lean()
+          .session(session)
+          .lean()
       )
     );
 
@@ -464,8 +465,8 @@ export const update_plywood_production_done = catchAsync(async (req, res) => {
           available_sqm: { $gte: item.issued_sqm },
           available_amount: { $gte: item.issued_amount },
         })
-        .session(session)
-        .lean()
+          .session(session)
+          .lean()
       )
     );
 
@@ -825,6 +826,7 @@ export const add_to_damage_from_plywood_production_done = catchAsync(
             width: plywood_production_data?.width,
             thickness: plywood_production_data?.thickness,
             no_of_sheets: plywood_production_data?.no_of_sheets,
+            plywood_production_date: plywood_production_data?.plywood_production_date,
             total_sqm: plywood_production_data?.total_sqm,
             plywood_production_id: plywood_production_data?._id,
             damage_sheets: damage_sheets,

@@ -30,6 +30,10 @@ const plywood_production_history_schema = new mongoose.Schema(
       type: Number,
       required: [true, 'Issued sheets are required.'],
     },
+    plywood_production_date: {
+      type: Date,
+      required: [true, 'Plywood Production Date is required'],
+    },
     issued_sqm: {
       type: Number,
       required: [true, 'Issued SQM are required.'],

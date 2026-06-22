@@ -2,6 +2,12 @@ import mongoose from 'mongoose';
 import UnitModel from '../../database/schema/masters/unit.schema.js';
 import catchAsync from '../../utils/errors/catchAsync.js';
 import { DynamicSearch } from '../../utils/dynamicSearch/dynamic.js';
+import { UnitJSONtoXML } from '../../utils/tally-utils/TallyLedgerCreation.js';
+import { XMLParser } from 'fast-xml-parser';
+import { sendToTally } from '../../utils/tally-utils/TallyService.js';
+import { StatusCodes } from '../../utils/constants.js';
+import ApiResponse from '../../utils/ApiResponse.js';
+
 
 export const AddUnitMaster = catchAsync(async (req, res) => {
   const authUserDetail = req.userDetails;
@@ -11,11 +17,26 @@ export const AddUnitMaster = catchAsync(async (req, res) => {
   };
   const newUnitList = new UnitModel(unitData);
   const savedUnit = await newUnitList.save();
-  return res.status(201).json({
-    result: savedUnit,
-    status: true,
-    message: 'Unit created successfully',
-  });
+
+  let tallyResponse = null;
+
+  try {
+    tallyResponse = await create_unit_helper(savedUnit._id);
+  } catch (err) {
+    console.error("Tally sync failed manually update item to sync it to tally:", savedUnit._id, err.message);
+    tallyResponse = err.message;
+  }
+
+  return res.json(
+    new ApiResponse(
+      StatusCodes.OK,
+      'Unit created successfully',
+      {
+        savedUnit,
+        tallyResponse
+      }
+    )
+  );
 });
 
 export const UpdateUnitMaster = catchAsync(async (req, res) => {
@@ -38,11 +59,21 @@ export const UpdateUnitMaster = catchAsync(async (req, res) => {
       message: 'Unit not found.',
     });
   }
-  res.status(200).json({
-    result: unit,
-    status: true,
-    message: 'Updated successfully',
-  });
+
+  let tallyResponse = null;
+
+  try {
+    tallyResponse = await create_unit_helper(unit._id);
+  } catch (err) {
+    console.error("Tally sync failed manually update unit to sync it to tally:", unit._id, err.message);
+    tallyResponse = err.message;
+  }
+
+  return res.json(
+    new ApiResponse(StatusCodes.OK, 'unit updated successfully', {
+      tallyResponse
+    })
+  );
 });
 
 export const ListUnitMaster = catchAsync(async (req, res) => {
@@ -153,4 +184,77 @@ export const DropdownUnitMaster = catchAsync(async (req, res) => {
     status: true,
     message: 'Unit Dropdown List',
   });
+});
+
+// add tally item name
+export const create_unit_helper = async (itemId) => {
+  const pipeline = [
+    { $match: { _id: mongoose.Types.ObjectId.createFromHexString(itemId.toString()) } },
+    {
+      $lookup: {
+        from: 'units',
+        localField: '_id',
+        foreignField: '_id',
+        as: 'unit_details',
+      },
+    },
+    { $unwind: { path: '$unit_details', preserveNullAndEmptyArrays: true } },
+  ];
+
+  const result = await UnitModel.aggregate(pipeline);
+  const item = result[0];
+  if (!item) throw new Error(`Item not found: ${itemId}`);
+  // console.log("res: ", item);
+  const xml = UnitJSONtoXML(item);
+  // console.log("xml: ", xml);
+  if (!xml) throw new Error("XML generation failed");
+
+  const response = await sendToTally(xml);
+  if (response.includes("<ERRORS>0</ERRORS>")) {
+    await UnitModel.findByIdAndUpdate(itemId, {
+      tally_unit_name: item.unit_name,
+    });
+  }
+
+  const parser = new XMLParser();
+  const parsed = parser.parse(response);
+  const msg = parsed?.message ||
+    parsed?.RESPONSE ||
+    parsed?.ENVELOPE?.BODY?.IMPORTDATA?.RESPONSE ||
+    parsed?.ENVELOPE?.BODY?.DATA?.IMPORTDATA?.RESPONSE ||
+    {};
+
+  const isSuccess = msg?.CREATED > 0 || msg?.ALTERED > 0;
+
+  await UnitModel.findByIdAndUpdate(
+    itemId,
+    {
+      $set: {
+        tally_sync_status: isSuccess ? "SUCCESSFUL" : "FAILED",
+      },
+    },
+    { new: true }
+  );
+
+  return parsed.RESPONSE || parsed.ENVELOPE?.BODY?.DATA?.IMPORTDATA?.RESPONSE || parsed;
+};
+
+// retry api for tally item name
+export const create_unit = catchAsync(async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ error: "Invalid ID" });
+    }
+
+    const response = await create_unit_helper(id);
+
+    res.status(200).json({
+      success: true,
+      message: "Invoice pushed to Tally",
+      response,
+    });
+  } catch (err) {
+    next(err);
+  }
 });

@@ -4119,18 +4119,30 @@ export const dispatch_tally = catchAsync(async (req, res, next) => {
       return it;
     });
 
+    const unitNames = dispatch.dispatch_items_details.map(i => i.calculate_unit).filter(Boolean);
+    const units = await UnitModel.find({ unit_name: { $in: unitNames } }).lean();
+    const unitMap = {};
+    units.forEach(u => { unitMap[u.unit_name] = u.unit_symbolic_name; });
+    dispatch.dispatch_items_details = dispatch.dispatch_items_details.map(item => ({
+      ...item,
+      calculate_unit: unitMap[item.calculate_unit] || item.calculate_unit,
+    }));
+
     const xml = DispatchJSONtoXML(dispatch);
-    console.log("stuff: ", dispatch);
+    // console.log("xml: ", xml);
+    // console.log("stuff: ", dispatch);
     if (!xml)
       return res.status(500).json({ error: "XML generation failed" });
 
     const response = await sendToTally(xml);
+    // console.log("Raw Tally Response:", response);
     const parser = new XMLParser();
     const parsed = parser.parse(response);
 
     const msg = parsed?.message ||
       parsed?.RESPONSE ||
-      parsed?.ENVELOPE?.BODY?.DATA?.IMPORTDATA?.RESPONSE ||
+      parsed?.ENVELOPE?.BODY?.IMPORTDATA?.RESPONSE ||
+      parsed?.ENVELOPE?.BODY?.DATA?.IMPORTDATA?.RESPONSE || // Keep as fallback
       {};
 
     // Transform Tally error messages for better readability
@@ -4162,9 +4174,9 @@ export const dispatch_tally = catchAsync(async (req, res, next) => {
       },
       { new: true }
     );
-    res.status(200).json({
-      success: true,
-      message: "Invoice pushed to Tally",
+    res.status(isSuccess ? 200 : 400).json({
+      success: isSuccess,
+      message: isSuccess ? "Invoice pushed to Tally" : (msg?.LINEERROR || "Failed to push to Tally"),
       tallyResponse: msg,
     });
   } catch (err) {
