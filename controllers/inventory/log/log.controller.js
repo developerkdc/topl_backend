@@ -715,6 +715,7 @@ export const add_issue_for_crosscutting = catchAsync(async (req, res, next) => {
     {
       $set: {
         issue_status: issues_for_status.crosscutting,
+        issued_date: req.body.issued_date,
       },
     }
   );
@@ -738,6 +739,7 @@ export const add_issue_for_crosscutting = catchAsync(async (req, res, next) => {
     data.issued_from = issues_for_status.log;
     data.log_inventory_item_id = _id;
     data.created_by = created_by;
+    data.issued_date = req.body.issued_date;
     return data;
   });
 
@@ -752,6 +754,7 @@ export const add_issue_for_crosscutting = catchAsync(async (req, res, next) => {
       {
         $set: {
           isEditable: false,
+          issued_date: req.body?.issued_date,
         },
       }
     );
@@ -779,6 +782,7 @@ export const add_issue_for_flitching = catchAsync(async (req, res, next) => {
     {
       $set: {
         issue_status: issues_for_status.flitching,
+        issued_date: req.body.issued_date,
       },
     }
   );
@@ -823,6 +827,7 @@ export const add_issue_for_flitching = catchAsync(async (req, res, next) => {
       issued_from: issues_for_status.log,
       remark: data?.remark,
       invoice_id: data?.invoice_id,
+      issued_date: req.body?.issued_date,
       color: {
         color_id: data?.color?.color_id,
         color_name: data?.color?.color_name,
@@ -842,6 +847,7 @@ export const add_issue_for_flitching = catchAsync(async (req, res, next) => {
       {
         $set: {
           isEditable: false,
+          issued_date: req.body?.issued_date,
         },
       }
     );

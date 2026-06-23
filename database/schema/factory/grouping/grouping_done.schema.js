@@ -46,6 +46,10 @@ const grouping_done_details_schema = new mongoose.Schema(
       trim: true,
       uppercase: true,
     },
+    issued_date: {
+      type: Date,
+      default: null,
+    },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Created By Id is required'],

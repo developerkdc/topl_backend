@@ -16,7 +16,7 @@ import issue_for_order_model from '../../../../../database/schema/order/issue_fo
 import plywood_history_model from '../../../../../database/schema/inventory/Plywood/plywood.history.schema.js';
 
 export const add_issue_for_order = catchAsync(async (req, res) => {
-  const { order_item_id, plywood_item_details } = req.body;
+  const { order_item_id, plywood_item_details, issued_date } = req.body;
   const userDetails = req.userDetails;
   const session = await mongoose.startSession();
   if (!isValidObjectId(order_item_id)) {
@@ -72,7 +72,7 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
     if (
       Number(
         validate_sqm_for_order?.total_sheets +
-          Number(plywood_item_details?.issued_sheets)
+        Number(plywood_item_details?.issued_sheets)
       ) > order_item_data?.no_of_sheet
     ) {
       throw new ApiError(
@@ -188,6 +188,7 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
             issued_sheets: issued_sheets_for_order,
             issued_sqm: issued_sqm_for_order,
             issued_amount: issued_amount_for_order,
+            issued_date: issued_date,
             created_by: userDetails?._id,
             updated_by: userDetails?._id,
           },

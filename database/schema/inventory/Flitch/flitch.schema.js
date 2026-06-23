@@ -142,6 +142,10 @@ export const item_details_schema = new mongoose.Schema(
       },
       default: null,
     },
+    issued_date: {
+      type: Date,
+      default: null,
+    },
     remark: {
       type: String,
       default: null,

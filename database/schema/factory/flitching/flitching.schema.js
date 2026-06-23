@@ -177,6 +177,10 @@ const flitchingSchema = new mongoose.Schema(
       },
       default: null,
     },
+    issued_date: {
+      type: Date,
+      default: null,
+    },
     isEditable: {
       type: Boolean,
       default: true,

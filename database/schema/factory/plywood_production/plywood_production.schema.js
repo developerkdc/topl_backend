@@ -176,6 +176,10 @@ const plywood_production_consumed_items_schema = new mongoose.Schema(
       type: Number,
       required: [true, 'Available SQM is required'],
     },
+    issued_date: {
+      type: Date,
+      default: null,
+    },
     grade_name: {
       type: String,
       required: [true, 'Grade name is required'],

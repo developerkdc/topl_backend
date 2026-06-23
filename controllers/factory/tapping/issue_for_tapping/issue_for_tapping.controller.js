@@ -24,7 +24,7 @@ export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(
     try {
       const userDetails = req.userDetails;
       const { grouping_done_item_id } = req.params;
-      const { issued_for, issue_no_of_sheets } = req.body;
+      const { issued_for, issue_no_of_sheets, issued_date } = req.body;
       if (
         !grouping_done_item_id ||
         !mongoose.isValidObjectId(grouping_done_item_id)
@@ -106,6 +106,7 @@ export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(
         series_name: data?.series_name,
         grade_id: data?.grade_id,
         grade_name: data?.grade_name,
+        issued_date: issued_date,
         remark: data?.remark,
       };
 
@@ -121,6 +122,7 @@ export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(
         amount: tapping_amount,
         created_by: userDetails?._id,
         updated_by: userDetails?._id,
+        issued_date: issued_date,
       };
 
       const insert_issue_for_tapping = await issue_for_tapping_model.create(
@@ -172,6 +174,7 @@ export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(
           {
             $set: {
               updated_by: userDetails?._id,
+              issued_date: issued_date,
             },
             $inc: {
               'available_details.no_of_sheets':
@@ -206,6 +209,7 @@ export const issue_for_tapping_from_grouping_for_stock_and_sample = catchAsync(
             $set: {
               isEditable: false,
               updated_by: userDetails?._id,
+              issued_date: issued_date,
             },
           },
           { runValidators: true, session }

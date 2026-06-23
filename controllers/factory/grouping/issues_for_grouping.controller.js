@@ -33,7 +33,7 @@ export const issue_for_grouping_from_veneer_inventory = catchAsync(
     session.startTransaction();
     try {
       const userDetails = req.userDetails;
-      const { veneer_inventory_item_ids } = req.body;
+      const { veneer_inventory_item_ids, issued_date } = req.body;
       if (
         !veneer_inventory_item_ids ||
         (Array.isArray(veneer_inventory_item_ids) &&
@@ -102,6 +102,7 @@ export const issue_for_grouping_from_veneer_inventory = catchAsync(
             amount: e?.amount,
             issued_from: issues_for_status?.veneer,
             remark: e?.remark,
+            issued_date: issued_date,
             created_by: userDetails?._id,
             updated_by: userDetails?._id,
           };
@@ -134,6 +135,7 @@ export const issue_for_grouping_from_veneer_inventory = catchAsync(
         {
           $set: {
             issue_status: issues_for_status.grouping,
+            issued_date: issued_date,
             updated_by: userDetails?._id,
           },
         },
@@ -210,7 +212,7 @@ export const issue_for_grouping_from_smoking_dying_done = catchAsync(
     try {
       const userDetails = req.userDetails;
       const { process_done_id } = req.params;
-      const { process_done_items_ids } = req.body;
+      const { process_done_items_ids, issued_date } = req.body;
       if (!process_done_id) {
         throw new ApiError(
           'process_done_id is required',
@@ -286,6 +288,7 @@ export const issue_for_grouping_from_smoking_dying_done = catchAsync(
             cut_name: e?.cut_name,
             issued_from: issues_for_status?.smoking_dying,
             remark: e?.remark,
+            issued_date: issued_date,
             created_by: userDetails?._id,
             updated_by: userDetails?._id,
           };
@@ -314,6 +317,7 @@ export const issue_for_grouping_from_smoking_dying_done = catchAsync(
             $set: {
               isEditable: false,
               updated_by: userDetails?._id,
+              issued_date: issued_date,
             },
           },
           { session }
@@ -347,6 +351,7 @@ export const issue_for_grouping_from_smoking_dying_done = catchAsync(
           {
             $set: {
               issue_status: issues_for_status.grouping,
+              issued_date: issued_date,
               updated_by: userDetails?._id,
             },
           },
@@ -375,6 +380,7 @@ export const issue_for_grouping_from_smoking_dying_done = catchAsync(
           {
             process_done_id: process_done_id,
             bundles: process_done_items_id_from_issue_for_grouping,
+            issued_date: issued_date,
             created_by: userDetails?._id,
             updated_by: userDetails?._id,
           },
@@ -412,7 +418,7 @@ export const issue_for_grouping_from_dressing_done = catchAsync(
     try {
       const userDetails = req.userDetails;
       const { dressing_done_id } = req.params;
-      const { dressing_done_items_ids } = req.body;
+      const { dressing_done_items_ids, issued_date } = req.body;
       if (!dressing_done_id) {
         throw new ApiError(
           'dressing_done_id is required',
@@ -488,6 +494,7 @@ export const issue_for_grouping_from_dressing_done = catchAsync(
             remark: e?.remark,
             created_by: userDetails?._id,
             updated_by: userDetails?._id,
+            issued_date: issued_date,
           };
         }
       );
@@ -514,6 +521,7 @@ export const issue_for_grouping_from_dressing_done = catchAsync(
             $set: {
               isEditable: false,
               updated_by: userDetails?._id,
+              issued_date: issued_date,
             },
           },
           { session }
@@ -547,6 +555,7 @@ export const issue_for_grouping_from_dressing_done = catchAsync(
           {
             $set: {
               issue_status: issues_for_status.grouping,
+              issued_date: issued_date,
               updated_by: userDetails?._id,
             },
           },
@@ -575,6 +584,7 @@ export const issue_for_grouping_from_dressing_done = catchAsync(
           {
             dressing_done_other_details_id: dressing_done_id,
             bundles: dressing_done_items_id_from_issue_for_grouping,
+            issued_date: issued_date,
             created_by: userDetails?._id,
             updated_by: userDetails?._id,
           },
