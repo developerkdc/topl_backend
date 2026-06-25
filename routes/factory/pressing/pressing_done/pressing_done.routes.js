@@ -6,6 +6,7 @@ import {
   fetch_all_pressing_done_items,
   fetch_all_pressing_done_items_history,
   fetch_pressing_done_consumed_item_details,
+  fetch_reserved_orders_for_item,
   revert_pressing_done_details,
 } from '../../../../controllers/factory/pressing/pressing_done/pressing_done.controller.js';
 import { bulk_upload_pressing_done } from '../../../../controllers/factory/pressing/pressing_done/pressing_done_bulk_upload.controller.js';
@@ -57,6 +58,11 @@ pressing_done_router.post(
   '/bulk-upload-pressing-done',
   AuthMiddleware,
   bulk_upload_pressing_done
+);
+
+pressing_done_router.get(
+  '/fetch-reserved-orders-for-item/:id',
+  fetch_reserved_orders_for_item
 );
 
 export default pressing_done_router;

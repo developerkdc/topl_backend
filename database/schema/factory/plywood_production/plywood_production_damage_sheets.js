@@ -67,6 +67,10 @@ const plywood_production_damage_schema = new mongoose.Schema(
     updated_by: {
       type: mongoose.Schema.Types.ObjectId,
     },
+    issued_date: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true }
 );
