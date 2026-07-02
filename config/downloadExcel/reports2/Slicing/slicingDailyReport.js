@@ -35,6 +35,8 @@ const groupRows = (rows) => {
         flitch_cmt: 0,
         rej_cmt: 0,
         leaves: 0,
+        amount: 0,
+        expense_amount: 0,
       };
     }
     const cmt = Number(r.cmt) || 0;
@@ -50,6 +52,8 @@ const groupRows = (rows) => {
       height: r.height,
       cmt,
       leaves,
+      amount: Number(r.amount) || 0,
+      expense_amount: Number(r.expense_amount) || 0,
       sq_mtr: 0,
       rej_height: r.rej_height,
       rej_width: r.rej_width,
@@ -65,6 +69,8 @@ const groupRows = (rows) => {
       seenSessionCmt[sessionKey] = true;
       byItem[itemName].flitch_cmt += cmt;
       byItem[itemName].rej_cmt += rejCmt;
+      byItem[itemName].amount += Number(r.amount) || 0;
+      byItem[itemName].expense_amount += Number(r.expense_amount) || 0;
     }
   });
 
@@ -87,7 +93,7 @@ const setCellStyle = (cell, bold = false) => {
  * - Rejection Details (Rej. Height, Rej. Width, Rej. CMT, Remarks) + Total Rej. CMT
  * - Summary (Item name, Flitch CMT, Rej. CMT, Slice CMT, Leaves) + Total
  */
-const GenerateSlicingDailyReport = async (rows, reportDate) => {
+const GenerateSlicingDailyReport = async (rows, reportDate, includeCostAndExpense) => {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Slicing Details Report');
 
@@ -118,6 +124,7 @@ const GenerateSlicingDailyReport = async (rows, reportDate) => {
     'CMT',
     'Leaves',
     'Sq Mtr',
+    ...(includeCostAndExpense ? ['Amount', 'Expense Amount'] : []),
   ];
   const rejHeaders = ['Rej. Height', 'Rej. Width', 'Rej. CMT', 'Remarks'];
   const mainColCount = mainHeaders.length;
@@ -145,6 +152,8 @@ const GenerateSlicingDailyReport = async (rows, reportDate) => {
   let grandFlitchCmt = 0;
   let grandRejCmt = 0;
   let grandLeaves = 0;
+  let grandAmount = 0;
+  let grandExpenseAmount = 0;
 
   itemNames.forEach((itemName) => {
     const itemData = byItem[itemName];
@@ -154,6 +163,8 @@ const GenerateSlicingDailyReport = async (rows, reportDate) => {
     let totalLeaves = 0;
     let totalSqMtr = 0;
     let totalRejCmt = 0;
+    let totalAmount = 0;
+    let totalExpenseAmount = 0;
 
     itemRows.forEach((r, idx) => {
       const row = worksheet.getRow(currentRow);
@@ -170,6 +181,10 @@ const GenerateSlicingDailyReport = async (rows, reportDate) => {
       row.getCell(rejStartCol + 1).value = r.rej_width;
       row.getCell(rejStartCol + 2).value = r.rej_cmt;
       row.getCell(rejStartCol + 3).value = r.remarks;
+      if (includeCostAndExpense) {
+        row.getCell(10).value = r.amount;
+        row.getCell(11).value = r.expense_amount;
+      }
 
       [3, 4, 5, 6, 7, 8, 9, rejStartCol, rejStartCol + 1, rejStartCol + 2].forEach((col) => {
         const c = row.getCell(col);
@@ -180,6 +195,8 @@ const GenerateSlicingDailyReport = async (rows, reportDate) => {
       totalLeaves += r.leaves;
       totalSqMtr += r.sq_mtr;
       totalRejCmt += r.rej_cmt;
+      totalAmount += r.amount;
+      totalExpenseAmount += r.expense_amount;
       currentRow++;
     });
 
@@ -199,6 +216,14 @@ const GenerateSlicingDailyReport = async (rows, reportDate) => {
     totalRow.getCell(rejStartCol + 2).value = totalRejCmt;
     totalRow.getCell(rejStartCol + 2).font = { bold: true };
     totalRow.getCell(rejStartCol + 2).numFmt = '0.000';
+    if (includeCostAndExpense) {
+      totalRow.getCell(10).value = totalAmount;
+      totalRow.getCell(10).font = { bold: true };
+      totalRow.getCell(10).numFmt = '0.000';
+      totalRow.getCell(11).value = totalExpenseAmount;
+      totalRow.getCell(11).font = { bold: true };
+      totalRow.getCell(11).numFmt = '0.000';
+    }
     for (let col = 1; col <= mainColCount + rejHeaders.length; col++) {
       const cell = totalRow.getCell(col);
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8E8E8' } };
@@ -209,11 +234,13 @@ const GenerateSlicingDailyReport = async (rows, reportDate) => {
     grandFlitchCmt += itemData.flitch_cmt;
     grandRejCmt += itemData.rej_cmt;
     grandLeaves += itemData.leaves;
+    grandAmount += itemData.amount;
+    grandExpenseAmount += itemData.expense_amount;
   });
 
   // Summary section (Item-wise)
   currentRow += 2;
-  const summaryHeaders = ['Item name', 'Flitch CMT', 'Rej. CMT', 'Slice CMT', 'Leaves'];
+  const summaryHeaders = ['Item name', 'Flitch CMT', 'Rej. CMT', 'Slice CMT', 'Leaves', ...(includeCostAndExpense ? ['Amount', 'Expense Amount'] : [])];
   const summaryRow = worksheet.getRow(currentRow);
   summaryHeaders.forEach((h, i) => {
     const cell = summaryRow.getCell(i + 1);
@@ -234,6 +261,10 @@ const GenerateSlicingDailyReport = async (rows, reportDate) => {
     row.getCell(3).value = itemData.rej_cmt;
     row.getCell(4).value = sliceCmt;
     row.getCell(5).value = itemData.leaves;
+    if (includeCostAndExpense) {
+      row.getCell(6).value = itemData.amount;
+      row.getCell(7).value = itemData.expense_amount;
+    }
     [2, 3, 4, 5].forEach((col) => {
       const c = row.getCell(col);
       if (typeof c.value === 'number') c.numFmt = '0.000';
@@ -248,6 +279,10 @@ const GenerateSlicingDailyReport = async (rows, reportDate) => {
   summaryTotalRow.getCell(3).value = grandRejCmt;
   summaryTotalRow.getCell(4).value = grandFlitchCmt - grandRejCmt;
   summaryTotalRow.getCell(5).value = grandLeaves;
+  if (includeCostAndExpense) {
+    summaryTotalRow.getCell(6).value = grandAmount;
+    summaryTotalRow.getCell(7).value = grandExpenseAmount;
+  }
   summaryTotalRow.font = { bold: true };
   [2, 3, 4, 5].forEach((col) => {
     const c = summaryTotalRow.getCell(col);

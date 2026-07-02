@@ -17,7 +17,7 @@ import { GenerateTappingStockRegisterExcel } from '../../../../config/downloadEx
  * @route POST /api/V1/report/download-excel-tapping-stock-register
  */
 export const TappingStockRegisterExcel = catchAsync(async (req, res, next) => {
-  const { startDate, endDate } = req.body;
+  const { startDate, endDate, includeCostAndExpense } = req.body;
 
   if (!startDate || !endDate) {
     return next(new ApiError('Start date and end date are required', 400));
@@ -60,6 +60,8 @@ export const TappingStockRegisterExcel = catchAsync(async (req, res, next) => {
             _id: {
               item_sub_category_name: '$item_sub_category_name',
               item_name: '$item_name',
+              amount: '$amount',
+              expense_amount: '$expense_amount'
             },
           },
         },
@@ -74,6 +76,8 @@ export const TappingStockRegisterExcel = catchAsync(async (req, res, next) => {
             _id: {
               item_sub_category_name: '$item_sub_category_name',
               item_name: '$item_name',
+              amount: '$amount',
+              expense_amount: '$expense_amount'
             },
           },
         },
@@ -147,7 +151,7 @@ export const TappingStockRegisterExcel = catchAsync(async (req, res, next) => {
         // currentAvailable: sum available_details.sqm
         tapping_done_items_details_model.aggregate([
           { $match: matchItem },
-          { $group: { _id: null, total: { $sum: '$available_details.sqm' } } },
+          { $group: { _id: null, total: { $sum: '$available_details.sqm' }, amount: { $sum: '$amount' }, expense_amount: { $sum: '$expense_amount' } } },
         ]),
 
         // tappingHand: received in period via hand splicing
@@ -168,7 +172,7 @@ export const TappingStockRegisterExcel = catchAsync(async (req, res, next) => {
               'session.splicing_type': { $in: ['HAND', 'HAND SPLICING'] },
             },
           },
-          { $group: { _id: null, total: { $sum: '$sqm' } } },
+          { $group: { _id: null, total: { $sum: '$sqm' }, amount: { $sum: '$amount' }, expense_amount: { $sum: '$expense_amount' } } },
         ]),
 
         // tappingMachine: received in period via machine splicing
@@ -189,7 +193,7 @@ export const TappingStockRegisterExcel = catchAsync(async (req, res, next) => {
               'session.splicing_type': { $in: ['MACHINE', 'MACHINE SPLICING'] },
             },
           },
-          { $group: { _id: null, total: { $sum: '$sqm' } } },
+          { $group: { _id: null, total: { $sum: '$sqm' }, amount: { $sum: '$amount' }, expense_amount: { $sum: '$expense_amount' } } },
         ]),
 
         // issuePressing: from tapping_done_history in period — exclude order+RAW (those go to Sales)
@@ -210,7 +214,7 @@ export const TappingStockRegisterExcel = catchAsync(async (req, res, next) => {
               ],
             },
           },
-          { $group: { _id: null, total: { $sum: '$sqm' } } },
+          { $group: { _id: null, total: { $sum: '$sqm' }, amount: { $sum: '$amount' }, expense_amount: { $sum: '$expense_amount' } } },
         ]),
 
         // sales: from tapping_done_history — order + RAW only
@@ -223,7 +227,7 @@ export const TappingStockRegisterExcel = catchAsync(async (req, res, next) => {
               order_category: 'RAW',
             },
           },
-          { $group: { _id: null, total: { $sum: '$sqm' } } },
+          { $group: { _id: null, total: { $sum: '$sqm' }, amount: { $sum: '$amount' }, expense_amount: { $sum: '$expense_amount' } } },
         ]),
 
         // processWaste: from issue_for_tapping_wastage in period (joined to issue_for_tappings for item)
@@ -244,7 +248,7 @@ export const TappingStockRegisterExcel = catchAsync(async (req, res, next) => {
               'issueFor.item_name': item_name,
             },
           },
-          { $group: { _id: null, total: { $sum: '$sqm' } } },
+          { $group: { _id: null, total: { $sum: '$sqm' }, amount: { $sum: '$amount' }, expense_amount: { $sum: '$expense_amount' } } },
         ]),
       ]);
 
@@ -255,6 +259,20 @@ export const TappingStockRegisterExcel = catchAsync(async (req, res, next) => {
       const issuePressing = issuePressingResult[0]?.total ?? 0;
       const sales = salesResult[0]?.total ?? 0;
       const processWaste = processWasteResult[0]?.total ?? 0;
+
+      const currentAmount = currentResult[0]?.amount ?? 0;
+      const currentExpenseAmount = currentResult[0]?.expense_amount ?? 0;
+      const tappingHandAmount = tappingHandResult[0]?.amount ?? 0;
+      const tappingMachineAmount = tappingMachineResult[0]?.amount ?? 0;
+      const issuePressingAmount = issuePressingResult[0]?.amount ?? 0;
+      const processWasteAmount = processWasteResult[0]?.amount ?? 0;
+      const salesAmount = salesResult[0]?.amount ?? 0;
+
+      const tappingHandExpense = tappingHandResult[0]?.expense_amount ?? 0;
+      const tappingMachineExpense = tappingMachineResult[0]?.expense_amount ?? 0;
+      const issuePressingExpense = issuePressingResult[0]?.expense_amount ?? 0;
+      const processWasteExpense = processWasteResult[0]?.expense_amount ?? 0;
+      const salesExpense = salesResult[0]?.expense_amount ?? 0;
 
       // Opening = currentAvailable + (issuePressing + sales) − tappingReceived (min 0)
       const openingBalance = Math.max(
@@ -267,6 +285,26 @@ export const TappingStockRegisterExcel = catchAsync(async (req, res, next) => {
         openingBalance + tappingReceived - issuePressing - processWaste - sales
       );
 
+      const tappingReceivedAmount =
+        tappingHandAmount + tappingMachineAmount;
+
+      const tappingReceivedExpenseAmount =
+        tappingHandExpense + tappingMachineExpense;
+
+      const openingBalanceAmount = Math.max(
+        0,
+        currentAmount - tappingReceivedAmount
+      );
+
+      const openingBalanceExpenseAmount = Math.max(
+        0,
+        currentExpenseAmount - tappingReceivedExpenseAmount
+      );
+
+      const closingBalanceAmount = currentAmount;
+
+      const closingBalanceExpenseAmount = currentExpenseAmount;
+
       return {
         item_name: item_sub_category_name,
         sales_item_name: item_name,
@@ -277,6 +315,20 @@ export const TappingStockRegisterExcel = catchAsync(async (req, res, next) => {
         process_waste: processWaste,
         sales,
         closing_balance: closingBalance,
+        opening_balance_amount: openingBalanceAmount,
+        opening_balance_expense_amount: openingBalanceExpenseAmount,
+        closing_balance_amount: closingBalanceAmount,
+        closing_balance_expense_amount: closingBalanceExpenseAmount,
+        tapping_hand_amount: tappingHandAmount,
+        tapping_hand_expense_amount: tappingHandExpense,
+        tapping_machine_amount: tappingMachineAmount,
+        tapping_machine_expense_amount: tappingMachineExpense,
+        issue_pressing_amount: issuePressingAmount,
+        issue_pressing_expense_amount: issuePressingExpense,
+        process_waste_amount: processWasteAmount,
+        process_waste_expense_amount: processWasteExpense,
+        sales_amount: salesAmount,
+        sales_expense_amount: salesExpense,
       };
     })
   );
@@ -305,7 +357,8 @@ export const TappingStockRegisterExcel = catchAsync(async (req, res, next) => {
   const excelLink = await GenerateTappingStockRegisterExcel(
     activeRows,
     startDate,
-    endDate
+    endDate,
+    includeCostAndExpense
   );
 
   return res.json(

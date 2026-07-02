@@ -5,7 +5,7 @@ import { log_inventory_items_model } from '../../../database/schema/inventory/lo
 import { issues_for_crosscutting_model } from '../../../database/schema/factory/crossCutting/issuedForCutting.schema.js';
 import { issues_for_flitching_model } from '../../../database/schema/factory/flitching/issuedForFlitching.schema.js';
 import { issues_for_peeling_model } from '../../../database/schema/factory/peeling/issues_for_peeling/issues_for_peeling.schema.js';
-import { peeling_done_other_details_model } from '../../../database/schema/factory/peeling/peeling_done/peeling_done.schema.js';
+import { peeling_done_other_details_model, peeling_done_items_model } from '../../../database/schema/factory/peeling/peeling_done/peeling_done.schema.js';
 import { crosscutting_done_model } from '../../../database/schema/factory/crossCutting/crosscutting.schema.js';
 import { rejected_crosscutting_model } from '../../../database/schema/factory/crossCutting/rejectedCrosscutting.schema.js';
 import { flitching_done_model } from '../../../database/schema/factory/flitching/flitching.schema.js';
@@ -15,389 +15,26 @@ import { createItemWiseInwardReportExcel } from '../../../config/downloadExcel/r
 /**
  * Item Wise Inward Daily Report Export
  * Generates a comprehensive CSV/Excel report tracking complete journey of logs
- * from inward receipt through crosscutting, flitching, peeling, and sales
- * 
+ * from inward receipt through crosscutting, flitching, peeling, and sales.
+ * Now includes Amount (cost) and Expense Amount tracking at every stage:
+ * Round Log, Cross Cut, Flitch, Peeling, Sales, Job Work Challan, Rejected.
+ *
  * @route POST /api/V1/report/download-excel-item-wise-inward-daily-report
  * @access Private
  */
-// export const ItemWiseInwardDailyReportExcel = catchAsync(async (req, res, next) => {
-//   const { startDate, endDate, filter = {} } = req.body;
-
-//   console.log('Item Wise Inward Report Request - Start Date:', startDate);
-//   console.log('Item Wise Inward Report Request - End Date:', endDate);
-//   console.log('Item Wise Inward Report Request - Filter:', filter);
-
-//   // Validate required parameters
-//   if (!startDate || !endDate) {
-//     return next(new ApiError('Start date and end date are required', 400));
-//   }
-
-//   // Parse dates
-//   const start = new Date(startDate);
-//   const end = new Date(endDate);
-//   end.setHours(23, 59, 59, 999); // Include full end date
-
-//   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-//     return next(new ApiError('Invalid date format. Use YYYY-MM-DD', 400));
-//   }
-
-//   if (start > end) {
-//     return next(new ApiError('Start date cannot be after end date', 400));
-//   }
-
-//   // Build filter for item_name if provided
-//   const itemFilter = {};
-//   if (filter.item_name) {
-//     itemFilter.item_name = filter.item_name;
-//   }
-
-//   try {
-//     // Step 1: Get all unique item names from log inventory
-//     const allItemNames = await log_inventory_items_model.aggregate([
-//       {
-//         $match: itemFilter,
-//       },
-//       {
-//         $group: {
-//           _id: '$item_name',
-//         },
-//       },
-//     ]);
-
-//     const itemNames = allItemNames.map((i) => i._id).filter((name) => name);
-
-//     if (itemNames.length === 0) {
-//       return res
-//         .status(404)
-//         .json(
-//           new ApiResponse(
-//             404,
-//             'No stock data found for the selected period'
-//           )
-//         );
-//     }
-
-//     // Step 2: For each item name, calculate stock movements
-//     const stockData = await Promise.all(
-//       itemNames.map(async (item_name) => {
-//         // Get current available CMT from log_inventory (where issue_status = null)
-//         const currentLogCmt = await log_inventory_items_model.aggregate([
-//           {
-//             $match: {
-//               item_name,
-//               $or: [{ issue_status: null }, { issue_status: { $exists: false } }],
-//             },
-//           },
-//           {
-//             $group: {
-//               _id: null,
-//               total_cmt: { $sum: '$physical_cmt' },
-//             },
-//           },
-//         ]);
-
-//         // Get current available CMT from crosscutting_done (where issue_status = null)
-//         const currentCrosscutCmt = await crosscutting_done_model.aggregate([
-//           {
-//             $match: {
-//               item_name,
-//               $or: [{ issue_status: null }, { issue_status: { $exists: false } }],
-//             },
-//           },
-//           {
-//             $group: {
-//               _id: null,
-//               total_cmt: { $sum: '$crosscut_cmt' },
-//             },
-//           },
-//         ]);
-
-//         // Get current available CMT from flitching_done (where issue_status = null)
-//         const currentFlitchCmt = await flitching_done_model.aggregate([
-//           {
-//             $match: {
-//               item_name,
-//               deleted_at: null,
-//               $or: [{ issue_status: null }, { issue_status: { $exists: false } }],
-//             },
-//           },
-//           {
-//             $group: {
-//               _id: null,
-//               total_cmt: { $sum: '$flitch_cmt' },
-//             },
-//           },
-//         ]);
-
-//         const currentAvailableCmt =
-//           (currentLogCmt[0]?.total_cmt || 0) +
-//           (currentCrosscutCmt[0]?.total_cmt || 0) +
-//           (currentFlitchCmt[0]?.total_cmt || 0);
-
-//         // ROUND LOG DETAILS - Logs received during period (Invoice/Indian/Actual CMT)
-//         const logsReceived = await log_inventory_items_model.aggregate([
-//           {
-//             $match: {
-//               item_name,
-//             },
-//           },
-//           {
-//             $lookup: {
-//               from: 'log_inventory_invoice_details',
-//               localField: 'invoice_id',
-//               foreignField: '_id',
-//               as: 'invoice',
-//             },
-//           },
-//           {
-//             $unwind: '$invoice',
-//           },
-//           {
-//             $match: {
-//               'invoice.inward_date': { $gte: start, $lte: end },
-//             },
-//           },
-//           {
-//             $group: {
-//               _id: null,
-//               invoice_cmt: { $sum: '$invoice_cmt' },
-//               indian_cmt: { $sum: '$indian_cmt' },
-//               actual_cmt: { $sum: '$physical_cmt' },
-//             },
-//           },
-//         ]);
-
-//         const invoiceCmt = logsReceived[0]?.invoice_cmt || 0;
-//         const indianCmt = logsReceived[0]?.indian_cmt || 0;
-//         const actualCmt = logsReceived[0]?.actual_cmt || 0;
-
-//         // CROSS CUT DETAILS - Issue for CC
-//         const issuedForCC = await log_inventory_items_model.aggregate([
-//           {
-//             $match: {
-//               item_name,
-//               issue_status: 'crosscutting',
-//               updatedAt: { $gte: start, $lte: end },
-//             },
-//           },
-//           {
-//             $group: {
-//               _id: null,
-//               total_cmt: { $sum: '$physical_cmt' },
-//             },
-//           },
-//         ]);
-
-//         const issueForCc = issuedForCC[0]?.total_cmt || 0;
-
-//         // CC Received - Crosscutting completed during period
-//         const ccReceived = await crosscutting_done_model.aggregate([
-//           {
-//             $match: {
-//               item_name,
-//               createdAt: { $gte: start, $lte: end },
-//             },
-//           },
-//           {
-//             $group: {
-//               _id: null,
-//               total_cmt: { $sum: '$crosscut_cmt' },
-//             },
-//           },
-//         ]);
-
-//         const ccReceivedCmt = ccReceived[0]?.total_cmt || 0;
-//         const diffCmt = issueForCc - ccReceivedCmt;
-
-//         // FLITCHING - Crosscut items issued for flitching
-//         const flitchingIssued = await crosscutting_done_model.aggregate([
-//           {
-//             $match: {
-//               item_name,
-//               issue_status: 'flitching',
-//               updatedAt: { $gte: start, $lte: end },
-//             },
-//           },
-//           {
-//             $group: {
-//               _id: null,
-//               total_cmt: { $sum: '$crosscut_cmt' },
-//             },
-//           },
-//         ]);
-
-//         const flitchingCmt = flitchingIssued[0]?.total_cmt || 0;
-
-//         // PEEL - Crosscut items issued for peeling
-//         const peelingIssued = await crosscutting_done_model.aggregate([
-//           {
-//             $match: {
-//               item_name,
-//               issue_status: 'peeling',
-//               updatedAt: { $gte: start, $lte: end },
-//             },
-//           },
-//           {
-//             $group: {
-//               _id: null,
-//               total_cmt: { $sum: '$crosscut_cmt' },
-//             },
-//           },
-//         ]);
-
-//         const peelCmt = peelingIssued[0]?.total_cmt || 0;
-
-//         // SALES - Items issued to orders/challan from logs
-//         const logSales = await log_inventory_items_model.aggregate([
-//           {
-//             $match: {
-//               item_name,
-//               issue_status: { $in: ['order', 'challan'] },
-//               updatedAt: { $gte: start, $lte: end },
-//             },
-//           },
-//           {
-//             $group: {
-//               _id: null,
-//               total_cmt: { $sum: '$physical_cmt' },
-//             },
-//           },
-//         ]);
-
-//         // Sales from crosscut items
-//         const crosscutSales = await crosscutting_done_model.aggregate([
-//           {
-//             $match: {
-//               item_name,
-//               issue_status: { $in: ['order', 'challan'] },
-//               updatedAt: { $gte: start, $lte: end },
-//             },
-//           },
-//           {
-//             $group: {
-//               _id: null,
-//               total_cmt: { $sum: '$crosscut_cmt' },
-//             },
-//           },
-//         ]);
-
-//         // Sales from flitch items
-//         const flitchSales = await flitching_done_model.aggregate([
-//           {
-//             $match: {
-//               item_name,
-//               deleted_at: null,
-//               issue_status: { $in: ['order', 'challan'] },
-//               updatedAt: { $gte: start, $lte: end },
-//             },
-//           },
-//           {
-//             $group: {
-//               _id: null,
-//               total_cmt: { $sum: '$flitch_cmt' },
-//             },
-//           },
-//         ]);
-
-//         const salesCmt =
-//           (logSales[0]?.total_cmt || 0) +
-//           (crosscutSales[0]?.total_cmt || 0) +
-//           (flitchSales[0]?.total_cmt || 0);
-
-//         // Calculate total issued during period (for opening calculation)
-//         const totalIssuedCmt = issueForCc + salesCmt;
-
-//         // Calculate total received during period (for opening calculation)
-//         const totalReceivedCmt = actualCmt + ccReceivedCmt;
-
-//         // Opening Balance = Current Available + Issued - Received
-//         const openingBalanceCmt = currentAvailableCmt + totalIssuedCmt - totalReceivedCmt;
-
-//         // Closing Balance = Opening + Actual Received - Issue for CC + CC Received - Flitching - Peel - Sales
-//         const closingBalanceCmt = openingBalanceCmt + actualCmt - issueForCc + ccReceivedCmt - flitchingCmt - peelCmt - salesCmt;
-
-//         return {
-//           item_name,
-//           opening_stock_cmt: Math.max(0, openingBalanceCmt),
-//           invoice_cmt: invoiceCmt,
-//           indian_cmt: indianCmt,
-//           actual_cmt: actualCmt,
-//           issue_for_cc: issueForCc,
-//           cc_received: ccReceivedCmt,
-//           diff: diffCmt,
-//           flitching: flitchingCmt,
-//           sawing: 0, // Placeholder - needs clarification
-//           wooden_tile: 0, // Placeholder - needs clarification
-//           unedge: 0, // Placeholder - needs clarification
-//           peel: peelCmt,
-//           sales: salesCmt,
-//           closing_stock_cmt: Math.max(0, closingBalanceCmt),
-//         };
-//       })
-//     );
-
-//     // Filter out items with no activity (all zeros)
-//     const activeStockData = stockData.filter(
-//       (item) =>
-//         item.opening_stock_cmt > 0 ||
-//         item.invoice_cmt > 0 ||
-//         item.indian_cmt > 0 ||
-//         item.actual_cmt > 0 ||
-//         item.issue_for_cc > 0 ||
-//         item.cc_received > 0 ||
-//         item.flitching > 0 ||
-//         item.peel > 0 ||
-//         item.sales > 0 ||
-//         item.closing_stock_cmt > 0
-//     );
-
-//     if (activeStockData.length === 0) {
-//       return res
-//         .status(404)
-//         .json(
-//           new ApiResponse(
-//             404,
-//             'No stock data found for the selected period'
-//           )
-//         );
-//     }
-
-//     // Generate Excel file
-//     const excelLink = await createItemWiseInwardReportExcel(
-//       activeStockData,
-//       startDate,
-//       endDate,
-//       filter
-//     );
-
-//     return res.json(
-//       new ApiResponse(
-//         200,
-//         'Item wise inward report generated successfully',
-//         excelLink
-//       )
-//     );
-//   } catch (error) {
-//     console.error('Error generating item wise inward report:', error);
-//     return next(
-//       new ApiError(error.message || 'Failed to generate report', 500)
-//     );
-//   }
-// });
-
 export const ItemWiseInwardDailyReportExcel = catchAsync(async (req, res, next) => {
-  const { startDate, endDate, filter = {} } = req.body;
+  const { startDate, endDate, filter = {}, includeCostAndExpense } = req.body;
 
   console.log('Item Wise Inward Report Request - Start Date:', startDate);
   console.log('Item Wise Inward Report Request - End Date:', endDate);
   console.log('Item Wise Inward Report Request - Filter:', filter);
+  console.log('Item Wise Inward Report Request - Include Cost and Expense:', includeCostAndExpense);
 
   if (!startDate || !endDate) {
     return next(new ApiError('Start date and end date are required', 400));
   }
 
   const start = new Date(startDate);
-  console.log('Parsed Start Date:', start);
   const end = new Date(endDate);
   end.setHours(23, 59, 59, 999);
 
@@ -415,7 +52,6 @@ export const ItemWiseInwardDailyReportExcel = catchAsync(async (req, res, next) 
   }
 
   try {
-
     /*********************************************************
      STEP 1: Get all unique items
     *********************************************************/
@@ -424,8 +60,8 @@ export const ItemWiseInwardDailyReportExcel = catchAsync(async (req, res, next) 
       {
         $group: {
           _id: {
-            item_id: "$item_id",
-            item_name: "$item_name",
+            item_id: '$item_id',
+            item_name: '$item_name',
           },
         },
       },
@@ -434,13 +70,57 @@ export const ItemWiseInwardDailyReportExcel = catchAsync(async (req, res, next) 
     if (!allItems.length) {
       return res
         .status(404)
-        .json(new ApiResponse(404, "No stock data found for the selected period"));
+        .json(new ApiResponse(404, 'No stock data found for the selected period'));
     }
 
     /*********************************************************
      STEP 2: Helper Map
+     Each field now has a *_cost and *_expense sibling where relevant.
     *********************************************************/
     const reportMap = new Map();
+
+    const FIELD_DEFAULTS = {
+      issue_for_cc: 0,
+      cc_issued: 0,
+      cc_received: 0,
+      flitch_issued: 0,
+      flitch_received: 0,
+      peeling_issued: 0,
+      peeling_received: 0,
+      invoice_cmt: 0,
+      indian_cmt: 0,
+      actual_cmt: 0,
+      sales: 0,
+      rejected: 0,
+      recover_from_rejected: 0,
+      issue_for_sqedge: 0,
+      job_work_challan: 0,
+
+      // Amount fields (cost + expense) per stage
+      amount: 0, // round log cost amount (received)
+      amount_expense: 0, // round log expense amount (received)
+
+      cc_received_cost: 0,
+      cc_received_expense: 0,
+
+      flitch_received_cost: 0,
+      flitch_received_expense: 0,
+
+      peeling_received_cost: 0,
+      peeling_received_expense: 0,
+
+      peeling_issued_cost: 0,
+      peeling_issued_expense: 0,
+
+      sales_cost: 0,
+      sales_expense: 0,
+
+      job_work_challan_cost: 0,
+      job_work_challan_expense: 0,
+
+      rejected_cost: 0,
+      rejected_expense: 0,
+    };
 
     const addValue = (item_id, item_name, field, value) => {
       const key = `${item_id}_${item_name}`;
@@ -448,23 +128,7 @@ export const ItemWiseInwardDailyReportExcel = catchAsync(async (req, res, next) 
       const existing = reportMap.get(key) || {
         item_id,
         item_name,
-        issue_for_cc: 0,
-        cc_issued: 0,
-        cc_received: 0,
-        flitch_issued: 0,
-        flitch_received: 0,
-        peeling_issued: 0,
-        peeling_received: 0,
-        // added fields for receipts
-        invoice_cmt: 0,
-        indian_cmt: 0,
-        actual_cmt: 0,
-        sales: 0,
-        rejected: 0,
-        // placeholders for new columns
-        recover_from_rejected: 0,
-        issue_for_sqedge: 0,
-        job_work_challan: 0,
+        ...FIELD_DEFAULTS,
       };
 
       existing[field] += value || 0;
@@ -472,8 +136,7 @@ export const ItemWiseInwardDailyReportExcel = catchAsync(async (req, res, next) 
     };
 
     /*********************************************************
-     STEP 3: Current Available CMT (closing balance) – for formula: Opening = Closing + Issued - Received
-     Sum of: round logs (issue_status=null) + crosscut (issue_status=null) + flitch (issue_status=null)
+     STEP 3: Current Available CMT (closing balance)
     *********************************************************/
     const [currentLogAgg, currentCrosscutAgg, currentFlitchAgg] = await Promise.all([
       log_inventory_items_model.aggregate([
@@ -534,67 +197,92 @@ export const ItemWiseInwardDailyReportExcel = catchAsync(async (req, res, next) 
     });
 
     /*********************************************************
-     STEP 3a: Received logs (invoice/indian/actual) during period
+     STEP 3a: Received logs (invoice/indian/actual/amount/expense) during period
     *********************************************************/
     const logsReceivedAgg = await log_inventory_items_model.aggregate([
       { $match: { ...itemFilter } },
       {
         $lookup: {
-          from: "log_inventory_invoice_details",
-          localField: "invoice_id",
-          foreignField: "_id",
-          as: "invoice",
+          from: 'log_inventory_invoice_details',
+          localField: 'invoice_id',
+          foreignField: '_id',
+          as: 'invoice',
         },
       },
-      { $unwind: "$invoice" },
-      { $match: { "invoice.inward_date": { $gte: start, $lte: end } } },
+      { $unwind: '$invoice' },
+      { $match: { 'invoice.inward_date': { $gte: start, $lte: end } } },
       {
         $group: {
-          _id: { item_id: "$item_id", item_name: "$item_name" },
-          invoice_cmt: { $sum: "$invoice_cmt" },
-          indian_cmt: { $sum: "$indian_cmt" },
-          actual_cmt: { $sum: "$physical_cmt" },
+          _id: { item_id: '$item_id', item_name: '$item_name' },
+          invoice_cmt: { $sum: '$invoice_cmt' },
+          indian_cmt: { $sum: '$indian_cmt' },
+          actual_cmt: { $sum: '$physical_cmt' },
+          amount: { $sum: '$amount' },
+          amount_expense: { $sum: '$expense_amount' },
         },
       },
     ]);
 
+    /*********************************************************
+     STEP 3b: Current Available Amount (closing balance for amount)
+    *********************************************************/
     logsReceivedAgg.forEach((r) => {
-      addValue(r._id.item_id, r._id.item_name, "invoice_cmt", r.invoice_cmt);
-      addValue(r._id.item_id, r._id.item_name, "indian_cmt", r.indian_cmt);
-      addValue(r._id.item_id, r._id.item_name, "actual_cmt", r.actual_cmt);
+      addValue(r._id.item_id, r._id.item_name, 'invoice_cmt', r.invoice_cmt);
+      addValue(r._id.item_id, r._id.item_name, 'indian_cmt', r.indian_cmt);
+      addValue(r._id.item_id, r._id.item_name, 'actual_cmt', r.actual_cmt);
+      addValue(r._id.item_id, r._id.item_name, 'amount', r.amount);
+      addValue(r._id.item_id, r._id.item_name, 'amount_expense', r.amount_expense);
+    });
+
+    const currentAmountAgg = await log_inventory_items_model.aggregate([
+      {
+        $match: {
+          ...itemFilter,
+          $or: [{ issue_status: null }, { issue_status: { $exists: false } }],
+        },
+      },
+      {
+        $group: {
+          _id: { item_id: '$item_id', item_name: '$item_name' },
+          total_amount: { $sum: '$amount' },
+          total_expense: { $sum: '$expense_amount' },
+        },
+      },
+    ]);
+
+    const currentAmountMap = new Map();
+    const currentExpenseMap = new Map();
+    currentAmountAgg.forEach((r) => {
+      const key = `${r._id.item_id}_${r._id.item_name}`;
+      currentAmountMap.set(key, r.total_amount || 0);
+      currentExpenseMap.set(key, r.total_expense || 0);
     });
 
     /*********************************************************
-     STEP 4: Issue for Crosscut (IMPORTANT FIX)
-    *********************************************************/
-
-    /*********************************************************
-     STEP 4: Issue for Crosscut (IMPORTANT FIX)
+     STEP 4: Issue for Crosscut
     *********************************************************/
     const issueForCcAgg = await log_inventory_items_model.aggregate([
       {
         $match: {
           createdAt: { $gte: start, $lte: end },
-          issue_status: "crosscutting",
+          issue_status: 'crosscutting',
           ...itemFilter,
         },
       },
       {
         $group: {
-          _id: { item_id: "$item_id", item_name: "$item_name" },
-          total: { $sum: "$physical_cmt" },
+          _id: { item_id: '$item_id', item_name: '$item_name' },
+          total: { $sum: '$physical_cmt' },
         },
       },
     ]);
 
     issueForCcAgg.forEach((r) =>
-      addValue(r._id.item_id, r._id.item_name, "issue_for_cc", r.total)
+      addValue(r._id.item_id, r._id.item_name, 'issue_for_cc', r.total)
     );
 
     /*********************************************************
-     STEP 5: Crosscut Issued – use crosscutting_done records that have been
-     forwarded (issue_status not null). this reflects the amount issued ahead
-     from the crosscutting stage rather than the original issue request.
+     STEP 5: Crosscut Issued (forwarded onward)
     *********************************************************/
     const ccIssuedAgg = await crosscutting_done_model.aggregate([
       {
@@ -606,18 +294,18 @@ export const ItemWiseInwardDailyReportExcel = catchAsync(async (req, res, next) 
       },
       {
         $group: {
-          _id: { item_id: "$item_id", item_name: "$item_name" },
-          total: { $sum: "$crosscut_cmt" },
+          _id: { item_id: '$item_id', item_name: '$item_name' },
+          total: { $sum: '$crosscut_cmt' },
         },
       },
     ]);
 
     ccIssuedAgg.forEach((r) =>
-      addValue(r._id.item_id, r._id.item_name, "cc_issued", r.total)
+      addValue(r._id.item_id, r._id.item_name, 'cc_issued', r.total)
     );
 
     /*********************************************************
-     STEP 6: Crosscut Received
+     STEP 6: Crosscut Received (+ cost + expense)
     *********************************************************/
     const ccReceivedAgg = await crosscutting_done_model.aggregate([
       {
@@ -628,15 +316,19 @@ export const ItemWiseInwardDailyReportExcel = catchAsync(async (req, res, next) 
       },
       {
         $group: {
-          _id: { item_id: "$item_id", item_name: "$item_name" },
-          total: { $sum: "$crosscut_cmt" },
+          _id: { item_id: '$item_id', item_name: '$item_name' },
+          total: { $sum: '$crosscut_cmt' },
+          total_cost: { $sum: '$cost_amount' },
+          total_expense: { $sum: '$expense_amount' },
         },
       },
     ]);
 
-    ccReceivedAgg.forEach((r) =>
-      addValue(r._id.item_id, r._id.item_name, "cc_received", r.total)
-    );
+    ccReceivedAgg.forEach((r) => {
+      addValue(r._id.item_id, r._id.item_name, 'cc_received', r.total);
+      addValue(r._id.item_id, r._id.item_name, 'cc_received_cost', r.total_cost);
+      addValue(r._id.item_id, r._id.item_name, 'cc_received_expense', r.total_expense);
+    });
 
     /*********************************************************
      STEP 7: Flitch Issued
@@ -650,37 +342,42 @@ export const ItemWiseInwardDailyReportExcel = catchAsync(async (req, res, next) 
       },
       {
         $group: {
-          _id: { item_id: "$item_id", item_name: "$item_name" },
-          total: { $sum: "$cmt" },
+          _id: { item_id: '$item_id', item_name: '$item_name' },
+          total: { $sum: '$cmt' },
         },
       },
     ]);
 
     flitchIssuedAgg.forEach((r) =>
-      addValue(r._id.item_id, r._id.item_name, "flitch_issued", r.total)
+      addValue(r._id.item_id, r._id.item_name, 'flitch_issued', r.total)
     );
 
     /*********************************************************
-     STEP 8: Flitch Received
+     STEP 8: Flitch Received (+ cost + expense)
     *********************************************************/
     const flitchReceivedAgg = await flitching_done_model.aggregate([
       {
         $match: {
           createdAt: { $gte: start, $lte: end },
+          deleted_at: null,
           ...itemFilter,
         },
       },
       {
         $group: {
-          _id: { item_id: "$item_id", item_name: "$item_name" },
-          total: { $sum: "$flitch_cmt" },
+          _id: { item_id: '$item_id', item_name: '$item_name' },
+          total: { $sum: '$flitch_cmt' },
+          total_cost: { $sum: '$cost_amount' },
+          total_expense: { $sum: '$expense_amount' },
         },
       },
     ]);
 
-    flitchReceivedAgg.forEach((r) =>
-      addValue(r._id.item_id, r._id.item_name, "flitch_received", r.total)
-    );
+    flitchReceivedAgg.forEach((r) => {
+      addValue(r._id.item_id, r._id.item_name, 'flitch_received', r.total);
+      addValue(r._id.item_id, r._id.item_name, 'flitch_received_cost', r.total_cost);
+      addValue(r._id.item_id, r._id.item_name, 'flitch_received_expense', r.total_expense);
+    });
 
     /*********************************************************
      STEP 9: Peeling Issued
@@ -694,19 +391,24 @@ export const ItemWiseInwardDailyReportExcel = catchAsync(async (req, res, next) 
       },
       {
         $group: {
-          _id: { item_id: "$item_id", item_name: "$item_name" },
-          total: { $sum: "$cmt" },
+          _id: { item_id: '$item_id', item_name: '$item_name' },
+          total: { $sum: '$cmt' },
+          total_cost: { $sum: '$amount' },          // cost at issue time
+          total_expense: { $sum: '$expense_amount' }, // expense at issue time
         },
       },
     ]);
 
-    peelingIssuedAgg.forEach((r) =>
-      addValue(r._id.item_id, r._id.item_name, "peeling_issued", r.total)
-    );
+    peelingIssuedAgg.forEach((r) => {
+      addValue(r._id.item_id, r._id.item_name, 'peeling_issued', r.total);
+      addValue(r._id.item_id, r._id.item_name, 'peeling_issued_cost', r.total_cost);
+      addValue(r._id.item_id, r._id.item_name, 'peeling_issued_expense', r.total_expense);
+    });
 
     /*********************************************************
-     STEP 10: Peeling Received – from peeling_done_other_details.total_cmt
-     Allocate total_cmt to items proportionally when a record has multiple items
+     STEP 10: Peeling Received (CMT, allocated proportionally)
+     + Peeling cost/expense (summed directly from peeling_done_items_model,
+       which is already itemized per item_name_id / item_name — no allocation needed)
     *********************************************************/
     const peelingReceivedAgg = await peeling_done_other_details_model.aggregate([
       {
@@ -722,93 +424,157 @@ export const ItemWiseInwardDailyReportExcel = catchAsync(async (req, res, next) 
       },
       {
         $addFields: {
-          itemsSum: { $sum: "$items.cmt" },
+          itemsSum: { $sum: '$items.cmt' },
         },
       },
-      { $unwind: "$items" },
+      { $unwind: '$items' },
 
       ...(filter.item_name
-        ? [{ $match: { "items.item_name": filter.item_name } }]
+        ? [{ $match: { 'items.item_name': filter.item_name } }]
         : []),
 
       {
         $addFields: {
           itemShare: {
             $cond: [
-              { $eq: ["$itemsSum", 0] },
+              { $eq: ['$itemsSum', 0] },
               0,
-              { $divide: ["$items.cmt", "$itemsSum"] },
+              { $divide: ['$items.cmt', '$itemsSum'] },
             ],
           },
         },
       },
       {
         $addFields: {
-          allocatedCmt: { $multiply: ["$total_cmt", "$itemShare"] },
+          allocatedCmt: { $multiply: ['$total_cmt', '$itemShare'] },
         },
       },
       {
         $group: {
           _id: {
-            item_id: "$items.item_name_id",
-            item_name: "$items.item_name",
+            item_id: '$items.item_name_id',
+            item_name: '$items.item_name',
           },
-          total: { $sum: "$allocatedCmt" },
+          total: { $sum: '$allocatedCmt' },
         },
       },
     ]);
 
     peelingReceivedAgg.forEach((r) =>
-      addValue(r._id.item_id, r._id.item_name, "peeling_received", r.total)
+      addValue(r._id.item_id, r._id.item_name, 'peeling_received', r.total)
     );
 
     /*********************************************************
      STEP 10a: Sales (order only) and Job Work Challan (challan only)
+     Now also tracks cost (cost_amount/amount) and expense_amount per source.
     *********************************************************/
     const [logOrderAgg, logChallanAgg] = await Promise.all([
       log_inventory_items_model.aggregate([
         { $match: { createdAt: { $gte: start, $lte: end }, issue_status: 'order', ...itemFilter } },
-        { $group: { _id: { item_id: '$item_id', item_name: '$item_name' }, total: { $sum: '$physical_cmt' } } },
+        {
+          $group: {
+            _id: { item_id: '$item_id', item_name: '$item_name' },
+            total: { $sum: '$physical_cmt' },
+            total_cost: { $sum: '$amount' },
+            total_expense: { $sum: '$expense_amount' },
+          },
+        },
       ]),
       log_inventory_items_model.aggregate([
         { $match: { createdAt: { $gte: start, $lte: end }, issue_status: 'challan', ...itemFilter } },
-        { $group: { _id: { item_id: '$item_id', item_name: '$item_name' }, total: { $sum: '$physical_cmt' } } },
+        {
+          $group: {
+            _id: { item_id: '$item_id', item_name: '$item_name' },
+            total: { $sum: '$physical_cmt' },
+            total_cost: { $sum: '$amount' },
+            total_expense: { $sum: '$expense_amount' },
+          },
+        },
       ]),
     ]);
-    logOrderAgg.forEach((r) => addValue(r._id.item_id, r._id.item_name, 'sales', r.total));
-    logChallanAgg.forEach((r) => addValue(r._id.item_id, r._id.item_name, 'job_work_challan', r.total));
+    logOrderAgg.forEach((r) => {
+      addValue(r._id.item_id, r._id.item_name, 'sales', r.total);
+      addValue(r._id.item_id, r._id.item_name, 'sales_cost', r.total_cost);
+      addValue(r._id.item_id, r._id.item_name, 'sales_expense', r.total_expense);
+    });
+    logChallanAgg.forEach((r) => {
+      addValue(r._id.item_id, r._id.item_name, 'job_work_challan', r.total);
+      addValue(r._id.item_id, r._id.item_name, 'job_work_challan_cost', r.total_cost);
+      addValue(r._id.item_id, r._id.item_name, 'job_work_challan_expense', r.total_expense);
+    });
 
     const [crosscutOrderAgg, crosscutChallanAgg] = await Promise.all([
       crosscutting_done_model.aggregate([
         { $match: { createdAt: { $gte: start, $lte: end }, issue_status: 'order', ...itemFilter } },
-        { $group: { _id: { item_id: '$item_id', item_name: '$item_name' }, total: { $sum: '$crosscut_cmt' } } },
+        {
+          $group: {
+            _id: { item_id: '$item_id', item_name: '$item_name' },
+            total: { $sum: '$crosscut_cmt' },
+            total_cost: { $sum: '$cost_amount' },
+            total_expense: { $sum: '$expense_amount' },
+          },
+        },
       ]),
       crosscutting_done_model.aggregate([
         { $match: { createdAt: { $gte: start, $lte: end }, issue_status: 'challan', ...itemFilter } },
-        { $group: { _id: { item_id: '$item_id', item_name: '$item_name' }, total: { $sum: '$crosscut_cmt' } } },
+        {
+          $group: {
+            _id: { item_id: '$item_id', item_name: '$item_name' },
+            total: { $sum: '$crosscut_cmt' },
+            total_cost: { $sum: '$cost_amount' },
+            total_expense: { $sum: '$expense_amount' },
+          },
+        },
       ]),
     ]);
-    crosscutOrderAgg.forEach((r) => addValue(r._id.item_id, r._id.item_name, 'sales', r.total));
-    crosscutChallanAgg.forEach((r) => addValue(r._id.item_id, r._id.item_name, 'job_work_challan', r.total));
+    crosscutOrderAgg.forEach((r) => {
+      addValue(r._id.item_id, r._id.item_name, 'sales', r.total);
+      addValue(r._id.item_id, r._id.item_name, 'sales_cost', r.total_cost);
+      addValue(r._id.item_id, r._id.item_name, 'sales_expense', r.total_expense);
+    });
+    crosscutChallanAgg.forEach((r) => {
+      addValue(r._id.item_id, r._id.item_name, 'job_work_challan', r.total);
+      addValue(r._id.item_id, r._id.item_name, 'job_work_challan_cost', r.total_cost);
+      addValue(r._id.item_id, r._id.item_name, 'job_work_challan_expense', r.total_expense);
+    });
 
     const [flitchOrderAgg, flitchChallanAgg] = await Promise.all([
       flitching_done_model.aggregate([
         { $match: { createdAt: { $gte: start, $lte: end }, deleted_at: null, issue_status: 'order', ...itemFilter } },
-        { $group: { _id: { item_id: '$item_id', item_name: '$item_name' }, total: { $sum: '$flitch_cmt' } } },
+        {
+          $group: {
+            _id: { item_id: '$item_id', item_name: '$item_name' },
+            total: { $sum: '$flitch_cmt' },
+            total_cost: { $sum: '$cost_amount' },
+            total_expense: { $sum: '$expense_amount' },
+          },
+        },
       ]),
       flitching_done_model.aggregate([
         { $match: { createdAt: { $gte: start, $lte: end }, deleted_at: null, issue_status: 'challan', ...itemFilter } },
-        { $group: { _id: { item_id: '$item_id', item_name: '$item_name' }, total: { $sum: '$flitch_cmt' } } },
+        {
+          $group: {
+            _id: { item_id: '$item_id', item_name: '$item_name' },
+            total: { $sum: '$flitch_cmt' },
+            total_cost: { $sum: '$cost_amount' },
+            total_expense: { $sum: '$expense_amount' },
+          },
+        },
       ]),
     ]);
-    flitchOrderAgg.forEach((r) => addValue(r._id.item_id, r._id.item_name, 'sales', r.total));
-    flitchChallanAgg.forEach((r) => addValue(r._id.item_id, r._id.item_name, 'job_work_challan', r.total));
+    flitchOrderAgg.forEach((r) => {
+      addValue(r._id.item_id, r._id.item_name, 'sales', r.total);
+      addValue(r._id.item_id, r._id.item_name, 'sales_cost', r.total_cost);
+      addValue(r._id.item_id, r._id.item_name, 'sales_expense', r.total_expense);
+    });
+    flitchChallanAgg.forEach((r) => {
+      addValue(r._id.item_id, r._id.item_name, 'job_work_challan', r.total);
+      addValue(r._id.item_id, r._id.item_name, 'job_work_challan_cost', r.total_cost);
+      addValue(r._id.item_id, r._id.item_name, 'job_work_challan_expense', r.total_expense);
+    });
 
     /*********************************************************
-     STEP 10b: Rejected (Cc+Flitch+Peeling)
-     CC: rejected crosscutting (rejected_crosscutting.rejected_quantity.physical_cmt)
-     Flitch: wastage CMT (flitching_done.wastage_info.wastage_sqm * sqm_factor)
-     Peeling: peeling wastage (issues_for_peeling_wastage.cmt)
+     STEP 10b: Rejected (Cc+Flitch+Peeling) — CMT + cost/expense
     *********************************************************/
     const rejectedCrosscutAgg = await rejected_crosscutting_model.aggregate([
       {
@@ -821,12 +587,15 @@ export const ItemWiseInwardDailyReportExcel = catchAsync(async (req, res, next) 
         $group: {
           _id: { item_id: '$item_id', item_name: '$item_name' },
           total: { $sum: '$rejected_quantity.physical_cmt' },
+          total_cost: { $sum: '$cost_amount' },
+          total_expense: { $sum: '$expense_amount' },
         },
       },
     ]);
     rejectedCrosscutAgg.forEach((r) => {
       addValue(r._id.item_id, r._id.item_name, 'rejected', r.total);
-      console.log('Rejected Stock [CC - Rejected Crosscutting]:', r._id.item_name, '=', r.total);
+      addValue(r._id.item_id, r._id.item_name, 'rejected_cost', r.total_cost);
+      addValue(r._id.item_id, r._id.item_name, 'rejected_expense', r.total_expense);
     });
 
     const rejectedFlitchAgg = await flitching_done_model.aggregate([
@@ -856,7 +625,6 @@ export const ItemWiseInwardDailyReportExcel = catchAsync(async (req, res, next) 
     ]);
     rejectedFlitchAgg.forEach((r) => {
       addValue(r._id.item_id, r._id.item_name, 'rejected', r.total);
-      console.log('Rejected Stock [Flitch - Wastage CMT]:', r._id.item_name, '=', r.total);
     });
 
     const rejectedPeelingAgg = await issues_for_peeling_wastage_model.aggregate([
@@ -884,19 +652,20 @@ export const ItemWiseInwardDailyReportExcel = catchAsync(async (req, res, next) 
     ]);
     rejectedPeelingAgg.forEach((r) => {
       addValue(r._id.item_id, r._id.item_name, 'rejected', r.total);
-      console.log('Rejected Stock [Peeling - Peeling Wastage]:', r._id.item_name, '=', r.total);
     });
 
     /*********************************************************
-     STEP 10c: Received/Issued AFTER period – to reconstruct period-end closing for past dates
-     Period-end closing = stock at end of endDate. If endDate < today, we must reconstruct:
-     Closing(period-end) = Current - Received(after) + Issued(after)
+     STEP 10c: Received/Issued AFTER period – to reconstruct period-end closing
     *********************************************************/
     const now = new Date();
     const isCurrentPeriod = end >= now;
 
     let receivedAfterMap = new Map();
     let issuedAfterMap = new Map();
+    let receivedAmountAfterMap = new Map();
+    let receivedExpenseAfterMap = new Map();
+    let issuedAmountAfterMap = new Map();
+    let issuedExpenseAfterMap = new Map();
 
     if (!isCurrentPeriod) {
       const [recAfter, issueCcAfter, flitchAfter, peelAfter, salesAfter, rejCcAfter, rejFlitchAfter, rejPeelAfter] = await Promise.all([
@@ -952,6 +721,44 @@ export const ItemWiseInwardDailyReportExcel = catchAsync(async (req, res, next) 
         ]),
       ]);
 
+      // After-period amount received (new invoices after end date)
+      const recAmountAfter = await log_inventory_items_model.aggregate([
+        { $match: { ...itemFilter } },
+        { $lookup: { from: 'log_inventory_invoice_details', localField: 'invoice_id', foreignField: '_id', as: 'invoice' } },
+        { $unwind: '$invoice' },
+        { $match: { 'invoice.inward_date': { $gt: end } } },
+        {
+          $group: {
+            _id: { item_id: '$item_id', item_name: '$item_name' },
+            total_amount: { $sum: '$amount' },
+            total_expense: { $sum: '$expense_amount' },
+          },
+        },
+      ]);
+
+      // After-period amount issued (sales + challan after end date)
+      const issuedAmountAfter = await log_inventory_items_model.aggregate([
+        { $match: { ...itemFilter, issue_status: { $in: ['order', 'challan'] }, updatedAt: { $gt: end } } },
+        {
+          $group: {
+            _id: { item_id: '$item_id', item_name: '$item_name' },
+            total_amount: { $sum: '$amount' },
+            total_expense: { $sum: '$expense_amount' },
+          },
+        },
+      ]);
+
+      recAmountAfter.forEach((x) => {
+        const k = `${x._id.item_id}_${x._id.item_name}`;
+        receivedAmountAfterMap.set(k, (receivedAmountAfterMap.get(k) || 0) + (x.total_amount || 0));
+        receivedExpenseAfterMap.set(k, (receivedExpenseAfterMap.get(k) || 0) + (x.total_expense || 0));
+      });
+      issuedAmountAfter.forEach((x) => {
+        const k = `${x._id.item_id}_${x._id.item_name}`;
+        issuedAmountAfterMap.set(k, (issuedAmountAfterMap.get(k) || 0) + (x.total_amount || 0));
+        issuedExpenseAfterMap.set(k, (issuedExpenseAfterMap.get(k) || 0) + (x.total_expense || 0));
+      });
+
       const crosscutSalesAfter = await crosscutting_done_model.aggregate([
         { $match: { ...itemFilter, issue_status: { $in: ['order', 'challan'] }, updatedAt: { $gt: end } } },
         { $group: { _id: { item_id: '$item_id', item_name: '$item_name' }, total: { $sum: '$crosscut_cmt' } } },
@@ -975,13 +782,6 @@ export const ItemWiseInwardDailyReportExcel = catchAsync(async (req, res, next) 
 
     /*********************************************************
      STEP 11: Build Final Report
-     Filter by date range: only include items that had inward_date in [start, end]
-     Opening = stock at start of period (startDate). Closing = stock at end of period (endDate).
-     Formula: Opening = Closing + Issued - Received
-     For current period (endDate >= today): Closing = current available
-     For past period: Closing = Current - Received(after) + Issued(after)
-     Issued = issue_for_cc + flitch_issued + peeling_issued + sales + job_work_challan + rejected
-     Received = actual_cmt (logs inward in period)
     *********************************************************/
     const itemsInPeriod = new Set(
       logsReceivedAgg.map((r) => `${r._id.item_id}_${r._id.item_name}`)
@@ -993,11 +793,14 @@ export const ItemWiseInwardDailyReportExcel = catchAsync(async (req, res, next) 
     currentAvailableMap.forEach((_, k) => {
       if (itemsInPeriod.has(k)) mergedKeys.add(k);
     });
-    const defaults = { issue_for_cc: 0, flitch_issued: 0, peeling_issued: 0, sales: 0, rejected: 0, actual_cmt: 0, invoice_cmt: 0, indian_cmt: 0, cc_received: 0, cc_issued: 0, flitch_received: 0, peeling_received: 0, recover_from_rejected: 0, issue_for_sqedge: 0, job_work_challan: 0 };
+
     const report = Array.from(mergedKeys).map((key) => {
-      const r = reportMap.get(key) || { ...keyToItem.get(key), ...defaults };
+      const r = reportMap.get(key) || { ...keyToItem.get(key), ...FIELD_DEFAULTS };
       const currentAvailable = currentAvailableMap.get(key) || 0;
       const received = r.actual_cmt || 0;
+      const received_amount = r.amount || 0;
+      const received_expense = r.amount_expense || 0;
+
       const issued =
         (r.issue_for_cc || 0) +
         (r.flitch_issued || 0) +
@@ -1006,45 +809,98 @@ export const ItemWiseInwardDailyReportExcel = catchAsync(async (req, res, next) 
         (r.job_work_challan || 0) +
         (r.rejected || 0);
 
+      const issued_amount =
+        (r.sales_cost || 0) +
+        (r.job_work_challan_cost || 0) +
+        (r.rejected_cost || 0) +
+        (r.cc_received_cost || 0) +
+        (r.flitch_received_cost || 0) +
+        (r.peeling_received_cost || 0) +
+        (r.peeling_issued_cost || 0);
+
+      const issued_expense =
+        (r.sales_expense || 0) +
+        (r.job_work_challan_expense || 0) +
+        (r.rejected_expense || 0) +
+        (r.cc_received_expense || 0) +
+        (r.flitch_received_expense || 0) +
+        (r.peeling_received_expense || 0) +
+        (r.peeling_issued_expense || 0);
+
       const periodEndClosing = isCurrentPeriod
         ? currentAvailable
         : Math.max(0, currentAvailable - (receivedAfterMap.get(key) || 0) + (issuedAfterMap.get(key) || 0));
       const opening_stock_cmt = Math.max(0, periodEndClosing + issued - received);
       const closing_stock_cmt = opening_stock_cmt + received - issued;
+      const currentAmount = currentAmountMap.get(key) || 0;
+      const currentExpense = currentExpenseMap.get(key) || 0;
+
+      const periodEndClosingAmount = isCurrentPeriod
+        ? currentAmount
+        : Math.max(0, currentAmount - (receivedAmountAfterMap.get(key) || 0) + (issuedAmountAfterMap.get(key) || 0));
+
+      const periodEndClosingExpense = isCurrentPeriod
+        ? currentExpense
+        : Math.max(0, currentExpense - (receivedExpenseAfterMap.get(key) || 0) + (issuedExpenseAfterMap.get(key) || 0));
+
+      const opening_amount = Math.max(0, periodEndClosingAmount + issued_amount - received_amount);
+      const opening_expense = Math.max(0, periodEndClosingExpense + issued_expense - received_expense);
+
+      const closing_amount = opening_amount + received_amount - issued_amount;
+      const closing_expense = opening_expense + received_expense - issued_expense;
 
       return {
         item_id: r.item_id,
         item_name: r.item_name,
         opening_stock_cmt,
+        opening_amount,
+        opening_expense,
         invoice_cmt: r.invoice_cmt,
         indian_cmt: r.indian_cmt,
         actual_cmt: r.actual_cmt,
+        amount: r.amount,
+        amount_expense: r.amount_expense,
         recover_from_rejected: r.recover_from_rejected,
         issue_for_cc: r.issue_for_cc,
         cc_received: r.cc_received,
+        cc_received_cost: r.cc_received_cost,
+        cc_received_expense: r.cc_received_expense,
         cc_issued: r.cc_issued,
         cc_diff: r.issue_for_cc - r.cc_received,
         issue_for_flitch: r.flitch_issued,
         flitch_received: r.flitch_received,
+        flitch_received_cost: r.flitch_received_cost,
+        flitch_received_expense: r.flitch_received_expense,
         flitch_diff: r.flitch_issued - r.flitch_received,
         issue_for_sqedge: r.issue_for_sqedge,
         peeling_issued: r.peeling_issued,
         peeling_received: r.peeling_received,
+        peeling_issued_cost: r.peeling_issued_cost,
+        peeling_issued_expense: r.peeling_issued_expense,
+        peeling_received_cost: r.peeling_received_cost,
+        peeling_received_expense: r.peeling_received_expense,
         peeling_diff: r.peeling_issued - r.peeling_received,
         sales: r.sales,
+        sales_cost: r.sales_cost,
+        sales_expense: r.sales_expense,
         job_work_challan: r.job_work_challan,
+        job_work_challan_cost: r.job_work_challan_cost,
+        job_work_challan_expense: r.job_work_challan_expense,
         rejected: r.rejected,
+        rejected_cost: r.rejected_cost,
+        rejected_expense: r.rejected_expense,
         closing_stock_cmt,
+        closing_amount,
+        closing_expense,
       };
     });
 
-    console.log('Final Report Data:', report);
-    // each object now contains opening_stock_cmt, invoice_cmt, indian_cmt, actual_cmt, sales, rejected, closing_stock_cmt, etc.
+    // console.log('Final Report Data:', report); 
 
     if (!report.length) {
       return res
         .status(404)
-        .json(new ApiResponse(404, "No stock data found for the selected period"));
+        .json(new ApiResponse(404, 'No stock data found for the selected period'));
     }
 
     /*********************************************************
@@ -1054,18 +910,19 @@ export const ItemWiseInwardDailyReportExcel = catchAsync(async (req, res, next) 
       report,
       startDate,
       endDate,
-      filter
+      filter,
+      includeCostAndExpense
     );
 
     return res.json(
       new ApiResponse(
         200,
-        "Item wise inward report generated successfully",
+        'Item wise inward report generated successfully',
         excelLink
       )
     );
   } catch (error) {
-    console.error("Error generating inventory report:", error);
-    return next(new ApiError(error.message || "Failed to generate report", 500));
+    console.error('Error generating inventory report:', error);
+    return next(new ApiError(error.message || 'Failed to generate report', 500));
   }
 });

@@ -13,7 +13,7 @@ import mongoose from 'mongoose';
  */
 export const SmokingDyingDailyReportExcel = catchAsync(
   async (req, res, next) => {
-    const { reportDate, smokingDyingId } = req?.body?.filters || {};
+    const { reportDate, smokingDyingId, includeCostAndExpense } = req?.body?.filters || {};
 
     if (!reportDate) {
       return res.status(400).json({
@@ -83,6 +83,10 @@ export const SmokingDyingDailyReportExcel = catchAsync(
           pattern_name: '$items.pattern_name',
           series_name: '$items.series_name',
           remark: '$items.remark',
+          ...(includeCostAndExpense ? {
+            amount: '$items.amount',
+            expense_amount: '$items.expense_amount',
+          } : {}),
         },
       },
     ];
@@ -97,7 +101,7 @@ export const SmokingDyingDailyReportExcel = catchAsync(
       });
     }
 
-    const excelLink = await GenerateSmokingDyingDailyReport(rows, reportDate);
+    const excelLink = await GenerateSmokingDyingDailyReport(rows, reportDate, includeCostAndExpense);
 
     return res.status(200).json({
       result: excelLink,

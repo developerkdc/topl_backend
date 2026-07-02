@@ -74,7 +74,8 @@ export const GeneratePressingStockRegisterReport1Excel = async (
   aggregatedData,
   startDate,
   endDate,
-  filter = {}
+  filter = {},
+  includeCostAndExpense
 ) => {
   try {
     const folderPath = 'public/upload/reports/reports2/Pressing';
@@ -87,7 +88,7 @@ export const GeneratePressingStockRegisterReport1Excel = async (
     const formattedEnd = formatDate(endDate);
     const title = `Pressing Item Stock Register sales name - thickness - other process wise between ${formattedStart} and ${formattedEnd}`;
 
-    const NUM_COLS = 11;
+    const NUM_COLS = includeCostAndExpense ? 16 : 11;
 
     // ── Title row ────────────────────────────────────────────────────────────
     let currentRow = 1;
@@ -105,17 +106,52 @@ export const GeneratePressingStockRegisterReport1Excel = async (
     const headerRowB = currentRow + 1;
 
     // Cols 1-6 and 9-11 span both header rows
+    let col = 1;
+
     const spanCols = [
-      { col: 1, label: 'Item Name' },
-      { col: 2, label: 'Sales item Name' },
-      { col: 3, label: 'Thickness' },
-      { col: 4, label: 'Size' },
-      { col: 5, label: 'Opening SqMtr' },
-      { col: 6, label: 'Pressing SqMtr' },
-      { col: 9, label: 'All Damage\n(Pressing+Cnc+Colour+Polish)' },
-      { col: 10, label: 'Process Waste' },
-      { col: 11, label: 'Closing SqMtr' },
+      { col: col++, label: 'Item Name' },
+      { col: col++, label: 'Sales item Name' },
+      { col: col++, label: 'Thickness' },
+      { col: col++, label: 'Size' },
+
+      { col: col++, label: 'Opening SqMtr' },
+      ...(includeCostAndExpense
+        ? [{ col: col++, label: 'Opening Amount' }]
+        : []),
+
+      { col: col++, label: 'Pressing SqMtr' },
+      ...(includeCostAndExpense
+        ? [{ col: col++, label: 'Pressing Amount' }]
+        : []),
     ];
+
+    const salesStartCol = col;
+
+    const salesCol = col++;
+    const challanCol = col++;
+
+    const damageCol = col++;
+    const damageAmountCol = includeCostAndExpense ? col++ : null;
+
+    const wasteCol = col++;
+    const wasteAmountCol = includeCostAndExpense ? col++ : null;
+
+    const closingCol = col++;
+    const closingAmountCol = includeCostAndExpense ? col++ : null;
+
+    spanCols.push(
+      { col: damageCol, label: 'All Damage\n(Pressing+Cnc+Colour+Polish)' },
+      { col: wasteCol, label: 'Process Waste' },
+      { col: closingCol, label: 'Closing SqMtr' }
+    );
+
+    if (includeCostAndExpense) {
+      spanCols.push(
+        { col: damageAmountCol, label: 'Damage Amount' },
+        { col: wasteAmountCol, label: 'Process Waste Amount' },
+        { col: closingAmountCol, label: 'Closing Amount' }
+      );
+    }
 
     for (const { col, label } of spanCols) {
       worksheet.mergeCells(headerRowA, col, headerRowB, col);
@@ -125,15 +161,15 @@ export const GeneratePressingStockRegisterReport1Excel = async (
     }
 
     // "Alls Sell" group header spans cols 7-8
-    worksheet.mergeCells(headerRowA, 7, headerRowA, 8);
-    const allSellCell = worksheet.getCell(headerRowA, 7);
+    worksheet.mergeCells(headerRowA, salesStartCol, headerRowA, salesStartCol + 1);
+    const allSellCell = worksheet.getCell(headerRowA, salesStartCol);
     allSellCell.value = 'Alls Sell\n(Direct Pressing+Cnc+Colour+Polish)';
     Object.assign(allSellCell, headerStyle);
 
     // Sub-headers in row B for cols 7-8
     const subHeaders = [
-      { col: 7, label: 'Sales' },
-      { col: 8, label: 'Issue for Challan' },
+      { col: salesCol, label: 'Sales' },
+      { col: challanCol, label: 'Issue for Challan' },
     ];
     for (const { col, label } of subHeaders) {
       const cell = worksheet.getCell(headerRowB, col);
@@ -164,6 +200,15 @@ export const GeneratePressingStockRegisterReport1Excel = async (
       damage: 0,
       process_waste: 0,
       closing_sqm: 0,
+      ...(includeCostAndExpense ? {
+        opening_amount: 0,
+        pressing_amount: 0,
+        sales_amount: 0,
+        issue_for_challan_amount: 0,
+        damage_amount: 0,
+        process_waste_amount: 0,
+        closing_amount: 0,
+      } : {}),
     };
 
     let prevItemName = null;
@@ -184,6 +229,15 @@ export const GeneratePressingStockRegisterReport1Excel = async (
       tr.getCell(9).value = totals.damage;
       tr.getCell(10).value = totals.process_waste;
       tr.getCell(11).value = totals.closing_sqm;
+      if (includeCostAndExpense) {
+        tr.getCell(6).value = totals.opening_amount;
+        tr.getCell(8).value = totals.pressing_amount;
+        tr.getCell(7).value = totals.sales_amount;
+        tr.getCell(9).value = totals.issue_for_challan_amount;
+        tr.getCell(10).value = totals.damage_amount;
+        tr.getCell(11).value = totals.process_waste_amount;
+        tr.getCell(12).value = totals.closing_amount;
+      }
       for (let c = 5; c <= NUM_COLS; c++) tr.getCell(c).numFmt = '0.00';
       tr.eachCell((cell) => Object.assign(cell, totalRowStyle));
     };
@@ -194,7 +248,7 @@ export const GeneratePressingStockRegisterReport1Excel = async (
 
       if (prevItemName !== null && prevItemName !== itemName) {
         writeItemTotal(prevItemName, itemTotals, currentRow);
-        itemMergeRanges.push({ start: itemStartRow, end: currentRow - 1 });
+        itemMergeRanges.push({ start: itemStartRow, end: currentRow - 2 });
         currentRow++;
         itemTotals = null;
         itemStartRow = null;
@@ -210,6 +264,15 @@ export const GeneratePressingStockRegisterReport1Excel = async (
           damage: 0,
           process_waste: 0,
           closing_sqm: 0,
+          ...(includeCostAndExpense ? {
+            opening_amount: 0,
+            pressing_amount: 0,
+            sales_amount: 0,
+            issue_for_challan_amount: 0,
+            damage_amount: 0,
+            process_waste_amount: 0,
+            closing_amount: 0,
+          } : {}),
         };
       }
 
@@ -220,6 +283,13 @@ export const GeneratePressingStockRegisterReport1Excel = async (
       const damage = Number(row.damage) || 0;
       const waste = Number(row.process_waste) || 0;
       const closing = Number(row.closing_sqm) || 0;
+      const ob_amount = Number(row.opening_amount) || 0;
+      const pressing_amount = Number(row.pressing_amount) || 0;
+      const sales_amount = Number(row.sales_amount) || 0;
+      const challan_amount = Number(row.issue_for_challan_amount) || 0;
+      const damage_amount = Number(row.damage_amount) || 0;
+      const waste_amount = Number(row.process_waste_amount) || 0;
+      const closing_amount = Number(row.closing_amount) || 0;
 
       const r = worksheet.getRow(currentRow);
       r.getCell(1).value = itemName;
@@ -233,6 +303,15 @@ export const GeneratePressingStockRegisterReport1Excel = async (
       r.getCell(9).value = damage;
       r.getCell(10).value = waste;
       r.getCell(11).value = closing;
+      if (includeCostAndExpense) {
+        r.getCell(6).value = ob_amount;
+        r.getCell(8).value = pressing_amount;
+        r.getCell(7).value = sales_amount;
+        r.getCell(9).value = challan_amount;
+        r.getCell(10).value = damage_amount;
+        r.getCell(11).value = waste_amount;
+        r.getCell(12).value = closing_amount;
+      }
       r.getCell(3).numFmt = '0.00';
       for (let c = 5; c <= NUM_COLS; c++) r.getCell(c).numFmt = '0.00';
 
@@ -243,6 +322,15 @@ export const GeneratePressingStockRegisterReport1Excel = async (
       itemTotals.damage += damage;
       itemTotals.process_waste += waste;
       itemTotals.closing_sqm += closing;
+      if (includeCostAndExpense) {
+        itemTotals.opening_amount += ob_amount;
+        itemTotals.pressing_amount += pressing_amount;
+        itemTotals.sales_amount += sales_amount;
+        itemTotals.issue_for_challan_amount += challan_amount;
+        itemTotals.damage_amount += damage_amount;
+        itemTotals.process_waste_amount += waste_amount;
+        itemTotals.closing_amount += closing_amount;
+      }
 
       grandTotals.opening_sqm += ob;
       grandTotals.pressing_sqm += pressing;
@@ -251,6 +339,15 @@ export const GeneratePressingStockRegisterReport1Excel = async (
       grandTotals.damage += damage;
       grandTotals.process_waste += waste;
       grandTotals.closing_sqm += closing;
+      if (includeCostAndExpense) {
+        grandTotals.opening_amount += ob_amount;
+        grandTotals.pressing_amount += pressing_amount;
+        grandTotals.sales_amount += sales_amount;
+        grandTotals.issue_for_challan_amount += challan_amount;
+        grandTotals.damage_amount += damage_amount;
+        grandTotals.process_waste_amount += waste_amount;
+        grandTotals.closing_amount += closing_amount;
+      }
 
       prevItemName = itemName;
       currentRow++;
@@ -259,13 +356,27 @@ export const GeneratePressingStockRegisterReport1Excel = async (
     // Last item subtotal
     if (itemTotals !== null && itemStartRow !== null) {
       writeItemTotal(prevItemName, itemTotals, currentRow);
-      itemMergeRanges.push({ start: itemStartRow, end: currentRow - 1 });
+      itemMergeRanges.push({ start: itemStartRow, end: currentRow - 2 });
       currentRow++;
     }
 
     // Merge Item Name column across its group rows + subtotal row
     itemMergeRanges.forEach(({ start, end }) => {
-      if (end > start) worksheet.mergeCells(start, 1, end, 1);
+      if (end <= start) return;
+
+      const alreadyMerged = worksheet._merges &&
+        Object.values(worksheet._merges).some((m) => {
+          return !(
+            end < m.top ||
+            start > m.bottom ||
+            1 < m.left ||
+            1 > m.right
+          );
+        });
+
+      if (!alreadyMerged) {
+        worksheet.mergeCells(start, 1, end, 1);
+      }
     });
 
     // Grand total row
@@ -279,6 +390,15 @@ export const GeneratePressingStockRegisterReport1Excel = async (
     totalRow.getCell(9).value = grandTotals.damage;
     totalRow.getCell(10).value = grandTotals.process_waste;
     totalRow.getCell(11).value = grandTotals.closing_sqm;
+    if (includeCostAndExpense) {
+      totalRow.getCell(6).value = grandTotals.opening_amount;
+      totalRow.getCell(8).value = grandTotals.pressing_amount;
+      totalRow.getCell(7).value = grandTotals.sales_amount;
+      totalRow.getCell(9).value = grandTotals.issue_for_challan_amount;
+      totalRow.getCell(10).value = grandTotals.damage_amount;
+      totalRow.getCell(11).value = grandTotals.process_waste_amount;
+      totalRow.getCell(12).value = grandTotals.closing_amount;
+    }
     totalRow.eachCell((cell) => {
       Object.assign(cell, totalRowStyle);
       if (cell.col >= 5) cell.numFmt = '0.00';

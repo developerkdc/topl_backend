@@ -14,7 +14,7 @@ const getTodayDateString = () => new Date().toISOString().split('T')[0];
 const isValidDateInput = (value) => ISO_DATE_REGEX.test(String(value || '').trim());
 
 export const PreviewDisplayReport = catchAsync(async (req, res, next) => {
-  const { reportId, filters = {} } = req.body || {};
+  const { reportId, filters = {}, includeCostAndExpense } = req.body || {};
 
   if (!reportId) {
     return next(new ApiError('reportId is required', 400));
@@ -25,7 +25,7 @@ export const PreviewDisplayReport = catchAsync(async (req, res, next) => {
     return next(new ApiError('Invalid reportId', 400));
   }
 
-  const payload = buildDownloadPayload({ reportType: reportConfig.type, filters });
+  const payload = buildDownloadPayload({ reportType: reportConfig.type, filters, includeCostAndExpense });
 
   if (
     reportConfig.type === 'RANGE' &&

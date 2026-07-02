@@ -18,7 +18,7 @@ import { createLogWiseCrosscutReportExcel } from '../../../config/downloadExcel/
  * @access Private
  */
 export const LogWiseCrosscutReportExcel = catchAsync(async (req, res, next) => {
-  const { startDate, endDate, filter = {} } = req.body;
+  const { startDate, endDate, filter = {}, includeCostAndExpense } = req.body;
 
   if (!startDate || !endDate) {
     return next(new ApiError('Start date and end date are required', 400));
@@ -55,7 +55,7 @@ export const LogWiseCrosscutReportExcel = catchAsync(async (req, res, next) => {
           createdAt: { $gte: start, $lte: end },
         },
       },
-      { $group: { _id: { log_no: '$log_no', item_name: '$item_name' } } },
+      { $group: { _id: { log_no: '$log_no', item_name: '$item_name', cost_amount: '$cost_amount', expense_amount: '$expense_amount' } } },
     ]);
 
     // Distinct (log_no, item_name) from crosscutting_done – only logs with activity in period:
@@ -81,7 +81,7 @@ export const LogWiseCrosscutReportExcel = catchAsync(async (req, res, next) => {
           ],
         },
       },
-      { $group: { _id: { log_no: '$log_no', item_name: '$item_name' } } },
+      { $group: { _id: { log_no: '$log_no', item_name: '$item_name', cost_amount: '$cost_amount', expense_amount: '$expense_amount' } } },
     ]);
 
     const logKeys = new Map();
@@ -110,7 +110,7 @@ export const LogWiseCrosscutReportExcel = catchAsync(async (req, res, next) => {
       { $sort: { createdAt: 1 } },
       {
         $group: {
-          _id: { log_no: '$log_no', item_name: '$item_name' },
+          _id: { log_no: '$log_no', item_name: '$item_name', cost_amount: '$amount', expense_amount: '$expense_amount' },
           invoice_cmt: { $first: '$invoice_cmt' },
           indian_cmt: { $first: '$indian_cmt' },
           physical_cmt: { $first: '$physical_cmt' },
@@ -126,6 +126,8 @@ export const LogWiseCrosscutReportExcel = catchAsync(async (req, res, next) => {
           indian_cmt: d.indian_cmt ?? 0,
           physical_cmt: d.physical_cmt ?? 0,
           physical_length: d.physical_length ?? 0,
+          cost_amount: d._id.cost_amount ?? 0,
+          expense_amount: d._id.expense_amount ?? 0,
         },
       ])
     );
@@ -138,6 +140,8 @@ export const LogWiseCrosscutReportExcel = catchAsync(async (req, res, next) => {
           indian_cmt: 0,
           physical_cmt: 0,
           physical_length: 0,
+          cost_amount: 0,
+          expense_amount: 0,
         };
 
         // Op Bal: crosscut stock at period start (CMT); same match also supplies length for CC Length
@@ -156,11 +160,15 @@ export const LogWiseCrosscutReportExcel = catchAsync(async (req, res, next) => {
               _id: null,
               total: { $sum: '$crosscut_cmt' },
               length: { $sum: '$length' },
+              cost_amount: { $sum: '$amount' },
+              expense_amount: { $sum: '$expense_amount' },
             },
           },
         ]);
         const opBal = opBalAgg[0]?.total ?? 0;
         const opBalLengthForCc = opBalAgg[0]?.length ?? 0;
+        const opBalCost = opBalAgg[0]?.cost_amount ?? 0;
+        const opBalExpense = opBalAgg[0]?.expense_amount ?? 0;
 
         // CC Received: crosscut done in period (by crosscut_date)
         const ccRecAgg = await crosscutting_done_model.aggregate([
@@ -172,11 +180,13 @@ export const LogWiseCrosscutReportExcel = catchAsync(async (req, res, next) => {
               'worker_details.crosscut_date': { $gte: start, $lte: end },
             },
           },
-          { $group: { _id: null, total: { $sum: '$crosscut_cmt' }, length: { $sum: '$length' } } },
+          { $group: { _id: null, total: { $sum: '$crosscut_cmt' }, length: { $sum: '$length' }, cost_amount: { $sum: '$amount' }, expense_amount: { $sum: '$expense_amount' } } },
         ]);
         const ccReceived = ccRecAgg[0]?.total ?? 0;
         const ccLengthInPeriod = ccRecAgg[0]?.length ?? 0;
         const ccLength = opBalLengthForCc + ccLengthInPeriod;
+        const ccCost = ccRecAgg[0]?.cost_amount ?? 0;
+        const ccExpense = ccRecAgg[0]?.expense_amount ?? 0;
 
         // CC Issued: crosscut pieces issued further (sales, challan, flitching, peeling) in period
         const ccIssuedAgg = await crosscutting_done_model.aggregate([
@@ -189,9 +199,11 @@ export const LogWiseCrosscutReportExcel = catchAsync(async (req, res, next) => {
               updatedAt: { $gte: start, $lte: end },
             },
           },
-          { $group: { _id: null, total: { $sum: '$crosscut_cmt' } } },
+          { $group: { _id: null, total: { $sum: '$crosscut_cmt' }, cost_amount: { $sum: '$amount' }, expense_amount: { $sum: '$expense_amount' } } },
         ]);
         const ccIssued = ccIssuedAgg[0]?.total ?? 0;
+        const ccIssuedCost = ccIssuedAgg[0]?.cost_amount ?? 0;
+        const ccIssuedExpense = ccIssuedAgg[0]?.expense_amount ?? 0;
 
         const ccClosing = Math.max(0, opBal + ccReceived - ccIssued);
 
@@ -219,9 +231,11 @@ export const LogWiseCrosscutReportExcel = catchAsync(async (req, res, next) => {
               'crosscut.item_name': itemName,
             },
           },
-          { $group: { _id: null, total: { $sum: '$flitch_cmt' } } },
+          { $group: { _id: null, total: { $sum: '$flitch_cmt' }, cost_amount: { $sum: '$cost_amount' }, expense_amount: { $sum: '$expense_amount' } } },
         ]);
         const flitchReceived = flitchAgg[0]?.total ?? 0;
+        const flitchCost = flitchAgg[0]?.cost_amount ?? 0;
+        const flitchExpense = flitchAgg[0]?.expense_amount ?? 0;
 
         // Peel Received: peeling done in period – use peeling_done_other_details.total_cmt
         const peelAgg = await peeling_done_items_model.aggregate([
@@ -246,11 +260,15 @@ export const LogWiseCrosscutReportExcel = catchAsync(async (req, res, next) => {
             $group: {
               _id: '$peeling_done_other_details_id',
               total_cmt: { $first: '$peeling_details.total_cmt' },
+              cost_amount: { $first: '$peeling_details.total_amount' },
+              expense_amount: { $first: '$peeling_details.expense_amount' },
             },
           },
-          { $group: { _id: null, total: { $sum: '$total_cmt' } } },
+          { $group: { _id: null, total: { $sum: '$total_cmt' }, cost_amount: { $sum: '$cost_amount' }, expense_amount: { $sum: '$expense_amount' } } },
         ]);
         const peelReceived = peelAgg[0]?.total ?? 0;
+        const peelCost = peelAgg[0]?.cost_amount ?? 0;
+        const peelExpense = peelAgg[0]?.expense_amount ?? 0;
 
         return {
           item_name: itemName,
@@ -258,16 +276,28 @@ export const LogWiseCrosscutReportExcel = catchAsync(async (req, res, next) => {
           invoice_cmt: issue.invoice_cmt,
           indian_cmt: issue.indian_cmt,
           physical_cmt: issue.physical_cmt,
+          cost_amount: issue.cost_amount,
+          expense_amount: issue.expense_amount,
           op_bal: opBal,
           cc_received: ccReceived,
           cc_issued: ccIssued,
           cc_closing: ccClosing,
+          op_bal_cost: opBalCost,
+          op_bal_expense: opBalExpense,
+          cc_received_cost: ccCost,
+          cc_received_expense: ccExpense,
+          cc_issued_cost: ccIssuedCost,
+          cc_issued_expense: ccIssuedExpense,
           physical_length: issue.physical_length,
           cc_length: ccLength,
           flitch_received: flitchReceived,
+          flitch_cost: flitchCost,
+          flitch_expense: flitchExpense,
           sq_received: 0,
           un_received: 0,
           peel_received: peelReceived,
+          peel_cost: peelCost,
+          peel_expense: peelExpense,
         };
       })
     );
@@ -281,7 +311,19 @@ export const LogWiseCrosscutReportExcel = catchAsync(async (req, res, next) => {
         log.cc_issued > 0 ||
         log.cc_closing > 0 ||
         log.flitch_received > 0 ||
-        log.peel_received > 0
+        log.peel_received > 0 ||
+        log.cost_amount > 0 ||
+        log.expense_amount > 0 ||
+        log.op_bal_cost > 0 ||
+        log.op_bal_expense > 0 ||
+        log.cc_received_cost > 0 ||
+        log.cc_received_expense > 0 ||
+        log.cc_issued_cost > 0 ||
+        log.cc_issued_expense > 0 ||
+        log.flitch_cost > 0 ||
+        log.flitch_expense > 0 ||
+        log.peel_cost > 0 ||
+        log.peel_expense > 0
     );
 
     if (activeLogsData.length === 0) {
@@ -301,7 +343,8 @@ export const LogWiseCrosscutReportExcel = catchAsync(async (req, res, next) => {
       activeLogsData,
       startDate,
       endDate,
-      filter
+      filter,
+      includeCostAndExpense
     );
 
     return res.json(

@@ -28,7 +28,7 @@ function nonNegativeDiff(minuend, subtrahend) {
  * @access Private
  */
 export const ItemWiseFlitchReportExcel = catchAsync(async (req, res, next) => {
-  const { startDate, endDate, filter = {} } = req.body;
+  const { startDate, endDate, filter = {}, includeCostAndExpense } = req.body;
 
   console.log('Item Wise Flitch Report Request - Start Date:', startDate);
   console.log('Item Wise Flitch Report Request - End Date:', endDate);
@@ -102,14 +102,22 @@ export const ItemWiseFlitchReportExcel = catchAsync(async (req, res, next) => {
         reportMap.set(item_name, {
           item_name,
           opening_stock_cmt: 0,
+          opening_cost_amount: 0,
+          opening_expense_amount: 0,
           invoice_cmt: 0,
           indian_cmt: 0,
           actual_cmt: 0,
+          actual_cost_amount: 0,
+          actual_expense_amount: 0,
           recover_from_rejected: 0,
           issue_for_flitch: 0,
           flitch_received: 0,
+          flitch_cost_amount: 0,
+          flitch_expense_amount: 0,
           issue_for_slicing: 0,
           slicing_received: 0,
+          slicing_cost_amount: 0,
+          slicing_expense_amount: 0,
           issue_for_sqedge: 0,
           sales: 0,
           rejected: 0,
@@ -131,7 +139,7 @@ export const ItemWiseFlitchReportExcel = catchAsync(async (req, res, next) => {
      * - If crosscut_done_id IS NULL → came from LOG
      * - If crosscut_done_id IS NOT NULL → came from CROSSCUT
      *************************************************************/
-    
+
     // Opening Stock: flitching_done with issue_status=null created BEFORE start date
     const openingStockAgg = await flitching_done_model.aggregate([
       {
@@ -146,10 +154,18 @@ export const ItemWiseFlitchReportExcel = catchAsync(async (req, res, next) => {
         $group: {
           _id: '$item_name',
           total: { $sum: '$flitch_cmt' },
+          cost_amount: { $sum: '$amount' },
+          expense_amount: { $sum: '$expense_amount' },
         },
       },
     ]);
-    openingStockAgg.forEach((r) => addValue(r._id, 'opening_stock_cmt', r.total));
+    openingStockAgg.forEach((r) => {
+      addValue(r._id, 'opening_stock_cmt', r.total);
+      if (includeCostAndExpense) {
+        addValue(r._id, 'opening_cost_amount', r.cost_amount);
+        addValue(r._id, 'opening_expense_amount', r.expense_amount);
+      }
+    });
 
     // Round Log Detail CMT from items flitched IN period (LOG sources)
     const roundLogDetailFromLogAgg = await flitching_done_model.aggregate([
@@ -176,6 +192,8 @@ export const ItemWiseFlitchReportExcel = catchAsync(async (req, res, next) => {
           invoice_cmt: { $sum: '$log_data.invoice_cmt' },
           indian_cmt: { $sum: '$log_data.indian_cmt' },
           actual_cmt: { $sum: '$log_data.physical_cmt' },
+          cost_amount: { $sum: '$log_data.amount' },
+          expense_amount: { $sum: '$log_data.expense_amount' },
         },
       },
     ]);
@@ -183,6 +201,10 @@ export const ItemWiseFlitchReportExcel = catchAsync(async (req, res, next) => {
       addValue(r._id, 'invoice_cmt', r.invoice_cmt);
       addValue(r._id, 'indian_cmt', r.indian_cmt);
       addValue(r._id, 'actual_cmt', r.actual_cmt);
+      if (includeCostAndExpense) {
+        addValue(r._id, 'actual_cost_amount', r.cost_amount);
+        addValue(r._id, 'actual_expense_amount', r.expense_amount);
+      }
     });
 
     // Round Log Detail CMT from items flitched IN period (CROSSCUT sources)
@@ -208,6 +230,8 @@ export const ItemWiseFlitchReportExcel = catchAsync(async (req, res, next) => {
         $group: {
           _id: '$item_name',
           actual_cmt: { $sum: '$crosscut_data.crosscut_cmt' },
+          cost_amount: { $sum: '$crosscut_data.amount' },
+          expense_amount: { $sum: '$crosscut_data.expense_amount' },
         },
       },
     ]);
@@ -215,6 +239,10 @@ export const ItemWiseFlitchReportExcel = catchAsync(async (req, res, next) => {
       addValue(r._id, 'invoice_cmt', 0);
       addValue(r._id, 'indian_cmt', 0);
       addValue(r._id, 'actual_cmt', r.actual_cmt);
+      if (includeCostAndExpense) {
+        addValue(r._id, 'actual_cost_amount', r.cost_amount);
+        addValue(r._id, 'actual_expense_amount', r.expense_amount);
+      }
     });
 
 
@@ -233,10 +261,18 @@ export const ItemWiseFlitchReportExcel = catchAsync(async (req, res, next) => {
         $group: {
           _id: '$item_name',
           total: { $sum: '$cmt' },
+          amount: { $sum: '$amount' },
+          expense_amount: { $sum: '$expense_amount' },
         },
       },
     ]);
-    flitchIssuedAgg.forEach((r) => addValue(r._id, 'issue_for_flitch', r.total));
+    flitchIssuedAgg.forEach((r) => {
+      addValue(r._id, 'issue_for_flitch', r.total);
+      if (includeCostAndExpense) {
+        addValue(r._id, 'flitch_cost_amount', r.amount);
+        addValue(r._id, 'flitch_expense_amount', r.expense_amount);
+      }
+    });
 
     /*************************************************************
      * STEP 5: Flitch Received (from flitching_done using worker_details.flitching_date)
@@ -253,10 +289,18 @@ export const ItemWiseFlitchReportExcel = catchAsync(async (req, res, next) => {
         $group: {
           _id: '$item_name',
           total: { $sum: '$flitch_cmt' },
+          amount: { $sum: '$amount' },
+          expense_amount: { $sum: '$expense_amount' },
         },
       },
     ]);
-    flitchReceivedAgg.forEach((r) => addValue(r._id, 'flitch_received', r.total));
+    flitchReceivedAgg.forEach((r) => {
+      addValue(r._id, 'flitch_received', r.total);
+      if (includeCostAndExpense) {
+        addValue(r._id, 'flitch_cost_amount', r.amount);
+        addValue(r._id, 'flitch_expense_amount', r.expense_amount);
+      }
+    });
 
     /*************************************************************
      * STEP 6: Issue for Slicing (from issued_for_slicing_model.createdAt)
@@ -272,10 +316,18 @@ export const ItemWiseFlitchReportExcel = catchAsync(async (req, res, next) => {
         $group: {
           _id: '$item_name',
           total: { $sum: '$cmt' },
+          amount: { $sum: '$amount' },
+          expense_amount: { $sum: '$expense_amount' },
         },
       },
     ]);
-    slicingIssuedAgg.forEach((r) => addValue(r._id, 'issue_for_slicing', r.total));
+    slicingIssuedAgg.forEach((r) => {
+      addValue(r._id, 'issue_for_slicing', r.total);
+      if (includeCostAndExpense) {
+        addValue(r._id, 'slicing_cost_amount', r.amount);
+        addValue(r._id, 'slicing_expense_amount', r.expense_amount);
+      }
+    });
 
     /*************************************************************
      * STEP 7: Slicing Received (from slicing_done_other_details_model.total_cmt)
@@ -301,10 +353,18 @@ export const ItemWiseFlitchReportExcel = catchAsync(async (req, res, next) => {
         $group: {
           _id: '$slicing_issue.item_name',
           total: { $sum: '$total_cmt' },
+          total_amount: { $sum: '$total_amount' },
+          total_expense_amount: { $sum: '$total_expense_amount' },
         },
       },
     ]);
-    slicingReceivedAgg.forEach((r) => addValue(r._id, 'slicing_received', r.total));
+    slicingReceivedAgg.forEach((r) => {
+      addValue(r._id, 'slicing_received', r.total);
+      if (includeCostAndExpense) {
+        addValue(r._id, 'slicing_cost_amount', r.total_amount);
+        addValue(r._id, 'slicing_expense_amount', r.total_expense_amount);
+      }
+    });
 
 
 
@@ -325,10 +385,18 @@ export const ItemWiseFlitchReportExcel = catchAsync(async (req, res, next) => {
         $group: {
           _id: '$item_name',
           total: { $sum: '$flitch_cmt' },
+          cost_amount: { $sum: '$cost_amount' },
+          expense_amount: { $sum: '$expense_amount' },
         },
       },
     ]);
-    flitchSalesAgg.forEach((r) => addValue(r._id, 'sales', r.total));
+    flitchSalesAgg.forEach((r) => {
+      addValue(r._id, 'sales', r.total);
+      if (includeCostAndExpense) {
+        addValue(r._id, 'sales_cost_amount', r.cost_amount);
+        addValue(r._id, 'sales_expense_amount', r.expense_amount);
+      }
+    });
 
     /*************************************************************
      * STEP 9: Rejected – flitching_done wastage_info.wastage_sqm + slicing_wastage
@@ -346,10 +414,18 @@ export const ItemWiseFlitchReportExcel = catchAsync(async (req, res, next) => {
         $group: {
           _id: '$item_name',
           total: { $sum: '$wastage_info.wastage_sqm' },
+          cost_amount: { $sum: '$wastage_info.cost_amount' },
+          expense_amount: { $sum: '$wastage_info.expense_amount' },
         },
       },
     ]);
-    rejectedFlitchAgg.forEach((r) => addValue(r._id, 'rejected', r.total));
+    rejectedFlitchAgg.forEach((r) => {
+      addValue(r._id, 'rejected', r.total);
+      if (includeCostAndExpense) {
+        addValue(r._id, 'rejected_cost_amount', r.cost_amount);
+        addValue(r._id, 'rejected_expense_amount', r.expense_amount);
+      }
+    });
 
     // Add slicing wastage to rejected
     const rejectedSlicingWastageAgg = await issue_for_slicing_wastage_model.aggregate([
@@ -389,22 +465,42 @@ export const ItemWiseFlitchReportExcel = catchAsync(async (req, res, next) => {
     const report = Array.from(reportMap.values())
       .filter((r) => itemNamesSet.has(r.item_name))
       .map((r) => ({
-        item_name:             r.item_name,
-        opening_stock_cmt:     r.opening_stock_cmt,
-        invoice_cmt:           r.invoice_cmt,        // Hard-coded 0
-        indian_cmt:            r.indian_cmt,         // Hard-coded 0
-        actual_cmt:            r.actual_cmt,
+        item_name: r.item_name,
+        opening_stock_cmt: r.opening_stock_cmt,
+        ...(includeCostAndExpense && {
+          opening_cost_amount: r.opening_cost_amount,
+          opening_expense_amount: r.opening_expense_amount,
+        }),
+        invoice_cmt: r.invoice_cmt,        // Hard-coded 0
+        indian_cmt: r.indian_cmt,         // Hard-coded 0
+        actual_cmt: r.actual_cmt,
+        ...(includeCostAndExpense && {
+          actual_cost_amount: r.actual_cost_amount,
+          actual_expense_amount: r.actual_expense_amount,
+        }),
         recover_from_rejected: r.recover_from_rejected, // Hard-coded 0
-        issue_for_flitch:      r.issue_for_flitch,
-        flitch_received:       r.flitch_received,
-        flitch_diff:           nonNegativeDiff(r.issue_for_flitch, r.flitch_received),
-        issue_for_slicing:     r.issue_for_slicing,
-        slicing_received:      r.slicing_received,
-        slicing_diff:          nonNegativeDiff(r.issue_for_slicing, r.slicing_received),
-        issue_for_sqedge:      r.issue_for_sqedge,     // Hard-coded 0
-        sales:                 r.sales,
-        rejected:              r.rejected,
-        closing_stock_cmt:     Math.max(0, r.opening_stock_cmt + r.flitch_received - r.issue_for_slicing - r.sales),
+        issue_for_flitch: r.issue_for_flitch,
+        flitch_received: r.flitch_received,
+        flitch_diff: nonNegativeDiff(r.issue_for_flitch, r.flitch_received),
+        ...(includeCostAndExpense && {
+          flitch_cost_amount: r.flitch_cost_amount,
+          flitch_expense_amount: r.flitch_expense_amount,
+        }),
+        issue_for_slicing: r.issue_for_slicing,
+        slicing_received: r.slicing_received,
+        slicing_diff: nonNegativeDiff(r.issue_for_slicing, r.slicing_received),
+        ...(includeCostAndExpense && {
+          slicing_cost_amount: r.slicing_cost_amount,
+          slicing_expense_amount: r.slicing_expense_amount,
+        }),
+        issue_for_sqedge: r.issue_for_sqedge,     // Hard-coded 0
+        sales: r.sales,
+        rejected: r.rejected,
+        closing_stock_cmt: Math.max(0, r.opening_stock_cmt + r.flitch_received - r.issue_for_slicing - r.sales),
+        ...(includeCostAndExpense && {
+          closing_cost_amount: Math.max(0, r.opening_cost_amount + r.flitch_cost_amount - r.slicing_cost_amount - r.sales_cost_amount),
+          closing_expense_amount: Math.max(0, r.opening_expense_amount + r.flitch_expense_amount - r.slicing_expense_amount - r.sales_expense_amount),
+        }),
       }));
 
     const activeReport = report.filter(
@@ -430,7 +526,8 @@ export const ItemWiseFlitchReportExcel = catchAsync(async (req, res, next) => {
       activeReport,
       startDate,
       endDate,
-      filter
+      filter,
+      includeCostAndExpense
     );
 
     return res.json(

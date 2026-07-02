@@ -5,10 +5,10 @@ import catchAsync from '../../../utils/errors/catchAsync.js';
 export const LogInwardDailyReportExcel = catchAsync(
   async (req, res, next) => {
     // Debug logging
-    console.log('Log Inward Report - Request Body:', JSON.stringify(req.body, null, 2));
-    console.log('Log Inward Report - Filters:', req.body?.filters);
-    
-    const { reportDate, ...data } = req?.body?.filters || {};
+    // console.log('Log Inward Report - Request Body:', JSON.stringify(req.body, null, 2));
+    // console.log('Log Inward Report - Filters:', req.body?.filters);
+
+    const { reportDate, includeCostAndExpense, ...data } = req?.body?.filters || {};
 
     // Validate reportDate
     if (!reportDate) {
@@ -30,6 +30,7 @@ export const LogInwardDailyReportExcel = catchAsync(
     console.log('Log Inward Report - Date:', reportDate);
     console.log('Log Inward Report - Start:', startOfDay);
     console.log('Log Inward Report - End:', endOfDay);
+    console.log('Log Inward Report - Include Cost and Expense:', includeCostAndExpense);
 
     // Build match query
     const matchQuery = {
@@ -48,11 +49,13 @@ export const LogInwardDailyReportExcel = catchAsync(
         $sort: {
           item_name: 1,
           log_no: 1,
+          amount: 1,
+          expense_amount: 1,
         },
       },
     ]);
 
-    console.log('Log Inward Report - Records found:', logInwardData);
+    // console.log('Log Inward Report - Records found:', logInwardData);
 
     // Check if data exists
     if (!logInwardData || logInwardData.length === 0) {
@@ -66,7 +69,8 @@ export const LogInwardDailyReportExcel = catchAsync(
     // Generate Excel report
     const excelLink = await GenerateLogDailyInwardReport(
       logInwardData,
-      reportDate
+      reportDate,
+      includeCostAndExpense
     );
 
     return res.status(200).json({

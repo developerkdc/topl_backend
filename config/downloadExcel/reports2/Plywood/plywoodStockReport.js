@@ -17,7 +17,8 @@ export const GeneratePlywoodStockReportExcel = async (
   aggregatedData,
   startDate,
   endDate,
-  filters = {}
+  filters = {},
+  includeCostAndExpense
 ) => {
   try {
     const folderPath = 'public/upload/reports/reports2/Plywood';
@@ -60,18 +61,46 @@ export const GeneratePlywoodStockReportExcel = async (
       { key: 'size', width: 15 },
       { key: 'opening_sheets', width: 12 },
       { key: 'opening_sqm', width: 12 },
+      ...(includeCostAndExpense ? [
+        { key: 'opening_amount', width: 12 },
+        { key: 'opening_expense_amount', width: 12 },
+      ] : []),
       { key: 'receive_sheets', width: 12 },
       { key: 'receive_sqm', width: 12 },
+      ...(includeCostAndExpense ? [
+        { key: 'receive_amount', width: 12 },
+        { key: 'receive_expense_amount', width: 12 },
+      ] : []),
       { key: 'consume_sheets', width: 12 },
       { key: 'consume_sqm', width: 12 },
+      ...(includeCostAndExpense ? [
+        { key: 'consume_amount', width: 12 },
+        { key: 'consume_expense_amount', width: 12 },
+      ] : []),
       { key: 'order_sheets', width: 12 },
       { key: 'order_sqm', width: 12 },
+      ...(includeCostAndExpense ? [
+        { key: 'order_amount', width: 12 },
+        { key: 'order_expense_amount', width: 12 },
+      ] : []),
       { key: 'issue_for_ply_resizing_sheets', width: 22 },
       { key: 'issue_for_ply_resizing_sqm', width: 22 },
+      ...(includeCostAndExpense ? [
+        { key: 'issue_for_ply_resizing_amount', width: 22 },
+        { key: 'issue_for_ply_resizing_expense_amount', width: 22 },
+      ] : []),
       { key: 'issue_for_pressing_sheets', width: 18 },
       { key: 'issue_for_pressing_sqm', width: 20 },
+      ...(includeCostAndExpense ? [
+        { key: 'issue_for_pressing_amount', width: 18 },
+        { key: 'issue_for_pressing_expense_amount', width: 20 },
+      ] : []),
       { key: 'closing_sheets', width: 12 },
       { key: 'closing_sqm', width: 12 },
+      ...(includeCostAndExpense ? [
+        { key: 'closing_amount', width: 12 },
+        { key: 'closing_expense_amount', width: 12 },
+      ] : [])
     ];
 
     worksheet.columns = columnDefinitions;
@@ -90,18 +119,46 @@ export const GeneratePlywoodStockReportExcel = async (
       'Size',
       'Opening Sheets',
       'Opening Metres',
+      ...(includeCostAndExpense ? [
+        'Opening Amount',
+        'Opening Expense Amount',
+      ] : []),
       'Received Sheets',
       'Received Mtrs',
+      ...(includeCostAndExpense ? [
+        'Received Amount',
+        'Received Expense Amount',
+      ] : []),
       'Consumed Sheets',
       'Consumed Mtrs',
+      ...(includeCostAndExpense ? [
+        'Consume Amount',
+        'Consume Expense Amount',
+      ] : []),
       'Order Sheets',
       'Order Mtrs',
+      ...(includeCostAndExpense ? [
+        'Order Amount',
+        'Order Expense Amount',
+      ] : []),
       'Issue For Ply Resizing Sheet',
       'Issue For Ply Resizing Sq Met',
+      ...(includeCostAndExpense ? [
+        'Issue For Ply Resizing Amount',
+        'Issue For Ply Resizing Expense Amount',
+      ] : []),
       'Issue For Pressing',
       'Issue For Pressing Sq Met',
+      ...(includeCostAndExpense ? [
+        'Issue For Pressing Amount',
+        'Issue For Pressing Expense Amount',
+      ] : []),
       'Closing sheets',
       'Closing Metres',
+      ...(includeCostAndExpense ? [
+        'Closing Amount',
+        'Closing Expense Amount',
+      ] : [])
     ]);
     headerRow.font = { bold: true };
     headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
@@ -141,6 +198,24 @@ export const GeneratePlywoodStockReportExcel = async (
       issue_for_pressing_sqm: 0,
       closing_sheets: 0,
       closing_sqm: 0,
+      ...(includeCostAndExpense ? {
+        opening_amount: 0,
+        opening_expense_amount: 0,
+        receive_amount: 0,
+        receive_expense_amount: 0,
+        consume_amount: 0,
+        consume_expense_amount: 0,
+        challan_amount: 0,
+        challan_expense_amount: 0,
+        order_amount: 0,
+        order_expense_amount: 0,
+        issue_for_ply_resizing_amount: 0,
+        issue_for_ply_resizing_expense_amount: 0,
+        issue_for_pressing_amount: 0,
+        issue_for_pressing_expense_amount: 0,
+        closing_amount: 0,
+        closing_expense_amount: 0,
+      } : {})
     };
 
     Object.keys(groupedData)
@@ -168,6 +243,24 @@ export const GeneratePlywoodStockReportExcel = async (
               issue_for_pressing_sqm: 0,
               closing_sheets: 0,
               closing_sqm: 0,
+              ...(includeCostAndExpense ? {
+                opening_amount: 0,
+                opening_expense_amount: 0,
+                receive_amount: 0,
+                receive_expense_amount: 0,
+                consume_amount: 0,
+                consume_expense_amount: 0,
+                challan_amount: 0,
+                challan_expense_amount: 0,
+                order_amount: 0,
+                order_expense_amount: 0,
+                issue_for_ply_resizing_amount: 0,
+                issue_for_ply_resizing_expense_amount: 0,
+                issue_for_pressing_amount: 0,
+                issue_for_pressing_expense_amount: 0,
+                closing_amount: 0,
+                closing_expense_amount: 0,
+              } : {})
             };
 
             items.forEach((item) => {
@@ -191,6 +284,24 @@ export const GeneratePlywoodStockReportExcel = async (
                 issue_for_pressing_sqm: item.issue_for_pressing_sqm || 0,
                 closing_sheets: item.closing_sheets || 0,
                 closing_sqm: item.closing_sqm || 0,
+                ...(includeCostAndExpense ? {
+                  opening_amount: item.opening_amount || 0,
+                  opening_expense_amount: item.opening_expense_amount || 0,
+                  receive_amount: item.receive_amount || 0,
+                  receive_expense_amount: item.receive_expense_amount || 0,
+                  consume_amount: item.consume_amount || 0,
+                  consume_expense_amount: item.consume_expense_amount || 0,
+                  challan_amount: item.challan_amount || 0,
+                  challan_expense_amount: item.challan_expense_amount || 0,
+                  order_amount: item.order_amount || 0,
+                  order_expense_amount: item.order_expense_amount || 0,
+                  issue_for_ply_resizing_amount: item.issue_for_ply_resizing_amount || 0,
+                  issue_for_ply_resizing_expense_amount: item.issue_for_ply_resizing_expense_amount || 0,
+                  issue_for_pressing_amount: item.issue_for_pressing_amount || 0,
+                  issue_for_pressing_expense_amount: item.issue_for_pressing_expense_amount || 0,
+                  closing_amount: item.closing_amount || 0,
+                  closing_expense_amount: item.closing_expense_amount || 0,
+                } : {})
               };
               const { challan_sheets, challan_sqm, ...rowData } = fullRowData;
               worksheet.addRow(rowData);
@@ -210,6 +321,26 @@ export const GeneratePlywoodStockReportExcel = async (
               thicknessTotals.issue_for_pressing_sqm += item.issue_for_pressing_sqm || 0;
               thicknessTotals.closing_sheets += item.closing_sheets || 0;
               thicknessTotals.closing_sqm += item.closing_sqm || 0;
+              if (includeCostAndExpense) {
+                [
+                  'opening',
+                  'receive',
+                  'consume',
+                  'challan',
+                  'order',
+                  'issue_for_ply_resizing',
+                  'issue_for_pressing',
+                  'closing',
+                ].forEach(prefix => {
+                  thicknessTotals[`${prefix}_amount`] =
+                    (thicknessTotals[`${prefix}_amount`] || 0) +
+                    (item[`${prefix}_amount`] || 0);
+
+                  thicknessTotals[`${prefix}_expense_amount`] =
+                    (thicknessTotals[`${prefix}_expense_amount`] || 0) +
+                    (item[`${prefix}_expense_amount`] || 0);
+                });
+              }
             });
 
             const { challan_sheets: _cs1, challan_sqm: _csq1, ...displayTotals } = thicknessTotals;
@@ -265,7 +396,8 @@ export const GeneratePlywoodItemWiseStockReportExcel = async (
   aggregatedData,
   startDate,
   endDate,
-  filters = {}
+  filters = {},
+  includeCostAndExpense
 ) => {
   try {
     const folderPath = 'public/upload/reports/reports2/Plywood';
@@ -312,18 +444,46 @@ export const GeneratePlywoodItemWiseStockReportExcel = async (
       { key: 'size', width: 15 },
       { key: 'opening_sheets', width: 12 },
       { key: 'opening_sqm', width: 12 },
+      ...(includeCostAndExpense ? [
+        { key: 'opening_amount', width: 12 },
+        { key: 'opening_expense_amount', width: 12 },
+      ] : []),
       { key: 'receive_sheets', width: 12 },
       { key: 'receive_sqm', width: 12 },
+      ...(includeCostAndExpense ? [
+        { key: 'receive_amount', width: 12 },
+        { key: 'receive_expense_amount', width: 12 },
+      ] : []),
       { key: 'consume_sheets', width: 12 },
       { key: 'consume_sqm', width: 12 },
+      ...(includeCostAndExpense ? [
+        { key: 'consume_amount', width: 12 },
+        { key: 'consume_expense_amount', width: 12 },
+      ] : []),
       { key: 'order_sheets', width: 12 },
       { key: 'order_sqm', width: 12 },
+      ...(includeCostAndExpense ? [
+        { key: 'order_amount', width: 12 },
+        { key: 'order_expense_amount', width: 12 },
+      ] : []),
       { key: 'issue_for_ply_resizing_sheets', width: 22 },
       { key: 'issue_for_ply_resizing_sqm', width: 22 },
+      ...(includeCostAndExpense ? [
+        { key: 'issue_for_ply_resizing_amount', width: 12 },
+        { key: 'issue_for_ply_resizing_expense_amount', width: 12 },
+      ] : []),
       { key: 'issue_for_pressing_sheets', width: 18 },
       { key: 'issue_for_pressing_sqm', width: 20 },
+      ...(includeCostAndExpense ? [
+        { key: 'issue_for_pressing_amount', width: 12 },
+        { key: 'issue_for_pressing_expense_amount', width: 12 },
+      ] : []),
       { key: 'closing_sheets', width: 12 },
       { key: 'closing_sqm', width: 12 },
+      ...(includeCostAndExpense ? [
+        { key: 'closing_amount', width: 12 },
+        { key: 'closing_expense_amount', width: 12 },
+      ] : []),
     ];
 
     worksheet.columns = columnDefinitions;
@@ -343,18 +503,46 @@ export const GeneratePlywoodItemWiseStockReportExcel = async (
       'Size',
       'Opening Sheets',
       'Opening Metres',
+      ...(includeCostAndExpense ? [
+        'Opening Amount',
+        'Opening Expense Amount',
+      ] : []),
       'Received Sheets',
       'Received Mtrs',
+      ...(includeCostAndExpense ? [
+        'Receive Amount',
+        'Receive Expense Amount',
+      ] : []),
       'Consumed Sheets',
       'Consumed Mtrs',
+      ...(includeCostAndExpense ? [
+        'Consume Amount',
+        'Consume Expense Amount',
+      ] : []),
       'Order Sheets',
       'Order Mtrs',
+      ...(includeCostAndExpense ? [
+        'Order Amount',
+        'Order Expense Amount',
+      ] : []),
       'Issue For Ply Resizing Sheet',
       'Issue For Ply Resizing Sq Met',
+      ...(includeCostAndExpense ? [
+        'Issue For Ply Resizing Amount',
+        'Issue For Ply Resizing Expense Amount',
+      ] : []),
       'Issue For Pressing',
       'Issue For Pressing Sq Met',
+      ...(includeCostAndExpense ? [
+        'Issue For Pressing Amount',
+        'Issue For Pressing Expense Amount',
+      ] : []),
       'Closing sheets',
       'Closing Metres',
+      ...(includeCostAndExpense ? [
+        'Closing Amount',
+        'Closing Expense Amount',
+      ] : []),
     ]);
     headerRow.font = { bold: true };
     headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
@@ -394,6 +582,24 @@ export const GeneratePlywoodItemWiseStockReportExcel = async (
       issue_for_pressing_sqm: 0,
       closing_sheets: 0,
       closing_sqm: 0,
+      ...(includeCostAndExpense ? {
+        opening_amount: 0,
+        opening_expense_amount: 0,
+        receive_amount: 0,
+        receive_expense_amount: 0,
+        consume_amount: 0,
+        consume_expense_amount: 0,
+        challan_amount: 0,
+        challan_expense_amount: 0,
+        order_amount: 0,
+        order_expense_amount: 0,
+        issue_for_ply_resizing_amount: 0,
+        issue_for_ply_resizing_expense_amount: 0,
+        issue_for_pressing_amount: 0,
+        issue_for_pressing_expense_amount: 0,
+        closing_amount: 0,
+        closing_expense_amount: 0,
+      } : {})
     };
 
     Object.keys(groupedByItem)
@@ -417,6 +623,24 @@ export const GeneratePlywoodItemWiseStockReportExcel = async (
           issue_for_pressing_sqm: 0,
           closing_sheets: 0,
           closing_sqm: 0,
+          ...(includeCostAndExpense ? {
+            opening_amount: 0,
+            opening_expense_amount: 0,
+            receive_amount: 0,
+            receive_expense_amount: 0,
+            consume_amount: 0,
+            consume_expense_amount: 0,
+            challan_amount: 0,
+            challan_expense_amount: 0,
+            order_amount: 0,
+            order_expense_amount: 0,
+            issue_for_ply_resizing_amount: 0,
+            issue_for_ply_resizing_expense_amount: 0,
+            issue_for_pressing_amount: 0,
+            issue_for_pressing_expense_amount: 0,
+            closing_amount: 0,
+            closing_expense_amount: 0,
+          } : {})
         };
 
         Object.keys(thicknesses)
@@ -440,6 +664,24 @@ export const GeneratePlywoodItemWiseStockReportExcel = async (
               issue_for_pressing_sqm: 0,
               closing_sheets: 0,
               closing_sqm: 0,
+              ...(includeCostAndExpense ? {
+                opening_amount: 0,
+                opening_expense_amount: 0,
+                receive_amount: 0,
+                receive_expense_amount: 0,
+                consume_amount: 0,
+                consume_expense_amount: 0,
+                challan_amount: 0,
+                challan_expense_amount: 0,
+                order_amount: 0,
+                order_expense_amount: 0,
+                issue_for_ply_resizing_amount: 0,
+                issue_for_ply_resizing_expense_amount: 0,
+                issue_for_pressing_amount: 0,
+                issue_for_pressing_expense_amount: 0,
+                closing_amount: 0,
+                closing_expense_amount: 0,
+              } : {})
             };
 
             rows.forEach((item) => {
@@ -464,6 +706,24 @@ export const GeneratePlywoodItemWiseStockReportExcel = async (
                 issue_for_pressing_sqm: item.issue_for_pressing_sqm ?? 0,
                 closing_sheets: item.closing_sheets ?? 0,
                 closing_sqm: item.closing_sqm ?? 0,
+                ...(includeCostAndExpense ? {
+                  opening_amount: item.opening_amount ?? 0,
+                  opening_expense_amount: item.opening_expense_amount ?? 0,
+                  receive_amount: item.receive_amount ?? 0,
+                  receive_expense_amount: item.receive_expense_amount ?? 0,
+                  consume_amount: item.consume_amount ?? 0,
+                  consume_expense_amount: item.consume_expense_amount ?? 0,
+                  challan_amount: item.challan_amount ?? 0,
+                  challan_expense_amount: item.challan_expense_amount ?? 0,
+                  order_amount: item.order_amount ?? 0,
+                  order_expense_amount: item.order_expense_amount ?? 0,
+                  issue_for_ply_resizing_amount: item.issue_for_ply_resizing_amount ?? 0,
+                  issue_for_ply_resizing_expense_amount: item.issue_for_ply_resizing_expense_amount ?? 0,
+                  issue_for_pressing_amount: item.issue_for_pressing_amount ?? 0,
+                  issue_for_pressing_expense_amount: item.issue_for_pressing_expense_amount ?? 0,
+                  closing_amount: item.closing_amount ?? 0,
+                  closing_expense_amount: item.closing_expense_amount ?? 0,
+                } : {})
               };
               const { challan_sheets, challan_sqm, ...rowData } = fullRowData;
               worksheet.addRow(rowData);
@@ -483,6 +743,26 @@ export const GeneratePlywoodItemWiseStockReportExcel = async (
               thicknessTotals.issue_for_pressing_sqm += item.issue_for_pressing_sqm ?? 0;
               thicknessTotals.closing_sheets += item.closing_sheets ?? 0;
               thicknessTotals.closing_sqm += item.closing_sqm ?? 0;
+              if (includeCostAndExpense) {
+                [
+                  'opening',
+                  'receive',
+                  'consume',
+                  'challan',
+                  'order',
+                  'issue_for_ply_resizing',
+                  'issue_for_pressing',
+                  'closing',
+                ].forEach(prefix => {
+                  thicknessTotals[`${prefix}_amount`] =
+                    (thicknessTotals[`${prefix}_amount`] || 0) +
+                    (item[`${prefix}_amount`] || 0);
+
+                  thicknessTotals[`${prefix}_expense_amount`] =
+                    (thicknessTotals[`${prefix}_expense_amount`] || 0) +
+                    (item[`${prefix}_expense_amount`] || 0);
+                });
+              }
             });
 
             const { challan_sheets: _cs1, challan_sqm: _csq1, ...displayTotals } = thicknessTotals;
@@ -561,7 +841,8 @@ export const GeneratePlywoodStockReportByPelletExcel = async (
   aggregatedData,
   startDate,
   endDate,
-  filters = {}
+  filters = {},
+  includeCostAndExpense
 ) => {
   try {
     const folderPath = 'public/upload/reports/reports2/Plywood';
@@ -605,18 +886,46 @@ export const GeneratePlywoodStockReportByPelletExcel = async (
       { key: 'size', width: 15 },
       { key: 'opening_sheets', width: 12 },
       { key: 'opening_sqm', width: 12 },
+      ...(includeCostAndExpense ? [
+        { key: 'opening_amount', width: 12 },
+        { key: 'opening_expense_amount', width: 12 },
+      ] : []),
       { key: 'receive_sheets', width: 12 },
       { key: 'receive_sqm', width: 12 },
+      ...(includeCostAndExpense ? [
+        { key: 'receive_amount', width: 12 },
+        { key: 'receive_expense_amount', width: 12 },
+      ] : []),
       { key: 'consume_sheets', width: 12 },
       { key: 'consume_sqm', width: 12 },
+      ...(includeCostAndExpense ? [
+        { key: 'consume_amount', width: 12 },
+        { key: 'consume_expense_amount', width: 12 },
+      ] : []),
       { key: 'order_sheets', width: 12 },
       { key: 'order_sqm', width: 12 },
+      ...(includeCostAndExpense ? [
+        { key: 'order_amount', width: 12 },
+        { key: 'order_expense_amount', width: 12 },
+      ] : []),
       { key: 'issue_for_ply_resizing_sheets', width: 22 },
       { key: 'issue_for_ply_resizing_sqm', width: 22 },
+      ...(includeCostAndExpense ? [
+        { key: 'issue_for_ply_resizing_amount', width: 22 },
+        { key: 'issue_for_ply_resizing_expense_amount', width: 22 },
+      ] : []),
       { key: 'issue_for_pressing_sheets', width: 18 },
       { key: 'issue_for_pressing_sqm', width: 20 },
+      ...(includeCostAndExpense ? [
+        { key: 'issue_for_pressing_amount', width: 18 },
+        { key: 'issue_for_pressing_expense_amount', width: 20 },
+      ] : []),
       { key: 'closing_sheets', width: 12 },
       { key: 'closing_sqm', width: 12 },
+      ...(includeCostAndExpense ? [
+        { key: 'closing_amount', width: 12 },
+        { key: 'closing_expense_amount', width: 12 },
+      ] : []),
     ];
 
     worksheet.columns = columnDefinitions;
@@ -636,18 +945,46 @@ export const GeneratePlywoodStockReportByPelletExcel = async (
       'Size',
       'Opening Sheets',
       'Opening Metres',
+      ...(includeCostAndExpense ? [
+        'Opening Amount',
+        'Opening Expense Amount',
+      ] : []),
       'Received Sheets',
       'Received Mtrs',
+      ...(includeCostAndExpense ? [
+        'Receive Amount',
+        'Receive Expense Amount',
+      ] : []),
       'Consumed Sheets',
       'Consumed Mtrs',
+      ...(includeCostAndExpense ? [
+        'Consume Amount',
+        'Consume Expense Amount',
+      ] : []),
       'Order Sheets',
       'Order Mtrs',
+      ...(includeCostAndExpense ? [
+        'Order Amount',
+        'Order Expense Amount',
+      ] : []),
       'Issue For Ply Resizing Sheet',
       'Issue For Ply Resizing Sq Met',
+      ...(includeCostAndExpense ? [
+        'Issue For Ply Resizing Amount',
+        'Issue For Ply Resizing Expense Amount',
+      ] : []),
       'Issue For Pressing',
       'Issue For Pressing Sq Met',
+      ...(includeCostAndExpense ? [
+        'Issue For Pressing Amount',
+        'Issue For Pressing Expense Amount',
+      ] : []),
       'Closing sheets',
       'Closing Metres',
+      ...(includeCostAndExpense ? [
+        'Closing Amount',
+        'Closing Expense Amount',
+      ] : []),
     ]);
     headerRow.font = { bold: true };
     headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
@@ -683,6 +1020,24 @@ export const GeneratePlywoodStockReportByPelletExcel = async (
       issue_for_pressing_sqm: 0,
       closing_sheets: 0,
       closing_sqm: 0,
+      ...(includeCostAndExpense ? {
+        opening_amount: 0,
+        opening_expense_amount: 0,
+        receive_amount: 0,
+        receive_expense_amount: 0,
+        consume_amount: 0,
+        consume_expense_amount: 0,
+        challan_amount: 0,
+        challan_expense_amount: 0,
+        order_amount: 0,
+        order_expense_amount: 0,
+        issue_for_ply_resizing_amount: 0,
+        issue_for_ply_resizing_expense_amount: 0,
+        issue_for_pressing_amount: 0,
+        issue_for_pressing_expense_amount: 0,
+        closing_amount: 0,
+        closing_expense_amount: 0,
+      } : {}),
     };
 
     Object.keys(groupedBySubCategory)
@@ -706,6 +1061,24 @@ export const GeneratePlywoodStockReportByPelletExcel = async (
           issue_for_pressing_sqm: 0,
           closing_sheets: 0,
           closing_sqm: 0,
+          ...(includeCostAndExpense ? {
+            opening_amount: 0,
+            opening_expense_amount: 0,
+            receive_amount: 0,
+            receive_expense_amount: 0,
+            consume_amount: 0,
+            consume_expense_amount: 0,
+            challan_amount: 0,
+            challan_expense_amount: 0,
+            order_amount: 0,
+            order_expense_amount: 0,
+            issue_for_ply_resizing_amount: 0,
+            issue_for_ply_resizing_expense_amount: 0,
+            issue_for_pressing_amount: 0,
+            issue_for_pressing_expense_amount: 0,
+            closing_amount: 0,
+            closing_expense_amount: 0,
+          } : {}),
         };
 
         items.forEach((item) => {
@@ -730,6 +1103,24 @@ export const GeneratePlywoodStockReportByPelletExcel = async (
             issue_for_pressing_sqm: item.issue_for_pressing_sqm ?? 0,
             closing_sheets: item.closing_sheets ?? 0,
             closing_sqm: item.closing_sqm ?? 0,
+            ...(includeCostAndExpense ? {
+              opening_amount: item.opening_amount ?? 0,
+              opening_expense_amount: item.opening_expense_amount ?? 0,
+              receive_amount: item.receive_amount ?? 0,
+              receive_expense_amount: item.receive_expense_amount ?? 0,
+              consume_amount: item.consume_amount ?? 0,
+              consume_expense_amount: item.consume_expense_amount ?? 0,
+              challan_amount: item.challan_amount ?? 0,
+              challan_expense_amount: item.challan_expense_amount ?? 0,
+              order_amount: item.order_amount ?? 0,
+              order_expense_amount: item.order_expense_amount ?? 0,
+              issue_for_ply_resizing_amount: item.issue_for_ply_resizing_amount ?? 0,
+              issue_for_ply_resizing_expense_amount: item.issue_for_ply_resizing_expense_amount ?? 0,
+              issue_for_pressing_amount: item.issue_for_pressing_amount ?? 0,
+              issue_for_pressing_expense_amount: item.issue_for_pressing_expense_amount ?? 0,
+              closing_amount: item.closing_amount ?? 0,
+              closing_expense_amount: item.closing_expense_amount ?? 0,
+            } : {}),
           };
           const { challan_sheets, challan_sqm, ...rowData } = fullRowData;
           worksheet.addRow(rowData);
@@ -749,6 +1140,27 @@ export const GeneratePlywoodStockReportByPelletExcel = async (
           categoryTotals.issue_for_pressing_sqm += item.issue_for_pressing_sqm ?? 0;
           categoryTotals.closing_sheets += item.closing_sheets ?? 0;
           categoryTotals.closing_sqm += item.closing_sqm ?? 0;
+
+          if (includeCostAndExpense) {
+            [
+              'opening',
+              'receive',
+              'consume',
+              'challan',
+              'order',
+              'issue_for_ply_resizing',
+              'issue_for_pressing',
+              'closing',
+            ].forEach(prefix => {
+              categoryTotals[`${prefix}_amount`] =
+                (categoryTotals[`${prefix}_amount`] || 0) +
+                (item[`${prefix}_amount`] || 0);
+
+              categoryTotals[`${prefix}_expense_amount`] =
+                (categoryTotals[`${prefix}_expense_amount`] || 0) +
+                (item[`${prefix}_expense_amount`] || 0);
+            });
+          }
         });
 
         const { challan_sheets: _cs1, challan_sqm: _csq1, ...displayCategoryTotals } = categoryTotals;

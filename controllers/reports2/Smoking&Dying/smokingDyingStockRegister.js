@@ -1,4 +1,4 @@
-  import { GenerateSmokingDyingStockRegisterExcel } from '../../../config/downloadExcel/reports2/Smoking&Dying/smokingDyingStockRegister.js';
+import { GenerateSmokingDyingStockRegisterExcel } from '../../../config/downloadExcel/reports2/Smoking&Dying/smokingDyingStockRegister.js';
 import { process_done_details_model } from '../../../database/schema/factory/smoking_dying/smoking_dying_done.schema.js';
 import catchAsync from '../../../utils/errors/catchAsync.js';
 
@@ -14,6 +14,7 @@ export const SmokingDyingStockRegisterExcel = catchAsync(async (req, res, next) 
   const filters = req?.body?.filters || {};
   const startDate = filters.startDate ?? req?.body?.startDate;
   const endDate = filters.endDate ?? req?.body?.endDate;
+  const includeCostAndExpense = req?.body?.includeCostAndExpense;
 
   if (!startDate || !endDate) {
     return res.status(400).json({
@@ -88,6 +89,8 @@ export const SmokingDyingStockRegisterExcel = catchAsync(async (req, res, next) 
         pattern_name: '$items.pattern_name',
         series_name: '$items.series_name',
         remark: '$items.remark',
+        amount: '$items.amount',
+        expense_amount: '$items.expense_amount',
       },
     },
   ];
@@ -102,7 +105,7 @@ export const SmokingDyingStockRegisterExcel = catchAsync(async (req, res, next) 
     });
   }
 
-  const excelLink = await GenerateSmokingDyingStockRegisterExcel(rows, startDate, endDate);
+  const excelLink = await GenerateSmokingDyingStockRegisterExcel(rows, startDate, endDate, includeCostAndExpense);
 
   return res.status(200).json({
     result: excelLink,

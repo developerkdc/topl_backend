@@ -10,7 +10,7 @@ import catchAsync from '../../../utils/errors/catchAsync.js';
  * Joins pressing_done_details, pressing_done_consumed_items_details, and users (worker name).
  */
 export const PressingDailyReportExcel = catchAsync(async (req, res, next) => {
-  const { reportDate } = req?.body?.filters || {};
+  const { reportDate, includeCostAndExpense } = req?.body?.filters || {};
 
   if (!reportDate) {
     return res.status(400).json({
@@ -79,7 +79,7 @@ export const PressingDailyReportExcel = catchAsync(async (req, res, next) => {
       },
     },
     {
-      $sort: { pressing_id: 1, product_type: 1 },
+      $sort: { pressing_id: 1, product_type: 1, amount: 1 },
     },
   ];
 
@@ -95,7 +95,8 @@ export const PressingDailyReportExcel = catchAsync(async (req, res, next) => {
 
   const excelLink = await GeneratePressingDailyReportExcel(
     pressingData,
-    reportDate
+    reportDate,
+    includeCostAndExpense
   );
 
   return res.status(200).json({

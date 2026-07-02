@@ -9,7 +9,7 @@ import catchAsync from '../../../utils/errors/catchAsync.js';
  */
 export const PeelingDailyReportExcel = catchAsync(
   async (req, res, next) => {
-    const { reportDate } = req?.body?.filters || {};
+    const { reportDate, includeCostAndExpense } = req?.body?.filters || {};
 
     if (!reportDate) {
       return res.status(400).json({
@@ -97,33 +97,66 @@ export const PeelingDailyReportExcel = catchAsync(
       {
         $sort: { 'items.item_name': 1, 'items.log_no': 1 },
       },
+      // {
+      //   $project: {
+      //     peeling_id: '$_id',
+      //     shift: 1,
+      //     no_of_working_hours: 1,
+      //     worker: {
+      //       $concat: [
+      //         { $ifNull: ['$worker.first_name', ''] },
+      //         ' ',
+      //         { $ifNull: ['$worker.last_name', ''] },
+      //       ],
+      //     },
+      //     item_name: '$items.item_name',
+      //     log_no: '$items.log_no',
+      //     output_type: '$items.output_type',
+      //     thickness: '$items.thickness',
+      //     length: '$items.length',
+      //     width: '$items.width',
+      //     sq_mtr: '$items.cmt',
+      //     cmt: { $ifNull: ['$issued_for_peeling.cmt', '$items.cmt'] },
+      //     leaves: '$items.no_of_leaves',
+      //     rej_length: '$wastage.length',
+      //     rej_diameter: '$wastage.diameter',
+      //     rej_cmt: '$wastage.cmt',
+      //     remarks: { $ifNull: ['$items.remark', ''] },
+      //   },
+      // },
       {
         $project: {
           peeling_id: '$_id',
-          shift: 1,
-          no_of_working_hours: 1,
-          worker: {
-            $concat: [
-              { $ifNull: ['$worker.first_name', ''] },
-              ' ',
-              { $ifNull: ['$worker.last_name', ''] },
-            ],
-          },
           item_name: '$items.item_name',
           log_no: '$items.log_no',
-          output_type: '$items.output_type',
           thickness: '$items.thickness',
-          length: '$items.length',
-          width: '$items.width',
-          sq_mtr: '$items.cmt',
-          cmt: { $ifNull: ['$issued_for_peeling.cmt', '$items.cmt'] },
-          leaves: '$items.no_of_leaves',
+
+          length: '$issued_for_peeling.length',
+          width: '$issued_for_peeling.width',
+          height: '$issued_for_peeling.height',
+          cmt: {
+            $ifNull: ['$issued_for_peeling.cmt', 0],
+          },
+
+          leaves: {
+            $ifNull: ['$items.no_of_leaves', 0],
+          },
+
           rej_length: '$wastage.length',
           rej_diameter: '$wastage.diameter',
-          rej_cmt: '$wastage.cmt',
-          remarks: { $ifNull: ['$items.remark', ''] },
+          rej_cmt: {
+            $ifNull: ['$wastage.cmt', 0],
+          },
+
+          amount: {
+            $ifNull: ['$issued_for_peeling.amount', 0],
+          },
+
+          expense_amount: {
+            $ifNull: ['$issued_for_peeling.expense_amount', 0],
+          },
         },
-      },
+      }
     ];
 
     const rows = await peeling_done_other_details_model.aggregate(pipeline);
@@ -136,7 +169,7 @@ export const PeelingDailyReportExcel = catchAsync(
       });
     }
 
-    const excelLink = await GeneratePeelingDailyReport(rows, reportDate);
+    const excelLink = await GeneratePeelingDailyReport(rows, reportDate, includeCostAndExpense);
 
     return res.status(200).json({
       result: excelLink,

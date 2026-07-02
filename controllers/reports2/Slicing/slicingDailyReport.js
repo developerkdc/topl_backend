@@ -11,7 +11,7 @@ import catchAsync from '../../../utils/errors/catchAsync.js';
  */
 export const SlicingDailyReportExcel = catchAsync(
   async (req, res, next) => {
-    const { reportDate } = req?.body?.filters || {};
+    const { reportDate, includeCostAndExpense } = req?.body?.filters || {};
 
     if (!reportDate) {
       return res.status(400).json({
@@ -83,17 +83,33 @@ export const SlicingDailyReportExcel = catchAsync(
           item_name: '$items.item_name',
           flitch_no: '$items.log_no',
           thickness: '$items.thickness',
+
           length: '$issued_for_slicing.length',
           width1: '$issued_for_slicing.width1',
           height: '$issued_for_slicing.height',
-          cmt: '$issued_for_slicing.cmt',
-          leaves: '$items.no_of_leaves',
+          cmt: {
+            $ifNull: ['$issued_for_slicing.cmt', 0],
+          },
+
+          leaves: {
+            $ifNull: ['$items.no_of_leaves', 0],
+          },
+
           rej_height: '$wastage.height',
           rej_width: '$wastage.width',
-          rej_cmt: '$wastage.cmt',
-          remarks: { $ifNull: ['$items.remark', ''] },
+          rej_cmt: {
+            $ifNull: ['$wastage.cmt', 0],
+          },
+
+          amount: {
+            $ifNull: ['$issued_for_slicing.amount', 0],
+          },
+
+          expense_amount: {
+            $ifNull: ['$issued_for_slicing.expense_amount', 0],
+          },
         },
-      },
+      }
     ];
 
     const rows = await slicing_done_other_details_model.aggregate(pipeline);
@@ -106,7 +122,7 @@ export const SlicingDailyReportExcel = catchAsync(
       });
     }
 
-    const excelLink = await GenerateSlicingDailyReport(rows, reportDate);
+    const excelLink = await GenerateSlicingDailyReport(rows, reportDate, includeCostAndExpense);
 
     return res.status(200).json({
       result: excelLink,

@@ -9,7 +9,7 @@ import catchAsync from '../../../../utils/errors/catchAsync.js';
  * @route POST /api/V1/report/download-excel-tapping-daily-report
  */
 export const TappingDailyReportExcel = catchAsync(async (req, res, next) => {
-  const { reportDate } = req?.body?.filters || {};
+  const { reportDate, includeCostAndExpense } = req?.body?.filters || {};
 
   if (!reportDate) {
     return res.status(400).json({
@@ -53,7 +53,7 @@ export const TappingDailyReportExcel = catchAsync(async (req, res, next) => {
       },
     },
     {
-      $sort: { 'items.item_name': 1, 'items.log_no_code': 1 },
+      $sort: { 'items.item_name': 1, 'items.log_no_code': 1, 'items.amount': 1, 'items.expense_amount': 1 },
     },
   ]);
 
@@ -65,7 +65,7 @@ export const TappingDailyReportExcel = catchAsync(async (req, res, next) => {
     });
   }
 
-  const excelLink = await GenerateTappingDailyReportExcel(tappingData, reportDate);
+  const excelLink = await GenerateTappingDailyReportExcel(tappingData, reportDate, includeCostAndExpense);
 
   return res.status(200).json({
     result: excelLink,

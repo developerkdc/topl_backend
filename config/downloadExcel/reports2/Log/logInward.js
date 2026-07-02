@@ -38,6 +38,7 @@ const medium = { style: 'medium' };
  * @param {Row} row - Excel row
  * @param {number} startCol - first column
  * @param {number} endCol - last column
+ * @param {boolean} includeCostAndExpense - Whether to include cost and expense columns
  * @param {{ top?: boolean, bottom?: boolean, bottomStyle?: string }} opts
  */
 const applyRowBorders = (row, startCol, endCol, opts = {}) => {
@@ -57,7 +58,7 @@ const applyRowBorders = (row, startCol, endCol, opts = {}) => {
 /**
  * Generate Log Daily Inward Report
  */
-const GenerateLogDailyInwardReport = async (details, reportDate) => {
+const GenerateLogDailyInwardReport = async (details, reportDate, includeCostAndExpense) => {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Log Inward Report');
 
@@ -91,6 +92,7 @@ const GenerateLogDailyInwardReport = async (details, reportDate) => {
     'Physical Length',
     'Physical Girth',
     'Physical CMT',
+    ...(includeCostAndExpense ? ['Cost', 'Expense'] : []),
     'Remarks',
   ];
 
@@ -127,12 +129,15 @@ const GenerateLogDailyInwardReport = async (details, reportDate) => {
     { width: 15 }, // Physical Length
     { width: 15 }, // Physical Girth
     { width: 12 }, // Physical CMT
+    ...(includeCostAndExpense ? [{ width: 12 }, { width: 12 }] : []),
     { width: 20 }, // Remarks
   ];
 
   let grandTotalInvoiceCMT = 0;
   let grandTotalIndianCMT = 0;
   let grandTotalPhysicalCMT = 0;
+  let grandTotalCost = 0;
+  let grandTotalExpense = 0;
 
   const workerDetailsMap = new Map();
 
@@ -167,6 +172,8 @@ const GenerateLogDailyInwardReport = async (details, reportDate) => {
       let inwardInvoiceCMT = 0;
       let inwardIndianCMT = 0;
       let inwardPhysicalCMT = 0;
+      let inwardCost = 0;
+      let inwardExpense = 0;
       let inwardPrinted = false;
 
       Object.keys(inwardData.items)
@@ -176,6 +183,8 @@ const GenerateLogDailyInwardReport = async (details, reportDate) => {
           let itemInvoiceCMT = 0;
           let itemIndianCMT = 0;
           let itemPhysicalCMT = 0;
+          let itemCost = 0;
+          let itemExpense = 0;
 
           itemData.logs.forEach((log, logIndex) => {
             const row = worksheet.getRow(currentRow);
@@ -197,7 +206,11 @@ const GenerateLogDailyInwardReport = async (details, reportDate) => {
             row.getCell(9).value = log.physical_length || '';
             row.getCell(10).value = log.physical_diameter || 0;
             row.getCell(11).value = log.physical_cmt || 0;
-            row.getCell(12).value = log.remark || '';
+            if (includeCostAndExpense) {
+              row.getCell(12).value = log.amount || 0;
+              row.getCell(13).value = log.expense_amount || 0;
+            }
+            row.getCell(14).value = log.remark || '';
 
             // Invoice Length, Invoice Dia., Physical Length, Physical Girth, Physical CMT, Invoice CMT, Indian CMT: 3 decimals
             [5, 6, 7, 8, 9, 10, 11].forEach((colNum) => {
@@ -214,6 +227,12 @@ const GenerateLogDailyInwardReport = async (details, reportDate) => {
             grandTotalInvoiceCMT += log.invoice_cmt || 0;
             grandTotalIndianCMT += log.indian_cmt || 0;
             grandTotalPhysicalCMT += log.physical_cmt || 0;
+            if (includeCostAndExpense) {
+              itemCost += log.amount || 0;
+              itemExpense += log.expense_amount || 0;
+              grandTotalCost += log.amount || 0;
+              grandTotalExpense += log.expense_amount || 0;
+            }
 
             if (log.log_invoice_details?.workers_details) {
               const workerKey = `${log.log_invoice_details.inward_sr_no}_${log.log_invoice_details.workers_details.shift}`;
@@ -244,12 +263,24 @@ const GenerateLogDailyInwardReport = async (details, reportDate) => {
           itemTotalRow.getCell(11).value = itemPhysicalCMT;
           itemTotalRow.getCell(11).font = { bold: true };
           itemTotalRow.getCell(11).numFmt = '0.000';
+          if (includeCostAndExpense) {
+            itemTotalRow.getCell(12).value = itemCost;
+            itemTotalRow.getCell(12).font = { bold: true };
+            itemTotalRow.getCell(12).numFmt = '0.000';
+            itemTotalRow.getCell(13).value = itemExpense;
+            itemTotalRow.getCell(13).font = { bold: true };
+            itemTotalRow.getCell(13).numFmt = '0.000';
+          }
           applyRowBorders(itemTotalRow, 1, 12, { top: true, bottom: true });
           currentRow++;
 
           inwardInvoiceCMT += itemInvoiceCMT;
           inwardIndianCMT += itemIndianCMT;
           inwardPhysicalCMT += itemPhysicalCMT;
+          if (includeCostAndExpense) {
+            inwardCost += itemCost;
+            inwardExpense += itemExpense;
+          }
         });
 
       // Inward total row — grey background across full row, thicker bottom border
@@ -266,6 +297,14 @@ const GenerateLogDailyInwardReport = async (details, reportDate) => {
       inwardTotalRow.getCell(11).value = inwardPhysicalCMT;
       inwardTotalRow.getCell(11).font = { bold: true };
       inwardTotalRow.getCell(11).numFmt = '0.000';
+      if (includeCostAndExpense) {
+        inwardTotalRow.getCell(12).value = inwardCost;
+        inwardTotalRow.getCell(12).font = { bold: true };
+        inwardTotalRow.getCell(12).numFmt = '0.000';
+        inwardTotalRow.getCell(13).value = inwardExpense;
+        inwardTotalRow.getCell(13).font = { bold: true };
+        inwardTotalRow.getCell(13).numFmt = '0.000';
+      }
       applyRowBorders(inwardTotalRow, 1, 12, { top: true, bottom: true, bottomStyle: 'medium' });
       currentRow++;
       currentRow++; // blank line between inwards
@@ -285,6 +324,14 @@ const GenerateLogDailyInwardReport = async (details, reportDate) => {
   grandTotalRow.getCell(11).value = grandTotalPhysicalCMT;
   grandTotalRow.getCell(11).font = { bold: true };
   grandTotalRow.getCell(11).numFmt = '0.000';
+  if (includeCostAndExpense) {
+    grandTotalRow.getCell(12).value = grandTotalCost;
+    grandTotalRow.getCell(12).font = { bold: true };
+    grandTotalRow.getCell(12).numFmt = '0.000';
+    grandTotalRow.getCell(13).value = grandTotalExpense;
+    grandTotalRow.getCell(13).font = { bold: true };
+    grandTotalRow.getCell(13).numFmt = '0.000';
+  }
   applyRowBorders(grandTotalRow, 1, 12, { top: true, bottom: true });
   currentRow++;
 
@@ -296,7 +343,7 @@ const GenerateLogDailyInwardReport = async (details, reportDate) => {
   summaryTitleRow.getCell(1).font = { bold: true, size: 12 };
   currentRow++;
 
-  const summaryHeaders = ['Item Name', 'Supplier', 'Invoice CMT', 'Indian CMT', 'Physical CMT'];
+  const summaryHeaders = ['Item Name', 'Supplier', 'Invoice CMT', 'Indian CMT', 'Physical CMT', ...(includeCostAndExpense ? ['Cost', 'Expense'] : [])];
   const summaryHeaderRow = worksheet.getRow(currentRow);
   summaryHeaders.forEach((header, idx) => {
     const cell = summaryHeaderRow.getCell(idx + 1);
@@ -330,16 +377,22 @@ const GenerateLogDailyInwardReport = async (details, reportDate) => {
     }
     if (!summaryMap[item]) summaryMap[item] = {};
     if (!summaryMap[item][supplierName]) {
-      summaryMap[item][supplierName] = { invoice: 0, indian: 0, physical: 0 };
+      summaryMap[item][supplierName] = { invoice: 0, indian: 0, physical: 0, amount: 0, expense_amount: 0 };
     }
     summaryMap[item][supplierName].invoice += log.invoice_cmt || 0;
     summaryMap[item][supplierName].indian += log.indian_cmt || 0;
     summaryMap[item][supplierName].physical += log.physical_cmt || 0;
+    if (includeCostAndExpense) {
+      summaryMap[item][supplierName].amount += log.amount || 0;
+      summaryMap[item][supplierName].expense_amount += log.expense_amount || 0;
+    }
   });
 
   let grandInvoice = 0;
   let grandIndian = 0;
   let grandPhysical = 0;
+  let grandCost = 0;
+  let grandExpense = 0;
 
   Object.keys(summaryMap)
     .sort()
@@ -349,6 +402,8 @@ const GenerateLogDailyInwardReport = async (details, reportDate) => {
       let itemInvoiceTotal = 0;
       let itemIndianTotal = 0;
       let itemPhysicalTotal = 0;
+      let itemCostTotal = 0;
+      let itemExpenseTotal = 0;
 
       Object.keys(suppliers)
         .sort()
@@ -362,10 +417,20 @@ const GenerateLogDailyInwardReport = async (details, reportDate) => {
           row.getCell(3).value = suppliers[supp].invoice;
           row.getCell(4).value = suppliers[supp].indian;
           row.getCell(5).value = suppliers[supp].physical;
+          if (includeCostAndExpense) {
+            row.getCell(6).value = suppliers[supp].amount;
+            row.getCell(7).value = suppliers[supp].expense_amount;
+          }
           [3, 4, 5].forEach((col) => {
             const cell = row.getCell(col);
             if (cell.value && typeof cell.value === 'number') cell.numFmt = '0.000';
           });
+          if (includeCostAndExpense) {
+            [6, 7].forEach((col) => {
+              const cell = row.getCell(col);
+              if (cell.value && typeof cell.value === 'number') cell.numFmt = '0.000';
+            });
+          }
           applyRowBorders(row, 1, 5, { top: false, bottom: true });
           itemInvoiceTotal += suppliers[supp].invoice;
           itemIndianTotal += suppliers[supp].indian;
@@ -373,6 +438,12 @@ const GenerateLogDailyInwardReport = async (details, reportDate) => {
           grandInvoice += suppliers[supp].invoice;
           grandIndian += suppliers[supp].indian;
           grandPhysical += suppliers[supp].physical;
+          if (includeCostAndExpense) {
+            itemCostTotal += suppliers[supp].amount;
+            itemExpenseTotal += suppliers[supp].expense_amount;
+            grandCost += suppliers[supp].amount;
+            grandExpense += suppliers[supp].expense_amount;
+          }
           currentRow++;
         });
 
@@ -390,6 +461,14 @@ const GenerateLogDailyInwardReport = async (details, reportDate) => {
       itemTotalRow.getCell(5).value = itemPhysicalTotal;
       itemTotalRow.getCell(5).font = { bold: true };
       itemTotalRow.getCell(5).numFmt = '0.000';
+      if (includeCostAndExpense) {
+        itemTotalRow.getCell(6).value = itemCostTotal;
+        itemTotalRow.getCell(6).font = { bold: true };
+        itemTotalRow.getCell(6).numFmt = '0.000';
+        itemTotalRow.getCell(7).value = itemExpenseTotal;
+        itemTotalRow.getCell(7).font = { bold: true };
+        itemTotalRow.getCell(7).numFmt = '0.000';
+      }
       applyRowBorders(itemTotalRow, 1, 5, { top: true, bottom: true });
       currentRow++;
       currentRow++; // blank after each item
@@ -409,6 +488,14 @@ const GenerateLogDailyInwardReport = async (details, reportDate) => {
   grandRow.getCell(5).value = grandPhysical;
   grandRow.getCell(5).font = { bold: true };
   grandRow.getCell(5).numFmt = '0.000';
+  if (includeCostAndExpense) {
+    grandRow.getCell(6).value = grandCost;
+    grandRow.getCell(6).font = { bold: true };
+    grandRow.getCell(6).numFmt = '0.000';
+    grandRow.getCell(7).value = grandExpense;
+    grandRow.getCell(7).font = { bold: true };
+    grandRow.getCell(7).numFmt = '0.000';
+  }
   applyRowBorders(grandRow, 1, 5, { top: true, bottom: true, bottomStyle: 'medium' });
   currentRow++;
 

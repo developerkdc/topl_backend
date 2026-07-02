@@ -17,7 +17,7 @@ import { GenerateTappingStockRegisterThicknessWiseExcel } from '../../../../conf
  */
 export const TappingStockRegisterThicknessWiseExcel = catchAsync(
   async (req, res, next) => {
-    const { startDate, endDate } = req.body;
+    const { startDate, endDate, includeCostAndExpense } = req.body;
 
     if (!startDate || !endDate) {
       return next(new ApiError('Start date and end date are required', 400));
@@ -67,6 +67,8 @@ export const TappingStockRegisterThicknessWiseExcel = catchAsync(
               log_no_code: '$log_no_code',
             },
             tapping_date: { $min: '$session.tapping_date' },
+            amount: { $sum: '$amount' },
+            expense_amount: { $sum: '$expense_amount' },
           },
         },
       ]),
@@ -84,6 +86,8 @@ export const TappingStockRegisterThicknessWiseExcel = catchAsync(
               log_no_code: '$log_no_code',
             },
             tapping_date: { $min: '$createdAt' },
+            amount: { $sum: '$amount' },
+            expense_amount: { $sum: '$expense_amount' },
           },
         },
       ]),
@@ -177,6 +181,8 @@ export const TappingStockRegisterThicknessWiseExcel = catchAsync(
                 $group: {
                   _id: null,
                   total: { $sum: '$available_details.sqm' },
+                  amount: { $sum: '$amount' },
+                  expense_amount: { $sum: '$expense_amount' },
                 },
               },
             ]),
@@ -199,7 +205,7 @@ export const TappingStockRegisterThicknessWiseExcel = catchAsync(
                   'session.splicing_type': { $in: ['HAND', 'HAND SPLICING'] },
                 },
               },
-              { $group: { _id: null, total: { $sum: '$sqm' } } },
+              { $group: { _id: null, total: { $sum: '$sqm' }, amount: { $sum: '$amount' }, expense_amount: { $sum: '$expense_amount' } } },
             ]),
 
             // tappingMachine: sqm received in period via machine splicing for this log
@@ -222,7 +228,7 @@ export const TappingStockRegisterThicknessWiseExcel = catchAsync(
                   },
                 },
               },
-              { $group: { _id: null, total: { $sum: '$sqm' } } },
+              { $group: { _id: null, total: { $sum: '$sqm' }, amount: { $sum: '$amount' }, expense_amount: { $sum: '$expense_amount' } } },
             ]),
 
             // issuePressing: sqm issued to pressing — exclude order+RAW (those go to Sales)
@@ -246,7 +252,7 @@ export const TappingStockRegisterThicknessWiseExcel = catchAsync(
                   ],
                 },
               },
-              { $group: { _id: null, total: { $sum: '$sqm' } } },
+              { $group: { _id: null, total: { $sum: '$sqm' }, amount: { $sum: '$amount' }, expense_amount: { $sum: '$expense_amount' } } },
             ]),
 
             // sales: order + RAW only
@@ -262,7 +268,7 @@ export const TappingStockRegisterThicknessWiseExcel = catchAsync(
                   order_category: 'RAW',
                 },
               },
-              { $group: { _id: null, total: { $sum: '$sqm' } } },
+              { $group: { _id: null, total: { $sum: '$sqm' }, amount: { $sum: '$amount' }, expense_amount: { $sum: '$expense_amount' } } },
             ]),
 
             // processWaste: wastage for this (item, thickness, log) from tapping damage (via issue_for_tappings lookup) in period
@@ -297,6 +303,19 @@ export const TappingStockRegisterThicknessWiseExcel = catchAsync(
           const sales = salesResult[0]?.total ?? 0;
           const processWaste = processWasteResult[0]?.total ?? 0;
 
+          const currentAvailableAmount = currentResult[0]?.amount ?? 0;
+          const currentAvailableExpenseAmount = currentResult[0]?.expense_amount ?? 0;
+          const tappingHandAmount = tappingHandResult[0]?.amount ?? 0;
+          const tappingHandExpenseAmount = tappingHandResult[0]?.expense_amount ?? 0;
+          const tappingMachineAmount = tappingMachineResult[0]?.amount ?? 0;
+          const tappingMachineExpenseAmount = tappingMachineResult[0]?.expense_amount ?? 0;
+          const issuePressingAmount = issuePressingResult[0]?.amount ?? 0;
+          const issuePressingExpenseAmount = issuePressingResult[0]?.expense_amount ?? 0;
+          const salesAmount = salesResult[0]?.amount ?? 0;
+          const salesExpenseAmount = salesResult[0]?.expense_amount ?? 0;
+          const processWasteAmount = processWasteResult[0]?.amount ?? 0;
+          const processWasteExpenseAmount = processWasteResult[0]?.expense_amount ?? 0;
+
           const openingBalance = Math.max(
             0,
             currentAvailable + issuePressing + sales - tappingReceived
@@ -304,6 +323,26 @@ export const TappingStockRegisterThicknessWiseExcel = catchAsync(
           const closingBalance = Math.max(
             0,
             openingBalance + tappingReceived - issuePressing - processWaste - sales
+          );
+
+          const openingBalanceAmount = Math.max(
+            0,
+            currentAvailableAmount + issuePressingAmount + salesAmount - tappingHandAmount - tappingMachineAmount
+          );
+
+          const openingBalanceExpenseAmount = Math.max(
+            0,
+            currentAvailableExpenseAmount + issuePressingExpenseAmount + salesExpenseAmount - tappingHandExpenseAmount - tappingMachineExpenseAmount
+          );
+
+          const closingBalanceAmount = Math.max(
+            0,
+            openingBalanceAmount + tappingHandAmount + tappingMachineAmount - issuePressingAmount - processWasteAmount - salesAmount
+          );
+
+          const closingBalanceExpenseAmount = Math.max(
+            0,
+            openingBalanceExpenseAmount + tappingHandExpenseAmount + tappingMachineExpenseAmount - issuePressingExpenseAmount - processWasteExpenseAmount - salesExpenseAmount
           );
 
           return {
@@ -318,7 +357,25 @@ export const TappingStockRegisterThicknessWiseExcel = catchAsync(
             issue_pressing: issuePressing,
             process_waste: processWaste,
             sales,
+            current_available_amount: currentAvailableAmount,
+            current_available_expense_amount: currentAvailableExpenseAmount,
+            tappingHandAmount: tappingHandAmount,
+            tappingMachineAmount: tappingMachineAmount,
+            tappingHandExpenseAmount: tappingHandExpenseAmount,
+            tappingMachineExpenseAmount: tappingMachineExpenseAmount,
+            issuePressingAmount: issuePressingAmount,
+            issuePressingExpenseAmount: issuePressingExpenseAmount,
+            salesAmount: salesAmount,
+            salesExpenseAmount: salesExpenseAmount,
+            processWasteAmount: processWasteAmount,
+            processWasteExpenseAmount: processWasteExpenseAmount,
             closing_balance: closingBalance,
+            opening_balance_amount: openingBalanceAmount,
+            opening_balance_expense_amount: openingBalanceExpenseAmount,
+            closing_balance_amount: closingBalanceAmount,
+            closing_balance_expense_amount: closingBalanceExpenseAmount,
+            total_amount: openingBalanceAmount + closingBalanceAmount,
+            total_expense_amount: openingBalanceExpenseAmount + closingBalanceExpenseAmount,
           };
         }
       )
@@ -348,7 +405,8 @@ export const TappingStockRegisterThicknessWiseExcel = catchAsync(
     const excelLink = await GenerateTappingStockRegisterThicknessWiseExcel(
       activeRows,
       startDate,
-      endDate
+      endDate,
+      includeCostAndExpense
     );
 
     return res.json(
