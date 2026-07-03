@@ -16,7 +16,7 @@ const issue_for_tapping_schema = new mongoose.Schema(
       default: null,
       required: [validateOrderField, 'order_id is required'],
     },
-     common_instructions: {
+    common_instructions: {
       type: [
         {
           type: String,
@@ -237,6 +237,10 @@ const issue_for_tapping_schema = new mongoose.Schema(
       ref: 'users',
       required: [true, 'Updated By is required'],
       trim: true,
+    },
+    issued_date: {
+      type: Date,
+      default: null,
     },
   },
   {

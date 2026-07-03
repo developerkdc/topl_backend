@@ -150,6 +150,7 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
     order_item_no,
     sales_item_name,
     order_category,
+    issued_date,
   } = req.body;
 
   const user = req.userDetails;
@@ -159,6 +160,7 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
     'issued_sqm',
     'issued_from_id',
     'issued_from',
+    'issued_date',
   ]) {
     if (!req.body[field]) {
       throw new ApiError(
@@ -356,6 +358,7 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
         pressing_done_details?.remark ||
         pressing_done_details?.pressing_details?.remark ||
         null,
+      issued_date: issued_date,
       created_by: user?._id,
       updated_by: user?._id,
     };
@@ -471,6 +474,7 @@ export const add_finished_ready_for_packing = catchAsync(async (req, res) => {
         pressing_done_details?.pressing_details?.remark ||
         null,
       issue_status: item_issued_from?.packing,
+      issued_date: issued_date,
       created_by: user?._id,
       updated_by: user?._id,
     };

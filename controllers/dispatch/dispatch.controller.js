@@ -1937,8 +1937,13 @@ export const generate_invoice_no = catchAsync(async (req, res, next) => {
   const currentFY = getFinancialYear();
 
   const latestDispatch = await dispatchModel
-    .findOne({}, { invoice_no: 1 })
-    .sort({ createdAt: -1 });
+    .findOne({
+      invoice_no: {
+        $regex: `^[0-9]+/${currentFY}$`,
+      },
+    })
+    .sort({ createdAt: -1 })
+    .select('invoice_no');
 
   let latest_invoice_no;
 
@@ -2391,6 +2396,308 @@ export const generate_irn_no = catchAsync(async (req, res, next) => {
     success: true,
     message: 'IRN number generated successfully.',
     result: irnResponse?.data,
+  });
+});
+
+export const irn_no_payload = catchAsync(async (req, res, next) => {
+  const dispatch_id = req.params.id;
+
+  const dispatch_details = await dispatchModel.findById(dispatch_id);
+
+  if (!dispatch_details) {
+    throw new ApiError(
+      'Dispatch details not found',
+      StatusCodes.NOT_FOUND
+    );
+  }
+
+  const dispatch_items = await dispatchItemsModel.find({ dispatch_id });
+
+  if (!dispatch_items || dispatch_items.length === 0) {
+    throw new ApiError(
+      'No dispatch items found for this dispatch',
+      StatusCodes.BAD_REQUEST
+    );
+  }
+
+  function formatDateToDDMMYYYY(date) {
+    if (!date) return '';
+    return moment(date).format('DD/MM/YYYY');
+  }
+
+  const {
+    bill_from_address,
+    bill_to_address,
+    dispatch_from_address,
+    ship_to_address,
+  } = dispatch_details.address || {};
+
+  const sellerDetails = {
+    Gstin: bill_from_address?.gst_number,
+    LglNm: 'TURAKHIA OVERSEAS PVT. LTD.',
+    ...(bill_from_address?.address &&
+      bill_from_address.address.length > 100
+      ? {
+        Addr1: bill_from_address.address.substring(0, 100),
+        Addr2: bill_from_address.address.substring(100),
+      }
+      : {
+        Addr1: bill_from_address?.address,
+      }),
+    Loc: bill_from_address?.city,
+    Pin: bill_from_address?.pincode,
+    Stcd: getStateCodeAsString(bill_from_address?.state),
+  };
+
+  const buyerDetails = {
+    Gstin: dispatch_details?.customer_details?.gst_number || '',
+    LglNm: dispatch_details?.customer_details?.legal_name || '',
+    Pos: getStateCodeAsString(bill_to_address?.state),
+    ...(bill_to_address?.address &&
+      bill_to_address.address.length > 100
+      ? {
+        Addr1: bill_to_address.address.substring(0, 100),
+        Addr2: bill_to_address.address.substring(100),
+      }
+      : {
+        Addr1: bill_to_address?.address,
+      }),
+    Loc: bill_to_address?.city || '',
+    Pin: bill_to_address?.pincode || '',
+    Stcd: getStateCodeAsString(bill_to_address?.state),
+  };
+
+  const DispatchDetails = {
+    Nm: 'TURAKHIA OVERSEAS PVT. LTD.',
+    ...(dispatch_from_address?.address &&
+      dispatch_from_address.address.length > 100
+      ? {
+        Addr1: dispatch_from_address.address.substring(0, 100),
+        Addr2: dispatch_from_address.address.substring(100),
+      }
+      : {
+        Addr1: dispatch_from_address?.address,
+      }),
+    Loc: dispatch_from_address?.city,
+    Pin: dispatch_from_address?.pincode,
+    Stcd: getStateCodeAsString(dispatch_from_address?.state),
+  };
+
+  const ShipToDetails = {
+    Nm: dispatch_details?.customer_details?.legal_name || '',
+    LglNm: dispatch_details?.customer_details?.legal_name || '',
+    ...(ship_to_address?.address &&
+      ship_to_address.address.length > 100
+      ? {
+        Addr1: ship_to_address.address.substring(0, 100),
+        Addr2: ship_to_address.address.substring(100),
+      }
+      : {
+        Addr1: ship_to_address?.address,
+      }),
+    Loc: ship_to_address?.city,
+    Pin: ship_to_address?.pincode,
+    Stcd: getStateCodeAsString(ship_to_address?.state),
+  };
+
+  const docDtls = {
+    Typ: 'INV',
+    No: dispatch_details.invoice_no || '00000',
+    Dt: formatDateToDDMMYYYY(
+      dispatch_details.invoice_date_time
+    ),
+  };
+
+  const all_units = await UnitModel.find({});
+  const unit_map = all_units.reduce((acc, unit) => {
+    acc[unit.unit_name] = unit.unit_symbolic_name;
+    return acc;
+  }, {});
+
+  const itemsArr = dispatch_items.map((item, idx) => {
+    const ass_amt = Number(
+      (item.amount - item.discount_value).toFixed(2)
+    );
+
+    return {
+      SlNo: String(idx + 1),
+      IsServc: 'N',
+      PrdDesc: item.product_category || item.item_name,
+      HsnCd: `${item.hsn_number}`,
+      Qty:
+        Number(item.qty) ||
+        Number(
+          item.new_sqm ||
+          item.sqm ||
+          item.cbm ||
+          item.cmt ||
+          0
+        ),
+      Unit:
+        unit_map[item.calculate_unit] || 'OTH',
+      UnitPrice: Number(
+        Number(item.rate || 0).toFixed(2)
+      ),
+      TotAmt: Number(
+        (item.amount || 0).toFixed(2)
+      ),
+      Discount: Number(
+        Number(item.discount_value || 0).toFixed(2)
+      ),
+      AssAmt: ass_amt,
+      GstRt: Number(
+        item.gst_details?.gst_percentage || 0
+      ),
+      IgstAmt: Number(
+        item.gst_details?.igst_amount || 0
+      ),
+      SgstAmt: Number(
+        item.gst_details?.sgst_amount || 0
+      ),
+      CgstAmt: Number(
+        item.gst_details?.cgst_amount || 0
+      ),
+      TotItemVal: Number(
+        Number(item.final_row_amount || 0).toFixed(2)
+      ),
+    };
+  });
+
+  const ins = dispatch_details?.insurance_details || {};
+  const frt = dispatch_details?.freight_details || {};
+  const oth = dispatch_details?.other_amount_details || {};
+
+  const pushChargeRow = (
+    slNo,
+    prdDesc,
+    assAmt,
+    gstRt,
+    igst,
+    cgst,
+    sgst
+  ) => {
+    const ass = Number(Number(assAmt || 0).toFixed(2));
+    const igstR = Number(Number(igst || 0).toFixed(2));
+    const cgstR = Number(Number(cgst || 0).toFixed(2));
+    const sgstR = Number(Number(sgst || 0).toFixed(2));
+
+    const totItemVal = Number(
+      (ass + igstR + cgstR + sgstR).toFixed(2)
+    );
+
+    itemsArr.push({
+      SlNo: String(slNo),
+      IsServc: 'N',
+      PrdDesc: prdDesc,
+      HsnCd: OTHER_HSN_CODE,
+      Qty: 1,
+      Unit: 'OTH',
+      UnitPrice: ass,
+      TotAmt: ass,
+      Discount: 0,
+      AssAmt: ass,
+      GstRt: Number(gstRt || 0),
+      IgstAmt: igstR,
+      SgstAmt: sgstR,
+      CgstAmt: cgstR,
+      TotItemVal: totItemVal,
+    });
+  };
+
+  let sl = itemsArr.length;
+
+  if (Number(ins?.insurance_amount || 0) > 0) {
+    sl += 1;
+
+    pushChargeRow(
+      sl,
+      'Insurance',
+      ins.insurance_amount,
+      ins.insurance_gst_rate,
+      ins.insurance_igst_amt,
+      ins.insurance_cgst_amt,
+      ins.insurance_sgst_amt
+    );
+  }
+
+  if (Number(frt?.freight_amount || 0) > 0) {
+    sl += 1;
+
+    pushChargeRow(
+      sl,
+      'Freight',
+      frt.freight_amount,
+      frt.freight_gst_rate,
+      frt.freight_igst_amt,
+      frt.freight_cgst_amt,
+      frt.freight_sgst_amt
+    );
+  }
+
+  if (Number(oth?.other_amount || 0) > 0) {
+    sl += 1;
+
+    pushChargeRow(
+      sl,
+      'Other Charges',
+      oth.other_amount,
+      oth.other_gst_rate,
+      oth.other_igst_amt,
+      oth.other_cgst_amt,
+      oth.other_sgst_amt
+    );
+  }
+
+  const AssVal = itemsArr.reduce(
+    (acc, i) => acc + i.AssAmt,
+    0
+  );
+
+  const CgstVal = itemsArr.reduce(
+    (acc, i) => acc + i.CgstAmt,
+    0
+  );
+
+  const SgstVal = itemsArr.reduce(
+    (acc, i) => acc + i.SgstAmt,
+    0
+  );
+
+  const IgstVal = itemsArr.reduce(
+    (acc, i) => acc + i.IgstAmt,
+    0
+  );
+
+  const TotInvVal = itemsArr.reduce(
+    (acc, i) => acc + i.TotItemVal,
+    0
+  );
+
+  const irnBody = {
+    Version: '1.1',
+    TranDtls: {
+      TaxSch: 'GST',
+      SupTyp: dispatch_details?.supp_type,
+    },
+    DocDtls: docDtls,
+    SellerDtls: sellerDetails,
+    BuyerDtls: buyerDetails,
+    DispDtls: DispatchDetails,
+    ShipDtls: ShipToDetails,
+    ItemList: itemsArr,
+    ValDtls: {
+      AssVal: Number(AssVal.toFixed(2)),
+      CgstVal: Number(CgstVal.toFixed(2)),
+      SgstVal: Number(SgstVal.toFixed(2)),
+      IgstVal: Number(IgstVal.toFixed(2)),
+      TotInvVal: Number(TotInvVal.toFixed(2)),
+    },
+  };
+
+  return res.status(200).json({
+    success: true,
+    message: 'IRN payload generated successfully.',
+    result: irnBody,
   });
 });
 
@@ -3104,6 +3411,273 @@ export const generate_ewaybill = catchAsync(async (req, res, next) => {
     success: true,
     message: 'Eway Bill Generated successfully.',
     result: ewayBillResponse?.data,
+  });
+});
+
+export const ewaybill_payload = catchAsync(async (req, res, next) => {
+  const dispatch_id = req.params.id;
+  const dispatch_details = await dispatchModel.findById(dispatch_id);
+  // console.log(
+  //   'start dispatch details',
+  //   dispatch_details,
+  //   'end dispatch details'
+  // );
+  if (!dispatch_details) {
+    throw new ApiError('Dispatch details not found', StatusCodes.NOT_FOUND);
+  }
+
+  const dispatch_items = await dispatchItemsModel.find({ dispatch_id });
+  if (!dispatch_items || dispatch_items.length === 0) {
+    throw new ApiError(
+      'No dispatch items found for this dispatch',
+      StatusCodes.BAD_REQUEST
+    );
+  }
+  // console.log('dispatch_items', dispatch_items, 'dispatch_items');
+
+  // Set transactionType based on the mapping in the image and the relevant field
+
+  let transactionType; // default Regular
+
+  switch (dispatch_details?.transaction_type) {
+    case transaction_type?.regular:
+    case 1:
+      transactionType = 1;
+      break;
+    case transaction_type?.bill_to_ship_to:
+    case 2:
+      transactionType = 2;
+      break;
+    case transaction_type?.bill_from_dispatch_from:
+    case 3:
+      transactionType = 3;
+      break;
+    case transaction_type?.bill_to_ship_to_and_bill_from_dispatch_from:
+    case 4:
+      transactionType = 4;
+      break;
+    default:
+      transactionType = 1;
+  }
+
+  const transporterId = dispatch_details?.transporter_id;
+  let transporter_details = null;
+  if (transporterId) {
+    transporter_details = await transporterModel.findOne({
+      _id: transporterId,
+    });
+  }
+
+  var {
+    bill_from_address,
+    bill_to_address,
+    dispatch_from_address,
+    ship_to_address,
+  } = dispatch_details?.address;
+
+  const all_units = await UnitModel.find({});
+  const unit_map = all_units.reduce((acc, unit) => {
+    acc[unit.unit_name] = unit.unit_symbolic_name;
+    return acc;
+  }, {});
+
+  const ewayBillBody = {
+    supplyType: 'O', // Outward
+    subSupplyType: '1', // Supply
+    subSupplyDesc: '',
+    docType: 'INV', // Invoice
+    docNo: dispatch_details?.invoice_no,
+    docDate: dispatch_details?.invoice_date_time
+      ? moment(dispatch_details.invoice_date_time).format('DD/MM/YYYY')
+      : '',
+
+    //seller details
+    fromGstin: dispatch_from_address?.gst_number,
+    fromTrdName: 'TURAKHIA OVERSEAS PVT. LTD.',
+    fromAddr1:
+      dispatch_from_address?.address &&
+        dispatch_from_address.address.length > 50
+        ? dispatch_from_address.address.slice(0, 50)
+        : dispatch_from_address?.address || '',
+    fromAddr2:
+      dispatch_from_address?.address &&
+        dispatch_from_address.address.length > 50
+        ? dispatch_from_address.address.slice(50)
+        : '',
+    fromPlace: dispatch_from_address?.city || '',
+    fromPincode: Number(dispatch_from_address?.pincode) || '',
+    fromStateCode: getStateCode(dispatch_from_address?.state),
+    actFromStateCode: getStateCode(dispatch_from_address?.state),
+
+    dispatchFromGSTIN: dispatch_from_address?.gst_number,
+    dispatchFromTradeName: 'TURAKHIA OVERSEAS PVT. LTD.',
+
+    //buyer details
+    toGstin: dispatch_details?.customer_details?.gst_number || '',
+    toTrdName: dispatch_details?.customer_details?.legal_name || '',
+    toAddr1:
+      ship_to_address?.address && ship_to_address.address.length > 50
+        ? ship_to_address.address.slice(0, 50)
+        : ship_to_address?.address || '',
+    toAddr2:
+      ship_to_address?.address && ship_to_address.address.length > 50
+        ? ship_to_address.address.slice(50)
+        : '',
+    toPlace: ship_to_address?.city || '',
+    toPincode: Number(ship_to_address?.pincode) || '',
+    toStateCode: getStateCode(ship_to_address?.state),
+    actToStateCode: getStateCode(ship_to_address?.state),
+
+    shipToGSTIN: dispatch_details?.customer_details?.gst_number || '',
+    shipToTradeName: dispatch_details?.customer_details?.legal_name || '',
+
+    //transport details
+    transactionType: transactionType,
+    transMode: dispatch_details?.transport_mode?.id,
+    transporterId: transporter_details?.transport_id,
+    transDistance: dispatch_details?.approx_distance?.toString() || '',
+    transporterName: dispatch_details?.transporter_details?.name,
+    transDocNo: dispatch_details?.trans_doc_no,
+    transDocDate: dispatch_details?.trans_doc_date
+      ? moment(dispatch_details.trans_doc_date).format('DD/MM/YYYY')
+      : '',
+    vehicleNo: dispatch_details?.vehicle_details?.[0]?.vehicle_number,
+    vehicleType: 'R',
+
+    // itemList: [
+    //   {
+    //     hsnCode: 125463,
+    //     taxableAmount: 100,
+    //     productName: 'FURROW REGANTO',
+    //     productDesc: 'FURROW GREEN OAK FR1606 LONG PLUS',
+    //     quantity: 10,
+    //     qtyUnit: 'SQM',
+    //     sgstRate: 0,
+    //     cgstRate: 0,
+    //     igstRate: 18,
+    //     // "cessRate": "<number>"
+    //   },
+    // ],
+    // totalValue: 100,
+    // cgstValue: 0,
+    // sgstValue: 0,
+    // igstValue: 18,
+    // totInvValue: 118,
+
+    //item list (product rows + Insurance, Freight, Other charge rows)
+    ...(function () {
+      const ins = dispatch_details?.insurance_details || {};
+      const frt = dispatch_details?.freight_details || {};
+      const oth = dispatch_details?.other_amount_details || {};
+      const itemList = (dispatch_items || []).map((item) => {
+        // const unit = item?.unit ? String(item.unit).slice(0, 3) : 'OTH';
+        const unit = item?.calculate_unit;
+        const unitSymbolicName = unit_map[unit] || 'OTH';
+        return {
+          hsnCode: Number(item?.hsn_number) || Number(OTHER_HSN_CODE),   // wood hsn code(other)
+          productName: item?.product_category || '',
+          productDesc: item?.sales_item_name || item?.product_category,
+          quantity: item?.new_sqm || item?.sqm || item?.cbm || item?.cmt || 0,
+          qtyUnit: unitSymbolicName,
+          cgstRate: item?.gst_details?.cgst_percentage,
+          sgstRate: item?.gst_details?.sgst_percentage,
+          igstRate: item?.gst_details?.igst_percentage,
+          taxableAmount: item?.discount_amount,
+        };
+      });
+      const pushCharge = (productName, taxableAmt, details) => {
+        const hasIgst = Number(details?.igst_amt || 0) > 0;
+        const gstRate = Number(details?.gst_rate || 0);
+        const cgstRate = hasIgst ? 0 : gstRate / 2;
+        const sgstRate = hasIgst ? 0 : gstRate / 2;
+        const igstRate = hasIgst ? gstRate : 0;
+        itemList.push({
+          hsnCode: Number(OTHER_HSN_CODE), // wood hsn code(other)
+          productName,
+          productDesc: productName,
+          quantity: 1,
+          qtyUnit: 'OTH',
+          cgstRate,
+          sgstRate,
+          igstRate,
+          taxableAmount: Number(taxableAmt || 0),
+        });
+      };
+      if (Number(ins?.insurance_amount || 0) > 0) {
+        pushCharge('Insurance', ins.insurance_amount, {
+          gst_rate: ins.insurance_gst_rate,
+          igst_amt: ins.insurance_igst_amt,
+        });
+      }
+      if (Number(frt?.freight_amount || 0) > 0) {
+        pushCharge('Freight', frt.freight_amount, {
+          gst_rate: frt.freight_gst_rate,
+          igst_amt: frt.freight_igst_amt,
+        });
+      }
+      if (Number(oth?.other_amount || 0) > 0) {
+        pushCharge('Other Charges', oth.other_amount, {
+          gst_rate: oth.other_gst_rate,
+          igst_amt: oth.other_igst_amt,
+        });
+      }
+      return { itemList };
+    })(),
+
+    totalValue: Number(
+      (
+        Number(dispatch_details?.base_amount_without_gst || 0) +
+        Number(dispatch_details?.insurance_details?.insurance_amount || 0) +
+        Number(dispatch_details?.freight_details?.freight_amount || 0) +
+        Number(dispatch_details?.other_amount_details?.other_amount || 0)
+      ).toFixed(2)
+    ),
+
+    cgstValue: Number(
+      (
+        (dispatch_items || []).reduce(
+          (sum, item) => sum + (item?.gst_details?.cgst_amount || 0),
+          0
+        ) +
+        Number(dispatch_details?.insurance_details?.insurance_cgst_amt || 0) +
+        Number(dispatch_details?.freight_details?.freight_cgst_amt || 0) +
+        Number(dispatch_details?.other_amount_details?.other_cgst_amt || 0)
+      ).toFixed(2)
+    ),
+
+    sgstValue: Number(
+      (
+        (dispatch_items || []).reduce(
+          (sum, item) => sum + (item?.gst_details?.sgst_amount || 0),
+          0
+        ) +
+        Number(dispatch_details?.insurance_details?.insurance_sgst_amt || 0) +
+        Number(dispatch_details?.freight_details?.freight_sgst_amt || 0) +
+        Number(dispatch_details?.other_amount_details?.other_sgst_amt || 0)
+      ).toFixed(2)
+    ),
+
+    igstValue: Number(
+      (
+        (dispatch_items || []).reduce(
+          (sum, item) => sum + (item?.gst_details?.igst_amount || 0),
+          0
+        ) +
+        Number(dispatch_details?.insurance_details?.insurance_igst_amt || 0) +
+        Number(dispatch_details?.freight_details?.freight_igst_amt || 0) +
+        Number(dispatch_details?.other_amount_details?.other_igst_amt || 0)
+      ).toFixed(2)
+    ),
+
+    totInvValue: Number(
+      Number(dispatch_details?.final_total_amount || 0).toFixed(2)
+    ),
+  };
+
+  return res.status(200).json({
+    success: true,
+    message: 'Eway Bill payload generated successfully.',
+    result: ewayBillBody,
   });
 });
 

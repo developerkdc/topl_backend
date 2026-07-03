@@ -18,7 +18,8 @@ export const GenerateCoreStockReportExcel = async (
   aggregatedData,
   startDate,
   endDate,
-  filter = {}
+  filter = {},
+  includeCostAndExpense
 ) => {
   try {
     const folderPath = 'public/upload/reports/reports2/Core';
@@ -61,9 +62,13 @@ export const GenerateCoreStockReportExcel = async (
       { key: 'thickness', width: 15 },
       { key: 'inward_date', width: 22 },
       { key: 'opening_balance', width: 18 },
+      ...(includeCostAndExpense ? [{ key: 'opening_amount', width: 18 }, { key: 'opening_expense_amount', width: 18 }] : []),
       { key: 'received_metres', width: 18 },
+      ...(includeCostAndExpense ? [{ key: 'receive_amount', width: 18 }, { key: 'receive_expense_amount', width: 18 }] : []),
       { key: 'issued_metres', width: 18 },
+      ...(includeCostAndExpense ? [{ key: 'issued_amount', width: 18 }] : []),
       { key: 'closing_bal', width: 18 },
+      ...(includeCostAndExpense ? [{ key: 'closing_amount', width: 18 }, { key: 'closing_expense_amount', width: 18 }] : []),
     ];
 
     worksheet.columns = columnDefinitions;
@@ -81,9 +86,13 @@ export const GenerateCoreStockReportExcel = async (
       'Thickness',
       'Inward Date',
       'Opening Balance',
+      ...(includeCostAndExpense ? ['Opening Amount', 'Opening Expense Amount'] : []),
       'Received Metres',
+      ...(includeCostAndExpense ? ['Received Amount', 'Received Expense Amount'] : []),
       'Issued Metres',
+      ...(includeCostAndExpense ? ['Issued Amount'] : []),
       'Closing Bal',
+      ...(includeCostAndExpense ? ['Closing Amount', 'Closing Expense Amount'] : []),
     ]);
     headerRow.font = { bold: true };
     headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
@@ -98,6 +107,7 @@ export const GenerateCoreStockReportExcel = async (
       received_metres: 0,
       issued_metres: 0,
       closing_bal: 0,
+      ...(includeCostAndExpense ? { opening_amount: 0, opening_expense_amount: 0, receive_amount: 0, receive_expense_amount: 0, issued_amount: 0, closing_amount: 0, closing_expense_amount: 0 } : {}),
     };
 
     const groupedData = {};
@@ -124,6 +134,13 @@ export const GenerateCoreStockReportExcel = async (
       let itemLastClosing = 0;
       let itemReceived = 0;
       let itemIssued = 0;
+      let itemOpeningAmount = 0;
+      let itemOpeningExpenseAmount = 0;
+      let itemReceivedAmount = 0;
+      let itemReceivedExpenseAmount = 0;
+      let itemIssuedAmount = 0;
+      let itemClosingAmount = 0;
+      let itemClosingExpenseAmount = 0;
 
       let itemStartRow = null;
 
@@ -132,7 +149,15 @@ export const GenerateCoreStockReportExcel = async (
         itemLastClosing = parseFloat(item.closing_bal || 0);
         itemReceived += parseFloat(item.received_metres || 0);
         itemIssued += parseFloat(item.issued_metres || 0);
-
+        if (includeCostAndExpense) {
+          itemOpeningAmount += parseFloat(item.opening_amount || 0);
+          itemOpeningExpenseAmount += parseFloat(item.opening_expense_amount || 0);
+          itemReceivedAmount += parseFloat(item.receive_amount || 0);
+          itemReceivedExpenseAmount += parseFloat(item.receive_expense_amount || 0);
+          itemIssuedAmount += parseFloat(item.issued_amount || 0);
+          itemClosingAmount += parseFloat(item.closing_amount || 0);
+          itemClosingExpenseAmount += parseFloat(item.closing_expense_amount || 0);
+        }
         const rowData = {
           item_name: itemName,
           thickness: parseFloat(item.thickness || 0).toFixed(2),
@@ -141,6 +166,7 @@ export const GenerateCoreStockReportExcel = async (
           received_metres: parseFloat(item.received_metres || 0).toFixed(2),
           issued_metres: parseFloat(item.issued_metres || 0).toFixed(2),
           closing_bal: parseFloat(item.closing_bal || 0).toFixed(2),
+          ...(includeCostAndExpense ? { opening_amount: parseFloat(item.opening_amount || 0).toFixed(2), opening_expense_amount: parseFloat(item.opening_expense_amount || 0).toFixed(2), receive_amount: parseFloat(item.receive_amount || 0).toFixed(2), receive_expense_amount: parseFloat(item.receive_expense_amount || 0).toFixed(2), issued_amount: parseFloat(item.issued_amount || 0).toFixed(2), closing_amount: parseFloat(item.closing_amount || 0).toFixed(2), closing_expense_amount: parseFloat(item.closing_expense_amount || 0).toFixed(2) } : {}),
         };
         const row = worksheet.addRow(rowData);
         if (itemStartRow === null) itemStartRow = row.number;
@@ -161,6 +187,7 @@ export const GenerateCoreStockReportExcel = async (
         received_metres: itemReceived.toFixed(2),
         issued_metres: itemIssued.toFixed(2),
         closing_bal: itemLastClosing.toFixed(2),
+        ...(includeCostAndExpense ? { opening_amount: itemOpeningAmount.toFixed(2), opening_expense_amount: itemOpeningExpenseAmount.toFixed(2), receive_amount: itemReceivedAmount.toFixed(2), receive_expense_amount: itemReceivedExpenseAmount.toFixed(2), issued_amount: itemIssuedAmount.toFixed(2), closing_amount: itemClosingAmount.toFixed(2), closing_expense_amount: itemClosingExpenseAmount.toFixed(2) } : {}),
       });
       itemTotalRow.eachCell((cell) => {
         cell.font = { bold: true };
@@ -175,6 +202,15 @@ export const GenerateCoreStockReportExcel = async (
       grandTotals.received_metres += itemReceived;
       grandTotals.issued_metres += itemIssued;
       grandTotals.closing_bal += itemLastClosing;
+      if (includeCostAndExpense) {
+        grandTotals.opening_amount += itemOpeningAmount;
+        grandTotals.opening_expense_amount += itemOpeningExpenseAmount;
+        grandTotals.receive_amount += itemReceivedAmount;
+        grandTotals.receive_expense_amount += itemReceivedExpenseAmount;
+        grandTotals.issued_amount += itemIssuedAmount;
+        grandTotals.closing_amount += itemClosingAmount;
+        grandTotals.closing_expense_amount += itemClosingExpenseAmount;
+      }
     });
 
     const totalRow = worksheet.addRow({
@@ -185,6 +221,7 @@ export const GenerateCoreStockReportExcel = async (
       received_metres: grandTotals.received_metres.toFixed(2),
       issued_metres: grandTotals.issued_metres.toFixed(2),
       closing_bal: grandTotals.closing_bal.toFixed(2),
+      ...(includeCostAndExpense ? { opening_amount: grandTotals.opening_amount.toFixed(2), opening_expense_amount: grandTotals.opening_expense_amount.toFixed(2), receive_amount: grandTotals.receive_amount.toFixed(2), receive_expense_amount: grandTotals.receive_expense_amount.toFixed(2), issued_amount: grandTotals.issued_amount.toFixed(2), closing_amount: grandTotals.closing_amount.toFixed(2), closing_expense_amount: grandTotals.closing_expense_amount.toFixed(2) } : {}),
     });
     totalRow.eachCell((cell) => {
       cell.font = { bold: true };

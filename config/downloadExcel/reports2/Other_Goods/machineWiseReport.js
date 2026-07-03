@@ -14,7 +14,7 @@ import dotenv from 'dotenv/config';
  * @param {Object} filter - Applied filters
  * @returns {String} Download link for the generated Excel file
  */
-export const OtherGoodsMachineWiseReportExcel = async (data, startDate, endDate, filter = {}) => {
+export const OtherGoodsMachineWiseReportExcel = async (data, startDate, endDate, filter = {}, includeCostAndExpense) => {
     try {
         const folderPath = 'public/reports/Other_Goods/MachineWiseReport';
 
@@ -55,7 +55,7 @@ export const OtherGoodsMachineWiseReportExcel = async (data, startDate, endDate,
             { key: 'item', width: 25 },
             { key: 'qty', width: 12 },
             { key: 'unit', width: 12 },
-            { key: 'amt', width: 15 }
+            ...(includeCostAndExpense ? [{ key: 'amt', width: 15 }] : [])
         ];
 
         worksheet.columns = columnDefinitions;
@@ -70,7 +70,7 @@ export const OtherGoodsMachineWiseReportExcel = async (data, startDate, endDate,
 
         // Row 2: Column headers
         const headerRow = worksheet.getRow(2);
-        headerRow.values = ['Machine', 'Item', 'Qty', 'Unit', 'Amt'];
+        headerRow.values = ['Machine', 'Item', 'Qty', 'Unit', ...(includeCostAndExpense ? ['Amt'] : [])];
         headerRow.font = { bold: true };
         headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
         headerRow.fill = {
@@ -98,7 +98,7 @@ export const OtherGoodsMachineWiseReportExcel = async (data, startDate, endDate,
                 item: item.item,
                 qty: parseFloat(item.qty || 0).toFixed(2),
                 unit: item.unit,
-                amt: parseFloat(item.amt || 0).toFixed(2)
+                amt: includeCostAndExpense ? parseFloat(item.amt || 0).toFixed(2) : null
             });
 
             // Add borders and alignment to each cell
@@ -118,13 +118,15 @@ export const OtherGoodsMachineWiseReportExcel = async (data, startDate, endDate,
                 }
             });
 
-            totalAmt += parseFloat(item.amt || 0);
+            if (includeCostAndExpense) {
+                totalAmt += parseFloat(item.amt || 0);
+            }
         });
 
         // Add grand total row
         const totalRow = worksheet.addRow({
-            machine: 'Grand Total',
-            amt: totalAmt.toFixed(2)
+            machine: includeCostAndExpense ? 'Grand Total' : "",
+            amt: includeCostAndExpense ? totalAmt.toFixed(2) : null
         });
 
         // Style total row

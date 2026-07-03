@@ -12,6 +12,8 @@ import { dynamic_filter } from '../../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../../utils/dynamicSearch/dynamic.js';
 import ApiError from '../../../../utils/errors/apiError.js';
 import catchAsync from '../../../../utils/errors/catchAsync.js';
+import { getReservedOrdersForGroupNo, getReservedOrdersForPhoto, resolvePhotoNoIdFromGroupNo } from '../../../../utils/getIssueBreakdown.js';
+import photoModel from '../../../../database/schema/masters/photo.schema.js';
 
 export const add_tapping_details = catchAsync(async (req, res, next) => {
   const session = await mongoose.startSession();
@@ -1257,3 +1259,24 @@ export const fetch_all_tapping_done_items_history = catchAsync(
     return res.status(StatusCodes.OK).json(response);
   }
 );
+
+export const fetch_reserved_orders_for_item = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+
+  if (!id || !mongoose.isValidObjectId(id)) {
+    throw new ApiError('Invalid item id', StatusCodes.BAD_REQUEST);
+  }
+
+  const item_details = await tapping_done_items_details_model.findById(id).select('group_no').lean();
+  if (!item_details) {
+    throw new ApiError('Item not found', StatusCodes.NOT_FOUND);
+  }
+
+  const reserved_orders = await getReservedOrdersForGroupNo(item_details.group_no);
+
+  return res.status(StatusCodes.OK).json(
+    new ApiResponse(StatusCodes.OK, 'Reserved orders fetched', {
+      reserved_orders,
+    })
+  );
+});

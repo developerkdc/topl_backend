@@ -28,7 +28,7 @@ const roundStock = (v, decimals = 4) => {
  * @access Private
  */
 export const plywoodStockReportCsv = catchAsync(async (req, res, next) => {
-  const { startDate, endDate } = req.body;
+  const { startDate, endDate, includeCostAndExpense } = req.body;
   const filter = req.body?.filter || {};
 
   if (!startDate || !endDate) {
@@ -68,6 +68,8 @@ export const plywoodStockReportCsv = catchAsync(async (req, res, next) => {
             length: '$length',
             width: '$width',
           },
+          total_amount: { $sum: '$amount' },
+          total_expense_amount: { $sum: '$expense_amount' },
           current_sheets: { $sum: '$available_sheets' },
           current_sqm: { $sum: '$available_sqm' },
           item_ids: { $push: '$_id' },
@@ -109,6 +111,8 @@ export const plywoodStockReportCsv = catchAsync(async (req, res, next) => {
               _id: null,
               total_sheets: { $sum: '$sheets' },
               total_sqm: { $sum: '$total_sq_meter' },
+              total_amount: { $sum: '$amount' },
+              total_expense_amount: { $sum: '$expense_amount' },
             },
           },
         ]);
@@ -127,6 +131,7 @@ export const plywoodStockReportCsv = catchAsync(async (req, res, next) => {
                 _id: null,
                 total_sheets: { $sum: '$issued_sheets' },
                 total_sqm: { $sum: '$issued_sqm' },
+                total_amount: { $sum: '$issued_amount' },
               },
             },
           ]),
@@ -143,6 +148,7 @@ export const plywoodStockReportCsv = catchAsync(async (req, res, next) => {
                 _id: null,
                 total_sheets: { $sum: '$issued_sheets' },
                 total_sqm: { $sum: '$issued_sqm' },
+                total_amount: { $sum: '$issued_amount' },
               },
             },
           ]),
@@ -159,6 +165,7 @@ export const plywoodStockReportCsv = catchAsync(async (req, res, next) => {
                 _id: null,
                 total_sheets: { $sum: '$issued_sheets' },
                 total_sqm: { $sum: '$issued_sqm' },
+                total_amount: { $sum: '$issued_amount' },
               },
             },
           ]),
@@ -175,6 +182,7 @@ export const plywoodStockReportCsv = catchAsync(async (req, res, next) => {
                 _id: null,
                 total_sheets: { $sum: '$issued_sheets' },
                 total_sqm: { $sum: '$issued_sqm' },
+                total_amount: { $sum: '$issued_amount' },
               },
             },
           ]),
@@ -194,11 +202,22 @@ export const plywoodStockReportCsv = catchAsync(async (req, res, next) => {
         const consumeSqm = challanSqm + orderSqm + issuePlyResizingSqm + issuePressingSqm;
         const currentSheets = item.current_sheets || 0;
         const currentSqm = item.current_sqm || 0;
-
         const openingSheets = currentSheets + consumeSheets - receiveSheets;
         const openingSqm = currentSqm + consumeSqm - receiveSqm;
         const closingSheets = openingSheets + receiveSheets - consumeSheets;
         const closingSqm = openingSqm + receiveSqm - consumeSqm;
+        const openingAmount = item.total_amount || 0;
+        const openingExpenseAmount = item.total_expense_amount || 0;
+        const receiveAmount = receives[0]?.total_amount || 0;
+        const receiveExpenseAmount = receives[0]?.total_expense_amount || 0;
+        const challanAmount = challan[0]?.total_amount || 0;
+        const orderAmount = order[0]?.total_amount || 0;
+        const issuePlyResizingAmount = issuePlyResizing[0]?.total_amount || 0;
+        const issuePressingAmount = issuePressing[0]?.total_amount || 0;
+        const consumeAmount = challanAmount + orderAmount + issuePlyResizingAmount + issuePressingAmount;
+        const consumeExpenseAmount = 0;
+        const closingAmount = openingAmount + receiveAmount - consumeAmount;
+        const closingExpenseAmount = openingExpenseAmount + receiveExpenseAmount - consumeExpenseAmount;
 
         return {
           plywood_sub_type: item_sub_category_name,
@@ -220,6 +239,18 @@ export const plywoodStockReportCsv = catchAsync(async (req, res, next) => {
           issue_for_pressing_sqm: issuePressingSqm,
           closing_sheets: Math.max(0, roundStock(closingSheets, 0)),
           closing_sqm: Math.max(0, roundStock(closingSqm)),
+          opening_amount: Math.max(0, roundStock(openingAmount)),
+          opening_expense_amount: Math.max(0, roundStock(openingExpenseAmount)),
+          receive_amount: Math.max(0, roundStock(receiveAmount)),
+          receive_expense_amount: Math.max(0, roundStock(receiveExpenseAmount)),
+          consume_amount: Math.max(0, roundStock(consumeAmount)),
+          consume_expense_amount: Math.max(0, roundStock(consumeExpenseAmount)),
+          challan_amount: Math.max(0, roundStock(challanAmount)),
+          order_amount: Math.max(0, roundStock(orderAmount)),
+          issue_for_ply_resizing_amount: Math.max(0, roundStock(issuePlyResizingAmount)),
+          issue_for_pressing_amount: Math.max(0, roundStock(issuePressingAmount)),
+          closing_amount: Math.max(0, roundStock(closingAmount)),
+          closing_expense_amount: Math.max(0, roundStock(closingExpenseAmount)),
         };
       })
     );
@@ -250,7 +281,8 @@ export const plywoodStockReportCsv = catchAsync(async (req, res, next) => {
       activeStockData,
       startDate,
       endDate,
-      filter
+      filter,
+      includeCostAndExpense
     );
 
     return res.json(
@@ -271,7 +303,7 @@ export const plywoodStockReportCsv = catchAsync(async (req, res, next) => {
  * @route POST /report/download-stock-report-plywood-item-wise
  */
 export const plywoodItemWiseStockReportCsv = catchAsync(async (req, res, next) => {
-  const { startDate, endDate } = req.body;
+  const { startDate, endDate, includeCostAndExpense } = req.body;
   const filter = req.body?.filter || {};
 
   if (!startDate || !endDate) {
@@ -310,6 +342,8 @@ export const plywoodItemWiseStockReportCsv = catchAsync(async (req, res, next) =
             length: '$length',
             width: '$width',
           },
+          total_amount: { $sum: '$amount' },
+          total_expense_amount: { $sum: '$expense_amount' },
           current_sheets: { $sum: '$available_sheets' },
           current_sqm: { $sum: '$available_sqm' },
           item_ids: { $push: '$_id' },
@@ -348,6 +382,8 @@ export const plywoodItemWiseStockReportCsv = catchAsync(async (req, res, next) =
               _id: null,
               total_sheets: { $sum: '$sheets' },
               total_sqm: { $sum: '$total_sq_meter' },
+              total_amount: { $sum: '$amount' },
+              total_expense_amount: { $sum: '$expense_amount' },
             },
           },
         ]);
@@ -366,6 +402,8 @@ export const plywoodItemWiseStockReportCsv = catchAsync(async (req, res, next) =
                 _id: null,
                 total_sheets: { $sum: '$issued_sheets' },
                 total_sqm: { $sum: '$issued_sqm' },
+                total_amount: { $sum: '$issued_amount' },
+                total_expense_amount: { $sum: '$issued_expense_amount' },
               },
             },
           ]),
@@ -382,6 +420,8 @@ export const plywoodItemWiseStockReportCsv = catchAsync(async (req, res, next) =
                 _id: null,
                 total_sheets: { $sum: '$issued_sheets' },
                 total_sqm: { $sum: '$issued_sqm' },
+                total_amount: { $sum: '$issued_amount' },
+                total_expense_amount: { $sum: '$issued_expense_amount' },
               },
             },
           ]),
@@ -398,6 +438,8 @@ export const plywoodItemWiseStockReportCsv = catchAsync(async (req, res, next) =
                 _id: null,
                 total_sheets: { $sum: '$issued_sheets' },
                 total_sqm: { $sum: '$issued_sqm' },
+                total_amount: { $sum: '$issued_amount' },
+                total_expense_amount: { $sum: '$issued_expense_amount' },
               },
             },
           ]),
@@ -414,6 +456,8 @@ export const plywoodItemWiseStockReportCsv = catchAsync(async (req, res, next) =
                 _id: null,
                 total_sheets: { $sum: '$issued_sheets' },
                 total_sqm: { $sum: '$issued_sqm' },
+                total_amount: { $sum: '$issued_amount' },
+                total_expense_amount: { $sum: '$issued_expense_amount' },
               },
             },
           ]),
@@ -433,11 +477,26 @@ export const plywoodItemWiseStockReportCsv = catchAsync(async (req, res, next) =
         const consumeSqm = challanSqm + orderSqm + issuePlyResizingSqm + issuePressingSqm;
         const currentSheets = item.current_sheets || 0;
         const currentSqm = item.current_sqm || 0;
-
         const openingSheets = currentSheets + consumeSheets - receiveSheets;
         const openingSqm = currentSqm + consumeSqm - receiveSqm;
         const closingSheets = openingSheets + receiveSheets - consumeSheets;
         const closingSqm = openingSqm + receiveSqm - consumeSqm;
+        const openingAmount = item.total_amount || 0;
+        const openingExpenseAmount = item.total_expense_amount || 0;
+        const receiveAmount = receives[0]?.total_amount || 0;
+        const receiveExpenseAmount = receives[0]?.total_expense_amount || 0;
+        const challanAmount = challan[0]?.total_amount || 0;
+        const challanExpenseAmount = challan[0]?.total_expense_amount || 0;
+        const orderAmount = order[0]?.total_amount || 0;
+        const orderExpenseAmount = order[0]?.total_expense_amount || 0;
+        const issuePlyResizingAmount = issuePlyResizing[0]?.total_amount || 0;
+        const issuePlyResizingExpenseAmount = issuePlyResizing[0]?.total_expense_amount || 0;
+        const issuePressingAmount = issuePressing[0]?.total_amount || 0;
+        const issuePressingExpenseAmount = issuePressing[0]?.total_expense_amount || 0;
+        const consumeAmount = challanAmount + orderAmount + issuePlyResizingAmount + issuePressingAmount;
+        const consumeExpenseAmount = challanExpenseAmount + orderExpenseAmount + issuePlyResizingExpenseAmount + issuePressingExpenseAmount;
+        const closingAmount = openingAmount + receiveAmount - consumeAmount;
+        const closingExpenseAmount = openingExpenseAmount + receiveExpenseAmount - consumeExpenseAmount;
 
         return {
           item_name: item_name || '',
@@ -460,6 +519,22 @@ export const plywoodItemWiseStockReportCsv = catchAsync(async (req, res, next) =
           issue_for_pressing_sqm: issuePressingSqm,
           closing_sheets: Math.max(0, roundStock(closingSheets, 0)),
           closing_sqm: Math.max(0, roundStock(closingSqm)),
+          opening_amount: Math.max(0, roundStock(openingAmount, 2)),
+          opening_expense_amount: Math.max(0, roundStock(openingExpenseAmount, 2)),
+          receive_amount: receiveAmount,
+          receive_expense_amount: receiveExpenseAmount,
+          consume_amount: consumeAmount,
+          consume_expense_amount: consumeExpenseAmount,
+          challan_amount: challanAmount,
+          challan_expense_amount: challanExpenseAmount,
+          order_amount: orderAmount,
+          order_expense_amount: orderExpenseAmount,
+          issue_for_ply_resizing_amount: issuePlyResizingAmount,
+          issue_for_ply_resizing_expense_amount: issuePlyResizingExpenseAmount,
+          issue_for_pressing_amount: issuePressingAmount,
+          issue_for_pressing_expense_amount: issuePressingExpenseAmount,
+          closing_amount: Math.max(0, roundStock(closingAmount, 2)),
+          closing_expense_amount: Math.max(0, roundStock(closingExpenseAmount, 2)),
         };
       })
     );
@@ -490,7 +565,8 @@ export const plywoodItemWiseStockReportCsv = catchAsync(async (req, res, next) =
       activeStockData,
       startDate,
       endDate,
-      filter
+      filter,
+      includeCostAndExpense
     );
 
     return res.json(
@@ -514,7 +590,7 @@ export const plywoodItemWiseStockReportCsv = catchAsync(async (req, res, next) =
  * @access Private
  */
 export const plywoodStockReportByPelletCsv = catchAsync(async (req, res, next) => {
-  const { startDate, endDate } = req.body;
+  const { startDate, endDate, includeCostAndExpense } = req.body;
   const filter = req.body?.filter || {};
 
   if (!startDate || !endDate) {
@@ -563,6 +639,8 @@ export const plywoodStockReportByPelletCsv = catchAsync(async (req, res, next) =
           available_sheets: 1,
           available_sqm: 1,
           inward_date: '$invoice.inward_date',
+          amount: 1,
+          expense_amount: 1,
         },
       },
     ]);
@@ -593,6 +671,7 @@ export const plywoodStockReportByPelletCsv = catchAsync(async (req, res, next) =
                 _id: null,
                 total_sheets: { $sum: '$issued_sheets' },
                 total_sqm: { $sum: '$issued_sqm' },
+                total_amount: { $sum: '$issued_amount' },
               },
             },
           ]),
@@ -609,6 +688,7 @@ export const plywoodStockReportByPelletCsv = catchAsync(async (req, res, next) =
                 _id: null,
                 total_sheets: { $sum: '$issued_sheets' },
                 total_sqm: { $sum: '$issued_sqm' },
+                total_amount: { $sum: '$issued_amount' },
               },
             },
           ]),
@@ -625,6 +705,7 @@ export const plywoodStockReportByPelletCsv = catchAsync(async (req, res, next) =
                 _id: null,
                 total_sheets: { $sum: '$issued_sheets' },
                 total_sqm: { $sum: '$issued_sqm' },
+                total_amount: { $sum: '$issued_amount' },
               },
             },
           ]),
@@ -641,6 +722,7 @@ export const plywoodStockReportByPelletCsv = catchAsync(async (req, res, next) =
                 _id: null,
                 total_sheets: { $sum: '$issued_sheets' },
                 total_sqm: { $sum: '$issued_sqm' },
+                total_amount: { $sum: '$issued_amount' },
               },
             },
           ]),
@@ -658,11 +740,28 @@ export const plywoodStockReportByPelletCsv = catchAsync(async (req, res, next) =
         const consumeSqm = challanSqm + orderSqm + issuePlyResizingSqm + issuePressingSqm;
         const currentSheets = item.available_sheets ?? item.sheets ?? 0;
         const currentSqm = item.available_sqm ?? item.total_sq_meter ?? 0;
-
         const openingSheets = currentSheets + consumeSheets - receiveSheets;
         const openingSqm = currentSqm + consumeSqm - receiveSqm;
         const closingSheets = openingSheets + receiveSheets - consumeSheets;
         const closingSqm = openingSqm + receiveSqm - consumeSqm;
+        const openingAmount = item.amount || 0;
+        const openingExpenseAmount = item.expense_amount || 0;
+        const receiveAmount =
+          inwardDate && inwardDate >= start && inwardDate <= end ? (item.amount || 0) : 0;
+        const receiveExpenseAmount =
+          inwardDate && inwardDate >= start && inwardDate <= end ? (item.expense_amount || 0) : 0;
+        const challanAmount = challan[0]?.total_amount || 0;
+        const challanExpenseAmount = challan[0]?.total_expense_amount || 0;
+        const orderAmount = order[0]?.total_amount || 0;
+        const orderExpenseAmount = order[0]?.total_expense_amount || 0;
+        const issuePlyResizingAmount = issuePlyResizing[0]?.total_amount || 0;
+        const issuePlyResizingExpenseAmount = issuePlyResizing[0]?.total_expense_amount || 0;
+        const issuePressingAmount = issuePressing[0]?.total_amount || 0;
+        const issuePressingExpenseAmount = issuePressing[0]?.total_expense_amount || 0;
+        const consumeAmount = challanAmount + orderAmount + issuePlyResizingAmount + issuePressingAmount;
+        const consumeExpenseAmount = challanExpenseAmount + orderExpenseAmount + issuePlyResizingExpenseAmount + issuePressingExpenseAmount;
+        const closingAmount = openingAmount + receiveAmount - consumeAmount;
+        const closingExpenseAmount = openingExpenseAmount + receiveExpenseAmount - consumeExpenseAmount;
 
         return {
           pellet_no: item.pallet_number,
@@ -685,6 +784,22 @@ export const plywoodStockReportByPelletCsv = catchAsync(async (req, res, next) =
           issue_for_pressing_sqm: issuePressingSqm,
           closing_sheets: Math.max(0, roundStock(closingSheets, 0)),
           closing_sqm: Math.max(0, roundStock(closingSqm)),
+          opening_amount: Math.max(0, roundStock(openingAmount, 2)),
+          opening_expense_amount: Math.max(0, roundStock(openingExpenseAmount, 2)),
+          receive_amount: receiveAmount,
+          receive_expense_amount: receiveExpenseAmount,
+          consume_amount: consumeAmount,
+          consume_expense_amount: consumeExpenseAmount,
+          challan_amount: challanAmount,
+          challan_expense_amount: challanExpenseAmount,
+          order_amount: orderAmount,
+          order_expense_amount: orderExpenseAmount,
+          issue_for_ply_resizing_amount: issuePlyResizingAmount,
+          issue_for_ply_resizing_expense_amount: issuePlyResizingExpenseAmount,
+          issue_for_pressing_amount: issuePressingAmount,
+          issue_for_pressing_expense_amount: issuePressingExpenseAmount,
+          closing_amount: Math.max(0, roundStock(closingAmount, 2)),
+          closing_expense_amount: Math.max(0, roundStock(closingExpenseAmount, 2)),
         };
       })
     );
@@ -721,7 +836,8 @@ export const plywoodStockReportByPelletCsv = catchAsync(async (req, res, next) =
       activeStockData,
       startDate,
       endDate,
-      filter
+      filter,
+      includeCostAndExpense
     );
 
     return res.json(

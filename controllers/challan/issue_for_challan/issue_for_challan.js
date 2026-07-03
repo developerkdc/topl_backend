@@ -77,7 +77,7 @@ const issued_from_map = {
   [item_issued_from?.dressing_factory]: dressing_done_items_model,
 };
 class IssueForChallan {
-  constructor(session, userDetails, issued_from, issued_item_id, issued_data) {
+  constructor(session, userDetails, issued_from, issued_item_id, issued_data, issued_date) {
     // if (!isValidObjectId(issued_item_id)) {
     //   throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
     // }
@@ -87,6 +87,7 @@ class IssueForChallan {
     this.issued_item_id = issued_item_id;
     this.issued_item_details = null;
     this.issued_data = issued_data || null;
+    this.issued_date = issued_date || null;
   }
 
   //method to fetch issued item details based on issued item id
@@ -144,6 +145,7 @@ class IssueForChallan {
       issued_from: this.issued_from,
       created_by: this.userDetails?._id,
       updated_by: this.userDetails?._id,
+      issued_date: this.issued_date,
     };
     const updated_item_details = this.issued_item_details?.map((item) => ({
       ...common_fields,
@@ -170,6 +172,7 @@ class IssueForChallan {
         {
           $set: {
             issue_status: issues_for_status?.challan,
+            issued_date: this.issued_date,
           },
         },
         { session: this.session }
@@ -195,6 +198,7 @@ class IssueForChallan {
         {
           $set: {
             isEditable: false,
+            issued_date: this.issued_date,
           },
         },
         { session: this.session }
@@ -219,6 +223,7 @@ class IssueForChallan {
       issued_from: this.issued_from,
       created_by: this.userDetails?._id,
       updated_by: this.userDetails?._id,
+      issued_date: this.issued_date,
     };
     const updated_item_details = this.issued_item_details?.map((item) => ({
       ...common_fields,
@@ -245,6 +250,7 @@ class IssueForChallan {
         {
           $set: {
             issue_status: issues_for_status?.challan,
+            issued_date: this.issued_date,
           },
         },
         { session: this.session }
@@ -270,6 +276,7 @@ class IssueForChallan {
         {
           $set: {
             isEditable: false,
+            issued_date: this.issued_date,
           },
         },
         { session: this.session }
@@ -328,6 +335,7 @@ class IssueForChallan {
           issued_item_details: updated_issued_item_details,
           created_by: this.userDetails?._id,
           updated_by: this.userDetails?._id,
+          issued_date: this.issued_date,
         },
       ],
       { session: this.session }
@@ -352,6 +360,7 @@ class IssueForChallan {
           $set: {
             // issue_status: issues_for_status?.challan,
             updated_by: this.userDetails?._id,
+            issued_date: this.issued_date,
           },
         },
         { session: this.session }
@@ -379,6 +388,7 @@ class IssueForChallan {
           $set: {
             isEditable: false,
             updated_by: this.userDetails?._id,
+            issued_date: this.issued_date,
           },
         },
         { session: this.session }
@@ -412,6 +422,7 @@ class IssueForChallan {
             issued_sheets: this.issued_data,
             issued_sqm: issued_sqm,
             issued_amount: issued_amount,
+            issued_date: this.issued_date,
             created_by: this.userDetails?._id,
             updated_by: this.userDetails?._id,
           },
@@ -432,6 +443,7 @@ class IssueForChallan {
       issued_from: this.issued_from,
       created_by: this.userDetails?._id,
       updated_by: this.userDetails?._id,
+      issued_date: this.issued_date,
     };
     const updated_item_details = this.issued_item_details?.map((item) => ({
       ...common_fields,
@@ -458,6 +470,7 @@ class IssueForChallan {
         {
           $set: {
             issue_status: issues_for_status?.challan,
+            issued_date: this.issued_date,
           },
         },
         { session: this.session }
@@ -483,6 +496,8 @@ class IssueForChallan {
         {
           $set: {
             isEditable: false,
+            updated_by: this.userDetails?._id,
+            issued_date: this.issued_date,
           },
         },
         { session: this.session }
@@ -530,6 +545,7 @@ class IssueForChallan {
       issued_sheets: this.issued_data,
       issued_sqm: issued_sqm,
       issued_amount: issued_amount,
+      issued_date: this.issued_date,
     };
 
     const [result] = await issue_for_challan_model.create(
@@ -540,6 +556,7 @@ class IssueForChallan {
           issued_item_details: updated_issued_item_details,
           created_by: this.userDetails?._id,
           updated_by: this.userDetails?._id,
+          issued_date: this.issued_date,
         },
       ],
       { session: this.session }
@@ -562,6 +579,7 @@ class IssueForChallan {
         $set: {
           issue_status: issues_for_status?.challan,
           updated_by: this.userDetails?._id,
+          issued_date: this.issued_date,
         },
       },
       { session: this.session }
@@ -589,6 +607,7 @@ class IssueForChallan {
           $set: {
             isEditable: false,
             updated_by: this.userDetails?._id,
+            issued_date: this.issued_date,
           },
         },
         { session: this.session }
@@ -618,6 +637,7 @@ class IssueForChallan {
           issued_sheets: this.issued_data,
           issued_sqm: issued_sqm,
           issued_amount: issued_amount,
+          issued_date: this.issued_date,
           created_by: this.userDetails?._id,
           updated_by: this.userDetails?._id,
         },
@@ -668,6 +688,7 @@ class IssueForChallan {
           issued_item_details: updated_issued_item_details,
           created_by: this.userDetails?._id,
           updated_by: this.userDetails?._id,
+          issued_date: this.issued_date,
         },
       ],
       { session: this.session }
@@ -691,6 +712,7 @@ class IssueForChallan {
         $set: {
           issue_status: issues_for_status?.challan,
           updated_by: this.userDetails?._id,
+          issued_date: this.issued_date,
         },
       },
       { session: this.session }
@@ -718,6 +740,7 @@ class IssueForChallan {
           $set: {
             isEditable: false,
             updated_by: this.userDetails?._id,
+            issued_date: this.issued_date,
           },
         },
         { session: this.session }
@@ -751,6 +774,7 @@ class IssueForChallan {
           issued_amount: issued_amount,
           created_by: this.userDetails?._id,
           updated_by: this.userDetails?._id,
+          issued_date: this.issued_date,
         },
       ],
       { session: this.session }
@@ -801,6 +825,7 @@ class IssueForChallan {
           issued_item_details: updated_issued_item_details,
           created_by: this.userDetails?._id,
           updated_by: this.userDetails?._id,
+          issued_date: this.issued_date,
         },
       ],
       { session: this.session }
@@ -824,6 +849,7 @@ class IssueForChallan {
         $set: {
           issue_status: issues_for_status?.challan,
           updated_by: this.userDetails?._id,
+          issued_date: this.issued_date,
         },
       },
       { session: this.session }
@@ -851,6 +877,7 @@ class IssueForChallan {
           $set: {
             isEditable: false,
             updated_by: this.userDetails?._id,
+            issued_date: this.issued_date,
           },
         },
         { session: this.session }
@@ -884,6 +911,7 @@ class IssueForChallan {
           issued_amount: issued_amount,
           created_by: this.userDetails?._id,
           updated_by: this.userDetails?._id,
+          issued_date: this.issued_date,
         },
       ],
       { session: this.session }
@@ -934,6 +962,7 @@ class IssueForChallan {
           issued_item_details: updated_issued_item_details,
           created_by: this.userDetails?._id,
           updated_by: this.userDetails?._id,
+          issued_date: this.issued_date,
         },
       ],
       { session: this.session }
@@ -958,6 +987,7 @@ class IssueForChallan {
           $set: {
             issue_status: issues_for_status?.challan,
             updated_by: this.userDetails?._id,
+            issued_date: this.issued_date,
           },
         },
         { session: this.session }
@@ -988,6 +1018,7 @@ class IssueForChallan {
           $set: {
             isEditable: false,
             updated_by: this.userDetails?._id,
+            issued_date: this.issued_date,
           },
         },
         { session: this.session }
@@ -1024,6 +1055,7 @@ class IssueForChallan {
             issued_amount: issued_amount,
             created_by: this.userDetails?._id,
             updated_by: this.userDetails?._id,
+            issued_date: this.issued_date,
           },
         ],
         { session: this.session }
@@ -1072,6 +1104,7 @@ class IssueForChallan {
           issued_item_details: updated_issued_item_details,
           created_by: this.userDetails?._id,
           updated_by: this.userDetails?._id,
+          issued_date: this.issued_date,
         },
       ],
       { session: this.session }
@@ -1096,6 +1129,7 @@ class IssueForChallan {
           $set: {
             issue_status: issues_for_status?.challan,
             updated_by: this.userDetails?._id,
+            issued_date: this.issued_date,
           },
         },
         { session: this.session }
@@ -1123,6 +1157,7 @@ class IssueForChallan {
           $set: {
             isEditable: false,
             updated_by: this.userDetails?._id,
+            issued_date: this.issued_date,
           },
         },
         { session: this.session }
@@ -1157,7 +1192,7 @@ class IssueForChallan {
             issued_quantity: this.issued_data,
             // issued_sqm: issued_sqm,
             issued_amount: issued_amount,
-            issue_date: new Date(),
+            issued_date: this.issued_date,
             created_by: this.userDetails?._id,
             updated_by: this.userDetails?._id,
           },
@@ -1177,6 +1212,7 @@ class IssueForChallan {
       issued_from: this.issued_from,
       created_by: this.userDetails?._id,
       updated_by: this.userDetails?._id,
+      issued_date: this.issued_date,
     };
 
     const updated_item_details = this.issued_item_details?.map((item) => ({
@@ -1201,6 +1237,7 @@ class IssueForChallan {
         {
           $set: {
             issue_status: issues_for_status?.challan,
+            issued_date: this.issued_date,
           },
         },
         { session: this.session }
@@ -1229,6 +1266,7 @@ class IssueForChallan {
       issued_from: this.issued_from,
       created_by: this.userDetails?._id,
       updated_by: this.userDetails?._id,
+      issued_date: this.issued_date,
     };
     const updated_item_details = this.issued_item_details?.map((item) => ({
       ...common_fields,
@@ -1252,6 +1290,7 @@ class IssueForChallan {
         {
           $set: {
             issue_status: issues_for_status?.challan,
+            issued_date: this.issued_date,
           },
         },
         { session: this.session }
@@ -1281,6 +1320,7 @@ class IssueForChallan {
       issued_item_details: this.issued_item_details,
       created_by: this.userDetails?._id,
       updated_by: this.userDetails?._id,
+      issued_date: this.issued_date,
     };
 
     //add model name to insert data to create order using session
@@ -1303,6 +1343,7 @@ class IssueForChallan {
           $set: {
             issue_status: issues_for_status?.challan,
             updated_by: this.userDetails?._id,
+            issued_date: this.issued_date,
           },
         },
         { session: this.session }
@@ -1332,6 +1373,7 @@ class IssueForChallan {
           $set: {
             isEditable: false,
             updated_by: this.userDetails?._id,
+            issued_date: this.issued_date,
           },
         },
         { session: this.session }
@@ -1363,6 +1405,7 @@ class IssueForChallan {
           bundles: [this.issued_item_details?._id],
           created_by: this.userDetails?._id,
           updated_by: this.userDetails?._id,
+          issued_date: this.issued_date,
         },
       ],
       { session: this.session }
@@ -1417,6 +1460,7 @@ class IssueForChallan {
           issued_item_details: updated_issued_item_details,
           created_by: this.userDetails?._id,
           updated_by: this.userDetails?._id,
+          issued_date: this.issued_date,
         },
       ],
       { session: this.session }
@@ -1441,6 +1485,7 @@ class IssueForChallan {
           $set: {
             issue_status: issues_for_status?.challan,
             updated_by: this.userDetails?._id,
+            issued_date: this.issued_date,
           },
         },
         { session: this.session }
@@ -1471,6 +1516,7 @@ class IssueForChallan {
           $set: {
             isEditable: false,
             updated_by: this.userDetails?._id,
+            issued_date: this.issued_date,
           },
         },
         { session: this.session }
@@ -1507,6 +1553,7 @@ class IssueForChallan {
             amount: issued_amount,
             created_by: this.userDetails?._id,
             updated_by: this.userDetails?._id,
+            issued_date: this.issued_date,
           },
         ],
         { session: this.session }

@@ -39,8 +39,9 @@ const other_goods_history_schema = new mongoose.Schema(
       type: Number,
       required: [true, 'Issued Amount is required.'],
     },
-    issue_date: {
+    issued_date: {
       type: Date,
+      default: null,
     },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,

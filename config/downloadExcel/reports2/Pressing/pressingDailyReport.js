@@ -69,7 +69,7 @@ const headerStyle = {
  * 2) Core - Face Consumption Sq.Mtr.
  * 3) Plywood Consumption Sq.Mtr.
  */
-const GeneratePressingDailyReportExcel = async (pressingData, reportDate) => {
+const GeneratePressingDailyReportExcel = async (pressingData, reportDate, includeCostAndExpense) => {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Pressing Daily Report');
 
@@ -99,6 +99,7 @@ const GeneratePressingDailyReportExcel = async (pressingData, reportDate) => {
     'Size',
     'Sheets',
     'Sq Mtr',
+    ...(includeCostAndExpense ? ['Amount'] : []),
   ];
   const pressingDetailsHeaderRow = worksheet.getRow(currentRow);
   pressingDetailsHeaders.forEach((h, i) => {
@@ -129,6 +130,7 @@ const GeneratePressingDailyReportExcel = async (pressingData, reportDate) => {
         size: docSize,
         sheets: docSheets,
         sqm: docSqm,
+        ...(includeCostAndExpense ? { amount: doc.amount } : {}),
       });
     });
   });
@@ -142,6 +144,7 @@ const GeneratePressingDailyReportExcel = async (pressingData, reportDate) => {
 
   let pressingDetailsTotalSheets = 0;
   let pressingDetailsTotalSqm = 0;
+  let pressingDetailsTotalAmount = 0;
   const categoryOrder = [
     'Decorative Mdf',
     'Decorative Plywood',
@@ -152,12 +155,14 @@ const GeneratePressingDailyReportExcel = async (pressingData, reportDate) => {
     if (rows.length === 0) return;
     let catSheets = 0;
     let catSqm = 0;
+    let catAmount = 0;
     const byThickSideSize = {};
     rows.forEach((r) => {
       const key = `${r.thick}_${r.side}_${r.size}_${r.itemName}`;
-      if (!byThickSideSize[key]) byThickSideSize[key] = { ...r, sheets: 0, sqm: 0 };
+      if (!byThickSideSize[key]) byThickSideSize[key] = { ...r, sheets: 0, sqm: 0, amount: 0 };
       byThickSideSize[key].sheets += r.sheets;
       byThickSideSize[key].sqm += r.sqm;
+      byThickSideSize[key].amount += r.amount;
     });
     Object.values(byThickSideSize).forEach((r, idx) => {
       const row = worksheet.getRow(currentRow);
@@ -171,8 +176,13 @@ const GeneratePressingDailyReportExcel = async (pressingData, reportDate) => {
       row.getCell(8).value = Math.round(r.sqm * 100) / 100;
       row.getCell(4).numFmt = '0.00';
       row.getCell(8).numFmt = '0.00';
+      if (includeCostAndExpense) {
+        row.getCell(9).value = r.amount;
+        row.getCell(9).numFmt = '0.00';
+      }
       catSheets += r.sheets;
       catSqm += r.sqm;
+      catAmount += r.amount;
       currentRow++;
     });
     const catTotalRow = worksheet.getRow(currentRow);
@@ -183,9 +193,14 @@ const GeneratePressingDailyReportExcel = async (pressingData, reportDate) => {
     catTotalRow.getCell(7).font = { bold: true };
     catTotalRow.getCell(8).font = { bold: true };
     catTotalRow.getCell(8).numFmt = '0.00';
+    if (includeCostAndExpense) {
+      catTotalRow.getCell(9).value = catAmount;
+      catTotalRow.getCell(9).numFmt = '0.00';
+    }
     currentRow++;
     pressingDetailsTotalSheets += catSheets;
     pressingDetailsTotalSqm += catSqm;
+    pressingDetailsTotalAmount += catAmount;
   });
 
   const pressingDetailsGrandRow = worksheet.getRow(currentRow);
@@ -196,6 +211,10 @@ const GeneratePressingDailyReportExcel = async (pressingData, reportDate) => {
   pressingDetailsGrandRow.getCell(7).font = { bold: true };
   pressingDetailsGrandRow.getCell(8).font = { bold: true };
   pressingDetailsGrandRow.getCell(8).numFmt = '0.00';
+  if (includeCostAndExpense) {
+    pressingDetailsGrandRow.getCell(9).value = pressingDetailsTotalAmount;
+    pressingDetailsGrandRow.getCell(9).numFmt = '0.00';
+  }
   currentRow += 2;
 
   // ---- Section 2 header: Core - Face Consumption Sq.Mtr. ----
@@ -207,7 +226,7 @@ const GeneratePressingDailyReportExcel = async (pressingData, reportDate) => {
   currentRow++;
 
   // ---- Section 2: Core - Face Consumption table column headers ----
-  const faceHeaders = ['Item Name', 'Thick.', 'Size', 'Sheets', 'Sq Mtr'];
+  const faceHeaders = ['Item Name', 'Thick.', 'Size', 'Sheets', 'Sq Mtr', ...(includeCostAndExpense ? ['Amount'] : [])];
   const faceHeaderRow = worksheet.getRow(currentRow);
   faceHeaders.forEach((h, i) => {
     const cell = faceHeaderRow.getCell(i + 1);
@@ -227,6 +246,7 @@ const GeneratePressingDailyReportExcel = async (pressingData, reportDate) => {
         size: formatSize(fd.length, fd.width),
         sheets: fd.no_of_sheets ?? 0,
         sqm: getSqm(fd.sqm, fd.length, fd.width),
+        amount: fd.amount ?? 0,
       });
     });
   });
@@ -234,14 +254,16 @@ const GeneratePressingDailyReportExcel = async (pressingData, reportDate) => {
   const faceByItem = {};
   faceRows.forEach((r) => {
     const key = r.itemName || 'UNKNOWN';
-    if (!faceByItem[key]) faceByItem[key] = { sheets: 0, sqm: 0, rows: [] };
+    if (!faceByItem[key]) faceByItem[key] = { sheets: 0, sqm: 0, amount: 0, rows: [] };
     faceByItem[key].sheets += r.sheets;
     faceByItem[key].sqm += r.sqm;
+    faceByItem[key].amount += r.amount;
     faceByItem[key].rows.push(r);
   });
 
   let faceTotalSheets = 0;
   let faceTotalSqm = 0;
+  let faceTotalAmount = 0;
   Object.keys(faceByItem)
     .sort()
     .forEach((itemName) => {
@@ -261,10 +283,15 @@ const GeneratePressingDailyReportExcel = async (pressingData, reportDate) => {
         row.getCell(4).value = r.sheets;
         row.getCell(5).value = Math.round(r.sqm * 100) / 100;
         row.getCell(5).numFmt = '0.00';
+        if (includeCostAndExpense) {
+          row.getCell(6).value = r.amount;
+          row.getCell(6).numFmt = '0.00';
+        }
         currentRow++;
       });
       faceTotalSheets += data.sheets;
       faceTotalSqm += data.sqm;
+      faceTotalAmount += data.amount;
     });
 
   const faceTotalRow = worksheet.getRow(currentRow);
@@ -275,6 +302,10 @@ const GeneratePressingDailyReportExcel = async (pressingData, reportDate) => {
   faceTotalRow.getCell(4).font = { bold: true };
   faceTotalRow.getCell(5).font = { bold: true };
   faceTotalRow.getCell(5).numFmt = '0.00';
+  if (includeCostAndExpense) {
+    faceTotalRow.getCell(6).value = faceTotalAmount;
+    faceTotalRow.getCell(6).numFmt = '0.00';
+  }
   currentRow += 2;
 
   // ---- Section 3 header: Plywood Consumption Sq.Mtr. ----
@@ -286,7 +317,7 @@ const GeneratePressingDailyReportExcel = async (pressingData, reportDate) => {
   currentRow++;
 
   // ---- Section 3: Plywood Consumption table column headers ----
-  const plywoodHeaders = ['Item Name', 'Thick.', 'Size', 'Sheets', 'Sq Mtr'];
+  const plywoodHeaders = ['Item Name', 'Thick.', 'Size', 'Sheets', 'Sq Mtr', ...(includeCostAndExpense ? ['Amount'] : [])];
   const plywoodHeaderRow = worksheet.getRow(currentRow);
   plywoodHeaders.forEach((h, i) => {
     const cell = plywoodHeaderRow.getCell(i + 1);
@@ -306,6 +337,7 @@ const GeneratePressingDailyReportExcel = async (pressingData, reportDate) => {
         size: formatSize(bd.length, bd.width),
         sheets: bd.no_of_sheets ?? 0,
         sqm: getSqm(bd.sqm, bd.length, bd.width),
+        amount: bd.amount ?? 0,
       });
     });
   });
@@ -313,19 +345,22 @@ const GeneratePressingDailyReportExcel = async (pressingData, reportDate) => {
   const plywoodByItem = {};
   plywoodRows.forEach((r) => {
     const key = r.itemName || 'UNKNOWN';
-    if (!plywoodByItem[key]) plywoodByItem[key] = { sheets: 0, sqm: 0, bySize: {} };
+    if (!plywoodByItem[key]) plywoodByItem[key] = { sheets: 0, sqm: 0, bySize: {}, amount: 0 };
     const sizeKey = `${r.thick}_${r.size}`;
     if (!plywoodByItem[key].bySize[sizeKey]) {
-      plywoodByItem[key].bySize[sizeKey] = { size: r.size, thick: r.thick, sheets: 0, sqm: 0 };
+      plywoodByItem[key].bySize[sizeKey] = { size: r.size, thick: r.thick, sheets: 0, sqm: 0, amount: 0 };
     }
     plywoodByItem[key].bySize[sizeKey].sheets += r.sheets;
     plywoodByItem[key].bySize[sizeKey].sqm += r.sqm;
+    plywoodByItem[key].bySize[sizeKey].amount += r.amount;
     plywoodByItem[key].sheets += r.sheets;
     plywoodByItem[key].sqm += r.sqm;
+    plywoodByItem[key].amount += r.amount;
   });
 
   let plywoodTotalSheets = 0;
   let plywoodTotalSqm = 0;
+  let plywoodTotalAmount = 0;
   Object.keys(plywoodByItem)
     .sort()
     .forEach((itemName) => {
@@ -338,10 +373,15 @@ const GeneratePressingDailyReportExcel = async (pressingData, reportDate) => {
         row.getCell(4).value = r.sheets;
         row.getCell(5).value = Math.round(r.sqm * 100) / 100;
         row.getCell(5).numFmt = '0.00';
+        if (includeCostAndExpense) {
+          row.getCell(6).value = r.amount;
+          row.getCell(6).numFmt = '0.00';
+        }
         currentRow++;
       });
       plywoodTotalSheets += data.sheets;
       plywoodTotalSqm += data.sqm;
+      plywoodTotalAmount += data.amount;
     });
 
   const plywoodTotalRow = worksheet.getRow(currentRow);
@@ -352,6 +392,10 @@ const GeneratePressingDailyReportExcel = async (pressingData, reportDate) => {
   plywoodTotalRow.getCell(4).font = { bold: true };
   plywoodTotalRow.getCell(5).font = { bold: true };
   plywoodTotalRow.getCell(5).numFmt = '0.00';
+  if (includeCostAndExpense) {
+    plywoodTotalRow.getCell(6).value = plywoodTotalAmount;
+    plywoodTotalRow.getCell(6).numFmt = '0.00';
+  }
   currentRow += 2;
 
   worksheet.columns = [
@@ -363,6 +407,7 @@ const GeneratePressingDailyReportExcel = async (pressingData, reportDate) => {
     { width: 14 },
     { width: 10 },
     { width: 12 },
+    ...(includeCostAndExpense ? [{ width: 12 }] : []),
   ];
 
   const dirPath = 'public/upload/reports/reports2/Pressing';

@@ -16,7 +16,7 @@ export const otherGoodsDailyReportExcel = catchAsync(
         // console.log('otherGoods Daily Report - Request Body:', JSON.stringify(req.body, null, 2));
         // console.log('otherGoods Daily Report - Filters:', req.body?.filters);
 
-        const { reportDate, ...data } = req?.body?.filters || {};
+        const { reportDate, includeCostAndExpense, ...data } = req?.body?.filters || {};
 
         // Validate reportDate
         if (!reportDate) {
@@ -119,7 +119,8 @@ export const otherGoodsDailyReportExcel = catchAsync(
         // Generate Excel report
         const excelLink = await GenerateOtherGoodsDailyReport(
             otherGoodsData,
-            reportDate
+            reportDate,
+            includeCostAndExpense
         );
 
         return res.status(200).json({

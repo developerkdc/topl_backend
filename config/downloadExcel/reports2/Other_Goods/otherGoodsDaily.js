@@ -19,7 +19,7 @@ const formatDate = (dateString) => {
 /**
  * Generate OtherGoods Daily Report
  */
-const GenerateOtherGoodsDailyReport = async (details, reportDate) => {
+const GenerateOtherGoodsDailyReport = async (details, reportDate, includeCostAndExpense) => {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('OtherGoods Daily Report');
 
@@ -45,7 +45,7 @@ const GenerateOtherGoodsDailyReport = async (details, reportDate) => {
         'Machine',
         'Qty',
         'Unit',
-        'amount',
+        ...(includeCostAndExpense ? ['Amount'] : []),
     ];
 
     const headerRow = worksheet.getRow(currentRow);
@@ -72,7 +72,7 @@ const GenerateOtherGoodsDailyReport = async (details, reportDate) => {
         { width: 20 }, // Machine
         { width: 10 }, // Qty
         { width: 12 }, // Unit
-        { width: 15 }, // amount
+        ...(includeCostAndExpense ? [{ width: 15 }] : []),
     ];
 
     let totalAmount = 0;
@@ -103,10 +103,12 @@ const GenerateOtherGoodsDailyReport = async (details, reportDate) => {
         row.getCell(7).value = item.unit || item.units || item.uom || '';
 
         // amount
-        row.getCell(8).value = item.amount || 0;
+        if (includeCostAndExpense) {
+            row.getCell(8).value = item.amount || 0;
+        }
 
         // Apply borders and alignment
-        for (let i = 1; i <= 8; i++) {
+        for (let i = 1; i <= (includeCostAndExpense ? 8 : 7); i++) {
             const cell = row.getCell(i);
             cell.border = {
                 top: { style: 'thin' },
@@ -121,13 +123,19 @@ const GenerateOtherGoodsDailyReport = async (details, reportDate) => {
             }
         }
 
-        totalAmount += item.amount || 0;
+        if (includeCostAndExpense) {
+            totalAmount += item.amount || 0;
+        }
         currentRow++;
     });
 
     // Add Total Row
     const totalRow = worksheet.getRow(currentRow);
-    totalRow.getCell(7).value = 'Total';
+    if (includeCostAndExpense) {
+        totalRow.getCell(7).value = 'Total';
+    } else {
+        totalRow.getCell(6).value = '';
+    }
     totalRow.getCell(7).font = { bold: true };
     totalRow.getCell(7).border = {
         top: { style: 'thin' },
@@ -136,15 +144,17 @@ const GenerateOtherGoodsDailyReport = async (details, reportDate) => {
         right: { style: 'thin' },
     };
 
-    totalRow.getCell(8).value = totalAmount;
-    totalRow.getCell(8).font = { bold: true };
-    totalRow.getCell(8).border = {
-        top: { style: 'thin' },
-        left: { style: 'thin' },
-        bottom: { style: 'thin' },
-        right: { style: 'thin' },
-    };
-    totalRow.getCell(8).alignment = { horizontal: 'right' };
+    if (includeCostAndExpense) {
+        totalRow.getCell(8).value = totalAmount;
+        totalRow.getCell(8).font = { bold: true };
+        totalRow.getCell(8).border = {
+            top: { style: 'thin' },
+            left: { style: 'thin' },
+            bottom: { style: 'thin' },
+            right: { style: 'thin' },
+        };
+        totalRow.getCell(8).alignment = { horizontal: 'right' };
+    }
 
     // Generate file path
     const timestamp = new Date().getTime();

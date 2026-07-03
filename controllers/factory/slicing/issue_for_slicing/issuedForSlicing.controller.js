@@ -30,7 +30,7 @@ export const addIssueForSlicingFromFlitchInventory = catchAsync(
     session.startTransaction();
     try {
       const userDetails = req.userDetails;
-      const { flitch_inventory_item_ids, is_peeling_done } = req.body;
+      const { flitch_inventory_item_ids, is_peeling_done, issued_date } = req.body;
 
       if (
         !flitch_inventory_item_ids ||
@@ -94,6 +94,7 @@ export const addIssueForSlicingFromFlitchInventory = catchAsync(
             invoice_id: item?.invoice_id,
             is_peeling_done: is_peeling_done ? true : false,
             remark: item?.remark,
+            issued_date: issued_date,
             created_by: userDetails?._id,
             updated_by: userDetails?._id,
           };
@@ -123,6 +124,7 @@ export const addIssueForSlicingFromFlitchInventory = catchAsync(
               issue_status: is_peeling_done
                 ? issues_for_status?.slicing_peeling
                 : issues_for_status?.slicing,
+              issued_date: issued_date,
             },
           },
           { session }
@@ -152,6 +154,7 @@ export const addIssueForSlicingFromFlitchInventory = catchAsync(
           {
             $set: {
               isEditable: false,
+              issued_date: issued_date,
             },
           },
           { session }
@@ -198,7 +201,7 @@ export const add_issue_for_slicing_from_flitching_done = catchAsync(
     session.startTransaction();
     try {
       const userDetails = req.userDetails;
-      const { flitching_done_ids, is_peeling_done } = req.body;
+      const { flitching_done_ids, is_peeling_done, issued_date } = req.body;
 
       if (
         !flitching_done_ids ||
@@ -308,6 +311,7 @@ export const add_issue_for_slicing_from_flitching_done = catchAsync(
           invoice_id: item?.flitch_inventory_invoice_details?._id,
           is_peeling_done: is_peeling_done ? true : false,
           remark: item?.remarks,
+          issued_date: issued_date,
           created_by: userDetails?._id,
           updated_by: userDetails?._id,
           //not adding invoice details
@@ -345,6 +349,7 @@ export const add_issue_for_slicing_from_flitching_done = catchAsync(
               issue_status: is_peeling_done
                 ? issues_for_status?.slicing_peeling
                 : issues_for_status?.slicing,
+              issued_date: issued_date,
             },
           },
           { session }
@@ -368,6 +373,7 @@ export const add_issue_for_slicing_from_flitching_done = catchAsync(
           {
             $set: {
               isEditable: false,
+              issued_date: issued_date,
             },
           },
           { session }

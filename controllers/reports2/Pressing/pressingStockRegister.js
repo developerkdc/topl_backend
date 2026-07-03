@@ -44,7 +44,7 @@ async function resolveCategoryNames(cache, itemNameIds) {
  * @access Private
  */
 export const PressingStockRegisterExcel = catchAsync(async (req, res, next) => {
-  const { startDate, endDate, filter = {} } = req.body;
+  const { startDate, endDate, filter = {}, includeCostAndExpense } = req.body;
 
   if (!startDate || !endDate) {
     return next(new ApiError('Start date and end date are required', 400));
@@ -77,6 +77,7 @@ export const PressingStockRegisterExcel = catchAsync(async (req, res, next) => {
         $group: {
           _id: '$group_no',
           sqm_total: { $sum: '$sqm' },
+          amount: { $sum: '$amount' },
           pd_ids: { $push: '$_id' },
         },
       },
@@ -103,6 +104,8 @@ export const PressingStockRegisterExcel = catchAsync(async (req, res, next) => {
           item_name: doc.item_name ?? '',
           item_sub_category_name: doc.item_sub_category_name ?? '',
           item_name_id: doc.item_name_id,
+          amount: doc.amount ?? 0,
+          expense_amount: doc.expense_amount ?? 0,
         });
         if (doc.item_name_id) itemNameIds.add(doc.item_name_id);
       }
@@ -131,12 +134,16 @@ export const PressingStockRegisterExcel = catchAsync(async (req, res, next) => {
           received_sqm: 0,
           pd_ids: [],
           group_nos: [],
+          amount: 0,
+          expense_amount: 0,
         });
       }
       const entry = itemMap.get(key);
       entry.received_sqm += row.sqm_total;
       entry.pd_ids.push(...row.pd_ids);
       entry.group_nos.push(row._id);
+      entry.amount += details.amount;
+      entry.expense_amount += details.expense_amount;
     }
 
     if (itemMap.size === 0) {
@@ -156,9 +163,9 @@ export const PressingStockRegisterExcel = catchAsync(async (req, res, next) => {
           group_no: { $in: allFilteredGroupNos },
         },
       },
-      { $group: { _id: '$group_no', opening_sqm: { $sum: '$sqm' } } },
+      { $group: { _id: '$group_no', opening_sqm: { $sum: '$sqm' }, amount: { $sum: '$amount' } } },
     ]);
-    const openingByGroup = new Map(openingAgg.map((r) => [r._id, r.opening_sqm]));
+    const openingByGroup = new Map(openingAgg.map((r) => [r._id, { opening_sqm: r.opening_sqm, amount: r.amount }]));
 
     // 5. All pressing_done IDs per group_no where pressing_date <= end (for full damage/sales scope)
     const allPdIdsAgg = await pressing_done_details_model.aggregate([
@@ -168,7 +175,7 @@ export const PressingStockRegisterExcel = catchAsync(async (req, res, next) => {
           group_no: { $in: allFilteredGroupNos },
         },
       },
-      { $group: { _id: '$group_no', pd_ids: { $push: '$_id' } } },
+      { $group: { _id: '$group_no', pd_ids: { $push: '$_id' }, amount: { $sum: '$amount' } } },
     ]);
     const allPdIdsByGroup = new Map(allPdIdsAgg.map((r) => [r._id, r.pd_ids]));
     const allPdIdsForDamageSales = allPdIdsAgg.flatMap((r) => r.pd_ids);
@@ -176,15 +183,14 @@ export const PressingStockRegisterExcel = catchAsync(async (req, res, next) => {
     // 6. Batch fetch Sales and Damages (ALL pressing_done for each group)
     const salesAgg = await pressing_done_history_model.aggregate([
       { $match: { issued_item_id: { $in: allPdIdsForDamageSales } } },
-      { $group: { _id: '$issued_item_id', total: { $sum: '$sqm' } } },
+      { $group: { _id: '$issued_item_id', total: { $sum: '$sqm' }, amount: { $sum: '$amount' } } },
     ]);
-    const salesMap = new Map(salesAgg.map((r) => [r._id.toString(), r.total]));
+    const salesMap = new Map(salesAgg.map((r) => [r._id.toString(), { total: r.total, amount: r.amount }]));
 
     const damageAgg = await pressing_damage_model.aggregate([
-      { $match: { pressing_done_details_id: { $in: allPdIdsForDamageSales } } },
-      { $group: { _id: '$pressing_done_details_id', total: { $sum: '$sqm' } } },
+      { $group: { _id: '$pressing_done_details_id', total: { $sum: '$sqm' }, amount: { $sum: '$amount' } } },
     ]);
-    const damageMap = new Map(damageAgg.map((r) => [r._id.toString(), r.total]));
+    const damageMap = new Map(damageAgg.map((r) => [r._id.toString(), { total: r.total, amount: r.amount }]));
 
     // 7. Build report data
     const stockData = itemEntries.map((entry) => {
@@ -192,14 +198,20 @@ export const PressingStockRegisterExcel = catchAsync(async (req, res, next) => {
 
       let sales = 0;
       let damage = 0;
+      sales += salesMap.get(id.toString())?.sqm ?? 0;
+      damage += damageMap.get(id.toString())?.sqm ?? 0;
       for (const id of allPdIds) {
         sales += salesMap.get(id.toString()) ?? 0;
         damage += damageMap.get(id.toString()) ?? 0;
+        sales_amount += salesMap.get(id.toString())?.amount ?? 0;
+        damage_amount += damageMap.get(id.toString())?.amount ?? 0;
       }
 
       let opening_balance = 0;
+      let opening_amount = 0;
       for (const gn of entry.group_nos) {
-        opening_balance += openingByGroup.get(gn) ?? 0;
+        opening_balance += openingByGroup.get(gn)?.opening_sqm ?? 0;
+        opening_amount += openingByGroup.get(gn)?.amount ?? 0;
       }
       opening_balance = Math.max(0, opening_balance);
 
@@ -208,9 +220,13 @@ export const PressingStockRegisterExcel = catchAsync(async (req, res, next) => {
       const purchase = 0;
       const issue = sales;
       const new_sqmtr = received - process_waste;
-
+      const received_amount = Math.max(0, entry.amount);
+      const issue_amount = Math.max(0, sales_amount);
+      const process_waste_amount = Math.max(0, damage_amount);
+      const purchase_amount = 0;
+      const new_sqmtr_amount = received_amount - process_waste_amount;
       const closing_balance = Math.max(0, opening_balance + received - damage - sales);
-
+      const closing_amount = Math.max(0, opening_amount + received_amount - damage_amount - sales_amount);
       return {
         category: entry.category,
         item_group_name: entry.item_group,
@@ -222,6 +238,13 @@ export const PressingStockRegisterExcel = catchAsync(async (req, res, next) => {
         process_waste,
         new_sqmtr,
         closing_balance,
+        opening_amount,
+        received_amount,
+        purchase_amount,
+        issue_amount,
+        process_waste_amount,
+        new_sqmtr_amount,
+        closing_amount,
       };
     });
 
@@ -230,7 +253,11 @@ export const PressingStockRegisterExcel = catchAsync(async (req, res, next) => {
         row.received !== 0 ||
         row.issue !== 0 ||
         row.purchase !== 0 ||
-        row.process_waste !== 0
+        row.process_waste !== 0 ||
+        row.received_amount !== 0 ||
+        row.issue_amount !== 0 ||
+        row.purchase_amount !== 0 ||
+        row.process_waste_amount !== 0
     );
 
     if (activeStockData.length === 0) {
@@ -243,7 +270,8 @@ export const PressingStockRegisterExcel = catchAsync(async (req, res, next) => {
       activeStockData,
       startDate,
       endDate,
-      filter
+      filter,
+      includeCostAndExpense
     );
 
     return res.json(

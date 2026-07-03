@@ -31,7 +31,7 @@ export const issue_for_pressing_from_tapping = catchAsync(
     try {
       const userDetails = req.userDetails;
       const { tapping_done_item_id } = req.params;
-      const { issue_no_of_sheets } = req.body;
+      const { issue_no_of_sheets, issued_date } = req.body;
       if (
         !tapping_done_item_id ||
         !mongoose.isValidObjectId(tapping_done_item_id)
@@ -109,6 +109,7 @@ export const issue_for_pressing_from_tapping = catchAsync(
         grade_id: data?.grade_id,
         grade_name: data?.grade_name,
         remark: data?.remark,
+        issued_date: issued_date,
       };
 
       const issue_for_pressing_data = {
@@ -123,6 +124,7 @@ export const issue_for_pressing_from_tapping = catchAsync(
         amount: pressing_amount,
         created_by: userDetails?._id,
         updated_by: userDetails?._id,
+        issued_date: issued_date,
       };
 
       const insert_issue_for_pressing = await issues_for_pressing_model.create(
@@ -173,6 +175,7 @@ export const issue_for_pressing_from_tapping = catchAsync(
           {
             $set: {
               updated_by: userDetails?._id,
+              issued_date: issued_date,
             },
             $inc: {
               'available_details.no_of_sheets':
@@ -207,6 +210,7 @@ export const issue_for_pressing_from_tapping = catchAsync(
             $set: {
               isEditable: false,
               updated_by: userDetails?._id,
+              issued_date: issued_date,
             },
           },
           { runValidators: true, session }
@@ -251,6 +255,7 @@ export const issue_for_pressing_from_tapping_for_order = catchAsync(
         order_item_id,
         order_category_status,
         issue_no_of_sheets,
+        issued_date,
       } = req.body;
       if (
         !tapping_done_item_id ||
@@ -440,6 +445,7 @@ export const issue_for_pressing_from_tapping_for_order = catchAsync(
         grade_id: data?.grade_id,
         grade_name: data?.grade_name,
         remark: data?.remark,
+        issued_date: issued_date,
       };
 
       const issue_for_pressing_data = {
@@ -454,6 +460,7 @@ export const issue_for_pressing_from_tapping_for_order = catchAsync(
         amount: pressing_amount,
         created_by: userDetails?._id,
         updated_by: userDetails?._id,
+        issued_date: issued_date,
       };
 
       const insert_issue_for_pressing = await issues_for_pressing_model.create(
@@ -504,6 +511,7 @@ export const issue_for_pressing_from_tapping_for_order = catchAsync(
           {
             $set: {
               updated_by: userDetails?._id,
+              issued_date: issued_date,
             },
             $inc: {
               'available_details.no_of_sheets':
@@ -538,6 +546,7 @@ export const issue_for_pressing_from_tapping_for_order = catchAsync(
             $set: {
               isEditable: false,
               updated_by: userDetails?._id,
+              issued_date: issued_date,
             },
           },
           { runValidators: true, session }

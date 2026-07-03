@@ -19,7 +19,8 @@ export const createLogWiseCrosscutReportExcel = async (
   logData,
   startDate,
   endDate,
-  filter = {}
+  filter = {},
+  includeCostAndExpense
 ) => {
   try {
     const folderPath = 'public/upload/reports/reports2/Crosscut';
@@ -58,16 +59,40 @@ export const createLogWiseCrosscutReportExcel = async (
       { key: 'invoice_cmt', width: 12 },
       { key: 'indian_cmt', width: 12 },
       { key: 'physical_cmt', width: 12 },
+      ...(includeCostAndExpense ? [
+        { key: 'cost_amount', width: 12 },
+        { key: 'expense_amount', width: 12 },
+      ] : []),
       { key: 'op_bal', width: 12 },
+      ...(includeCostAndExpense ? [
+        { key: 'op_bal_cost', width: 12 },
+        { key: 'op_bal_expense', width: 12 },
+      ] : []),
       { key: 'cc_received', width: 12 },
+      ...(includeCostAndExpense ? [
+        { key: 'cc_received_cost', width: 12 },
+        { key: 'cc_received_expense', width: 12 },
+      ] : []),
       { key: 'cc_issued', width: 12 },
+      ...(includeCostAndExpense ? [
+        { key: 'cc_issued_cost', width: 12 },
+        { key: 'cc_issued_expense', width: 12 },
+      ] : []),
       { key: 'cc_closing', width: 12 },
       { key: 'physical_length', width: 14 },
       { key: 'cc_length', width: 12 },
       { key: 'flitch_received', width: 14 },
+      ...(includeCostAndExpense ? [
+        { key: 'flitch_cost', width: 12 },
+        { key: 'flitch_expense', width: 12 },
+      ] : []),
       { key: 'sq_received', width: 12 },
       { key: 'un_received', width: 12 },
       { key: 'peel_received', width: 12 },
+      ...(includeCostAndExpense ? [
+        { key: 'peel_cost', width: 12 },
+        { key: 'peel_expense', width: 12 },
+      ] : []),
     ];
 
     worksheet.columns = columnDefinitions;
@@ -86,16 +111,40 @@ export const createLogWiseCrosscutReportExcel = async (
       'Invoice CMT',
       'Indian CMT',
       'Physical CMT',
+      ...(includeCostAndExpense ? [
+        'Cost Amount',
+        'Expense Amount',
+      ] : []),
       'Op Bal',
+      ...(includeCostAndExpense ? [
+        'Op Bal Cost',
+        'Op Bal Expense',
+      ] : []),
       'CC Received',
+      ...(includeCostAndExpense ? [
+        'CC Received Cost',
+        'CC Received Expense',
+      ] : []),
       'CC Issued',
+      ...(includeCostAndExpense ? [
+        'CC Issued Cost',
+        'CC Issued Expense',
+      ] : []),
       'CC Closing',
       'Physical Length',
       'CC Length',
       'Flitch Received',
+      ...(includeCostAndExpense ? [
+        'Flitch Cost',
+        'Flitch Expense',
+      ] : []),
       'SQ Received',
       'UN Received',
       'Peel Received',
+      ...(includeCostAndExpense ? [
+        'Peel Cost',
+        'Peel Expense',
+      ] : []),
     ]);
     headerRow.font = { bold: true };
     headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
@@ -134,6 +183,20 @@ export const createLogWiseCrosscutReportExcel = async (
       sq_received: 0,
       un_received: 0,
       peel_received: 0,
+      ...(includeCostAndExpense ? {
+        cost_amount: 0,
+        expense_amount: 0,
+        op_bal_cost: 0,
+        op_bal_expense: 0,
+        cc_received_cost: 0,
+        cc_received_expense: 0,
+        cc_issued_cost: 0,
+        cc_issued_expense: 0,
+        flitch_cost: 0,
+        flitch_expense: 0,
+        peel_cost: 0,
+        peel_expense: 0,
+      } : {}),
     };
 
     const sortedItemNames = Object.keys(groupedData).sort();
@@ -156,6 +219,20 @@ export const createLogWiseCrosscutReportExcel = async (
         sq_received: 0,
         un_received: 0,
         peel_received: 0,
+        ...(includeCostAndExpense ? {
+          cost_amount: 0,
+          expense_amount: 0,
+          op_bal_cost: 0,
+          op_bal_expense: 0,
+          cc_received_cost: 0,
+          cc_received_expense: 0,
+          cc_issued_cost: 0,
+          cc_issued_expense: 0,
+          flitch_cost: 0,
+          flitch_expense: 0,
+          peel_cost: 0,
+          peel_expense: 0,
+        } : {}),
       };
 
       logs.forEach((log, index) => {
@@ -175,6 +252,20 @@ export const createLogWiseCrosscutReportExcel = async (
           sq_received: parseFloat(log.sq_received || 0).toFixed(3),
           un_received: parseFloat(log.un_received || 0).toFixed(3),
           peel_received: parseFloat(log.peel_received || 0).toFixed(3),
+          ...(includeCostAndExpense ? {
+            cost_amount: parseFloat(log.cost_amount || 0).toFixed(3),
+            expense_amount: parseFloat(log.expense_amount || 0).toFixed(3),
+            op_bal_cost: parseFloat(log.op_bal_cost || 0).toFixed(3),
+            op_bal_expense: parseFloat(log.op_bal_expense || 0).toFixed(3),
+            cc_received_cost: parseFloat(log.cc_received_cost || 0).toFixed(3),
+            cc_received_expense: parseFloat(log.cc_received_expense || 0).toFixed(3),
+            cc_issued_cost: parseFloat(log.cc_issued_cost || 0).toFixed(3),
+            cc_issued_expense: parseFloat(log.cc_issued_expense || 0).toFixed(3),
+            flitch_cost: parseFloat(log.flitch_cost || 0).toFixed(3),
+            flitch_expense: parseFloat(log.flitch_expense || 0).toFixed(3),
+            peel_cost: parseFloat(log.peel_cost || 0).toFixed(3),
+            peel_expense: parseFloat(log.peel_expense || 0).toFixed(3),
+          } : {}),
         };
 
         const dataRow = worksheet.addRow(rowData);
@@ -200,6 +291,21 @@ export const createLogWiseCrosscutReportExcel = async (
         itemTotals.sq_received += parseFloat(log.sq_received || 0);
         itemTotals.un_received += parseFloat(log.un_received || 0);
         itemTotals.peel_received += parseFloat(log.peel_received || 0);
+
+        if (includeCostAndExpense) {
+          itemTotals.cost_amount += parseFloat(log.cost_amount || 0);
+          itemTotals.expense_amount += parseFloat(log.expense_amount || 0);
+          itemTotals.op_bal_cost += parseFloat(log.op_bal_cost || 0);
+          itemTotals.op_bal_expense += parseFloat(log.op_bal_expense || 0);
+          itemTotals.cc_received_cost += parseFloat(log.cc_received_cost || 0);
+          itemTotals.cc_received_expense += parseFloat(log.cc_received_expense || 0);
+          itemTotals.cc_issued_cost += parseFloat(log.cc_issued_cost || 0);
+          itemTotals.cc_issued_expense += parseFloat(log.cc_issued_expense || 0);
+          itemTotals.flitch_cost += parseFloat(log.flitch_cost || 0);
+          itemTotals.flitch_expense += parseFloat(log.flitch_expense || 0);
+          itemTotals.peel_cost += parseFloat(log.peel_cost || 0);
+          itemTotals.peel_expense += parseFloat(log.peel_expense || 0);
+        }
       });
 
       if (logs.length > 1) {
@@ -226,6 +332,20 @@ export const createLogWiseCrosscutReportExcel = async (
         sq_received: itemTotals.sq_received.toFixed(3),
         un_received: itemTotals.un_received.toFixed(3),
         peel_received: itemTotals.peel_received.toFixed(3),
+        ...(includeCostAndExpense ? {
+          cost_amount: itemTotals.cost_amount.toFixed(3),
+          expense_amount: itemTotals.expense_amount.toFixed(3),
+          op_bal_cost: itemTotals.op_bal_cost.toFixed(3),
+          op_bal_expense: itemTotals.op_bal_expense.toFixed(3),
+          cc_received_cost: itemTotals.cc_received_cost.toFixed(3),
+          cc_received_expense: itemTotals.cc_received_expense.toFixed(3),
+          cc_issued_cost: itemTotals.cc_issued_cost.toFixed(3),
+          cc_issued_expense: itemTotals.cc_issued_expense.toFixed(3),
+          flitch_cost: itemTotals.flitch_cost.toFixed(3),
+          flitch_expense: itemTotals.flitch_expense.toFixed(3),
+          peel_cost: itemTotals.peel_cost.toFixed(3),
+          peel_expense: itemTotals.peel_expense.toFixed(3),
+        } : {}),
       });
       itemTotalRow.eachCell((cell) => {
         cell.font = { bold: true };
@@ -255,6 +375,20 @@ export const createLogWiseCrosscutReportExcel = async (
       grandTotals.sq_received += itemTotals.sq_received;
       grandTotals.un_received += itemTotals.un_received;
       grandTotals.peel_received += itemTotals.peel_received;
+      if (includeCostAndExpense) {
+        grandTotals.cost_amount += itemTotals.cost_amount;
+        grandTotals.expense_amount += itemTotals.expense_amount;
+        grandTotals.op_bal_cost += itemTotals.op_bal_cost;
+        grandTotals.op_bal_expense += itemTotals.op_bal_expense;
+        grandTotals.cc_received_cost += itemTotals.cc_received_cost;
+        grandTotals.cc_received_expense += itemTotals.cc_received_expense;
+        grandTotals.cc_issued_cost += itemTotals.cc_issued_cost;
+        grandTotals.cc_issued_expense += itemTotals.cc_issued_expense;
+        grandTotals.flitch_cost += itemTotals.flitch_cost;
+        grandTotals.flitch_expense += itemTotals.flitch_expense;
+        grandTotals.peel_cost += itemTotals.peel_cost;
+        grandTotals.peel_expense += itemTotals.peel_expense;
+      }
     });
 
     // Grand total row
@@ -274,6 +408,20 @@ export const createLogWiseCrosscutReportExcel = async (
       sq_received: grandTotals.sq_received.toFixed(3),
       un_received: grandTotals.un_received.toFixed(3),
       peel_received: grandTotals.peel_received.toFixed(3),
+      ...(includeCostAndExpense ? {
+        cost_amount: grandTotals.cost_amount.toFixed(3),
+        expense_amount: grandTotals.expense_amount.toFixed(3),
+        op_bal_cost: grandTotals.op_bal_cost.toFixed(3),
+        op_bal_expense: grandTotals.op_bal_expense.toFixed(3),
+        cc_received_cost: grandTotals.cc_received_cost.toFixed(3),
+        cc_received_expense: grandTotals.cc_received_expense.toFixed(3),
+        cc_issued_cost: grandTotals.cc_issued_cost.toFixed(3),
+        cc_issued_expense: grandTotals.cc_issued_expense.toFixed(3),
+        flitch_cost: grandTotals.flitch_cost.toFixed(3),
+        flitch_expense: grandTotals.flitch_expense.toFixed(3),
+        peel_cost: grandTotals.peel_cost.toFixed(3),
+        peel_expense: grandTotals.peel_expense.toFixed(3),
+      } : {}),
     });
     grandTotalRow.eachCell((cell) => {
       cell.font = { bold: true };

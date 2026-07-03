@@ -34,6 +34,7 @@ export const createLogLogsExcel = async (newData) => {
       { header: 'Rate in INR', key: 'rate_in_inr', width: 20 },
 
       { header: 'Amount', key: 'amount', width: 20 },
+      { header: 'Issued Date', key: 'issued_date', width: 20 },
       { header: 'Remark', key: 'remark', width: 20 },
       { header: 'Created Date', key: 'createdAt', width: 20 },
       { header: 'Updated Date', key: 'updatedAt', width: 20 },
@@ -118,6 +119,9 @@ export const createLogLogsExcel = async (newData) => {
         rate_in_inr: data?.rate_in_inr,
 
         amount: data?.amount,
+        issued_date: data?.issued_date
+          ? new Date(data.issued_date).toLocaleDateString()
+          : '',
         remark: data?.remark,
         inward_date: data?.log_invoice_details?.inward_date
           ? new Date(data.log_invoice_details.inward_date).toLocaleDateString()

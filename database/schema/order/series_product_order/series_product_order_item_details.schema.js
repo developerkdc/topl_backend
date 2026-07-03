@@ -24,7 +24,7 @@ const series_product_order_item_details_schema = new mongoose.Schema(
       uppercase: true,
       trim: true,
     },
-     alternate_sales_item_name: {
+    alternate_sales_item_name: {
       type: String,
       uppercase: true,
       trim: true,
@@ -229,6 +229,8 @@ series_product_order_item_details_schema.index(
   { item_no: 1, order_id: 1 },
   { unique: true }
 );
+series_product_order_item_details_schema.index({ photo_number_id: 1, item_status: 1 });
+series_product_order_item_details_schema.index({ different_group_photo_number_id: 1, item_status: 1 })
 
 const series_product_order_item_details_model = mongoose.model(
   'series_product_order_item_details',

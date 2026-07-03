@@ -248,6 +248,10 @@ const issues_for_pressing_schema = new mongoose.Schema(
       required: [true, 'Updated By is required'],
       trim: true,
     },
+    issued_date: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,

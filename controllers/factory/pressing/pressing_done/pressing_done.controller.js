@@ -41,6 +41,7 @@ import face_history_model from '../../../../database/schema/inventory/face/face.
 import plywood_production_history_model from '../../../../database/schema/factory/plywood_production/plywood_production_history.schema.js';
 import { pressing_damage_model } from '../../../../database/schema/factory/pressing/pressing_damage/pressing_damage.schema.js';
 import { pressing_done_history_model } from '../../../../database/schema/factory/pressing/pressing_history/pressing_done_history.schema.js';
+import { getReservedOrdersForGroupNo } from '../../../../utils/getIssueBreakdown.js';
 
 // Add pressing Api
 export const add_pressing_details = catchAsync(async (req, res, next) => {
@@ -1989,7 +1990,7 @@ export const revert_pressing_done_details = catchAsync(
 export const add_to_damage_from_pressing_done = catchAsync(async (req, res) => {
   const userDetails = req.userDetails;
   const { id } = req.params;
-  const { damage_sheets } = req.body;
+  const { damage_sheets, issued_date } = req.body;
 
   const session = await mongoose.startSession();
   try {
@@ -2050,6 +2051,7 @@ export const add_to_damage_from_pressing_done = catchAsync(async (req, res) => {
           sqm: damage_sqm,
           created_by: userDetails?._id,
           updated_by: userDetails?._id,
+          issued_date: issued_date,
         },
       ],
       { session }
@@ -2075,6 +2077,7 @@ export const add_to_damage_from_pressing_done = catchAsync(async (req, res) => {
           },
           $set: {
             isEditable: false,
+            issued_date: issued_date,
           },
         },
         { session }
@@ -2415,3 +2418,24 @@ export const fetch_all_pressing_done_items_history = catchAsync(
     return res.status(StatusCodes.OK).json(response);
   }
 );
+
+export const fetch_reserved_orders_for_item = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+
+  if (!id || !mongoose.isValidObjectId(id)) {
+    throw new ApiError('Invalid item id', StatusCodes.BAD_REQUEST);
+  }
+
+  const item_details = await pressing_done_details_model.findById(id).select('group_no').lean();
+  if (!item_details) {
+    throw new ApiError('Item not found', StatusCodes.NOT_FOUND);
+  }
+
+  const reserved_orders = await getReservedOrdersForGroupNo(item_details.group_no);
+
+  return res.status(StatusCodes.OK).json(
+    new ApiResponse(StatusCodes.OK, 'Reserved orders fetched', {
+      reserved_orders,
+    })
+  );
+});

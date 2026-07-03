@@ -223,6 +223,10 @@ const issues_for_grouping_schema = new mongoose.Schema(
       },
       required: [true, 'Issued from is required'],
     },
+    issued_date: {
+      type: Date,
+      default: null,
+    },
     is_grouping_done: {
       type: Boolean,
       default: false,

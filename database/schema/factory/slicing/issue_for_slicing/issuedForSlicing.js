@@ -160,6 +160,10 @@ const issue_for_slicing_schema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    issued_date: {
+      type: Date,
+      default: null,
+    },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Created By is required'],

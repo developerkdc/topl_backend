@@ -195,7 +195,8 @@ export const listing_cnc_damage = catchAsync(async (req, res) => {
 
 export const add_cnc_damage = catchAsync(async (req, res) => {
   const userDetails = req.userDetails;
-  const { id, damage_sheets, } = req.query;
+  const { id, damage_sheets } = req.query;
+  const { issued_date } = req.body;
   const session = await mongoose.startSession();
   try {
     session.startTransaction();
@@ -257,6 +258,7 @@ export const add_cnc_damage = catchAsync(async (req, res) => {
           sr_no: maxSrNo ? maxSrNo?.max_sr_no + 1 : 1,
           created_by: userDetails?._id,
           updated_by: userDetails?._id,
+          issued_date: issued_date,
         },
       ],
       { session }

@@ -773,7 +773,7 @@ export const add_to_damage_from_plywood_production_done = catchAsync(
   async (req, res) => {
     const userDetails = req.userDetails;
     const { id } = req.params;
-    const { damage_sheets } = req.body;
+    const { damage_sheets, issued_date } = req.body;
 
     const session = await mongoose.startSession();
     try {
@@ -832,6 +832,7 @@ export const add_to_damage_from_plywood_production_done = catchAsync(
             damage_sheets: damage_sheets,
             damage_sqm: damage_sqm,
             remark: plywood_production_data?.remark,
+            issued_date: issued_date,
             created_by: userDetails?._id,
             updated_by: userDetails?._id,
           },

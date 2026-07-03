@@ -84,6 +84,8 @@ const groupData = (data) => {
       width3: record.width3,
       height: record.height,
       flitch_cmt: record.flitch_cmt,
+      amount: record.amount,
+      expense_amount: record.expense_amount,
     });
   });
 
@@ -93,7 +95,7 @@ const groupData = (data) => {
 /**
  * Generate Flitch Daily Report
  */
-const GenerateFlitchDailyReport = async (details, reportDate) => {
+const GenerateFlitchDailyReport = async (details, includeCostAndExpense, reportDate) => {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Flitch Report');
 
@@ -126,6 +128,7 @@ const GenerateFlitchDailyReport = async (details, reportDate) => {
     'Width3',
     'Height',
     'Flitch CMT',
+    ...(includeCostAndExpense ? ['Amount', 'Expense Amount'] : []),
   ];
 
   const headerRow = worksheet.getRow(currentRow);
@@ -160,10 +163,14 @@ const GenerateFlitchDailyReport = async (details, reportDate) => {
     { width: 10 }, // Width3
     { width: 10 }, // Height
     { width: 12 }, // Flitch CMT
+    ...(includeCostAndExpense ? [{ width: 12 }, { width: 12 }] : []),
   ];
 
   // Group data
   const groupedData = groupData(details);
+
+  const mainTableCols = includeCostAndExpense ? 12 : 10;
+  const summaryTableCols = includeCostAndExpense ? 5 : 3;
 
   // Track totals for summary
   let grandTotalFlitch = 0;
@@ -175,6 +182,8 @@ const GenerateFlitchDailyReport = async (details, reportDate) => {
       const inwardData = groupedData[inward];
       let inwardPrinted = false;
       let inwardTotal = 0;
+      let inwardAmount = 0;
+      let inwardExpenseAmount = 0;
       const items = inwardData.items || {};
 
       Object.keys(items)
@@ -182,6 +191,8 @@ const GenerateFlitchDailyReport = async (details, reportDate) => {
         .forEach((itemName) => {
           const itemData = items[itemName];
           const itemStartRow = currentRow;
+          let itemAmount = 0;
+          let itemExpenseAmount = 0;
           let itemFlitchTotal = 0;
 
           itemData.flitches.forEach((flitch) => {
@@ -197,6 +208,7 @@ const GenerateFlitchDailyReport = async (details, reportDate) => {
               row.getCell(3).value = itemName;
             }
 
+
             // Flitch info
             row.getCell(4).value = flitch.flitch_no;
             row.getCell(5).value = flitch.length;
@@ -205,6 +217,10 @@ const GenerateFlitchDailyReport = async (details, reportDate) => {
             row.getCell(8).value = flitch.width3;
             row.getCell(9).value = flitch.height;
             row.getCell(10).value = flitch.flitch_cmt;
+            if (includeCostAndExpense) {
+              row.getCell(11).value = flitch.amount;
+              row.getCell(12).value = flitch.expense_amount;
+            }
 
             [5, 6, 7, 8, 9].forEach((colNum) => {
               const cell = row.getCell(colNum);
@@ -213,25 +229,37 @@ const GenerateFlitchDailyReport = async (details, reportDate) => {
             const cmtCell = row.getCell(10);
             if (cmtCell.value && typeof cmtCell.value === 'number') cmtCell.numFmt = '0.000';
 
-            applyRowBorders(row, 1, 10, { top: false, bottom: true });
+            applyRowBorders(row, 1, mainTableCols, { top: false, bottom: true });
 
             itemFlitchTotal += flitch.flitch_cmt || 0;
+            itemAmount += flitch.amount || 0;
+            itemExpenseAmount += flitch.expense_amount || 0;
             currentRow++;
           });
 
           inwardTotal += itemFlitchTotal;
           grandTotalFlitch += itemFlitchTotal || 0;
+          inwardAmount += itemAmount || 0;
+          inwardExpenseAmount += itemExpenseAmount || 0;
         });
 
       // Inward total row
       const inwardTotalRow = worksheet.getRow(currentRow);
-      applyGreyBackground(inwardTotalRow, 10);
+      applyGreyBackground(inwardTotalRow, mainTableCols);
       inwardTotalRow.getCell(1).value = `TOTAL ${inward}`;
       inwardTotalRow.getCell(1).font = { bold: true };
       inwardTotalRow.getCell(10).value = inwardTotal;
       inwardTotalRow.getCell(10).font = { bold: true };
       inwardTotalRow.getCell(10).numFmt = '0.000';
-      applyRowBorders(inwardTotalRow, 1, 10, { top: true, bottom: true, bottomStyle: 'medium' });
+      if (includeCostAndExpense) {
+        inwardTotalRow.getCell(11).value = inwardAmount;
+        inwardTotalRow.getCell(11).font = { bold: true };
+        inwardTotalRow.getCell(11).numFmt = '0.00';
+        inwardTotalRow.getCell(12).value = inwardExpenseAmount;
+        inwardTotalRow.getCell(12).font = { bold: true };
+        inwardTotalRow.getCell(12).numFmt = '0.00';
+      }
+      applyRowBorders(inwardTotalRow, 1, mainTableCols, { top: true, bottom: true, bottomStyle: 'medium' });
       currentRow++;
       currentRow++;
     });
@@ -245,9 +273,12 @@ const GenerateFlitchDailyReport = async (details, reportDate) => {
   worksheet.mergeCells(currentRow, 1, currentRow, 3);
   summaryTitleRow.getCell(1).value = 'Summary 1';
   summaryTitleRow.getCell(1).font = { bold: true, size: 12 };
+  if (includeCostAndExpense) {
+    worksheet.mergeCells(currentRow, 4, currentRow, 5);
+  }
   currentRow++;
 
-  const summaryHeaders = ['Item Name', 'Supplier', 'Flitch CMT'];
+  const summaryHeaders = ['Item Name', 'Supplier', 'Flitch CMT', ...(includeCostAndExpense ? ['Amount', 'Expense Amount'] : [])];
   const summaryHeaderRow = worksheet.getRow(currentRow);
   summaryHeaders.forEach((header, idx) => {
     const cell = summaryHeaderRow.getCell(idx + 1);
@@ -278,19 +309,27 @@ const GenerateFlitchDailyReport = async (details, reportDate) => {
     else supplierName = supDetails?.company_details?.supplier_name || supDetails || '';
 
     if (!summaryMap[item]) summaryMap[item] = {};
-    if (!summaryMap[item][supplierName]) summaryMap[item][supplierName] = { flitch: 0 };
+    if (!summaryMap[item][supplierName]) summaryMap[item][supplierName] = { flitch: 0, amount: 0, expense_amount: 0 };
 
     const flitchCmt = rec.flitch_cmt || 0;
     summaryMap[item][supplierName].flitch += flitchCmt;
+    if (includeCostAndExpense) {
+      summaryMap[item][supplierName].amount += rec.amount || 0;
+      summaryMap[item][supplierName].expense_amount += rec.expense_amount || 0;
+    }
   });
 
   let grandFlitch = 0;
+  let grandAmount = 0;
+  let grandExpenseAmount = 0;
 
   Object.keys(summaryMap)
     .sort()
     .forEach((itemName) => {
       let itemPrinted = false;
       let itemFlitchTotal = 0;
+      let itemAmount = 0;
+      let itemExpenseAmount = 0;
 
       Object.keys(summaryMap[itemName])
         .sort()
@@ -305,35 +344,62 @@ const GenerateFlitchDailyReport = async (details, reportDate) => {
           const cell = row.getCell(3);
           if (cell.value && typeof cell.value === 'number') cell.numFmt = '0.000';
 
-          applyRowBorders(row, 1, 3, { top: false, bottom: true });
+          if (includeCostAndExpense) {
+            row.getCell(4).value = summaryMap[itemName][supp].amount;
+            row.getCell(4).numFmt = '0.00';
+            row.getCell(5).value = summaryMap[itemName][supp].expense_amount;
+            row.getCell(5).numFmt = '0.00';
+          }
+
+          applyRowBorders(row, 1, summaryTableCols, { top: false, bottom: true });
 
           itemFlitchTotal += summaryMap[itemName][supp].flitch;
           grandFlitch += summaryMap[itemName][supp].flitch;
+          itemAmount += summaryMap[itemName][supp].amount;
+          grandAmount += summaryMap[itemName][supp].amount;
+          itemExpenseAmount += summaryMap[itemName][supp].expense_amount;
+          grandExpenseAmount += summaryMap[itemName][supp].expense_amount;
           currentRow++;
         });
 
       // Item total
       const itemTotalRow = worksheet.getRow(currentRow);
-      applyGreyBackground(itemTotalRow, 3);
+      applyGreyBackground(itemTotalRow, summaryTableCols);
       itemTotalRow.getCell(2).value = 'Total';
       itemTotalRow.getCell(2).font = { bold: true };
       itemTotalRow.getCell(3).value = itemFlitchTotal;
       itemTotalRow.getCell(3).font = { bold: true };
       itemTotalRow.getCell(3).numFmt = '0.000';
-      applyRowBorders(itemTotalRow, 1, 3, { top: true, bottom: true });
+      if (includeCostAndExpense) {
+        itemTotalRow.getCell(4).value = itemAmount;
+        itemTotalRow.getCell(4).font = { bold: true };
+        itemTotalRow.getCell(4).numFmt = '0.00';
+        itemTotalRow.getCell(5).value = itemExpenseAmount;
+        itemTotalRow.getCell(5).font = { bold: true };
+        itemTotalRow.getCell(5).numFmt = '0.00';
+      }
+      applyRowBorders(itemTotalRow, 1, summaryTableCols, { top: true, bottom: true });
       currentRow++;
       currentRow++;
     });
 
   // Summary grand total
   const grandRow = worksheet.getRow(currentRow);
-  applyGreyBackground(grandRow, 3);
+  applyGreyBackground(grandRow, summaryTableCols);
   grandRow.getCell(2).value = 'Grand Total';
   grandRow.getCell(2).font = { bold: true };
   grandRow.getCell(3).value = grandFlitch;
   grandRow.getCell(3).font = { bold: true };
   grandRow.getCell(3).numFmt = '0.000';
-  applyRowBorders(grandRow, 1, 3, { top: true, bottom: true, bottomStyle: 'medium' });
+  if (includeCostAndExpense) {
+    grandRow.getCell(4).value = grandAmount;
+    grandRow.getCell(4).font = { bold: true };
+    grandRow.getCell(4).numFmt = '0.00';
+    grandRow.getCell(5).value = grandExpenseAmount;
+    grandRow.getCell(5).font = { bold: true };
+    grandRow.getCell(5).numFmt = '0.00';
+  }
+  applyRowBorders(grandRow, 1, summaryTableCols, { top: true, bottom: true, bottomStyle: 'medium' });
   currentRow++;
 
   // Generate file path

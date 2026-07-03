@@ -29,13 +29,15 @@ const applyRowBorders = (row, startCol, endCol, opts = {}) => {
  * @param {String} startDate - Start date (YYYY-MM-DD)
  * @param {String} endDate - End date (YYYY-MM-DD)
  * @param {Object} filter - Optional filters applied
+ * @param {boolean} includeCostAndExpense - Whether to include cost and expense columns
  * @returns {String} Download link for the generated Excel file
  */
 export const createItemWiseInwardReportExcel = async (
   aggregatedData,
   startDate,
   endDate,
-  filter = {}
+  filter = {},
+  includeCostAndExpense = false
 ) => {
   try {
     const folderPath = 'public/upload/reports/reports2/Log';
@@ -76,68 +78,93 @@ export const createItemWiseInwardReportExcel = async (
 
     console.log('Generated item wise inward report title:', title);
 
-    // Define columns (21 columns) matching screenshot order
-    const columnDefinitions = [
-      { key: 'item_name', width: 25 },            // 1. ItemName
-      { key: 'opening_stock_cmt', width: 15 },    // 2. Opening Stock CMT
-      { key: 'invoice_cmt', width: 12 },          // 3. Invoice
-      { key: 'indian_cmt', width: 12 },           // 4. Indian
-      { key: 'actual_cmt', width: 12 },           // 5. Actual
-      { key: 'recover_from_rejected', width: 15 },// 6. Recover From rejected (empty)
-      { key: 'issue_for_cc', width: 15 },         // 7. Issue for CC
-      { key: 'cc_received', width: 15 },          // 8. CC Received
-      { key: 'cc_issued', width: 15 },            // 9. CC Issue
-      { key: 'cc_diff', width: 12 },              // 10. CC Diff
-      { key: 'issue_for_flitch', width: 15 },     // 11. Issue for Flitch
-      { key: 'flitch_received', width: 15 },      // 12. Flitch Received
-      { key: 'flitch_diff', width: 12 },          // 13. Flitch Diff
-      { key: 'peeling_issued', width: 15 },       // 14. Issue for Peeling
-      { key: 'peeling_received', width: 15 },     // 15. Peeling Received
-      { key: 'peeling_diff', width: 12 },         // 16. Peeling Diff
-      { key: 'issue_for_sqedge', width: 15 },     // 17. Issue for Sq.Edge
-      { key: 'sales', width: 12 },                // 18. Sales (Round log + Cross Cut)
-      { key: 'job_work_challan', width: 15 },     // 19. Job Work Challan
-      { key: 'rejected', width: 12 },             // 20. Rejected (Cc+Flitch+Peeling)
-      { key: 'closing_stock_cmt', width: 15 },    // 21. Closing Stock CMT
-    ];
+    const columnDefinitions = [];
+    const groupHeaderValues = [];
+    const headerValues = [];
+
+    const addCol = (key, width, header, groupHeader = '') => {
+      columnDefinitions.push({ key, width });
+      groupHeaderValues.push(groupHeader);
+      headerValues.push(header);
+    };
+
+    // Item Info
+    addCol('item_name', 25, 'ItemName');
+    addCol('opening_stock_cmt', 15, 'Opening Stock CMT');
+    if (includeCostAndExpense) {
+      addCol('opening_amount', 15, 'Opening Amount');
+      addCol('opening_expense', 15, 'Opening Expense');
+    }
+
+    // ROUND LOG DETAIL CMT
+    addCol('invoice_cmt', 12, 'Invoice', 'ROUND LOG DETAIL CMT');
+    addCol('indian_cmt', 12, 'Indian', 'ROUND LOG DETAIL CMT');
+    addCol('actual_cmt', 12, 'Actual', 'ROUND LOG DETAIL CMT');
+    if (includeCostAndExpense) {
+      addCol('amount', 12, 'Amount', 'ROUND LOG DETAIL CMT');
+      addCol('expense_amount', 12, 'Expense Amount', 'ROUND LOG DETAIL CMT');
+      addCol('total_amount', 12, 'Total Amount', 'ROUND LOG DETAIL CMT');
+    }
+    addCol('recover_from_rejected', 15, 'Recover From rejected', 'ROUND LOG DETAIL CMT');
+
+    // Cross Cut Details CMT
+    addCol('issue_for_cc', 15, 'Issue for CC', 'Cross Cut Details CMT');
+    addCol('cc_received', 15, 'CC Received', 'Cross Cut Details CMT');
+    addCol('cc_issued', 15, 'CC Issue', 'Cross Cut Details CMT');
+    addCol('cc_diff', 12, 'CC Diff', 'Cross Cut Details CMT');
+    if (includeCostAndExpense) {
+      addCol('cc_cost_amount', 12, 'CC Cost Amount', 'Cross Cut Details CMT');
+      addCol('cc_expense_amount', 12, 'CC Expense Amount', 'Cross Cut Details CMT');
+      addCol('cc_total_amount', 12, 'CC Total Amount', 'Cross Cut Details CMT');
+    }
+
+    // Flitch Details CMT
+    addCol('issue_for_flitch', 15, 'Issue for Flitch', 'Flitch Details CMT');
+    addCol('flitch_received', 15, 'Flitch Received', 'Flitch Details CMT');
+    addCol('flitch_diff', 12, 'Flitch Diff', 'Flitch Details CMT');
+    if (includeCostAndExpense) {
+      addCol('flitch_cost_amount', 12, 'Flitch Cost Amount', 'Flitch Details CMT');
+      addCol('flitch_expense_amount', 12, 'Flitch Expense Amount', 'Flitch Details CMT');
+      addCol('flitch_total_amount', 12, 'Flitch Total Amount', 'Flitch Details CMT');
+    }
+
+    // Peeling Details CMT
+    addCol('peeling_issued', 15, 'Issue for Peeling', 'Peeling Details CMT');
+    addCol('peeling_received', 15, 'Peeling Received', 'Peeling Details CMT');
+    addCol('peeling_diff', 12, 'Peeling Diff', 'Peeling Details CMT');
+    if (includeCostAndExpense) {
+      addCol('peeling_cost_amount', 12, 'Peeling Cost Amount', 'Peeling Details CMT');
+      addCol('peeling_expense_amount', 12, 'Peeling Expense Amount', 'Peeling Details CMT');
+      addCol('peeling_total_amount', 12, 'Peeling Total Amount', 'Peeling Details CMT');
+    }
+
+    // Standalone detail columns
+    addCol('issue_for_sqedge', 15, 'Issue for Sq.Edge');
+    addCol('sales', 12, 'Sales', 'Round log +Cross Cut');
+    addCol('job_work_challan', 15, 'Job Work Challan');
+    addCol('rejected', 12, 'Rejected', '(Cc+Flitch+Peeling)');
+    addCol('closing_stock_cmt', 15, 'Closing Stock CMT');
+    if (includeCostAndExpense) {
+      addCol('closing_amount', 15, 'Closing Amount');
+      addCol('closing_expense', 15, 'Closing Expense');
+    }
 
     // Set columns
     worksheet.columns = columnDefinitions;
 
     // Row 1: Title row (merged across all columns)
     const titleRow = worksheet.addRow([title]);
+    const totalCols = columnDefinitions.length;
     titleRow.font = { bold: true, size: 12 };
     titleRow.alignment = { vertical: 'middle', horizontal: 'left', wrapText: false };
     titleRow.height = 20;
-    worksheet.mergeCells(1, 1, 1, 21);
+    worksheet.mergeCells(1, 1, 1, totalCols);
 
     // Row 2: Empty row for spacing
     worksheet.addRow([]);
 
     // Row 3: Group headers (merged cells for grouped columns)
-    const groupHeaderRow = worksheet.addRow([
-      '', // col 1: ItemName
-      '', // col 2: Opening Stock CMT
-      'ROUND LOG DETAIL CMT', // col 3: Invoice (merged 3-5)
-      '', // col 4: Indian (inside merge)
-      '', // col 5: Actual (inside merge)
-      '', // col 6: Recover From rejected
-      'Cross Cut Details CMT', // col 7: Issue for CC (merged 7-10)
-      '', // col 8: CC Received (inside merge)
-      '', // col 9: CC Issue (inside merge)
-      '', // col 10: CC Diff (inside merge)
-      'Flitch Details CMT', // col 11: Issue for Flitch (merged 11-13)
-      '', // col 12: Flitch Received (inside merge)
-      '', // col 13: Flitch Diff (inside merge)
-      'Peeling Details CMT', // col 14: Issue for Peeling (merged 14-16)
-      '', // col 15: Peeling Received (inside merge)
-      '', // col 16: Peeling Diff (inside merge)
-      '', // col 17: Issue for Sq.Edge
-      'Round log +Cross Cut', // col 18: Sales
-      '', // col 19: Job Work Challan
-      '(Cc+Flitch+Peeling)', // col 20: Rejected
-      '', // col 21: Closing Stock CMT
-    ]);
+    const groupHeaderRow = worksheet.addRow(groupHeaderValues);
     groupHeaderRow.font = { bold: true };
     groupHeaderRow.alignment = { vertical: 'middle', horizontal: 'center' };
     groupHeaderRow.fill = {
@@ -145,43 +172,28 @@ export const createItemWiseInwardReportExcel = async (
       pattern: 'solid',
       fgColor: { argb: 'FFD3D3D3' },
     };
-    applyRowBorders(groupHeaderRow, 1, 21, { top: true, bottom: true });
+    applyRowBorders(groupHeaderRow, 1, totalCols, { top: true, bottom: true });
 
-    // Merge group headers
-    worksheet.mergeCells(3, 3, 3, 5);   // ROUND LOG DETAIL CMT (cols 3-5: Invoice, Indian, Actual)
-    worksheet.mergeCells(3, 7, 3, 10);  // Cross Cut Details CMT (cols 7-10: Issue for CC, CC Received, CC Issue, CC Diff)
-    worksheet.mergeCells(3, 11, 3, 13); // Flitch Details CMT (cols 11-13: Issue for Flitch, Flitch Received, Flitch Diff)
-    worksheet.mergeCells(3, 14, 3, 16); // Peeling Details CMT (cols 14-16: Issue for Peeling, Peeling Received, Peeling Diff)
-    // col 17: Issue for Sq.Edge (standalone)
-    // col 18: Round log +Cross Cut / Sales (standalone label)
-    // col 19: Job Work Challan (standalone)
-    // col 20: (Cc+Flitch+Peeling) / Rejected (standalone label)
-    // col 21: Closing Stock CMT (standalone)
+    // Merge group headers dynamically
+    let startCol = 1;
+    while (startCol <= totalCols) {
+      const headerName = groupHeaderValues[startCol - 1];
+      if (headerName !== '') {
+        let endCol = startCol;
+        while (endCol < totalCols && groupHeaderValues[endCol] === headerName) {
+          endCol++;
+        }
+        if (endCol > startCol) {
+          worksheet.mergeCells(3, startCol, 3, endCol);
+        }
+        startCol = endCol + 1;
+      } else {
+        startCol++;
+      }
+    }
 
     // Row 4: Column headers
-    const headerRow = worksheet.addRow([
-      'ItemName',
-      'Opening Stock CMT',
-      'Invoice',
-      'Indian',
-      'Actual',
-      'Recover From rejected',
-      'Issue for CC',
-      'CC Received',
-      'CC Issue',
-      'CC Diff',
-      'Issue for Flitch',
-      'Flitch Received',
-      'Flitch Diff',
-      'Issue for Peeling',
-      'Peeling Received',
-      'Peeling Diff',
-      'Issue for Sq.Edge',
-      'Sales',
-      'Job Work Challan',
-      'Rejected',
-      'Closing Stock CMT',
-    ]);
+    const headerRow = worksheet.addRow(headerValues);
     headerRow.font = { bold: true };
     headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
     headerRow.fill = {
@@ -189,30 +201,46 @@ export const createItemWiseInwardReportExcel = async (
       pattern: 'solid',
       fgColor: { argb: 'FFD3D3D3' },
     };
-    applyRowBorders(headerRow, 1, 21, { top: true, bottom: true });
+    applyRowBorders(headerRow, 1, totalCols, { top: true, bottom: true });
 
     // Initialize grand totals
     const grandTotals = {
       opening_stock_cmt: 0,
+      opening_amount: 0,
+      opening_expense: 0,
       invoice_cmt: 0,
       indian_cmt: 0,
       actual_cmt: 0,
+      amount: 0,
+      expense_amount: 0,
+      total_amount: 0,
       recover_from_rejected: 0,
       issue_for_cc: 0,
       cc_received: 0,
       cc_issued: 0,
       cc_diff: 0,
+      cc_cost_amount: 0,
+      cc_expense_amount: 0,
+      cc_total_amount: 0,
       issue_for_flitch: 0,
       flitch_received: 0,
       flitch_diff: 0,
+      flitch_cost_amount: 0,
+      flitch_expense_amount: 0,
+      flitch_total_amount: 0,
       issue_for_sqedge: 0,
       peeling_issued: 0,
       peeling_received: 0,
       peeling_diff: 0,
+      peeling_cost_amount: 0,
+      peeling_expense_amount: 0,
+      peeling_total_amount: 0,
       sales: 0,
       job_work_challan: 0,
       rejected: 0,
       closing_stock_cmt: 0,
+      closing_amount: 0,
+      closing_expense: 0,
     };
 
     // Sort data by item_name
@@ -227,76 +255,142 @@ export const createItemWiseInwardReportExcel = async (
       const rowData = {
         item_name: item.item_name || '',
         opening_stock_cmt: parseFloat(item.opening_stock_cmt || 0).toFixed(3),
+        ...(includeCostAndExpense ? {
+          opening_amount: parseFloat(item.opening_amount || 0).toFixed(3),
+          opening_expense: parseFloat(item.opening_expense || 0).toFixed(3),
+        } : {}),
         invoice_cmt: parseFloat(item.invoice_cmt || 0).toFixed(3),
         indian_cmt: parseFloat(item.indian_cmt || 0).toFixed(3),
         actual_cmt: parseFloat(item.actual_cmt || 0).toFixed(3),
+        ...(includeCostAndExpense ? {
+          amount: parseFloat(item.amount || 0).toFixed(3),
+          expense_amount: parseFloat(item.amount_expense || 0).toFixed(3),
+          total_amount: (parseFloat(item.amount || 0) + parseFloat(item.amount_expense || 0)).toFixed(3),
+        } : {}),
         recover_from_rejected: parseFloat(item.recover_from_rejected || 0).toFixed(3),
         issue_for_cc: parseFloat(item.issue_for_cc || 0).toFixed(3),
         cc_received: parseFloat(item.cc_received || 0).toFixed(3),
         cc_issued: parseFloat(item.cc_issued || 0).toFixed(3),
         cc_diff: parseFloat(item.cc_diff || 0).toFixed(3),
+        ...(includeCostAndExpense ? {
+          cc_cost_amount: parseFloat(item.cc_received_cost || 0).toFixed(3),
+          cc_expense_amount: parseFloat(item.cc_received_expense || 0).toFixed(3),
+          cc_total_amount: (parseFloat(item.cc_received_cost || 0) + parseFloat(item.cc_received_expense || 0)).toFixed(3),
+        } : {}),
         issue_for_flitch: parseFloat(item.issue_for_flitch || 0).toFixed(3),
         flitch_received: parseFloat(item.flitch_received || 0).toFixed(3),
         flitch_diff: parseFloat(item.flitch_diff || 0).toFixed(3),
+        ...(includeCostAndExpense ? {
+          flitch_cost_amount: parseFloat(item.flitch_received_cost || 0).toFixed(3),
+          flitch_expense_amount: parseFloat(item.flitch_received_expense || 0).toFixed(3),
+          flitch_total_amount: (
+            parseFloat(item.flitch_received_cost || 0) +
+            parseFloat(item.flitch_received_expense || 0)
+          ).toFixed(3),
+        } : {}),
         issue_for_sqedge: parseFloat(item.issue_for_sqedge || 0).toFixed(3),
         peeling_issued: parseFloat(item.peeling_issued || 0).toFixed(3),
         peeling_received: parseFloat(item.peeling_received || 0).toFixed(3),
         peeling_diff: parseFloat(item.peeling_diff || 0).toFixed(3),
+        ...(includeCostAndExpense ? {
+          peeling_cost_amount: parseFloat(item.peeling_issued_cost || 0).toFixed(3),
+          peeling_expense_amount: parseFloat(item.peeling_issued_expense || 0).toFixed(3),
+          peeling_total_amount: (
+            parseFloat(item.peeling_issued_cost || 0) +
+            parseFloat(item.peeling_issued_expense || 0)
+          ).toFixed(3),
+        } : {}),
         sales: parseFloat(item.sales || 0).toFixed(3),
         job_work_challan: parseFloat(item.job_work_challan || 0).toFixed(3),
         rejected: parseFloat(item.rejected || 0).toFixed(3),
         closing_stock_cmt: parseFloat(item.closing_stock_cmt || 0).toFixed(3),
+        ...(includeCostAndExpense ? {
+          closing_amount: parseFloat(item.closing_amount || 0).toFixed(3),
+          closing_expense: parseFloat(item.closing_expense || 0).toFixed(3),
+        } : {}),
       };
 
       const dataRow = worksheet.addRow(rowData);
-      applyRowBorders(dataRow, 1, 21, { top: false, bottom: true });
+      applyRowBorders(dataRow, 1, totalCols, { top: false, bottom: true });
 
       // Accumulate grand totals
       grandTotals.opening_stock_cmt += parseFloat(item.opening_stock_cmt || 0);
+      grandTotals.opening_amount += parseFloat(item.opening_amount || 0);
+      grandTotals.opening_expense += parseFloat(item.opening_expense || 0);
       grandTotals.invoice_cmt += parseFloat(item.invoice_cmt || 0);
       grandTotals.indian_cmt += parseFloat(item.indian_cmt || 0);
       grandTotals.actual_cmt += parseFloat(item.actual_cmt || 0);
+      grandTotals.amount += parseFloat(item.amount || 0);
+      grandTotals.expense_amount += parseFloat(item.amount_expense || 0);
+      grandTotals.total_amount += parseFloat(item.amount || 0) + parseFloat(item.amount_expense || 0);
       grandTotals.recover_from_rejected += parseFloat(item.recover_from_rejected || 0);
       grandTotals.issue_for_cc += parseFloat(item.issue_for_cc || 0);
       grandTotals.cc_received += parseFloat(item.cc_received || 0);
       grandTotals.cc_issued += parseFloat(item.cc_issued || 0);
       grandTotals.cc_diff += parseFloat(item.cc_diff || 0);
+      grandTotals.cc_cost_amount += parseFloat(item.cc_received_cost || 0);
+      grandTotals.cc_expense_amount += parseFloat(item.cc_received_expense || 0);
+      grandTotals.cc_total_amount += parseFloat(item.cc_received_cost || 0) + parseFloat(item.cc_received_expense || 0);
       grandTotals.issue_for_flitch += parseFloat(item.issue_for_flitch || 0);
       grandTotals.flitch_received += parseFloat(item.flitch_received || 0);
       grandTotals.flitch_diff += parseFloat(item.flitch_diff || 0);
+      grandTotals.flitch_cost_amount += parseFloat(item.flitch_received_cost || 0);
+      grandTotals.flitch_expense_amount += parseFloat(item.flitch_received_expense || 0);
+      grandTotals.flitch_total_amount += parseFloat(item.flitch_received_cost || 0) + parseFloat(item.flitch_received_expense || 0);
       grandTotals.issue_for_sqedge += parseFloat(item.issue_for_sqedge || 0);
       grandTotals.peeling_issued += parseFloat(item.peeling_issued || 0);
       grandTotals.peeling_received += parseFloat(item.peeling_received || 0);
       grandTotals.peeling_diff += parseFloat(item.peeling_diff || 0);
+      grandTotals.peeling_cost_amount += parseFloat(item.peeling_issued_cost || 0);
+      grandTotals.peeling_expense_amount += parseFloat(item.peeling_issued_expense || 0);
+      grandTotals.peeling_total_amount += parseFloat(item.peeling_issued_cost || 0) + parseFloat(item.peeling_issued_expense || 0);
       grandTotals.sales += parseFloat(item.sales || 0);
       grandTotals.job_work_challan += parseFloat(item.job_work_challan || 0);
       grandTotals.rejected += parseFloat(item.rejected || 0);
       grandTotals.closing_stock_cmt += parseFloat(item.closing_stock_cmt || 0);
+      grandTotals.closing_amount += parseFloat(item.closing_amount || 0);
+      grandTotals.closing_expense += parseFloat(item.closing_expense || 0);
     });
 
     // Add grand total row
     const totalRow = worksheet.addRow({
       item_name: 'Total',
       opening_stock_cmt: grandTotals.opening_stock_cmt.toFixed(3),
+      opening_amount: grandTotals.opening_amount.toFixed(3),
+      opening_expense: grandTotals.opening_expense.toFixed(3),
       invoice_cmt: grandTotals.invoice_cmt.toFixed(3),
       indian_cmt: grandTotals.indian_cmt.toFixed(3),
       actual_cmt: grandTotals.actual_cmt.toFixed(3),
+      amount: grandTotals.amount.toFixed(3),
+      expense_amount: grandTotals.expense_amount.toFixed(3),
+      total_amount: grandTotals.total_amount.toFixed(3),
       recover_from_rejected: grandTotals.recover_from_rejected.toFixed(3),
       issue_for_cc: grandTotals.issue_for_cc.toFixed(3),
       cc_received: grandTotals.cc_received.toFixed(3),
       cc_issued: grandTotals.cc_issued.toFixed(3),
       cc_diff: grandTotals.cc_diff.toFixed(3),
+      cc_cost_amount: grandTotals.cc_cost_amount.toFixed(3),
+      cc_expense_amount: grandTotals.cc_expense_amount.toFixed(3),
+      cc_total_amount: grandTotals.cc_total_amount.toFixed(3),
       issue_for_flitch: grandTotals.issue_for_flitch.toFixed(3),
       flitch_received: grandTotals.flitch_received.toFixed(3),
       flitch_diff: grandTotals.flitch_diff.toFixed(3),
+      flitch_cost_amount: grandTotals.flitch_cost_amount.toFixed(3),
+      flitch_expense_amount: grandTotals.flitch_expense_amount.toFixed(3),
+      flitch_total_amount: grandTotals.flitch_total_amount.toFixed(3),
       issue_for_sqedge: grandTotals.issue_for_sqedge.toFixed(3),
       peeling_issued: grandTotals.peeling_issued.toFixed(3),
       peeling_received: grandTotals.peeling_received.toFixed(3),
       peeling_diff: grandTotals.peeling_diff.toFixed(3),
+      peeling_cost_amount: grandTotals.peeling_cost_amount.toFixed(3),
+      peeling_expense_amount: grandTotals.peeling_expense_amount.toFixed(3),
+      peeling_total_amount: grandTotals.peeling_total_amount.toFixed(3),
       sales: grandTotals.sales.toFixed(3),
       job_work_challan: grandTotals.job_work_challan.toFixed(3),
       rejected: grandTotals.rejected.toFixed(3),
       closing_stock_cmt: grandTotals.closing_stock_cmt.toFixed(3),
+      closing_amount: grandTotals.closing_amount.toFixed(3),
+      closing_expense: grandTotals.closing_expense.toFixed(3),
     });
     totalRow.eachCell((cell) => {
       cell.font = { bold: true };
@@ -306,7 +400,7 @@ export const createItemWiseInwardReportExcel = async (
         fgColor: { argb: 'FFE0E0E0' },
       };
     });
-    applyRowBorders(totalRow, 1, 21, { top: true, bottom: true });
+    applyRowBorders(totalRow, 1, totalCols, { top: true, bottom: true });
 
     // Save file
     const timeStamp = new Date().getTime();

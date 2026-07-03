@@ -7,7 +7,7 @@ import ApiError from '../../../../utils/errors/apiError.js';
  * Generates an Excel report for Other Goods Item Summary
  * Columns: Item, Op (Qty, Val), Purchase (Qty, Val), Issue (Qty, Val), Sales (Qty, Val), Damage (Qty, Val), Closing (Qty, Val)
  */
-export const OtherItemSummaryReportExcel = async (reportData, startDate, endDate) => {
+export const OtherItemSummaryReportExcel = async (reportData, startDate, endDate, includeCostAndExpense) => {
     try {
         const workbook = new exceljs.Workbook();
         const worksheet = workbook.addWorksheet('Other Item Summary');
@@ -29,18 +29,24 @@ export const OtherItemSummaryReportExcel = async (reportData, startDate, endDate
         const titleRow = worksheet.addRow([title]);
         titleRow.font = { bold: true, size: 14 };
         titleRow.alignment = { horizontal: 'center', vertical: 'middle' };
-        worksheet.mergeCells(1, 1, 1, 7); // Item + 6 stages = 7 columns
+        worksheet.mergeCells(1, 1, 1, 13); // Item + 6 stages = 7 columns
         titleRow.height = 30;
 
         // --- ROW 2: HEADERS ---
         const headers = [
             'Item',
             'Opening',
+            ...(includeCostAndExpense ? ['Opening Amount'] : []),
             'Purchase',
+            ...(includeCostAndExpense ? ['Purchase Amount'] : []),
             'Issue',
+            ...(includeCostAndExpense ? ['Issue Amount'] : []),
             'Sales',
+            ...(includeCostAndExpense ? ['Sales Amount'] : []),
             'Damage',
-            'Closing'
+            ...(includeCostAndExpense ? ['Damage Amount'] : []),
+            'Closing',
+            ...(includeCostAndExpense ? ['Closing Amount'] : [])
         ];
         const headerRow = worksheet.addRow(headers);
         headerRow.font = { bold: true };
@@ -64,11 +70,17 @@ export const OtherItemSummaryReportExcel = async (reportData, startDate, endDate
             const row = worksheet.addRow([
                 item.item_name,
                 item.opening_qty,
+                ...(includeCostAndExpense ? [item.opening_amount] : []),
                 item.purchase_qty,
+                ...(includeCostAndExpense ? [item.purchase_amount] : []),
                 item.issue_qty,
+                ...(includeCostAndExpense ? [item.issue_amount] : []),
                 item.sales_qty,
+                ...(includeCostAndExpense ? [item.sales_amount] : []),
                 item.damage_qty,
-                item.closing_qty
+                ...(includeCostAndExpense ? [item.damage_amount] : []),
+                item.closing_qty,
+                ...(includeCostAndExpense ? [item.closing_amount] : [])
             ]);
 
             row.eachCell((cell) => {
@@ -83,7 +95,7 @@ export const OtherItemSummaryReportExcel = async (reportData, startDate, endDate
 
         // Column Widths
         worksheet.getColumn(1).width = 35; // Item name
-        for (let i = 2; i <= 7; i++) {
+        for (let i = 2; i <= 13; i++) {
             worksheet.getColumn(i).width = 15;
         }
 

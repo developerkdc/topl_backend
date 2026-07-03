@@ -19,11 +19,12 @@ import { createLogItemWiseInwardReportExcel } from '../../../config/downloadExce
  * @access Private
  */
 export const LogItemWiseInwardDailyReportExcel = catchAsync(async (req, res, next) => {
-  const { startDate, endDate, filter = {} } = req.body;
+  const { startDate, endDate, filter = {}, includeCostAndExpense } = req.body;
 
   console.log('Log Item Wise Inward Report Request - Start Date:', startDate);
   console.log('Log Item Wise Inward Report Request - End Date:', endDate);
   console.log('Log Item Wise Inward Report Request - Filter:', filter);
+  console.log('Log Item Wise Inward Report Request - Include Cost and Expense:', includeCostAndExpense);
 
   // Validate required parameters
   if (!startDate || !endDate) {
@@ -92,6 +93,8 @@ export const LogItemWiseInwardDailyReportExcel = catchAsync(async (req, res, nex
         const invoiceCmt = logView?.invoice_cmt || 0;
         const indianCmt = logView?.indian_cmt || 0;
         const actualCmt = logView?.physical_cmt || 0;
+        const logAmount = logView?.amount ?? 0;
+        const logExpenseAmount = logView?.expense_amount ?? 0;
 
         let recoverFromRejected = 0;
         let issueForSqedge = 0;
@@ -105,7 +108,7 @@ export const LogItemWiseInwardDailyReportExcel = catchAsync(async (req, res, nex
                 $or: [{ issue_status: null }, { issue_status: { $exists: false } }],
               },
             },
-            { $group: { _id: null, total_cmt: { $sum: '$physical_cmt' } } },
+            { $group: { _id: null, total_cmt: { $sum: '$physical_cmt' }, total_amount: { $sum: '$amount' } } },
           ]),
           crosscutting_done_model.aggregate([
             {
@@ -114,7 +117,7 @@ export const LogItemWiseInwardDailyReportExcel = catchAsync(async (req, res, nex
                 $or: [{ issue_status: null }, { issue_status: { $exists: false } }],
               },
             },
-            { $group: { _id: null, total_cmt: { $sum: '$crosscut_cmt' } } },
+            { $group: { _id: null, total_cmt: { $sum: '$crosscut_cmt' }, total_amount: { $sum: '$cost_amount' } } },
           ]),
           flitching_done_model.aggregate([
             {
@@ -124,13 +127,21 @@ export const LogItemWiseInwardDailyReportExcel = catchAsync(async (req, res, nex
                 $or: [{ issue_status: null }, { issue_status: { $exists: false } }],
               },
             },
-            { $group: { _id: null, total_cmt: { $sum: '$flitch_cmt' } } },
+            { $group: { _id: null, total_cmt: { $sum: '$flitch_cmt' }, total_amount: { $sum: '$cost_amount' } } },
           ]),
         ]);
         const currentAvailableCmt =
           (currentLogCmt[0]?.total_cmt || 0) +
           (currentCcCmt[0]?.total_cmt || 0) +
           (currentFlitchCmt[0]?.total_cmt || 0);
+        const currentAvailableAmount =
+          (currentLogCmt[0]?.total_amount || 0) +
+          (currentCcCmt[0]?.total_amount || 0) +
+          (currentFlitchCmt[0]?.total_amount || 0);
+        const currentAvailableExpenseAmount =
+          (currentLogCmt[0]?.total_expense_amount || 0) +
+          (currentCcCmt[0]?.total_expense_amount || 0) +
+          (currentFlitchCmt[0]?.total_expense_amount || 0);
 
         // RECEIVED IN PERIOD = physical_cmt for logs with inward_date in period
         const receivedInPeriodData = await log_inventory_items_model.aggregate([
@@ -145,9 +156,10 @@ export const LogItemWiseInwardDailyReportExcel = catchAsync(async (req, res, nex
           },
           { $unwind: '$invoice' },
           { $match: { 'invoice.inward_date': { $gte: start, $lte: end } } },
-          { $group: { _id: null, total_cmt: { $sum: '$physical_cmt' } } },
+          { $group: { _id: null, total_cmt: { $sum: '$physical_cmt' }, total_amount: { $sum: '$amount' } } },
         ]);
         const receivedCmt = receivedInPeriodData[0]?.total_cmt || 0;
+        const receivedAmount = receivedInPeriodData[0]?.total_amount || 0;
 
         // ISSUE FOR CC – issued during period
         const issueForCcData = await log_inventory_items_model.aggregate([
@@ -158,9 +170,10 @@ export const LogItemWiseInwardDailyReportExcel = catchAsync(async (req, res, nex
               updatedAt: { $gte: start, $lte: end },
             },
           },
-          { $group: { _id: null, total_cmt: { $sum: '$physical_cmt' } } },
+          { $group: { _id: null, total_cmt: { $sum: '$physical_cmt' }, total_amount: { $sum: '$amount' } } },
         ]);
         const issueForCc = issueForCcData[0]?.total_cmt || 0;
+        const issueForCcAmount = issueForCcData[0]?.total_amount || 0;
 
         // CC Received - Check if crosscutting was completed for this log during period
         const ccReceivedData = await crosscutting_done_model.aggregate([
@@ -174,10 +187,14 @@ export const LogItemWiseInwardDailyReportExcel = catchAsync(async (req, res, nex
             $group: {
               _id: null,
               total_cmt: { $sum: '$crosscut_cmt' },
+              total_amount: { $sum: '$cost_amount' },
+              total_expense_amount: { $sum: '$expense_amount' },
             },
           },
         ]);
         const ccReceivedCmt = ccReceivedData[0]?.total_cmt || 0;
+        const ccReceivedAmount = ccReceivedData[0]?.total_amount || 0;
+        const ccReceivedExpenseAmount = ccReceivedData[0]?.total_expense_amount || 0;
         const diffCmt = issueForCc - ccReceivedCmt;
 
         // Crosscut issued ahead (for cc_issued)
@@ -189,8 +206,10 @@ export const LogItemWiseInwardDailyReportExcel = catchAsync(async (req, res, nex
               issue_status: { $ne: null },
             },
           },
-          { $group: { _id: null, total_cmt: { $sum: '$crosscut_cmt' } } },
+          { $group: { _id: null, total_cmt: { $sum: '$crosscut_cmt' }, total_amount: { $sum: '$cost_amount' }, total_expense_amount: { $sum: '$expense_amount' } } },
         ]);
+        const ccIssuedAmount = ccIssuedData[0]?.total_amount || 0;
+        const ccIssuedExpenseAmount = ccIssuedData[0]?.total_expense_amount || 0;
         const ccIssuedCmt = ccIssuedData[0]?.total_cmt || 0;
 
         // FLITCHING - Check if crosscut items from this log were issued for flitching
@@ -206,10 +225,14 @@ export const LogItemWiseInwardDailyReportExcel = catchAsync(async (req, res, nex
             $group: {
               _id: null,
               total_cmt: { $sum: '$crosscut_cmt' },
+              total_amount: { $sum: '$cost_amount' },
+              total_expense_amount: { $sum: '$expense_amount' },
             },
           },
         ]);
         const flitchingCmt = flitchingData[0]?.total_cmt || 0;
+        const flitchingAmount = flitchingData[0]?.total_amount || 0;
+        const flitchingExpenseAmount = flitchingData[0]?.total_expense_amount || 0;
 
         // Flitch received from flitching_done
         const flitchReceivedData = await flitching_done_model.aggregate([
@@ -220,9 +243,17 @@ export const LogItemWiseInwardDailyReportExcel = catchAsync(async (req, res, nex
               createdAt: { $gte: start, $lte: end },
             },
           },
-          { $group: { _id: null, total_cmt: { $sum: '$flitch_cmt' } } },
+          {
+            $group: {
+              _id: null, total_cmt: { $sum: '$flitch_cmt' },
+              total_amount: { $sum: '$cost_amount' },
+              total_expense_amount: { $sum: '$expense_amount' },
+            }
+          },
         ]);
         const flitchReceivedCmt = flitchReceivedData[0]?.total_cmt || 0;
+        const flitchReceivedAmount = flitchReceivedData[0]?.total_amount || 0;
+        const flitchReceivedExpenseAmount = flitchReceivedData[0]?.total_expense_amount || 0;
 
         // SAWING - Placeholder (awaiting clarification on data source)
         const sawingCmt = 0;
@@ -246,10 +277,14 @@ export const LogItemWiseInwardDailyReportExcel = catchAsync(async (req, res, nex
             $group: {
               _id: null,
               total_cmt: { $sum: '$crosscut_cmt' },
+              total_amount: { $sum: '$cost_amount' },
+              total_expense: { $sum: '$expense_amount' },
             },
           },
         ]);
         const peelCmt = peelingData[0]?.total_cmt || 0;
+        const peelAmount = peelingData[0]?.total_amount || 0;
+        const peelExpenseAmount = peelingData[0]?.total_expense || 0;
 
         // PEELING RECEIVED - from peeling_done_other_details.total_cmt, allocated by log_no
         const peelingReceivedData = await peeling_done_other_details_model.aggregate([
@@ -279,6 +314,8 @@ export const LogItemWiseInwardDailyReportExcel = catchAsync(async (req, res, nex
               total_cmt: { $first: '$total_cmt' },
               itemsSum: { $first: '$itemsSum' },
               logItemsCmt: { $sum: '$items.cmt' },
+              logItemsAmount: { $sum: '$items.item_amount' },
+              logItemsExpenseAmount: { $sum: '$items.item_wastage_consumed_amount' },
             },
           },
           {
@@ -296,10 +333,14 @@ export const LogItemWiseInwardDailyReportExcel = catchAsync(async (req, res, nex
             $group: {
               _id: null,
               total_cmt: { $sum: '$allocatedCmt' },
+              total_amount: { $sum: '$logItemsAmount' },
+              total_expense_amount: { $sum: '$logItemsExpenseAmount' },
             },
           },
         ]);
         const peelingReceivedCmt = peelingReceivedData[0]?.total_cmt || 0;
+        const peelingReceivedAmount = peelingReceivedData[0]?.total_amount || 0;
+        const peelingReceivedExpenseAmount = peelingReceivedData[0]?.total_expense_amount || 0;
 
         // SALES (order only) and JOB WORK CHALLAN (challan only)
         const [logOrderData, logChallanData, crosscutOrderData, crosscutChallanData, flitchOrderData, flitchChallanData] = await Promise.all([
@@ -392,6 +433,8 @@ export const LogItemWiseInwardDailyReportExcel = catchAsync(async (req, res, nex
 
         // Period-end closing: for past periods, reconstruct from current - received_after + issued_after
         let periodEndClosingCmt = currentAvailableCmt;
+        let periodEndClosingAmount = currentAvailableAmount;
+        let periodEndClosingExpenseAmount = currentAvailableExpenseAmount;
         if (!isCurrentPeriod) {
           const [recAfterData, issueCcAfterData, flitchAfterData, peelAfterData, logSalesAfterData, ccSalesAfterData, flitchSalesAfterData, rejCcAfterData, rejFlitchAfterData, rejPeelAfterData] = await Promise.all([
             log_inventory_items_model.aggregate([
@@ -454,6 +497,8 @@ export const LogItemWiseInwardDailyReportExcel = catchAsync(async (req, res, nex
             ]),
           ]);
           const receivedAfter = recAfterData[0]?.total_cmt || 0;
+          const receivedAfterAmount = recAfterData[0]?.total_amount || 0;
+          const receivedAfterExpenseAmount = recAfterData[0]?.total_expense_amount || 0;
           const issuedAfter =
             (issueCcAfterData[0]?.total_cmt || 0) +
             (flitchAfterData[0]?.total_cmt || 0) +
@@ -464,7 +509,31 @@ export const LogItemWiseInwardDailyReportExcel = catchAsync(async (req, res, nex
             (rejCcAfterData[0]?.total_cmt || 0) +
             (rejFlitchAfterData[0]?.total_cmt || 0) +
             (rejPeelAfterData[0]?.total_cmt || 0);
+
+          const issuedAfterAmount =
+            (issueCcAfterData[0]?.total_amount || 0) +
+            (flitchAfterData[0]?.total_amount || 0) +
+            (peelAfterData[0]?.total_amount || 0) +
+            (logSalesAfterData[0]?.total_amount || 0) +
+            (ccSalesAfterData[0]?.total_amount || 0) +
+            (flitchSalesAfterData[0]?.total_amount || 0) +
+            (rejCcAfterData[0]?.total_amount || 0) +
+            (rejFlitchAfterData[0]?.total_amount || 0) +
+            (rejPeelAfterData[0]?.total_amount || 0);
+
+          const issuedAfterExpenseAmount =
+            (issueCcAfterData[0]?.total_expense_amount || 0) +
+            (flitchAfterData[0]?.total_expense_amount || 0) +
+            (peelAfterData[0]?.total_expense_amount || 0) +
+            (logSalesAfterData[0]?.total_expense_amount || 0) +
+            (ccSalesAfterData[0]?.total_expense_amount || 0) +
+            (flitchSalesAfterData[0]?.total_expense_amount || 0) +
+            (rejCcAfterData[0]?.total_expense_amount || 0) +
+            (rejFlitchAfterData[0]?.total_expense_amount || 0) +
+            (rejPeelAfterData[0]?.total_expense_amount || 0);
           periodEndClosingCmt = Math.max(0, currentAvailableCmt - receivedAfter + issuedAfter);
+          periodEndClosingAmount = Math.max(0, currentAvailableAmount - receivedAfterAmount + issuedAfterAmount);
+          periodEndClosingExpenseAmount = Math.max(0, currentAvailableExpenseAmount - receivedAfterExpenseAmount + issuedAfterExpenseAmount);
         }
 
         // FORMULA: Opening = Closing + Issued - Received
@@ -478,6 +547,11 @@ export const LogItemWiseInwardDailyReportExcel = catchAsync(async (req, res, nex
           rejected;
         const openingBalanceCmt = Math.max(0, periodEndClosingCmt + totalIssued - receivedCmt);
         const closingBalanceCmt = openingBalanceCmt + receivedCmt - totalIssued;
+        const avgRatePerCmt = currentAvailableCmt > 0 ? currentAvailableAmount / currentAvailableCmt : 0;
+        const avgExpenseRatePerCmt = currentAvailableCmt > 0 ? currentAvailableExpenseAmount / currentAvailableCmt : 0;
+
+        const closingStockAmount = (Math.max(0, closingBalanceCmt) * avgRatePerCmt).toFixed(3);
+        const closingStockExpenseAmount = (Math.max(0, closingBalanceCmt) * avgExpenseRatePerCmt).toFixed(3);
 
         return {
           item_name: itemName,
@@ -505,6 +579,25 @@ export const LogItemWiseInwardDailyReportExcel = catchAsync(async (req, res, nex
           job_work_challan: jobWorkChallan,
           rejected,
           closing_stock_cmt: Math.max(0, closingBalanceCmt),
+          cc_amount: ccReceivedAmount,
+          cc_expense_amount: ccReceivedExpenseAmount,
+          flitch_amount: flitchReceivedAmount,
+          flitch_expense_amount: flitchReceivedExpenseAmount,
+          peeling_amount: peelingReceivedAmount,
+          peeling_expense_amount: peelingReceivedExpenseAmount,
+          cc_issued_amount: ccIssuedAmount,
+          cc_issued_expense_amount: ccIssuedExpenseAmount,
+          flitch_issued_amount: flitchingAmount,
+          flitch_issued_expense_amount: flitchingExpenseAmount,
+          peeling_issued_amount: peelAmount,
+          peeling_issued_expense_amount: peelExpenseAmount,
+          issue_for_cc_amount: issueForCcAmount,
+          closing_stock_amount: closingStockAmount,
+          closing_stock_expense_amount: closingStockExpenseAmount,
+          total_cost: ccReceivedAmount + flitchReceivedAmount + peelingReceivedAmount,
+          cost_per_cmt: receivedCmt > 0
+            ? (ccReceivedAmount + flitchReceivedAmount + peelingReceivedAmount) / receivedCmt
+            : 0,
         };
       })
     );
@@ -541,7 +634,8 @@ export const LogItemWiseInwardDailyReportExcel = catchAsync(async (req, res, nex
       activeLogs,
       startDate,
       endDate,
-      filter
+      filter,
+      includeCostAndExpense
     );
 
     return res.json(

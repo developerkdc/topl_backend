@@ -30,6 +30,8 @@ const groupRows = (rows) => {
         input_cmt: 0,
         rej_cmt: 0,
         leaves: 0,
+        amount: 0,
+        expense_amount: 0,
       };
     }
     const cmt = Number(r.cmt) || 0;
@@ -50,10 +52,14 @@ const groupRows = (rows) => {
       rej_diameter: r.rej_diameter,
       rej_cmt: rejCmt,
       remarks: r.remarks ?? '',
+      amount: r.amount ?? 0,
+      expense_amount: r.expense_amount ?? 0,
     });
     byItem[itemName].input_cmt += cmt;
     byItem[itemName].rej_cmt += rejCmt;
     byItem[itemName].leaves += leaves;
+    byItem[itemName].amount += r.amount ?? 0;
+    byItem[itemName].expense_amount += r.expense_amount ?? 0;
   });
 
   return { byItem };
@@ -75,7 +81,7 @@ const setCellStyle = (cell, bold = false) => {
  * - Rejection Details (Rej. Length, Rej. Diameter, Rej. CMT, Remarks) + Total Rej. CMT
  * - Summary (Item name, Input CMT, Rej. CMT, Peel CMT, Leaves) + Total
  */
-const GeneratePeelingDailyReport = async (rows, reportDate) => {
+const GeneratePeelingDailyReport = async (rows, reportDate, includeCostAndExpense) => {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Peeling Details Report');
 
@@ -106,6 +112,7 @@ const GeneratePeelingDailyReport = async (rows, reportDate) => {
     'CMT',
     'Leaves',
     'Sq Mtr',
+    ...(includeCostAndExpense ? ['Amount', 'Expense Amount'] : []),
   ];
   const rejHeaders = ['Rej. Length', 'Rej. Diameter', 'Rej. CMT', 'Remarks'];
   const mainColCount = mainHeaders.length;
@@ -133,6 +140,8 @@ const GeneratePeelingDailyReport = async (rows, reportDate) => {
   let grandInputCmt = 0;
   let grandRejCmt = 0;
   let grandLeaves = 0;
+  let grandAmount = 0;
+  let grandExpenseAmount = 0;
 
   itemNames.forEach((itemName) => {
     const itemData = byItem[itemName];
@@ -141,6 +150,8 @@ const GeneratePeelingDailyReport = async (rows, reportDate) => {
     let totalLeaves = 0;
     let totalSqMtr = 0;
     let totalRejCmt = 0;
+    let totalAmount = 0;
+    let totalExpenseAmount = 0;
 
     itemRows.forEach((r, idx) => {
       const row = worksheet.getRow(currentRow);
@@ -158,17 +169,27 @@ const GeneratePeelingDailyReport = async (rows, reportDate) => {
       row.getCell(rejStartCol + 2).value = r.rej_cmt;
       row.getCell(rejStartCol + 3).value = r.remarks;
 
+      if (includeCostAndExpense) {
+        row.getCell(10).value = r.amount;
+        row.getCell(11).value = r.expense_amount;
+      }
+
       [4, 5, 6, 7, 9, rejStartCol, rejStartCol + 1, rejStartCol + 2].forEach((col) => {
         const c = row.getCell(col);
         if (typeof c.value === 'number') c.numFmt = '0.00';
       });
       if (typeof row.getCell(7).value === 'number') row.getCell(7).numFmt = '0.000';
       if (typeof row.getCell(rejStartCol + 2).value === 'number') row.getCell(rejStartCol + 2).numFmt = '0.000';
-
+      if (includeCostAndExpense) {
+        if (typeof row.getCell(rejStartCol + 4).value === 'number') row.getCell(rejStartCol + 4).numFmt = '0.00';
+        if (typeof row.getCell(rejStartCol + 5).value === 'number') row.getCell(rejStartCol + 5).numFmt = '0.00';
+      }
       totalCmt += r.cmt;
       totalLeaves += r.leaves;
       totalSqMtr += r.sq_mtr;
       totalRejCmt += r.rej_cmt;
+      totalAmount += r.amount;
+      totalExpenseAmount += r.expense_amount;
       currentRow++;
     });
 
@@ -186,6 +207,14 @@ const GeneratePeelingDailyReport = async (rows, reportDate) => {
     totalRow.getCell(rejStartCol + 2).value = totalRejCmt;
     totalRow.getCell(rejStartCol + 2).font = { bold: true };
     totalRow.getCell(rejStartCol + 2).numFmt = '0.000';
+    if (includeCostAndExpense) {
+      totalRow.getCell(10).value = totalAmount;
+      totalRow.getCell(10).font = { bold: true };
+      totalRow.getCell(10).numFmt = '0.00';
+      totalRow.getCell(11).value = totalExpenseAmount;
+      totalRow.getCell(11).font = { bold: true };
+      totalRow.getCell(11).numFmt = '0.00';
+    }
     for (let col = 1; col <= mainColCount + rejHeaders.length; col++) {
       const cell = totalRow.getCell(col);
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8E8E8' } };
@@ -196,11 +225,13 @@ const GeneratePeelingDailyReport = async (rows, reportDate) => {
     grandInputCmt += itemData.input_cmt;
     grandRejCmt += itemData.rej_cmt;
     grandLeaves += itemData.leaves;
+    grandAmount += itemData.amount;
+    grandExpenseAmount += itemData.expense_amount;
   });
 
   // Summary section (Item-wise)
   currentRow += 2;
-  const summaryHeaders = ['Item name', 'Input CMT', 'Rej. CMT', 'Peel CMT', 'Leaves'];
+  const summaryHeaders = ['Item name', 'Input CMT', 'Rej. CMT', 'Peel CMT', 'Leaves', ...(includeCostAndExpense ? ['Amount', 'Expense Amount'] : [])];
   const summaryRow = worksheet.getRow(currentRow);
   summaryHeaders.forEach((h, i) => {
     const cell = summaryRow.getCell(i + 1);
@@ -221,6 +252,14 @@ const GeneratePeelingDailyReport = async (rows, reportDate) => {
     row.getCell(3).value = itemData.rej_cmt;
     row.getCell(4).value = peelCmt;
     row.getCell(5).value = itemData.leaves;
+    if (includeCostAndExpense) {
+      row.getCell(6).value = itemData.amount;
+      row.getCell(6).font = { bold: true };
+      row.getCell(6).numFmt = '0.00';
+      row.getCell(7).value = itemData.expense_amount;
+      row.getCell(7).font = { bold: true };
+      row.getCell(7).numFmt = '0.00';
+    }
     [2, 3, 4].forEach((col) => {
       const c = row.getCell(col);
       if (typeof c.value === 'number') c.numFmt = '0.000';
@@ -235,6 +274,14 @@ const GeneratePeelingDailyReport = async (rows, reportDate) => {
   summaryTotalRow.getCell(3).value = grandRejCmt;
   summaryTotalRow.getCell(4).value = grandInputCmt - grandRejCmt;
   summaryTotalRow.getCell(5).value = grandLeaves;
+  if (includeCostAndExpense) {
+    summaryTotalRow.getCell(6).value = grandAmount;
+    summaryTotalRow.getCell(6).font = { bold: true };
+    summaryTotalRow.getCell(6).numFmt = '0.00';
+    summaryTotalRow.getCell(7).value = grandExpenseAmount;
+    summaryTotalRow.getCell(7).font = { bold: true };
+    summaryTotalRow.getCell(7).numFmt = '0.00';
+  }
   summaryTotalRow.font = { bold: true };
   [2, 3, 4].forEach((col) => {
     const c = summaryTotalRow.getCell(col);
@@ -261,6 +308,7 @@ const GeneratePeelingDailyReport = async (rows, reportDate) => {
     { width: 10 },
     { width: 10 },
     { width: 14 },
+    ...(includeCostAndExpense ? [{ width: 10 }, { width: 10 }] : []),
   ];
 
   const timestamp = new Date().getTime();

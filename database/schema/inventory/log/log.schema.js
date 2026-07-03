@@ -77,6 +77,10 @@ export const log_item_details_schema = new mongoose.Schema(
       },
       default: null,
     },
+    issued_date: {
+      type: Date,
+      default: null,
+    },
     invoice_length: {
       type: Number,
       required: [true, 'Invoice length is required'],
