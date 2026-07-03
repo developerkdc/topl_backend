@@ -1937,8 +1937,13 @@ export const generate_invoice_no = catchAsync(async (req, res, next) => {
   const currentFY = getFinancialYear();
 
   const latestDispatch = await dispatchModel
-    .findOne({}, { invoice_no: 1 })
-    .sort({ createdAt: -1 });
+    .findOne({
+      invoice_no: {
+        $regex: `^[0-9]+/${currentFY}$`,
+      },
+    })
+    .sort({ createdAt: -1 })
+    .select('invoice_no');
 
   let latest_invoice_no;
 
