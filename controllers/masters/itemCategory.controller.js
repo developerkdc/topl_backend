@@ -299,13 +299,25 @@ export const create_stock_item_helper = async (itemId) => {
         foreignField: '_id',
         as: 'item_category_details',
       },
+
     },
     { $unwind: { path: '$item_category_details', preserveNullAndEmptyArrays: true } },
+    {
+      $lookup: {
+        from: 'units',
+        localField: 'calculate_unit',
+        foreignField: 'unit_name',
+        as: 'unit_details',
+      },
+    },
+    { $unwind: { path: '$unit_details', preserveNullAndEmptyArrays: true } },
   ];
 
   const result = await itemCategoryModel.aggregate(pipeline);
   const item = result[0];
   if (!item) throw new Error(`Item not found: ${itemId}`);
+  item.calculate_unit = item.unit_details?.unit_symbolic_name || item.calculate_unit;
+
   // console.log("res: ", item);
   const xml = StockItemJSONtoXML(item);
   // console.log("xml: ", xml);
@@ -322,6 +334,7 @@ export const create_stock_item_helper = async (itemId) => {
   const parsed = parser.parse(response);
   const msg = parsed?.message ||
     parsed?.RESPONSE ||
+    parsed?.ENVELOPE?.BODY?.IMPORTDATA?.RESPONSE ||
     parsed?.ENVELOPE?.BODY?.DATA?.IMPORTDATA?.RESPONSE ||
     {};
 

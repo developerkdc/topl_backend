@@ -26,7 +26,7 @@ import { GeneratePressingStockRegisterReport2Excel } from '../../../config/downl
  * @access Private
  */
 export const PressingStockRegisterReport2Excel = catchAsync(async (req, res, next) => {
-  const { startDate, endDate, filter = {} } = req.body;
+  const { startDate, endDate, filter = {}, includeCostAndExpense } = req.body;
 
   if (!startDate || !endDate) {
     return next(new ApiError('Start date and end date are required', 400));
@@ -63,6 +63,7 @@ export const PressingStockRegisterReport2Excel = catchAsync(async (req, res, nex
           },
           pressing_received: { $sum: '$sqm' },
           pressing_done_ids: { $push: '$_id' },
+          amount: { $sum: '$amount' },
         },
       },
     ]);
@@ -117,6 +118,7 @@ export const PressingStockRegisterReport2Excel = catchAsync(async (req, res, nex
             width: '$width',
           },
           opening_sqm: { $sum: '$sqm' },
+          amount: { $sum: '$amount' },
         },
       },
     ]);
@@ -144,6 +146,7 @@ export const PressingStockRegisterReport2Excel = catchAsync(async (req, res, nex
             width: '$width',
           },
           pressing_done_ids: { $push: '$_id' },
+          amount: { $sum: '$amount' },
         },
       },
     ]);
@@ -197,6 +200,7 @@ export const PressingStockRegisterReport2Excel = catchAsync(async (req, res, nex
             width: '$width',
           },
           order_id: { $first: '$order_id' },
+          amount: { $sum: '$amount' },
         },
       },
     ]);
@@ -219,7 +223,7 @@ export const PressingStockRegisterReport2Excel = catchAsync(async (req, res, nex
     // 7. Sales from pressing_done_history (ALL pressing_done for each group)
     const salesAgg = await pressing_done_history_model.aggregate([
       { $match: { issued_item_id: { $in: allPdIdsForDamageSales } } },
-      { $group: { _id: '$issued_item_id', total: { $sum: '$sqm' } } },
+      { $group: { _id: '$issued_item_id', total: { $sum: '$sqm' }, amount: { $sum: '$amount' } } },
     ]);
     const salesByPdId = new Map(salesAgg.map((r) => [r._id.toString(), r.total]));
 
@@ -247,6 +251,7 @@ export const PressingStockRegisterReport2Excel = catchAsync(async (req, res, nex
             width: '$width',
           },
           total: { $sum: '$sqm' },
+          amount: { $sum: '$amount' },
         },
       },
     ]);
@@ -262,6 +267,29 @@ export const PressingStockRegisterReport2Excel = catchAsync(async (req, res, nex
         r._id.thickness ?? 0,
       ])
     );
+    const pressingAgg = await pressing_done_details_model.aggregate([
+      {
+        $match: {
+          group_no: { $in: filteredGroupNos },
+          createdAt: { $gte: start, $lte: end },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            group_no: '$group_no',
+            thickness: '$thickness',
+            length: '$length',
+            width: '$width',
+          },
+          total: { $sum: '$sqm' },
+          amount: { $sum: '$amount' },
+        },
+      },
+    ]);
+
+
+
 
     // 9b. Issued thickness: primary from issues_for_pressing (covers issued-but-not-pressed); fallback from consumed (when dimension mismatch)
     const idToDimKey = new Map();
@@ -321,6 +349,12 @@ export const PressingStockRegisterReport2Excel = catchAsync(async (req, res, nex
         issuedThicknessFromConsumedMap.get(dimKey) ??
         received_thickness;
 
+      const opening_amount = openingAgg.find((r) => r._id.group_no === group_no)?.amount ?? 0;
+      const pressing_amount = pressingAgg.find((r) => r._id.group_no === group_no)?.amount ?? 0;
+      const sales_amount = salesAgg.find((r) => r._id.group_no === group_no)?.amount ?? 0;
+      const damage_amount = damageAgg.find((r) => r._id.group_no === group_no)?.amount ?? 0;
+      const closing_amount = Math.max(0, opening_amount + pressing_amount - damage_amount - sales_amount);
+
       return {
         item_name: itemNameMap.get(group_no) ?? '',
         group_no,
@@ -336,6 +370,11 @@ export const PressingStockRegisterReport2Excel = catchAsync(async (req, res, nex
         sales,
         all_damage,
         closing_sqm,
+        opening_amount,
+        pressing_amount,
+        sales_amount,
+        damage_amount,
+        closing_amount,
       };
     });
 
@@ -357,7 +396,8 @@ export const PressingStockRegisterReport2Excel = catchAsync(async (req, res, nex
       activeStockData,
       startDate,
       endDate,
-      filter
+      filter,
+      includeCostAndExpense
     );
 
     return res.json(

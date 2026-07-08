@@ -35,6 +35,10 @@ const plywood_production_schema = new mongoose.Schema(
       type: Number,
       required: [true, 'New Width is required'],
     },
+    plywood_production_date: {
+      type: Date,
+      required: [true, 'Plywood Production Date is required'],
+    },
     thickness: {
       type: Number,
       required: [true, 'New Thickness is required'],
@@ -171,6 +175,10 @@ const plywood_production_consumed_items_schema = new mongoose.Schema(
     available_sqm: {
       type: Number,
       required: [true, 'Available SQM is required'],
+    },
+    issued_date: {
+      type: Date,
+      default: null,
     },
     grade_name: {
       type: String,

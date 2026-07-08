@@ -13,7 +13,7 @@ import { OtherGoodsMachineWiseReportExcel as createMachineWiseReportExcelConfig 
  * @access Private
  */
 export const OtherGoodsMachineWiseReportExcel = catchAsync(async (req, res, next) => {
-    const { startDate, endDate, filter = {} } = req.body;
+    const { startDate, endDate, filter = {}, includeCostAndExpense } = req.body;
 
     // Validate required parameters
     if (!startDate || !endDate) {
@@ -121,7 +121,8 @@ export const OtherGoodsMachineWiseReportExcel = catchAsync(async (req, res, next
             reportData,
             startDate,
             endDate,
-            filter
+            filter,
+            includeCostAndExpense
         );
 
         return res.json(

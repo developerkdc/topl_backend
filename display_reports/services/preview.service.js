@@ -405,17 +405,23 @@ const hasDownloadLink = (response) =>
 const hasJsonMessage = (response) =>
   Boolean(response?.data && typeof response.data === 'object' && typeof response.data.message === 'string');
 
-export const buildDownloadPayload = ({ reportType, filters = {} }) => {
+export const buildDownloadPayload = ({ reportType, filters = {}, includeCostAndExpense }) => {
   if (reportType === 'RANGE') {
     return {
+      ...filters,
       startDate: filters?.startDate || null,
       endDate: filters?.endDate || null,
+      filter: filters?.filter || {},
+      includeCostAndExpense: includeCostAndExpense ?? false,
     };
   }
 
   return {
+    ...filters,
     filters: {
-      reportDate: filters?.reportDate || null,
+      ...filters?.filters,
+      reportDate: filters?.reportDate || filters?.filters?.reportDate || null,
+      includeCostAndExpense: includeCostAndExpense ?? filters?.includeCostAndExpense ?? false,
     },
   };
 };

@@ -1,11 +1,11 @@
 import express from 'express';
 import {
   AddUnitMaster,
+  create_unit,
   DropdownUnitMaster,
   ListUnitMaster,
   UpdateUnitMaster,
 } from '../../controllers/masters/unit.js';
-import { ListUnitsLogs } from '../../controllers/logs/Masters/unitLogs.js';
 import AuthMiddleware from '../../middlewares/verifyToken.js';
 import RolesPermissions from '../../middlewares/permission.js';
 
@@ -29,6 +29,12 @@ router.post(
   RolesPermissions('unit_master', 'view'),
   ListUnitMaster
 );
+router.post(
+  '/tally-unit-master/:id',
+  AuthMiddleware,
+  create_unit
+);
+
 // router.get("/units-logs", AuthMiddleware, ListUnitsLogs);
 
 // without permission

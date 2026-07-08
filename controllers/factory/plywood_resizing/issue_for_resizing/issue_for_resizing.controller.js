@@ -19,7 +19,7 @@ import plywood_history_model from '../../../../database/schema/inventory/Plywood
 export const add_issue_for_resizing_from_plywood = catchAsync(
   async (req, res) => {
     const userDetails = req.userDetails;
-    const { plywood_item_id, issued_sheets } = req.body;
+    const { plywood_item_id, issued_sheets, issued_date } = req.body;
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
@@ -70,6 +70,7 @@ export const add_issue_for_resizing_from_plywood = catchAsync(
         updated_by: userDetails?._id,
         amount_factor: 1,
         expense_amount: plywood_item_details?.expense_amount,
+        issued_date: issued_date,
       };
 
       const insert_issue_for_resize_result =
@@ -99,6 +100,7 @@ export const add_issue_for_resizing_from_plywood = catchAsync(
             $set: {
               // issue_status: issues_for_status?.plywood_resizing,
               updated_by: userDetails?._id,
+              issued_date: issued_date,
             },
           },
           { session }
@@ -156,6 +158,7 @@ export const add_issue_for_resizing_from_plywood = catchAsync(
             plywood_item_id: _id,
             issued_for_plywood_resizing_id: issue_for_resizing_id,
             issued_for_order_id: null,
+            issued_date: issued_date,
             created_by: userDetails?._id,
             updated_by: userDetails?._id,
           },

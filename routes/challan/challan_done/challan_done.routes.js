@@ -12,6 +12,7 @@ import {
   get_ewaybill_details,
   update_ewaybill_transporter,
   update_ewaybill_partB,
+  eway_bill_payload,
 } from '../../../controllers/challan/challan_done/challan_done.controller.js';
 import { challan_ewaybill_pdf } from '../../../controllers/challan/challan_done/challan_ewaybill.controller.js';
 import EwayBillAuthMiddleware from '../../../middlewares/ewaybillAuth.middleware.js';
@@ -64,5 +65,6 @@ challan_done_router.post(
   update_ewaybill_partB
 );
 challan_done_router.get('/challan-ewaybill-pdf/:id', challan_ewaybill_pdf);
+challan_done_router.get('/get-ewaybill-payload/:id', AuthMiddleware, eway_bill_payload);
 
 export default challan_done_router;

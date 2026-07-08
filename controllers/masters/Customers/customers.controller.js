@@ -824,7 +824,7 @@ export const create_customer_ledger_helper = async (customerId) => {
     { new: true }
   );
 
-  return parsed.RESPONSE || parsed.ENVELOPE?.BODY?.DATA?.IMPORTDATA?.RESPONSE || parsed;
+  return parsed.RESPONSE || parsed.ENVELOPE?.BODY?.IMPORTDATA?.RESPONSE || parsed.ENVELOPE?.BODY?.DATA?.IMPORTDATA?.RESPONSE || parsed;
 };
 
 //tally ledger creation retry api

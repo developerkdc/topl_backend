@@ -103,7 +103,10 @@ const issue_for_resize_schema = new mongoose.Schema(
       type: String,
       default: null,
     },
-
+    issued_date: {
+      type: Date,
+      default: null,
+    },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Created By is required'],

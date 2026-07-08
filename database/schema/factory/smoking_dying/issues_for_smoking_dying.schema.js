@@ -204,6 +204,10 @@ const issues_for_smoking_dying_schema = new mongoose.Schema(
       trim: true,
       uppercase: true,
     },
+    issued_date: {
+      type: Date,
+      default: null,
+    },
     created_by: {
       type: mongoose.Types.ObjectId,
       ref: 'users',

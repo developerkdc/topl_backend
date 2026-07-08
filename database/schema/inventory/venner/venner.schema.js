@@ -115,6 +115,10 @@ export const veneer_item_details_schema = new mongoose.Schema(
       },
       default: null,
     },
+    issued_date: {
+      type: Date,
+      default: null,
+    },
     cut_id: {
       type: mongoose.Schema.Types.ObjectId,
       default: null,

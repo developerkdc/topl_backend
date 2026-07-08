@@ -32,7 +32,7 @@ import { GeneratePressingStockRegisterReport1Excel } from '../../../config/downl
  * @access Private
  */
 export const PressingStockRegisterReport1Excel = catchAsync(async (req, res, next) => {
-  const { startDate, endDate, filter = {} } = req.body;
+  const { startDate, endDate, filter = {}, includeCostAndExpense } = req.body;
 
   if (!startDate || !endDate) {
     return next(new ApiError('Start date and end date are required', 400));
@@ -72,6 +72,7 @@ export const PressingStockRegisterReport1Excel = catchAsync(async (req, res, nex
           },
           pressing_sqm: { $sum: '$sqm' },
           pressing_done_ids: { $push: '$_id' },
+          amount: { $sum: '$amount' },
         },
       },
     ]);
@@ -88,18 +89,22 @@ export const PressingStockRegisterReport1Excel = catchAsync(async (req, res, nex
     // 2. Resolve item_name per group_no from issues_for_pressing
     // ─────────────────────────────────────────────────────────────────────────
     const itemNameDocs = await issues_for_pressing_model
-      .find({ group_no: { $in: allGroupNos } }, { group_no: 1, item_name: 1 })
+      .find({ group_no: { $in: allGroupNos } }, { group_no: 1, item_name: 1, amount: 1, expense_amount: 1 })
       .lean();
     const itemNameMap = new Map();
     for (const doc of itemNameDocs) {
       if (!itemNameMap.has(doc.group_no)) {
-        itemNameMap.set(doc.group_no, doc.item_name ?? '');
+        itemNameMap.set(doc.group_no, { item_name: doc.item_name ?? '', amount: doc.amount ?? 0, expense_amount: doc.expense_amount ?? 0 });
       }
     }
 
     // Apply optional item_name filter
     const filteredGroupNos = filter.item_name
-      ? allGroupNos.filter((gn) => itemNameMap.get(gn) === filter.item_name.toUpperCase().trim())
+      ? allGroupNos.filter(
+        (gn) =>
+          itemNameMap.get(gn)?.item_name ===
+          filter.item_name.toUpperCase().trim()
+      )
       : allGroupNos;
 
     if (filteredGroupNos.length === 0) {
@@ -126,10 +131,11 @@ export const PressingStockRegisterReport1Excel = catchAsync(async (req, res, nex
       const { group_no, thickness, length, width } = row._id;
       if (!filteredGroupNos.includes(group_no)) continue;
 
-      const item_name = itemNameMap.get(group_no) ?? '';
+      const item_name = itemNameMap.get(group_no)?.item_name ?? '';
       const sales_item_name = salesNameMap.get(group_no) ?? '';
       const size = `${length ?? 0} X ${width ?? 0}`;
       const comboKey = `${item_name}||${sales_item_name}||${thickness ?? 0}||${size}`;
+      const amount = itemNameMap.get(group_no)?.amount ?? 0;
 
       if (!comboMap.has(comboKey)) {
         comboMap.set(comboKey, {
@@ -139,11 +145,13 @@ export const PressingStockRegisterReport1Excel = catchAsync(async (req, res, nex
           size,
           groupDims: [],
           pressing_sqm: 0,
+          amount: 0,
         });
       }
       const combo = comboMap.get(comboKey);
       combo.groupDims.push({ group_no, thickness: thickness ?? 0, length: length ?? 0, width: width ?? 0 });
       combo.pressing_sqm += row.pressing_sqm;
+      combo.amount += row.amount;
     }
 
     const combos = [...comboMap.values()];
@@ -168,13 +176,17 @@ export const PressingStockRegisterReport1Excel = catchAsync(async (req, res, nex
             width: '$width',
           },
           opening_sqm: { $sum: '$sqm' },
+          amount: { $sum: '$amount' },
         },
       },
     ]);
     const openingByGroupDim = new Map(
       openingAgg.map((r) => [
         `${r._id.group_no}|${r._id.thickness ?? 0}|${r._id.length ?? 0}|${r._id.width ?? 0}`,
-        r.opening_sqm,
+        {
+          sqm: r.opening_sqm,
+          amount: r.amount,
+        },
       ])
     );
 
@@ -198,13 +210,17 @@ export const PressingStockRegisterReport1Excel = catchAsync(async (req, res, nex
             width: '$width',
           },
           pressing_done_ids: { $push: '$_id' },
+          amount: { $sum: '$amount' },
         },
       },
     ]);
     const allPdIdsByGroupDim = new Map(
       allPdIdsAgg.map((r) => [
         `${r._id.group_no}|${r._id.thickness ?? 0}|${r._id.length ?? 0}|${r._id.width ?? 0}`,
-        r.pressing_done_ids,
+        {
+          pressing_done_ids: r.pressing_done_ids,
+          amount: r.amount,
+        },
       ])
     );
 
@@ -220,9 +236,17 @@ export const PressingStockRegisterReport1Excel = catchAsync(async (req, res, nex
           issued_for: item_issued_for.order,
         },
       },
-      { $group: { _id: '$issued_item_id', total: { $sum: '$sqm' } } },
+      { $group: { _id: '$issued_item_id', total: { $sum: '$sqm' }, amount: { $sum: '$amount' }, } },
     ]);
-    const salesByPdId = new Map(salesAgg.map((r) => [r._id.toString(), r.total]));
+    const salesByPdId = new Map(
+      salesAgg.map((r) => [
+        r._id.toString(),
+        {
+          sqm: r.total,
+          amount: r.amount,
+        },
+      ])
+    );;
 
     // ─────────────────────────────────────────────────────────────────────────
     // 8. All Damage: Pressing + CNC + Colour + Polish (via pressing_details_id)
@@ -236,19 +260,19 @@ export const PressingStockRegisterReport1Excel = catchAsync(async (req, res, nex
         { $lookup: { from: 'cnc_done_details', localField: 'cnc_done_id', foreignField: '_id', as: 'cnc_done' } },
         { $unwind: '$cnc_done' },
         { $match: { 'cnc_done.pressing_details_id': { $in: allPdIdsForDamageSales } } },
-        { $group: { _id: '$cnc_done.pressing_details_id', total: { $sum: '$sqm' } } },
+        { $group: { _id: '$cnc_done.pressing_details_id', total: { $sum: '$sqm' }, amount: { $sum: '$amount' }, } },
       ]),
       color_damage_model.aggregate([
         { $lookup: { from: 'color_done_details', localField: 'color_done_id', foreignField: '_id', as: 'color_done' } },
         { $unwind: '$color_done' },
         { $match: { 'color_done.pressing_details_id': { $in: allPdIdsForDamageSales } } },
-        { $group: { _id: '$color_done.pressing_details_id', total: { $sum: '$sqm' } } },
+        { $group: { _id: '$color_done.pressing_details_id', total: { $sum: '$sqm' }, amount: { $sum: '$amount' }, } },
       ]),
       polishing_damage_model.aggregate([
         { $lookup: { from: 'polishing_done_details', localField: 'polishing_done_id', foreignField: '_id', as: 'polishing_done' } },
         { $unwind: '$polishing_done' },
         { $match: { 'polishing_done.pressing_details_id': { $in: allPdIdsForDamageSales } } },
-        { $group: { _id: '$polishing_done.pressing_details_id', total: { $sum: '$sqm' } } },
+        { $group: { _id: '$polishing_done.pressing_details_id', total: { $sum: '$sqm' }, amount: { $sum: '$amount' }, } },
       ]),
     ]);
 
@@ -258,6 +282,15 @@ export const PressingStockRegisterReport1Excel = catchAsync(async (req, res, nex
       damageByPdId.set(key, (damageByPdId.get(key) ?? 0) + r.total);
     }
     const processWasteByPdId = new Map(pressingDamageAgg.map((r) => [r._id.toString(), r.total]));
+
+    const amountByPdId = new Map(
+      allPdIdsAgg.flatMap((r) =>
+        r.pressing_done_ids.map((id) => [
+          id.toString(),
+          r.amount,
+        ])
+      )
+    );
 
     // CNC + Colour + Polish damage per pressing_done_id (for Sales = sales_raw - downstream damage)
     const cncColorPolishDamageByPdId = new Map();
@@ -275,26 +308,32 @@ export const PressingStockRegisterReport1Excel = catchAsync(async (req, res, nex
 
       // Opening: sum pressing_done.sqm before start for each (group_no, thickness, length, width) in combo (min 0)
       let opening_sqm = 0;
+      let opening_amount = 0;
       const allPdIdsForCombo = [];
       for (const dim of groupDims) {
         const dimKey = `${dim.group_no}|${dim.thickness}|${dim.length}|${dim.width}`;
-        opening_sqm += openingByGroupDim.get(dimKey) ?? 0;
-        allPdIdsForCombo.push(...(allPdIdsByGroupDim.get(dimKey) ?? []));
+        opening_sqm += openingByGroupDim.get(dimKey)?.sqm ?? 0;
+        opening_amount += amountByPdId.get(dimKey) ?? 0;
+        allPdIdsForCombo.push(...(allPdIdsByGroupDim.get(dimKey)?.pressing_done_ids ?? []));
       }
       opening_sqm = Math.max(0, opening_sqm);
+      opening_amount = Math.max(0, opening_amount);
 
       const uniquePdIds = [...new Set(allPdIdsForCombo.map((id) => id.toString()))];
       let sales_raw = 0;
+      let sales_amount = 0;
       let downstream_damage = 0;
       let all_damage = 0;
       let process_waste = 0;
+      let amount = 0;
       for (const idStr of uniquePdIds) {
-        sales_raw += salesByPdId.get(idStr) ?? 0;
+        sales_raw += salesByPdId.get(idStr)?.sqm ?? 0;
+        sales_amount += salesByPdId.get(idStr)?.amount ?? 0;
         downstream_damage += cncColorPolishDamageByPdId.get(idStr) ?? 0;
         all_damage += damageByPdId.get(idStr) ?? 0;
         process_waste += processWasteByPdId.get(idStr) ?? 0;
+        amount += amountByPdId.get(idStr) ?? 0;
       }
-
       const sales = Math.max(0, sales_raw - downstream_damage);
       const pressing_sqm = combo.pressing_sqm;
       const issue_for_challan = 0;
@@ -307,12 +346,19 @@ export const PressingStockRegisterReport1Excel = catchAsync(async (req, res, nex
         thickness,
         size,
         opening_sqm,
+        opening_amount,
         pressing_sqm,
+        pressing_amount: amount,
         sales,
+        sales_amount,
         issue_for_challan,
+        issue_for_challan_amount: 0,
         damage: all_damage,
+        damage_amount: 0,
         process_waste,
+        process_waste_amount: 0,
         closing_sqm,
+        closing_amount: amount,
       };
     });
 
@@ -335,7 +381,8 @@ export const PressingStockRegisterReport1Excel = catchAsync(async (req, res, nex
       activeStockData,
       startDate,
       endDate,
-      filter
+      filter,
+      includeCostAndExpense
     );
 
     return res.json(

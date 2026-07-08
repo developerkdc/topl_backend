@@ -210,6 +210,10 @@ const issues_for_flitching_details_schema = new mongoose.Schema(
       // required: [true, "Created By is required"],
       trim: true,
     },
+    issued_date: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,

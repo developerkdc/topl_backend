@@ -65,6 +65,7 @@ export const addIssueForPeelingFromLogInventory = catchAsync(
             crosscut_done_id: null,
             item_id: item?.item_id,
             item_name: item?.item_name,
+            issued_date: req.body?.issued_date,
             color: item?.color,
             item_sub_category_id: item?.item_sub_category_id,
             item_sub_category_name: item?.item_sub_category_name,
@@ -105,6 +106,7 @@ export const addIssueForPeelingFromLogInventory = catchAsync(
           {
             $set: {
               issue_status: issues_for_status.peeling,
+              issued_date: req.body?.issued_date,
             },
           },
           { session }
@@ -128,6 +130,7 @@ export const addIssueForPeelingFromLogInventory = catchAsync(
           {
             $set: {
               isEditable: false,
+              issued_date: req.body?.issued_date,
             },
           },
           { session }
@@ -262,6 +265,7 @@ export const addIssueForPeelingFromCrosscutDone = catchAsync(
           issued_from: issues_for_status?.crosscut_done,
           remark: item?.remarks,
           created_by: userDetails?._id,
+          issued_date: req.body?.issued_date,
           updated_by: userDetails?._id,
         };
       });
@@ -286,6 +290,7 @@ export const addIssueForPeelingFromCrosscutDone = catchAsync(
           {
             $set: {
               issue_status: issues_for_status.peeling,
+              issued_date: req.body?.issued_date,
             },
           },
           { session }
@@ -311,6 +316,7 @@ export const addIssueForPeelingFromCrosscutDone = catchAsync(
           {
             $set: {
               isEditable: false,
+              issued_date: req.body?.issued_date,
             },
           },
           { session }

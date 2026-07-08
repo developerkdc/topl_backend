@@ -31,7 +31,7 @@ const roundMetricValue = (v) => roundStock(v, 2);
  * @access Private
  */
 export const mdfStockReportCsv = catchAsync(async (req, res, next) => {
-  const { startDate, endDate } = req.body;
+  const { startDate, endDate, includeCostAndExpense } = req.body;
   const filter = req.body?.filter || {};
 
   if (!startDate || !endDate) {
@@ -71,6 +71,8 @@ export const mdfStockReportCsv = catchAsync(async (req, res, next) => {
             length: '$length',
             width: '$width',
           },
+          total_amount: { $sum: '$amount' },
+          total_expense_amount: { $sum: '$expense_amount' },
           current_sheets: { $sum: '$available_sheets' },
           current_sqm: { $sum: '$available_sqm' },
           item_ids: { $push: '$_id' },
@@ -112,6 +114,8 @@ export const mdfStockReportCsv = catchAsync(async (req, res, next) => {
               _id: null,
               total_sheets: { $sum: '$no_of_sheet' },
               total_sqm: { $sum: '$total_sq_meter' },
+              total_amount: { $sum: '$amount' },
+              total_expense_amount: { $sum: '$expense_amount' },
             },
           },
         ]);
@@ -146,6 +150,7 @@ export const mdfStockReportCsv = catchAsync(async (req, res, next) => {
                 _id: null,
                 total_sheets: { $sum: '$issued_sheets' },
                 total_sqm: { $sum: '$issued_sqm' },
+                total_issued_amount: { $sum: '$issued_amount' },
               },
             },
           ]),
@@ -162,6 +167,7 @@ export const mdfStockReportCsv = catchAsync(async (req, res, next) => {
                 _id: null,
                 total_sheets: { $sum: '$issued_sheets' },
                 total_sqm: { $sum: '$issued_sqm' },
+                total_issued_amount: { $sum: '$issued_amount' },
               },
             },
           ]),
@@ -179,11 +185,22 @@ export const mdfStockReportCsv = catchAsync(async (req, res, next) => {
         const consumeSqm = challanSqm + orderSqm + issuePressingSqm;
         const currentSheets = item.current_sheets || 0;
         const currentSqm = item.current_sqm || 0;
-
         const openingSheets = currentSheets + consumeSheets - receiveSheets;
         const openingSqm = currentSqm + consumeSqm - receiveSqm;
         const closingSheets = openingSheets + receiveSheets - consumeSheets;
         const closingSqm = openingSqm + receiveSqm - consumeSqm;
+        const openingAmount = item.total_amount || 0;
+        const openingExpenseAmount = item.total_expense_amount || 0;
+        const receiveAmount = receives[0]?.total_amount || 0;
+        const receiveExpenseAmount = receives[0]?.total_expense_amount || 0;
+        const consumeAmount = challan[0]?.total_issued_amount || 0;
+        const consumeExpenseAmount = challan[0]?.total_issued_expense_amount || 0;
+        const orderAmount = order[0]?.total_issued_amount || 0;
+        const orderExpenseAmount = order[0]?.total_issued_expense_amount || 0;
+        const issuePressingAmount = issuePressing[0]?.total_issued_amount || 0;
+        const issuePressingExpenseAmount = issuePressing[0]?.total_issued_expense_amount || 0;
+        const closingAmount = openingAmount + receiveAmount - consumeAmount;
+        const closingExpenseAmount = openingExpenseAmount + receiveExpenseAmount - consumeExpenseAmount;
 
         return {
           mdf_sub_type: item_sub_category_name,
@@ -203,6 +220,18 @@ export const mdfStockReportCsv = catchAsync(async (req, res, next) => {
           issue_pressing_sqm: roundMetricValue(issuePressingSqm),
           closing_sheets: Math.max(0, roundStock(closingSheets, 0)),
           closing_sqm: Math.max(0, roundMetricValue(closingSqm)),
+          opening_amount: Math.max(0, roundMetricValue(openingAmount)),
+          opening_expense_amount: Math.max(0, roundMetricValue(openingExpenseAmount)),
+          receive_amount: Math.max(0, roundMetricValue(receiveAmount)),
+          receive_expense_amount: Math.max(0, roundMetricValue(receiveExpenseAmount)),
+          consume_amount: Math.max(0, roundMetricValue(consumeAmount)),
+          consume_expense_amount: Math.max(0, roundMetricValue(consumeExpenseAmount)),
+          order_amount: Math.max(0, roundMetricValue(orderAmount)),
+          order_expense_amount: Math.max(0, roundMetricValue(orderExpenseAmount)),
+          issue_pressing_amount: Math.max(0, roundMetricValue(issuePressingAmount)),
+          issue_pressing_expense_amount: Math.max(0, roundMetricValue(issuePressingExpenseAmount)),
+          closing_amount: Math.max(0, roundMetricValue(closingAmount)),
+          closing_expense_amount: Math.max(0, roundMetricValue(closingExpenseAmount)),
         };
       })
     );
@@ -232,7 +261,8 @@ export const mdfStockReportCsv = catchAsync(async (req, res, next) => {
       activeStockData,
       startDate,
       endDate,
-      filter
+      filter,
+      includeCostAndExpense
     );
 
     return res.json(
@@ -253,7 +283,7 @@ export const mdfStockReportCsv = catchAsync(async (req, res, next) => {
  * @route POST /report/download-stock-report-mdf-item-wise
  */
 export const mdfItemWiseStockReportCsv = catchAsync(async (req, res, next) => {
-  const { startDate, endDate } = req.body;
+  const { startDate, endDate, includeCostAndExpense } = req.body;
   const filter = req.body?.filter || {};
 
   if (!startDate || !endDate) {
@@ -292,6 +322,8 @@ export const mdfItemWiseStockReportCsv = catchAsync(async (req, res, next) => {
             length: '$length',
             width: '$width',
           },
+          total_amount: { $sum: '$amount' },
+          total_expense_amount: { $sum: '$expense_amount' },
           current_sheets: { $sum: '$available_sheets' },
           current_sqm: { $sum: '$available_sqm' },
           item_ids: { $push: '$_id' },
@@ -330,6 +362,8 @@ export const mdfItemWiseStockReportCsv = catchAsync(async (req, res, next) => {
               _id: null,
               total_sheets: { $sum: '$no_of_sheet' },
               total_sqm: { $sum: '$total_sq_meter' },
+              total_amount: { $sum: '$amount' },
+              total_expense_amount: { $sum: '$expense_amount' },
             },
           },
         ]);
@@ -348,6 +382,7 @@ export const mdfItemWiseStockReportCsv = catchAsync(async (req, res, next) => {
                 _id: null,
                 total_sheets: { $sum: '$issued_sheets' },
                 total_sqm: { $sum: '$issued_sqm' },
+                total_issued_amount: { $sum: '$issued_amount' },
               },
             },
           ]),
@@ -364,6 +399,7 @@ export const mdfItemWiseStockReportCsv = catchAsync(async (req, res, next) => {
                 _id: null,
                 total_sheets: { $sum: '$issued_sheets' },
                 total_sqm: { $sum: '$issued_sqm' },
+                total_issued_amount: { $sum: '$issued_amount' },
               },
             },
           ]),
@@ -380,6 +416,7 @@ export const mdfItemWiseStockReportCsv = catchAsync(async (req, res, next) => {
                 _id: null,
                 total_sheets: { $sum: '$issued_sheets' },
                 total_sqm: { $sum: '$issued_sqm' },
+                total_issued_amount: { $sum: '$issued_amount' },
               },
             },
           ]),
@@ -397,11 +434,21 @@ export const mdfItemWiseStockReportCsv = catchAsync(async (req, res, next) => {
         const consumeSqm = challanSqm + orderSqm + issuePressingSqm;
         const currentSheets = item.current_sheets || 0;
         const currentSqm = item.current_sqm || 0;
-
         const openingSheets = currentSheets + consumeSheets - receiveSheets;
         const openingSqm = currentSqm + consumeSqm - receiveSqm;
         const closingSheets = openingSheets + receiveSheets - consumeSheets;
         const closingSqm = openingSqm + receiveSqm - consumeSqm;
+
+        const openingAmount = includeCostAndExpense ? (item.total_amount || 0) : 0;
+        const openingExpenseAmount = includeCostAndExpense ? (item.total_expense_amount || 0) : 0;
+        const receiveAmount = includeCostAndExpense ? (receives[0]?.total_amount || 0) : 0;
+        const receiveExpenseAmount = includeCostAndExpense ? (receives[0]?.total_expense_amount || 0) : 0;
+        const challanAmount = includeCostAndExpense ? (challan[0]?.total_issued_amount || 0) : 0;
+        const challanExpenseAmount = includeCostAndExpense ? (challan[0]?.total_issued_expense_amount || 0) : 0;
+        const orderAmount = includeCostAndExpense ? (order[0]?.total_issued_amount || 0) : 0;
+        const issuePressingAmount = includeCostAndExpense ? (issuePressing[0]?.total_issued_amount || 0) : 0;
+        const closingAmount = includeCostAndExpense ? (openingAmount + receiveAmount - challanAmount - orderAmount - issuePressingAmount) : 0;
+        const closingExpenseAmount = includeCostAndExpense ? (openingExpenseAmount + receiveExpenseAmount - challanExpenseAmount) : 0;
 
         return {
           item_name: item_name || '',
@@ -422,6 +469,16 @@ export const mdfItemWiseStockReportCsv = catchAsync(async (req, res, next) => {
           issue_pressing_sqm: roundMetricValue(issuePressingSqm),
           closing_sheets: Math.max(0, roundStock(closingSheets, 0)),
           closing_sqm: Math.max(0, roundMetricValue(closingSqm)),
+          opening_amount: Math.max(0, roundMetricValue(openingAmount)),
+          opening_expense_amount: Math.max(0, roundMetricValue(openingExpenseAmount)),
+          receive_amount: Math.max(0, roundMetricValue(receiveAmount)),
+          receive_expense_amount: Math.max(0, roundMetricValue(receiveExpenseAmount)),
+          challan_amount: Math.max(0, roundMetricValue(challanAmount)),
+          challan_expense_amount: Math.max(0, roundMetricValue(challanExpenseAmount)),
+          order_amount: Math.max(0, roundMetricValue(orderAmount)),
+          issue_pressing_amount: Math.max(0, roundMetricValue(issuePressingAmount)),
+          closing_amount: Math.max(0, roundMetricValue(closingAmount)),
+          closing_expense_amount: Math.max(0, roundMetricValue(closingExpenseAmount)),
         };
       })
     );
@@ -451,7 +508,8 @@ export const mdfItemWiseStockReportCsv = catchAsync(async (req, res, next) => {
       activeStockData,
       startDate,
       endDate,
-      filter
+      filter,
+      includeCostAndExpense
     );
 
     return res.json(
@@ -475,7 +533,7 @@ export const mdfItemWiseStockReportCsv = catchAsync(async (req, res, next) => {
  * @access Private
  */
 export const mdfStockReportByPelletCsv = catchAsync(async (req, res, next) => {
-  const { startDate, endDate } = req.body;
+  const { startDate, endDate, includeCostAndExpense } = req.body;
   const filter = req.body?.filter || {};
 
   if (!startDate || !endDate) {
@@ -524,6 +582,8 @@ export const mdfStockReportByPelletCsv = catchAsync(async (req, res, next) => {
           available_sheets: 1,
           available_sqm: 1,
           inward_date: '$invoice.inward_date',
+          amount: 1,
+          expense_amount: 1,
         },
       },
     ]);
@@ -554,6 +614,7 @@ export const mdfStockReportByPelletCsv = catchAsync(async (req, res, next) => {
                 _id: null,
                 total_sheets: { $sum: '$issued_sheets' },
                 total_sqm: { $sum: '$issued_sqm' },
+                total_issued_amount: { $sum: '$issued_amount' },
               },
             },
           ]),
@@ -570,6 +631,7 @@ export const mdfStockReportByPelletCsv = catchAsync(async (req, res, next) => {
                 _id: null,
                 total_sheets: { $sum: '$issued_sheets' },
                 total_sqm: { $sum: '$issued_sqm' },
+                total_issued_amount: { $sum: '$issued_amount' },
               },
             },
           ]),
@@ -586,6 +648,7 @@ export const mdfStockReportByPelletCsv = catchAsync(async (req, res, next) => {
                 _id: null,
                 total_sheets: { $sum: '$issued_sheets' },
                 total_sqm: { $sum: '$issued_sqm' },
+                total_issued_amount: { $sum: '$issued_amount' },
               },
             },
           ]),
@@ -601,11 +664,32 @@ export const mdfStockReportByPelletCsv = catchAsync(async (req, res, next) => {
         const consumeSqm = challanSqm + orderSqm + issuePressingSqm;
         const currentSheets = item.available_sheets ?? item.no_of_sheet ?? 0;
         const currentSqm = item.available_sqm ?? item.total_sq_meter ?? 0;
-
         const openingSheets = currentSheets + consumeSheets - receiveSheets;
         const openingSqm = currentSqm + consumeSqm - receiveSqm;
         const closingSheets = openingSheets + receiveSheets - consumeSheets;
         const closingSqm = openingSqm + receiveSqm - consumeSqm;
+        const openingAmount = includeCostAndExpense ? (item.amount || 0) : 0;
+        const openingExpenseAmount = includeCostAndExpense ? (item.expense_amount || 0) : 0;
+        const receiveAmount = includeCostAndExpense && inwardDate && inwardDate >= start && inwardDate <= end
+          ? (item.amount || 0)
+          : 0;
+        const receiveExpenseAmount = includeCostAndExpense && inwardDate && inwardDate >= start && inwardDate <= end
+          ? (item.expense_amount || 0)
+          : 0;
+        const consumeAmount = includeCostAndExpense && inwardDate && inwardDate >= start && inwardDate <= end
+          ? (item.amount || 0)
+          : 0;
+        const consumeExpenseAmount = includeCostAndExpense && inwardDate && inwardDate >= start && inwardDate <= end
+          ? (item.expense_amount || 0)
+          : 0;
+        const challanAmount = includeCostAndExpense ? (challan[0]?.total_issued_amount || 0) : 0;
+        const challanExpenseAmount = includeCostAndExpense ? (challan[0]?.total_issued_expense_amount || 0) : 0;
+        const orderAmount = includeCostAndExpense ? (order[0]?.total_issued_amount || 0) : 0;
+        const issuePressingAmount = includeCostAndExpense ? (issuePressing[0]?.total_issued_amount || 0) : 0;
+        const orderExpenseAmount = includeCostAndExpense ? (order[0]?.total_issued_expense_amount || 0) : 0;
+        const issuePressingExpenseAmount = includeCostAndExpense ? (issuePressing[0]?.total_issued_expense_amount || 0) : 0;
+        const closingAmount = includeCostAndExpense ? (openingAmount + receiveAmount - challanAmount - orderAmount - issuePressingAmount) : 0;
+        const closingExpenseAmount = includeCostAndExpense ? (openingExpenseAmount + receiveExpenseAmount - challanExpenseAmount) : 0;
 
         return {
           pellet_no: item.pallet_number,
@@ -626,6 +710,20 @@ export const mdfStockReportByPelletCsv = catchAsync(async (req, res, next) => {
           issue_pressing_sqm: roundMetricValue(issuePressingSqm),
           closing_sheets: Math.max(0, roundStock(closingSheets, 0)),
           closing_sqm: Math.max(0, roundMetricValue(closingSqm)),
+          opening_amount: Math.max(0, roundMetricValue(openingAmount)),
+          opening_expense_amount: Math.max(0, roundMetricValue(openingExpenseAmount)),
+          receive_amount: Math.max(0, roundMetricValue(receiveAmount)),
+          receive_expense_amount: Math.max(0, roundMetricValue(receiveExpenseAmount)),
+          consume_amount: Math.max(0, roundMetricValue(consumeAmount)),
+          consume_expense_amount: Math.max(0, roundMetricValue(consumeExpenseAmount)),
+          challan_amount: Math.max(0, roundMetricValue(challanAmount)),
+          challan_expense_amount: Math.max(0, roundMetricValue(challanExpenseAmount)),
+          order_amount: Math.max(0, roundMetricValue(orderAmount)),
+          order_expense_amount: Math.max(0, roundMetricValue(orderExpenseAmount)),
+          issue_pressing_amount: Math.max(0, roundMetricValue(issuePressingAmount)),
+          issue_pressing_expense_amount: Math.max(0, roundMetricValue(issuePressingExpenseAmount)),
+          closing_amount: Math.max(0, roundMetricValue(closingAmount)),
+          closing_expense_amount: Math.max(0, roundMetricValue(closingExpenseAmount)),
         };
       })
     );
@@ -661,7 +759,8 @@ export const mdfStockReportByPelletCsv = catchAsync(async (req, res, next) => {
       activeStockData,
       startDate,
       endDate,
-      filter
+      filter,
+      includeCostAndExpense
     );
 
     return res.json(

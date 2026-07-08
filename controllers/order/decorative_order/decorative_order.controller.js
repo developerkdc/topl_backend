@@ -17,6 +17,8 @@ import moment from 'moment';
 import photoModel from '../../../database/schema/masters/photo.schema.js';
 import { orders_approval_model } from '../../../database/schema/order/orders.approval.schema.js';
 import { approval_decorative_order_item_details_model } from '../../../database/schema/order/decorative_order/approval.decorative_order_item_details.schema.js';
+import { pressing_done_details_model } from '../../../database/schema/factory/pressing/pressing_done/pressing_done.schema.js';
+import dispatchItemsModel from '../../../database/schema/dispatch/dispatch_items.schema.js';
 
 export const add_decorative_order = catchAsync(async (req, res) => {
   const { order_details, item_details } = req.body;
@@ -153,6 +155,58 @@ export const update_decorative_order = catchAsync(async (req, res) => {
   const { order_details, item_details } = req.body;
   const userDetails = req.userDetails;
   const send_for_approval = req.sendForApproval;
+  const BASE_LOCKED_FIELDS = ['base_type', 'base_sub_category_id', 'base_sub_category_name', 'base_min_thickness'];
+  const INVOICE_LOCKED_FIELDS = ['value_added_process', 'sales_item_name', 'rate_per_sqm'];
+  const hasFieldChanged = (existing, incoming, field) => {
+    const a = existing?.[field];
+    const b = incoming?.[field];
+    return JSON.stringify(a ?? null) !== JSON.stringify(b ?? null);
+  };
+
+  const assertFieldsEditable = async (existingItem, incomingItem, session) => {
+    const changedBaseFields = BASE_LOCKED_FIELDS.filter((f) =>
+      hasFieldChanged(existingItem, incomingItem, f)
+    );
+    const changedInvoiceFields = INVOICE_LOCKED_FIELDS.filter((f) =>
+      hasFieldChanged(existingItem, incomingItem, f)
+    );
+
+    if (changedBaseFields.length === 0 && changedInvoiceFields.length === 0) {
+      return;
+    }
+
+    const [pressingRecord, dispatchRecord] = await Promise.all([
+      changedBaseFields.length
+        ? pressing_done_details_model.findOne(
+          { order_item_id: existingItem._id },
+          { _id: 1 },
+          { session }
+        )
+        : null,
+      changedInvoiceFields.length
+        ? dispatchItemsModel.findOne(
+          { order_item_id: existingItem._id },
+          { _id: 1 },
+          { session }
+        )
+        : null,
+    ]);
+
+    if (changedBaseFields.length && pressingRecord) {
+      throw new ApiError(
+        `Cannot edit ${changedBaseFields.join(', ')} for item ${existingItem.item_no} — item has already been pressed.`,
+        StatusCodes.BAD_REQUEST
+      );
+    }
+
+    if (changedInvoiceFields.length && dispatchRecord) {
+      throw new ApiError(
+        `Cannot edit ${changedInvoiceFields.join(', ')} for item ${existingItem.item_no} — item has already been dispatched.`,
+        StatusCodes.BAD_REQUEST
+      );
+    }
+  };
+
   // const send_for_approval = true; //for now always sending for approval
   const session = await mongoose.startSession();
   try {
@@ -204,11 +258,29 @@ export const update_decorative_order = catchAsync(async (req, res) => {
         throw new ApiError('Order is already closed', StatusCodes.BAD_REQUEST);
       }
 
-      // revert photo details
       const order_items_details = await decorative_order_item_details_model?.find(
         { order_id: order_details_result?._id },
-        { _id: 1, photo_number_id: 1, photo_number: 1, no_of_sheets: 1, pressing_instructions: 1 },
+        {
+          _id: 1,
+          item_no: 1,
+          photo_number_id: 1,
+          photo_number: 1,
+          no_of_sheets: 1,
+          pressing_instructions: 1,
+          base_type: 1,
+          base_sub_category_id: 1,
+          base_sub_category_name: 1,
+          base_min_thickness: 1,
+          value_added_process: 1,
+          sales_item_name: 1,
+          rate_per_sqm: 1,
+        },
         { session }
+      );
+
+      // build lookup map for the edit-lock check
+      const existingItemsMap = new Map(
+        order_items_details.map((item) => [String(item._id), item])
       );
 
       const revert_photo_details = async function (
@@ -304,48 +376,61 @@ export const update_decorative_order = catchAsync(async (req, res) => {
       };
 
       const updated_item_details = [];
+      const bulkOps = [];
+
       for (const item of item_details) {
+        const existingItem = item._id ? existingItemsMap.get(String(item._id)) : null;
+        if (existingItem) {
+          await assertFieldsEditable(existingItem, item, session);
+        }
 
-        // Validate photo availability - await properly in loop
         if (item.photo_number && item.photo_number_id) {
-          const updated_photo_details = await update_photo_details(
-            item.photo_number_id,
-            item.photo_number,
-            item.no_of_sheets,
-            item.pressing_instructions
-          );
-          console.log("updated photo details => ", updated_photo_details)
+          await update_photo_details(item.photo_number_id, item.photo_number, item.no_of_sheets, item.pressing_instructions);
         }
-
-        if (
-          item.different_group_photo_number &&
-          item.different_group_photo_number_id &&
+        if (item.different_group_photo_number && item.different_group_photo_number_id &&
           item.photo_number !== item.different_group_photo_number &&
-          item.photo_number_id !== item.different_group_photo_number_id
-        ) {
-          await update_photo_details(
-            item.different_group_photo_number_id,
-            item.different_group_photo_number,
-            item.no_of_sheets,
-            item.pressing_instructions
-          );
+          item.photo_number_id !== item.different_group_photo_number_id) {
+          await update_photo_details(item.different_group_photo_number_id, item.different_group_photo_number, item.no_of_sheets, item.pressing_instructions);
         }
 
-        updated_item_details.push({
-          ...item,
+        const { _id, ...rest } = item;
+        const payload = {
+          ...rest,
           order_id: order_details_result?._id,
           product_category: `${order_details_result?.product_category} ${item.base_type}`,
-          created_by: item.created_by ? item?.created_by : userDetails?._id,
-          updated_by: item.updated_by ? item?.updated_by : userDetails?._id,
-          createdAt: item.createdAt ? item?.createdAt : new Date(),
+          created_by: item.created_by ? item.created_by : userDetails?._id,
+          updated_by: userDetails?._id,
           updatedAt: new Date(),
-        });
+        };
+
+        if (existingItem) {
+          bulkOps.push({
+            insertOne: {
+              document: { ...payload, _id: existingItem._id, createdAt: existingItem.createdAt || new Date() },
+            },
+          });
+          updated_item_details.push({ _id: existingItem._id, ...payload });
+        } else {
+          const newId = new mongoose.Types.ObjectId();
+          bulkOps.push({
+            insertOne: {
+              document: { _id: newId, ...payload, createdAt: new Date() },
+            },
+          });
+          updated_item_details.push({ _id: newId, ...payload });
+        }
       }
-      const create_order_result =
-        await decorative_order_item_details_model?.insertMany(
-          updated_item_details,
-          { session }
-        );
+
+      // delete items that existed before but aren't in the incoming payload anymore
+      const incomingIds = new Set(item_details.filter(i => i._id).map(i => String(i._id)));
+      const removedItemIds = order_items_details
+        .filter(i => !incomingIds.has(String(i._id)))
+        .map(i => i._id);
+      if (removedItemIds.length) {
+        bulkOps.push({ deleteMany: { filter: { _id: { $in: removedItemIds } } } });
+      }
+
+      const create_order_result = await decorative_order_item_details_model.bulkWrite(bulkOps, { session });
       if (create_order_result?.length === 0) {
         throw new ApiError(
           'Failed to add order item details',
@@ -745,6 +830,15 @@ export const fetch_all_decorative_order_items_by_order_id = catchAsync(
       throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
     }
 
+    const BASE_LOCKED_FIELDS = ['base_type', 'base_sub_category_id', 'base_sub_category_name', 'base_min_thickness'];
+    const INVOICE_LOCKED_FIELDS = ['value_added_process', 'sales_item_name', 'rate_per_sqm'];
+    const ALL_LOCKABLE_FIELDS = [
+      'photo_number', 'additional_photo_number', 'group_number', 'item_sub_category_name', 'previous_rate',
+      'item_name', 'length', 'width', 'thickness', 'no_of_sheets', 'sqm',
+      'pressing_instructions', 'different_group_photo_number', 'different_group_group_number',
+      'different_thickness', 'alternate_sales_item_name', 'remark',
+    ];
+
     const pipeline = [
       {
         $match: {
@@ -757,6 +851,36 @@ export const fetch_all_decorative_order_items_by_order_id = catchAsync(
           foreignField: 'order_id',
           localField: '_id',
           as: 'order_items_details',
+          pipeline: [
+            {
+              $lookup: {
+                from: 'pressing_done_details',
+                localField: '_id',
+                foreignField: 'order_item_id',
+                as: 'pressing_records',
+              },
+            },
+            {
+              $lookup: {
+                from: 'dispatch_items',
+                localField: '_id',
+                foreignField: 'order_item_id',
+                as: 'dispatch_records',
+              },
+            },
+            {
+              $addFields: {
+                is_pressed: { $gt: [{ $size: '$pressing_records' }, 0] },
+                is_dispatched: { $gt: [{ $size: '$dispatch_records' }, 0] },
+              },
+            },
+            {
+              $project: {
+                pressing_records: 0,
+                dispatch_records: 0,
+              },
+            },
+          ],
         },
       },
       {
@@ -812,6 +936,17 @@ export const fetch_all_decorative_order_items_by_order_id = catchAsync(
     ];
 
     const result = await OrderModel.aggregate(pipeline);
+
+    if (result?.[0]?.order_items_details) {
+      result[0].order_items_details = result[0].order_items_details.map((item) => ({
+        ...item,
+        locked_fields: [
+          ...ALL_LOCKABLE_FIELDS,
+          ...(item.is_pressed ? BASE_LOCKED_FIELDS : []),
+          ...(item.is_dispatched ? INVOICE_LOCKED_FIELDS : []),
+        ],
+      }));
+    }
 
     const response = new ApiResponse(
       StatusCodes.OK,

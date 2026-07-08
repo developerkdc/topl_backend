@@ -100,6 +100,10 @@ const issues_for_crosscutting_details_schema = new mongoose.Schema(
       type: Number,
       required: [true, 'Indian CMT is required'],
     },
+    issued_date: {
+      type: Date,
+      default: null,
+    },
     physical_length: {
       type: Number,
       required: [true, 'Physical length is required'],

@@ -16,7 +16,7 @@ import { GenerateDressingStockRegisterExcel } from '../../../config/downloadExce
  * @access Private
  */
 export const DressingStockRegisterExcel = catchAsync(async (req, res, next) => {
-  const { startDate, endDate, filter = {} } = req.body;
+  const { startDate, endDate, filter = {}, includeCostAndExpense } = req.body;
 
   if (!startDate || !endDate) {
     return next(new ApiError('Start date and end date are required', 400));
@@ -69,53 +69,31 @@ export const DressingStockRegisterExcel = catchAsync(async (req, res, next) => {
     // Receipt before period (per item pair, per day) – for day-by-day closing → opening balance
     const receiptBeforeByDay = await dressing_done_items_model.aggregate([
       { $match: itemFilter },
-      {
-        $lookup: {
-          from: 'dressing_done_other_details',
-          localField: 'dressing_done_other_details_id',
-          foreignField: '_id',
-          as: 'details',
-        },
-      },
+      { $lookup: { from: 'dressing_done_other_details', localField: 'dressing_done_other_details_id', foreignField: '_id', as: 'details' } },
       { $unwind: '$details' },
-      {
-        $match: {
-          'details.dressing_date': { $lt: start },
-        },
-      },
+      { $match: { 'details.dressing_date': { $lt: start } } },
       {
         $group: {
           _id: {
             item_sub_category_name: '$item_sub_category_name',
             item_name: '$item_name',
-            day: {
-              $dateToString: { format: '%Y-%m-%d', date: '$details.dressing_date' },
-            },
+            day: { $dateToString: { format: '%Y-%m-%d', date: '$details.dressing_date' } },
           },
           total: { $sum: '$sqm' },
+          amount: { $sum: '$amount' },
+          expense_amount: { $sum: '$expense_amount' },
         },
       },
     ]);
 
-    // Issue before period (per item pair, per day) – for day-by-day closing → opening balance
     const issueBeforeByDay = await dressing_done_items_model.aggregate([
-      {
-        $match: {
-          ...itemFilter,
-          issue_status: { $in: ['grouping', 'order', 'smoking_dying'] },
-          updatedAt: { $lt: start },
-        },
-      },
+      { $match: { ...itemFilter, issue_status: { $in: ['grouping', 'order', 'smoking_dying'] }, updatedAt: { $lt: start } } },
       {
         $group: {
-          _id: {
-            item_sub_category_name: '$item_sub_category_name',
-            item_name: '$item_name',
-            day: {
-              $dateToString: { format: '%Y-%m-%d', date: '$updatedAt' },
-            },
-          },
+          _id: { item_sub_category_name: '$item_sub_category_name', item_name: '$item_name', day: { $dateToString: { format: '%Y-%m-%d', date: '$updatedAt' } } },
           total: { $sum: '$sqm' },
+          amount: { $sum: '$amount' },
+          expense_amount: { $sum: '$expense_amount' },
         },
       },
     ]);
@@ -127,6 +105,26 @@ export const DressingStockRegisterExcel = catchAsync(async (req, res, next) => {
     const pairKey = (a, b) => `${a}|${b}`;
     const receiptByPairDay = new Map();
     const issueByPairDay = new Map();
+    const receiptAmountByPairDay = new Map();
+    const receiptExpenseAmountByPairDay = new Map();
+    const issueAmountByPairDay = new Map();
+    const issueExpenseAmountByPairDay = new Map();
+
+    for (const r of receiptBeforeByDay) {
+      const key = pairKey(r._id.item_sub_category_name, r._id.item_name);
+      if (!receiptAmountByPairDay.has(key)) receiptAmountByPairDay.set(key, new Map());
+      receiptAmountByPairDay.get(key).set(r._id.day, r.amount);
+      if (!receiptExpenseAmountByPairDay.has(key)) receiptExpenseAmountByPairDay.set(key, new Map());
+      receiptExpenseAmountByPairDay.get(key).set(r._id.day, r.expense_amount);
+    }
+    for (const i of issueBeforeByDay) {
+      const key = pairKey(i._id.item_sub_category_name, i._id.item_name);
+      if (!issueAmountByPairDay.has(key)) issueAmountByPairDay.set(key, new Map());
+      issueAmountByPairDay.get(key).set(i._id.day, i.amount);
+      if (!issueExpenseAmountByPairDay.has(key)) issueExpenseAmountByPairDay.set(key, new Map());
+      issueExpenseAmountByPairDay.get(key).set(i._id.day, i.expense_amount);
+    }
+
     for (const r of receiptBeforeByDay) {
       const key = pairKey(r._id.item_sub_category_name, r._id.item_name);
       if (!receiptByPairDay.has(key)) receiptByPairDay.set(key, new Map());
@@ -155,7 +153,43 @@ export const DressingStockRegisterExcel = catchAsync(async (req, res, next) => {
         const issue = issueDays?.get(day) ?? 0;
         runningClosing = Math.max(0, runningClosing + receipt - issue);
       }
-      openingBalanceByPair.set(key, runningClosing);
+      openingBalanceByPair.set(key, Math.max(0, runningClosing))
+    }
+
+    const openingBalanceAmountByPair = new Map();
+    for (const { item_sub_category_name, item_name } of pairs) {
+      const key = pairKey(item_sub_category_name, item_name);
+      const receiptDays = receiptAmountByPairDay.get(key);
+      const issueDays = issueAmountByPairDay.get(key);
+      const allDays = new Set([
+        ...(receiptDays ? receiptDays.keys() : []),
+        ...(issueDays ? issueDays.keys() : []),
+      ].filter((d) => d <= dayBeforeStartStr));
+      let running = 0;
+      for (const day of [...allDays].sort()) {
+        running += (receiptDays?.get(day) ?? 0) - (issueDays?.get(day) ?? 0);
+      }
+      openingBalanceAmountByPair.set(key, Math.max(0, running));
+    }
+
+    const openingBalanceExpenseAmountByPair = new Map();
+    for (const { item_sub_category_name, item_name } of pairs) {
+      const key = pairKey(item_sub_category_name, item_name);
+      const receiptDays = receiptExpenseAmountByPairDay.get(key);
+      const issueDays = issueExpenseAmountByPairDay.get(key);
+      const allDays = new Set(
+        [
+          ...(receiptDays ? receiptDays.keys() : []),
+          ...(issueDays ? issueDays.keys() : []),
+        ].filter((d) => d <= dayBeforeStartStr)
+      );
+      let runningClosing = 0;
+      for (const day of [...allDays].sort()) {
+        const receipt = receiptDays?.get(day) ?? 0;
+        const issue = issueDays?.get(day) ?? 0;
+        runningClosing = Math.max(0, runningClosing + receipt - issue);
+      }
+      openingBalanceExpenseAmountByPair.set(key, Math.max(0, runningClosing));
     }
 
     const stockData = await Promise.all(
@@ -170,6 +204,20 @@ export const DressingStockRegisterExcel = catchAsync(async (req, res, next) => {
           const openingBalance = Math.max(
             0,
             openingBalanceByPair.get(
+              pairKey(item_sub_category_name, item_name)
+            ) ?? 0
+          );
+
+          const openingBalanceAmount = Math.max(
+            0,
+            openingBalanceAmountByPair.get(
+              pairKey(item_sub_category_name, item_name)
+            ) ?? 0
+          );
+
+          const openingBalanceExpenseAmount = Math.max(
+            0,
+            openingBalanceExpenseAmountByPair.get(
               pairKey(item_sub_category_name, item_name)
             ) ?? 0
           );
@@ -191,9 +239,11 @@ export const DressingStockRegisterExcel = catchAsync(async (req, res, next) => {
                 'details.dressing_date': { $gte: start, $lte: end },
               },
             },
-            { $group: { _id: null, total: { $sum: '$sqm' } } },
+            { $group: { _id: null, total: { $sum: '$sqm' }, amount: { $sum: '$amount' }, expense_amount: { $sum: '$expense_amount' } } },
           ]);
           const receipt = receiptResult[0]?.total ?? 0;
+          const receiptAmount = receiptResult[0]?.amount ?? 0;
+          const receiptExpenseAmount = receiptResult[0]?.expense_amount ?? 0;
 
           // Issued in period: by issue_status (order + grouping -> Issue Sq Mtr, smoking_dying -> Dyeing)
           const issuedOrderResult = await dressing_done_items_model.aggregate([
@@ -204,7 +254,7 @@ export const DressingStockRegisterExcel = catchAsync(async (req, res, next) => {
                 updatedAt: { $gte: start, $lte: end },
               },
             },
-            { $group: { _id: null, total: { $sum: '$sqm' } } },
+            { $group: { _id: null, total: { $sum: '$sqm' }, amount: { $sum: '$amount' }, expense_amount: { $sum: '$expense_amount' } } },
           ]);
           const issuedGroupingResult = await dressing_done_items_model.aggregate([
             {
@@ -214,7 +264,7 @@ export const DressingStockRegisterExcel = catchAsync(async (req, res, next) => {
                 updatedAt: { $gte: start, $lte: end },
               },
             },
-            { $group: { _id: null, total: { $sum: '$sqm' } } },
+            { $group: { _id: null, total: { $sum: '$sqm' }, amount: { $sum: '$amount' }, expense_amount: { $sum: '$expense_amount' } } },
           ]);
           const issuedDyeingResult = await dressing_done_items_model.aggregate([
             {
@@ -224,14 +274,25 @@ export const DressingStockRegisterExcel = catchAsync(async (req, res, next) => {
                 updatedAt: { $gte: start, $lte: end },
               },
             },
-            { $group: { _id: null, total: { $sum: '$sqm' } } },
+            { $group: { _id: null, total: { $sum: '$sqm' }, amount: { $sum: '$amount' }, expense_amount: { $sum: '$expense_amount' } } },
           ]);
 
           const issue_sq_mtr =
             (issuedOrderResult[0]?.total ?? 0) +
             (issuedGroupingResult[0]?.total ?? 0);
           const dyeing = issuedDyeingResult[0]?.total ?? 0;
+          const issue_sq_mtr_amount =
+            (issuedOrderResult[0]?.amount ?? 0) +
+            (issuedGroupingResult[0]?.amount ?? 0);
+
+          const issue_sq_mtr_expense_amount =
+            (issuedOrderResult[0]?.expense_amount ?? 0) +
+            (issuedGroupingResult[0]?.expense_amount ?? 0);
+          const dyeing_amount = issuedDyeingResult[0]?.amount ?? 0;
+          const dyeing_expense_amount = issuedDyeingResult[0]?.expense_amount ?? 0;
           const clipping = issuedGroupingResult[0]?.total ?? 0; // Clipping = issue to Grouping
+          const clipping_amount = issuedGroupingResult[0]?.amount ?? 0;
+          const clipping_expense_amount = issuedGroupingResult[0]?.expense_amount ?? 0;
 
           // Mixmatch in period: dressing_miss_match_data
           const mixmatchResult = await dressing_miss_match_data_model.aggregate([
@@ -265,6 +326,29 @@ export const DressingStockRegisterExcel = catchAsync(async (req, res, next) => {
             0,
             openingBalance + purchase + receipt - totalIssues
           );
+          const totalIssueAmount =
+            issue_sq_mtr_amount +
+            clipping_amount +
+            dyeing_amount +
+            0 /* mixmatch has no amount tracked */ +
+            0 /* edgebanding */ +
+            0 /* lipping */ +
+            0 /* redressing */ +
+            0 /* sale */;
+
+          const totalIssueExpenseAmount =
+            issue_sq_mtr_expense_amount +
+            clipping_expense_amount +
+            dyeing_expense_amount;
+
+          const closing_balance_amount = Math.max(
+            0,
+            openingBalanceAmount + receiptAmount - totalIssueAmount
+          );
+          const closing_balance_expense_amount = Math.max(
+            0,
+            openingBalanceExpenseAmount + receiptExpenseAmount - totalIssueExpenseAmount
+          );
 
           return {
             item_group_name: item_sub_category_name,
@@ -281,6 +365,26 @@ export const DressingStockRegisterExcel = catchAsync(async (req, res, next) => {
             redressing,
             sale,
             closing_balance: closingBalance,
+            ...(includeCostAndExpense ? {
+              opening_balance_amount: openingBalanceAmount,
+              opening_balance_expense_amount: openingBalanceExpenseAmount,
+              receipt_amount: receiptAmount,
+              receipt_expense_amount: receiptExpenseAmount,
+              issue_sq_mtr_amount: issue_sq_mtr_amount,
+              issue_sq_mtr_expense_amount: issue_sq_mtr_expense_amount,
+              clipping_amount: clipping_amount,
+              clipping_expense_amount: clipping_expense_amount,
+              dyeing_amount: dyeing_amount,
+              dyeing_expense_amount: dyeing_expense_amount,
+              edgebanding_amount: 0,
+              edgebanding_expense_amount: 0,
+              lipping_amount: 0,
+              lipping_expense_amount: 0,
+              redressing_amount: 0,
+              redressing_expense_amount: 0,
+              closing_balance_amount: closing_balance_amount,
+              closing_balance_expense_amount: closing_balance_expense_amount,
+            } : {}),
           };
         }
       )
@@ -314,7 +418,8 @@ export const DressingStockRegisterExcel = catchAsync(async (req, res, next) => {
       activeStockData,
       startDate,
       endDate,
-      filter
+      filter,
+      includeCostAndExpense
     );
 
     return res.json(

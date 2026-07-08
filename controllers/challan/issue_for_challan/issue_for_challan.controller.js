@@ -10,7 +10,7 @@ import { dynamic_filter } from '../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 
 export const add_issue_for_challan_data = catchAsync(async (req, res) => {
-  const { issued_from, issued_item_ids, issued_data = null } = req.body;
+  const { issued_from, issued_item_ids, issued_data, issued_date = null } = req.body;
   const userDetails = req.userDetails;
   const required_fields = ['issued_from', 'issued_item_ids'];
   for (let field of required_fields) {
@@ -33,7 +33,8 @@ export const add_issue_for_challan_data = catchAsync(async (req, res) => {
       userDetails,
       issued_from,
       issued_item_ids,
-      issued_data
+      issued_data,
+      issued_date
     );
 
     await issue_for_challan_handler?.add_issue_data_to_challan();

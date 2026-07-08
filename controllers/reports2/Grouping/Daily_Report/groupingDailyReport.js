@@ -15,7 +15,7 @@ import mongoose from 'mongoose';
  */
 export const GroupingDailyReportExcel = catchAsync(
   async (req, res, next) => {
-    const { reportDate, groupingId } = req?.body?.filters || {};
+    const { reportDate, groupingId, includeCostAndExpense } = req?.body?.filters || {};
 
     if (!reportDate) {
       return res.status(400).json({
@@ -124,6 +124,8 @@ export const GroupingDailyReportExcel = catchAsync(
           damaged_sqm: {
             $cond: [{ $eq: ['$items.is_damaged', true] }, '$items.sqm', 0],
           },
+          amount: '$items.amount',
+          expense_amount: '$items.expense_amount',
         },
       },
     ];
@@ -138,7 +140,7 @@ export const GroupingDailyReportExcel = catchAsync(
       });
     }
 
-    const excelLink = await GenerateGroupingDailyReport(rows, reportDate);
+    const excelLink = await GenerateGroupingDailyReport(rows, reportDate, includeCostAndExpense);
 
     return res.status(200).json({
       result: excelLink,

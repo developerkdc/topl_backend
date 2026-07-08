@@ -56,7 +56,7 @@ function formatOrderItemVolumeOnly(item) {
   if (unit.includes('SQM') || unit.includes('SQ.M') || unit.includes('SQUARE')) return sqm > 0 ? round3(sqm) : '';
   if (unit.includes('CBM') || unit.includes('CUBIC')) return cbm > 0 ? round3(cbm) : '';
   if (rawMat === 'LOG' || rawMat === 'FLITCH') return cbm > 0 ? round3(cbm) : (sqm > 0 ? round3(sqm) : '');
-  
+
   return cbm > 0 ? round3(cbm) : (sqm > 0 ? round3(sqm) : '');
 }
 
@@ -247,7 +247,8 @@ function buildGroupingData(
   const availSqm = getVal(groupItem, 'available_details.sqm') ?? recSqm;
   const issueSheets = nonNegativeDiff(recSheets, availSheets);
   const issueSqm = nonNegativeDiff(recSqm, availSqm);
-
+  const amount = groupItem.amount ?? 0;
+  const expenseAmount = groupItem.expense_amount ?? 0;
   // Splicing / Tapping
   const tappingItems = tappingByGroupNo.get(groupNo) || [];
   const machineItems = tappingItems.filter((t) => {
@@ -264,6 +265,8 @@ function buildGroupingData(
   const splicingAvailSheets = sumField(tappingItems, 'available_details.no_of_sheets');
   const splicingAvailSqm = sumField(tappingItems, 'available_details.sqm');
   const splicingIssueSheets = nonNegativeDiff(splicingSheets, splicingAvailSheets);
+  const splicingAmount = sumField(tappingItems, 'amount');
+  const splicingExpenseAmount = sumField(tappingItems, 'expense_amount');
   const splicingIssueStatus = resolveSplicingIssueStatusFromHistory(
     tappingItems,
     tappingIssueStatusByItemId
@@ -277,6 +280,8 @@ function buildGroupingData(
   const pressingAvailSqm = sumField(pressingItems, 'available_details.sqm');
   const pressingIssueSheets = nonNegativeDiff(pressingSheets, pressingAvailSheets);
   const pressingIssueSqm = nonNegativeDiff(pressingSqm, pressingAvailSqm);
+  const pressingAmount = sumField(pressingItems, 'amount');
+  const pressingExpenseAmount = sumField(pressingItems, 'expense_amount');
   const pressingIssueStatus = resolvePressingIssueStatusFromHistory(
     pressingItems,
     pressingIssueStatusByItemId
@@ -289,7 +294,10 @@ function buildGroupingData(
   const cncType = cncItems[0]?.product_type || '';
   const cncRecSheets = sumField(cncItems, 'no_of_sheets');
   const colourRecSheets = sumField(colourItems, 'no_of_sheets');
-
+  const cncAmount = sumField(cncItems, 'amount');
+  const cncExpenseAmount = sumField(cncItems, 'expense_amount');
+  const colourAmount = sumField(colourItems, 'amount');
+  const colourExpenseAmount = sumField(colourItems, 'expense_amount');
   const groupingIssueStatus =
     groupingIssuedForByItemId?.get(String(groupItem._id)) || '';
 
@@ -318,20 +326,20 @@ function buildGroupingData(
 
   // ── Determine the TERMINAL stage for this row ──
   // A sale volume appears ONLY if the current terminal stage reached is a final sale status
-  
+
   // We check stage arrays (Colour -> CNC -> Pressing -> Grouping)
   const findTerminalSale = (items, stageOrderItemMap) => {
     if (!items || items.length === 0) return null;
-    
+
     // Priority: Find an item in this stage that is officially tied to a sale/packing
     for (const item of items) {
       const id = String(item._id);
       const orderItemId = item.order_item_id || stageOrderItemMap?.get(id) || stageOrderItemMap?.get(String(item.issued_from_id));
-      
+
       // THE FIX: We must be very flexible with status field names across stages
       const rawStatus = (item.issue_status || item.issued_for || '').trim().toUpperCase();
       const currentStatus = item.is_packing_done ? 'PACKING' : rawStatus;
-      
+
       if (orderItemId && (isFinalSaleStatus(currentStatus) || item.is_packing_done)) {
         const cmt = salesCmtByCode?.get(id) || salesCmtByCode?.get(String(item.issued_from_id)) || 0;
         return {
@@ -345,7 +353,7 @@ function buildGroupingData(
 
   const colorSale = findTerminalSale(colourItems, colourOrderItemIdByItemId);
   const cncSale = !colorSale ? findTerminalSale(cncItems, cncOrderItemIdByItemId) : null;
-  
+
   // FAILSAFE: If no sale found by ID link, check by Group No
   const failsafeSale = (!colorSale && !cncSale) ? findTerminalSale(terminalByGroupNo?.get(groupNo), null) : null;
 
@@ -369,7 +377,7 @@ function buildGroupingData(
     const groupKey = (groupItem.log_no_code || groupItem.group_no || '').trim().toUpperCase();
     const idKey = String(groupItem._id);
     const gSaleVolume = salesCmtByCode?.get(groupKey) || salesCmtByCode?.get(idKey) || 0;
-    
+
     if (gSaleVolume > 0 || groupingOrderItemIdByItemId?.get(idKey)) {
       stageIssuedCmt = issueSqm || gSaleVolume || 0;
       resolvedOrderItemId = (orderRefsByCode?.get(groupKey) || orderRefsByCode?.get(idKey))?.order_item_id || groupingOrderItemIdByItemId?.get(idKey);
@@ -412,6 +420,16 @@ function buildGroupingData(
     sales_order_no: salesVal,
     jwc_veneer: '',
     awc_pressing_sheets: '',
+    grouping_amount: round3(amount) || '',
+    grouping_expense_amount: round3(expenseAmount) || '',
+    splicing_amount: round3(splicingAmount) || '',
+    splicing_expense_amount: round3(splicingExpenseAmount) || '',
+    pressing_amount: round3(pressingAmount) || '',
+    pressing_expense_amount: round3(pressingExpenseAmount) || '',
+    cnc_amount: round3(cncAmount) || '',
+    cnc_expense_amount: round3(cncExpenseAmount) || '',
+    colour_amount: round3(colourAmount) || '',
+    colour_expense_amount: round3(colourExpenseAmount) || '',
   };
 }
 
@@ -425,6 +443,8 @@ function getDressingData(logNoCode, dressingByCode) {
     dress_rec_sqm: round3(sumField(items, 'sqm')) || '',
     dress_issue_sqm: round3(sumField(items.filter((d) => d.issue_status), 'sqm')) || '',
     dress_issue_status: items.find((d) => d.issue_status)?.issue_status || '',
+    dress_amount: round3(sumField(items, 'amount')) || '',
+    dress_expense_amount: round3(sumField(items, 'expense_amount')) || '',
   };
 }
 
@@ -440,6 +460,8 @@ function getSmokingData(logNoCode, smokingByCode) {
     // SQM issued onward from smoking (only rows with issue_status)
     smoking_issue_sqm: issuedSqm,
     smoking_issue_status: issuedItems[0]?.issue_status || '',
+    smoking_amount: round3(sumField(items, 'amount')) || '',
+    smoking_expense_amount: round3(sumField(items, 'expense_amount')) || '',
   };
 }
 
@@ -467,12 +489,16 @@ function buildSlicingSideRows(
   const processCmt = round3(parseFloat(side.item_cmt ?? side.cmt) || 0);
   const issuedCmt = round3(parseFloat(side.issued_for_slicing?.cmt) || 0);
   const balanceCmt = round2(nonNegativeDiff(issuedCmt, processCmt));
+  const slicingAmount = round3(parseFloat(side.amount) || parseFloat(side.issued_for_slicing?.amount) || 0);
+  const slicingExpenseAmount = round3(parseFloat(side.expense_amount) || parseFloat(side.issued_for_slicing?.expense_amount) || 0);
 
   const slicingBase = {
     slicing_side: sideCode,
     slicing_process_cmt: processCmt || '',
     slicing_balance_cmt: balanceCmt || '',
     slicing_rec_leaf: side.no_of_leaves || '',
+    slicing_amount: round3(slicingAmount) || '',
+    slicing_expense_amount: round3(slicingExpenseAmount) || '',
   };
 
   const dressingData = getDressingData(sideCode, dressingByCode);
@@ -542,7 +568,7 @@ function buildSlicingSideRows(
  */
 export const FlitchItemFurtherProcessReportExcel = catchAsync(
   async (req, res, next) => {
-    const { startDate, endDate, filter = {} } = req.body;
+    const { startDate, endDate, filter = {}, includeCostAndExpense } = req.body;
 
     if (!startDate || !endDate) {
       return next(new ApiError('Start date and end date are required', 400));
@@ -590,14 +616,16 @@ export const FlitchItemFurtherProcessReportExcel = catchAsync(
 
       const issuedForSlicingAgg = flitchIds.length
         ? await issued_for_slicing_model.aggregate([
-            { $match: { flitch_inventory_item_id: { $in: flitchIds } } },
-            {
-              $group: {
-                _id: '$flitch_inventory_item_id',
-                cmt: { $sum: '$cmt' },
-              },
+          { $match: { flitch_inventory_item_id: { $in: flitchIds } } },
+          {
+            $group: {
+              _id: '$flitch_inventory_item_id',
+              cmt: { $sum: '$cmt' },
+              amount: { $sum: '$amount' },
+              expense_amount: { $sum: '$expense_amount' },
             },
-          ])
+          },
+        ])
         : [];
 
       const issueForSlicingByFlitchId = new Map(
@@ -608,95 +636,138 @@ export const FlitchItemFurtherProcessReportExcel = catchAsync(
       // Link slicing rows via issue_for_slicing.flitch_inventory_item_id.
       const issueIdsForReportFlitches = flitchIds.length
         ? await issued_for_slicing_model.distinct('_id', {
-            flitch_inventory_item_id: { $in: flitchIds },
-          })
+          flitch_inventory_item_id: { $in: flitchIds },
+        })
         : [];
 
       // ── Step 2: Bulk-fetch all processing stage data ──────────────────────
       const slicingItems = issueIdsForReportFlitches.length
         ? await slicing_done_items_model.aggregate([
-            {
-              $lookup: {
-                from: 'slicing_done_other_details',
-                localField: 'slicing_done_other_details_id',
-                foreignField: '_id',
-                as: 'slicing_done_other_details',
+          {
+            $lookup: {
+              from: 'slicing_done_other_details',
+              localField: 'slicing_done_other_details_id',
+              foreignField: '_id',
+              as: 'slicing_done_other_details',
+            },
+          },
+          { $unwind: { path: '$slicing_done_other_details', preserveNullAndEmptyArrays: false } },
+          {
+            $match: {
+              'slicing_done_other_details.issue_for_slicing_id': {
+                $in: issueIdsForReportFlitches,
               },
             },
-            { $unwind: { path: '$slicing_done_other_details', preserveNullAndEmptyArrays: false } },
-            {
-              $match: {
-                'slicing_done_other_details.issue_for_slicing_id': {
-                  $in: issueIdsForReportFlitches,
+          },
+          {
+            $lookup: {
+              from: 'issued_for_slicings',
+              localField: 'slicing_done_other_details.issue_for_slicing_id',
+              foreignField: '_id',
+              as: 'issued_for_slicing',
+            },
+          },
+          { $unwind: { path: '$issued_for_slicing', preserveNullAndEmptyArrays: true } },
+          {
+            $lookup: {
+              from: 'issue_for_slicing_available',
+              localField: 'slicing_done_other_details.issue_for_slicing_id',
+              foreignField: 'issue_for_slicing_id',
+              as: 'issue_for_slicing_available_details',
+            },
+          },
+          {
+            $addFields: {
+              issue_for_slicing_available_details: {
+                $arrayElemAt: ['$issue_for_slicing_available_details', 0],
+              },
+            },
+          },
+          {
+            $lookup: {
+              from: 'slicing_done_items',
+              localField: 'slicing_done_other_details_id',
+              foreignField: 'slicing_done_other_details_id',
+              as: '_slicing_batch_siblings',
+            },
+          },
+          {
+            $addFields: {
+              item_cmt: {
+                $let: {
+                  vars: {
+                    raw: { $ifNull: ['$cmt', 0] },
+                    total: {
+                      $ifNull: ['$slicing_done_other_details.total_cmt', 0],
+                    },
+                    cnt: {
+                      $size: { $ifNull: ['$_slicing_batch_siblings', []] },
+                    },
+                  },
+                  in: {
+                    $cond: [
+                      { $gt: ['$$raw', 0] },
+                      '$$raw',
+                      {
+                        $cond: [
+                          {
+                            $and: [{ $gt: ['$$total', 0] }, { $gt: ['$$cnt', 0] }],
+                          },
+                          { $divide: ['$$total', '$$cnt'] },
+                          0,
+                        ],
+                      },
+                    ],
+                  },
                 },
               },
-            },
-            {
-              $lookup: {
-                from: 'issued_for_slicings',
-                localField: 'slicing_done_other_details.issue_for_slicing_id',
-                foreignField: '_id',
-                as: 'issued_for_slicing',
-              },
-            },
-            { $unwind: { path: '$issued_for_slicing', preserveNullAndEmptyArrays: true } },
-            {
-              $lookup: {
-                from: 'issue_for_slicing_available',
-                localField: 'slicing_done_other_details.issue_for_slicing_id',
-                foreignField: 'issue_for_slicing_id',
-                as: 'issue_for_slicing_available_details',
-              },
-            },
-            {
-              $addFields: {
-                issue_for_slicing_available_details: {
-                  $arrayElemAt: ['$issue_for_slicing_available_details', 0],
+              item_amount: {
+                $let: {
+                  vars: {
+                    total: { $ifNull: ['$slicing_done_other_details.total_amount', 0] },
+                    cnt: { $size: { $ifNull: ['$_slicing_batch_siblings', []] } },
+                  },
+                  in: {
+                    $cond: [
+                      { $and: [{ $gt: ['$$total', 0] }, { $gt: ['$$cnt', 0] }] },
+                      { $divide: ['$$total', '$$cnt'] },
+                      0,
+                    ],
+                  },
                 },
               },
-            },
-            {
-              $lookup: {
-                from: 'slicing_done_items',
-                localField: 'slicing_done_other_details_id',
-                foreignField: 'slicing_done_other_details_id',
-                as: '_slicing_batch_siblings',
-              },
-            },
-            {
-              $addFields: {
-                item_cmt: {
-                  $let: {
-                    vars: {
-                      raw: { $ifNull: ['$cmt', 0] },
-                      total: {
-                        $ifNull: ['$slicing_done_other_details.total_cmt', 0],
-                      },
-                      cnt: {
-                        $size: { $ifNull: ['$_slicing_batch_siblings', []] },
-                      },
+              item_expense_amount: {
+                $let: {
+                  vars: {
+                    raw: { $ifNull: ['$item_expense_amount', 0] },
+                    total: {
+                      $ifNull: ['$slicing_done_other_details.wastage_consumed_total_amount', 0],
                     },
-                    in: {
-                      $cond: [
-                        { $gt: ['$$raw', 0] },
-                        '$$raw',
-                        {
-                          $cond: [
-                            {
-                              $and: [{ $gt: ['$$total', 0] }, { $gt: ['$$cnt', 0] }],
-                            },
-                            { $divide: ['$$total', '$$cnt'] },
-                            0,
-                          ],
-                        },
-                      ],
+                    cnt: {
+                      $size: { $ifNull: ['$_slicing_batch_siblings', []] },
                     },
+                  },
+                  in: {
+                    $cond: [
+                      { $gt: ['$$raw', 0] },
+                      '$$raw',
+                      {
+                        $cond: [
+                          {
+                            $and: [{ $gt: ['$$total', 0] }, { $gt: ['$$cnt', 0] }],
+                          },
+                          { $divide: ['$$total', '$$cnt'] },
+                          0,
+                        ],
+                      },
+                    ],
                   },
                 },
               },
             },
-            { $project: { _slicing_batch_siblings: 0 } },
-          ])
+          },
+          { $project: { _slicing_batch_siblings: 0 } },
+        ])
         : [];
 
       const slicingItemsMerged = mergeSlicingItemsBySideCode(slicingItems);
@@ -708,18 +779,18 @@ export const FlitchItemFurtherProcessReportExcel = catchAsync(
       const [dressingItems, smokingItems, groupingItems] = await Promise.all([
         allLeafCodes.length
           ? dressing_done_items_model
-              .find({ log_no_code: { $in: allLeafCodes } })
-              .lean()
+            .find({ log_no_code: { $in: allLeafCodes } })
+            .lean()
           : [],
         allLeafCodes.length
           ? process_done_items_details_model
-              .find({ log_no_code: { $in: allLeafCodes } })
-              .lean()
+            .find({ log_no_code: { $in: allLeafCodes } })
+            .lean()
           : [],
         allLeafCodes.length
           ? grouping_done_items_details_model
-              .find({ log_no_code: { $in: allLeafCodes } })
-              .lean()
+            .find({ log_no_code: { $in: allLeafCodes } })
+            .lean()
           : [],
       ]);
 
@@ -727,18 +798,20 @@ export const FlitchItemFurtherProcessReportExcel = catchAsync(
       const groupingIssuedForAgg =
         groupingItemIds.length > 0
           ? await grouping_done_history_model.aggregate([
-              { $match: { grouping_done_item_id: { $in: groupingItemIds } } },
-              { $sort: { updatedAt: -1 } },
-              {
-                $group: {
-                  _id: '$grouping_done_item_id',
-                  issued_for: { $first: '$issued_for' },
-                  issue_status: { $first: '$issue_status' },
-                  order_id: { $first: '$order_id' },
-                  order_item_id: { $first: '$order_item_id' },
-                },
+            { $match: { grouping_done_item_id: { $in: groupingItemIds } } },
+            { $sort: { updatedAt: -1 } },
+            {
+              $group: {
+                _id: '$grouping_done_item_id',
+                issued_for: { $first: '$issued_for' },
+                issue_status: { $first: '$issue_status' },
+                order_id: { $first: '$order_id' },
+                order_item_id: { $first: '$order_item_id' },
+                amount: { $first: '$amount' },
+                expense_amount: { $first: '$expense_amount' },
               },
-            ])
+            },
+          ])
           : [];
       const groupingIssuedForByItemId = new Map(
         groupingIssuedForAgg.map((r) => [String(r._id), r.issued_for || ''])
@@ -759,27 +832,27 @@ export const FlitchItemFurtherProcessReportExcel = catchAsync(
       const [tappingRaw, pressingItems] = await Promise.all([
         groupNos.length
           ? tapping_done_items_details_model.aggregate([
-              { $match: { group_no: { $in: groupNos } } },
-              {
-                $lookup: {
-                  from: 'tapping_done_other_details',
-                  localField: 'tapping_done_other_details_id',
-                  foreignField: '_id',
-                  as: 'tapping_details',
-                },
+            { $match: { group_no: { $in: groupNos } } },
+            {
+              $lookup: {
+                from: 'tapping_done_other_details',
+                localField: 'tapping_done_other_details_id',
+                foreignField: '_id',
+                as: 'tapping_details',
               },
-              {
-                $unwind: {
-                  path: '$tapping_details',
-                  preserveNullAndEmptyArrays: true,
-                },
+            },
+            {
+              $unwind: {
+                path: '$tapping_details',
+                preserveNullAndEmptyArrays: true,
               },
-            ])
+            },
+          ])
           : [],
         groupNos.length
           ? pressing_done_details_model
-              .find({ group_no: { $in: groupNos } })
-              .lean()
+            .find({ group_no: { $in: groupNos } })
+            .lean()
           : [],
       ]);
 
@@ -787,18 +860,20 @@ export const FlitchItemFurtherProcessReportExcel = catchAsync(
       const tappingHistoryAgg =
         tappingItemIds.length > 0
           ? await tapping_done_history_model.aggregate([
-              { $match: { tapping_done_item_id: { $in: tappingItemIds } } },
-              { $sort: { updatedAt: -1 } },
-              {
-                $group: {
-                  _id: '$tapping_done_item_id',
-                  issue_status: { $first: '$issue_status' },
-                  issued_for: { $first: '$issued_for' },
-                  order_id: { $first: '$order_id' },
-                  order_item_id: { $first: '$order_item_id' },
-                },
+            { $match: { tapping_done_item_id: { $in: tappingItemIds } } },
+            { $sort: { updatedAt: -1 } },
+            {
+              $group: {
+                _id: '$tapping_done_item_id',
+                issue_status: { $first: '$issue_status' },
+                issued_for: { $first: '$issued_for' },
+                order_id: { $first: '$order_id' },
+                order_item_id: { $first: '$order_item_id' },
+                amount: { $first: '$amount' },
+                expense_amount: { $first: '$expense_amount' },
               },
-            ])
+            },
+          ])
           : [];
       const tappingIssueStatusByItemId = new Map(
         tappingHistoryAgg.map((r) => [
@@ -821,18 +896,20 @@ export const FlitchItemFurtherProcessReportExcel = catchAsync(
       const pressingHistoryAgg =
         pressingDetailIds.length > 0
           ? await pressing_done_history_model.aggregate([
-              { $match: { issued_item_id: { $in: pressingDetailIds } } },
-              { $sort: { updatedAt: -1 } },
-              {
-                $group: {
-                  _id: '$issued_item_id',
-                  issue_status: { $first: '$issue_status' },
-                  issued_for: { $first: '$issued_for' },
-                  order_id: { $first: '$order_id' },
-                  order_item_id: { $first: '$order_item_id' },
-                },
+            { $match: { issued_item_id: { $in: pressingDetailIds } } },
+            { $sort: { updatedAt: -1 } },
+            {
+              $group: {
+                _id: '$issued_item_id',
+                issue_status: { $first: '$issue_status' },
+                issued_for: { $first: '$issued_for' },
+                order_id: { $first: '$order_id' },
+                order_item_id: { $first: '$order_item_id' },
+                amount: { $first: '$amount' },
+                expense_amount: { $first: '$expense_amount' },
               },
-            ])
+            },
+          ])
           : [];
       const pressingIssueStatusByItemId = new Map(
         pressingHistoryAgg.map((r) => [
@@ -854,19 +931,19 @@ export const FlitchItemFurtherProcessReportExcel = catchAsync(
       // Total pressing IDs for downstream lookups
       const pressingIds = pressingItems.map((p) => p._id).filter(Boolean);
       const pressingIdStrings = pressingIds.map(id => String(id));
-      
+
       // Fetch Production items (CNC/Color done) AND Packing items (terminal stage)
       // We search by both ObjectId and String to handle mixed data types in the DB
       const [cncDoneItems, colorDoneItems, packingItemsRes] = await Promise.all([
         pressingIds.length ? cnc_done_details_model.find({ pressing_details_id: { $in: [...pressingIds, ...pressingIdStrings] } }).lean() : [],
         pressingIds.length ? color_done_details_model.find({ pressing_details_id: { $in: [...pressingIds, ...pressingIdStrings] } }).lean() : [],
-        (pressingIds.length || groupNos.length) 
-          ? finished_ready_for_packing_model.find({ 
-              $or: [
-                { pressing_details_id: { $in: [...pressingIds, ...pressingIdStrings] } },
-                { group_no: { $in: groupNos } }
-              ]
-            }).lean() 
+        (pressingIds.length || groupNos.length)
+          ? finished_ready_for_packing_model.find({
+            $or: [
+              { pressing_details_id: { $in: [...pressingIds, ...pressingIdStrings] } },
+              { group_no: { $in: groupNos } }
+            ]
+          }).lean()
           : [],
       ]);
 
@@ -892,17 +969,18 @@ export const FlitchItemFurtherProcessReportExcel = catchAsync(
       // unlike history models which can retain stale order_id values.
       const packingOrderRows = pressingIds.length
         ? await finished_ready_for_packing_model
-            .find(
-              { pressing_details_id: { $in: pressingIds }, order_id: { $ne: null } },
-              {
-                pressing_details_id: 1,
-                issued_from_id: 1,
-                issued_from: 1,
-                order_id: 1,
-                order_item_id: 1,
-              }
-            )
-            .lean()
+          .find(
+            { pressing_details_id: { $in: pressingIds }, order_id: { $ne: null } },
+            {
+              pressing_details_id: 1,
+              issued_from_id: 1,
+              issued_from: 1,
+              order_id: 1,
+              order_item_id: 1,
+              amount: 1,
+            }
+          )
+          .lean()
         : [];
 
       // Manual overrides for pressing-specific order data (if any)
@@ -942,7 +1020,7 @@ export const FlitchItemFurtherProcessReportExcel = catchAsync(
             { 'item_details.log_no': { $in: allLogNoCodes } },
             { 'item_details.log_no_code': { $in: allLogNoCodes } },
             { 'item_details.group_no': { $in: [...allLogNoCodes, ...groupNoRegex] } },
-            { 'item_details.finished_no': { $in: allLogNoCodes } }, 
+            { 'item_details.finished_no': { $in: allLogNoCodes } },
             { 'item_details.issued_from_id': { $in: allStageItemIds } },
             { 'item_details.pressing_details_id': { $in: allStageItemIds } },
             { 'item_details.issued_item_id': { $in: allStageItemIds } },
@@ -954,8 +1032,8 @@ export const FlitchItemFurtherProcessReportExcel = catchAsync(
 
       // Build maps: Unique Identifier → CMT/SQM
       const salesCmtByCode = new Map();
-      const orderRefsByCode = new Map(); 
-      
+      const orderRefsByCode = new Map();
+
       for (const oi of orderIssuedItems) {
         const det = oi.item_details;
         if (!det) continue;
@@ -1006,9 +1084,9 @@ export const FlitchItemFurtherProcessReportExcel = catchAsync(
       ];
       const orderDocs = allOrderIds.length
         ? await OrderModel.find(
-            { _id: { $in: allOrderIds } },
-            { order_no: 1, orderDate: 1, owner_name: 1 }
-          ).lean()
+          { _id: { $in: allOrderIds } },
+          { order_no: 1, orderDate: 1, owner_name: 1 }
+        ).lean()
         : [];
       const orderById = new Map(orderDocs.map((o) => [String(o._id), o]));
 
@@ -1098,7 +1176,7 @@ export const FlitchItemFurtherProcessReportExcel = catchAsync(
         const flitchKey = (flitch.log_no_code || flitch.log_no || '').trim().toUpperCase();
         const directOrderCmt = salesCmtByCode.get(flitchKey) || 0;
         const directOrderRef = orderRefsByCode.get(flitchKey);
-        
+
         const issueForTotal = round3(slicingCmt + directOrderCmt) || '';
 
         const flitchBase = {
@@ -1138,7 +1216,7 @@ export const FlitchItemFurtherProcessReportExcel = catchAsync(
         if (!rows.length) {
           const directOrderItem = directOrderRef?.order_item_id ? orderItemById.get(String(directOrderRef.order_item_id)) : null;
           const directSalesVal = directOrderCmt > 0 ? round3(directOrderCmt) : formatOrderItemVolumeOnly(directOrderItem);
-          
+
           rows.push({
             ...flitchBase,
             ...emptySlicing(),
@@ -1162,7 +1240,8 @@ export const FlitchItemFurtherProcessReportExcel = catchAsync(
         allRows,
         startDate,
         endDate,
-        filter
+        filter,
+        includeCostAndExpense
       );
 
       return res.json(

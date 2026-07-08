@@ -229,6 +229,8 @@ decorative_order_item_details_schema.index({ photo_number: 1 });
 decorative_order_item_details_schema.index({ group_number: 1 });
 decorative_order_item_details_schema.index({ base_type: 1 });
 decorative_order_item_details_schema.index({ base_sub_category_name: 1 });
+decorative_order_item_details_schema.index({ photo_number_id: 1, item_status: 1 });
+decorative_order_item_details_schema.index({ different_group_photo_number_id: 1, item_status: 1 });
 
 export const decorative_order_item_details_model = mongoose.model(
   'decorative_order_item_details',

@@ -14,7 +14,7 @@ import { OtherItemSummaryReportExcel } from '../../../config/downloadExcel/repor
  * Calculates Opening, Purchase, Issue, Sales, Damage, and Closing (Qty & Value)
  */
 export const OtherItemReportExcel = catchAsync(async (req, res, next) => {
-    const { startDate, endDate } = req.body;
+    const { startDate, endDate, includeCostAndExpense } = req.body;
 
     if (!startDate || !endDate) {
         return next(new ApiError('Start date and end date are required', StatusCodes.BAD_REQUEST));
@@ -46,9 +46,9 @@ export const OtherItemReportExcel = catchAsync(async (req, res, next) => {
             },
             { $unwind: '$invoice' },
             { $match: { 'invoice.inward_date': { $gte: start, $lte: end } } },
-            { $group: { _id: '$item_name', qty: { $sum: '$total_quantity' } } }
+            { $group: { _id: '$item_name', qty: { $sum: '$total_quantity' }, amount: { $sum: '$amount' }, expense_amount: { $sum: '$expense_amount' } } }
         ]);
-        const purchaseMap = new Map(purchasesRaw.map(p => [p._id, p.qty]));
+        const purchaseMap = new Map(purchasesRaw.map(p => [p._id, { qty: p.qty, amount: p.amount, expense_amount: p.expense_amount }]));
 
         // --- ISSUES Map ---
         const issuesRaw = await other_goods_history_model.aggregate([
@@ -67,9 +67,9 @@ export const OtherItemReportExcel = catchAsync(async (req, res, next) => {
                     createdAt: { $gte: start, $lte: end }
                 }
             },
-            { $group: { _id: '$item.item_name', qty: { $sum: '$issued_quantity' } } }
+            { $group: { _id: '$item.item_name', qty: { $sum: '$issued_quantity' }, issued_amount: { $sum: '$issued_amount' } } }
         ]);
-        const issueMap = new Map(issuesRaw.map(i => [i._id, i.qty]));
+        const issueMap = new Map(issuesRaw.map(i => [i._id, { qty: i.qty, issued_amount: i.issued_amount }]));
 
         // --- SALES Map (Dispatch) ---
         const salesRaw = await dispatchItemsModel.aggregate([
@@ -105,9 +105,9 @@ export const OtherItemReportExcel = catchAsync(async (req, res, next) => {
             },
             { $unwind: '$invoice' },
             { $match: { 'invoice.inward_date': { $lt: start } } },
-            { $group: { _id: '$item_name', qty: { $sum: '$total_quantity' } } }
+            { $group: { _id: '$item_name', qty: { $sum: '$total_quantity' }, amount: { $sum: '$amount' }, expense_amount: { $sum: '$expense_amount' } } }
         ]);
-        const inBeforeMap = new Map(inBeforeRaw.map(i => [i._id, i.qty]));
+        const inBeforeMap = new Map(inBeforeRaw.map(i => [i._id, { qty: i.qty, amount: i.amount, expense_amount: i.expense_amount }]));
 
         const issuedBeforeRaw = await other_goods_history_model.aggregate([
             {
@@ -125,9 +125,9 @@ export const OtherItemReportExcel = catchAsync(async (req, res, next) => {
                     createdAt: { $lt: start }
                 }
             },
-            { $group: { _id: '$item.item_name', qty: { $sum: '$issued_quantity' } } }
+            { $group: { _id: '$item.item_name', qty: { $sum: '$issued_quantity' }, issued_amount: { $sum: '$issued_amount' } } }
         ]);
-        const issuedBeforeMap = new Map(issuedBeforeRaw.map(i => [i._id, i.qty]));
+        const issuedBeforeMap = new Map(issuedBeforeRaw.map(i => [i._id, { qty: i.qty, issued_amount: i.issued_amount }]));
 
         const dispatchedBeforeRaw = await dispatchItemsModel.aggregate([
             { $match: { createdAt: { $lt: start } } },
@@ -151,16 +151,68 @@ export const OtherItemReportExcel = catchAsync(async (req, res, next) => {
 
         // 3. Construct Final Data
         const reportData = items.map(itemName => {
-            const openingIn = inBeforeMap.get(itemName) || 0;
-            const openingOut = (issuedBeforeMap.get(itemName) || 0) + (dispatchedBeforeMap.get(itemName) || 0);
-            const openingQty = Math.max(0, openingIn - openingOut);
+            const openingIn = inBeforeMap.get(itemName) || {
+                qty: 0,
+                amount: 0,
+                expense_amount: 0,
+            };
 
-            const purchaseQty = purchaseMap.get(itemName) || 0;
-            const issueQty = issueMap.get(itemName) || 0;
+            const issuedBefore = issuedBeforeMap.get(itemName) || {
+                qty: 0,
+                issued_amount: 0,
+            };
+
+            const dispatchedBefore = dispatchedBeforeMap.get(itemName) || 0;
+
+            const purchase = purchaseMap.get(itemName) || {
+                qty: 0,
+                amount: 0,
+                expense_amount: 0,
+            };
+
+            const issue = issueMap.get(itemName) || {
+                qty: 0,
+                issued_amount: 0,
+            };
+
             const salesQty = salesMap.get(itemName) || 0;
+
+            const openingQty = Math.max(
+                0,
+                openingIn.qty - issuedBefore.qty - dispatchedBefore
+            );
+
+            const purchaseQty = purchase.qty;
+            const issueQty = issue.qty;
             const damageQty = 0;
 
-            const closingQty = openingQty + purchaseQty - (issueQty + salesQty + damageQty);
+            const closingQty = Math.max(
+                0,
+                openingQty +
+                purchaseQty -
+                issueQty -
+                salesQty -
+                damageQty
+            );
+
+            const openingAmount = Math.max(
+                0,
+                openingIn.amount - issuedBefore.issued_amount
+            );
+
+            const purchaseAmount = purchase.amount;
+            const issueAmount = issue.issued_amount;
+            const salesAmount = 0;
+            const damageAmount = 0;
+
+            const closingAmount = Math.max(
+                0,
+                openingAmount +
+                purchaseAmount -
+                issueAmount -
+                salesAmount -
+                damageAmount
+            );
 
             return {
                 item_name: itemName,
@@ -169,7 +221,13 @@ export const OtherItemReportExcel = catchAsync(async (req, res, next) => {
                 issue_qty: issueQty,
                 sales_qty: salesQty,
                 damage_qty: damageQty,
-                closing_qty: Math.max(0, closingQty)
+                closing_qty: Math.max(0, closingQty),
+                opening_amount: openingAmount,
+                purchase_amount: purchaseAmount,
+                issue_amount: issueAmount,
+                sales_amount: salesAmount,
+                damage_amount: damageAmount,
+                closing_amount: Math.max(0, closingAmount)
             };
         });
 
@@ -178,7 +236,11 @@ export const OtherItemReportExcel = catchAsync(async (req, res, next) => {
             item.opening_qty > 0 ||
             item.purchase_qty > 0 ||
             item.issue_qty > 0 ||
-            item.sales_qty > 0
+            item.sales_qty > 0 ||
+            item.opening_amount > 0 ||
+            item.purchase_amount > 0 ||
+            item.issue_amount > 0 ||
+            item.sales_amount > 0
         );
 
         if (filteredReportData.length === 0) {
@@ -188,7 +250,7 @@ export const OtherItemReportExcel = catchAsync(async (req, res, next) => {
         }
 
         // Generate Excel
-        const excelLink = await OtherItemSummaryReportExcel(filteredReportData, startDate, endDate);
+        const excelLink = await OtherItemSummaryReportExcel(filteredReportData, startDate, endDate, includeCostAndExpense);
 
         return res.status(StatusCodes.OK).json(
             new ApiResponse(StatusCodes.OK, 'Other Item Summary Report generated successfully', excelLink)

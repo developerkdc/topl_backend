@@ -40,10 +40,12 @@ const computeVeneerSummary = (rows) => {
   rows.forEach((r) => {
     const key = r.item_name ?? 'UNKNOWN';
     if (!byItem[key]) {
-      byItem[key] = { item_name: key, leaves: 0, sqm: 0 };
+      byItem[key] = { item_name: key, leaves: 0, sqm: 0, amount: 0, expense_amount: 0 };
     }
     byItem[key].leaves += Number(r.no_of_leaves) || 0;
     byItem[key].sqm += Number(r.sqm) || 0;
+    byItem[key].amount += Number(r.amount) || 0;
+    byItem[key].expense_amount += Number(r.expense_amount) || 0;
   });
   return Object.values(byItem).sort((a, b) =>
     (a.item_name || '').localeCompare(b.item_name || '')
@@ -66,11 +68,15 @@ const computeLogSummary = (rows) => {
         cmt: 0,
         leaves: 0,
         sqm: 0,
+        amount: 0,
+        expense_amount: 0,
       };
     }
     byLog[key].cmt += Number(r.volume) || 0;
     byLog[key].leaves += Number(r.no_of_leaves) || 0;
     byLog[key].sqm += Number(r.sqm) || 0;
+    byLog[key].amount += Number(r.amount) || 0;
+    byLog[key].expense_amount += Number(r.expense_amount) || 0;
   });
   return Object.values(byLog).sort((a, b) => {
     const c = (a.log_no_code || '').localeCompare(b.log_no_code || '');
@@ -86,7 +92,7 @@ const computeLogSummary = (rows) => {
  * - Veneer Summary: ITEM NAME, LEAVE, SQ. MTR (grouped by item) + Total
  * - Log Summary: LOG NO, ITEM NAME, CMT, LEAVES, SQ. MTR (grouped by log+item) + Total
  */
-const GenerateDressingDailyReport = async (rows, reportDate) => {
+const GenerateDressingDailyReport = async (rows, reportDate, includeCostAndExpense) => {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Dressing Details Report');
 
@@ -107,6 +113,7 @@ const GenerateDressingDailyReport = async (rows, reportDate) => {
     'Pattern',
     'Series',
     'Remarks',
+    ...(includeCostAndExpense ? ['Amount', 'Expense Amount'] : []),
   ];
   const numDetailCols = detailsHeaders.length;
 
@@ -135,6 +142,8 @@ const GenerateDressingDailyReport = async (rows, reportDate) => {
 
   let totalLeaves = 0;
   let totalSqm = 0;
+  let totalAmount = 0;
+  let totalExpenseAmount = 0;
 
   // All data rows (no per-session blocks, no duplicate columns)
   rows.forEach((r) => {
@@ -151,6 +160,10 @@ const GenerateDressingDailyReport = async (rows, reportDate) => {
     row.getCell(10).value = r.pattern_name ?? '';
     row.getCell(11).value = r.series_name ?? '';
     row.getCell(12).value = r.remark ?? '';
+    if (includeCostAndExpense) {
+      row.getCell(13).value = r.amount ?? '';
+      row.getCell(14).value = r.expense_amount ?? '';
+    }
 
     [4, 5, 6, 8].forEach((col) => {
       const c = row.getCell(col);
@@ -159,6 +172,10 @@ const GenerateDressingDailyReport = async (rows, reportDate) => {
 
     totalLeaves += Number(r.no_of_leaves) || 0;
     totalSqm += Number(r.sqm) || 0;
+    if (includeCostAndExpense) {
+      totalAmount += Number(r.amount) || 0;
+      totalExpenseAmount += Number(r.expense_amount) || 0;
+    }
     currentRow++;
   });
 
@@ -171,14 +188,22 @@ const GenerateDressingDailyReport = async (rows, reportDate) => {
   totalRow.getCell(8).value = totalSqm;
   totalRow.getCell(8).font = { bold: true };
   totalRow.getCell(8).numFmt = '0.00';
+  if (includeCostAndExpense) {
+    totalRow.getCell(13).value = totalAmount;
+    totalRow.getCell(13).font = { bold: true };
+    totalRow.getCell(13).numFmt = '0.00';
+    totalRow.getCell(14).value = totalExpenseAmount;
+    totalRow.getCell(14).font = { bold: true };
+    totalRow.getCell(14).numFmt = '0.00';
+  }
   setCellStyle(totalRow.getCell(1), true);
   for (let col = 2; col <= numDetailCols; col++) {
-    setCellStyle(totalRow.getCell(col), col === 7 || col === 8);
+    setCellStyle(totalRow.getCell(col), col === 7 || col === 8 || (includeCostAndExpense && (col === 13 || col === 14)));
   }
   currentRow += 2;
 
   // Veneer Summary section
-  const veneerHeaders = ['ITEM NAME', 'LEAVE', 'SQ. MTR'];
+  const veneerHeaders = ['ITEM NAME', 'LEAVE', 'SQ. MTR', ...(includeCostAndExpense ? ['Amount', 'Expense Amount'] : [])];
   const veneerTitleCell = worksheet.getCell(currentRow, 1);
   veneerTitleCell.value = 'VENEER SUMMARY';
   veneerTitleCell.font = { bold: true, size: 11 };
@@ -197,15 +222,27 @@ const GenerateDressingDailyReport = async (rows, reportDate) => {
 
   let veneerTotalLeaves = 0;
   let veneerTotalSqm = 0;
+  let veneerTotalAmount = 0;
+  let veneerTotalExpenseAmount = 0;
   veneerSummary.forEach((v) => {
     const row = worksheet.getRow(currentRow);
     row.getCell(1).value = v.item_name ?? '';
     row.getCell(2).value = v.leaves;
     row.getCell(3).value = v.sqm;
     row.getCell(3).numFmt = '0.00';
+    if (includeCostAndExpense) {
+      row.getCell(4).value = v.amount ?? '';
+      row.getCell(4).numFmt = '0.00';
+      row.getCell(5).value = v.expense_amount ?? '';
+      row.getCell(5).numFmt = '0.00';
+    }
     [1, 2, 3].forEach((col) => setCellStyle(row.getCell(col)));
     veneerTotalLeaves += v.leaves;
     veneerTotalSqm += v.sqm;
+    if (includeCostAndExpense) {
+      veneerTotalAmount += v.amount ?? 0;
+      veneerTotalExpenseAmount += v.expense_amount ?? 0;
+    }
     currentRow++;
   });
 
@@ -217,11 +254,19 @@ const GenerateDressingDailyReport = async (rows, reportDate) => {
   veneerTotalRow.getCell(3).value = veneerTotalSqm;
   veneerTotalRow.getCell(3).font = { bold: true };
   veneerTotalRow.getCell(3).numFmt = '0.00';
+  if (includeCostAndExpense) {
+    veneerTotalRow.getCell(4).value = veneerTotalAmount;
+    veneerTotalRow.getCell(4).font = { bold: true };
+    veneerTotalRow.getCell(4).numFmt = '0.00';
+    veneerTotalRow.getCell(5).value = veneerTotalExpenseAmount;
+    veneerTotalRow.getCell(5).font = { bold: true };
+    veneerTotalRow.getCell(5).numFmt = '0.00';
+  }
   [1, 2, 3].forEach((col) => setCellStyle(veneerTotalRow.getCell(col), col > 1));
   currentRow += 2;
 
   // Log Summary section
-  const logHeaders = ['LOG NO', 'ITEM NAME', 'CMT', 'LEAVES', 'SQ. MTR'];
+  const logHeaders = ['LOG NO', 'ITEM NAME', 'CMT', 'LEAVES', 'SQ. MTR', ...(includeCostAndExpense ? ['Amount', 'Expense Amount'] : [])];
   const logTitleCell = worksheet.getCell(currentRow, 1);
   logTitleCell.value = 'LOG SUMMARY';
   logTitleCell.font = { bold: true, size: 11 };
@@ -241,6 +286,9 @@ const GenerateDressingDailyReport = async (rows, reportDate) => {
   let logTotalCmt = 0;
   let logTotalLeaves = 0;
   let logTotalSqm = 0;
+  let logTotalAmount = 0;
+  let logTotalExpenseAmount = 0;
+
   logSummary.forEach((l) => {
     const row = worksheet.getRow(currentRow);
     row.getCell(1).value = l.log_no_code ?? '';
@@ -250,10 +298,20 @@ const GenerateDressingDailyReport = async (rows, reportDate) => {
     row.getCell(4).value = l.leaves;
     row.getCell(5).value = l.sqm;
     row.getCell(5).numFmt = '0.00';
+    if (includeCostAndExpense) {
+      row.getCell(6).value = l.amount ?? '';
+      row.getCell(6).numFmt = '0.00';
+      row.getCell(7).value = l.expense_amount ?? '';
+      row.getCell(7).numFmt = '0.00';
+    }
     [1, 2, 3, 4, 5].forEach((col) => setCellStyle(row.getCell(col)));
     logTotalCmt += l.cmt;
     logTotalLeaves += l.leaves;
     logTotalSqm += l.sqm;
+    if (includeCostAndExpense) {
+      logTotalAmount += l.amount ?? 0;
+      logTotalExpenseAmount += l.expense_amount ?? 0;
+    }
     currentRow++;
   });
 
@@ -269,6 +327,14 @@ const GenerateDressingDailyReport = async (rows, reportDate) => {
   logTotalRow.getCell(5).value = logTotalSqm;
   logTotalRow.getCell(5).font = { bold: true };
   logTotalRow.getCell(5).numFmt = '0.00';
+  if (includeCostAndExpense) {
+    logTotalRow.getCell(6).value = logTotalAmount;
+    logTotalRow.getCell(6).font = { bold: true };
+    logTotalRow.getCell(6).numFmt = '0.00';
+    logTotalRow.getCell(7).value = logTotalExpenseAmount;
+    logTotalRow.getCell(7).font = { bold: true };
+    logTotalRow.getCell(7).numFmt = '0.00';
+  }
   [1, 2, 3, 4, 5].forEach((col) => setCellStyle(logTotalRow.getCell(col), col > 2));
   currentRow++;
 
@@ -285,6 +351,7 @@ const GenerateDressingDailyReport = async (rows, reportDate) => {
     { width: 12 },
     { width: 12 },
     { width: 16 },
+    ...(includeCostAndExpense ? [{ width: 12 }, { width: 12 }] : []),
   ];
 
   const timestamp = new Date().getTime();

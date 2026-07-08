@@ -1122,6 +1122,7 @@ export const add_crosscut_issue_for_flitching = catchAsync(
   async (req, res, next) => {
     const crosscut_id = req.params?.crosscut_id;
     if (!crosscut_id) return next(new ApiError('crosscut id is required', 400));
+    const { issued_date } = req.body;
     const created_by = req.userDetails.id; //extract userid from req.userDetails
 
     const crosscut_done_details = await crosscutting_done_model.findOne({
@@ -1136,6 +1137,7 @@ export const add_crosscut_issue_for_flitching = catchAsync(
         {
           $set: {
             issue_status: issues_for_status.flitching,
+            issued_date: issued_date,
           },
         }
       );
@@ -1179,6 +1181,7 @@ export const add_crosscut_issue_for_flitching = catchAsync(
       remark: crosscut_done_details?.remarks,
       invoice_id: log_details?.invoice_id,
       created_by: created_by,
+      issued_date: issued_date,
       color: {
         color_id: crosscut_done_details?.color?.color_id,
         color_name: crosscut_done_details?.color?.color_name,
@@ -1196,6 +1199,7 @@ export const add_crosscut_issue_for_flitching = catchAsync(
       {
         $set: {
           isEditable: false,
+          issued_date: issued_date,
         },
       }
     );

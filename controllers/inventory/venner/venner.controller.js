@@ -114,7 +114,7 @@ export const add_veneer_inventory = catchAsync(async (req, res, next) => {
   try {
     const { inventory_invoice_details, inventory_items_details } = req.body;
 
-     const convertEmptyToNull = (obj) => {
+    const convertEmptyToNull = (obj) => {
       for (let key in obj) {
         if (obj[key] === "") obj[key] = null;
         if (typeof obj[key] === "object" && obj[key] !== null) {
@@ -471,6 +471,18 @@ export const inward_sr_no_dropdown = catchAsync(async (req, res, next) => {
     status: 'success',
     data: item_sr_no,
     message: 'Inward Sr No Dropdown fetched successfully',
+  });
+});
+
+export const log_code_dropdown = catchAsync(async (req, res, next) => {
+  const { history } = req.query;
+  const filter = history === 'true' ? {} : { issue_status: null };
+  const log_code = await veneer_inventory_items_model.distinct('log_code', filter);
+  return res.status(200).json({
+    statusCode: 200,
+    status: 'success',
+    data: log_code,
+    message: 'Log Code Dropdown fetched successfully',
   });
 });
 

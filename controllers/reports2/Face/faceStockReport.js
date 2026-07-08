@@ -16,7 +16,7 @@ import { GenerateFaceStockReportExcel } from '../../../config/downloadExcel/repo
  * @access Private
  */
 export const FaceStockReportExcel = catchAsync(async (req, res, next) => {
-  const { startDate, endDate, filter = {} } = req.body;
+  const { startDate, endDate, filter = {}, includeCostAndExpense } = req.body;
 
   if (!startDate || !endDate) {
     return next(new ApiError('Start date and end date are required', 400));
@@ -68,6 +68,8 @@ export const FaceStockReportExcel = catchAsync(async (req, res, next) => {
           _id: {
             item_name: '$item_name',
             thickness: '$thickness',
+            amount: '$amount',
+            expense_amount: '$expense_amount',
           },
         },
       },
@@ -100,6 +102,8 @@ export const FaceStockReportExcel = catchAsync(async (req, res, next) => {
             $group: {
               _id: null,
               total_sqm: { $sum: '$available_sqm' },
+              total_amount: { $sum: '$amount' },
+              total_expense_amount: { $sum: '$expense_amount' },
             },
           },
         ]);
@@ -132,6 +136,8 @@ export const FaceStockReportExcel = catchAsync(async (req, res, next) => {
             $group: {
               _id: '$invoice.inward_date',
               total_sqm: { $sum: '$total_sq_meter' },
+              total_amount: { $sum: '$amount' },
+              total_expense_amount: { $sum: '$expense_amount' },
             },
           },
           { $sort: { _id: 1 } },
@@ -164,12 +170,14 @@ export const FaceStockReportExcel = catchAsync(async (req, res, next) => {
             $group: {
               _id: null,
               total_sqm: { $sum: '$issued_sqm' },
+              total_issued_amount: { $sum: '$issued_amount' },
             },
           },
         ]);
 
         const issuedSqmValue = issuedSqm[0]?.total_sqm || 0;
         const totalReceived = receivedByDate.reduce((sum, r) => sum + (r.total_sqm || 0), 0);
+        const issuedAmountValue = includeCostAndExpense ? (issuedSqm[0]?.total_issued_amount || 0) : 0;
         const openingBalance = Math.max(
           0,
           currentAvailableSqm + issuedSqmValue - totalReceived
@@ -182,6 +190,12 @@ export const FaceStockReportExcel = catchAsync(async (req, res, next) => {
           const receivedThisDate = rec.total_sqm || 0;
           const isLast = i === receivedByDate.length - 1;
           const issuedThisRow = isLast ? issuedSqmValue : 0;
+          const openingAmountVal = includeCostAndExpense ? (rec.total_amount || 0) : 0;
+          const openingExpenseAmountVal = includeCostAndExpense ? (rec.total_expense_amount || 0) : 0;
+          const receiveAmountVal = includeCostAndExpense ? (rec.total_amount || 0) : 0;
+          const receiveExpenseAmountVal = includeCostAndExpense ? (rec.total_expense_amount || 0) : 0;
+          const issuedAmountThisRow = includeCostAndExpense && isLast ? issuedAmountValue : 0;
+
           const closingBal = Math.max(
             0,
             runningOpen + receivedThisDate - issuedThisRow
@@ -194,6 +208,16 @@ export const FaceStockReportExcel = catchAsync(async (req, res, next) => {
             received_metres: receivedThisDate,
             issued_metres: issuedThisRow,
             closing_bal: closingBal,
+            opening_amount: openingAmountVal,
+            opening_expense_amount: openingExpenseAmountVal,
+            receive_amount: receiveAmountVal,
+            receive_expense_amount: receiveExpenseAmountVal,
+            closing_amount: includeCostAndExpense
+              ? Math.max(0, openingAmountVal + receiveAmountVal - issuedAmountThisRow)
+              : 0,
+            closing_expense_amount: includeCostAndExpense
+              ? Math.max(0, openingExpenseAmountVal + receiveExpenseAmountVal)
+              : 0,
           });
           runningOpen = closingBal;
         }
@@ -226,7 +250,8 @@ export const FaceStockReportExcel = catchAsync(async (req, res, next) => {
       activeStockData,
       startDate,
       endDate,
-      filter
+      filter,
+      includeCostAndExpense
     );
 
     return res
