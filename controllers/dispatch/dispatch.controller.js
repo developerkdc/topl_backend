@@ -28,7 +28,7 @@ import moment from 'moment';
 import axios from 'axios';
 import transporterModel from '../../database/schema/masters/transporter.schema.js';
 import vehicleModel from '../../database/schema/masters/vehicle.js';
-import { getStateCode, getStateCodeAsString } from '../../utils/stateCode.js';
+import { getEwayPincode, getEwayStateCode, getStateCode, getStateCodeAsString } from '../../utils/stateCode.js';
 import { EwayBillHeaderVariable } from '../../middlewares/ewaybillAuth.middleware.js';
 import errorCodeMapForEwayBill from './errorCodeMapForEwayBill.js';
 import approval_dispatch_model from '../../database/schema/dispatch/approval/approval.dispatch.schema.js';
@@ -3137,9 +3137,9 @@ export const generate_ewaybill = catchAsync(async (req, res, next) => {
         ? dispatch_from_address.address.slice(50)
         : '',
     fromPlace: dispatch_from_address?.city || '',
-    fromPincode: Number(dispatch_from_address?.pincode) || '',
-    fromStateCode: getStateCode(dispatch_from_address?.state),
-    actFromStateCode: getStateCode(dispatch_from_address?.state),
+    fromPincode: getEwayPincode(dispatch_from_address),
+    fromStateCode: getEwayStateCode(dispatch_from_address, "BILL"),
+    actFromStateCode: getEwayStateCode(dispatch_from_address, "BILL"),
 
     dispatchFromGSTIN: dispatch_from_address?.gst_number,
     dispatchFromTradeName: 'TURAKHIA OVERSEAS PVT. LTD.',
@@ -3156,9 +3156,9 @@ export const generate_ewaybill = catchAsync(async (req, res, next) => {
         ? ship_to_address.address.slice(50)
         : '',
     toPlace: ship_to_address?.city || '',
-    toPincode: Number(ship_to_address?.pincode) || '',
-    toStateCode: getStateCode(ship_to_address?.state),
-    actToStateCode: getStateCode(ship_to_address?.state),
+    toPincode: getEwayPincode(ship_to_address),
+    toStateCode: getEwayStateCode(ship_to_address, "SHIP"),
+    actToStateCode: getEwayStateCode(ship_to_address, "SHIP"),
 
     shipToGSTIN: dispatch_details?.customer_details?.gst_number || '',
     shipToTradeName: dispatch_details?.customer_details?.legal_name || '',
@@ -3505,9 +3505,9 @@ export const ewaybill_payload = catchAsync(async (req, res, next) => {
         ? dispatch_from_address.address.slice(50)
         : '',
     fromPlace: dispatch_from_address?.city || '',
-    fromPincode: Number(dispatch_from_address?.pincode) || '',
-    fromStateCode: getStateCode(dispatch_from_address?.state),
-    actFromStateCode: getStateCode(dispatch_from_address?.state),
+    fromPincode: getEwayPincode(dispatch_from_address),
+    fromStateCode: getEwayStateCode(dispatch_from_address, "BILL"),
+    actFromStateCode: getEwayStateCode(dispatch_from_address, "BILL"),
 
     dispatchFromGSTIN: dispatch_from_address?.gst_number,
     dispatchFromTradeName: 'TURAKHIA OVERSEAS PVT. LTD.',
@@ -3524,9 +3524,9 @@ export const ewaybill_payload = catchAsync(async (req, res, next) => {
         ? ship_to_address.address.slice(50)
         : '',
     toPlace: ship_to_address?.city || '',
-    toPincode: Number(ship_to_address?.pincode) || '',
-    toStateCode: getStateCode(ship_to_address?.state),
-    actToStateCode: getStateCode(ship_to_address?.state),
+    toPincode: getEwayPincode(ship_to_address),
+    toStateCode: getEwayStateCode(ship_to_address, "SHIP"),
+    actToStateCode: getEwayStateCode(ship_to_address, "SHIP"),
 
     shipToGSTIN: dispatch_details?.customer_details?.gst_number || '',
     shipToTradeName: dispatch_details?.customer_details?.legal_name || '',
