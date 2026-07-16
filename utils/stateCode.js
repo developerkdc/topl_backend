@@ -1,13 +1,13 @@
 const STATE_CODES = [
-  { code: 1,  name: "JAMMU AND KASHMIR" },
-  { code: 2,  name: "HIMACHAL PRADESH" },
-  { code: 3,  name: "PUNJAB" },
-  { code: 4,  name: "CHANDIGARH" },
-  { code: 5,  name: "UTTARAKHAND" },
-  { code: 6,  name: "HARYANA" },
-  { code: 7,  name: "DELHI" },
-  { code: 8,  name: "RAJASTHAN" },
-  { code: 9,  name: "UTTAR PRADESH" },
+  { code: 1, name: "JAMMU AND KASHMIR" },
+  { code: 2, name: "HIMACHAL PRADESH" },
+  { code: 3, name: "PUNJAB" },
+  { code: 4, name: "CHANDIGARH" },
+  { code: 5, name: "UTTARAKHAND" },
+  { code: 6, name: "HARYANA" },
+  { code: 7, name: "DELHI" },
+  { code: 8, name: "RAJASTHAN" },
+  { code: 9, name: "UTTAR PRADESH" },
   { code: 10, name: "BIHAR" },
   { code: 11, name: "SIKKIM" },
   { code: 12, name: "ARUNACHAL PRADESH" },
@@ -62,4 +62,29 @@ export const getStateCodeAsString = (stateName) => {
     return '29';
   }
   return String(code).padStart(2, '0');
+};
+
+export const isIndia = (country) => {
+  if (!country) return true;
+
+  return (
+    country.toLowerCase() === "india" ||
+    country.toLowerCase() === "ind"
+  );
+};
+
+export const getEwayStateCode = (address, type) => {
+  if (!isIndia(address?.country)) {
+    return type === "SHIP" ? 99 : 96;
+  }
+
+  return getStateCode(address?.state);
+};
+
+export const getEwayPincode = (address) => {
+  if (!isIndia(address?.country)) {
+    return 999999;
+  }
+
+  return Number(address?.pincode) || "";
 };

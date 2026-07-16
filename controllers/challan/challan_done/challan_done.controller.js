@@ -14,7 +14,7 @@ import {
 } from '../../../database/Utils/constants/constants.js';
 import transporterModel from '../../../database/schema/masters/transporter.schema.js';
 import moment from 'moment';
-import { getStateCode } from '../../../utils/stateCode.js';
+import { getEwayPincode, getEwayStateCode, getStateCode } from '../../../utils/stateCode.js';
 import { EwayBillHeaderVariable } from '../../../middlewares/ewaybillAuth.middleware.js';
 import errorCodeMapForEwayBill from '../../dispatch/errorCodeMapForEwayBill.js';
 import axios from 'axios';
@@ -882,9 +882,9 @@ export const eway_bill_payload = catchAsync(async (req, res, next) => {
         ? dispatch_from_address.address.slice(50)
         : '',
     fromPlace: dispatch_from_address?.city || '',
-    actFromStateCode: getStateCode(dispatch_from_address?.state),
-    fromPincode: Number(dispatch_from_address?.pincode) || '',
-    fromStateCode: getStateCode(dispatch_from_address?.state),
+    actFromStateCode: getEwayStateCode(dispatch_from_address, "BILL"),
+    fromPincode: getEwayPincode(dispatch_from_address),
+    fromStateCode: getEwayStateCode(dispatch_from_address, "BILL"),
 
     toGstin:
       bill_to_address?.gst_number ||
@@ -904,9 +904,9 @@ export const eway_bill_payload = catchAsync(async (req, res, next) => {
         ? ship_to_address.address.slice(50)
         : '',
     toPlace: ship_to_address?.city || '',
-    toPincode: Number(ship_to_address?.pincode) || '',
-    actToStateCode: getStateCode(ship_to_address?.state),
-    toStateCode: getStateCode(ship_to_address?.state),
+    toPincode: getEwayPincode(ship_to_address),
+    actToStateCode: getEwayStateCode(ship_to_address, "SHIP"),
+    toStateCode: getEwayStateCode(ship_to_address, "SHIP"),
 
     transactionType: transactionType,
 
@@ -983,7 +983,6 @@ export const eway_bill_payload = catchAsync(async (req, res, next) => {
       // cessRate: item?.cess_rate || 0,
     })),
   };
-
   return res.status(StatusCodes.OK).json({
     status: true,
     message: 'Ewaybill body fetched successfully',
@@ -1123,9 +1122,9 @@ export const generate_challan_ewaybill = catchAsync(async (req, res, next) => {
         ? dispatch_from_address.address.slice(50)
         : '',
     fromPlace: dispatch_from_address?.city || '',
-    actFromStateCode: getStateCode(dispatch_from_address?.state),
-    fromPincode: Number(dispatch_from_address?.pincode) || '',
-    fromStateCode: getStateCode(dispatch_from_address?.state),
+    actFromStateCode: getEwayStateCode(dispatch_from_address, "BILL"),
+    fromPincode: getEwayPincode(dispatch_from_address),
+    fromStateCode: getEwayStateCode(dispatch_from_address, "BILL"),
 
     toGstin:
       bill_to_address?.gst_number ||
@@ -1145,9 +1144,9 @@ export const generate_challan_ewaybill = catchAsync(async (req, res, next) => {
         ? ship_to_address.address.slice(50)
         : '',
     toPlace: ship_to_address?.city || '',
-    toPincode: Number(ship_to_address?.pincode) || '',
-    actToStateCode: getStateCode(ship_to_address?.state),
-    toStateCode: getStateCode(ship_to_address?.state),
+    toPincode: getEwayPincode(ship_to_address),
+    actToStateCode: getEwayStateCode(ship_to_address, "SHIP"),
+    toStateCode: getEwayStateCode(ship_to_address, "SHIP"),
 
     transactionType: transactionType,
 
