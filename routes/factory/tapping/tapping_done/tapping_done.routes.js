@@ -6,9 +6,9 @@ import {
   fetch_all_tapping_done_items,
   fetch_all_tapping_done_items_history,
   revert_tapping_done_details,
+  fetch_reserved_orders_for_item
 } from '../../../../controllers/factory/tapping/tapping_done/tapping_done.controller.js';
 import AuthMiddleware from '../../../../middlewares/verifyToken.js';
-
 const tapping_done_router = express.Router();
 
 tapping_done_router.post(
@@ -40,6 +40,11 @@ tapping_done_router.post(
   '/list-tapping-done-items-history',
   AuthMiddleware,
   fetch_all_tapping_done_items_history
+);
+
+tapping_done_router.get(
+  '/fetch-reserved-orders/:id',
+  fetch_reserved_orders_for_item
 );
 
 export default tapping_done_router;

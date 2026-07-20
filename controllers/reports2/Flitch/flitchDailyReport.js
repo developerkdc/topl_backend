@@ -8,8 +8,8 @@ export const FlitchDailyReportExcel = catchAsync(
     // Debug logging
     console.log('Flitch Daily Report - Request Body:', JSON.stringify(req.body, null, 2));
     console.log('Flitch Daily Report - Filters:', req.body?.filters);
-    
-    const { reportDate, ...data } = req?.body?.filters || {};
+
+    const { reportDate, includeCostAndExpense, ...data } = req?.body?.filters || {};
 
     // Validate reportDate
     if (!reportDate) {
@@ -85,17 +85,19 @@ export const FlitchDailyReportExcel = catchAsync(
     // ]);
 
     const flitchingData = await flitch_inventory_items_view_model.aggregate([
-       {
+      {
         $match: matchQuery,
       },
       {
         $sort: {
           item_name: 1,
           log_no: 1,
+          amount: 1,
+          expense_amount: 1,
         },
       },
     ]);
-  
+
     console.log('Flitch Daily Report - Records found:', flitchingData);
 
     // Check if data exists
@@ -110,6 +112,7 @@ export const FlitchDailyReportExcel = catchAsync(
     // Generate Excel report
     const excelLink = await GenerateFlitchDailyReport(
       flitchingData,
+      includeCostAndExpense,
       reportDate
     );
 

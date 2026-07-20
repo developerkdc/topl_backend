@@ -71,7 +71,7 @@ const resolveRowSales = (code, id, ctx) => {
   for (const g of relatedGroups) {
     const gn = String(g.group_no || '').trim().toUpperCase();
     const terminalItems = ctx.terminalByGroupNo.get(gn) || [];
-    
+
     for (const item of terminalItems) {
       // Use pressing_details_id as the uniqueness key to avoid counting the same piece twice (e.g. CNC + Packing)
       const pId = String(item.pressing_details_id || item.issued_from_id || item._id);
@@ -89,12 +89,12 @@ const resolveRowSales = (code, id, ctx) => {
 
     // Also check direct Group-level sales if this group hasn't reached a terminal stage
     if (!hasTerminal) {
-       const gid = String(g._id);
-       const gCmt = ctx.salesCmtByCode.get(gn) || ctx.salesCmtByCode.get(gid) || 0;
-       if (gCmt > 0) {
-         terminalSales += gCmt;
-         hasTerminal = true;
-       }
+      const gid = String(g._id);
+      const gCmt = ctx.salesCmtByCode.get(gn) || ctx.salesCmtByCode.get(gid) || 0;
+      if (gCmt > 0) {
+        terminalSales += gCmt;
+        hasTerminal = true;
+      }
     }
   }
 
@@ -149,7 +149,7 @@ const resolveGroupingSales = (groupItem, ctx, issueSqm) => {
   const directOrderRef = ctx.orderRefsByCode.get(gn) || ctx.orderRefsByCode.get(idKey);
 
   const finalOrderItem = directOrderRef?.order_item_id ? ctx.orderItemById.get(String(directOrderRef.order_item_id)) : null;
-  
+
   return (directOrderCmt > 0 || finalOrderItem)
     ? round3(issueSqm || directOrderCmt || (finalOrderItem ? formatOrderItemVolumeOnly(finalOrderItem) : 0))
     : '';
@@ -213,7 +213,7 @@ const formatOrderItemVolumeOnly = (item) => {
   if (unit.includes('SQM') || unit.includes('SQ.M') || unit.includes('SQUARE')) return sqm > 0 ? round3(sqm) : '';
   if (unit.includes('CBM') || unit.includes('CUBIC')) return cbm > 0 ? round3(cbm) : '';
   if (rawMat === 'LOG' || rawMat === 'FLITCH') return cbm > 0 ? round3(cbm) : (sqm > 0 ? round3(sqm) : '');
-  
+
   return cbm > 0 ? round3(cbm) : (sqm > 0 ? round3(sqm) : '');
 };
 
@@ -341,6 +341,9 @@ function buildGroupingData(groupItem, ctx) {
   const issueSheets = Math.max(0, recSheets - availSheets);
   const issueSqm = round3(Math.max(0, recSqm - availSqm));
 
+  const amount = groupItem.amount ?? 0;
+  const expenseAmount = groupItem.expense_amount ?? 0;
+
   const tappingItems = ctx.tappingByGroupNo.get(groupNo) || [];
   const machineItems = tappingItems.filter((t) => {
     const st = String(getVal(t, 'tapping_details.splicing_type') || t.splicing_type || '').toUpperCase();
@@ -350,13 +353,13 @@ function buildGroupingData(groupItem, ctx) {
     const st = String(getVal(t, 'tapping_details.splicing_type') || t.splicing_type || '').toUpperCase();
     return st.includes('HAND');
   });
-  
+
   const machineSqm = round3(sumField(machineItems, 'sqm'));
   const handSqm = round3(sumField(handItems, 'sqm'));
   const splicingSheets = sumField(tappingItems, 'no_of_sheets');
   const splicingAvailSheets = sumField(tappingItems, 'available_details.no_of_sheets');
   const splicingAvailSqm = round3(sumField(tappingItems, 'available_details.sqm'));
-  
+
   const splicingIssueSheets = Math.max(0, splicingSheets - splicingAvailSheets);
   const splicingIssueStatus = resolveSplicingIssueStatusFromHistory(tappingItems, ctx.tappingIssueStatusByItemId);
 
@@ -373,6 +376,13 @@ function buildGroupingData(groupItem, ctx) {
   const cncItems = pressingIds.flatMap((id) => ctx.cncByPressingId.get(id) || []);
   const colourItems = pressingIds.flatMap((id) => ctx.colourByPressingId.get(id) || []);
 
+  const cncAmount = cncItems.reduce((sum, c) => sum + (c.amount ?? 0), 0);
+  const cncExpenseAmount = cncItems.reduce((sum, c) => sum + (c.expense_amount ?? 0), 0);
+  const colourAmount = colourItems.reduce((sum, c) => sum + (c.amount ?? 0), 0);
+  const colourExpenseAmount = colourItems.reduce((sum, c) => sum + (c.expense_amount ?? 0), 0);
+  const slicingAmount = tappingItems.reduce((sum, t) => sum + (t.amount ?? 0), 0);
+  const slicingExpenseAmount = tappingItems.reduce((sum, t) => sum + (t.expense_amount ?? 0), 0);
+
   const salesVal = resolveGroupingSales(groupItem, ctx, issueSqm);
 
   return {
@@ -384,6 +394,8 @@ function buildGroupingData(groupItem, ctx) {
     grouping_issue_status: resolveGroupingIssueStatusFromHistory(groupItem, ctx.groupingIssuedForByItemId),
     grouping_balance_sheets: availSheets,
     grouping_balance_sqm: round3(availSqm),
+    grouping_amount: amount,
+    grouping_expense_amount: expenseAmount,
     splicing_rec_machine_sqm: round3(machineSqm),
     splicing_rec_hand_sqm: round3(handSqm),
     splicing_sheets: splicingSheets,
@@ -399,6 +411,12 @@ function buildGroupingData(groupItem, ctx) {
     pressing_issue_status: pressingIssueStatus,
     pressing_balance_sheets: pressingAvailSheets,
     pressing_balance_sqm: round3(pressingAvailSqm),
+    cnc_amount: cncAmount,
+    cnc_expense_amount: cncExpenseAmount,
+    colour_amount: colourAmount,
+    colour_expense_amount: colourExpenseAmount,
+    slicing_amount: slicingAmount,
+    slicing_expense_amount: slicingExpenseAmount,
     cnc_type: cncItems[0]?.product_type || '',
     cnc_rec_sheets: sumField(cncItems, 'no_of_sheets'),
     colour_rec_sheets: sumField(colourItems, 'no_of_sheets'),
@@ -413,6 +431,8 @@ function getDressingData(logNoCode, dressingByCode) {
     dress_rec_sqm: round3(sumField(items, 'sqm')),
     dress_issue_sqm: round3(sumField(items.filter((d) => d.issue_status), 'sqm')),
     dress_issue_status: items.find((d) => d.issue_status)?.issue_status || '',
+    dress_amount: items.reduce((sum, d) => sum + (d.amount ?? 0), 0),
+    dress_expense_amount: items.reduce((sum, d) => sum + (d.expense_amount ?? 0), 0),
   };
 }
 
@@ -423,6 +443,8 @@ function getSmokingData(logNoCode, smokingByCode) {
     smoking_process: items.map((s) => s.process_name).filter(Boolean)[0] || '',
     smoking_issue_sqm: round3(sumField(items, 'sqm')),
     smoking_issue_status: items.find((s) => s.issue_status)?.issue_status || '',
+    smoking_amount: items.reduce((sum, s) => sum + (s.amount ?? 0), 0),
+    smoking_expense_amount: items.reduce((sum, s) => sum + (s.expense_amount ?? 0), 0),
   };
 }
 
@@ -437,6 +459,8 @@ function buildSlicingSideRows(logBase, ccBase, flitchBase, side, ctx) {
     slicing_balance_leaf: getVal(side, 'available_details.no_of_leaves') ?? 0,
     slicing_balance_sqm: round3(getVal(side, 'available_details.sqm') ?? 0),
     sales_cmt_sqm: resolveRowSales(sideCode, side._id, ctx),
+    slicing_amount: side.amount ?? 0,
+    slicing_expense_amount: side.expense_amount ?? 0,
   };
 
   const dressingData = getDressingData(sideCode, ctx.dressingByCode);
@@ -481,6 +505,8 @@ function buildPeelingRow(logBase, ccBase, flitchBase, peel, ctx) {
     peeling_output: peel.output_type || '',
     peeling_rec_leaf: peel.no_of_leaves ?? 0,
     sales_cmt_sqm: resolveRowSales(peelingCode, peel._id, ctx),
+    peeling_amount: peel.amount ?? 0,
+    peeling_expense_amount: peel.expense_amount ?? 0,
   };
 
   const resolvedFlitch = flitchBase || emptyFlitch();
@@ -532,6 +558,8 @@ function buildFlitchRows(logBase, ccBase, flitch, ctx) {
     flitch_status: flitchStatusVal,
     sales_cmt_sqm: flitchSalesVal,
     challan_cmt_sqm: round3(flitchChallan),
+    fitch_amount: flitch.amount ?? 0,
+    fitch_expense_amount: flitch.expense_amount ?? 0,
   };
 
   // ID-BASED MAPPING for Slicing from Flitch
@@ -575,7 +603,7 @@ function buildFlitchRows(logBase, ccBase, flitch, ctx) {
  */
 export const LogItemFurtherProcessReportExcel = catchAsync(
   async (req, res, next) => {
-    const { startDate, endDate, filter = {} } = req.body;
+    const { startDate, endDate, filter = {}, includeCostAndExpense } = req.body;
 
     if (!startDate || !endDate) {
       return next(
@@ -638,9 +666,9 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
       // ── Step 2: Bulk-fetch Crosscuts and Flitches FIRST ──────────────────
       const [crosscuts, flitches] = await Promise.all([
         crosscutting_done_model.find({ log_no: logNoRegex, deleted_at: null }).lean(),
-        flitching_done_model.find({ 
-          log_inventory_item_id: { $in: logIds }, 
-          $or: [{ deleted_at: null }, { deleted_at: { $exists: false } }] 
+        flitching_done_model.find({
+          log_inventory_item_id: { $in: logIds },
+          $or: [{ deleted_at: null }, { deleted_at: { $exists: false } }]
         }).lean(),
       ]);
 
@@ -651,13 +679,13 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
       const [slicingItems, peelingItems] = await Promise.all([
         // STABLE ID ENRICHMENT FOR SLICING (Broad Match)
         issued_for_slicing_model.aggregate([
-          { 
-            $match: { 
+          {
+            $match: {
               $or: [
                 { log_inventory_item_id: { $in: logIds } },
                 { flitching_done_id: { $in: flitchIds } }
               ]
-            } 
+            }
           },
           { $lookup: { from: 'slicing_done_other_details', localField: '_id', foreignField: 'issue_for_slicing_id', as: 'od' } },
           { $unwind: { path: '$od', preserveNullAndEmptyArrays: true } },
@@ -665,17 +693,17 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
           { $unwind: { path: '$items', preserveNullAndEmptyArrays: true } },
           { $lookup: { from: 'issue_for_slicing_available', localField: '_id', foreignField: 'issue_for_slicing_id', as: 'bal' } },
           { $unwind: { path: '$bal', preserveNullAndEmptyArrays: true } },
-          { $project: { _id: { $ifNull: ['$items._id', '$_id'] }, log_no: { $ifNull: ['$items.log_no', '$log_no'] }, log_no_code: { $ifNull: ['$items.log_no_code', '$log_no_code'] }, thickness: { $ifNull: ['$items.thickness', 0] }, no_of_leaves: { $ifNull: ['$items.no_of_leaves', 0] }, available_details: '$items.available_details', grade_name: { $ifNull: ['$items.grade_name', ''] }, remark: { $ifNull: ['$items.remark', ''] }, slicing_cmt: { $ifNull: ['$od.total_cmt', 0] }, slicing_balance_cmt: '$bal.cmt', issue_type: '$type', issue_cmt: '$cmt', flitching_done_id: 1, log_inventory_item_id: 1 } }
+          { $project: { _id: { $ifNull: ['$items._id', '$_id'] }, log_no: { $ifNull: ['$items.log_no', '$log_no'] }, log_no_code: { $ifNull: ['$items.log_no_code', '$log_no_code'] }, thickness: { $ifNull: ['$items.thickness', 0] }, no_of_leaves: { $ifNull: ['$items.no_of_leaves', 0] }, available_details: '$items.available_details', grade_name: { $ifNull: ['$items.grade_name', ''] }, remark: { $ifNull: ['$items.remark', ''] }, slicing_cmt: { $ifNull: ['$od.total_cmt', 0] }, slicing_balance_cmt: '$bal.cmt', issue_type: '$type', issue_cmt: '$cmt', flitching_done_id: { $ifNull: ['$items.flitching_done_id', '$flitching_done_id'] }, log_inventory_item_id: 1 } }
         ]),
         // STABLE ID ENRICHMENT FOR PEELING (Broad Match)
         issues_for_peeling_model.aggregate([
-          { 
-            $match: { 
+          {
+            $match: {
               $or: [
                 { log_inventory_item_id: { $in: logIds } },
                 { crosscut_done_id: { $in: ccIds } }
               ]
-            } 
+            }
           },
           { $lookup: { from: 'peeling_done_other_details', localField: '_id', foreignField: 'issue_for_peeling_id', as: 'od' } },
           { $unwind: { path: '$od', preserveNullAndEmptyArrays: true } },
@@ -743,13 +771,13 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
       const [cncDoneItems, colorDoneItems, packingItemsRes] = await Promise.all([
         pressingDetailIds.length ? cnc_done_details_model.find({ pressing_details_id: { $in: pressingDetailIds } }).lean() : [],
         pressingDetailIds.length ? color_done_details_model.find({ pressing_details_id: { $in: pressingDetailIds } }).lean() : [],
-        (pressingDetailIds.length || groupNos.length) 
-          ? finished_ready_for_packing_model.find({ 
-              $or: [
-                { pressing_details_id: { $in: [...pressingDetailIds, ...pressingDetailIdStrings] } },
-                { group_no: { $in: groupNos } }
-              ]
-            }).lean() 
+        (pressingDetailIds.length || groupNos.length)
+          ? finished_ready_for_packing_model.find({
+            $or: [
+              { pressing_details_id: { $in: [...pressingDetailIds, ...pressingDetailIdStrings] } },
+              { group_no: { $in: groupNos } }
+            ]
+          }).lean()
           : [],
       ]);
 
@@ -772,11 +800,11 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
       // ── Active packing orders (source of truth for order resolution) ──────
       const packingOrderRows = pressingDetailIds.length
         ? await finished_ready_for_packing_model
-            .find(
-              { pressing_details_id: { $in: pressingDetailIds }, order_id: { $ne: null } },
-              { pressing_details_id: 1, issued_from_id: 1, issued_from: 1, order_id: 1, order_item_id: 1 }
-            )
-            .lean()
+          .find(
+            { pressing_details_id: { $in: pressingDetailIds }, order_id: { $ne: null } },
+            { pressing_details_id: 1, issued_from_id: 1, issued_from: 1, order_id: 1, order_item_id: 1 }
+          )
+          .lean()
         : [];
 
       // Update Pressing Order Maps with top-priority packing data
@@ -836,7 +864,7 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
 
       // Build maps: Unique Identifier → CMT/SQM
       const salesCmtByCode = new Map();
-      const orderRefsByCode = new Map(); 
+      const orderRefsByCode = new Map();
 
       for (const oi of orderIssuedItems) {
         const det = oi.item_details;
@@ -1000,7 +1028,7 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
         const logSalesVolume = resolveRowSales(log.log_no, log._id, ctx);
         const logChallanFromMap = ctx.challanCmtByLogNo.get(log.log_no) || '';
         const logChallan = logChallanFromMap || (String(log.issue_status).toLowerCase().includes('challan') ? (log.physical_cmt ?? 0) : '');
-        
+
         const logBase = {
           item_name: log.item_name || '',
           log_no: log.log_no,
@@ -1023,14 +1051,14 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
             const ccFp = crosscutIssueForFlitchPeeling(cc);
             const ccSalesVolume = resolveRowSales(cc.log_no_code, cc._id, ctx);
             const ccChallan = ctx.challanCmtByCcCode.get(cc.log_no_code) || '';
-            
+
             const ccIssueFor = ccFp.issue_for || (ccSalesVolume ? (cc.crosscut_cmt ?? 0) : (ccChallan ? (cc.crosscut_cmt ?? 0) : ''));
             const ccStatus = ccFp.status || (ccSalesVolume ? 'order' : (ccChallan ? 'challan' : ''));
-            
-            const ccBase = { 
-              cc_log_no: cc.log_no_code, 
-              cc_rec: cc.crosscut_cmt ?? 0, 
-              cc_issue_for: ccIssueFor, 
+
+            const ccBase = {
+              cc_log_no: cc.log_no_code,
+              cc_rec: cc.crosscut_cmt ?? 0,
+              cc_issue_for: ccIssueFor,
               cc_status: ccStatus,
               sales_cmt_sqm: ccSalesVolume,
               challan_cmt_sqm: ccChallan,
@@ -1046,26 +1074,26 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
                 linkedFlitchIds.add(String(flitch._id));
                 allRows.push(...buildFlitchRows(logBase, ccBase, flitch, ctx));
               }
-            } 
+            }
             if (peelingForCc.length > 0) {
               hasDownstream = true;
               for (const peel of peelingForCc) {
                 allRows.push(...buildPeelingRow(logBase, ccBase, emptyFlitch(), peel, ctx));
               }
-            } 
-            
+            }
+
             if (!hasDownstream) {
-              allRows.push({ 
-                ...logBase, 
-                ...ccBase, 
-                ...emptyFlitch(), 
-                ...emptySlicing(), 
-                ...emptyPeeling(), 
-                ...emptyDressing(), 
-                ...emptySmoking(), 
+              allRows.push({
+                ...logBase,
+                ...ccBase,
+                ...emptyFlitch(),
+                ...emptySlicing(),
+                ...emptyPeeling(),
+                ...emptyDressing(),
+                ...emptySmoking(),
                 ...emptyDownstream(),
-                 sales_cmt_sqm: ccSalesVolume,
-                 challan_cmt_sqm: ccChallan,
+                sales_cmt_sqm: ccSalesVolume,
+                challan_cmt_sqm: ccChallan,
               });
             }
           }
@@ -1083,27 +1111,27 @@ export const LogItemFurtherProcessReportExcel = catchAsync(
             allRows.push(...buildPeelingRow(logBase, { cc_log_no: '', cc_rec: 0, cc_issue_for: 0, cc_status: '' }, null, peel, ctx));
           }
         } else {
-          allRows.push({ 
-            ...logBase, 
-            cc_log_no: '', 
-            cc_rec: 0, 
-            cc_issue_for: 0, 
-            cc_status: '', 
-            ...emptyFlitch(), 
-            ...emptySlicing(), 
-            ...emptyPeeling(), 
-            ...emptyDressing(), 
-            ...emptySmoking(), 
-            ...emptyDownstream(), 
-            sales_cmt_sqm: logSalesVolume, 
-            challan_cmt_sqm: logChallan 
+          allRows.push({
+            ...logBase,
+            cc_log_no: '',
+            cc_rec: 0,
+            cc_issue_for: 0,
+            cc_status: '',
+            ...emptyFlitch(),
+            ...emptySlicing(),
+            ...emptyPeeling(),
+            ...emptyDressing(),
+            ...emptySmoking(),
+            ...emptyDownstream(),
+            sales_cmt_sqm: logSalesVolume,
+            challan_cmt_sqm: logChallan
           });
         }
       }
 
       if (!allRows.length) return res.status(404).json(new ApiResponse(404, 'No log data found for the selected period'));
 
-      const excelLink = await createLogItemFurtherProcessReportExcel(allRows, startDate, endDate, filter);
+      const excelLink = await createLogItemFurtherProcessReportExcel(allRows, startDate, endDate, filter, includeCostAndExpense);
       return res.json(new ApiResponse(200, 'Log item further process report generated successfully', excelLink));
     } catch (error) {
       console.error('Error generating report:', error);

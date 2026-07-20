@@ -703,7 +703,17 @@ async function customer_master(doc, session) {
 
 //here it is dyanmic and created using field map
 
-async function photo_master(doc, session) {
+const getCachedDoc = async (modelName, query, cache) => {
+    const cacheKey = `${modelName}:${JSON.stringify(query)}`;
+    if (cache.has(cacheKey)) {
+        return cache.get(cacheKey);
+    }
+    const doc = await model(modelName).findOne(query).lean();
+    cache.set(cacheKey, doc);
+    return doc;
+};
+
+async function photo_master(doc, session, cache) {
     const value_added_processes = [];
     const additional_characters = [];
 
@@ -791,24 +801,37 @@ async function photo_master(doc, session) {
 
     for (const field of fieldMap) {
         if (doc[field.key]) {
-            const found = await model(field.model)
-                .findOne({ [field.queryField]: doc[field.key] })
-                .session(session);
-
-            if (!found) {
-                throw new ApiError(
-                    `${doc[field.key]} not found in ${field.model}`,
-                    StatusCodes.NOT_FOUND
-                );
-            }
-
             if (field.assignArray) {
-                field.assignArray.push({
-                    [field.arrayId]: found._id,
-                    [field.arrayName]: found[field.assignName || field.queryField],
-                });
+                const values = typeof doc[field.key] === 'string'
+                    ? doc[field.key].split(',').map(v => v.trim()).filter(Boolean)
+                    : [doc[field.key]];
+
+                for (const val of values) {
+                    const found = await getCachedDoc(field.model, { [field.queryField]: val }, cache);
+
+                    if (!found) {
+                        throw new ApiError(
+                            `${val} not found in ${field.model}`,
+                            StatusCodes.NOT_FOUND
+                        );
+                    }
+
+                    field.assignArray.push({
+                        [field.arrayId]: found._id,
+                        [field.arrayName]: found[field.assignName || field.queryField],
+                    });
+                }
                 doc[field.key] = field.assignArray;
             } else {
+                const found = await getCachedDoc(field.model, { [field.queryField]: doc[field.key] }, cache);
+
+                if (!found) {
+                    throw new ApiError(
+                        `${doc[field.key]} not found in ${field.model}`,
+                        StatusCodes.NOT_FOUND
+                    );
+                }
+
                 doc[field.assignId] = found?._id;
                 // if (field.assignName)
                 //     doc[field.assignName] = found[field.assignName || field.queryField];
@@ -862,18 +885,45 @@ export const bulk_upload_masters = catchAsync(async (req, res) => {
         const batch_size = 1000;
         let buffer_data = [];
         let total = 0;
+        const photoMap = new Map();
+        const cache = new Map();
 
-        session.startTransaction();
+        session.startTransaction({
+            readConcern: { level: 'local' },
+            writeConcern: { w: 'majority' },
+        });
         try {
-            const workbook_reader = new exceljs.stream.xlsx.WorkbookReader(
-                file.filepath,
-                {
-                    entries: 'emit',
-                    sharedStrings: 'cache',
-                    hyperlinks: 'ignore',
-                    styles: 'ignore',
+            const workbook = new exceljs.Workbook();
+            await workbook.xlsx.readFile(file.filepath);
+
+            const allRows = [];
+            workbook.worksheets.forEach(worksheet => {
+                worksheet.eachRow((row, rowNumber) => {
+                    if (rowNumber === 1) return;
+                    allRows.push(row);
+                });
+            });
+
+            const existingPhotosMap = new Map();
+            if (master_name === 'photo_master') {
+                const allPhotoNumbers = [];
+                allRows.forEach(row => {
+                    const photoNum = row.getCell(1).value;
+                    if (photoNum) {
+                        allPhotoNumbers.push(photoNum.toString().trim().toUpperCase());
+                    }
+                });
+
+                if (allPhotoNumbers.length > 0) {
+                    const photos = await model('photos')
+                        .find({ photo_number: { $in: allPhotoNumbers } })
+                        .session(session);
+                    for (const photo of photos) {
+                        existingPhotosMap.set(photo.photo_number.toString().trim().toUpperCase(), photo);
+                    }
                 }
-            );
+            }
+
             const maxNumber = await model(configs?.model)
                 .aggregate([
                     {
@@ -886,75 +936,143 @@ export const bulk_upload_masters = catchAsync(async (req, res) => {
                 .session(session);
 
             let max_sr_no = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1;
-            for await (const worksheet of workbook_reader) {
-                for await (const row of worksheet) {
-                    if (row?.number === 1) continue;
 
-                    let doc = { sr_no: max_sr_no++ };
+            for (const row of allRows) {
+                let doc = { sr_no: max_sr_no++ };
 
-                    for (let i = 0; i < configs?.fields?.length; i++) {
-                        const excel_field = configs?.fields[i];
-                        let raw_value = row.getCell(i + 1).value ?? null;
+                for (let i = 0; i < configs?.fields?.length; i++) {
+                    const excel_field = configs?.fields[i];
+                    let raw_value = row.getCell(i + 1).value ?? null;
 
-                        if (raw_value && typeof raw_value === 'object' && 'result' in raw_value) {
-                            raw_value = raw_value.result;
+                    if (raw_value && typeof raw_value === 'object' && 'result' in raw_value) {
+                        raw_value = raw_value.result;
+                    }
+
+                    doc[excel_field] = raw_value;
+                }
+                const is_empty = Object.values(doc)
+                    .filter((v, i) => i > 0)
+                    .every(v => v === null || v === undefined || v === '');
+                if (is_empty) continue;
+
+                console.log("doc file fields => ", doc)
+
+                switch (master_name) {
+                    // case 'category_master':
+                    //     doc = await category_master(doc, session);
+                    //     break;
+                    case 'sub_category_master':
+                        doc = await subcategory_master(doc, session);
+                        break;
+                    case 'item_name_master':
+                        doc = await item_name_master(doc, session);
+                        break;
+                    case 'supplier_branches_master':
+                        doc = await supplier_branches_master(doc, session);
+                        break;
+                    case 'machine_master':
+                        doc = await machine_master(doc, session);
+                        break;
+                    case 'customer_master':
+                        doc = await customer_master(doc, session);
+                        console.log("doc in customer master", doc)
+                        break;
+                    case 'color_master':
+                        doc = await color_master(doc, session);
+                        break;
+                    case 'photo_master':
+                        doc = await photo_master(doc, session, cache);
+                        break;
+                    default:
+                        break;
+                }
+
+                if (
+                    [
+                        'unit_master',
+                        'grade_master',
+                        'currency_master',
+                        'cut_master',
+                        'expense_type_master',
+                        'gst_master',
+                        'department_master',
+                    ]?.includes(master_name)
+                ) {
+                    doc.created_employee_id = user?._id;
+                } else {
+                    doc.created_by = user?._id;
+                }
+                doc.updated_by = user?._id;
+
+                if (master_name === 'photo_master') {
+                    if (!doc.photo_number) {
+                        throw new ApiError('Photo number is required in Excel row', StatusCodes.BAD_REQUEST);
+                    }
+                    if (doc.sub_category_type) {
+                        doc.sub_category_type = doc.sub_category_type.toString().trim().toUpperCase();
+                    }
+                    const photoKey = doc.photo_number.toString().trim().toUpperCase();
+                    if (photoMap.has(photoKey)) {
+                        const entry = photoMap.get(photoKey);
+                        const targetDoc = entry.doc;
+                        if (targetDoc.sub_category_type === 'HYBRID') {
+                            if (doc.group_id) {
+                                const isMainGroup = targetDoc.group_id && targetDoc.group_id.toString() === doc.group_id.toString();
+                                const isInHybrid = targetDoc.hybrid_group_no.some(
+                                    (g) => g._id && g._id.toString() === doc.group_id.toString()
+                                );
+                                if (!isMainGroup && !isInHybrid) {
+                                    targetDoc.hybrid_group_no.push({
+                                        _id: doc.group_id,
+                                        group_no: doc.group_no,
+                                    });
+                                }
+                            }
+                            targetDoc.no_of_sheets = (Number(targetDoc.no_of_sheets) || 0) + (Number(doc.no_of_sheets) || 0);
+                            targetDoc.available_no_of_sheets = (Number(targetDoc.available_no_of_sheets) || 0) + (Number(doc.available_no_of_sheets) || 0);
+                            targetDoc.updated_by = user?._id;
+                        } else {
+                            throw new ApiError(
+                                `Duplicate photo number "${doc.photo_number}" found for non-hybrid subcategory`,
+                                StatusCodes.BAD_REQUEST
+                            );
                         }
-
-                        doc[excel_field] = raw_value;
-                    }
-                    const is_empty = Object.values(doc)
-                        .filter((v, i) => i > 0)
-                        .every(v => v === null || v === undefined || v === '');
-                    if (is_empty) continue;
-
-                    console.log("doc file fields => ", doc)
-
-                    switch (master_name) {
-                        // case 'category_master':
-                        //     doc = await category_master(doc, session);
-                        //     break;
-                        case 'sub_category_master':
-                            doc = await subcategory_master(doc, session);
-                            break;
-                        case 'item_name_master':
-                            doc = await item_name_master(doc, session);
-                            break;
-                        case 'supplier_branches_master':
-                            doc = await supplier_branches_master(doc, session);
-                            break;
-                        case 'machine_master':
-                            doc = await machine_master(doc, session);
-                            break;
-                        case 'customer_master':
-                            doc = await customer_master(doc, session);
-                            console.log("doc in customer master", doc)
-                            break;
-                        case 'color_master':
-                            doc = await color_master(doc, session);
-                            break;
-                        case 'photo_master':
-                            doc = await photo_master(doc, session);
-                            break;
-                        default:
-                            break;
-                    }
-
-                    if (
-                        [
-                            'unit_master',
-                            'grade_master',
-                            'currency_master',
-                            'cut_master',
-                            'expense_type_master',
-                            'gst_master',
-                            'department_master',
-                        ]?.includes(master_name)
-                    ) {
-                        doc.created_employee_id = user?._id;
                     } else {
-                        doc.created_by = user?._id;
+                        let existingPhoto = existingPhotosMap.get(photoKey);
+                        if (existingPhoto) {
+                            existingPhoto = existingPhoto.toObject ? existingPhoto.toObject() : existingPhoto;
+                            if (existingPhoto.sub_category_type === 'HYBRID') {
+                                if (doc.group_id) {
+                                    const isMainGroup = existingPhoto.group_id && existingPhoto.group_id.toString() === doc.group_id.toString();
+                                    const isInHybrid = existingPhoto.hybrid_group_no.some(
+                                        (g) => g._id && g._id.toString() === doc.group_id.toString()
+                                    );
+                                    if (!isMainGroup && !isInHybrid) {
+                                        existingPhoto.hybrid_group_no.push({
+                                            _id: doc.group_id,
+                                            group_no: doc.group_no,
+                                        });
+                                    }
+                                }
+                                existingPhoto.no_of_sheets = (Number(existingPhoto.no_of_sheets) || 0) + (Number(doc.no_of_sheets) || 0);
+                                existingPhoto.available_no_of_sheets = (Number(existingPhoto.available_no_of_sheets) || 0) + (Number(doc.available_no_of_sheets) || 0);
+                                existingPhoto.updated_by = user?._id;
+                                photoMap.set(photoKey, { doc: existingPhoto, isNew: false });
+                            } else {
+                                throw new ApiError(
+                                    `Photo number "${doc.photo_number}" already exists in database and is not hybrid`,
+                                    StatusCodes.BAD_REQUEST
+                                );
+                            }
+                        } else {
+                            doc._id = new mongoose.Types.ObjectId();
+                            doc.hybrid_group_no = doc.hybrid_group_no || [];
+                            doc.created_by = user?._id;
+                            doc.updated_by = user?._id;
+                            photoMap.set(photoKey, { doc, isNew: true });
+                        }
                     }
-                    doc.updated_by = user?._id;
+                } else {
                     buffer_data?.push(doc);
 
                     if (buffer_data?.length >= batch_size) {
@@ -965,9 +1083,68 @@ export const bulk_upload_masters = catchAsync(async (req, res) => {
                 }
             }
 
-            if (buffer_data?.length > 0) {
-                await model(configs?.model)?.insertMany(buffer_data, { session });
-                total += buffer_data?.length;
+            if (master_name === 'photo_master') {
+                const photoBulkOperations = [];
+                const groupBulkOperations = [];
+
+                for (const [photoKey, entry] of photoMap.entries()) {
+                    if (entry.isNew) {
+                        photoBulkOperations.push({
+                            insertOne: {
+                                document: entry.doc,
+                            },
+                        });
+                        total++;
+                    } else {
+                        photoBulkOperations.push({
+                            updateOne: {
+                                filter: { _id: entry.doc._id },
+                                update: {
+                                    $set: {
+                                        hybrid_group_no: entry.doc.hybrid_group_no,
+                                        no_of_sheets: entry.doc.no_of_sheets,
+                                        available_no_of_sheets: entry.doc.available_no_of_sheets,
+                                        updated_by: entry.doc.updated_by,
+                                    },
+                                },
+                            },
+                        });
+                        total++;
+                    }
+
+                    // Link the groups back to the photo
+                    let groupIdsToUpdate = [entry.doc.group_id];
+                    if (entry.doc.sub_category_type === 'HYBRID' && entry.doc.hybrid_group_no?.length > 0) {
+                        const hybridIds = entry.doc.hybrid_group_no.map(g => g._id);
+                        groupIdsToUpdate = [...groupIdsToUpdate, ...hybridIds];
+                    }
+                    groupIdsToUpdate = groupIdsToUpdate.filter(id => id); // Remove null/undefined
+                    if (groupIdsToUpdate.length > 0) {
+                        groupBulkOperations.push({
+                            updateMany: {
+                                filter: { _id: { $in: groupIdsToUpdate } },
+                                update: {
+                                    $set: {
+                                        photo_no: entry.doc.photo_number,
+                                        photo_no_id: entry.doc._id,
+                                    },
+                                },
+                            },
+                        });
+                    }
+                }
+
+                if (photoBulkOperations.length > 0) {
+                    await model('photos').bulkWrite(photoBulkOperations, { session });
+                }
+                if (groupBulkOperations.length > 0) {
+                    await model('grouping_done_items_details').bulkWrite(groupBulkOperations, { session });
+                }
+            } else {
+                if (buffer_data?.length > 0) {
+                    await model(configs?.model)?.insertMany(buffer_data, { session });
+                    total += buffer_data?.length;
+                }
             }
 
             const response = new ApiResponse(
@@ -977,9 +1154,33 @@ export const bulk_upload_masters = catchAsync(async (req, res) => {
             );
             await session.commitTransaction();
             return res.status(response.statusCode).json(response);
-        } catch (error) {
-            await session.abortTransaction();
-            throw error;
+        } catch (err) {
+            console.log("=========== ERROR ===========");
+            console.log(err);
+            console.log("MESSAGE:", err.message);
+            console.log("CODE:", err.code);
+            console.log("NAME:", err.name);
+            console.log("KEY VALUE:", err.keyValue);
+            console.log("ERROR RESPONSE:", err.errorResponse);
+            console.log("STACK:", err.stack);
+            console.log("=============================");
+
+            if (session.inTransaction()) {
+                await session.abortTransaction();
+            }
+
+            if (file_path) {
+                try {
+                    fs.unlinkSync(file_path);
+                } catch (unlinkErr) {
+                    console.error("Error unlinking file:", unlinkErr);
+                }
+            }
+
+            return res.status(500).json({
+                success: false,
+                error: err.message
+            });
         }
     } catch (error) {
         if (file_path) {

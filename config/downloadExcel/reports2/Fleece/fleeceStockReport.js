@@ -17,7 +17,8 @@ export const GenerateFleeceStockReportExcel = async (
   aggregatedData,
   startDate,
   endDate,
-  filters = {}
+  filters = {},
+  includeCostAndExpense
 ) => {
   try {
     const folderPath = 'public/upload/reports/reports2/Fleece';
@@ -60,16 +61,52 @@ export const GenerateFleeceStockReportExcel = async (
       { key: 'size', width: 15 },
       { key: 'opening_rolls', width: 12 },
       { key: 'opening_sqm', width: 12 },
+      ...(includeCostAndExpense
+        ? [
+          { key: 'opening_amount', width: 15 },
+          { key: 'opening_expense_amount', width: 15 },
+        ]
+        : []),
       { key: 'receive_rolls', width: 12 },
       { key: 'receive_sqm', width: 12 },
+      ...(includeCostAndExpense
+        ? [
+          { key: 'receive_amount', width: 15 },
+          { key: 'receive_expense_amount', width: 15 },
+        ]
+        : []),
       { key: 'consume_rolls', width: 12 },
       { key: 'consume_sqm', width: 12 },
+      ...(includeCostAndExpense
+        ? [
+          { key: 'consume_amount', width: 15 },
+          { key: 'consume_expense_amount', width: 15 },
+        ]
+        : []),
       { key: 'order_rolls', width: 12 },
       { key: 'order_sqm', width: 12 },
+      ...(includeCostAndExpense
+        ? [
+          { key: 'order_amount', width: 15 },
+          { key: 'order_expense_amount', width: 15 },
+        ]
+        : []),
       { key: 'issue_pressing_rolls', width: 20 },
       { key: 'issue_pressing_sqm', width: 20 },
+      ...(includeCostAndExpense
+        ? [
+          { key: 'issue_pressing_amount', width: 15 },
+          { key: 'issue_pressing_expense_amount', width: 15 },
+        ]
+        : []),
       { key: 'closing_rolls', width: 12 },
       { key: 'closing_sqm', width: 12 },
+      ...(includeCostAndExpense
+        ? [
+          { key: 'closing_amount', width: 15 },
+          { key: 'closing_expense_amount', width: 15 },
+        ]
+        : []),
     ];
 
     worksheet.columns = columnDefinitions;
@@ -88,16 +125,37 @@ export const GenerateFleeceStockReportExcel = async (
       'Size',
       'Opening Rolls',
       'Opening Metres',
+      ...(includeCostAndExpense
+        ? ['Opening Amount', 'Opening Expense Amount']
+        : []),
       'Received Rolls',
       'Received Mtrs',
+      ...(includeCostAndExpense
+        ? ['Receive Amount', 'Receive Expense Amount']
+        : []),
       'Consumed Rolls',
       'Consumed Mtrs',
+      ...(includeCostAndExpense
+        ? ['Consume Amount', 'Consume Expense Amount']
+        : []),
       'Order Rolls',
       'Order Mtrs',
+      ...(includeCostAndExpense
+        ? ['Order Amount', 'Order Expense Amount']
+        : []),
       'Issue For Pressing',
       'Issue For Pressing Sq Met',
+      ...(includeCostAndExpense
+        ? [
+          'Issue For Pressing Amount',
+          'Issue For Pressing Expense Amount',
+        ]
+        : []),
       'Closing Rolls',
       'Closing Metres',
+      ...(includeCostAndExpense
+        ? ['Closing Amount', 'Closing Expense Amount']
+        : []),
     ]);
     headerRow.font = { bold: true };
     headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
@@ -135,6 +193,24 @@ export const GenerateFleeceStockReportExcel = async (
       issue_pressing_sqm: 0,
       closing_rolls: 0,
       closing_sqm: 0,
+      ...(includeCostAndExpense
+        ? {
+          opening_amount: 0,
+          opening_expense_amount: 0,
+          receive_amount: 0,
+          receive_expense_amount: 0,
+          consume_amount: 0,
+          consume_expense_amount: 0,
+          challan_amount: 0,
+          challan_expense_amount: 0,
+          order_amount: 0,
+          order_expense_amount: 0,
+          issue_pressing_amount: 0,
+          issue_pressing_expense_amount: 0,
+          closing_amount: 0,
+          closing_expense_amount: 0,
+        }
+        : {}),
     };
 
     Object.keys(groupedData)
@@ -160,6 +236,24 @@ export const GenerateFleeceStockReportExcel = async (
               issue_pressing_sqm: 0,
               closing_rolls: 0,
               closing_sqm: 0,
+              ...(includeCostAndExpense
+                ? {
+                  opening_amount: 0,
+                  opening_expense_amount: 0,
+                  receive_amount: 0,
+                  receive_expense_amount: 0,
+                  consume_amount: 0,
+                  consume_expense_amount: 0,
+                  challan_amount: 0,
+                  challan_expense_amount: 0,
+                  order_amount: 0,
+                  order_expense_amount: 0,
+                  issue_pressing_amount: 0,
+                  issue_pressing_expense_amount: 0,
+                  closing_amount: 0,
+                  closing_expense_amount: 0,
+                }
+                : {}),
             };
 
             items.forEach((item) => {
@@ -181,6 +275,24 @@ export const GenerateFleeceStockReportExcel = async (
                 issue_pressing_sqm: item.issue_pressing_sqm || 0,
                 closing_rolls: item.closing_rolls || 0,
                 closing_sqm: item.closing_sqm || 0,
+                ...(includeCostAndExpense
+                  ? {
+                    opening_amount: item.opening_amount || 0,
+                    opening_expense_amount: item.opening_expense_amount || 0,
+                    receive_amount: item.receive_amount || 0,
+                    receive_expense_amount: item.receive_expense_amount || 0,
+                    consume_amount: item.consume_amount || 0,
+                    consume_expense_amount: item.consume_expense_amount || 0,
+                    challan_amount: item.challan_amount || 0,
+                    challan_expense_amount: item.challan_expense_amount || 0,
+                    order_amount: item.order_amount || 0,
+                    order_expense_amount: item.order_expense_amount || 0,
+                    issue_pressing_amount: item.issue_pressing_amount || 0,
+                    issue_pressing_expense_amount: item.issue_pressing_expense_amount || 0,
+                    closing_amount: item.closing_amount || 0,
+                    closing_expense_amount: item.closing_expense_amount || 0,
+                  }
+                  : {}),
               };
               const { challan_rolls, challan_sqm, ...rowData } = fullRowData;
               worksheet.addRow(rowData);
@@ -241,7 +353,8 @@ export const GenerateFleeceItemWiseStockReportExcel = async (
   aggregatedData,
   startDate,
   endDate,
-  filters = {}
+  filters = {},
+  includeCostAndExpense
 ) => {
   try {
     const folderPath = 'public/upload/reports/reports2/Fleece';
@@ -288,16 +401,52 @@ export const GenerateFleeceItemWiseStockReportExcel = async (
       { key: 'size', width: 15 },
       { key: 'opening_rolls', width: 12 },
       { key: 'opening_sqm', width: 12 },
+      ...(includeCostAndExpense
+        ? [
+          { key: 'opening_amount', width: 15 },
+          { key: 'opening_expense_amount', width: 15 },
+        ]
+        : []),
       { key: 'receive_rolls', width: 12 },
       { key: 'receive_sqm', width: 12 },
+      ...(includeCostAndExpense
+        ? [
+          { key: 'receive_amount', width: 15 },
+          { key: 'receive_expense_amount', width: 15 },
+        ]
+        : []),
       { key: 'consume_rolls', width: 12 },
       { key: 'consume_sqm', width: 12 },
+      ...(includeCostAndExpense
+        ? [
+          { key: 'consume_amount', width: 15 },
+          { key: 'consume_expense_amount', width: 15 },
+        ]
+        : []),
       { key: 'order_rolls', width: 12 },
       { key: 'order_sqm', width: 12 },
+      ...(includeCostAndExpense
+        ? [
+          { key: 'order_amount', width: 15 },
+          { key: 'order_expense_amount', width: 15 },
+        ]
+        : []),
       { key: 'issue_pressing_rolls', width: 20 },
       { key: 'issue_pressing_sqm', width: 20 },
+      ...(includeCostAndExpense
+        ? [
+          { key: 'issue_pressing_amount', width: 15 },
+          { key: 'issue_pressing_expense_amount', width: 15 },
+        ]
+        : []),
       { key: 'closing_rolls', width: 12 },
       { key: 'closing_sqm', width: 12 },
+      ...(includeCostAndExpense
+        ? [
+          { key: 'closing_amount', width: 15 },
+          { key: 'closing_expense_amount', width: 15 },
+        ]
+        : []),
     ];
 
     worksheet.columns = columnDefinitions;
@@ -317,16 +466,34 @@ export const GenerateFleeceItemWiseStockReportExcel = async (
       'Size',
       'Opening Rolls',
       'Opening Metres',
+      ...(includeCostAndExpense
+        ? ['Opening Amount', 'Opening Expense Amount']
+        : []),
       'Received Rolls',
       'Received Mtrs',
+      ...(includeCostAndExpense
+        ? ['Receive Amount', 'Receive Expense Amount']
+        : []),
       'Consumed Rolls',
       'Consumed Mtrs',
+      ...(includeCostAndExpense
+        ? ['Consume Amount', 'Consume Expense Amount']
+        : []),
       'Order Rolls',
       'Order Mtrs',
+      ...(includeCostAndExpense
+        ? ['Order Amount', 'Order Expense Amount']
+        : []),
       'Issue For Pressing',
       'Issue For Pressing Sq Met',
+      ...(includeCostAndExpense
+        ? ['Issue For Pressing Amount', 'Issue For Pressing Expense Amount']
+        : []),
       'Closing Rolls',
       'Closing Metres',
+      ...(includeCostAndExpense
+        ? ['Closing Amount', 'Closing Expense Amount']
+        : []),
     ]);
     headerRow.font = { bold: true };
     headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
@@ -364,6 +531,24 @@ export const GenerateFleeceItemWiseStockReportExcel = async (
       issue_pressing_sqm: 0,
       closing_rolls: 0,
       closing_sqm: 0,
+      ...(includeCostAndExpense
+        ? {
+          opening_amount: 0,
+          opening_expense_amount: 0,
+          receive_amount: 0,
+          receive_expense_amount: 0,
+          consume_amount: 0,
+          consume_expense_amount: 0,
+          challan_amount: 0,
+          challan_expense_amount: 0,
+          order_amount: 0,
+          order_expense_amount: 0,
+          issue_pressing_amount: 0,
+          issue_pressing_expense_amount: 0,
+          closing_amount: 0,
+          closing_expense_amount: 0,
+        }
+        : {}),
     };
 
     Object.keys(groupedByItem)
@@ -385,6 +570,24 @@ export const GenerateFleeceItemWiseStockReportExcel = async (
           issue_pressing_sqm: 0,
           closing_rolls: 0,
           closing_sqm: 0,
+          ...(includeCostAndExpense
+            ? {
+              opening_amount: 0,
+              opening_expense_amount: 0,
+              receive_amount: 0,
+              receive_expense_amount: 0,
+              consume_amount: 0,
+              consume_expense_amount: 0,
+              challan_amount: 0,
+              challan_expense_amount: 0,
+              order_amount: 0,
+              order_expense_amount: 0,
+              issue_pressing_amount: 0,
+              issue_pressing_expense_amount: 0,
+              closing_amount: 0,
+              closing_expense_amount: 0,
+            }
+            : {}),
         };
 
         Object.keys(thicknesses)
@@ -406,6 +609,24 @@ export const GenerateFleeceItemWiseStockReportExcel = async (
               issue_pressing_sqm: 0,
               closing_rolls: 0,
               closing_sqm: 0,
+              ...(includeCostAndExpense
+                ? {
+                  opening_amount: 0,
+                  opening_expense_amount: 0,
+                  receive_amount: 0,
+                  receive_expense_amount: 0,
+                  consume_amount: 0,
+                  consume_expense_amount: 0,
+                  challan_amount: 0,
+                  challan_expense_amount: 0,
+                  order_amount: 0,
+                  order_expense_amount: 0,
+                  issue_pressing_amount: 0,
+                  issue_pressing_expense_amount: 0,
+                  closing_amount: 0,
+                  closing_expense_amount: 0,
+                }
+                : {}),
             };
 
             rows.forEach((item) => {
@@ -428,6 +649,24 @@ export const GenerateFleeceItemWiseStockReportExcel = async (
                 issue_pressing_sqm: item.issue_pressing_sqm ?? 0,
                 closing_rolls: item.closing_rolls ?? 0,
                 closing_sqm: item.closing_sqm ?? 0,
+                ...(includeCostAndExpense
+                  ? {
+                    opening_amount: item.opening_amount ?? 0,
+                    opening_expense_amount: item.opening_expense_amount ?? 0,
+                    receive_amount: item.receive_amount ?? 0,
+                    receive_expense_amount: item.receive_expense_amount ?? 0,
+                    consume_amount: item.consume_amount ?? 0,
+                    consume_expense_amount: item.consume_expense_amount ?? 0,
+                    challan_amount: item.challan_amount ?? 0,
+                    challan_expense_amount: item.challan_expense_amount ?? 0,
+                    order_amount: item.order_amount ?? 0,
+                    order_expense_amount: item.order_expense_amount ?? 0,
+                    issue_pressing_amount: item.issue_pressing_amount ?? 0,
+                    issue_pressing_expense_amount: item.issue_pressing_expense_amount ?? 0,
+                    closing_amount: item.closing_amount ?? 0,
+                    closing_expense_amount: item.closing_expense_amount ?? 0,
+                  }
+                  : {}),
               };
               const { challan_rolls, challan_sqm, ...rowData } = fullRowData;
               worksheet.addRow(rowData);
@@ -513,7 +752,8 @@ export const GenerateFleeceStockReportByInwardExcel = async (
   aggregatedData,
   startDate,
   endDate,
-  filters = {}
+  filters = {},
+  includeCostAndExpense
 ) => {
   try {
     const folderPath = 'public/upload/reports/reports2/Fleece';
@@ -557,16 +797,52 @@ export const GenerateFleeceStockReportByInwardExcel = async (
       { key: 'size', width: 15 },
       { key: 'opening_rolls', width: 12 },
       { key: 'opening_sqm', width: 12 },
+      ...(includeCostAndExpense
+        ? [
+          { key: 'opening_amount', width: 12 },
+          { key: 'opening_expense_amount', width: 12 },
+        ]
+        : []),
       { key: 'receive_rolls', width: 12 },
       { key: 'receive_sqm', width: 12 },
+      ...(includeCostAndExpense
+        ? [
+          { key: 'receive_amount', width: 12 },
+          { key: 'receive_expense_amount', width: 12 },
+        ]
+        : []),
       { key: 'consume_rolls', width: 12 },
       { key: 'consume_sqm', width: 12 },
+      ...(includeCostAndExpense
+        ? [
+          { key: 'consume_amount', width: 12 },
+          { key: 'consume_expense_amount', width: 12 },
+        ]
+        : []),
       { key: 'order_rolls', width: 12 },
       { key: 'order_sqm', width: 12 },
+      ...(includeCostAndExpense
+        ? [
+          { key: 'order_amount', width: 12 },
+          { key: 'order_expense_amount', width: 12 },
+        ]
+        : []),
       { key: 'issue_pressing_rolls', width: 20 },
       { key: 'issue_pressing_sqm', width: 20 },
+      ...(includeCostAndExpense
+        ? [
+          { key: 'issue_pressing_amount', width: 12 },
+          { key: 'issue_pressing_expense_amount', width: 12 },
+        ]
+        : []),
       { key: 'closing_rolls', width: 12 },
       { key: 'closing_sqm', width: 12 },
+      ...(includeCostAndExpense
+        ? [
+          { key: 'closing_amount', width: 12 },
+          { key: 'closing_expense_amount', width: 12 },
+        ]
+        : []),
     ];
 
     worksheet.columns = columnDefinitions;
@@ -586,16 +862,22 @@ export const GenerateFleeceStockReportByInwardExcel = async (
       'Size',
       'Opening Rolls',
       'Opening Metres',
+      ...(includeCostAndExpense ? ['Opening Amount', 'Opening Expense Amount'] : []),
       'Received Rolls',
       'Received Mtrs',
+      ...(includeCostAndExpense ? ['Received Amount', 'Received Expense Amount'] : []),
       'Consumed Rolls',
       'Consumed Mtrs',
+      ...(includeCostAndExpense ? ['Consumed Amount', 'Consumed Expense Amount'] : []),
       'Order Rolls',
       'Order Mtrs',
+      ...(includeCostAndExpense ? ['Order Amount', 'Order Expense Amount'] : []),
       'Issue For Pressing',
       'Issue For Pressing Sq Met',
+      ...(includeCostAndExpense ? ['Issue For Pressing Amount', 'Issue For Pressing Expense Amount'] : []),
       'Closing Rolls',
-      'Closing Metres',
+      'Closing Mtrs',
+      ...(includeCostAndExpense ? ['Closing Amount', 'Closing Expense Amount'] : []),
     ]);
     headerRow.font = { bold: true };
     headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
@@ -608,18 +890,60 @@ export const GenerateFleeceStockReportByInwardExcel = async (
     const grandTotals = {
       opening_rolls: 0,
       opening_sqm: 0,
+      ...(includeCostAndExpense
+        ? {
+          opening_amount: 0,
+          opening_expense_amount: 0,
+        }
+        : {}),
       receive_rolls: 0,
       receive_sqm: 0,
+      ...(includeCostAndExpense
+        ? {
+          receive_amount: 0,
+          receive_expense_amount: 0,
+        }
+        : {}),
       consume_rolls: 0,
       consume_sqm: 0,
+      ...(includeCostAndExpense
+        ? {
+          consume_amount: 0,
+          consume_expense_amount: 0,
+        }
+        : {}),
       challan_rolls: 0,
       challan_sqm: 0,
+      ...(includeCostAndExpense
+        ? {
+          challan_amount: 0,
+          challan_expense_amount: 0,
+        }
+        : {}),
       order_rolls: 0,
       order_sqm: 0,
+      ...(includeCostAndExpense
+        ? {
+          order_amount: 0,
+          order_expense_amount: 0,
+        }
+        : {}),
       issue_pressing_rolls: 0,
       issue_pressing_sqm: 0,
+      ...(includeCostAndExpense
+        ? {
+          issue_pressing_amount: 0,
+          issue_pressing_expense_amount: 0,
+        }
+        : {}),
       closing_rolls: 0,
       closing_sqm: 0,
+      ...(includeCostAndExpense
+        ? {
+          closing_amount: 0,
+          closing_expense_amount: 0,
+        }
+        : {}),
     };
 
     const groupedByInward = {};
@@ -651,6 +975,16 @@ export const GenerateFleeceStockReportByInwardExcel = async (
         issue_pressing_sqm: 0,
         closing_rolls: 0,
         closing_sqm: 0,
+        ...(includeCostAndExpense
+          ? {
+            order_amount: 0,
+            order_expense_amount: 0,
+            issue_pressing_amount: 0,
+            issue_pressing_expense_amount: 0,
+            closing_amount: 0,
+            closing_expense_amount: 0,
+          }
+          : {}),
       };
 
       items.forEach((item, idx) => {
@@ -661,18 +995,60 @@ export const GenerateFleeceStockReportByInwardExcel = async (
           size: item.size ?? '',
           opening_rolls: item.opening_rolls ?? 0,
           opening_sqm: item.opening_sqm ?? 0,
+          ...(includeCostAndExpense
+            ? {
+              opening_amount: item.opening_amount ?? 0,
+              opening_expense_amount: item.opening_expense_amount ?? 0,
+            }
+            : {}),
           receive_rolls: item.receive_rolls ?? 0,
           receive_sqm: item.receive_sqm ?? 0,
+          ...(includeCostAndExpense
+            ? {
+              receive_amount: item.receive_amount ?? 0,
+              receive_expense_amount: item.receive_expense_amount ?? 0,
+            }
+            : {}),
           consume_rolls: item.consume_rolls ?? 0,
           consume_sqm: item.consume_sqm ?? 0,
+          ...(includeCostAndExpense
+            ? {
+              consume_amount: item.consume_amount ?? 0,
+              consume_expense_amount: item.consume_expense_amount ?? 0,
+            }
+            : {}),
           challan_rolls: item.challan_rolls ?? 0,
           challan_sqm: item.challan_sqm ?? 0,
+          ...(includeCostAndExpense
+            ? {
+              challan_amount: item.challan_amount ?? 0,
+              challan_expense_amount: item.challan_expense_amount ?? 0,
+            }
+            : {}),
           order_rolls: item.order_rolls ?? 0,
           order_sqm: item.order_sqm ?? 0,
+          ...(includeCostAndExpense
+            ? {
+              order_amount: item.order_amount ?? 0,
+              order_expense_amount: item.order_expense_amount ?? 0,
+            }
+            : {}),
           issue_pressing_rolls: item.issue_pressing_rolls ?? 0,
           issue_pressing_sqm: item.issue_pressing_sqm ?? 0,
+          ...(includeCostAndExpense
+            ? {
+              issue_pressing_amount: item.issue_pressing_amount ?? 0,
+              issue_pressing_expense_amount: item.issue_pressing_expense_amount ?? 0,
+            }
+            : {}),
           closing_rolls: item.closing_rolls ?? 0,
           closing_sqm: item.closing_sqm ?? 0,
+          ...(includeCostAndExpense
+            ? {
+              closing_amount: item.closing_amount ?? 0,
+              closing_expense_amount: item.closing_expense_amount ?? 0,
+            }
+            : {}),
         };
         const { challan_rolls, challan_sqm, ...rowData } = fullRowData;
         worksheet.addRow(rowData);

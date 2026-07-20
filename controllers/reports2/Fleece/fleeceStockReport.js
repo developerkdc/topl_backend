@@ -31,7 +31,7 @@ const roundMetricValue = (v) => roundStock(v, 3);
  * @access Private
  */
 export const fleeceStockReportCsv = catchAsync(async (req, res, next) => {
-  const { startDate, endDate } = req.body;
+  const { startDate, endDate, includeCostAndExpense } = req.body;
   const filter = req.body?.filter || {};
 
   if (!startDate || !endDate) {
@@ -71,6 +71,8 @@ export const fleeceStockReportCsv = catchAsync(async (req, res, next) => {
             length: '$length',
             width: '$width',
           },
+          amount: { $sum: '$amount' },
+          expense_amount: { $sum: '$expense_amount' },
           current_rolls: { $sum: '$available_number_of_roll' },
           current_sqm: { $sum: '$available_sqm' },
           item_ids: { $push: '$_id' },
@@ -112,10 +114,11 @@ export const fleeceStockReportCsv = catchAsync(async (req, res, next) => {
               _id: null,
               total_rolls: { $sum: '$number_of_roll' },
               total_sqm: { $sum: '$total_sq_meter' },
+              total_amount: { $sum: '$amount' },
+              total_expense_amount: { $sum: '$expense_amount' },
             },
           },
         ]);
-
         const [challan, order, issuePressing] = await Promise.all([
           fleece_history_model.aggregate([
             {
@@ -130,6 +133,7 @@ export const fleeceStockReportCsv = catchAsync(async (req, res, next) => {
                 _id: null,
                 total_rolls: { $sum: '$issued_number_of_roll' },
                 total_sqm: { $sum: '$issued_sqm' },
+                total_amount: { $sum: '$issued_amount' },
               },
             },
           ]),
@@ -146,6 +150,7 @@ export const fleeceStockReportCsv = catchAsync(async (req, res, next) => {
                 _id: null,
                 total_rolls: { $sum: '$issued_number_of_roll' },
                 total_sqm: { $sum: '$issued_sqm' },
+                total_amount: { $sum: '$issued_amount' },
               },
             },
           ]),
@@ -162,6 +167,7 @@ export const fleeceStockReportCsv = catchAsync(async (req, res, next) => {
                 _id: null,
                 total_rolls: { $sum: '$issued_number_of_roll' },
                 total_sqm: { $sum: '$issued_sqm' },
+                total_amount: { $sum: '$issued_amount' },
               },
             },
           ]),
@@ -179,11 +185,39 @@ export const fleeceStockReportCsv = catchAsync(async (req, res, next) => {
         const consumeSqm = challanSqm + orderSqm + issuePressingSqm;
         const currentRolls = item.current_rolls || 0;
         const currentSqm = item.current_sqm || 0;
-
         const openingRolls = currentRolls + consumeRolls - receiveRolls;
         const openingSqm = currentSqm + consumeSqm - receiveSqm;
         const closingRolls = openingRolls + receiveRolls - consumeRolls;
         const closingSqm = openingSqm + receiveSqm - consumeSqm;
+
+        const receiveAmount = includeCostAndExpense ? (receives[0]?.total_amount || 0) : 0;
+
+        const challanAmount = challan[0]?.total_amount || 0;
+        const orderAmount = order[0]?.total_amount || 0;
+        const issuePressingAmount = issuePressing[0]?.total_amount || 0;
+
+        const consumeAmount =
+          challanAmount +
+          orderAmount +
+          issuePressingAmount;
+        const currentAmount = item.total_amount || 0;
+
+        const openingAmount = currentAmount + consumeAmount - receiveAmount;
+        const closingAmount = openingAmount + receiveAmount - consumeAmount;
+
+        const receiveExpenseAmount = includeCostAndExpense ? (receives[0]?.total_expense_amount || 0) : 0;
+
+        const challanExpenseAmount = challan[0]?.total_expense_amount || 0;
+        const orderExpenseAmount = order[0]?.total_expense_amount || 0;
+        const issuePressingExpenseAmount = issuePressing[0]?.total_expense_amount || 0;
+
+        const consumeExpenseAmount =
+          challanExpenseAmount +
+          orderExpenseAmount +
+          issuePressingExpenseAmount;
+        const currentExpenseAmount = item.expense_amount || 0;
+        const openingExpenseAmount = currentExpenseAmount + consumeExpenseAmount - receiveExpenseAmount;
+        const closingExpenseAmount = openingExpenseAmount + receiveExpenseAmount - consumeExpenseAmount;
 
         return {
           fleece_sub_type: item_sub_category_name,
@@ -203,6 +237,20 @@ export const fleeceStockReportCsv = catchAsync(async (req, res, next) => {
           issue_pressing_sqm: roundMetricValue(issuePressingSqm),
           closing_rolls: Math.max(0, roundStock(closingRolls, 0)),
           closing_sqm: Math.max(0, roundMetricValue(closingSqm)),
+          ...(includeCostAndExpense && {
+            opening_amount: Math.max(0, roundMetricValue(openingAmount)),
+            opening_expense_amount: Math.max(0, roundMetricValue(openingExpenseAmount)),
+            receive_amount: Math.max(0, roundMetricValue(receiveAmount)),
+            receive_expense_amount: Math.max(0, roundMetricValue(receiveExpenseAmount)),
+            consume_amount: Math.max(0, roundMetricValue(consumeAmount)),
+            consume_expense_amount: Math.max(0, roundMetricValue(consumeExpenseAmount)),
+            order_amount: Math.max(0, roundMetricValue(orderAmount)),
+            order_expense_amount: Math.max(0, roundMetricValue(orderExpenseAmount)),
+            issue_pressing_amount: Math.max(0, roundMetricValue(issuePressingAmount)),
+            issue_pressing_expense_amount: Math.max(0, roundMetricValue(issuePressingExpenseAmount)),
+            closing_amount: Math.max(0, roundMetricValue(closingAmount)),
+            closing_expense_amount: Math.max(0, roundMetricValue(closingExpenseAmount)),
+          }),
         };
       })
     );
@@ -232,7 +280,8 @@ export const fleeceStockReportCsv = catchAsync(async (req, res, next) => {
       activeStockData,
       startDate,
       endDate,
-      filter
+      filter,
+      includeCostAndExpense
     );
 
     return res.json(
@@ -253,7 +302,7 @@ export const fleeceStockReportCsv = catchAsync(async (req, res, next) => {
  * @route POST /report/download-stock-report-fleece-item-wise
  */
 export const fleeceItemWiseStockReportCsv = catchAsync(async (req, res, next) => {
-  const { startDate, endDate } = req.body;
+  const { startDate, endDate, includeCostAndExpense } = req.body;
   const filter = req.body?.filter || {};
 
   if (!startDate || !endDate) {
@@ -292,6 +341,8 @@ export const fleeceItemWiseStockReportCsv = catchAsync(async (req, res, next) =>
             length: '$length',
             width: '$width',
           },
+          amount: { $sum: '$amount' },
+          expense_amount: { $sum: '$expense_amount' },
           current_rolls: { $sum: '$available_number_of_roll' },
           current_sqm: { $sum: '$available_sqm' },
           item_ids: { $push: '$_id' },
@@ -330,6 +381,8 @@ export const fleeceItemWiseStockReportCsv = catchAsync(async (req, res, next) =>
               _id: null,
               total_rolls: { $sum: '$number_of_roll' },
               total_sqm: { $sum: '$total_sq_meter' },
+              total_amount: { $sum: '$amount' },
+              total_expense_amount: { $sum: '$expense_amount' },
             },
           },
         ]);
@@ -348,6 +401,7 @@ export const fleeceItemWiseStockReportCsv = catchAsync(async (req, res, next) =>
                 _id: null,
                 total_rolls: { $sum: '$issued_number_of_roll' },
                 total_sqm: { $sum: '$issued_sqm' },
+                total_issued_amount: { $sum: '$issued_amount' },
               },
             },
           ]),
@@ -364,6 +418,7 @@ export const fleeceItemWiseStockReportCsv = catchAsync(async (req, res, next) =>
                 _id: null,
                 total_rolls: { $sum: '$issued_number_of_roll' },
                 total_sqm: { $sum: '$issued_sqm' },
+                total_issued_amount: { $sum: '$issued_amount' },
               },
             },
           ]),
@@ -380,6 +435,7 @@ export const fleeceItemWiseStockReportCsv = catchAsync(async (req, res, next) =>
                 _id: null,
                 total_rolls: { $sum: '$issued_number_of_roll' },
                 total_sqm: { $sum: '$issued_sqm' },
+                total_issued_amount: { $sum: '$issued_amount' },
               },
             },
           ]),
@@ -402,6 +458,24 @@ export const fleeceItemWiseStockReportCsv = catchAsync(async (req, res, next) =>
         const openingSqm = currentSqm + consumeSqm - receiveSqm;
         const closingRolls = openingRolls + receiveRolls - consumeRolls;
         const closingSqm = openingSqm + receiveSqm - consumeSqm;
+        const challanAmount = challan[0]?.total_issued_amount || 0;
+        const challanExpenseAmount = challan[0]?.total_expense_amount || 0;
+
+        const receiveAmount = receives[0]?.total_amount || 0;
+        const receiveExpenseAmount = receives[0]?.total_expense_amount || 0;
+        const orderAmount = order[0]?.total_issued_amount || 0;
+        const orderExpenseAmount = order[0]?.total_expense_amount || 0;
+        const issuePressingAmount = issuePressing[0]?.total_issued_amount || 0;
+        const issuePressingExpenseAmount = issuePressing[0]?.total_expense_amount || 0;
+        const consumeAmount = challanAmount + orderAmount + issuePressingAmount;
+        const consumeExpenseAmount = challanExpenseAmount + orderExpenseAmount + issuePressingExpenseAmount;
+        const currentAmount = item.amount || 0;
+        const currentExpenseAmount = item.expense_amount || 0;
+
+        const openingAmount = currentAmount + consumeAmount - receiveAmount;
+        const openingExpenseAmount = currentExpenseAmount + consumeExpenseAmount - receiveExpenseAmount;
+        const closingAmount = openingAmount + receiveAmount - consumeAmount;
+        const closingExpenseAmount = openingExpenseAmount + receiveExpenseAmount - consumeExpenseAmount;
 
         return {
           item_name: item_name || '',
@@ -422,6 +496,18 @@ export const fleeceItemWiseStockReportCsv = catchAsync(async (req, res, next) =>
           issue_pressing_sqm: roundMetricValue(issuePressingSqm),
           closing_rolls: Math.max(0, roundStock(closingRolls, 0)),
           closing_sqm: Math.max(0, roundMetricValue(closingSqm)),
+          opening_amount: Math.max(0, roundMetricValue(openingAmount)),
+          opening_expense_amount: Math.max(0, roundMetricValue(openingExpenseAmount)),
+          receive_amount: Math.max(0, roundMetricValue(receiveAmount)),
+          receive_expense_amount: Math.max(0, roundMetricValue(receiveExpenseAmount)),
+          consume_amount: Math.max(0, roundMetricValue(consumeAmount)),
+          consume_expense_amount: Math.max(0, roundMetricValue(consumeExpenseAmount)),
+          order_amount: Math.max(0, roundMetricValue(orderAmount)),
+          order_expense_amount: Math.max(0, roundMetricValue(orderExpenseAmount)),
+          issue_pressing_amount: Math.max(0, roundMetricValue(issuePressingAmount)),
+          issue_pressing_expense_amount: Math.max(0, roundMetricValue(issuePressingExpenseAmount)),
+          closing_amount: Math.max(0, roundMetricValue(closingAmount)),
+          closing_expense_amount: Math.max(0, roundMetricValue(closingExpenseAmount)),
         };
       })
     );
@@ -451,7 +537,8 @@ export const fleeceItemWiseStockReportCsv = catchAsync(async (req, res, next) =>
       activeStockData,
       startDate,
       endDate,
-      filter
+      filter,
+      includeCostAndExpense
     );
 
     return res.json(
@@ -475,7 +562,7 @@ export const fleeceItemWiseStockReportCsv = catchAsync(async (req, res, next) =>
  * @access Private
  */
 export const fleeceStockReportByInwardCsv = catchAsync(async (req, res, next) => {
-  const { startDate, endDate } = req.body;
+  const { startDate, endDate, includeCostAndExpense } = req.body;
   const filter = req.body?.filter || {};
 
   if (!startDate || !endDate) {
@@ -527,6 +614,8 @@ export const fleeceStockReportByInwardCsv = catchAsync(async (req, res, next) =>
           total_sq_meter: { $sum: '$total_sq_meter' },
           current_rolls: { $sum: '$available_number_of_roll' },
           current_sqm: { $sum: '$available_sqm' },
+          total_amount: { $sum: '$amount' },
+          total_expense_amount: { $sum: '$expense_amount' },
         },
       },
     ]).then((groups) => groups.filter((g) => g.inward_sr_no != null));
@@ -560,6 +649,7 @@ export const fleeceStockReportByInwardCsv = catchAsync(async (req, res, next) =>
                 _id: null,
                 total_rolls: { $sum: '$issued_number_of_roll' },
                 total_sqm: { $sum: '$issued_sqm' },
+                total_issued_amount: { $sum: '$issued_amount' },
               },
             },
           ]),
@@ -576,6 +666,7 @@ export const fleeceStockReportByInwardCsv = catchAsync(async (req, res, next) =>
                 _id: null,
                 total_rolls: { $sum: '$issued_number_of_roll' },
                 total_sqm: { $sum: '$issued_sqm' },
+                total_issued_amount: { $sum: '$issued_amount' },
               },
             },
           ]),
@@ -592,6 +683,7 @@ export const fleeceStockReportByInwardCsv = catchAsync(async (req, res, next) =>
                 _id: null,
                 total_rolls: { $sum: '$issued_number_of_roll' },
                 total_sqm: { $sum: '$issued_sqm' },
+                total_issued_amount: { $sum: '$issued_amount' },
               },
             },
           ]),
@@ -613,6 +705,27 @@ export const fleeceStockReportByInwardCsv = catchAsync(async (req, res, next) =>
         const closingRolls = openingRolls + receiveRolls - consumeRolls;
         const closingSqm = openingSqm + receiveSqm - consumeSqm;
 
+        const receiveAmount = includeCostAndExpense && inwardDate && inwardDate >= start && inwardDate <= end
+          ? (group.total_amount || 0)
+          : 0;
+        const receiveExpenseAmount = includeCostAndExpense && inwardDate && inwardDate >= start && inwardDate <= end
+          ? (group.total_expense_amount || 0)
+          : 0;
+        const challanAmount = challan[0]?.total_issued_amount || 0;
+        const challanExpenseAmount = challan[0]?.total_expense_amount || 0;
+        const orderAmount = order[0]?.total_issued_amount || 0;
+        const orderExpenseAmount = order[0]?.total_expense_amount || 0;
+        const issuePressingAmount = issuePressing[0]?.total_issued_amount || 0;
+        const issuePressingExpenseAmount = issuePressing[0]?.total_expense_amount || 0;
+        const consumeAmount = challanAmount + orderAmount + issuePressingAmount;
+        const consumeExpenseAmount = challanExpenseAmount + orderExpenseAmount + issuePressingExpenseAmount;
+        const currentAmount = group.total_amount || 0;
+        const currentExpenseAmount = group.total_expense_amount || 0;
+        const openingAmount = currentAmount + consumeAmount - receiveAmount;
+        const openingExpenseAmount = currentExpenseAmount + consumeExpenseAmount - receiveExpenseAmount;
+        const closingAmount = openingAmount + receiveAmount - consumeAmount;
+        const closingExpenseAmount = openingExpenseAmount + receiveExpenseAmount - consumeExpenseAmount;
+
         return {
           inward_no: group.inward_sr_no ?? '',
           fleece_sub_type: item_sub_category_name ?? '',
@@ -632,6 +745,22 @@ export const fleeceStockReportByInwardCsv = catchAsync(async (req, res, next) =>
           issue_pressing_sqm: roundMetricValue(issuePressingSqm),
           closing_rolls: Math.max(0, roundStock(closingRolls, 0)),
           closing_sqm: Math.max(0, roundMetricValue(closingSqm)),
+          opening_amount: Math.max(0, roundMetricValue(openingAmount)),
+          opening_expense_amount: Math.max(0, roundMetricValue(openingExpenseAmount)),
+          closing_amount: Math.max(0, roundMetricValue(closingAmount)),
+          closing_expense_amount: Math.max(0, roundMetricValue(closingExpenseAmount)),
+          receive_amount: Math.max(0, roundMetricValue(receiveAmount)),
+          receive_expense_amount: Math.max(0, roundMetricValue(receiveExpenseAmount)),
+          consume_amount: Math.max(0, roundMetricValue(consumeAmount)),
+          consume_expense_amount: Math.max(0, roundMetricValue(consumeExpenseAmount)),
+          challan_amount: Math.max(0, roundMetricValue(challanAmount)),
+          challan_expense_amount: Math.max(0, roundMetricValue(challanExpenseAmount)),
+          order_amount: Math.max(0, roundMetricValue(orderAmount)),
+          order_expense_amount: Math.max(0, roundMetricValue(orderExpenseAmount)),
+          issue_pressing_amount: Math.max(0, roundMetricValue(issuePressingAmount)),
+          issue_pressing_expense_amount: Math.max(0, roundMetricValue(issuePressingExpenseAmount)),
+          consume_amount: Math.max(0, roundMetricValue(consumeAmount)),
+          consume_expense_amount: Math.max(0, roundMetricValue(consumeExpenseAmount)),
         };
       })
     );
@@ -669,7 +798,8 @@ export const fleeceStockReportByInwardCsv = catchAsync(async (req, res, next) =>
       activeStockData,
       startDate,
       endDate,
-      filter
+      filter,
+      includeCostAndExpense
     );
 
     return res.json(

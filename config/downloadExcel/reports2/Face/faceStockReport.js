@@ -18,7 +18,8 @@ export const GenerateFaceStockReportExcel = async (
   aggregatedData,
   startDate,
   endDate,
-  filter = {}
+  filter = {},
+  includeCostAndExpense
 ) => {
   try {
     const folderPath = 'public/upload/reports/reports2/Face';
@@ -64,6 +65,16 @@ export const GenerateFaceStockReportExcel = async (
       { key: 'received_metres', width: 18 },
       { key: 'issued_metres', width: 18 },
       { key: 'closing_bal', width: 18 },
+      ...(includeCostAndExpense
+        ? [
+          { key: 'opening_amount', width: 18 },
+          { key: 'opening_expense_amount', width: 18 },
+          { key: 'receive_amount', width: 18 },
+          { key: 'receive_expense_amount', width: 18 },
+          { key: 'closing_amount', width: 18 },
+          { key: 'closing_expense_amount', width: 18 },
+        ]
+        : [])
     ];
 
     worksheet.columns = columnDefinitions;
@@ -84,6 +95,16 @@ export const GenerateFaceStockReportExcel = async (
       'Received Metres',
       'Issued Metres',
       'Closing Bal',
+      ...(includeCostAndExpense
+        ? [
+          'Opening Amount',
+          'Opening Expense Amount',
+          'Receive Amount',
+          'Receive Expense Amount',
+          'Closing Amount',
+          'Closing Expense Amount',
+        ]
+        : [])
     ]);
     headerRow.font = { bold: true };
     headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
@@ -98,6 +119,16 @@ export const GenerateFaceStockReportExcel = async (
       received_metres: 0,
       issued_metres: 0,
       closing_bal: 0,
+      ...(includeCostAndExpense
+        ? {
+          opening_amount: 0,
+          opening_expense_amount: 0,
+          receive_amount: 0,
+          receive_expense_amount: 0,
+          closing_amount: 0,
+          closing_expense_amount: 0,
+        }
+        : {})
     };
 
     const groupedData = {};
@@ -124,6 +155,12 @@ export const GenerateFaceStockReportExcel = async (
       let itemLastClosing = 0;
       let itemReceived = 0;
       let itemIssued = 0;
+      let itemOpeningAmount = 0;
+      let itemOpeningExpenseAmount = 0;
+      let itemReceiveAmount = 0;
+      let itemReceiveExpenseAmount = 0;
+      let itemClosingAmount = 0;
+      let itemClosingExpenseAmount = 0;
 
       let itemStartRow = null;
 
@@ -132,7 +169,16 @@ export const GenerateFaceStockReportExcel = async (
         itemLastClosing = parseFloat(item.closing_bal || 0);
         itemReceived += parseFloat(item.received_metres || 0);
         itemIssued += parseFloat(item.issued_metres || 0);
-
+        if (includeCostAndExpense) {
+          if (item.opening_amount !== undefined) {
+            if (itemOpeningAmount === 0) itemOpeningAmount = item.opening_amount;
+            itemOpeningExpenseAmount += item.opening_expense_amount || 0;
+          }
+          itemReceiveAmount += item.receive_amount || 0;
+          itemReceiveExpenseAmount += item.receive_expense_amount || 0;
+          itemClosingAmount = item.closing_amount || 0;
+          itemClosingExpenseAmount = item.closing_expense_amount || 0;
+        }
         const rowData = {
           item_name: itemName,
           thickness: parseFloat(item.thickness || 0).toFixed(2),
@@ -141,6 +187,16 @@ export const GenerateFaceStockReportExcel = async (
           received_metres: parseFloat(item.received_metres || 0).toFixed(2),
           issued_metres: parseFloat(item.issued_metres || 0).toFixed(2),
           closing_bal: parseFloat(item.closing_bal || 0).toFixed(2),
+          ...(includeCostAndExpense
+            ? {
+              opening_amount: (item.opening_amount || 0).toFixed(2),
+              opening_expense_amount: (item.opening_expense_amount || 0).toFixed(2),
+              receive_amount: (item.receive_amount || 0).toFixed(2),
+              receive_expense_amount: (item.receive_expense_amount || 0).toFixed(2),
+              closing_amount: (item.closing_amount || 0).toFixed(2),
+              closing_expense_amount: (item.closing_expense_amount || 0).toFixed(2),
+            }
+            : {})
         };
         const row = worksheet.addRow(rowData);
         if (itemStartRow === null) itemStartRow = row.number;
@@ -161,6 +217,16 @@ export const GenerateFaceStockReportExcel = async (
         received_metres: itemReceived.toFixed(2),
         issued_metres: itemIssued.toFixed(2),
         closing_bal: itemLastClosing.toFixed(2),
+        ...(includeCostAndExpense
+          ? {
+            opening_amount: itemOpeningAmount.toFixed(2),
+            opening_expense_amount: itemOpeningExpenseAmount.toFixed(2),
+            receive_amount: itemReceiveAmount.toFixed(2),
+            receive_expense_amount: itemReceiveExpenseAmount.toFixed(2),
+            closing_amount: itemClosingAmount.toFixed(2),
+            closing_expense_amount: itemClosingExpenseAmount.toFixed(2),
+          }
+          : {})
       });
       itemTotalRow.eachCell((cell) => {
         cell.font = { bold: true };
@@ -175,6 +241,14 @@ export const GenerateFaceStockReportExcel = async (
       grandTotals.received_metres += itemReceived;
       grandTotals.issued_metres += itemIssued;
       grandTotals.closing_bal += itemLastClosing;
+      if (includeCostAndExpense) {
+        grandTotals.opening_amount += itemOpeningAmount;
+        grandTotals.opening_expense_amount += itemOpeningExpenseAmount;
+        grandTotals.receive_amount += itemReceiveAmount;
+        grandTotals.receive_expense_amount += itemReceiveExpenseAmount;
+        grandTotals.closing_amount += itemClosingAmount;
+        grandTotals.closing_expense_amount += itemClosingExpenseAmount;
+      }
     });
 
     const totalRow = worksheet.addRow({
@@ -185,6 +259,16 @@ export const GenerateFaceStockReportExcel = async (
       received_metres: grandTotals.received_metres.toFixed(2),
       issued_metres: grandTotals.issued_metres.toFixed(2),
       closing_bal: grandTotals.closing_bal.toFixed(2),
+      ...(includeCostAndExpense
+        ? {
+          opening_amount: grandTotals.opening_amount.toFixed(2),
+          opening_expense_amount: grandTotals.opening_expense_amount.toFixed(2),
+          receive_amount: grandTotals.receive_amount.toFixed(2),
+          receive_expense_amount: grandTotals.receive_expense_amount.toFixed(2),
+          closing_amount: grandTotals.closing_amount.toFixed(2),
+          closing_expense_amount: grandTotals.closing_expense_amount.toFixed(2),
+        }
+        : {})
     });
     totalRow.eachCell((cell) => {
       cell.font = { bold: true };

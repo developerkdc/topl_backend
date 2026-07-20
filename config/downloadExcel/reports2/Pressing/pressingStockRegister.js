@@ -60,7 +60,8 @@ export const GeneratePressingStockRegisterExcel = async (
   aggregatedData,
   startDate,
   endDate,
-  filter = {}
+  filter = {},
+  includeCostAndExpense
 ) => {
   try {
     const folderPath = 'public/upload/reports/reports2/Pressing';
@@ -79,12 +80,19 @@ export const GeneratePressingStockRegisterExcel = async (
       'Item Group',
       'Item Name',
       'OPBL SqMtr',
+      ...(includeCostAndExpense ? ['OPBL Amount'] : []),
       'Received SqMtr',
+      ...(includeCostAndExpense ? ['Received Amount'] : []),
       'Pur Sq Mtr',
+      ...(includeCostAndExpense ? ['Pur Amount'] : []),
       'Issue SqMtr',
+      ...(includeCostAndExpense ? ['Issue Amount'] : []),
       'Process Waste SqMtr',
+      ...(includeCostAndExpense ? ['Process Waste Amount'] : []),
       'New Sqmtr',
+      ...(includeCostAndExpense ? ['New Amount'] : []),
       'Closing SqMtr',
+      ...(includeCostAndExpense ? ['Closing Amount'] : []),
     ];
 
     let currentRow = 1;
@@ -123,6 +131,15 @@ export const GeneratePressingStockRegisterExcel = async (
       process_waste: 0,
       new_sqmtr: 0,
       closing_balance: 0,
+      ...(includeCostAndExpense ? {
+        opening_amount: 0,
+        received_amount: 0,
+        purchase_amount: 0,
+        issue_amount: 0,
+        process_waste_amount: 0,
+        new_sqmtr_amount: 0,
+        closing_amount: 0,
+      } : {}),
     };
 
     let prevCategory = null;
@@ -147,12 +164,33 @@ export const GeneratePressingStockRegisterExcel = async (
           tr.getCell(2).value = '';
           tr.getCell(3).value = 'Total';
           tr.getCell(4).value = groupTotals.opening_balance;
+          if (includeCostAndExpense) {
+            tr.getCell(5).value = groupTotals.opening_amount;
+          }
           tr.getCell(5).value = groupTotals.received;
+          if (includeCostAndExpense) {
+            tr.getCell(6).value = groupTotals.received_amount;
+          }
           tr.getCell(6).value = groupTotals.purchase;
+          if (includeCostAndExpense) {
+            tr.getCell(7).value = groupTotals.purchase_amount;
+          }
           tr.getCell(7).value = groupTotals.issue;
+          if (includeCostAndExpense) {
+            tr.getCell(8).value = groupTotals.issue_amount;
+          }
           tr.getCell(8).value = groupTotals.process_waste;
+          if (includeCostAndExpense) {
+            tr.getCell(9).value = groupTotals.process_waste_amount;
+          }
           tr.getCell(9).value = groupTotals.new_sqmtr;
+          if (includeCostAndExpense) {
+            tr.getCell(10).value = groupTotals.new_sqmtr_amount;
+          }
           tr.getCell(10).value = groupTotals.closing_balance;
+          if (includeCostAndExpense) {
+            tr.getCell(11).value = groupTotals.closing_amount;
+          }
           for (let col = 4; col <= 10; col++) tr.getCell(col).numFmt = '0.00';
           tr.eachCell((cell) => {
             Object.assign(cell, totalRowStyle);
@@ -181,6 +219,15 @@ export const GeneratePressingStockRegisterExcel = async (
           process_waste: 0,
           new_sqmtr: 0,
           closing_balance: 0,
+          ...(includeCostAndExpense ? {
+            opening_amount: 0,
+            received_amount: 0,
+            purchase_amount: 0,
+            issue_amount: 0,
+            process_waste_amount: 0,
+            new_sqmtr_amount: 0,
+            closing_amount: 0,
+          } : {}),
         };
         groupStartRow = currentRow;
       }
@@ -192,6 +239,13 @@ export const GeneratePressingStockRegisterExcel = async (
       const pw = Number(row.process_waste) ?? 0;
       const nw = Number(row.new_sqmtr) ?? 0;
       const cb = Number(row.closing_balance) ?? 0;
+      const oa = Number(row.opening_amount) ?? 0;
+      const ra = Number(row.received_amount) ?? 0;
+      const pa = Number(row.purchase_amount) ?? 0;
+      const isa = Number(row.issue_amount) ?? 0;
+      const pwa = Number(row.process_waste_amount) ?? 0;
+      const nwa = Number(row.new_sqmtr_amount) ?? 0;
+      const cba = Number(row.closing_amount) ?? 0;
 
       const r = worksheet.getRow(currentRow);
       r.getCell(1).value = category;
@@ -204,6 +258,15 @@ export const GeneratePressingStockRegisterExcel = async (
       r.getCell(8).value = pw;
       r.getCell(9).value = nw;
       r.getCell(10).value = cb;
+      if (includeCostAndExpense) {
+        r.getCell(5).value = oa;
+        r.getCell(6).value = ra;
+        r.getCell(7).value = pa;
+        r.getCell(8).value = isa;
+        r.getCell(9).value = pwa;
+        r.getCell(10).value = nwa;
+        r.getCell(11).value = cba;
+      }
       for (let col = 4; col <= 10; col++) r.getCell(col).numFmt = '0.00';
 
       groupTotals.opening_balance += ob;
@@ -213,6 +276,15 @@ export const GeneratePressingStockRegisterExcel = async (
       groupTotals.process_waste += pw;
       groupTotals.new_sqmtr += nw;
       groupTotals.closing_balance += cb;
+      if (includeCostAndExpense) {
+        groupTotals.opening_amount += oa;
+        groupTotals.received_amount += ra;
+        groupTotals.purchase_amount += pa;
+        groupTotals.issue_amount += isa;
+        groupTotals.process_waste_amount += pwa;
+        groupTotals.new_sqmtr_amount += nwa;
+        groupTotals.closing_amount += cba;
+      }
 
       grandTotals.opening_balance += ob;
       grandTotals.received += re;
@@ -221,6 +293,15 @@ export const GeneratePressingStockRegisterExcel = async (
       grandTotals.process_waste += pw;
       grandTotals.new_sqmtr += nw;
       grandTotals.closing_balance += cb;
+      if (includeCostAndExpense) {
+        grandTotals.opening_amount += oa;
+        grandTotals.received_amount += ra;
+        grandTotals.purchase_amount += pa;
+        grandTotals.issue_amount += isa;
+        grandTotals.process_waste_amount += pwa;
+        grandTotals.new_sqmtr_amount += nwa;
+        grandTotals.closing_amount += cba;
+      }
 
       prevCategory = category;
       prevItemGroup = itemGroup;
@@ -233,12 +314,33 @@ export const GeneratePressingStockRegisterExcel = async (
       tr.getCell(2).value = '';
       tr.getCell(3).value = 'Total';
       tr.getCell(4).value = groupTotals.opening_balance;
+      if (includeCostAndExpense) {
+        tr.getCell(5).value = groupTotals.opening_amount;
+      }
       tr.getCell(5).value = groupTotals.received;
+      if (includeCostAndExpense) {
+        tr.getCell(6).value = groupTotals.received_amount;
+      }
       tr.getCell(6).value = groupTotals.purchase;
+      if (includeCostAndExpense) {
+        tr.getCell(7).value = groupTotals.purchase_amount;
+      }
       tr.getCell(7).value = groupTotals.issue;
+      if (includeCostAndExpense) {
+        tr.getCell(8).value = groupTotals.issue_amount;
+      }
       tr.getCell(8).value = groupTotals.process_waste;
+      if (includeCostAndExpense) {
+        tr.getCell(9).value = groupTotals.process_waste_amount;
+      }
       tr.getCell(9).value = groupTotals.new_sqmtr;
+      if (includeCostAndExpense) {
+        tr.getCell(10).value = groupTotals.new_sqmtr_amount;
+      }
       tr.getCell(10).value = groupTotals.closing_balance;
+      if (includeCostAndExpense) {
+        tr.getCell(11).value = groupTotals.closing_amount;
+      }
       for (let col = 4; col <= 10; col++) tr.getCell(col).numFmt = '0.00';
       tr.eachCell((cell) => Object.assign(cell, totalRowStyle));
       mergeRanges.itemGroup.push({ start: itemGroupStartRow, end: currentRow - 1 });
@@ -258,12 +360,33 @@ export const GeneratePressingStockRegisterExcel = async (
     totalRow.getCell(2).value = '';
     totalRow.getCell(3).value = '';
     totalRow.getCell(4).value = grandTotals.opening_balance;
+    if (includeCostAndExpense) {
+      totalRow.getCell(5).value = grandTotals.opening_amount;
+    }
     totalRow.getCell(5).value = grandTotals.received;
+    if (includeCostAndExpense) {
+      totalRow.getCell(6).value = grandTotals.received_amount;
+    }
     totalRow.getCell(6).value = grandTotals.purchase;
+    if (includeCostAndExpense) {
+      totalRow.getCell(7).value = grandTotals.purchase_amount;
+    }
     totalRow.getCell(7).value = grandTotals.issue;
+    if (includeCostAndExpense) {
+      totalRow.getCell(8).value = grandTotals.issue_amount;
+    }
     totalRow.getCell(8).value = grandTotals.process_waste;
+    if (includeCostAndExpense) {
+      totalRow.getCell(9).value = grandTotals.process_waste_amount;
+    }
     totalRow.getCell(9).value = grandTotals.new_sqmtr;
+    if (includeCostAndExpense) {
+      totalRow.getCell(10).value = grandTotals.new_sqmtr_amount;
+    }
     totalRow.getCell(10).value = grandTotals.closing_balance;
+    if (includeCostAndExpense) {
+      totalRow.getCell(11).value = grandTotals.closing_amount;
+    }
     totalRow.eachCell((cell) => {
       Object.assign(cell, totalRowStyle);
       if (cell.column >= 4) cell.numFmt = '0.00';

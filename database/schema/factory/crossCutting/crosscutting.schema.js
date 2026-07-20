@@ -171,6 +171,10 @@ const crosscutting_done_schema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    issued_date: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true }
 );

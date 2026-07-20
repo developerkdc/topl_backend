@@ -44,37 +44,70 @@ const styleData = (cell) => {
 };
 
 /**
+ * Helper to fetch amount value from row regardless of casing style
+ */
+const getAmountVal = (row, baseKey) => {
+  if (row[`${baseKey}_amount`] !== undefined) return row[`${baseKey}_amount`];
+  const camelKey = baseKey.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
+  if (row[`${camelKey}Amount`] !== undefined) return row[`${camelKey}Amount`];
+  if (row[`${baseKey}Amount`] !== undefined) return row[`${baseKey}Amount`];
+  return 0;
+};
+
+/**
+ * Helper to fetch expense value from row regardless of casing style
+ */
+const getExpenseVal = (row, baseKey) => {
+  const camelKey = baseKey.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
+  const keys = [
+    `${baseKey}_expense_amount`,
+    `${baseKey}_expense`,
+    `${camelKey}ExpenseAmount`,
+    `${camelKey}Expense`,
+    `${baseKey}ExpenseAmount`,
+    `${baseKey}Expense`
+  ];
+  for (const key of keys) {
+    if (row[key] !== undefined) return row[key];
+  }
+  return 0;
+};
+
+/**
  * Generate Tapping Stock Register Excel.
  *
- * Layout (9 columns, 2-row header):
- *
- * Header Row 1:
+ * Layout (2-row header):
  *   Col 1: Item Name          (merged rows 1–2)
  *   Col 2: Sales Item Name    (merged rows 1–2)
- *   Col 3: Opening Balance    (merged rows 1–2)
- *   Cols 4–5: Tapping         (merged across cols 4–5, row 1 only)
- *   Col 6: Issue              (merged rows 1–2 — "Issue" label; sub-label "Pressing" in row 2)
- *   Col 7: Process Waste      (merged rows 1–2)
- *   Col 8: Sales              (merged rows 1–2)
- *   Col 9: Closing Balance    (merged rows 1–2)
+ *   Col 3: Opening Balance    (or block: Qty | Amount | Expense Amount)
+ *   Tapping block → Hand Splice, Machine Splice
+ *   Issue block   → Pressing
+ *   Process Waste (or block)
+ *   Sales         (or block)
+ *   Closing Balance (or block)
  *
- * Header Row 2:
- *   (cols 1,2,3,7,8,9 are merged down from row 1)
- *   Col 4: Hand Splice
- *   Col 5: Machine Splice
- *   Col 6: Pressing  (sub-label under Issue)
- *
- * @param {Array} rows  - processed stock rows from controller
- * @param {string} startDate - YYYY-MM-DD
- * @param {string} endDate   - YYYY-MM-DD
+ * When includeCostAndExpense is true, every quantity column expands into a
+ * 3-col sub-block: Qty | Amount | Expense Amount.
  */
-const GenerateTappingStockRegisterExcel = async (rows, startDate, endDate) => {
+const GenerateTappingStockRegisterExcel = async (rows, startDate, endDate, includeCostAndExpense) => {
   const workbook = new ExcelJS.Workbook();
   const ws = workbook.addWorksheet('Stock Register');
 
   const numFmt = '0.00';
   const negFmt = '0.00;(0.00)';
-  const TOTAL_COLS = 9;
+
+  // ── Layout math ───────────────────────────────────────────────────────────
+  const KEY_COLS = 2; // Item Name, Sales Item Name
+  const colsPerQty = includeCostAndExpense ? 3 : 1; // Qty [ | Amount | Expense Amount ]
+
+  const openingCol = KEY_COLS + 1;
+  const handSpliceCol = openingCol + colsPerQty;
+  const machineSpliceCol = handSpliceCol + colsPerQty;
+  const pressingCol = machineSpliceCol + colsPerQty;
+  const processWasteCol = pressingCol + colsPerQty;
+  const salesCol = processWasteCol + colsPerQty;
+  const closingCol = salesCol + colsPerQty;
+  const TOTAL_COLS = closingCol + colsPerQty - 1;
 
   let r = 1;
 
@@ -91,129 +124,166 @@ const GenerateTappingStockRegisterExcel = async (rows, startDate, endDate) => {
   const hRow1 = r;
   const hRow2 = r + 1;
 
-  // Cols merged vertically (rows 1–2): 1, 2, 3, 7, 8, 9
-  const verticalCols = [
+  // Key cols: merged vertically (rows 1–2)
+  [
     { col: 1, label: 'Item Name' },
     { col: 2, label: 'Sales Item Name' },
-    { col: 3, label: 'Opening Balance' },
-    { col: 7, label: 'Process Waste' },
-    { col: 8, label: 'Sales' },
-    { col: 9, label: 'Closing Balance' },
-  ];
-  verticalCols.forEach(({ col, label }) => {
+  ].forEach(({ col, label }) => {
     ws.mergeCells(hRow1, col, hRow2, col);
     const cell = ws.getCell(hRow1, col);
     cell.value = label;
     styleHeader(cell, { wrapText: true });
   });
 
-  // "Tapping" merged across cols 4–5, row 1
-  ws.mergeCells(hRow1, 4, hRow1, 5);
-  const tappingCell = ws.getCell(hRow1, 4);
+  // Helper: render a single quantity block
+  const renderQtyBlock = (startCol, label) => {
+    if (includeCostAndExpense) {
+      ws.mergeCells(hRow1, startCol, hRow1, startCol + colsPerQty - 1);
+      const topCell = ws.getCell(hRow1, startCol);
+      topCell.value = label;
+      styleHeader(topCell, { wrapText: true });
+      ['Qty', 'Amount', 'Expense Amount'].forEach((sub, i) => {
+        const cell = ws.getCell(hRow2, startCol + i);
+        cell.value = sub;
+        styleHeader(cell);
+      });
+    } else {
+      ws.mergeCells(hRow1, startCol, hRow2, startCol);
+      const cell = ws.getCell(hRow1, startCol);
+      cell.value = label;
+      styleHeader(cell, { wrapText: true });
+    }
+  };
+
+  renderQtyBlock(openingCol, 'Opening Balance');
+  renderQtyBlock(processWasteCol, 'Process Waste');
+  renderQtyBlock(salesCol, 'Sales');
+  renderQtyBlock(closingCol, 'Closing Balance');
+
+  // "Tapping" merged across Hand Splice + Machine Splice blocks, row 1 only
+  ws.mergeCells(hRow1, handSpliceCol, hRow1, machineSpliceCol + colsPerQty - 1);
+  const tappingCell = ws.getCell(hRow1, handSpliceCol);
   tappingCell.value = 'Tapping';
   styleHeader(tappingCell);
 
-  // "Issue" merged rows 1–2 for col 6 (label "Issue" in row 1, "Pressing" in row 2)
-  // We show "Issue" in row 1 and "Pressing" directly in row 2 for col 6
-  const issueCell = ws.getCell(hRow1, 6);
+  // "Issue" label in row 1 over Pressing block
+  if (includeCostAndExpense) {
+    ws.mergeCells(hRow1, pressingCol, hRow1, pressingCol + colsPerQty - 1);
+  }
+  const issueCell = ws.getCell(hRow1, pressingCol);
   issueCell.value = 'Issue';
   styleHeader(issueCell);
 
-  // Row 2 sub-labels for cols 4, 5, 6
-  const subLabels = [
-    { col: 4, label: 'Hand Splice' },
-    { col: 5, label: 'Machine Splice' },
-    { col: 6, label: 'Pressing' },
-  ];
-  subLabels.forEach(({ col, label }) => {
-    const cell = ws.getCell(hRow2, col);
-    cell.value = label;
-    styleHeader(cell);
-  });
+  // Row 2 sub-labels for Hand Splice / Machine Splice / Pressing
+  if (includeCostAndExpense) {
+    ['Qty', 'Amount', 'Expense Amount'].forEach((sub, i) => {
+      const handCell = ws.getCell(hRow2, handSpliceCol + i);
+      handCell.value = i === 0 ? 'Hand Splice' : sub;
+      styleHeader(handCell);
+
+      const machineCell = ws.getCell(hRow2, machineSpliceCol + i);
+      machineCell.value = i === 0 ? 'Machine Splice' : sub;
+      styleHeader(machineCell);
+
+      const pressCell = ws.getCell(hRow2, pressingCol + i);
+      pressCell.value = i === 0 ? 'Pressing' : sub;
+      styleHeader(pressCell);
+    });
+  } else {
+    [
+      { col: handSpliceCol, label: 'Hand Splice' },
+      { col: machineSpliceCol, label: 'Machine Splice' },
+      { col: pressingCol, label: 'Pressing' },
+    ].forEach(({ col, label }) => {
+      const cell = ws.getCell(hRow2, col);
+      cell.value = label;
+      styleHeader(cell);
+    });
+  }
 
   [hRow1, hRow2].forEach((rowNum) => { ws.getRow(rowNum).height = 18; });
   r += 2;
 
-  // ─── Data Rows ────────────────────────────────────────────────────────────
-  // Totals accumulators
-  let totOpeningBalance = 0;
-  let totTappingHand = 0;
-  let totTappingMachine = 0;
-  let totIssuePressing = 0;
-  let totProcessWaste = 0;
-  let totSales = 0;
-  let totClosingBalance = 0;
+  // ─── Quantity block definitions ───────────────────────────────────────────
+  const qtyBlocks = [
+    { startCol: openingCol, baseKey: 'opening_balance', useNegFmt: true },
+    { startCol: handSpliceCol, baseKey: 'tapping_hand', useNegFmt: false },
+    { startCol: machineSpliceCol, baseKey: 'tapping_machine', useNegFmt: false },
+    { startCol: pressingCol, baseKey: 'issue_pressing', useNegFmt: false },
+    { startCol: processWasteCol, baseKey: 'process_waste', useNegFmt: false },
+    { startCol: salesCol, baseKey: 'sales', useNegFmt: false },
+    { startCol: closingCol, baseKey: 'closing_balance', useNegFmt: true },
+  ];
 
+  const totals = {};
+  qtyBlocks.forEach(({ baseKey }) => {
+    totals[baseKey] = 0;
+    if (includeCostAndExpense) {
+      totals[`${baseKey}_amount`] = 0;
+      totals[`${baseKey}_expense_amount`] = 0;
+    }
+  });
+
+  // ─── Data Rows ────────────────────────────────────────────────────────────
   rows.forEach((row) => {
     const dataRow = ws.getRow(r);
 
-    dataRow.getCell(1).value = row.item_name;
-    dataRow.getCell(2).value = row.sales_item_name;
-    dataRow.getCell(3).value = row.opening_balance;
-    dataRow.getCell(4).value = row.tapping_hand;
-    dataRow.getCell(5).value = row.tapping_machine;
-    dataRow.getCell(6).value = row.issue_pressing;
-    dataRow.getCell(7).value = row.process_waste;
-    dataRow.getCell(8).value = row.sales;
-    dataRow.getCell(9).value = row.closing_balance;
+    dataRow.getCell(1).value = row.item_name ?? '';
+    dataRow.getCell(2).value = row.sales_item_name ?? '';
 
-    // Number formatting (allow negatives in parentheses for balance cols)
-    [3, 9].forEach((col) => {
-      const cell = dataRow.getCell(col);
-      if (typeof cell.value === 'number') cell.numFmt = negFmt;
-    });
-    [4, 5, 6, 7, 8].forEach((col) => {
-      const cell = dataRow.getCell(col);
-      if (typeof cell.value === 'number') cell.numFmt = numFmt;
+    qtyBlocks.forEach(({ startCol, baseKey, useNegFmt }) => {
+      const qtyVal = row[baseKey] ?? 0;
+      dataRow.getCell(startCol).value = qtyVal;
+      dataRow.getCell(startCol).numFmt = useNegFmt ? negFmt : numFmt;
+      totals[baseKey] += qtyVal;
+
+      if (includeCostAndExpense) {
+        const amountVal = getAmountVal(row, baseKey);
+        const expenseVal = getExpenseVal(row, baseKey);
+        dataRow.getCell(startCol + 1).value = amountVal;
+        dataRow.getCell(startCol + 1).numFmt = numFmt;
+        dataRow.getCell(startCol + 2).value = expenseVal;
+        dataRow.getCell(startCol + 2).numFmt = numFmt;
+        totals[`${baseKey}_amount`] += amountVal;
+        totals[`${baseKey}_expense_amount`] += expenseVal;
+      }
     });
 
     for (let col = 1; col <= TOTAL_COLS; col++) styleData(dataRow.getCell(col));
-
-    totOpeningBalance += row.opening_balance;
-    totTappingHand += row.tapping_hand;
-    totTappingMachine += row.tapping_machine;
-    totIssuePressing += row.issue_pressing;
-    totProcessWaste += row.process_waste;
-    totSales += row.sales;
-    totClosingBalance += row.closing_balance;
-
     r++;
   });
 
   // ─── Total Row ────────────────────────────────────────────────────────────
   const totalRow = ws.getRow(r);
   totalRow.getCell(1).value = 'Total';
-  totalRow.getCell(3).value = totOpeningBalance;
-  totalRow.getCell(4).value = totTappingHand;
-  totalRow.getCell(5).value = totTappingMachine;
-  totalRow.getCell(6).value = totIssuePressing;
-  totalRow.getCell(7).value = totProcessWaste;
-  totalRow.getCell(8).value = totSales;
-  totalRow.getCell(9).value = totClosingBalance;
-
   totalRow.getCell(1).font = { bold: true };
-  [3, 9].forEach((col) => {
-    totalRow.getCell(col).font = { bold: true };
-    totalRow.getCell(col).numFmt = negFmt;
+
+  qtyBlocks.forEach(({ startCol, baseKey, useNegFmt }) => {
+    totalRow.getCell(startCol).value = totals[baseKey];
+    totalRow.getCell(startCol).font = { bold: true };
+    totalRow.getCell(startCol).numFmt = useNegFmt ? negFmt : numFmt;
+
+    if (includeCostAndExpense) {
+      totalRow.getCell(startCol + 1).value = totals[`${baseKey}_amount`];
+      totalRow.getCell(startCol + 1).font = { bold: true };
+      totalRow.getCell(startCol + 1).numFmt = numFmt;
+
+      totalRow.getCell(startCol + 2).value = totals[`${baseKey}_expense_amount`];
+      totalRow.getCell(startCol + 2).font = { bold: true };
+      totalRow.getCell(startCol + 2).numFmt = numFmt;
+    }
   });
-  [4, 5, 6, 7, 8].forEach((col) => {
-    totalRow.getCell(col).font = { bold: true };
-    totalRow.getCell(col).numFmt = numFmt;
-  });
+
   for (let col = 1; col <= TOTAL_COLS; col++) styleData(totalRow.getCell(col));
 
   // ─── Column Widths ────────────────────────────────────────────────────────
-  ws.columns = [
+  const qtyWidths = includeCostAndExpense ? [14, 14, 16] : [14];
+  const columns = [
     { width: 22 }, // Item Name
     { width: 22 }, // Sales Item Name
-    { width: 16 }, // Opening Balance
-    { width: 14 }, // Hand Splice
-    { width: 16 }, // Machine Splice
-    { width: 14 }, // Pressing
-    { width: 14 }, // Process Waste
-    { width: 10 }, // Sales
-    { width: 16 }, // Closing Balance
   ];
+  qtyBlocks.forEach(() => columns.push(...qtyWidths.map((w) => ({ width: w }))));
+  ws.columns = columns;
 
   // ─── Save File ────────────────────────────────────────────────────────────
   const timestamp = Date.now();

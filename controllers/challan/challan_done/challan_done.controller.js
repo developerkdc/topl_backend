@@ -14,13 +14,14 @@ import {
 } from '../../../database/Utils/constants/constants.js';
 import transporterModel from '../../../database/schema/masters/transporter.schema.js';
 import moment from 'moment';
-import { getStateCode } from '../../../utils/stateCode.js';
+import { getEwayPincode, getEwayStateCode, getStateCode } from '../../../utils/stateCode.js';
 import { EwayBillHeaderVariable } from '../../../middlewares/ewaybillAuth.middleware.js';
 import errorCodeMapForEwayBill from '../../dispatch/errorCodeMapForEwayBill.js';
 import axios from 'axios';
 import { parseGovEwayDate } from '../../../utils/date/govDateConverter.js';
 import itemCategoryModel from '../../../database/schema/masters/item.category.schema.js';
 import UnitModel from '../../../database/schema/masters/unit.schema.js';
+import { response } from 'express';
 // import errorCodeMapForEwayBill from './errorCodeMapForEwayBill.js';
 
 export const create_challan = catchAsync(async (req, res) => {
@@ -365,9 +366,9 @@ export const listing_challan_done = catchAsync(async (req, res, next) => {
     $sort:
       sortBy === 'challan_no'
         ? {
-            challan_no_sort_key: sort === 'desc' ? -1 : 1,
-            challan_no: sort === 'desc' ? -1 : 1,
-          }
+          challan_no_sort_key: sort === 'desc' ? -1 : 1,
+          challan_no: sort === 'desc' ? -1 : 1,
+        }
         : { [sortBy]: sort === 'desc' ? -1 : 1 },
   };
   const aggSkip = {
@@ -749,6 +750,246 @@ export const listing_single_challan = catchAsync(async (req, res, next) => {
   return res.status(StatusCodes.OK).json(response);
 });
 
+export const eway_bill_payload = catchAsync(async (req, res, next) => {
+  const challan_id = req.params.id;
+  const matchQuery = {
+    $match: {
+      _id: mongoose.Types.ObjectId.createFromHexString(challan_id),
+    },
+  };
+  const aggIssuedChallanDetailsLookup = {
+    $lookup: {
+      from: 'issue_for_challan_details',
+      localField: 'raw_material_items',
+      foreignField: '_id',
+      as: 'issue_for_challan_item_details',
+    },
+  };
+  const listAggregate = [matchQuery, aggIssuedChallanDetailsLookup];
+
+  if (!challan_id) {
+    throw new ApiError('Challan ID is missing.', StatusCodes.NOT_FOUND);
+  }
+  if (!isValidObjectId(challan_id)) {
+    throw new ApiError('Invalid Challan ID', StatusCodes.BAD_REQUEST);
+  }
+
+  const challanDetails = await challan_done_model.aggregate(listAggregate);
+  if (!challanDetails || challanDetails.length === 0) {
+    throw new ApiError('Challan details not found', StatusCodes.NOT_FOUND);
+  }
+  const challan_details = challanDetails[0];
+  const issue_for_challan_item_details =
+    challan_details?.issue_for_challan_item_details;
+
+  if (
+    !issue_for_challan_item_details ||
+    issue_for_challan_item_details.length === 0
+  ) {
+    throw new ApiError(
+      'Issue for challan item details not found',
+      StatusCodes.NOT_FOUND
+    );
+  }
+
+  // console.log('challanDetails', challan_details, 'challanDetails');
+  // console.log(
+  //   'issue_for_challan_item_details',
+  //   issue_for_challan_item_details,
+  //   'issue_for_challan_item_details'
+  // );
+
+  //get hsn code and unit form category for raw material
+  const itemCategory = await itemCategoryModel.findOne({
+    category: challan_details?.raw_material?.toUpperCase(),
+  });
+  if (!itemCategory) {
+    throw new ApiError('Item category not found', StatusCodes.NOT_FOUND);
+  }
+  const hsnCode = itemCategory?.product_hsn_code;
+  const unit = itemCategory?.calculate_unit;
+  //find this unit in unit master to get symbolic name
+  const unitDetails = await UnitModel.findOne({
+    unit_name: unit,
+  });
+  if (!unitDetails) {
+    throw new ApiError('Unit not found', StatusCodes.NOT_FOUND);
+  }
+  const unitSymbolicName = unitDetails?.unit_symbolic_name;
+  // console.log('hsnCode', hsnCode, 'hsnCode');
+  // console.log('unit', unit, 'unit');
+
+  // Optionally, eager load related entities (transporter, vehicle) if you need deeper metadata, like dispatch
+  let transporter_details = challan_details.transporter_details;
+  if (challan_details.transporter_id) {
+    transporter_details = await transporterModel.findOne({
+      _id: challan_details.transporter_id,
+    });
+  }
+  // console.log('transporter_details', transporter_details, 'transporter_details');
+
+  const address = challan_details.address || {};
+  const {
+    bill_from_address,
+    bill_to_address,
+    dispatch_from_address,
+    ship_to_address,
+  } = address;
+
+  // Transaction type mapping (mimic dispatch logic: 1=Regular, 2=Bill to Ship to, 3=Bill from Dispatch from, 4=Both). Fallback to 1.
+  let transactionType;
+  switch (challan_details?.transaction_type) {
+    case transaction_type?.regular:
+    case 1:
+      transactionType = 1;
+      break;
+    case transaction_type?.bill_to_ship_to:
+    case 2:
+      transactionType = 2;
+      break;
+    case transaction_type?.bill_from_dispatch_from:
+    case 3:
+      transactionType = 3;
+      break;
+    case transaction_type?.bill_to_ship_to_and_bill_from_dispatch_from:
+    case 4:
+      transactionType = 4;
+      break;
+    default:
+      transactionType = 1;
+  }
+
+  const ewayBillBody = {
+    supplyType: 'O', // Outward
+    subSupplyType: '4', // Job work (for challan) -- adjust if required
+    subSupplyDesc: '',
+    docType: 'CHL', // Challan
+    docNo: challan_details?.challan_no,
+    docDate: challan_details?.challan_date
+      ? moment(challan_details.challan_date).format('DD/MM/YYYY')
+      : '',
+    // Seller details
+    fromGstin: bill_from_address?.gst_number,
+    fromTrdName: 'TURAKHIA OVERSEAS PVT. LTD.',
+    fromAddr1:
+      dispatch_from_address?.address &&
+        dispatch_from_address.address.length > 50
+        ? dispatch_from_address.address.slice(0, 50)
+        : dispatch_from_address?.address || '',
+    fromAddr2:
+      dispatch_from_address?.address &&
+        dispatch_from_address.address.length > 50
+        ? dispatch_from_address.address.slice(50)
+        : '',
+    fromPlace: dispatch_from_address?.city || '',
+    actFromStateCode: getEwayStateCode(dispatch_from_address, "BILL"),
+    fromPincode: getEwayPincode(dispatch_from_address),
+    fromStateCode: getEwayStateCode(dispatch_from_address, "BILL"),
+
+    toGstin:
+      bill_to_address?.gst_number ||
+      challan_details?.customer_details?.gst_number ||
+      '',
+    toTrdName:
+      challan_details?.customer_details?.legal_name ||
+      challan_details?.customer_name ||
+      '',
+
+    toAddr1:
+      ship_to_address?.address && ship_to_address.address.length > 50
+        ? ship_to_address.address.slice(0, 50)
+        : ship_to_address?.address || '',
+    toAddr2:
+      ship_to_address?.address && ship_to_address.address.length > 50
+        ? ship_to_address.address.slice(50)
+        : '',
+    toPlace: ship_to_address?.city || '',
+    toPincode: getEwayPincode(ship_to_address),
+    actToStateCode: getEwayStateCode(ship_to_address, "SHIP"),
+    toStateCode: getEwayStateCode(ship_to_address, "SHIP"),
+
+    transactionType: transactionType,
+
+    dispatchFromGSTIN: dispatch_from_address?.gst_number,
+    dispatchFromTradeName: 'TURAKHIA OVERSEAS PVT. LTD.',
+
+    // Buyer details
+
+    shipToGSTIN:
+      ship_to_address?.gst_number ||
+      challan_details?.customer_details?.gst_number ||
+      '',
+    shipToTradeName:
+      challan_details?.customer_details?.legal_name ||
+      challan_details?.customer_name ||
+      '',
+
+    totalValue:
+      challan_details?.base_amount ||
+      challan_details?.base_amount_without_gst ||
+      0,
+
+    cgstValue: challan_details?.cgst ? challan_details?.gst_amount / 2 : 0,
+    sgstValue: challan_details?.sgst ? challan_details?.gst_amount / 2 : 0,
+    igstValue: challan_details?.igst ? challan_details?.gst_amount : 0,
+    // cessValue: challan_details?.cess_value || 0,
+    totInvValue:
+      challan_details?.grand_total || challan_details?.total_amount || 0,
+
+    // Transport details
+    transMode: challan_details?.transport_mode?.id,
+    transDistance: challan_details?.approx_distance?.toString() || '',
+    transporterName: transporter_details?.name,
+    transporterId: transporter_details?.transport_id,
+    // transporterId: "23AACFA2856L1ZJ",
+    transDocNo: challan_details?.transport_document_no,
+    transDocDate: challan_details?.transport_document_date
+      ? moment(challan_details.transport_document_date, [
+        'DD/MM/YYYY',
+        'YYYY-MM-DD',
+      ]).format('DD/MM/YYYY')
+      : '',
+    vehicleNo: challan_details?.vehicle_name,
+    vehicleType: 'R',
+
+    // Items
+    itemList: (issue_for_challan_item_details || []).map((item) => ({
+      // Pick fields in similar manner as dispatch
+      productName:
+        item?.product_name ||
+        item?.product_category ||
+        item?.issued_item_details?.item_name ||
+        '',
+      productDesc:
+        item?.product_desc ||
+        item?.sales_item_name ||
+        item?.product_category ||
+        item?.issued_item_details?.item_name ||
+        '',
+      hsnCode: item?.hsn_code || hsnCode,
+      quantity:
+        item?.issued_item_details?.quantity ||
+        item?.issued_item_details?.new_sqm ||
+        item?.issued_item_details?.sqm ||
+        item?.issued_item_details?.cbm ||
+        item?.issued_item_details?.cmt ||
+        item?.issued_item_details?.physical_cmt ||
+        0,
+      qtyUnit: item?.issued_item_details?.unit || unitSymbolicName,
+      taxableAmount: item?.issued_item_details?.amount || 0,
+      sgstRate: challan_details?.sgst || 0,
+      cgstRate: challan_details?.cgst || 0,
+      igstRate: challan_details?.igst || 0,
+      // cessRate: item?.cess_rate || 0,
+    })),
+  };
+  return res.status(StatusCodes.OK).json({
+    status: true,
+    message: 'Ewaybill body fetched successfully',
+    data: ewayBillBody,
+  });
+});
+
 export const generate_challan_ewaybill = catchAsync(async (req, res, next) => {
   const challan_id = req.params.id;
   const matchQuery = {
@@ -872,18 +1113,18 @@ export const generate_challan_ewaybill = catchAsync(async (req, res, next) => {
     fromTrdName: 'TURAKHIA OVERSEAS PVT. LTD.',
     fromAddr1:
       dispatch_from_address?.address &&
-      dispatch_from_address.address.length > 50
+        dispatch_from_address.address.length > 50
         ? dispatch_from_address.address.slice(0, 50)
         : dispatch_from_address?.address || '',
     fromAddr2:
       dispatch_from_address?.address &&
-      dispatch_from_address.address.length > 50
+        dispatch_from_address.address.length > 50
         ? dispatch_from_address.address.slice(50)
         : '',
     fromPlace: dispatch_from_address?.city || '',
-    actFromStateCode: getStateCode(dispatch_from_address?.state),
-    fromPincode: Number(dispatch_from_address?.pincode) || '',
-    fromStateCode: getStateCode(dispatch_from_address?.state),
+    actFromStateCode: getEwayStateCode(dispatch_from_address, "BILL"),
+    fromPincode: getEwayPincode(dispatch_from_address),
+    fromStateCode: getEwayStateCode(dispatch_from_address, "BILL"),
 
     toGstin:
       bill_to_address?.gst_number ||
@@ -903,9 +1144,9 @@ export const generate_challan_ewaybill = catchAsync(async (req, res, next) => {
         ? ship_to_address.address.slice(50)
         : '',
     toPlace: ship_to_address?.city || '',
-    toPincode: Number(ship_to_address?.pincode) || '',
-    actToStateCode: getStateCode(ship_to_address?.state),
-    toStateCode: getStateCode(ship_to_address?.state),
+    toPincode: getEwayPincode(ship_to_address),
+    actToStateCode: getEwayStateCode(ship_to_address, "SHIP"),
+    toStateCode: getEwayStateCode(ship_to_address, "SHIP"),
 
     transactionType: transactionType,
 
@@ -944,9 +1185,9 @@ export const generate_challan_ewaybill = catchAsync(async (req, res, next) => {
     transDocNo: challan_details?.transport_document_no,
     transDocDate: challan_details?.transport_document_date
       ? moment(challan_details.transport_document_date, [
-          'DD/MM/YYYY',
-          'YYYY-MM-DD',
-        ]).format('DD/MM/YYYY')
+        'DD/MM/YYYY',
+        'YYYY-MM-DD',
+      ]).format('DD/MM/YYYY')
       : '',
     vehicleNo: challan_details?.vehicle_name,
     vehicleType: 'R',
@@ -1335,7 +1576,7 @@ export const cancel_challan_ewaybill = catchAsync(async (req, res, next) => {
               // Sometimes there may be a trailing comma, split and clean
               errorCode = parsed.errorCodes.split(',')[0]?.trim();
             }
-          } catch (e) {}
+          } catch (e) { }
           // Provide specific error messages for known error codes
           // You can expand or modify this map as needed
           const errorCodeMap = {};
@@ -1466,7 +1707,7 @@ export const update_ewaybill_transporter = catchAsync(
                 // Sometimes there may be a trailing comma, split and clean
                 errorCode = parsed.errorCodes.split(',')[0]?.trim();
               }
-            } catch (e) {}
+            } catch (e) { }
             // Provide specific error messages for known error codes
             // You can expand or modify this map as needed
             const errorCodeMap = {};
@@ -1632,7 +1873,7 @@ export const update_ewaybill_partB = catchAsync(async (req, res, next) => {
             if (parsed?.errorCodes) {
               errorCode = parsed.errorCodes.split(',')[0]?.trim();
             }
-          } catch (e) {}
+          } catch (e) { }
           const errorCodeMap = {};
           for (const errorObj of errorCodeMapForEwayBill) {
             errorCodeMap[errorObj.errorCode] = errorObj.errorDesc;

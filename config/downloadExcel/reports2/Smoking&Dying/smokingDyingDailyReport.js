@@ -40,10 +40,12 @@ const computeItemSummary = (rows) => {
   rows.forEach((r) => {
     const key = r.item_name ?? 'UNKNOWN';
     if (!byItem[key]) {
-      byItem[key] = { item_name: key, process_name: r.process_name ?? '', leaves: 0, sqm: 0 };
+      byItem[key] = { item_name: key, process_name: r.process_name ?? '', leaves: 0, sqm: 0, amount: 0, expense_amount: 0 };
     }
     byItem[key].leaves += Number(r.no_of_leaves) || 0;
     byItem[key].sqm += Number(r.sqm) || 0;
+    byItem[key].amount += Number(r.amount) || 0;
+    byItem[key].expense_amount += Number(r.expense_amount) || 0;
   });
   return Object.values(byItem).sort((a, b) =>
     (a.item_name || '').localeCompare(b.item_name || '')
@@ -59,7 +61,7 @@ const computeItemSummary = (rows) => {
  * - Grand Total row
  * - Summary section: ITEM NAME | RECEIVED MTR. | PROCESS NAME | LEAVE | PRODUCTION SQ. MTR
  */
-const GenerateSmokingDyingDailyReport = async (rows, reportDate) => {
+const GenerateSmokingDyingDailyReport = async (rows, reportDate, includeCostAndExpense) => {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Smoking Details Report');
 
@@ -81,12 +83,18 @@ const GenerateSmokingDyingDailyReport = async (rows, reportDate) => {
     'Pattern',
     'Series',
     'Remarks',
+    ...(includeCostAndExpense ? [
+      'Amount',
+      'Expense Amount',
+    ] : []),
   ];
   const numDetailCols = detailsHeaders.length;
 
   // Column indices: Leaves=7, Sq Mtr=8
   const LEAVES_COL = 7;
   const SQM_COL = 8;
+  const AMOUNT_COL = 15;
+  const EXPENSE_AMOUNT_COL = 16;
 
   let currentRow = 1;
 
@@ -119,6 +127,10 @@ const GenerateSmokingDyingDailyReport = async (rows, reportDate) => {
   let itemSqm = 0;
   let totalLeaves = 0;
   let totalSqm = 0;
+  let itemAmount = 0;
+  let itemExpenseAmount = 0;
+  let totalAmount = 0;
+  let totalExpenseAmount = 0;
 
   rows.forEach((r) => {
     const logKey = `${r.process_done_id?.toString?.() ?? ''}_${r.log_no_code ?? ''}`;
@@ -139,13 +151,23 @@ const GenerateSmokingDyingDailyReport = async (rows, reportDate) => {
       subtotalRow.getCell(SQM_COL).value = itemSqm;
       subtotalRow.getCell(SQM_COL).font = { bold: true };
       subtotalRow.getCell(SQM_COL).numFmt = '0.00';
+      if (includeCostAndExpense) {
+        subtotalRow.getCell(AMOUNT_COL).value = itemAmount;
+        subtotalRow.getCell(AMOUNT_COL).font = { bold: true };
+        subtotalRow.getCell(AMOUNT_COL).numFmt = '0.00';
+        subtotalRow.getCell(EXPENSE_AMOUNT_COL).value = itemExpenseAmount;
+        subtotalRow.getCell(EXPENSE_AMOUNT_COL).font = { bold: true };
+        subtotalRow.getCell(EXPENSE_AMOUNT_COL).numFmt = '0.00';
+      }
       for (let col = 1; col <= numDetailCols; col++) {
-        setCellStyle(subtotalRow.getCell(col), col === 1 || col === LEAVES_COL || col === SQM_COL);
+        setCellStyle(subtotalRow.getCell(col), col === 1 || col === LEAVES_COL || col === SQM_COL || (includeCostAndExpense && (col === AMOUNT_COL || col === EXPENSE_AMOUNT_COL)));
       }
       currentRow++;
       blockStartRow = currentRow;
       itemLeaves = 0;
       itemSqm = 0;
+      itemAmount = 0;
+      itemExpenseAmount = 0;
     }
 
     // Merge ranges when log group changes (within same item)
@@ -174,16 +196,29 @@ const GenerateSmokingDyingDailyReport = async (rows, reportDate) => {
     dataRow.getCell(12).value = r.pattern_name ?? '';
     dataRow.getCell(13).value = r.series_name ?? '';
     dataRow.getCell(14).value = r.remark ?? '';
+    if (includeCostAndExpense) {
+      dataRow.getCell(15).value = r.amount ?? 0;
+      dataRow.getCell(15).numFmt = '0.00';
+      dataRow.getCell(16).value = r.expense_amount ?? 0;
+      dataRow.getCell(16).numFmt = '0.00';
+    }
 
     if (typeof dataRow.getCell(4).value === 'number') dataRow.getCell(4).numFmt = '0.00';
     if (typeof dataRow.getCell(5).value === 'number') dataRow.getCell(5).numFmt = '0.00';
     if (typeof dataRow.getCell(6).value === 'number') dataRow.getCell(6).numFmt = '0.00';
     if (typeof dataRow.getCell(8).value === 'number') dataRow.getCell(8).numFmt = '0.00';
+    if (includeCostAndExpense) {
+      itemAmount += Number(r.amount) || 0;
+      itemExpenseAmount += Number(r.expense_amount) || 0;
+      totalAmount += Number(r.amount) || 0;
+      totalExpenseAmount += Number(r.expense_amount) || 0;
+    }
 
     itemLeaves += Number(r.no_of_leaves) || 0;
     itemSqm += Number(r.sqm) || 0;
     totalLeaves += Number(r.no_of_leaves) || 0;
     totalSqm += Number(r.sqm) || 0;
+
     currentRow++;
   });
 
@@ -202,8 +237,16 @@ const GenerateSmokingDyingDailyReport = async (rows, reportDate) => {
     subtotalRow.getCell(SQM_COL).value = itemSqm;
     subtotalRow.getCell(SQM_COL).font = { bold: true };
     subtotalRow.getCell(SQM_COL).numFmt = '0.00';
+    if (includeCostAndExpense) {
+      subtotalRow.getCell(AMOUNT_COL).value = itemAmount;
+      subtotalRow.getCell(AMOUNT_COL).font = { bold: true };
+      subtotalRow.getCell(AMOUNT_COL).numFmt = '0.00';
+      subtotalRow.getCell(EXPENSE_AMOUNT_COL).value = itemExpenseAmount;
+      subtotalRow.getCell(EXPENSE_AMOUNT_COL).font = { bold: true };
+      subtotalRow.getCell(EXPENSE_AMOUNT_COL).numFmt = '0.00';
+    }
     for (let col = 1; col <= numDetailCols; col++) {
-      setCellStyle(subtotalRow.getCell(col), col === 1 || col === LEAVES_COL || col === SQM_COL);
+      setCellStyle(subtotalRow.getCell(col), col === 1 || col === LEAVES_COL || col === SQM_COL || (includeCostAndExpense && (col === AMOUNT_COL || col === EXPENSE_AMOUNT_COL)));
     }
     currentRow++;
   }
@@ -223,13 +266,21 @@ const GenerateSmokingDyingDailyReport = async (rows, reportDate) => {
   grandTotalRow.getCell(SQM_COL).value = totalSqm;
   grandTotalRow.getCell(SQM_COL).font = { bold: true };
   grandTotalRow.getCell(SQM_COL).numFmt = '0.00';
+  if (includeCostAndExpense) {
+    grandTotalRow.getCell(AMOUNT_COL).value = totalAmount;
+    grandTotalRow.getCell(AMOUNT_COL).font = { bold: true };
+    grandTotalRow.getCell(AMOUNT_COL).numFmt = '0.00';
+    grandTotalRow.getCell(EXPENSE_AMOUNT_COL).value = totalExpenseAmount;
+    grandTotalRow.getCell(EXPENSE_AMOUNT_COL).font = { bold: true };
+    grandTotalRow.getCell(EXPENSE_AMOUNT_COL).numFmt = '0.00';
+  }
   for (let col = 1; col <= numDetailCols; col++) {
-    setCellStyle(grandTotalRow.getCell(col), col === 1 || col === LEAVES_COL || col === SQM_COL);
+    setCellStyle(grandTotalRow.getCell(col), col === 1 || col === LEAVES_COL || col === SQM_COL || (includeCostAndExpense && (col === AMOUNT_COL || col === EXPENSE_AMOUNT_COL)));
   }
   currentRow += 2;
 
   // Summary section: SUMMERY
-  const summaryHeaders = ['ITEM NAME', 'RECEIVED MTR.', 'PROCESS NAME', 'LEAVE', 'PRODUCTION SQ. MTR'];
+  const summaryHeaders = ['ITEM NAME', 'RECEIVED MTR.', 'PROCESS NAME', 'LEAVE', 'PRODUCTION SQ. MTR', 'AMOUNT', 'EXPENSE AMOUNT'];
   const summaryHeaderRow = worksheet.getRow(currentRow);
   summaryHeaders.forEach((h, i) => {
     const cell = summaryHeaderRow.getCell(i + 1);
@@ -252,11 +303,18 @@ const GenerateSmokingDyingDailyReport = async (rows, reportDate) => {
     summaryRow.getCell(4).value = item.leaves ?? 0;
     summaryRow.getCell(5).value = item.sqm ?? 0;
     summaryRow.getCell(5).numFmt = '0.00';
+    if (includeCostAndExpense) {
+      summaryRow.getCell(6).value = item.amount ?? 0;
+      summaryRow.getCell(6).numFmt = '0.00';
+      summaryRow.getCell(7).value = item.expense_amount ?? 0;
+      summaryRow.getCell(7).numFmt = '0.00';
+    }
     for (let col = 1; col <= 5; col++) {
       setCellStyle(summaryRow.getCell(col));
     }
     summaryTotalLeaves += item.leaves ?? 0;
     summaryTotalSqm += item.sqm ?? 0;
+
     currentRow++;
   });
 
@@ -273,8 +331,16 @@ const GenerateSmokingDyingDailyReport = async (rows, reportDate) => {
   summaryTotalRow.getCell(5).value = summaryTotalSqm;
   summaryTotalRow.getCell(5).font = { bold: true };
   summaryTotalRow.getCell(5).numFmt = '0.00';
+  if (includeCostAndExpense) {
+    summaryTotalRow.getCell(6).value = totalAmount;
+    summaryTotalRow.getCell(6).font = { bold: true };
+    summaryTotalRow.getCell(6).numFmt = '0.00';
+    summaryTotalRow.getCell(7).value = totalExpenseAmount;
+    summaryTotalRow.getCell(7).font = { bold: true };
+    summaryTotalRow.getCell(7).numFmt = '0.00';
+  }
   for (let col = 1; col <= 5; col++) {
-    setCellStyle(summaryTotalRow.getCell(col), col === 1 || col === 2 || col === 4 || col === 5);
+    setCellStyle(summaryTotalRow.getCell(col), col === 1 || col === 2 || col === 4 || col === 5 || (includeCostAndExpense && (col === 6 || col === 7)));
   }
 
   worksheet.columns = [
@@ -292,6 +358,8 @@ const GenerateSmokingDyingDailyReport = async (rows, reportDate) => {
     { width: 10 },
     { width: 10 },
     { width: 16 },
+    { width: 12 },
+    { width: 12 },
   ];
 
   const timestamp = new Date().getTime();

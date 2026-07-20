@@ -20,8 +20,11 @@ import { issues_for_pressing_model } from '../../../database/schema/factory/pres
 import { createFactoryGroupingDoneExcel } from '../../../config/downloadExcel/Logs/Factory/Grouping/groupingDone.js';
 import { createFactoryGroupingDamageExcel } from '../../../config/downloadExcel/Logs/Factory/Grouping/groupingDamage.js';
 import { createFactoryGroupingHistoryExcel } from '../../../config/downloadExcel/Logs/Factory/Grouping/groupingHistory.js';
-import { sub_category, item_issued_for } from '../../../database/Utils/constants/constants.js';
+import { sub_category, item_issued_for, order_status, order_item_status } from '../../../database/Utils/constants/constants.js';
 import photoModel from '../../../database/schema/masters/photo.schema.js';
+import { decorative_order_item_details_model } from '../../../database/schema/order/decorative_order/decorative_order_item_details.schema.js';
+import series_product_order_item_details_model from '../../../database/schema/order/series_product_order/series_product_order_item_details.schema.js';
+import { getIssueBreakdownForItem } from '../../../utils/getIssueBreakdown.js';
 
 export const add_grouping_done = catchAsync(async (req, res, next) => {
   const session = await mongoose.startSession();
@@ -1763,6 +1766,7 @@ export const add_grouping_done_damaged = catchAsync(async (req, res, next) => {
   session.startTransaction();
   try {
     const { id } = req.params;
+    const { issued_date } = req.body;
     const userDetails = req.userDetails;
     if (!id && !mongoose.isValidObjectId(id)) {
       throw new ApiError('Invalid ID', StatusCodes.NOT_FOUND);
@@ -1792,6 +1796,7 @@ export const add_grouping_done_damaged = catchAsync(async (req, res, next) => {
         {
           $set: {
             is_damaged: true,
+            issued_date: issued_date,
             updated_by: userDetails?._id,
           },
         },
@@ -1819,6 +1824,7 @@ export const add_grouping_done_damaged = catchAsync(async (req, res, next) => {
           $set: {
             isEditable: false,
             updated_by: userDetails?._id,
+            issued_date: issued_date,
           },
         }
       );
@@ -2796,3 +2802,18 @@ export const download_excel_factory_grouping_history = catchAsync(
     // return res.status(200).json(response);
   }
 );
+
+export const fetch_issue_breakdown = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+
+  const result = await getIssueBreakdownForItem({
+    itemModel: grouping_done_items_details_model,
+    itemId: id,
+    historyModel: grouping_done_history_model,
+    historyMatchField: 'grouping_done_item_id',
+  });
+
+  return res.status(StatusCodes.OK).json(
+    new ApiResponse(StatusCodes.OK, 'Issue breakdown fetched', result)
+  );
+});

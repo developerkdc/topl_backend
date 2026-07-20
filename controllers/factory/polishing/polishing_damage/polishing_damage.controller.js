@@ -198,6 +198,7 @@ export const listing_polishing_damage = catchAsync(async (req, res) => {
 export const add_polishing_damage = catchAsync(async (req, res) => {
   const userDetails = req.userDetails;
   const { id, damage_sheets } = req.query;
+  const { issued_date } = req.body;
   const session = await mongoose.startSession();
   try {
     session.startTransaction();
@@ -263,6 +264,7 @@ export const add_polishing_damage = catchAsync(async (req, res) => {
           series_code: polishing_done_details?.series_code,
           created_by: userDetails?._id,
           updated_by: userDetails?._id,
+          issued_date: issued_date,
         },
       ],
       { session }

@@ -45,7 +45,8 @@ export const GeneratePressingStockRegisterReport2Excel = async (
   aggregatedData,
   startDate,
   endDate,
-  filter = {}
+  filter = {},
+  includeCostAndExpense
 ) => {
   try {
     const folderPath = 'public/upload/reports/reports2/Pressing';
@@ -67,15 +68,19 @@ export const GeneratePressingStockRegisterReport2Excel = async (
       'Received Thickness',
       'Size',
       'Opening SqMtr',
+      ...(includeCostAndExpense ? ['Opening Amount'] : []),
       'Issued for pressing SqMtr',
+      ...(includeCostAndExpense ? ['Issued for pressing Amount'] : []),
       'Pressing received Sqmtr',
+      ...(includeCostAndExpense ? ['Pressing received Amount'] : []),
       'Pressing Waste SqMtr',
       // 'Sales',
       // 'All Damage',
       'Closing SqMtr',
+      ...(includeCostAndExpense ? ['Closing Amount'] : []),
     ];
     const NUM_COLS = headers.length;
-    const NUMERIC_START_COL = 8;
+    const NUMERIC_START_COL = includeCostAndExpense ? 9 : 8;
 
     let currentRow = 1;
 
@@ -112,6 +117,14 @@ export const GeneratePressingStockRegisterReport2Excel = async (
       sales: 0,
       all_damage: 0,
       closing_sqm: 0,
+      ...(includeCostAndExpense ? {
+        opening_amount: 0,
+        issued_for_pressing_amount: 0,
+        pressing_received_amount: 0,
+        sales_amount: 0,
+        all_damage_amount: 0,
+        closing_amount: 0,
+      } : {}),
     };
 
     let prevItemName = null;
@@ -125,10 +138,22 @@ export const GeneratePressingStockRegisterReport2Excel = async (
       tr.getCell(2).value = '';
       for (let c = 3; c <= 7; c++) tr.getCell(c).value = '';
       tr.getCell(8).value = totals.opening_sqm;
-      tr.getCell(9).value = totals.issued_for_pressing;
-      tr.getCell(10).value = totals.pressing_received;
-      tr.getCell(11).value = totals.pressing_waste;
-      tr.getCell(12).value = totals.closing_sqm;
+      if (includeCostAndExpense) {
+        tr.getCell(9).value = totals.opening_amount;
+      }
+      tr.getCell(NUMERIC_START_COL).value = totals.issued_for_pressing;
+      if (includeCostAndExpense) {
+        tr.getCell(NUMERIC_START_COL + 1).value = totals.issued_for_pressing_amount;
+      }
+      tr.getCell(NUMERIC_START_COL + 1).value = totals.pressing_received;
+      if (includeCostAndExpense) {
+        tr.getCell(NUMERIC_START_COL + 2).value = totals.pressing_received_amount;
+      }
+      tr.getCell(NUMERIC_START_COL + 2).value = totals.pressing_waste;
+      tr.getCell(NUMERIC_START_COL + 3).value = totals.closing_sqm;
+      if (includeCostAndExpense) {
+        tr.getCell(NUMERIC_START_COL + 4).value = totals.closing_amount;
+      }
       for (let c = NUMERIC_START_COL; c <= NUM_COLS; c++) tr.getCell(c).numFmt = '0.00';
       tr.eachCell((cell) => Object.assign(cell, totalRowStyle));
     };
@@ -153,6 +178,14 @@ export const GeneratePressingStockRegisterReport2Excel = async (
           sales: 0,
           all_damage: 0,
           closing_sqm: 0,
+          ...(includeCostAndExpense ? {
+            opening_amount: 0,
+            issued_for_pressing_amount: 0,
+            pressing_received_amount: 0,
+            sales_amount: 0,
+            all_damage_amount: 0,
+            closing_amount: 0,
+          } : {}),
         };
       }
 
@@ -165,10 +198,22 @@ export const GeneratePressingStockRegisterReport2Excel = async (
       r.getCell(6).value = row.received_thickness ?? 0;
       r.getCell(7).value = row.size ?? '';
       r.getCell(8).value = row.opening_sqm;
-      r.getCell(9).value = row.issued_for_pressing;
-      r.getCell(10).value = row.pressing_received;
-      r.getCell(11).value = row.pressing_waste;
-      r.getCell(12).value = row.closing_sqm;
+      if (includeCostAndExpense) {
+        r.getCell(9).value = row.opening_amount;
+      }
+      r.getCell(NUMERIC_START_COL).value = row.issued_for_pressing;
+      if (includeCostAndExpense) {
+        r.getCell(NUMERIC_START_COL + 1).value = row.issued_for_pressing_amount;
+      }
+      r.getCell(NUMERIC_START_COL + 1).value = row.pressing_received;
+      if (includeCostAndExpense) {
+        r.getCell(NUMERIC_START_COL + 2).value = row.pressing_received_amount;
+      }
+      r.getCell(NUMERIC_START_COL + 2).value = row.pressing_waste;
+      r.getCell(NUMERIC_START_COL + 3).value = row.closing_sqm;
+      if (includeCostAndExpense) {
+        r.getCell(NUMERIC_START_COL + 4).value = row.closing_amount;
+      }
 
       r.getCell(5).numFmt = '0.00';
       r.getCell(6).numFmt = '0.00';
@@ -181,6 +226,14 @@ export const GeneratePressingStockRegisterReport2Excel = async (
       itemTotals.sales += row.sales;
       itemTotals.all_damage += row.all_damage;
       itemTotals.closing_sqm += row.closing_sqm;
+      if (includeCostAndExpense) {
+        itemTotals.opening_amount += row.opening_amount;
+        itemTotals.issued_for_pressing_amount += row.issued_for_pressing_amount;
+        itemTotals.pressing_received_amount += row.pressing_received_amount;
+        itemTotals.sales_amount += row.sales_amount;
+        itemTotals.all_damage_amount += row.all_damage_amount;
+        itemTotals.closing_amount += row.closing_amount;
+      }
 
       grandTotals.opening_sqm += row.opening_sqm;
       grandTotals.issued_for_pressing += row.issued_for_pressing;
@@ -189,6 +242,14 @@ export const GeneratePressingStockRegisterReport2Excel = async (
       grandTotals.sales += row.sales;
       grandTotals.all_damage += row.all_damage;
       grandTotals.closing_sqm += row.closing_sqm;
+      if (includeCostAndExpense) {
+        grandTotals.opening_amount += row.opening_amount;
+        grandTotals.issued_for_pressing_amount += row.issued_for_pressing_amount;
+        grandTotals.pressing_received_amount += row.pressing_received_amount;
+        grandTotals.sales_amount += row.sales_amount;
+        grandTotals.all_damage_amount += row.all_damage_amount;
+        grandTotals.closing_amount += row.closing_amount;
+      }
 
       prevItemName = itemName;
       currentRow++;
@@ -209,10 +270,22 @@ export const GeneratePressingStockRegisterReport2Excel = async (
     gr.getCell(1).value = 'Total';
     for (let c = 2; c <= 7; c++) gr.getCell(c).value = '';
     gr.getCell(8).value = grandTotals.opening_sqm;
-    gr.getCell(9).value = grandTotals.issued_for_pressing;
-    gr.getCell(10).value = grandTotals.pressing_received;
-    gr.getCell(11).value = grandTotals.pressing_waste;
-    gr.getCell(12).value = grandTotals.closing_sqm;
+    if (includeCostAndExpense) {
+      gr.getCell(9).value = grandTotals.opening_amount;
+    }
+    gr.getCell(NUMERIC_START_COL).value = grandTotals.issued_for_pressing;
+    if (includeCostAndExpense) {
+      gr.getCell(NUMERIC_START_COL + 1).value = grandTotals.issued_for_pressing_amount;
+    }
+    gr.getCell(NUMERIC_START_COL + 1).value = grandTotals.pressing_received;
+    if (includeCostAndExpense) {
+      gr.getCell(NUMERIC_START_COL + 2).value = grandTotals.pressing_received_amount;
+    }
+    gr.getCell(NUMERIC_START_COL + 2).value = grandTotals.pressing_waste;
+    gr.getCell(NUMERIC_START_COL + 3).value = grandTotals.closing_sqm;
+    if (includeCostAndExpense) {
+      gr.getCell(NUMERIC_START_COL + 4).value = grandTotals.closing_amount;
+    }
     gr.eachCell((cell) => {
       Object.assign(cell, totalRowStyle);
       if (cell.col >= NUMERIC_START_COL) cell.numFmt = '0.00';

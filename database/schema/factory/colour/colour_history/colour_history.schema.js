@@ -96,6 +96,10 @@ const color_history_schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Updated By is required.'],
     },
+    issued_date: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true }
 );

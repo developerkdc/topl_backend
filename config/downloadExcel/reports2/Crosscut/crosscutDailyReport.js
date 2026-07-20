@@ -60,7 +60,7 @@ const groupData = (data) => {
  * Row 2 (LogX): cols 1-5 empty; LogX, Length, Girth, CC CMT
  * Row 3: "Total" in LogX column, CC CMT subtotal only
  */
-const GenerateCrosscutDailyReportExcel = async (details, reportDate) => {
+const GenerateCrosscutDailyReportExcel = async (details, reportDate, includeCostAndExpense) => {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('CrossCut Report');
 
@@ -90,6 +90,10 @@ const GenerateCrosscutDailyReportExcel = async (details, reportDate) => {
     'Girth',
     'CC CMT',
   ];
+
+  if (includeCostAndExpense) {
+    headers.push('Cost Amount', 'Expense Amount');
+  }
 
   const thinBorder = {
     top: { style: 'thin' },
@@ -125,10 +129,16 @@ const GenerateCrosscutDailyReportExcel = async (details, reportDate) => {
     { width: 12 },
   ];
 
+  if (includeCostAndExpense) {
+    worksheet.columns.push({ width: 12 }, { width: 12 });
+  }
+
   const groupedData = groupData(details);
   const itemTotals = {};
   let grandTotalInward = 0;
   let grandTotalCC = 0;
+  let grandTotalCost = 0;
+  let grandTotalExpense = 0;
 
   Object.keys(groupedData)
     .sort()
@@ -143,6 +153,8 @@ const GenerateCrosscutDailyReportExcel = async (details, reportDate) => {
         .forEach((logNo) => {
           const logData = logs[logNo];
           let logCCTotal = 0;
+          let logCostTotal = 0;
+          let logExpenseTotal = 0;
 
           logData.pieces.forEach((piece, pieceIndex) => {
             const row = worksheet.getRow(currentRow);
@@ -156,6 +168,11 @@ const GenerateCrosscutDailyReportExcel = async (details, reportDate) => {
               row.getCell(3).value = logData.original_log.length;
               row.getCell(4).value = logData.original_log.girth;
               row.getCell(5).value = logData.original_log.inward_cmt;
+
+              if (includeCostAndExpense) {
+                row.getCell(10).value = piece.cost_amount;
+                row.getCell(11).value = piece.expense_amount;
+              }
             }
 
             // LogX columns (6-9): LogX, Length, Girth, CC CMT
@@ -172,6 +189,8 @@ const GenerateCrosscutDailyReportExcel = async (details, reportDate) => {
               }
             });
             logCCTotal += piece.cc_cmt || 0;
+            logCostTotal += piece.cost_amount || 0;
+            logExpenseTotal += piece.expense_amount || 0;
             currentRow++;
           });
 
@@ -181,6 +200,14 @@ const GenerateCrosscutDailyReportExcel = async (details, reportDate) => {
           totalRow.getCell(6).font = { bold: true };
           totalRow.getCell(9).value = logCCTotal;
           totalRow.getCell(9).font = { bold: true };
+          if (includeCostAndExpense) {
+            totalRow.getCell(10).value = logCostTotal;
+            totalRow.getCell(11).value = logExpenseTotal;
+            totalRow.getCell(10).font = { bold: true };
+            totalRow.getCell(11).font = { bold: true };
+            totalRow.getCell(10).numFmt = '0.000';
+            totalRow.getCell(11).numFmt = '0.000';
+          }
           totalRow.getCell(9).numFmt = '0.000';
           [1, 2, 3, 4, 5, 6, 7, 8, 9].forEach((colNum) => {
             totalRow.getCell(colNum).border = thinBorder;
@@ -189,6 +216,8 @@ const GenerateCrosscutDailyReportExcel = async (details, reportDate) => {
 
           itemInwardTotal += logData.original_log.inward_cmt || 0;
           itemCCTotal += logCCTotal;
+          logCostTotal += logCostTotal;
+          logExpenseTotal += logExpenseTotal;
         });
 
       // Item-level total: one "Total" row under LogNo column with CC CMT
@@ -197,6 +226,14 @@ const GenerateCrosscutDailyReportExcel = async (details, reportDate) => {
       itemTotalRow.getCell(2).font = { bold: true };
       itemTotalRow.getCell(9).value = itemCCTotal;
       itemTotalRow.getCell(9).font = { bold: true };
+      if (includeCostAndExpense) {
+        itemTotalRow.getCell(10).value = logCostTotal;
+        itemTotalRow.getCell(11).value = logExpenseTotal;
+        itemTotalRow.getCell(10).font = { bold: true };
+        itemTotalRow.getCell(11).font = { bold: true };
+        itemTotalRow.getCell(10).numFmt = '0.000';
+        itemTotalRow.getCell(11).numFmt = '0.000';
+      }
       itemTotalRow.getCell(9).numFmt = '0.000';
       [1, 2, 3, 4, 5, 6, 7, 8, 9].forEach((colNum) => {
         itemTotalRow.getCell(colNum).border = thinBorder;
@@ -214,6 +251,10 @@ const GenerateCrosscutDailyReportExcel = async (details, reportDate) => {
   summaryHeaderRow.getCell(1).value = 'Item Name';
   summaryHeaderRow.getCell(2).value = 'Inward CMT';
   summaryHeaderRow.getCell(3).value = 'CC CMT';
+  if (includeCostAndExpense) {
+    summaryHeaderRow.getCell(4).value = 'Cost Amount';
+    summaryHeaderRow.getCell(5).value = 'Expense Amount';
+  }
   summaryHeaderRow.font = { bold: true };
   summaryHeaderRow.eachCell({ includeEmpty: false }, (cell) => {
     cell.fill = {
@@ -235,6 +276,12 @@ const GenerateCrosscutDailyReportExcel = async (details, reportDate) => {
       row.getCell(2).numFmt = '0.000';
       row.getCell(3).value = itemTotals[itemName].cc;
       row.getCell(3).numFmt = '0.000';
+      if (includeCostAndExpense) {
+        row.getCell(4).value = itemTotals[itemName].cost;
+        row.getCell(5).value = itemTotals[itemName].expense;
+        row.getCell(4).numFmt = '0.000';
+        row.getCell(5).numFmt = '0.000';
+      }
       [1, 2, 3].forEach((colNum) => {
         row.getCell(colNum).border = thinBorder;
       });
@@ -248,6 +295,12 @@ const GenerateCrosscutDailyReportExcel = async (details, reportDate) => {
   summaryTotalRow.font = { bold: true };
   summaryTotalRow.getCell(2).numFmt = '0.000';
   summaryTotalRow.getCell(3).numFmt = '0.000';
+  if (includeCostAndExpense) {
+    summaryTotalRow.getCell(4).value = grandTotalCost;
+    summaryTotalRow.getCell(5).value = grandTotalExpense;
+    summaryTotalRow.getCell(4).numFmt = '0.000';
+    summaryTotalRow.getCell(5).numFmt = '0.000';
+  }
   [1, 2, 3].forEach((colNum) => {
     summaryTotalRow.getCell(colNum).border = thinBorder;
   });

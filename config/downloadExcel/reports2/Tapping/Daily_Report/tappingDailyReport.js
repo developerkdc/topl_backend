@@ -33,6 +33,8 @@ const groupData = (data) => {
     const width = Number(item?.width) || 0;
     const sheets = Number(item?.no_of_sheets) || 0;
     const sqm = Number(item?.sqm) || 0;
+    const amount = Number(item?.amount) || 0;
+    const expense_amount = Number(item?.expense_amount) || 0;
     const splicingType = (record.splicing_type || '').toUpperCase();
 
     if (!byItem[itemName]) byItem[itemName] = [];
@@ -44,6 +46,8 @@ const groupData = (data) => {
       width,
       no_of_sheets: sheets,
       sqm,
+      amount,
+      expense_amount,
       splicing_type: splicingType,
       character_name: item?.character_name ?? '',
       pattern_name: item?.pattern_name ?? '',
@@ -61,8 +65,12 @@ const groupData = (data) => {
         width,
         issue_sheets: 0,
         issue_sqm: 0,
+        issue_amount: 0,
+        issue_expense_amount: 0,
         production_sheets: 0,
         production_sqm: 0,
+        production_amount: 0,
+        production_expense_amount: 0,
       };
     }
 
@@ -70,10 +78,14 @@ const groupData = (data) => {
     const issueSource = record.issueSource?.[0];
     SummaryMap[SummaryKey].issue_sheets += Number(issueSource?.no_of_sheets) || 0;
     SummaryMap[SummaryKey].issue_sqm += Number(issueSource?.sqm) || 0;
+    SummaryMap[SummaryKey].issue_amount += Number(issueSource?.amount) || 0;
+    SummaryMap[SummaryKey].issue_expense_amount += Number(issueSource?.expense_amount) || 0;
 
     // Production from tapping_done_items_details
     SummaryMap[SummaryKey].production_sheets += sheets;
     SummaryMap[SummaryKey].production_sqm += sqm;
+    SummaryMap[SummaryKey].production_amount += amount;
+    SummaryMap[SummaryKey].production_expense_amount += expense_amount;
   });
 
   return { byItem, SummaryRows: Object.values(SummaryMap) };
@@ -109,33 +121,41 @@ const styleDataCell = (cell) => {
 /**
  * Generate Splicing Details Daily Report Excel.
  *
- * Main table: 14 columns, 3-row header
+ * Main table: 3-row header
  *   Col 1:  Item Name
  *   Col 2:  Thickness
  *   Col 3:  LogX
  *   Col 4:  Length
  *   Col 5:  Width
  *   Col 6:  Sheets
- *   Cols 7–10: Tapping received (In Sq. Mtr.)
- *     Cols 7–8:  Machine Splicing → Sheets | SQ Mtr
- *     Cols 9–10: Hand Splicing    → Sheets | SQ Mtr
- *   Col 11: Character
- *   Col 12: Pattern
- *   Col 13: Series
- *   Col 14: Remarks
+ *   Tapping received (In Sq. Mtr.) block:
+ *     Machine Splicing → Sheets | SQ Mtr [ | Amount | Expense Amount ]
+ *     Hand Splicing    → Sheets | SQ Mtr [ | Amount | Expense Amount ]
+ *   Then: Character | Pattern | Series | Remarks
  *
- * Summary table: 8 columns, 2-row header
- *   Cols 1–4: Item Name | Tickness | Length | Width
- *   Cols 5–6: Issue → Sheets | SQ Mtr
- *   Cols 7–8: Production → Sheets | SQ Mtr
+ * Summary table: 2-row header
+ *   Item Name | Thickness | Length | Width
+ *   Issue      → Sheets | SQ Mtr [ | Amount | Expense Amount ]
+ *   Production → Sheets | SQ Mtr [ | Amount | Expense Amount ]
  */
-const GenerateTappingDailyReportExcel = async (details, reportDate) => {
+const GenerateTappingDailyReportExcel = async (details, reportDate, includeCostAndExpense) => {
   const workbook = new ExcelJS.Workbook();
   const ws = workbook.addWorksheet('Splicing Report');
 
   const formattedDate = formatDate(reportDate);
   const numFmt = '0.00';
-  const TOTAL_COLS = 14;
+
+  // ── Layout math (main table) ──────────────────────────────────────────────
+  const colsPerSub = includeCostAndExpense ? 4 : 2; // Sheets, SQM, [Amount, Expense Amount]
+  const subLabels = includeCostAndExpense
+    ? ['Sheets', 'SQ Mtr', 'Amount', 'Expense Amount']
+    : ['Sheets', 'SQ Mtr'];
+
+  const KEY_COLS = 6; // Item Name, Thickness, LogX, Length, Width, Sheets
+  const machineStart = KEY_COLS + 1;
+  const handStart = machineStart + colsPerSub;
+  const rightStart = handStart + colsPerSub; // Character
+  const TOTAL_COLS = rightStart + 3; // Character, Pattern, Series, Remarks
 
   let r = 1; // current row tracker
 
@@ -169,12 +189,12 @@ const GenerateTappingDailyReportExcel = async (details, reportDate) => {
     styleHeaderCell(cell);
   });
 
-  // Cols 11–14: merge vertically across all 3 header rows
+  // Right cols: merge vertically across all 3 header rows
   const rightCols = [
-    { col: 11, label: 'Character' },
-    { col: 12, label: 'Pattern' },
-    { col: 13, label: 'Series' },
-    { col: 14, label: 'Remarks' },
+    { col: rightStart, label: 'Character' },
+    { col: rightStart + 1, label: 'Pattern' },
+    { col: rightStart + 2, label: 'Series' },
+    { col: rightStart + 3, label: 'Remarks' },
   ];
   rightCols.forEach(({ col, label }) => {
     ws.mergeCells(hRow1, col, hRow3, col);
@@ -183,29 +203,32 @@ const GenerateTappingDailyReportExcel = async (details, reportDate) => {
     styleHeaderCell(cell);
   });
 
-  // Row 1: "Tapping received (In Sq. Mtr.)" merged across cols 7–10
-  ws.mergeCells(hRow1, 7, hRow1, 10);
-  const tappingReceivedCell = ws.getCell(hRow1, 7);
+  // Row 1: "Tapping received (In Sq. Mtr.)" merged across the whole block
+  ws.mergeCells(hRow1, machineStart, hRow1, handStart + colsPerSub - 1);
+  const tappingReceivedCell = ws.getCell(hRow1, machineStart);
   tappingReceivedCell.value = 'Tapping received (In Sq. Mtr.)';
   styleHeaderCell(tappingReceivedCell, { wrapText: true });
 
-  // Row 2: "Machine Splicing" (7–8), "Hand Splicing" (9–10)
-  ws.mergeCells(hRow2, 7, hRow2, 8);
-  const machineCell = ws.getCell(hRow2, 7);
+  // Row 2: "Machine Splicing" / "Hand Splicing"
+  ws.mergeCells(hRow2, machineStart, hRow2, machineStart + colsPerSub - 1);
+  const machineCell = ws.getCell(hRow2, machineStart);
   machineCell.value = 'Machine Splicing';
   styleHeaderCell(machineCell);
 
-  ws.mergeCells(hRow2, 9, hRow2, 10);
-  const handCell = ws.getCell(hRow2, 9);
+  ws.mergeCells(hRow2, handStart, hRow2, handStart + colsPerSub - 1);
+  const handCell = ws.getCell(hRow2, handStart);
   handCell.value = 'Hand Splicing';
   styleHeaderCell(handCell);
 
-  // Row 3: Sheets | SQ Mtr | Sheets | SQ Mtr (cols 7–10)
-  const subLabels = ['Sheets', 'SQ Mtr', 'Sheets', 'SQ Mtr'];
+  // Row 3: sub-labels for both blocks
   subLabels.forEach((label, i) => {
-    const cell = ws.getCell(hRow3, 7 + i);
-    cell.value = label;
-    styleHeaderCell(cell);
+    const machineCellSub = ws.getCell(hRow3, machineStart + i);
+    machineCellSub.value = label;
+    styleHeaderCell(machineCellSub);
+
+    const handCellSub = ws.getCell(hRow3, handStart + i);
+    handCellSub.value = label;
+    styleHeaderCell(handCellSub);
   });
 
   [hRow1, hRow2, hRow3].forEach((rowNum) => {
@@ -220,8 +243,12 @@ const GenerateTappingDailyReportExcel = async (details, reportDate) => {
   let grandSheets = 0;
   let grandMachineSheets = 0;
   let grandMachineSqm = 0;
+  let grandMachineAmount = 0;
+  let grandMachineExpense = 0;
   let grandHandSheets = 0;
   let grandHandSqm = 0;
+  let grandHandAmount = 0;
+  let grandHandExpense = 0;
 
   Object.keys(byItem)
     .sort()
@@ -230,8 +257,12 @@ const GenerateTappingDailyReportExcel = async (details, reportDate) => {
       let itemSheets = 0;
       let itemMachineSheets = 0;
       let itemMachineSqm = 0;
+      let itemMachineAmount = 0;
+      let itemMachineExpense = 0;
       let itemHandSheets = 0;
       let itemHandSqm = 0;
+      let itemHandAmount = 0;
+      let itemHandExpense = 0;
 
       rows.forEach((row, idx) => {
         const dataRow = ws.getRow(r);
@@ -250,20 +281,34 @@ const GenerateTappingDailyReportExcel = async (details, reportDate) => {
         dataRow.getCell(4).value = row.length;
         dataRow.getCell(5).value = row.width;
         dataRow.getCell(6).value = row.no_of_sheets;
-        // Machine Splicing (cols 7–8)
-        dataRow.getCell(7).value = isMachine ? row.no_of_sheets : 0;
-        dataRow.getCell(8).value = isMachine ? row.sqm : 0;
-        // Hand Splicing (cols 9–10)
-        dataRow.getCell(9).value = isHand ? row.no_of_sheets : 0;
-        dataRow.getCell(10).value = isHand ? row.sqm : 0;
+
+        // Machine Splicing block
+        dataRow.getCell(machineStart).value = isMachine ? row.no_of_sheets : 0;
+        dataRow.getCell(machineStart + 1).value = isMachine ? row.sqm : 0;
+        if (includeCostAndExpense) {
+          dataRow.getCell(machineStart + 2).value = isMachine ? row.amount : 0;
+          dataRow.getCell(machineStart + 3).value = isMachine ? row.expense_amount : 0;
+        }
+
+        // Hand Splicing block
+        dataRow.getCell(handStart).value = isHand ? row.no_of_sheets : 0;
+        dataRow.getCell(handStart + 1).value = isHand ? row.sqm : 0;
+        if (includeCostAndExpense) {
+          dataRow.getCell(handStart + 2).value = isHand ? row.amount : 0;
+          dataRow.getCell(handStart + 3).value = isHand ? row.expense_amount : 0;
+        }
+
         // Right cols
-        dataRow.getCell(11).value = row.character_name;
-        dataRow.getCell(12).value = row.pattern_name;
-        dataRow.getCell(13).value = row.series_name;
-        dataRow.getCell(14).value = row.remark;
+        dataRow.getCell(rightStart).value = row.character_name;
+        dataRow.getCell(rightStart + 1).value = row.pattern_name;
+        dataRow.getCell(rightStart + 2).value = row.series_name;
+        dataRow.getCell(rightStart + 3).value = row.remark;
 
         // Number formatting
-        [2, 4, 5, 6, 7, 8, 9, 10].forEach((col) => {
+        const numericCols = [2, 4, 5, 6];
+        for (let c = machineStart; c < machineStart + colsPerSub; c++) numericCols.push(c);
+        for (let c = handStart; c < handStart + colsPerSub; c++) numericCols.push(c);
+        numericCols.forEach((col) => {
           const cell = dataRow.getCell(col);
           if (typeof cell.value === 'number') cell.numFmt = numFmt;
         });
@@ -271,8 +316,18 @@ const GenerateTappingDailyReportExcel = async (details, reportDate) => {
         for (let col = 1; col <= TOTAL_COLS; col++) styleDataCell(dataRow.getCell(col));
 
         itemSheets += row.no_of_sheets;
-        if (isMachine) { itemMachineSheets += row.no_of_sheets; itemMachineSqm += row.sqm; }
-        if (isHand)    { itemHandSheets += row.no_of_sheets;    itemHandSqm += row.sqm;    }
+        if (isMachine) {
+          itemMachineSheets += row.no_of_sheets;
+          itemMachineSqm += row.sqm;
+          itemMachineAmount += row.amount;
+          itemMachineExpense += row.expense_amount;
+        }
+        if (isHand) {
+          itemHandSheets += row.no_of_sheets;
+          itemHandSqm += row.sqm;
+          itemHandAmount += row.amount;
+          itemHandExpense += row.expense_amount;
+        }
 
         r++;
       });
@@ -282,11 +337,19 @@ const GenerateTappingDailyReportExcel = async (details, reportDate) => {
       totalRow.getCell(3).value = 'Total';
       totalRow.getCell(3).font = { bold: true };
       totalRow.getCell(6).value = itemSheets;
-      totalRow.getCell(7).value = itemMachineSheets;
-      totalRow.getCell(8).value = itemMachineSqm;
-      totalRow.getCell(9).value = itemHandSheets;
-      totalRow.getCell(10).value = itemHandSqm;
-      [6, 7, 8, 9, 10].forEach((col) => {
+      totalRow.getCell(machineStart).value = itemMachineSheets;
+      totalRow.getCell(machineStart + 1).value = itemMachineSqm;
+      totalRow.getCell(handStart).value = itemHandSheets;
+      totalRow.getCell(handStart + 1).value = itemHandSqm;
+      const totalNumericCols = [6, machineStart, machineStart + 1, handStart, handStart + 1];
+      if (includeCostAndExpense) {
+        totalRow.getCell(machineStart + 2).value = itemMachineAmount;
+        totalRow.getCell(machineStart + 3).value = itemMachineExpense;
+        totalRow.getCell(handStart + 2).value = itemHandAmount;
+        totalRow.getCell(handStart + 3).value = itemHandExpense;
+        totalNumericCols.push(machineStart + 2, machineStart + 3, handStart + 2, handStart + 3);
+      }
+      totalNumericCols.forEach((col) => {
         totalRow.getCell(col).font = { bold: true };
         totalRow.getCell(col).numFmt = numFmt;
       });
@@ -296,8 +359,12 @@ const GenerateTappingDailyReportExcel = async (details, reportDate) => {
       grandSheets += itemSheets;
       grandMachineSheets += itemMachineSheets;
       grandMachineSqm += itemMachineSqm;
+      grandMachineAmount += itemMachineAmount;
+      grandMachineExpense += itemMachineExpense;
       grandHandSheets += itemHandSheets;
       grandHandSqm += itemHandSqm;
+      grandHandAmount += itemHandAmount;
+      grandHandExpense += itemHandExpense;
     });
 
   // Grand Total row
@@ -305,12 +372,20 @@ const GenerateTappingDailyReportExcel = async (details, reportDate) => {
   grandRow.getCell(1).value = 'Total';
   grandRow.getCell(3).value = '-';
   grandRow.getCell(6).value = grandSheets;
-  grandRow.getCell(7).value = grandMachineSheets;
-  grandRow.getCell(8).value = grandMachineSqm;
-  grandRow.getCell(9).value = grandHandSheets;
-  grandRow.getCell(10).value = grandHandSqm;
+  grandRow.getCell(machineStart).value = grandMachineSheets;
+  grandRow.getCell(machineStart + 1).value = grandMachineSqm;
+  grandRow.getCell(handStart).value = grandHandSheets;
+  grandRow.getCell(handStart + 1).value = grandHandSqm;
+  const grandNumericCols = [6, machineStart, machineStart + 1, handStart, handStart + 1];
+  if (includeCostAndExpense) {
+    grandRow.getCell(machineStart + 2).value = grandMachineAmount;
+    grandRow.getCell(machineStart + 3).value = grandMachineExpense;
+    grandRow.getCell(handStart + 2).value = grandHandAmount;
+    grandRow.getCell(handStart + 3).value = grandHandExpense;
+    grandNumericCols.push(machineStart + 2, machineStart + 3, handStart + 2, handStart + 3);
+  }
   [1, 3].forEach((col) => (grandRow.getCell(col).font = { bold: true }));
-  [6, 7, 8, 9, 10].forEach((col) => {
+  grandNumericCols.forEach((col) => {
     grandRow.getCell(col).font = { bold: true };
     grandRow.getCell(col).numFmt = numFmt;
   });
@@ -318,8 +393,14 @@ const GenerateTappingDailyReportExcel = async (details, reportDate) => {
   r += 2;
 
   // ─── Summary Section ──────────────────────────────────────────────────────
+  const sColsPerSub = includeCostAndExpense ? 4 : 2;
+  const sKeyCols = 4; // Item Name, Thickness, Length, Width
+  const issueStart = sKeyCols + 1;
+  const productionStart = issueStart + sColsPerSub;
+  const SUMMARY_TOTAL_COLS = productionStart + sColsPerSub - 1;
+
   // "Summary" label
-  ws.mergeCells(r, 1, r, 8);
+  ws.mergeCells(r, 1, r, SUMMARY_TOTAL_COLS);
   const SummaryLabel = ws.getCell(r, 1);
   SummaryLabel.value = 'Summary';
   SummaryLabel.font = { bold: true };
@@ -330,7 +411,7 @@ const GenerateTappingDailyReportExcel = async (details, reportDate) => {
   const sHRow1 = r;
   const sHRow2 = r + 1;
 
-  // Cols 1–4: merged vertically (Item Name, Tickness, Length, Width)
+  // Cols 1–4: merged vertically (Item Name, Thickness, Length, Width)
   const SummarySingleCols = [
     { col: 1, label: 'Item Name' },
     { col: 2, label: 'Thickness' },
@@ -344,23 +425,27 @@ const GenerateTappingDailyReportExcel = async (details, reportDate) => {
     styleHeaderCell(cell);
   });
 
-  // Issue merged (cols 5–6)
-  ws.mergeCells(sHRow1, 5, sHRow1, 6);
-  const issueCell = ws.getCell(sHRow1, 5);
+  // Issue merged block
+  ws.mergeCells(sHRow1, issueStart, sHRow1, issueStart + sColsPerSub - 1);
+  const issueCell = ws.getCell(sHRow1, issueStart);
   issueCell.value = 'Issue';
   styleHeaderCell(issueCell);
 
-  // Production merged (cols 7–8)
-  ws.mergeCells(sHRow1, 7, sHRow1, 8);
-  const productionCell = ws.getCell(sHRow1, 7);
+  // Production merged block
+  ws.mergeCells(sHRow1, productionStart, sHRow1, productionStart + sColsPerSub - 1);
+  const productionCell = ws.getCell(sHRow1, productionStart);
   productionCell.value = 'Production';
   styleHeaderCell(productionCell);
 
   // Sub-labels row 2
-  ['Sheets', 'SQ Mtr', 'Sheets', 'SQ Mtr'].forEach((label, i) => {
-    const cell = ws.getCell(sHRow2, 5 + i);
-    cell.value = label;
-    styleHeaderCell(cell);
+  subLabels.forEach((label, i) => {
+    const issueSubCell = ws.getCell(sHRow2, issueStart + i);
+    issueSubCell.value = label;
+    styleHeaderCell(issueSubCell);
+
+    const prodSubCell = ws.getCell(sHRow2, productionStart + i);
+    prodSubCell.value = label;
+    styleHeaderCell(prodSubCell);
   });
 
   [sHRow1, sHRow2].forEach((rowNum) => { ws.getRow(rowNum).height = 18; });
@@ -369,8 +454,12 @@ const GenerateTappingDailyReportExcel = async (details, reportDate) => {
   // Summary data rows
   let sumIssueSheets = 0;
   let sumIssueSqm = 0;
+  let sumIssueAmount = 0;
+  let sumIssueExpense = 0;
   let sumProdSheets = 0;
   let sumProdSqm = 0;
+  let sumProdAmount = 0;
+  let sumProdExpense = 0;
 
   SummaryRows
     .sort((a, b) => a.item_name.localeCompare(b.item_name) || a.length - b.length || a.width - b.width)
@@ -380,21 +469,33 @@ const GenerateTappingDailyReportExcel = async (details, reportDate) => {
       row.getCell(2).value = s.thickness;
       row.getCell(3).value = s.length;
       row.getCell(4).value = s.width;
-      row.getCell(5).value = s.issue_sheets;
-      row.getCell(6).value = s.issue_sqm;
-      row.getCell(7).value = s.production_sheets;
-      row.getCell(8).value = s.production_sqm;
+      row.getCell(issueStart).value = s.issue_sheets;
+      row.getCell(issueStart + 1).value = s.issue_sqm;
+      row.getCell(productionStart).value = s.production_sheets;
+      row.getCell(productionStart + 1).value = s.production_sqm;
 
-      [2, 3, 4, 5, 6, 7, 8].forEach((col) => {
+      const sNumericCols = [2, 3, 4, issueStart, issueStart + 1, productionStart, productionStart + 1];
+      if (includeCostAndExpense) {
+        row.getCell(issueStart + 2).value = s.issue_amount;
+        row.getCell(issueStart + 3).value = s.issue_expense_amount;
+        row.getCell(productionStart + 2).value = s.production_amount;
+        row.getCell(productionStart + 3).value = s.production_expense_amount;
+        sNumericCols.push(issueStart + 2, issueStart + 3, productionStart + 2, productionStart + 3);
+      }
+      sNumericCols.forEach((col) => {
         const cell = row.getCell(col);
         if (typeof cell.value === 'number') cell.numFmt = numFmt;
       });
-      for (let col = 1; col <= 8; col++) styleDataCell(row.getCell(col));
+      for (let col = 1; col <= SUMMARY_TOTAL_COLS; col++) styleDataCell(row.getCell(col));
 
       sumIssueSheets += s.issue_sheets;
       sumIssueSqm += s.issue_sqm;
+      sumIssueAmount += s.issue_amount;
+      sumIssueExpense += s.issue_expense_amount;
       sumProdSheets += s.production_sheets;
       sumProdSqm += s.production_sqm;
+      sumProdAmount += s.production_amount;
+      sumProdExpense += s.production_expense_amount;
 
       r++;
     });
@@ -402,34 +503,42 @@ const GenerateTappingDailyReportExcel = async (details, reportDate) => {
   // Summary Total row
   const sTotalRow = ws.getRow(r);
   sTotalRow.getCell(1).value = 'Total';
-  sTotalRow.getCell(5).value = sumIssueSheets;
-  sTotalRow.getCell(6).value = sumIssueSqm;
-  sTotalRow.getCell(7).value = sumProdSheets;
-  sTotalRow.getCell(8).value = sumProdSqm;
+  sTotalRow.getCell(issueStart).value = sumIssueSheets;
+  sTotalRow.getCell(issueStart + 1).value = sumIssueSqm;
+  sTotalRow.getCell(productionStart).value = sumProdSheets;
+  sTotalRow.getCell(productionStart + 1).value = sumProdSqm;
+  const sTotalNumericCols = [issueStart, issueStart + 1, productionStart, productionStart + 1];
+  if (includeCostAndExpense) {
+    sTotalRow.getCell(issueStart + 2).value = sumIssueAmount;
+    sTotalRow.getCell(issueStart + 3).value = sumIssueExpense;
+    sTotalRow.getCell(productionStart + 2).value = sumProdAmount;
+    sTotalRow.getCell(productionStart + 3).value = sumProdExpense;
+    sTotalNumericCols.push(issueStart + 2, issueStart + 3, productionStart + 2, productionStart + 3);
+  }
   sTotalRow.getCell(1).font = { bold: true };
-  [5, 6, 7, 8].forEach((col) => {
+  sTotalNumericCols.forEach((col) => {
     sTotalRow.getCell(col).font = { bold: true };
     sTotalRow.getCell(col).numFmt = numFmt;
   });
-  for (let col = 1; col <= 8; col++) styleDataCell(sTotalRow.getCell(col));
+  for (let col = 1; col <= SUMMARY_TOTAL_COLS; col++) styleDataCell(sTotalRow.getCell(col));
 
   // ─── Column Widths ────────────────────────────────────────────────────────
-  ws.columns = [
+  const subWidths = includeCostAndExpense ? [12, 12, 12, 16] : [12, 12]; // Sheets, SQM, [Amount, Expense Amount]
+  const columns = [
     { width: 30 }, // Item Name
     { width: 12 }, // Thickness
     { width: 14 }, // LogX
     { width: 10 }, // Length
     { width: 10 }, // Width
     { width: 10 }, // Sheets
-    { width: 12 }, // Machine Sheets
-    { width: 12 }, // Machine SQ Mtr
-    { width: 12 }, // Hand Sheets
-    { width: 12 }, // Hand SQ Mtr
+    ...subWidths,  // Machine block
+    ...subWidths,  // Hand block
     { width: 14 }, // Character
     { width: 14 }, // Pattern
     { width: 12 }, // Series
     { width: 16 }, // Remarks
   ];
+  ws.columns = columns;
 
   // ─── Save File ────────────────────────────────────────────────────────────
   const timestamp = Date.now();

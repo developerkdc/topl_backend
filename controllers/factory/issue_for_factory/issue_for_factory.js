@@ -63,6 +63,7 @@ class Issue_For_Factory {
     issue_details,
     add_to_factory,
     issued_for,
+    issued_date,
   ) {
     if (!isValidObjectId(issue_details?.issued_from_id)) {
       throw new ApiError('Invalid Issued from ID', StatusCodes?.BAD_REQUEST);
@@ -75,6 +76,7 @@ class Issue_For_Factory {
     this.issued_from_id = issue_details?.issued_from_id;
     this.issued_from_details = null;
     this.add_to_factory = add_to_factory;
+    this.issued_date = issued_date;
   }
 
   async fetch_issue_from_data() {
@@ -200,6 +202,7 @@ class Issue_For_Factory {
             remark: this.issued_from_details?.remark,
             product_type: this.issued_from_details?.product_type || null,
             series_code: this.issued_from_details?.series_code || null,
+            issued_date: this.issued_date,
           },
         ],
         { session: this.session }
@@ -229,6 +232,7 @@ class Issue_For_Factory {
           $set: {
             isEditable: false,
             updated_by: this.userDetails?._id,
+            issued_date: this.issued_date,
           },
         },
         { session: this.session }
@@ -291,6 +295,7 @@ class Issue_For_Factory {
         created_by: this.userDetails?._id,
         updated_by: this.userDetails?._id,
         issue_status: this.add_to_factory,
+        issued_date: this.issued_date,
         order_id: this.issue_details?.order_id,
         order_item_id: this.issue_details?.order_item_id,
         product_type: this.issued_from_details?.product_type || null,

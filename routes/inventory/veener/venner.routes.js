@@ -12,6 +12,7 @@ import {
   veneerLogsCsv,
   listing_veneer_history_inventory,
   veneerHistoryLogsCsv,
+  log_code_dropdown,
 } from '../../../controllers/inventory/venner/venner.controller.js';
 import AuthMiddleware from '../../../middlewares/verifyToken.js';
 import RolesPermissions from '../../../middlewares/permission.js';
@@ -100,6 +101,13 @@ veneer_router.get(
   '/inward-srno-dropdown',
   AuthMiddleware,
   inward_sr_no_dropdown
+);
+
+//log code dropdown
+veneer_router.get(
+  '/log-code-dropdown',
+  AuthMiddleware,
+  log_code_dropdown
 );
 
 //Excels

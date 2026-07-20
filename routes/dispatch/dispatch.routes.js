@@ -1,5 +1,5 @@
 import express from 'express';
-import { add_dispatch_details, cancel_dispatch_details, cancel_ewaybill, cancel_irn_no, dispatch_tally, edit_dispatch_details, fetch_all_details_by_dispatch_id, fetch_all_dispatch_details, fetch_all_dispatch_items_details, fetch_dispatch_details_by_invoice_no, fetch_invoices, fetch_packing_details_by_customer_id, fetch_purchase_history, fetch_single_dispatch_items, generate_ewaybill, generate_ewaybill_using_irn_no, generate_invoice_no, generate_irn_no, get_ewaybill_details, get_irn_by_doc, invoice_no_dropdown, load_packing_details, packing_done_dropdown, revert_dispatch_details, update_ewaybill_partB, update_ewaybill_transporter } from '../../controllers/dispatch/dispatch.controller.js';
+import { add_dispatch_details, cancel_dispatch_details, cancel_ewaybill, cancel_irn_no, dispatch_tally, edit_dispatch_details, ewaybill_payload, fetch_all_details_by_dispatch_id, fetch_all_dispatch_details, fetch_all_dispatch_items_details, fetch_dispatch_details_by_invoice_no, fetch_invoices, fetch_packing_details_by_customer_id, fetch_purchase_history, fetch_single_dispatch_items, generate_ewaybill, generate_ewaybill_using_irn_no, generate_invoice_no, generate_irn_no, get_ewaybill_details, get_irn_by_doc, invoice_no_dropdown, irn_no_payload, load_packing_details, packing_done_dropdown, revert_dispatch_details, update_ewaybill_partB, update_ewaybill_transporter } from '../../controllers/dispatch/dispatch.controller.js';
 import { dispatch_invoice_pdf } from '../../controllers/dispatch/dispatch_invoice.controller.js';
 import { verifyApproval } from '../../middlewares/approval.middleware.js';
 import EInvoiceAuthMiddleware from '../../middlewares/eInvoiceAuth.middleware.js';
@@ -26,6 +26,7 @@ dispatchRouter.post("/generate-irn-no/:id", AuthMiddleware, EInvoiceAuthMiddlewa
 dispatchRouter.post("/get-irn-by-doc/:id", AuthMiddleware, EInvoiceAuthMiddleware, get_irn_by_doc);
 dispatchRouter.post("/cancel-irn-no/:id", AuthMiddleware, EInvoiceAuthMiddleware, cancel_irn_no);
 dispatchRouter.post("/generate-ewaybill-using-irn/:id", AuthMiddleware, EInvoiceAuthMiddleware, generate_ewaybill_using_irn_no);
+dispatchRouter.get("/irn-no-payload/:id", AuthMiddleware, EInvoiceAuthMiddleware, irn_no_payload);
 
 // generate ewaybill
 dispatchRouter.post("/generate-ewaybill/:id", AuthMiddleware, generate_ewaybill);
@@ -34,6 +35,7 @@ dispatchRouter.post("/get-ewaybill/:id", AuthMiddleware, EwayBillAuthMiddleware,
 dispatchRouter.post("/update-ewaybill-transporter/:id", AuthMiddleware, update_ewaybill_transporter);
 dispatchRouter.post("/update-ewaybill-partB/:id", AuthMiddleware, update_ewaybill_partB);
 dispatchRouter.get("/dispatch-ewaybill-pdf/:id", dispatch_ewaybill_pdf);
+dispatchRouter.get("/dispatch-ewaybill-payload/:id", AuthMiddleware, ewaybill_payload);
 
 //mobile api
 dispatchRouter.post("/fetch-invoice-details-by-invoice-no", fetch_dispatch_details_by_invoice_no);

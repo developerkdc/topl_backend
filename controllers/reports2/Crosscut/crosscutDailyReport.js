@@ -8,7 +8,7 @@ import catchAsync from '../../../utils/errors/catchAsync.js';
  * @route POST /api/V1/report/download-excel-crosscutting-daily-report
  */
 export const CrosscutDailyReportExcel = catchAsync(async (req, res, next) => {
-  const { reportDate, item_name, ...rest } = req?.body?.filters || {};
+  const { reportDate, item_name, includeCostAndExpense, ...rest } = req?.body?.filters || {};
 
   if (!reportDate) {
     return res.status(400).json({
@@ -47,7 +47,7 @@ export const CrosscutDailyReportExcel = catchAsync(async (req, res, next) => {
       },
     },
     {
-      $sort: { item_name: 1, log_no: 1, code: 1 },
+      $sort: { item_name: 1, log_no: 1, code: 1, cost_amount: 1, expense_amount: 1 },
     },
   ]);
 
@@ -61,7 +61,8 @@ export const CrosscutDailyReportExcel = catchAsync(async (req, res, next) => {
 
   const excelLink = await GenerateCrosscutDailyReportExcel(
     crossCuttingData,
-    reportDate
+    reportDate,
+    includeCostAndExpense
   );
 
   return res.status(200).json({

@@ -29,7 +29,7 @@ function nonNegativeDiff(minuend, subtrahend) {
  * @access Private
  */
 export const LogWiseFlitchReportExcel = catchAsync(async (req, res, next) => {
-  const { startDate, endDate, filter = {} } = req.body;
+  const { startDate, endDate, filter = {}, includeCostAndExpense } = req.body;
 
   console.log('Log Wise Flitch Report Request - Start Date:', startDate);
   console.log('Log Wise Flitch Report Request - End Date:', endDate);
@@ -122,6 +122,8 @@ export const LogWiseFlitchReportExcel = catchAsync(async (req, res, next) => {
               _id: null,
               inward_date: { $min: '$invoice.inward_date' },
               invoice_no: { $first: '$invoice.inward_sr_no' },
+              amount: { $sum: '$amount' },
+              expense_amount: { $sum: '$expense_amount' },
             },
           },
         ]);
@@ -136,6 +138,8 @@ export const LogWiseFlitchReportExcel = catchAsync(async (req, res, next) => {
               $group: {
                 _id: null,
                 flitching_date: { $min: '$worker_details.flitching_date' },
+                cost_amount: { $sum: '$cost_amount' },
+                expense_amount: { $sum: '$expense_amount' },
               },
             },
           ]);
@@ -178,9 +182,11 @@ export const LogWiseFlitchReportExcel = catchAsync(async (req, res, next) => {
               deleted_at: null,
             },
           },
-          { $group: { _id: null, total_cmt: { $sum: '$flitch_cmt' } } },
+          { $group: { _id: null, total_cmt: { $sum: '$flitch_cmt' }, total_cost_amount: { $sum: '$cost_amount' }, total_expense_amount: { $sum: '$expense_amount' } } },
         ]);
         const openingStockCmt = openingStockData[0]?.total_cmt || 0;
+        const openingStockCostAmount = openingStockData[0]?.total_cost_amount || 0;
+        const openingStockExpenseAmount = openingStockData[0]?.total_expense_amount || 0;
 
         // ── ROUND LOG DETAIL CMT (Invoice, Indian, Actual) from LOG sources ──
         // LOG source determined by: crosscut_done_id = null
@@ -208,6 +214,8 @@ export const LogWiseFlitchReportExcel = catchAsync(async (req, res, next) => {
               invoice_cmt: { $sum: { $ifNull: ['$log_data.invoice_cmt', 0] } },
               indian_cmt: { $sum: { $ifNull: ['$log_data.indian_cmt', 0] } },
               actual_cmt: { $sum: { $ifNull: ['$log_data.physical_cmt', 0] } },
+              amount: { $sum: { $ifNull: ['$log_data.amount', 0] } },
+              expense_amount: { $sum: { $ifNull: ['$log_data.expense_amount', 0] } },
             },
           },
         ]);
@@ -237,15 +245,19 @@ export const LogWiseFlitchReportExcel = catchAsync(async (req, res, next) => {
             $group: {
               _id: null,
               actual_cmt: { $sum: { $ifNull: ['$crosscut_data.crosscut_cmt', 0] } },
+              amount: { $sum: { $ifNull: ['$crosscut_data.cost_amount', 0] } },
+              expense_amount: { $sum: { $ifNull: ['$crosscut_data.expense_amount', 0] } },
             },
           },
         ]);
-        const roundLogFromCrosscut = roundLogDetailFromCrosscut[0] || { actual_cmt: 0 };
+        const roundLogFromCrosscut = roundLogDetailFromCrosscut[0] || { actual_cmt: 0, amount: 0, expense_amount: 0 };
 
         // Combine LOG + CROSSCUT for total Round Log Detail
         const invoiceCmt = roundLogFromLog.invoice_cmt;
         const indianCmt = roundLogFromLog.indian_cmt;
         const actualCmt = roundLogFromLog.actual_cmt + roundLogFromCrosscut.actual_cmt;
+        const actualCmtAmount = roundLogFromLog.amount + roundLogFromCrosscut.amount;
+        const actualCmtExpenseAmount = roundLogFromLog.expense_amount + roundLogFromCrosscut.expense_amount;
 
         // ── ISSUE FOR FLITCH — from issues_for_flitching_model (actual issue records, in period) ──
         const issueForFlitchData = await issues_for_flitching_model.aggregate([
@@ -255,10 +267,12 @@ export const LogWiseFlitchReportExcel = catchAsync(async (req, res, next) => {
               createdAt: { $gte: start, $lte: end },
             },
           },
-          { $group: { _id: null, total_cmt: { $sum: '$cmt' } } },
+          { $group: { _id: null, total_cmt: { $sum: '$cmt' }, amount: { $sum: '$amount' }, expense_amount: { $sum: '$expense_amount' } } },
         ]);
 
         const issueForFlitch = issueForFlitchData[0]?.total_cmt || 0;
+        const issueForFlitchAmount = issueForFlitchData[0]?.amount || 0;
+        const issueForFlitchExpenseAmount = issueForFlitchData[0]?.expense_amount || 0;
 
         // ── FLITCH RECEIVED — inventory + factory in period ──
         const [flitchReceivedData, ccReceivedData] = await Promise.all([
@@ -274,7 +288,7 @@ export const LogWiseFlitchReportExcel = catchAsync(async (req, res, next) => {
             },
             { $unwind: '$invoice' },
             { $match: { 'invoice.inward_date': { $gte: start, $lte: end } } },
-            { $group: { _id: null, total_cmt: { $sum: '$flitch_cmt' } } },
+            { $group: { _id: null, total_cmt: { $sum: '$flitch_cmt' }, amount: { $sum: '$amount' }, expense_amount: { $sum: '$expense_amount' } } },
           ]),
           flitching_done_model.aggregate([
             {
@@ -284,11 +298,13 @@ export const LogWiseFlitchReportExcel = catchAsync(async (req, res, next) => {
                 'worker_details.flitching_date': { $gte: start, $lte: end },
               },
             },
-            { $group: { _id: null, total_cmt: { $sum: '$flitch_cmt' } } },
+            { $group: { _id: null, total_cmt: { $sum: '$flitch_cmt' }, amount: { $sum: '$amount' }, expense_amount: { $sum: '$expense_amount' } } },
           ]),
         ]);
 
         const flitchReceivedCmt = flitchReceivedData[0]?.total_cmt || 0;
+        const flitchReceivedAmount = flitchReceivedData[0]?.amount || 0;
+        const flitchReceivedExpenseAmount = flitchReceivedData[0]?.expense_amount || 0;
         const ccReceivedCmt = ccReceivedData[0]?.total_cmt || 0;
         const totalFlitchReceived = flitchReceivedCmt + ccReceivedCmt;
 
@@ -300,9 +316,11 @@ export const LogWiseFlitchReportExcel = catchAsync(async (req, res, next) => {
               createdAt: { $gte: start, $lte: end },
             },
           },
-          { $group: { _id: null, total_cmt: { $sum: '$cmt' } } },
+          { $group: { _id: null, total_cmt: { $sum: '$cmt' }, amount: { $sum: '$amount' }, expense_amount: { $sum: '$expense_amount' } } },
         ]);
         const issueForSlicing = issueForSlicingData[0]?.total_cmt || 0;
+        const issueForSlicingAmount = issueForSlicingData[0]?.amount || 0;
+        const issueForSlicingExpenseAmount = issueForSlicingData[0]?.expense_amount || 0;
 
         // ── SLICING RECEIVED — from slicing_done_other_details, lookup issued_for_slicing for log_no (in period) ──
         const slicingReceivedData = await slicing_done_other_details_model.aggregate([
@@ -325,9 +343,11 @@ export const LogWiseFlitchReportExcel = catchAsync(async (req, res, next) => {
               'slicing_issue.log_no': logNo,
             },
           },
-          { $group: { _id: null, total_cmt: { $sum: '$total_cmt' } } },
+          { $group: { _id: null, total_cmt: { $sum: '$total_cmt' }, total_amount: { $sum: '$total_amount' }, expense_amount: { $sum: '$expense_amount' } } },
         ]);
         const slicingReceivedCmt = slicingReceivedData[0]?.total_cmt || 0;
+        const slicingReceivedAmount = slicingReceivedData[0]?.total_amount || 0;
+        const slicingReceivedExpenseAmount = slicingReceivedData[0]?.expense_amount || 0;
 
         // ── SALES — order/challan only (in period) ──
         const [inventorySalesData, factorySalesData] = await Promise.all([
@@ -339,7 +359,7 @@ export const LogWiseFlitchReportExcel = catchAsync(async (req, res, next) => {
                 updatedAt: { $gte: start, $lte: end },
               },
             },
-            { $group: { _id: null, total_cmt: { $sum: '$flitch_cmt' } } },
+            { $group: { _id: null, total_cmt: { $sum: '$flitch_cmt' }, amount: { $sum: '$amount' }, expense_amount: { $sum: '$expense_amount' } } },
           ]),
           flitching_done_model.aggregate([
             {
@@ -350,13 +370,19 @@ export const LogWiseFlitchReportExcel = catchAsync(async (req, res, next) => {
                 updatedAt: { $gte: start, $lte: end },
               },
             },
-            { $group: { _id: null, total_cmt: { $sum: '$flitch_cmt' } } },
+            { $group: { _id: null, total_cmt: { $sum: '$flitch_cmt' }, cost_amount: { $sum: '$cost_amount' }, expense_amount: { $sum: '$expense_amount' } } },
           ]),
         ]);
 
         const salesCmt =
           (inventorySalesData[0]?.total_cmt || 0) +
           (factorySalesData[0]?.total_cmt || 0);
+        const salesAmount =
+          (inventorySalesData[0]?.amount || 0) +
+          (factorySalesData[0]?.cost_amount || 0);
+        const salesExpenseAmount =
+          (inventorySalesData[0]?.expense_amount || 0) +
+          (factorySalesData[0]?.expense_amount || 0);
 
         // ── REJECTED — flitch wastage (wastage_info.wastage_sqm) + slicing wastage (issue_for_slicing_wastage.cmt) ──
         const [flitchWastageData, slicingWastageData] = await Promise.all([
@@ -368,7 +394,7 @@ export const LogWiseFlitchReportExcel = catchAsync(async (req, res, next) => {
                 'worker_details.flitching_date': { $gte: start, $lte: end },
               },
             },
-            { $group: { _id: null, total_wastage: { $sum: '$wastage_info.wastage_sqm' } } },
+            { $group: { _id: null, total_wastage: { $sum: '$wastage_info.wastage_sqm' }, cost_amount: { $sum: '$cost_amount' }, expense_amount: { $sum: '$expense_amount' } } },
           ]),
           issue_for_slicing_wastage_model.aggregate([
             {
@@ -377,7 +403,7 @@ export const LogWiseFlitchReportExcel = catchAsync(async (req, res, next) => {
                 'created_at': { $gte: start, $lte: end },
               },
             },
-            { $group: { _id: null, total_wastage: { $sum: '$cmt' } } },
+            { $group: { _id: null, total_wastage: { $sum: '$cmt' }, } },
           ]),
         ]);
 
@@ -391,6 +417,14 @@ export const LogWiseFlitchReportExcel = catchAsync(async (req, res, next) => {
           0,
           openingStockCmt + totalFlitchReceived - issueForFlitch - salesCmt
         );
+        const closingStockAmount = Math.max(
+          0,
+          openingStockCostAmount + flitchReceivedAmount - issueForFlitchAmount - salesAmount
+        );
+        const closingStockExpenseAmount = Math.max(
+          0,
+          openingStockExpenseAmount + flitchReceivedExpenseAmount - issueForFlitchExpenseAmount - salesExpenseAmount
+        );
 
         return {
           item_name: itemName,
@@ -398,20 +432,36 @@ export const LogWiseFlitchReportExcel = catchAsync(async (req, res, next) => {
           inward_date: inwardDate,
           status: logStatus,
           op_bal: openingStockCmt,
+          op_bal_amount: openingStockCostAmount,
+          op_bal_expense_amount: openingStockExpenseAmount,
           invoice_cmt: invoiceCmt,
           indian_cmt: indianCmt,
           actual_cmt: actualCmt,
+          actual_cmt_amount: actualCmtAmount,
+          actual_cmt_expense_amount: actualCmtExpenseAmount,
           recover_from_rejected: 0,           // placeholder – no source defined
           issue_for_flitch: issueForFlitch,
+          issue_for_flitch_amount: issueForFlitchAmount,
+          issue_for_flitch_expense_amount: issueForFlitchExpenseAmount,
           flitch_received: totalFlitchReceived,
+          flitch_received_amount: flitchReceivedAmount,
+          flitch_received_expense_amount: flitchReceivedExpenseAmount,
           flitch_diff: nonNegativeDiff(issueForFlitch, totalFlitchReceived),
           issue_for_slicing: issueForSlicing,
+          issue_for_slicing_amount: issueForSlicingAmount,
+          issue_for_slicing_expense_amount: issueForSlicingExpenseAmount,
           slicing_received: slicingReceivedCmt,
+          slicing_received_amount: slicingReceivedAmount,
+          slicing_received_expense_amount: slicingReceivedExpenseAmount,
           slicing_diff: nonNegativeDiff(issueForSlicing, slicingReceivedCmt),
           issue_for_sqedge: 0,                // placeholder – no source defined
           sales: salesCmt,
+          sales_amount: salesAmount,
+          sales_expense_amount: salesExpenseAmount,
           rejected: totalRejected,
           fl_closing: closingStockCmt,
+          fl_closing_amount: closingStockAmount,
+          fl_closing_expense_amount: closingStockExpenseAmount,
         };
       })
     );
@@ -445,7 +495,8 @@ export const LogWiseFlitchReportExcel = catchAsync(async (req, res, next) => {
       activeLogsData,
       startDate,
       endDate,
-      filter
+      filter,
+      includeCostAndExpense
     );
 
     return res.json(

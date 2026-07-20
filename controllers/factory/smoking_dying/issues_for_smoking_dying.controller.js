@@ -25,7 +25,7 @@ export const add_issue_for_smoking_dying_from_veneer_inventory = catchAsync(
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
-      const { veneer_inventory_ids } = req.body;
+      const { veneer_inventory_ids, issued_date } = req.body;
       const userDetails = req.userDetails;
       if (
         !veneer_inventory_ids ||
@@ -100,6 +100,7 @@ export const add_issue_for_smoking_dying_from_veneer_inventory = catchAsync(
             expense_amount: item?.expense_amount,
             issued_from: issues_for_status?.veneer,
             remark: item?.remark,
+            issued_date: issued_date,
             created_by: userDetails?._id,
             updated_by: userDetails?._id,
           };
@@ -132,6 +133,7 @@ export const add_issue_for_smoking_dying_from_veneer_inventory = catchAsync(
           {
             $set: {
               issue_status: issues_for_status?.smoking_dying,
+              issued_date: issued_date,
             },
           },
           { session }
@@ -194,7 +196,7 @@ export const add_issue_for_smoking_dying_from_dressing_done_factory =
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
-      const { dressing_done_ids, dressing_done_other_details_id } = req.body;
+      const { dressing_done_ids, dressing_done_other_details_id, issued_date } = req.body;
       const userDetails = req.userDetails;
 
       if (!dressing_done_other_details_id) {
@@ -271,6 +273,7 @@ export const add_issue_for_smoking_dying_from_dressing_done_factory =
             series_name: item?.series_name || null,
             series_id: item?.series_id || null,
             remark: item?.remark,
+            issued_date: issued_date,
             created_by: userDetails?._id,
             updated_by: userDetails?._id,
           };
@@ -304,6 +307,7 @@ export const add_issue_for_smoking_dying_from_dressing_done_factory =
           {
             $set: {
               issue_status: issues_for_status?.smoking_dying,
+              issued_date: issued_date,
             },
           },
           { session }
@@ -350,6 +354,7 @@ export const add_issue_for_smoking_dying_from_dressing_done_factory =
       const history_data = {
         dressing_done_other_details_id: dressing_done_other_details_id,
         bundles: dressing_done_ids,
+        issued_date: issued_date,
         created_by: userDetails?._id,
         updated_by: userDetails?._id,
       };
@@ -739,7 +744,7 @@ export const revert_issued_for_smoking_dying_item = catchAsync(
           (ele) => ele.dressing_done_other_details_id
         );
 
-        console.log("dressing ids => ",dressing_done_other_details_id)
+        console.log("dressing ids => ", dressing_done_other_details_id)
         const delete_dressing_done_history_doc =
           await dressing_done_history_model.deleteOne(
             {

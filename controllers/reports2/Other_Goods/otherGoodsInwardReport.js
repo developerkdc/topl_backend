@@ -15,7 +15,7 @@ export const otherGoodsInwardReportExcel = catchAsync(
         // console.log('otherGoods Inward Report - Request Body:', JSON.stringify(req.body, null, 2));
         // console.log('otherGoods Inward Report - Filters:', req.body);
 
-        const { startDate, endDate, ...data } = req?.body || {};
+        const { startDate, endDate, includeCostAndExpense, ...data } = req?.body || {};
         let targetStart = startDate;
         let targetEnd = endDate;
 
@@ -131,7 +131,8 @@ export const otherGoodsInwardReportExcel = catchAsync(
         const excelLink = await GenerateOtherGoodsInwardReport(
             otherGoodsData,
             targetStart,
-            targetEnd
+            targetEnd,
+            includeCostAndExpense
         );
 
         return res.status(200).json({

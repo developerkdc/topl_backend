@@ -46,6 +46,8 @@ const buildIssueProdSummary = (rows) => {
     group_sqm: 0,
     damaged_sheets: 0,
     damaged_sqm: 0,
+    amount: 0,
+    expense_amount: 0,
   };
 
   rows.forEach((r) => {
@@ -56,6 +58,8 @@ const buildIssueProdSummary = (rows) => {
     const groupSqm = Number(r.sqm) || 0;
     const damagedSheets = Number(r.damaged_sheets) || 0;
     const damagedSqm = Number(r.damaged_sqm) || 0;
+    const amount = Number(r.amount) || 0;
+    const expenseAmount = Number(r.expense_amount) || 0;
 
     if (!map.has(key)) {
       map.set(key, {
@@ -69,6 +73,8 @@ const buildIssueProdSummary = (rows) => {
         group_sqm: 0,
         damaged_sheets: 0,
         damaged_sqm: 0,
+        amount: 0,
+        expense_amount: 0,
       });
     }
 
@@ -79,6 +85,8 @@ const buildIssueProdSummary = (rows) => {
     entry.group_sqm += groupSqm;
     entry.damaged_sheets += damagedSheets;
     entry.damaged_sqm += damagedSqm;
+    entry.amount += amount;
+    entry.expense_amount += expenseAmount;
 
     totals.issue_sheets += issueSheets;
     totals.issue_sqm += issueSqm;
@@ -86,6 +94,8 @@ const buildIssueProdSummary = (rows) => {
     totals.group_sqm += groupSqm;
     totals.damaged_sheets += damagedSheets;
     totals.damaged_sqm += damagedSqm;
+    totals.amount += amount;
+    totals.expense_amount += expenseAmount;
   });
 
   const summaryRows = Array.from(map.values()).sort((a, b) => {
@@ -109,7 +119,7 @@ const buildIssueProdSummary = (rows) => {
  *   Sub-headers: Item Name | Length | Width | Thickness | Sheets | SQ Mtr | Group Sheets | Group Sq. Mtr. | Damaged Sheets | Damaged Sq. Mtr.
  *   Rows grouped by (item_name, length, width, thickness). Total row at bottom.
  */
-const GenerateGroupingDailyReport = async (rows, reportDate) => {
+const GenerateGroupingDailyReport = async (rows, reportDate, includeCostAndExpense) => {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Grouping Details Report');
 
@@ -131,6 +141,7 @@ const GenerateGroupingDailyReport = async (rows, reportDate) => {
     'Pattern',      // col 11
     'Series',       // col 12
     'Remarks',      // col 13
+    ...(includeCostAndExpense ? ['Amount', 'Expense Amount'] : []),
   ];
   const numMainCols = mainHeaders.length; // 13
 
@@ -162,6 +173,10 @@ const GenerateGroupingDailyReport = async (rows, reportDate) => {
   let lastItemName = null;
   let groupSheets = 0;
   let groupSqm = 0;
+  let totalAmount = 0;
+  let totalExpenseAmount = 0;
+  let itemAmount = 0;
+  let itemExpenseAmount = 0;
 
   rows.forEach((r) => {
     const itemName = r.item_name ?? '';
@@ -176,12 +191,20 @@ const GenerateGroupingDailyReport = async (rows, reportDate) => {
       totalRow.getCell(9).value = groupSqm;
       totalRow.getCell(9).font = { bold: true };
       totalRow.getCell(9).numFmt = '0.00';
+      totalRow.getCell(14).value = itemAmount;
+      totalRow.getCell(14).font = { bold: true };
+      totalRow.getCell(14).numFmt = '0.00';
+      totalRow.getCell(15).value = itemExpenseAmount;
+      totalRow.getCell(15).font = { bold: true };
+      totalRow.getCell(15).numFmt = '0.00';
       for (let col = 1; col <= numMainCols; col++) {
-        setCellStyle(totalRow.getCell(col), col === 1 || col === 7 || col === 9);
+        setCellStyle(totalRow.getCell(col), col === 1 || col === 7 || col === 9 || col === 14 || col === 15);
       }
       currentRow++;
       groupSheets = 0;
       groupSqm = 0;
+      itemAmount = 0;
+      itemExpenseAmount = 0;
     }
     lastItemName = itemName;
 
@@ -200,6 +223,12 @@ const GenerateGroupingDailyReport = async (rows, reportDate) => {
     dataRow.getCell(11).value = r.pattern_name ?? '';
     dataRow.getCell(12).value = r.series_name ?? '';
     dataRow.getCell(13).value = r.remark ?? '';
+    if (includeCostAndExpense) {
+      dataRow.getCell(14).value = r.amount ?? 0;
+      dataRow.getCell(14).numFmt = '0.00';
+      dataRow.getCell(15).value = r.expense_amount ?? 0;
+      dataRow.getCell(15).numFmt = '0.00';
+    }
 
     [4, 5, 6, 9].forEach((col) => {
       const c = dataRow.getCell(col);
@@ -214,6 +243,10 @@ const GenerateGroupingDailyReport = async (rows, reportDate) => {
     groupSqm += sqm;
     grandTotalSheets += sheets;
     grandTotalSqm += sqm;
+    itemAmount += r.amount || 0;
+    itemExpenseAmount += r.expense_amount || 0;
+    totalAmount += r.amount || 0;
+    totalExpenseAmount += r.expense_amount || 0;
     currentRow++;
   });
 
@@ -227,8 +260,16 @@ const GenerateGroupingDailyReport = async (rows, reportDate) => {
     totalRow.getCell(9).value = groupSqm;
     totalRow.getCell(9).font = { bold: true };
     totalRow.getCell(9).numFmt = '0.00';
+    if (includeCostAndExpense) {
+      totalRow.getCell(14).value = itemAmount;
+      totalRow.getCell(14).font = { bold: true };
+      totalRow.getCell(14).numFmt = '0.00';
+      totalRow.getCell(15).value = itemExpenseAmount;
+      totalRow.getCell(15).font = { bold: true };
+      totalRow.getCell(15).numFmt = '0.00';
+    }
     for (let col = 1; col <= numMainCols; col++) {
-      setCellStyle(totalRow.getCell(col), col === 1 || col === 7 || col === 9);
+      setCellStyle(totalRow.getCell(col), col === 1 || col === 7 || col === 9 || col === 14 || col === 15);
     }
     currentRow++;
   }
@@ -242,14 +283,22 @@ const GenerateGroupingDailyReport = async (rows, reportDate) => {
   grandTotalRow.getCell(9).value = grandTotalSqm;
   grandTotalRow.getCell(9).font = { bold: true };
   grandTotalRow.getCell(9).numFmt = '0.00';
+  if (includeCostAndExpense) {
+    grandTotalRow.getCell(14).value = totalAmount;
+    grandTotalRow.getCell(14).font = { bold: true };
+    grandTotalRow.getCell(14).numFmt = '0.00';
+    grandTotalRow.getCell(15).value = totalExpenseAmount;
+    grandTotalRow.getCell(15).font = { bold: true };
+    grandTotalRow.getCell(15).numFmt = '0.00';
+  }
   for (let col = 1; col <= numMainCols; col++) {
-    setCellStyle(grandTotalRow.getCell(col), col === 1 || col === 7 || col === 9);
+    setCellStyle(grandTotalRow.getCell(col), col === 1 || col === 7 || col === 9 || col === 14 || col === 15);
   }
   currentRow += 2;
 
   // ── Section 2 — Issue/Production summary ──────────────────────────────────
   // 10 columns: Item Name | Length | Width | Thickness | Sheets | SQ Mtr | Group Sheets | Group Sq. Mtr. | Damaged Sheets | Damaged Sq. Mtr.
-  const numSummaryCols = 10;
+  const numSummaryCols = includeCostAndExpense ? 12 : 10;
 
   // Super-header row: "Issue" over cols 5–6, "Production" over cols 7–10; cols 1–4 are empty but bordered
   const superHeaderRow = worksheet.getRow(currentRow);
@@ -277,6 +326,9 @@ const GenerateGroupingDailyReport = async (rows, reportDate) => {
   prodCell.fill = grayFill;
   setCellStyle(prodCell);
   for (let col = 8; col <= 10; col++) setCellStyle(superHeaderRow.getCell(col));
+  if (includeCostAndExpense) {
+    for (let col = 11; col <= 12; col++) setCellStyle(superHeaderRow.getCell(col));
+  }
 
   currentRow++;
 
@@ -292,6 +344,7 @@ const GenerateGroupingDailyReport = async (rows, reportDate) => {
     'Group Sq. Mtr.',
     'Damaged Sheets',
     'Damaged Sq. Mtr.',
+    ...(includeCostAndExpense ? ['Amount', 'Expense Amount'] : []),
   ];
   const subHeaderRow = worksheet.getRow(currentRow);
   subHeaders.forEach((h, i) => {
@@ -317,11 +370,19 @@ const GenerateGroupingDailyReport = async (rows, reportDate) => {
     sumRow.getCell(8).value = s.group_sqm ?? 0;
     sumRow.getCell(9).value = s.damaged_sheets ?? 0;
     sumRow.getCell(10).value = s.damaged_sqm ?? 0;
+    if (includeCostAndExpense) {
+      sumRow.getCell(11).value = s.amount ?? 0;
+      sumRow.getCell(12).value = s.expense_amount ?? 0;
+    }
 
     [2, 3, 4, 6, 8, 10].forEach((col) => {
       const c = sumRow.getCell(col);
       if (typeof c.value === 'number') c.numFmt = '0.00';
     });
+    if (includeCostAndExpense) {
+      sumRow.getCell(11).numFmt = '0.00';
+      sumRow.getCell(12).numFmt = '0.00';
+    }
 
     for (let col = 1; col <= numSummaryCols; col++) setCellStyle(sumRow.getCell(col));
     currentRow++;
@@ -346,10 +407,18 @@ const GenerateGroupingDailyReport = async (rows, reportDate) => {
   sumTotalRow.getCell(10).value = totals.damaged_sqm;
   sumTotalRow.getCell(10).font = { bold: true };
   sumTotalRow.getCell(10).numFmt = '0.00';
+  if (includeCostAndExpense) {
+    sumTotalRow.getCell(11).value = totals.amount;
+    sumTotalRow.getCell(11).font = { bold: true };
+    sumTotalRow.getCell(11).numFmt = '0.00';
+    sumTotalRow.getCell(12).value = totals.expense_amount;
+    sumTotalRow.getCell(12).font = { bold: true };
+    sumTotalRow.getCell(12).numFmt = '0.00';
+  }
   for (let col = 1; col <= numSummaryCols; col++) {
     setCellStyle(
       sumTotalRow.getCell(col),
-      col === 1 || col === 5 || col === 6 || col === 7 || col === 8 || col === 9 || col === 10
+      col === 1 || col === 5 || col === 6 || col === 7 || col === 8 || col === 9 || col === 10 || col === 11 || col === 12
     );
   }
 
@@ -368,6 +437,7 @@ const GenerateGroupingDailyReport = async (rows, reportDate) => {
     { width: 12 }, // Pattern
     { width: 12 }, // Series
     { width: 16 }, // Remarks
+    ...(includeCostAndExpense ? [{ width: 12 }, { width: 12 }] : []),
   ];
 
   const timestamp = new Date().getTime();

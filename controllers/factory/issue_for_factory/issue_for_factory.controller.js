@@ -6,7 +6,7 @@ import mongoose from 'mongoose';
 import Issue_For_Factory from './issue_for_factory.js';
 
 export const add_issue_for_factory_data = catchAsync(async (req, res) => {
-  const { issued_from, issue_details, add_to_factory, issued_for } = req.body;
+  const { issued_from, issue_details, add_to_factory, issued_for, issued_date } = req.body;
 
   const userDetails = req.userDetails;
 
@@ -18,6 +18,7 @@ export const add_issue_for_factory_data = catchAsync(async (req, res) => {
       'issue_details',
       'add_to_factory',
       'issued_for',
+      'issued_date',
     ]) {
       if (!req.body[field]) {
         throw new ApiError(`${field} is missing.`, StatusCodes.BAD_REQUEST);
@@ -30,7 +31,8 @@ export const add_issue_for_factory_data = catchAsync(async (req, res) => {
       issued_from,
       issue_details,
       add_to_factory,
-      issued_for
+      issued_for,
+      issued_date,
     );
     const result = await add_to_factory_handler?.add_issued_items_to_factory();
 

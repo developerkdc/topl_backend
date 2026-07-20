@@ -26,6 +26,10 @@ const plywood_resizing_history_schema = new mongoose.Schema(
       },
       default: null,
     },
+    issued_date: {
+      type: Date,
+      default: null,
+    },
     issued_sheets: {
       type: Number,
       required: [true, 'Issued sheets are required.'],
