@@ -255,6 +255,7 @@ veneer_item_details_schema.index(
   { item_name: -1, pallet_number: -1, bundle_number: -1 },
   { unique: true }
 );
+veneer_item_details_schema.index({ issue_status: 1, updatedAt: -1, _id: -1 });
 
 export const veneer_invoice_schema = new mongoose.Schema(
   {
@@ -432,7 +433,6 @@ export const veneer_invoice_schema = new mongoose.Schema(
   }
 );
 
-veneer_invoice_schema.index({ inward_sr_no: 1 });
 veneer_invoice_schema.index(
   { inward_sr_no: 1, 'expensesSchema.expenseType': 1 },
   { unique: true }
@@ -461,44 +461,155 @@ export const veneer_inventory_items_view_modal = mongoose.model(
   veneer_inventory_items_view_schema
 );
 
+// export const veneer_inventory_items_view_test_modal = mongoose.model(
+//   "veneer_inventory_items_views_test",
+//   veneer_inventory_items_view_schema
+// );
+
+// (async function () {
+//   await veneer_inventory_items_view_modal.createCollection({
+//     viewOn: 'veneer_inventory_items_details',
+//     pipeline: [
+//       {
+//         $sort: {
+//           updatedAt: 1,
+//           _id: 1,
+//         },
+//       },
+//       {
+//         $lookup: {
+//           from: 'veneer_inventory_invoice_details',
+//           localField: 'invoice_id',
+//           foreignField: '_id',
+//           as: 'veneer_invoice_details',
+//         },
+//       },
+//       {
+//         $unwind: {
+//           path: '$veneer_invoice_details',
+//           preserveNullAndEmptyArrays: true,
+//         },
+//       },
+//       {
+//         $lookup: {
+//           from: 'users',
+//           localField: 'created_by',
+//           foreignField: '_id',
+//           as: 'created_user',
+//         },
+//       },
+//       {
+//         $unwind: {
+//           path: '$created_user',
+//           preserveNullAndEmptyArrays: true,
+//         },
+//       },
+//     ],
+//   });
+// })();
+
 (async function () {
-  await veneer_inventory_items_view_modal.createCollection({
-    viewOn: 'veneer_inventory_items_details',
-    pipeline: [
-      {
-        $sort: {
-          updatedAt: 1,
-          _id: 1,
+  try {
+    await veneer_inventory_items_view_modal.createCollection({
+      viewOn: 'veneer_inventory_items_details',
+      pipeline: [
+        {
+          $lookup: {
+            from: 'veneer_inventory_invoice_details',
+            localField: 'invoice_id',
+            foreignField: '_id',
+            as: 'veneer_invoice_details',
+          },
         },
-      },
-      {
-        $lookup: {
-          from: 'veneer_inventory_invoice_details',
-          localField: 'invoice_id',
-          foreignField: '_id',
-          as: 'veneer_invoice_details',
+        {
+          $unwind: {
+            path: '$veneer_invoice_details',
+            preserveNullAndEmptyArrays: true,
+          },
         },
-      },
-      {
-        $unwind: {
-          path: '$veneer_invoice_details',
-          preserveNullAndEmptyArrays: true,
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'created_by',
+            foreignField: '_id',
+            pipeline: [
+              {
+                $project: {
+                  _id: 1,
+                  user_name: 1,
+                  first_name: 1,
+                  last_name: 1,
+                },
+              },
+            ],
+            as: 'created_user',
+          },
         },
-      },
-      {
-        $lookup: {
-          from: 'users',
-          localField: 'created_by',
-          foreignField: '_id',
-          as: 'created_user',
+        {
+          $unwind: {
+            path: '$created_user',
+            preserveNullAndEmptyArrays: true,
+          },
         },
-      },
-      {
-        $unwind: {
-          path: '$created_user',
-          preserveNullAndEmptyArrays: true,
-        },
-      },
-    ],
-  });
+      ],
+    });
+  } catch (err) {
+    // Ignore if view already exists
+    if (err.codeName !== 'NamespaceExists') {
+      console.error(err);
+    }
+  }
 })();
+
+//   (async function () {
+//   try {
+//     await veneer_inventory_items_view_test_modal.createCollection({
+//       viewOn: 'veneer_inventory_items_details',
+//       pipeline: [
+//         {
+//           $lookup: {
+//             from: 'veneer_inventory_invoice_details',
+//             localField: 'invoice_id',
+//             foreignField: '_id',
+//             as: 'veneer_invoice_details',
+//           },
+//         },
+//         {
+//           $unwind: {
+//             path: '$veneer_invoice_details',
+//             preserveNullAndEmptyArrays: true,
+//           },
+//         },
+//         {
+//           $lookup: {
+//             from: 'users',
+//             localField: 'created_by',
+//             foreignField: '_id',
+//             pipeline: [
+//               {
+//                 $project: {
+//                   _id: 1,
+//                   user_name: 1,
+//                   first_name: 1,
+//                   last_name: 1,
+//                 },
+//               },
+//             ],
+//             as: 'created_user',
+//           },
+//         },
+//         {
+//           $unwind: {
+//             path: '$created_user',
+//             preserveNullAndEmptyArrays: true,
+//           },
+//         },
+//       ],
+//     });
+//   } catch (err) {
+//     // Ignore if view already exists
+//     if (err.codeName !== 'NamespaceExists') {
+//       console.error(err);
+//     }
+//   }
+// })();

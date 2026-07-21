@@ -3,6 +3,7 @@ import {
   veneer_inventory_invoice_model,
   veneer_inventory_items_model,
   veneer_inventory_items_view_modal,
+  // veneer_inventory_items_view_test_modal,
 } from '../../../database/schema/inventory/venner/venner.schema.js';
 import catchAsync from '../../../utils/errors/catchAsync.js';
 import ApiError from '../../../utils/errors/apiError.js';
@@ -17,6 +18,187 @@ import {
   veneer_approval_inventory_invoice_model,
   veneer_approval_inventory_items_model,
 } from '../../../database/schema/inventory/venner/veneerApproval.schema.js';
+import UserModel from '../../../database/schema/user.schema.js';
+
+const VENEER_INVOICE_PREFIX = 'veneer_invoice_details.';
+const CREATED_USER_PREFIX = 'created_user.';
+const LEGACY_SUPPLIER_PREFIX = 'supplier_details.';
+
+const veneerInventoryLookupStages = [
+  {
+    $lookup: {
+      from: 'veneer_inventory_invoice_details',
+      localField: 'invoice_id',
+      foreignField: '_id',
+      as: 'veneer_invoice_details',
+    },
+  },
+  {
+    $unwind: {
+      path: '$veneer_invoice_details',
+      preserveNullAndEmptyArrays: true,
+    },
+  },
+  {
+    $lookup: {
+      from: 'users',
+      localField: 'created_by',
+      foreignField: '_id',
+      pipeline: [
+        {
+          $project: {
+            _id: 1,
+            user_name: 1,
+            first_name: 1,
+            last_name: 1,
+          },
+        },
+      ],
+      as: 'created_user',
+    },
+  },
+  {
+    $unwind: {
+      path: '$created_user',
+      preserveNullAndEmptyArrays: true,
+    },
+  },
+];
+
+const getVeneerListingFieldSource = (field = '') => {
+  if (field.startsWith(VENEER_INVOICE_PREFIX)) {
+    return {
+      source: 'invoice',
+      field: field.slice(VENEER_INVOICE_PREFIX.length),
+      responseField: field,
+    };
+  }
+
+  if (field.startsWith(LEGACY_SUPPLIER_PREFIX)) {
+    return {
+      source: 'invoice',
+      field,
+      responseField: `${VENEER_INVOICE_PREFIX}${field}`,
+    };
+  }
+
+  if (field.startsWith(CREATED_USER_PREFIX)) {
+    return {
+      source: 'user',
+      field: field.slice(CREATED_USER_PREFIX.length),
+      responseField: field,
+    };
+  }
+
+  return {
+    source: 'base',
+    field,
+    responseField: field,
+  };
+};
+
+const splitVeneerListingFilter = (filterData = {}) => {
+  const baseFilter = {};
+  const invoiceFilter = {};
+  const userFilter = {};
+
+  Object.entries(filterData || {}).forEach(([field, value]) => {
+    const fieldSource = getVeneerListingFieldSource(field);
+    if (fieldSource.source === 'invoice') {
+      invoiceFilter[fieldSource.field] = value;
+    } else if (fieldSource.source === 'user') {
+      userFilter[fieldSource.field] = value;
+    } else {
+      baseFilter[fieldSource.field] = value;
+    }
+  });
+
+  return { baseFilter, invoiceFilter, userFilter };
+};
+
+const createEmptyVeneerSearchFields = () => ({
+  string: [],
+  boolean: [],
+  numbers: [],
+  arrayField: [],
+});
+
+const splitVeneerListingSearchFields = ({
+  string = [],
+  boolean = [],
+  numbers = [],
+  arrayField = [],
+} = {}) => {
+  const searchFieldsBySource = {
+    base: createEmptyVeneerSearchFields(),
+    invoice: createEmptyVeneerSearchFields(),
+    user: createEmptyVeneerSearchFields(),
+  };
+
+  [
+    ['string', string],
+    ['boolean', boolean],
+    ['numbers', numbers],
+    ['arrayField', arrayField],
+  ].forEach(([fieldType, fields]) => {
+    fields?.forEach((field) => {
+      const fieldSource = getVeneerListingFieldSource(field);
+      searchFieldsBySource[fieldSource.source][fieldType].push(
+        fieldSource.field
+      );
+    });
+  });
+
+  return searchFieldsBySource;
+};
+
+const hasVeneerSearchFields = (searchFields) =>
+  Object.values(searchFields).some((fields) => fields?.length > 0);
+
+const buildVeneerSearchQuery = (search, searchFields) => {
+  if (!search || !hasVeneerSearchFields(searchFields)) return null;
+
+  const searchQuery = DynamicSearch(
+    search,
+    searchFields.boolean,
+    searchFields.numbers,
+    searchFields.string,
+    searchFields.arrayField
+  );
+
+  return searchQuery?.$or?.length ? searchQuery : null;
+};
+
+const distinctVeneerListingIds = async (model, query) => {
+  if (!query || Object.keys(query).length === 0) return null;
+  return model.distinct('_id', query);
+};
+
+const emptyVeneerListingResponse = (res) =>
+  res.status(200).json({
+    statusCode: 200,
+    status: 'success',
+    data: [],
+    totalPage: 0,
+    message: 'Data fetched successfully',
+  });
+
+/*
+Previous veneer listing implementation kept commented for quick rollback/testing:
+
+const aggregate_stage = [
+  { $match: match_query },
+  { $sort: { [sortBy]: sort === 'desc' ? -1 : 1, _id: sort === 'desc' ? -1 : 1 } },
+  { $skip: (parseInt(page) - 1) * parseInt(limit) },
+  { $limit: parseInt(limit) },
+];
+
+const List_veneer_inventory_details =
+  await veneer_inventory_items_view_test_modal.aggregate(aggregate_stage).allowDiskUse(true);
+
+const totalCount =
+  await veneer_inventory_items_view_test_modal.countDocuments({ ...match_query });
+*/
 
 export const listing_veneer_inventory = catchAsync(async (req, res, next) => {
   const {
@@ -26,24 +208,73 @@ export const listing_veneer_inventory = catchAsync(async (req, res, next) => {
     sort = 'desc',
     search = '',
   } = req.query;
-  const {
-    string,
-    boolean,
-    numbers,
-    arrayField = [],
-  } = req?.body?.searchFields || {};
   const filter = req.body?.filter;
 
-  let search_query = {};
-  if (search != '' && req?.body?.searchFields) {
-    const search_data = DynamicSearch(
-      search,
-      boolean,
-      numbers,
-      string,
-      arrayField
+  const filterData = dynamic_filter(filter || {});
+  const { baseFilter, invoiceFilter, userFilter } =
+    splitVeneerListingFilter(filterData);
+  const searchFieldsBySource = splitVeneerListingSearchFields(
+    req?.body?.searchFields
+  );
+  const trimmedSearch = search?.trim();
+
+  const match_query = {
+    ...baseFilter,
+    issue_status: null,
+  };
+
+  const pageNumber = Math.max(parseInt(page) || 1, 1);
+  const pageLimit = Math.max(parseInt(limit) || 10, 1);
+  const filterIdLookups = await Promise.all([
+    distinctVeneerListingIds(veneer_inventory_invoice_model, invoiceFilter),
+    distinctVeneerListingIds(UserModel, userFilter),
+  ]);
+  const [filterInvoiceIds, filterUserIds] = filterIdLookups;
+
+  if (filterInvoiceIds?.length === 0 || filterUserIds?.length === 0) {
+    return emptyVeneerListingResponse(res);
+  }
+
+  const andConditions = [];
+  if (filterInvoiceIds) {
+    andConditions.push({ invoice_id: { $in: filterInvoiceIds } });
+  }
+  if (filterUserIds) {
+    andConditions.push({ created_by: { $in: filterUserIds } });
+  }
+
+  if (trimmedSearch) {
+    const baseSearchQuery = buildVeneerSearchQuery(
+      trimmedSearch,
+      searchFieldsBySource.base
     );
-    if (search_data?.length == 0) {
+    const invoiceSearchQuery = buildVeneerSearchQuery(
+      trimmedSearch,
+      searchFieldsBySource.invoice
+    );
+    const userSearchQuery = buildVeneerSearchQuery(
+      trimmedSearch,
+      searchFieldsBySource.user
+    );
+    const [searchInvoiceIds, searchUserIds] = await Promise.all([
+      distinctVeneerListingIds(
+        veneer_inventory_invoice_model,
+        invoiceSearchQuery
+      ),
+      distinctVeneerListingIds(UserModel, userSearchQuery),
+    ]);
+
+    const searchConditions = [
+      ...(baseSearchQuery?.$or || []),
+      ...(searchInvoiceIds?.length
+        ? [{ invoice_id: { $in: searchInvoiceIds } }]
+        : []),
+      ...(searchUserIds?.length
+        ? [{ created_by: { $in: searchUserIds } }]
+        : []),
+    ];
+
+    if (searchConditions.length === 0) {
       return res.status(404).json({
         statusCode: 404,
         status: false,
@@ -53,34 +284,23 @@ export const listing_veneer_inventory = catchAsync(async (req, res, next) => {
         message: 'Results Not Found',
       });
     }
-    search_query = search_data;
+
+    match_query.$or = searchConditions;
   }
 
-  const filterData = dynamic_filter(filter);
+  if (andConditions.length > 0) {
+    match_query.$and = andConditions;
+  }
 
-  const match_query = {
-    ...filterData,
-    ...search_query,
-    issue_status: null,
+  const sortFieldSource = getVeneerListingFieldSource(sortBy);
+  const sortField = sortFieldSource.responseField;
+  const sortStage = {
+    $sort: {
+      [sortField]: sort === 'desc' ? -1 : 1,
+      _id: sort === 'desc' ? -1 : 1,
+    },
   };
 
-  const aggregate_stage = [
-    {
-      $match: match_query,
-    },
-    {
-      $sort: {
-        [sortBy]: sort === 'desc' ? -1 : 1,
-        _id: sort === 'desc' ? -1 : 1,
-      },
-    },
-    {
-      $skip: (parseInt(page) - 1) * parseInt(limit),
-    },
-    {
-      $limit: parseInt(limit),
-    },
-  ];
   // console.log(!(sortBy === 'updatedAt' && sort === "desc"))
   // if (!(sortBy === 'updatedAt' && sort === "desc")){
   //     aggregate_stage[1] = {
@@ -90,14 +310,32 @@ export const listing_veneer_inventory = catchAsync(async (req, res, next) => {
   //     }
   // }
 
-  const List_veneer_inventory_details =
-    await veneer_inventory_items_view_modal.aggregate(aggregate_stage);
+  const aggregate_stage =
+    sortFieldSource.source === 'base'
+      ? [
+        { $match: match_query },
+        sortStage,
+        { $skip: (pageNumber - 1) * pageLimit },
+        { $limit: pageLimit },
+        ...veneerInventoryLookupStages,
+      ]
+      : [
+        { $match: match_query },
+        ...veneerInventoryLookupStages,
+        sortStage,
+        { $skip: (pageNumber - 1) * pageLimit },
+        { $limit: pageLimit },
+      ];
 
-  const totalCount = await veneer_inventory_items_view_modal.countDocuments({
+  const List_veneer_inventory_details = await veneer_inventory_items_model
+    .aggregate(aggregate_stage)
+    .allowDiskUse(true);
+
+  const totalCount = await veneer_inventory_items_model.countDocuments({
     ...match_query,
   });
 
-  const totalPage = Math.ceil(totalCount / limit);
+  const totalPage = Math.ceil(totalCount / pageLimit);
 
   return res.status(200).json({
     statusCode: 200,
@@ -490,10 +728,20 @@ export const veneer_item_listing_by_invoice = catchAsync(
   async (req, res, next) => {
     const invoice_id = req.params.invoice_id;
 
+    const invoice_details = await veneer_inventory_invoice_model
+      .findById(invoice_id)
+      .lean();
+
+    // Previous view-based match kept for comparison:
+    // {
+    //   $match: {
+    //     'veneer_invoice_details._id': new mongoose.Types.ObjectId(invoice_id),
+    //   },
+    // }
     const aggregate_stage = [
       {
         $match: {
-          'veneer_invoice_details._id': new mongoose.Types.ObjectId(invoice_id),
+          invoice_id: new mongoose.Types.ObjectId(invoice_id),
         },
       },
       {
@@ -509,7 +757,8 @@ export const veneer_item_listing_by_invoice = catchAsync(
     ];
 
     const single_invoice_list_veneer_inventory_details =
-      await veneer_inventory_items_view_modal.aggregate(aggregate_stage);
+      await veneer_inventory_items_model.aggregate(aggregate_stage)
+        .allowDiskUse(true);
 
     // const totalCount = await veneer_inventory_items_view_modal.countDocuments({
     //   ...match_query,
@@ -521,6 +770,7 @@ export const veneer_item_listing_by_invoice = catchAsync(
       statusCode: 200,
       status: 'success',
       data: single_invoice_list_veneer_inventory_details,
+      invoice_details,
       // totalPage: totalPage,
       message: 'Data fetched successfully',
     });
@@ -907,7 +1157,8 @@ export const listing_veneer_history_inventory = catchAsync(
     ];
 
     const List_veneer_inventory_details =
-      await veneer_inventory_items_view_modal.aggregate(aggregate_stage);
+      await veneer_inventory_items_view_modal.aggregate(aggregate_stage)
+        .allowDiskUse(true);
 
     const totalCount = await veneer_inventory_items_view_modal.countDocuments({
       ...match_query,
