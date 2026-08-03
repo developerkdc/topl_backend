@@ -42,6 +42,12 @@ import plywood_production_history_model from '../../../../database/schema/factor
 import { pressing_damage_model } from '../../../../database/schema/factory/pressing/pressing_damage/pressing_damage.schema.js';
 import { pressing_done_history_model } from '../../../../database/schema/factory/pressing/pressing_history/pressing_done_history.schema.js';
 import { getReservedOrdersForGroupNo } from '../../../../utils/getIssueBreakdown.js';
+import { grouping_done_items_details_model } from '../../../../database/schema/factory/grouping/grouping_done.schema.js';
+import { OrderModel } from '../../../../database/schema/order/orders.schema.js';
+import series_product_order_item_details_model from '../../../../database/schema/order/series_product_order/series_product_order_item_details.schema.js';
+import { decorative_order_item_details_model } from '../../../../database/schema/order/decorative_order/decorative_order_item_details.schema.js';
+import UserModel from '../../../../database/schema/user.schema.js';
+import { runOptimizedPaginatedListing } from '../../../../utils/pagination/runOptimizedPaginatedListing.js';
 
 // Add pressing Api
 export const add_pressing_details = catchAsync(async (req, res, next) => {
@@ -969,11 +975,6 @@ export const fetch_all_pressing_done_items = catchAsync(
 
     const filterData = dynamic_filter(filter);
 
-    const match_query = {
-      ...search_query,
-      ...filterData,
-    };
-
     const aggCommonMatch = {
       $match: {
         'available_details.no_of_sheets': { $gt: 0 },
@@ -1132,12 +1133,6 @@ export const fetch_all_pressing_done_items = catchAsync(
       //   },
       // },
     ];
-    const aggMatch = {
-      $match: {
-        ...match_query,
-      },
-    };
-
     const aggUnwindCreatedUser = {
       $unwind: {
         path: '$created_user_details',
@@ -1150,64 +1145,95 @@ export const fetch_all_pressing_done_items = catchAsync(
         preserveNullAndEmptyArrays: true,
       },
     };
-    const aggSort = {
-      $sort: {
-        [sortBy]: sort === 'desc' ? -1 : 1,
+    const optimizedResult = await runOptimizedPaginatedListing({
+      model: pressing_done_details_model,
+      page,
+      limit,
+      sortBy,
+      sort,
+      search,
+      searchFields: req.body?.searchFields,
+      filterData,
+      staticMatch: {
+        'available_details.no_of_sheets': { $gt: 0 },
       },
-    };
+      joinedFieldConfigs: [
+        {
+          key: 'grouping_done_items_details',
+          prefix: 'grouping_done_items_details.',
+          model: grouping_done_items_details_model,
+          localField: 'group_no',
+          foreignField: 'group_no',
+        },
+        {
+          key: 'created_user_details',
+          prefix: 'created_user_details.',
+          model: UserModel,
+          localField: 'created_by',
+          foreignField: '_id',
+        },
+        {
+          key: 'updated_user_details',
+          prefix: 'updated_user_details.',
+          model: UserModel,
+          localField: 'updated_by',
+          foreignField: '_id',
+        },
+        {
+          key: 'order_details',
+          prefix: 'order_details.',
+          model: OrderModel,
+          localField: 'order_id',
+          foreignField: '_id',
+        },
+        {
+          key: 'series_product_order_item_details',
+          prefix: 'series_product_order_item_details.',
+          model: series_product_order_item_details_model,
+          localField: 'order_item_id',
+          foreignField: '_id',
+        },
+        {
+          key: 'decorative_order_item_details',
+          prefix: 'decorative_order_item_details.',
+          model: decorative_order_item_details_model,
+          localField: 'order_item_id',
+          foreignField: '_id',
+        },
+      ],
+      hydratePipelineBuilder: (pageIds) => [
+        {
+          $match: {
+            _id: { $in: pageIds },
+          },
+        },
+        aggGroupNoLookup,
+        aggGroupNoUnwind,
+        ...aggOrderRelatedData,
+        aggCreatedUserDetails,
+        aggUpdatedUserDetails,
+        aggUnwindCreatedUser,
+        aggUnwindUpdatedUser,
+      ],
+    });
 
-    const aggSkip = {
-      $skip: (parseInt(page) - 1) * parseInt(limit),
-    };
-
-    const aggLimit = {
-      $limit: parseInt(limit),
-    };
-
-    const list_aggregate = [
-      aggCommonMatch,
-      aggGroupNoLookup,
-      aggGroupNoUnwind,
-      ...aggOrderRelatedData,
-      aggCreatedUserDetails,
-      aggUpdatedUserDetails,
-      aggUnwindCreatedUser,
-      aggUnwindUpdatedUser,
-      aggMatch,
-      aggSort,
-      aggSkip,
-      aggLimit,
-    ];
-
-    const result = await pressing_done_details_model.aggregate(list_aggregate);
-
-    const aggCount = {
-      $count: 'totalCount',
-    };
-
-    const count_total_docs = [
-      aggCommonMatch,
-      aggGroupNoLookup,
-      aggGroupNoUnwind,
-      aggCreatedUserDetails,
-      aggUpdatedUserDetails,
-      aggUnwindCreatedUser,
-      aggUnwindUpdatedUser,
-      aggMatch,
-      aggCount,
-    ];
-
-    const total_docs =
-      await pressing_done_details_model.aggregate(count_total_docs);
-
-    const totalPages = Math.ceil((total_docs[0]?.totalCount || 0) / limit);
+    if (optimizedResult.searchMiss) {
+      return res.status(404).json({
+        statusCode: 404,
+        status: false,
+        data: {
+          data: [],
+        },
+        message: 'Results Not Found',
+      });
+    }
 
     const response = new ApiResponse(
       StatusCodes.OK,
       'Data Fetched Successfully',
       {
-        data: result,
-        totalPages: totalPages,
+        data: optimizedResult.data,
+        totalPages: optimizedResult.totalPages,
       }
     );
     return res.status(StatusCodes.OK).json(response);

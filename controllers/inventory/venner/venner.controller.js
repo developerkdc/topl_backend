@@ -19,6 +19,7 @@ import {
   veneer_approval_inventory_items_model,
 } from '../../../database/schema/inventory/venner/veneerApproval.schema.js';
 import UserModel from '../../../database/schema/user.schema.js';
+import { runInventoryListingPagination } from '../../../utils/pagination/inventoryPagination.js';
 
 const VENEER_INVOICE_PREFIX = 'veneer_invoice_details.';
 const CREATED_USER_PREFIX = 'created_user.';
@@ -1093,84 +1094,33 @@ export const veneerHistoryLogsCsv = catchAsync(async (req, res) => {
 
 export const listing_veneer_history_inventory = catchAsync(
   async (req, res, next) => {
-    const {
-      page = 1,
-      limit = 10,
-      sortBy = 'updatedAt',
-      sort = 'desc',
-      search = '',
-    } = req.query;
-    const {
-      string,
-      boolean,
-      numbers,
-      arrayField = [],
-    } = req?.body?.searchFields || {};
-    const filter = req.body?.filter;
-
-    let search_query = {};
-    if (search != '' && req?.body?.searchFields) {
-      const search_data = DynamicSearch(
-        search,
-        boolean,
-        numbers,
-        string,
-        arrayField
-      );
-      if (search_data?.length == 0) {
-        return res.status(404).json({
-          statusCode: 404,
-          status: false,
-          data: {
-            data: [],
-          },
-          message: 'Results Not Found',
-        });
-      }
-      search_query = search_data;
-    }
-
-    const filterData = dynamic_filter(filter);
-
-    const match_query = {
-      ...filterData,
-      ...search_query,
-      issue_status: { $ne: null },
-    };
-
-    const aggregate_stage = [
-      {
-        $match: match_query,
+    const optimizedResult = await runInventoryListingPagination({
+      itemsModel: veneer_inventory_items_model,
+      invoiceModel: veneer_inventory_invoice_model,
+      invoiceAlias: 'veneer_invoice_details',
+      invoicePrefixes: [{ prefix: 'veneer_invoice_details.' }],
+      staticMatch: {
+        issue_status: { $ne: null },
       },
-      {
-        $sort: {
-          [sortBy]: sort === 'desc' ? -1 : 1,
-          _id: sort === 'desc' ? -1 : 1,
-        },
-      },
-      {
-        $skip: (parseInt(page) - 1) * parseInt(limit),
-      },
-      {
-        $limit: parseInt(limit),
-      },
-    ];
-
-    const List_veneer_inventory_details =
-      await veneer_inventory_items_view_modal.aggregate(aggregate_stage)
-        .allowDiskUse(true);
-
-    const totalCount = await veneer_inventory_items_view_modal.countDocuments({
-      ...match_query,
+      req,
     });
 
-    const totalPage = Math.ceil(totalCount / limit);
+    if (optimizedResult.searchMiss) {
+      return res.status(404).json({
+        statusCode: 404,
+        status: false,
+        data: {
+          data: [],
+        },
+        message: 'Results Not Found',
+      });
+    }
 
     return res.status(200).json({
       statusCode: 200,
       status: 'success',
-      data: List_veneer_inventory_details,
-      totalPage: totalPage,
+      data: optimizedResult.data,
+      totalPage: optimizedResult.totalPages,
       message: 'Data fetched successfully',
     });
   }

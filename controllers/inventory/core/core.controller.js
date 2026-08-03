@@ -19,85 +19,39 @@ import {
   core_approval_inventory_items_model,
 } from '../../../database/schema/inventory/core/coreApproval.schema.js';
 import core_history_model from '../../../database/schema/inventory/core/core.history.schema.js';
+import {
+  runInventoryHistoryPagination,
+  runInventoryListingPagination,
+} from '../../../utils/pagination/inventoryPagination.js';
 
 export const listing_core_inventory = catchAsync(async (req, res, next) => {
-  const {
-    page = 1,
-    limit = 10,
-    sortBy = 'updatedAt',
-    sort = 'desc',
-    search = '',
-  } = req.query;
-  const {
-    string,
-    boolean,
-    numbers,
-    arrayField = [],
-  } = req?.body?.searchFields || {};
-  const filter = req.body?.filter;
-
-  let search_query = {};
-  if (search != '' && req?.body?.searchFields) {
-    const search_data = DynamicSearch(
-      search,
-      boolean,
-      numbers,
-      string,
-      arrayField
-    );
-    if (search_data?.length == 0) {
-      return res.status(404).json({
-        statusCode: 404,
-        status: false,
-        data: {
-          data: [],
-        },
-        message: 'Results Not Found',
-      });
-    }
-    search_query = search_data;
-  }
-
-  const filterData = dynamic_filter(filter);
-
-  const match_query = {
-    ...filterData,
-    ...search_query,
-    available_sqm: { $ne: 0 },
-  };
-
-  const aggregate_stage = [
-    {
-      $match: match_query,
+  const optimizedResult = await runInventoryListingPagination({
+    itemsModel: core_inventory_items_details,
+    invoiceModel: core_inventory_invoice_details,
+    invoiceAlias: 'core_invoice_details',
+    invoicePrefixes: [{ prefix: 'core_invoice_details.' }],
+    staticMatch: {
+      available_sqm: { $ne: 0 },
     },
-    {
-      $sort: {
-        [sortBy]: sort === 'desc' ? -1 : 1,
-        _id: sort === 'desc' ? -1 : 1,
-      },
-    },
-    {
-      $skip: (parseInt(page) - 1) * parseInt(limit),
-    },
-    {
-      $limit: parseInt(limit),
-    },
-  ];
-
-  const List_core_inventory_details =
-    await core_inventory_items_view_modal.aggregate(aggregate_stage);
-
-  const totalCount = await core_inventory_items_view_modal.countDocuments({
-    ...match_query,
+    req,
   });
 
-  const totalPage = Math.ceil(totalCount / limit);
+  if (optimizedResult.searchMiss) {
+    return res.status(404).json({
+      statusCode: 404,
+      status: false,
+      data: {
+        data: [],
+      },
+      message: 'Results Not Found',
+    });
+  }
 
   return res.status(200).json({
     statusCode: 200,
     status: 'success',
-    data: List_core_inventory_details,
-    totalPage: totalPage,
+    data: optimizedResult.data,
+    totalPage: optimizedResult.totalPages,
     message: 'Data fetched successfully',
   });
   // return res.status(200).json(new ApiResponse(StatusCodes.OK, "Data fetched successfully", List_core_inventory_details));
@@ -266,7 +220,7 @@ export const core_item_listing_by_invoice = catchAsync(
     const aggregate_stage = [
       {
         $match: {
-          'core_invoice_details._id': new mongoose.Types.ObjectId(invoice_id),
+          invoice_id: new mongoose.Types.ObjectId(invoice_id),
         },
       },
       {
@@ -274,15 +228,10 @@ export const core_item_listing_by_invoice = catchAsync(
           item_sr_no: 1,
         },
       },
-      {
-        $project: {
-          core_invoice_details: 0,
-        },
-      },
     ];
 
     const single_invoice_list_core_inventory_details =
-      await core_inventory_items_view_modal.aggregate(aggregate_stage);
+      await core_inventory_items_details.aggregate(aggregate_stage);
 
     // const totalCount = await log_inventory_items_view_model.countDocuments({
     //   ...match_query,
@@ -789,178 +738,38 @@ export const coreHistoryLogsCsv = catchAsync(async (req, res) => {
 
 //fetch core history
 export const fetch_core_history = catchAsync(async (req, res, next) => {
-  const {
-    page = 1,
-    sortBy = 'updatedAt',
-    sort = 'desc',
-    limit = 10,
-    search = '',
-  } = req.query;
-  const {
-    string,
-    boolean,
-    numbers,
-    arrayField = [],
-  } = req.body?.searchFields || {};
-
-  const filter = req.body?.filter;
-
-  let search_query = {};
-  if (search != '' && req?.body?.searchFields) {
-    const search_data = DynamicSearch(
-      search,
-      boolean,
-      numbers,
-      string,
-      arrayField
-    );
-    if (search_data?.length == 0) {
-      return res.status(404).json({
-        statusCode: 404,
-        status: false,
-        data: {
-          data: [],
+  const optimizedResult = await runInventoryHistoryPagination({
+    historyModel: core_history_model,
+    itemViewModel: core_inventory_items_view_modal,
+    itemLocalField: 'core_item_id',
+    itemAlias: 'core_item_details',
+    itemLookupPipeline: [
+      {
+        $project: {
+          created_user: 0,
         },
-        message: 'Results Not Found',
-      });
-    }
-    search_query = search_data;
+      },
+    ],
+    req,
+  });
+
+  if (optimizedResult.searchMiss) {
+    return res.status(404).json({
+      statusCode: 404,
+      status: false,
+      data: {
+        data: [],
+      },
+      message: 'Results Not Found',
+    });
   }
-
-  const filterData = dynamic_filter(filter);
-
-  const match_query = {
-    ...search_query,
-    ...filterData,
-  };
-  const aggMatch = {
-    $match: {
-      ...match_query,
-    },
-  };
-
-  const aggLookupPlwoodItemDetails = {
-    $lookup: {
-      from: 'core_inventory_items_views',
-      foreignField: '_id',
-      localField: 'core_item_id',
-      as: 'core_item_details',
-      pipeline: [
-        {
-          $project: {
-            created_user: 0,
-          },
-        },
-      ],
-    },
-  };
-  const aggCreatedUserDetails = {
-    $lookup: {
-      from: 'users',
-      localField: 'created_by',
-      foreignField: '_id',
-      pipeline: [
-        {
-          $project: {
-            first_name: 1,
-            last_name: 1,
-            user_name: 1,
-            user_type: 1,
-            email_id: 1,
-          },
-        },
-      ],
-      as: 'created_user_details',
-    },
-  };
-  const aggUpdatedUserDetails = {
-    $lookup: {
-      from: 'users',
-      localField: 'updated_by',
-      foreignField: '_id',
-      pipeline: [
-        {
-          $project: {
-            first_name: 1,
-            last_name: 1,
-            user_name: 1,
-            user_type: 1,
-          },
-        },
-      ],
-      as: 'updated_user_details',
-    },
-  };
-  const aggUnwindCreatedUser = {
-    $unwind: {
-      path: '$created_user_details',
-      preserveNullAndEmptyArrays: true,
-    },
-  };
-  const aggUnwindUpdatdUser = {
-    $unwind: {
-      path: '$updated_user_details',
-      preserveNullAndEmptyArrays: true,
-    },
-  };
-  const aggUnwindPlywoodItemDetails = {
-    $unwind: {
-      path: '$core_item_details',
-      preserveNullAndEmptyArrays: true,
-    },
-  };
-
-  const aggLimit = {
-    $limit: parseInt(limit),
-  };
-
-  const aggSkip = {
-    $skip: (parseInt(page) - 1) * parseInt(limit),
-  };
-
-  const aggSort = {
-    $sort: { [sortBy]: sort === 'desc' ? -1 : 1 },
-  };
-  const list_aggregate = [
-    aggLookupPlwoodItemDetails,
-    aggUnwindPlywoodItemDetails,
-    aggCreatedUserDetails,
-    aggUpdatedUserDetails,
-    aggUnwindCreatedUser,
-    aggUnwindUpdatdUser,
-    aggMatch,
-    aggSort,
-    aggSkip,
-    aggLimit,
-  ];
-
-  const result = await core_history_model.aggregate(list_aggregate);
-
-  const aggCount = {
-    $count: 'totalCount',
-  };
-
-  const count_total_docs = [
-    aggLookupPlwoodItemDetails,
-    aggUnwindPlywoodItemDetails,
-    aggCreatedUserDetails,
-    aggUpdatedUserDetails,
-    aggUnwindCreatedUser,
-    aggUnwindUpdatdUser,
-    aggMatch,
-    aggCount,
-  ];
-
-  const total_docs = await core_history_model.aggregate(count_total_docs);
-
-  const totalPages = Math.ceil((total_docs[0]?.totalCount || 0) / limit);
 
   const response = new ApiResponse(
     StatusCodes.OK,
     'Data fetched successfully...',
     {
-      data: result,
-      totalPages: totalPages,
+      data: optimizedResult.data,
+      totalPages: optimizedResult.totalPages,
     }
   );
 

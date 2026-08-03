@@ -19,93 +19,39 @@ import {
   plywood_approval_inventory_items_model,
 } from '../../../database/schema/inventory/Plywood/plywoodApproval.schema.js';
 import plywood_history_model from '../../../database/schema/inventory/Plywood/plywood.history.schema.js';
+import {
+  runInventoryHistoryPagination,
+  runInventoryListingPagination,
+} from '../../../utils/pagination/inventoryPagination.js';
 
 export const listing_plywood_inventory = catchAsync(async (req, res, next) => {
-  const {
-    page = 1,
-    limit = 10,
-    sortBy = 'updatedAt',
-    sort = 'desc',
-    search = '',
-  } = req.query;
-  const {
-    string,
-    boolean,
-    numbers,
-    arrayField = [],
-  } = req?.body?.searchFields || {};
-  const filter = req.body?.filter;
-
-  let search_query = {};
-  if (search != '' && req?.body?.searchFields) {
-    const search_data = DynamicSearch(
-      search,
-      boolean,
-      numbers,
-      string,
-      arrayField
-    );
-    if (search_data?.length == 0) {
-      return res.status(404).json({
-        statusCode: 404,
-        status: false,
-        data: {
-          data: [],
-        },
-        message: 'Results Not Found',
-      });
-    }
-    search_query = search_data;
-  }
-
-  const filterData = dynamic_filter(filter);
-
-  const match_query = {
-    ...filterData,
-    ...search_query,
-    available_sheets: { $ne: 0 },
-  };
-
-  const aggregate_stage = [
-    {
-      $match: match_query,
+  const optimizedResult = await runInventoryListingPagination({
+    itemsModel: plywood_inventory_items_details,
+    invoiceModel: plywood_inventory_invoice_details,
+    invoiceAlias: 'plywood_invoice_details',
+    invoicePrefixes: [{ prefix: 'plywood_invoice_details.' }],
+    staticMatch: {
+      available_sheets: { $ne: 0 },
     },
-    {
-      $sort: {
-        [sortBy]: sort === 'desc' ? -1 : 1,
-      },
-    },
-    {
-      $skip: (parseInt(page) - 1) * parseInt(limit),
-    },
-    {
-      $limit: parseInt(limit),
-    },
-  ];
-  // console.log(sortBy !== 'updatedAt' && sort !== "desc")
-  // if (sortBy !== 'updatedAt' && sort !== "desc"){
-  //     console.log("first")
-  //     aggregate_stage[1] = {
-  //         $sort: {
-  //             [sortBy]: sort === "desc" ? -1 : 1
-  //         }
-  //     }
-  // }
-
-  const List_plywood_inventory_details =
-    await plywood_inventory_items_view_modal.aggregate(aggregate_stage);
-
-  const totalCount = await plywood_inventory_items_view_modal.countDocuments({
-    ...match_query,
+    req,
   });
 
-  const totalPage = Math.ceil(totalCount / limit);
+  if (optimizedResult.searchMiss) {
+    return res.status(404).json({
+      statusCode: 404,
+      status: false,
+      data: {
+        data: [],
+      },
+      message: 'Results Not Found',
+    });
+  }
 
   return res.status(200).json({
     statusCode: 200,
     status: 'success',
-    data: List_plywood_inventory_details,
-    totalPage: totalPage,
+    data: optimizedResult.data,
+    totalPage: optimizedResult.totalPages,
     message: 'Data fetched successfully',
   });
 });
@@ -769,9 +715,7 @@ export const plywood_item_listing_by_invoice = catchAsync(
     const aggregate_stage = [
       {
         $match: {
-          'plywood_invoice_details._id': new mongoose.Types.ObjectId(
-            invoice_id
-          ),
+          invoice_id: new mongoose.Types.ObjectId(invoice_id),
         },
       },
       {
@@ -779,15 +723,10 @@ export const plywood_item_listing_by_invoice = catchAsync(
           item_sr_no: 1,
         },
       },
-      {
-        $project: {
-          plywood_invoice_details: 0,
-        },
-      },
     ];
 
     const single_invoice_list_log_inventory_details =
-      await plywood_inventory_items_view_modal.aggregate(aggregate_stage);
+      await plywood_inventory_items_details.aggregate(aggregate_stage);
 
     // const totalCount = await log_inventory_items_view_model.countDocuments({
     //   ...match_query,
@@ -831,194 +770,38 @@ export const inward_sr_no_dropdown = catchAsync(async (req, res, next) => {
 
 //fetch plywood history
 export const fetch_plywood_history = catchAsync(async (req, res, next) => {
-  const {
-    page = 1,
-    sortBy = 'updatedAt',
-    sort = 'desc',
-    limit = 10,
-    search = '',
-  } = req.query;
-  const {
-    string,
-    boolean,
-    numbers,
-    arrayField = [],
-  } = req.body?.searchFields || {};
-
-  const filter = req.body?.filter;
-
-  let search_query = {};
-  if (search != '' && req?.body?.searchFields) {
-    const search_data = DynamicSearch(
-      search,
-      boolean,
-      numbers,
-      string,
-      arrayField
-    );
-    if (search_data?.length == 0) {
-      return res.status(404).json({
-        statusCode: 404,
-        status: false,
-        data: {
-          data: [],
+  const optimizedResult = await runInventoryHistoryPagination({
+    historyModel: plywood_history_model,
+    itemViewModel: plywood_inventory_items_view_modal,
+    itemLocalField: 'plywood_item_id',
+    itemAlias: 'plywood_item_details',
+    itemLookupPipeline: [
+      {
+        $project: {
+          created_user: 0,
         },
-        message: 'Results Not Found',
-      });
-    }
-    search_query = search_data;
+      },
+    ],
+    req,
+  });
+
+  if (optimizedResult.searchMiss) {
+    return res.status(404).json({
+      statusCode: 404,
+      status: false,
+      data: {
+        data: [],
+      },
+      message: 'Results Not Found',
+    });
   }
-
-  const filterData = dynamic_filter(filter);
-
-  const match_query = {
-    ...search_query,
-    ...filterData,
-  };
-  const aggMatch = {
-    $match: {
-      ...match_query,
-    },
-  };
-
-  const aggLookupPlwoodItemDetails = {
-    $lookup: {
-      from: 'plywood_inventory_items_views',
-      foreignField: '_id',
-      localField: 'plywood_item_id',
-      as: 'plywood_item_details',
-      pipeline: [
-        {
-          $project: {
-            created_user: 0,
-          },
-        },
-      ],
-    },
-  };
-  // const aggLookupPlywoodInvoiceDetails = {
-  //   $lookup: {
-  //     from: 'plywood_inventory_invoice_details',
-  //     foreignField: '_id',
-  //     localField: 'plywood_item_details.invoice_id',
-  //     as: 'plywood_invoice_details',
-  //   },
-  // };
-  const aggCreatedUserDetails = {
-    $lookup: {
-      from: 'users',
-      localField: 'created_by',
-      foreignField: '_id',
-      pipeline: [
-        {
-          $project: {
-            first_name: 1,
-            last_name: 1,
-            user_name: 1,
-            user_type: 1,
-            email_id: 1,
-          },
-        },
-      ],
-      as: 'created_user_details',
-    },
-  };
-  const aggUpdatedUserDetails = {
-    $lookup: {
-      from: 'users',
-      localField: 'updated_by',
-      foreignField: '_id',
-      pipeline: [
-        {
-          $project: {
-            first_name: 1,
-            last_name: 1,
-            user_name: 1,
-            user_type: 1,
-          },
-        },
-      ],
-      as: 'updated_user_details',
-    },
-  };
-  const aggUnwindCreatedUser = {
-    $unwind: {
-      path: '$created_user_details',
-      preserveNullAndEmptyArrays: true,
-    },
-  };
-  const aggUnwindUpdatdUser = {
-    $unwind: {
-      path: '$updated_user_details',
-      preserveNullAndEmptyArrays: true,
-    },
-  };
-  const aggUnwindPlywoodItemDetails = {
-    $unwind: {
-      path: '$plywood_item_details',
-      preserveNullAndEmptyArrays: true,
-    },
-  };
-  // const aggUnwindPlywoodInvoiceDetails = {
-  //   $unwind: {
-  //     path: '$plywood_invoice_details',
-  //     preserveNullAndEmptyArrays: true,
-  //   },
-  // };
-
-  const aggLimit = {
-    $limit: parseInt(limit),
-  };
-
-  const aggSkip = {
-    $skip: (parseInt(page) - 1) * parseInt(limit),
-  };
-
-  const aggSort = {
-    $sort: { [sortBy]: sort === 'desc' ? -1 : 1 },
-  };
-  const list_aggregate = [
-    aggLookupPlwoodItemDetails,
-    aggUnwindPlywoodItemDetails,
-    // aggLookupPlywoodInvoiceDetails,
-    // aggUnwindPlywoodInvoiceDetails,
-    aggCreatedUserDetails,
-    aggUpdatedUserDetails,
-    aggUnwindCreatedUser,
-    aggUnwindUpdatdUser,
-    aggMatch,
-    aggSort,
-    aggSkip,
-    aggLimit,
-  ];
-
-  const result = await plywood_history_model.aggregate(list_aggregate);
-
-  const aggCount = {
-    $count: 'totalCount',
-  };
-
-  const count_total_docs = [
-    aggLookupPlwoodItemDetails,
-    aggUnwindPlywoodItemDetails,
-    aggCreatedUserDetails,
-    aggUpdatedUserDetails,
-    aggUnwindCreatedUser,
-    aggUnwindUpdatdUser,
-    aggMatch,
-    aggCount,
-  ];
-
-  const total_docs = await plywood_history_model.aggregate(count_total_docs);
-
-  const totalPages = Math.ceil((total_docs[0]?.totalCount || 0) / limit);
 
   const response = new ApiResponse(
     StatusCodes.OK,
     'Data fetched successfully...',
     {
-      data: result,
-      totalPages: totalPages,
+      data: optimizedResult.data,
+      totalPages: optimizedResult.totalPages,
     }
   );
 

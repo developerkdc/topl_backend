@@ -252,7 +252,7 @@ veneer_item_details_schema.index({ item_name: -1 });
 veneer_item_details_schema.index({ bundle_number: -1 });
 veneer_item_details_schema.index({ pallet_number: -1 });
 veneer_item_details_schema.index(
-  { item_name: -1, pallet_number: -1, bundle_number: -1 },
+  { log_code: 1, bundle_number: 1, pallet_number: 1 },
   { unique: true }
 );
 veneer_item_details_schema.index({ issue_status: 1, updatedAt: -1, _id: -1 });

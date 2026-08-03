@@ -8,51 +8,11 @@ import ApiError from '../../../../utils/errors/apiError.js';
 import polishing_damage_model from '../../../../database/schema/factory/polishing/polishing_damage/polishing_damage.schema.js';
 import { polishing_done_details_model } from '../../../../database/schema/factory/polishing/polishing_done/polishing_done.schema.js';
 import { createFactoryPolishDamageExcel } from '../../../../config/downloadExcel/Logs/Factory/Polish/PolishDamage/index.js';
+import { runConditionalHydratedPagination } from '../../../../utils/pagination/runConditionalHydratedPagination.js';
 
 export const listing_polishing_damage = catchAsync(async (req, res) => {
-  const {
-    page = 1,
-    limit = 10,
-    sortBy = 'updatedAt',
-    sort = 'desc',
-    search = '',
-  } = req.query;
-  const {
-    string,
-    boolean,
-    numbers,
-    arrayField = [],
-  } = req?.body?.searchFields || {};
-  const filter = req.body?.filter;
-
-  let search_query = {};
-  if (search != '' && req?.body?.searchFields) {
-    const search_data = DynamicSearch(
-      search,
-      boolean,
-      numbers,
-      string,
-      arrayField
-    );
-    if (search_data?.length == 0) {
-      return res.status(404).json({
-        statusCode: 404,
-        status: false,
-        data: {
-          data: [],
-        },
-        message: 'Results Not Found',
-      });
-    }
-    search_query = search_data;
-  }
-
-  const filterData = dynamic_filter(filter);
-
-  const match_query = {
-    ...filterData,
-    ...search_query,
-  };
+  const { page = 1, limit = 10, sortBy = 'updatedAt', sort = 'desc' } =
+    req.query;
 
   const aggLookuppolishingDoneDetails = {
     $lookup: {
@@ -139,20 +99,7 @@ export const listing_polishing_damage = catchAsync(async (req, res) => {
     },
   };
   const aggMatch = {
-    $match: {
-      ...match_query,
-    },
-  };
-  const aggSort = {
-    $sort: {
-      [sortBy]: sort === 'desc' ? -1 : 1,
-    },
-  };
-  const aggSkip = {
-    $skip: (parseInt(page) - 1) * parseInt(limit),
-  };
-  const aggLimit = {
-    $limit: parseInt(limit),
+    $match: {},
   };
 
   const listAggregate = [
@@ -165,31 +112,85 @@ export const listing_polishing_damage = catchAsync(async (req, res) => {
     aggUpdatedByLookup,
     aggUpdatedByUnwind,
     aggMatch,
-    aggSort,
-    aggSkip,
-    aggLimit,
   ]; // aggregation pipiline
+  const optimizedResult = await runConditionalHydratedPagination({
+    model: polishing_damage_model,
+    req,
+    joinedFieldPrefixes: [
+      'polishing_done_details.',
+      'issue_for_polishing_details.',
+      'created_by.',
+      'updated_by.',
+    ],
+    hydratePipelineBuilder: (pageIds) => [
+      {
+        $match: {
+          _id: { $in: pageIds },
+        },
+      },
+      aggLookuppolishingDoneDetails,
+      aggUnwindpolishingDoneDetails,
+      aggLookUpIssueForpolishingDetails,
+      aggUnwindIssueForpolishingDetails,
+      aggCreatedByLookup,
+      aggCreatedByUnwind,
+      aggUpdatedByLookup,
+      aggUpdatedByUnwind,
+    ],
+    fallbackRunner: async ({
+      pageNumber,
+      pageLimit,
+      sortBy: fallbackSortBy,
+      sort: fallbackSort,
+      matchQuery,
+    }) => {
+      aggMatch.$match = matchQuery;
+      const aggSort = {
+        $sort: {
+          [fallbackSortBy]: fallbackSort === 'desc' ? -1 : 1,
+        },
+      };
+      const aggSkip = {
+        $skip: (pageNumber - 1) * pageLimit,
+      };
+      const aggLimit = {
+        $limit: pageLimit,
+      };
 
-  const polishing_damage_list =
-    await polishing_damage_model.aggregate(listAggregate);
+      const [data, totalDocument] = await Promise.all([
+        polishing_damage_model
+          .aggregate([...listAggregate, aggSort, aggSkip, aggLimit])
+          .allowDiskUse(true),
+        polishing_damage_model
+          .aggregate([...listAggregate, { $count: 'totalCount' }])
+          .allowDiskUse(true),
+      ]);
 
-  const aggCount = {
-    $count: 'totalCount',
-  }; // count aggregation stage
+      return {
+        searchMiss: false,
+        data,
+        totalPages: Math.ceil((totalDocument?.[0]?.totalCount || 0) / pageLimit),
+      };
+    },
+  });
 
-  const totalAggregate = [...listAggregate?.slice(0, -2), aggCount]; // total aggregation pipiline
-
-  const [totalDocument] =
-    await polishing_damage_model.aggregate(totalAggregate);
-
-  const totalPages = Math.ceil((totalDocument?.totalCount || 0) / limit);
+  if (optimizedResult.searchMiss) {
+    return res.status(404).json({
+      statusCode: 404,
+      status: false,
+      data: {
+        data: [],
+      },
+      message: 'Results Not Found',
+    });
+  }
 
   const response = new ApiResponse(
     StatusCodes.OK,
     'polishing Damage Data Fetched Successfully',
     {
-      data: polishing_damage_list,
-      totalPages: totalPages,
+      data: optimizedResult.data,
+      totalPages: optimizedResult.totalPages,
     }
   );
   return res.status(StatusCodes.OK).json(response);

@@ -20,85 +20,36 @@ import ApiError from '../../../utils/errors/apiError.js';
 import catchAsync from '../../../utils/errors/catchAsync.js';
 import { veneer_inventory_items_model } from '../../../database/schema/inventory/venner/venner.schema.js';
 import { flitch_inventory_items_model } from '../../../database/schema/inventory/Flitch/flitch.schema.js';
+import { runInventoryListingPagination } from '../../../utils/pagination/inventoryPagination.js';
 
 export const listing_log_inventory = catchAsync(async (req, res, next) => {
-  const {
-    page = 1,
-    limit = 10,
-    sortBy = 'updatedAt',
-    sort = 'desc',
-    search = '',
-  } = req.query;
-  const {
-    string,
-    boolean,
-    numbers,
-    arrayField = [],
-  } = req?.body?.searchFields || {};
-  const filter = req.body?.filter;
-
-  let search_query = {};
-  if (search != '' && req?.body?.searchFields) {
-    const search_data = DynamicSearch(
-      search,
-      boolean,
-      numbers,
-      string,
-      arrayField
-    );
-    if (search_data?.length == 0) {
-      return res.status(404).json({
-        statusCode: 404,
-        status: false,
-        data: {
-          data: [],
-        },
-        message: 'Results Not Found',
-      });
-    }
-    search_query = search_data;
-  }
-
-  const filterData = dynamic_filter(filter);
-
-  const match_query = {
-    ...filterData,
-    ...search_query,
-    issue_status: null,
-  };
-
-  const aggregate_stage = [
-    {
-      $match: match_query,
+  const optimizedResult = await runInventoryListingPagination({
+    itemsModel: log_inventory_items_model,
+    invoiceModel: log_inventory_invoice_model,
+    invoiceAlias: 'log_invoice_details',
+    invoicePrefixes: [{ prefix: 'log_invoice_details.' }],
+    staticMatch: {
+      issue_status: null,
     },
-    {
-      $sort: {
-        [sortBy]: sort === 'desc' ? -1 : 1,
-        _id: sort === 'desc' ? -1 : 1,
-      },
-    },
-    {
-      $skip: (parseInt(page) - 1) * parseInt(limit),
-    },
-    {
-      $limit: parseInt(limit),
-    },
-  ];
-
-  const List_log_inventory_details =
-    await log_inventory_items_view_model.aggregate(aggregate_stage);
-
-  const totalCount = await log_inventory_items_view_model.countDocuments({
-    ...match_query,
+    req,
   });
 
-  const totalPage = Math.ceil(totalCount / limit);
+  if (optimizedResult.searchMiss) {
+    return res.status(404).json({
+      statusCode: 404,
+      status: false,
+      data: {
+        data: [],
+      },
+      message: 'Results Not Found',
+    });
+  }
 
   return res.status(200).json({
     statusCode: 200,
     status: 'success',
-    data: List_log_inventory_details,
-    totalPage: totalPage,
+    data: optimizedResult.data,
+    totalPage: optimizedResult.totalPages,
     message: 'Data fetched successfully',
   });
 });
@@ -669,7 +620,7 @@ export const log_item_listing_by_invoice = catchAsync(
     const aggregate_stage = [
       {
         $match: {
-          'log_invoice_details._id': new mongoose.Types.ObjectId(invoice_id),
+          invoice_id: new mongoose.Types.ObjectId(invoice_id),
         },
       },
       {
@@ -677,15 +628,10 @@ export const log_item_listing_by_invoice = catchAsync(
           item_sr_no: 1,
         },
       },
-      {
-        $project: {
-          log_invoice_details: 0,
-        },
-      },
     ];
 
     const single_invoice_list_log_inventory_details =
-      await log_inventory_items_view_model.aggregate(aggregate_stage);
+      await log_inventory_items_model.aggregate(aggregate_stage);
 
     // const totalCount = await log_inventory_items_view_model.countDocuments({
     //   ...match_query,
@@ -865,83 +811,33 @@ export const add_issue_for_flitching = catchAsync(async (req, res, next) => {
 
 export const listing_log_history_inventory = catchAsync(
   async (req, res, next) => {
-    const {
-      page = 1,
-      limit = 10,
-      sortBy = 'updatedAt',
-      sort = 'desc',
-      search = '',
-    } = req.query;
-    const {
-      string,
-      boolean,
-      numbers,
-      arrayField = [],
-    } = req?.body?.searchFields || {};
-    const filter = req.body?.filter;
-
-    let search_query = {};
-    if (search != '' && req?.body?.searchFields) {
-      const search_data = DynamicSearch(
-        search,
-        boolean,
-        numbers,
-        string,
-        arrayField
-      );
-      if (search_data?.length == 0) {
-        return res.status(404).json({
-          statusCode: 404,
-          status: false,
-          data: {
-            data: [],
-          },
-          message: 'Results Not Found',
-        });
-      }
-      search_query = search_data;
-    }
-
-    const filterData = dynamic_filter(filter);
-
-    const match_query = {
-      ...filterData,
-      ...search_query,
-      issue_status: { $ne: null },
-    };
-
-    const aggregate_stage = [
-      {
-        $match: match_query,
+    const optimizedResult = await runInventoryListingPagination({
+      itemsModel: log_inventory_items_model,
+      invoiceModel: log_inventory_invoice_model,
+      invoiceAlias: 'log_invoice_details',
+      invoicePrefixes: [{ prefix: 'log_invoice_details.' }],
+      staticMatch: {
+        issue_status: { $ne: null },
       },
-      {
-        $sort: {
-          [sortBy]: sort === 'desc' ? -1 : 1,
-          _id: sort === 'desc' ? -1 : 1,
-        },
-      },
-      {
-        $skip: (parseInt(page) - 1) * parseInt(limit),
-      },
-      {
-        $limit: parseInt(limit),
-      },
-    ];
-
-    const List_log_inventory_details =
-      await log_inventory_items_view_model.aggregate(aggregate_stage);
-
-    const totalCount = await log_inventory_items_view_model.countDocuments({
-      ...match_query,
+      req,
     });
 
-    const totalPage = Math.ceil(totalCount / limit);
+    if (optimizedResult.searchMiss) {
+      return res.status(404).json({
+        statusCode: 404,
+        status: false,
+        data: {
+          data: [],
+        },
+        message: 'Results Not Found',
+      });
+    }
 
     return res.status(200).json({
       statusCode: 200,
       status: 'success',
-      data: List_log_inventory_details,
-      totalPage: totalPage,
+      data: optimizedResult.data,
+      totalPage: optimizedResult.totalPages,
       message: 'Data fetched successfully',
     });
   }
