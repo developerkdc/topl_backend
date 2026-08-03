@@ -23,110 +23,49 @@ import other_goods_history_model from '../../../database/schema/inventory/otherG
 import { issues_for_status } from '../../../database/Utils/constants/constants.js';
 import departMentModel from '../../../database/schema/masters/department.schema.js';
 import machineModel from '../../../database/schema/masters/machine.schema.js';
+import {
+  runInventoryHistoryPagination,
+  runInventoryListingPagination,
+} from '../../../utils/pagination/inventoryPagination.js';
 
 export const listing_otherGodds_inventory = catchAsync(
   async (req, res, next) => {
-    const {
-      page = 1,
-      limit = 10,
-      sortBy = 'updatedAt',
-      sort = 'desc',
-      search = '',
-    } = req.query;
-    const {
-      string,
-      boolean,
-      numbers,
-      arrayField = [],
-    } = req?.body?.searchFields || {};
-    const filter = req.body?.filter;
-
-    let search_query = {};
-    if (search != '' && req?.body?.searchFields) {
-      const search_data = DynamicSearch(
-        search,
-        boolean,
-        numbers,
-        string,
-        arrayField
-      );
-      if (search_data?.length == 0) {
-        return res.status(404).json({
-          statusCode: 404,
-          status: false,
-          data: {
-            data: [],
-          },
-          message: 'Results Not Found',
-        });
-      }
-      search_query = search_data;
-    }
-
-    const filterData = dynamic_filter(filter);
-
-    const match_query = {
-      ...filterData,
-      ...search_query,
-      available_quantity: {
-        $ne: 0,
-      },
-    };
-
-    const aggregate_stage = [
-      {
-        $match: match_query,
-      },
-      {
-        $sort: {
-          [sortBy]: sort === 'desc' ? -1 : 1,
+    const optimizedResult = await runInventoryListingPagination({
+      itemsModel: othergoods_inventory_items_details,
+      invoiceModel: othergoods_inventory_invoice_details,
+      invoiceAlias: 'othergoods_invoice_details',
+      createdUserAlias: 'created_by',
+      createdUserPrefix: 'created_by.',
+      invoicePrefixes: [
+        { prefix: 'othergoods_invoice_details.' },
+        {
+          prefix: 'othergoods.',
+          mapField: (field) => field,
+        },
+      ],
+      staticMatch: {
+        available_quantity: {
+          $ne: 0,
         },
       },
-      {
-        $skip: (parseInt(page) - 1) * parseInt(limit),
-      },
-      {
-        $limit: parseInt(limit),
-      },
-    ];
-    // const aggregate_stage = [
-    //   {
-    //     $match: match_query,
-    //   },
-    //   {
-    //     $sort: {
-    //       [sortBy]: sort === "desc" ? -1 : 1,
-    //     },
-    //   },
-    //   {
-    //     $skip: (parseInt(page) - 1) * parseInt(limit),
-    //   },
-    //   {
-    //     $limit: parseInt(limit),
-    //   },
-    //   {
-    //     $addFields: {
-    //       "created_user": {
-    //         user_name: "$created_user.user_name",
-    //         first_name: "$created_user.first_name",
-    //         last_name: "$created_user.last_name",
-    //       },
-    //     },
-    //   },
-    // ];
+      req,
+    });
 
-    const List_otherGoods_inventory_details =
-      await othergoods_inventory_items_view_modal.aggregate(aggregate_stage);
-    const totalItems =
-      await othergoods_inventory_items_view_modal.countDocuments({
-        ...match_query,
+    if (optimizedResult.searchMiss) {
+      return res.status(404).json({
+        statusCode: 404,
+        status: false,
+        data: {
+          data: [],
+        },
+        message: 'Results Not Found',
       });
-    const totalPage = Math.ceil(totalItems / parseInt(limit));
+    }
 
     return res.status(200).json(
       new ApiResponse(StatusCodes.OK, 'Data fetched successfully', {
-        List_otherGoods_inventory_details,
-        totalPage,
+        List_otherGoods_inventory_details: optimizedResult.data,
+        totalPage: optimizedResult.totalPages,
       })
     );
   }
@@ -607,9 +546,7 @@ export const othergoods_item_listing_by_invoice = catchAsync(
     const aggregate_stage = [
       {
         $match: {
-          'othergoods_invoice_details._id': new mongoose.Types.ObjectId(
-            invoice_id
-          ),
+          invoice_id: new mongoose.Types.ObjectId(invoice_id),
         },
       },
       {
@@ -617,15 +554,10 @@ export const othergoods_item_listing_by_invoice = catchAsync(
           item_sr_no: 1,
         },
       },
-      {
-        $project: {
-          othergoods_invoice_details: 0,
-        },
-      },
     ];
 
     const single_invoice_list_log_inventory_details =
-      await othergoods_inventory_items_view_modal.aggregate(aggregate_stage);
+      await othergoods_inventory_items_details.aggregate(aggregate_stage);
 
     // const totalCount = await log_inventory_items_view_model.countDocuments({
     //   ...match_query,
@@ -668,195 +600,38 @@ export const inward_sr_no_dropdown = catchAsync(async (req, res, next) => {
 });
 
 export const fetch_other_goods_history = catchAsync(async (req, res, next) => {
-  const {
-    page = 1,
-    sortBy = 'updatedAt',
-    sort = 'desc',
-    limit = 10,
-    search = '',
-  } = req.query;
-  const {
-    string,
-    boolean,
-    numbers,
-    arrayField = [],
-  } = req.body?.searchFields || {};
-
-  const filter = req.body?.filter;
-
-  let search_query = {};
-  if (search != '' && req?.body?.searchFields) {
-    const search_data = DynamicSearch(
-      search,
-      boolean,
-      numbers,
-      string,
-      arrayField
-    );
-    if (search_data?.length == 0) {
-      return res.status(404).json({
-        statusCode: 404,
-        status: false,
-        data: {
-          data: [],
+  const optimizedResult = await runInventoryHistoryPagination({
+    historyModel: other_goods_history_model,
+    itemViewModel: othergoods_inventory_items_view_modal,
+    itemLocalField: 'other_goods_item_id',
+    itemAlias: 'other_goods_item_details',
+    itemLookupPipeline: [
+      {
+        $project: {
+          created_user: 0,
         },
-        message: 'Results Not Found',
-      });
-    }
-    search_query = search_data;
+      },
+    ],
+    req,
+  });
+
+  if (optimizedResult.searchMiss) {
+    return res.status(404).json({
+      statusCode: 404,
+      status: false,
+      data: {
+        data: [],
+      },
+      message: 'Results Not Found',
+    });
   }
-
-  const filterData = dynamic_filter(filter);
-
-  const match_query = {
-    ...search_query,
-    ...filterData,
-  };
-  const aggMatch = {
-    $match: {
-      ...match_query,
-    },
-  };
-
-  const aggLookupPlwoodItemDetails = {
-    $lookup: {
-      from: 'othergoods_inventory_items_views',
-      foreignField: '_id',
-      localField: 'other_goods_item_id',
-      as: 'other_goods_item_details',
-      pipeline: [
-        {
-          $project: {
-            created_user: 0,
-          },
-        },
-      ],
-    },
-  };
-  // const aggLookupPlywoodInvoiceDetails = {
-  //   $lookup: {
-  //     from: 'plywood_inventory_invoice_details',
-  //     foreignField: '_id',
-  //     localField: 'plywood_item_details.invoice_id',
-  //     as: 'plywood_invoice_details',
-  //   },
-  // };
-  const aggCreatedUserDetails = {
-    $lookup: {
-      from: 'users',
-      localField: 'created_by',
-      foreignField: '_id',
-      pipeline: [
-        {
-          $project: {
-            first_name: 1,
-            last_name: 1,
-            user_name: 1,
-            user_type: 1,
-            email_id: 1,
-          },
-        },
-      ],
-      as: 'created_user_details',
-    },
-  };
-  const aggUpdatedUserDetails = {
-    $lookup: {
-      from: 'users',
-      localField: 'updated_by',
-      foreignField: '_id',
-      pipeline: [
-        {
-          $project: {
-            first_name: 1,
-            last_name: 1,
-            user_name: 1,
-            user_type: 1,
-          },
-        },
-      ],
-      as: 'updated_user_details',
-    },
-  };
-  const aggUnwindCreatedUser = {
-    $unwind: {
-      path: '$created_user_details',
-      preserveNullAndEmptyArrays: true,
-    },
-  };
-  const aggUnwindUpdatdUser = {
-    $unwind: {
-      path: '$updated_user_details',
-      preserveNullAndEmptyArrays: true,
-    },
-  };
-  const aggUnwindPlywoodItemDetails = {
-    $unwind: {
-      path: '$other_goods_item_details',
-      preserveNullAndEmptyArrays: true,
-    },
-  };
-  // const aggUnwindPlywoodInvoiceDetails = {
-  //   $unwind: {
-  //     path: '$plywood_invoice_details',
-  //     preserveNullAndEmptyArrays: true,
-  //   },
-  // };
-
-  const aggLimit = {
-    $limit: parseInt(limit),
-  };
-
-  const aggSkip = {
-    $skip: (parseInt(page) - 1) * parseInt(limit),
-  };
-
-  const aggSort = {
-    $sort: { [sortBy]: sort === 'desc' ? -1 : 1 },
-  };
-  const list_aggregate = [
-    aggLookupPlwoodItemDetails,
-    aggUnwindPlywoodItemDetails,
-    // aggLookupPlywoodInvoiceDetails,
-    // aggUnwindPlywoodInvoiceDetails,
-    aggCreatedUserDetails,
-    aggUpdatedUserDetails,
-    aggUnwindCreatedUser,
-    aggUnwindUpdatdUser,
-    aggMatch,
-    aggSort,
-    aggSkip,
-    aggLimit,
-  ];
-
-  const result = await other_goods_history_model.aggregate(list_aggregate);
-
-  const aggCount = {
-    $count: 'totalCount',
-  };
-
-  const count_total_docs = [
-    aggLookupPlwoodItemDetails,
-    aggUnwindPlywoodItemDetails,
-    aggCreatedUserDetails,
-    aggUpdatedUserDetails,
-    aggUnwindCreatedUser,
-    aggUnwindUpdatdUser,
-    aggMatch,
-    aggCount,
-  ];
-
-  const total_docs =
-    await other_goods_history_model.aggregate(count_total_docs);
-
-  const totalPages = Math.ceil((total_docs[0]?.totalCount || 0) / limit);
 
   const response = new ApiResponse(
     StatusCodes.OK,
     'Data fetched successfully...',
     {
-      data: result,
-      totalPages: totalPages,
+      data: optimizedResult.data,
+      totalPages: optimizedResult.totalPages,
     }
   );
 

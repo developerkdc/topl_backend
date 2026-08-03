@@ -26,92 +26,36 @@ import { issues_for_crosscutting_model } from '../../../database/schema/factory/
 import { crosscutting_done_model } from '../../../database/schema/factory/crossCutting/crosscutting.schema.js';
 import { issues_for_flitching_model } from '../../../database/schema/factory/flitching/issuedForFlitching.schema.js';
 import { issues_for_peeling_model } from '../../../database/schema/factory/peeling/issues_for_peeling/issues_for_peeling.schema.js';
+import { runInventoryListingPagination } from '../../../utils/pagination/inventoryPagination.js';
 
 export const listing_flitch_inventory = catchAsync(async (req, res, next) => {
-  const {
-    page = 1,
-    limit = 10,
-    sortBy = 'updatedAt',
-    sort = 'desc',
-    search = '',
-  } = req.query;
-  const {
-    string,
-    boolean,
-    numbers,
-    arrayField = [],
-  } = req?.body?.searchFields || {};
-  const filter = req.body?.filter;
-
-  let search_query = {};
-  if (search != '' && req?.body?.searchFields) {
-    const search_data = DynamicSearch(
-      search,
-      boolean,
-      numbers,
-      string,
-      arrayField
-    );
-    if (search_data?.length == 0) {
-      return res.status(404).json({
-        statusCode: 404,
-        status: false,
-        data: {
-          data: [],
-        },
-        message: 'Results Not Found',
-      });
-    }
-    search_query = search_data;
-  }
-
-  const filterData = dynamic_filter(filter);
-
-  const match_query = {
-    ...filterData,
-    ...search_query,
-    issue_status: null,
-  };
-
-  const aggregate_stage = [
-    {
-      $match: match_query,
+  const optimizedResult = await runInventoryListingPagination({
+    itemsModel: flitch_inventory_items_model,
+    invoiceModel: flitch_inventory_invoice_model,
+    invoiceAlias: 'flitch_invoice_details',
+    invoicePrefixes: [{ prefix: 'flitch_invoice_details.' }],
+    staticMatch: {
+      issue_status: null,
     },
-    {
-      $sort: {
-        [sortBy]: sort === 'desc' ? -1 : 1,
-      },
-    },
-    {
-      $skip: (parseInt(page) - 1) * parseInt(limit),
-    },
-    {
-      $limit: parseInt(limit),
-    },
-  ];
-  // console.log(sortBy !== 'updatedAt' && sort !== "desc")
-  // if (sortBy !== 'updatedAt' && sort !== "desc"){
-  //     console.log("first")
-  //     aggregate_stage[1] = {
-  //         $sort: {
-  //             [sortBy]: sort === "desc" ? -1 : 1
-  //         }
-  //     }
-  // }
-
-  const List_flitch_inventory_details =
-    await flitch_inventory_items_view_model.aggregate(aggregate_stage);
-
-  const totalItems = await flitch_inventory_items_view_model.countDocuments({
-    ...match_query,
+    req,
   });
-  const totalPage = Math.ceil(totalItems / parseInt(limit));
+
+  if (optimizedResult.searchMiss) {
+    return res.status(404).json({
+      statusCode: 404,
+      status: false,
+      data: {
+        data: [],
+      },
+      message: 'Results Not Found',
+    });
+  }
 
   return res.status(200).json({
     statusCode: 200,
     status: 'success',
-    data: List_flitch_inventory_details,
-    totalPage: totalPage,
+    data: optimizedResult.data,
+    totalPage: optimizedResult.totalPages,
     message: 'Data fetched successfully',
   });
 });
@@ -420,7 +364,7 @@ export const flitch_item_listing_by_invoice = catchAsync(
     const aggregate_stage = [
       {
         $match: {
-          'flitch_invoice_details._id': new mongoose.Types.ObjectId(invoice_id),
+          invoice_id: new mongoose.Types.ObjectId(invoice_id),
         },
       },
       {
@@ -428,15 +372,10 @@ export const flitch_item_listing_by_invoice = catchAsync(
           item_sr_no: 1,
         },
       },
-      {
-        $project: {
-          flitch_invoice_details: 0,
-        },
-      },
     ];
 
     const single_invoice_list_flitch_inventory_details =
-      await flitch_inventory_items_view_model.aggregate(aggregate_stage);
+      await flitch_inventory_items_model.aggregate(aggregate_stage);
 
     // const totalCount = await log_inventory_items_view_model.countDocuments({
     //   ...match_query,
@@ -629,83 +568,33 @@ export const edit_flitch_item_invoice_inventory = catchAsync(
 
 export const listing_flitch_history_inventory = catchAsync(
   async (req, res, next) => {
-    const {
-      page = 1,
-      limit = 10,
-      sortBy = 'updatedAt',
-      sort = 'desc',
-      search = '',
-    } = req.query;
-    const {
-      string,
-      boolean,
-      numbers,
-      arrayField = [],
-    } = req?.body?.searchFields || {};
-    const filter = req.body?.filter;
-
-    let search_query = {};
-    if (search != '' && req?.body?.searchFields) {
-      const search_data = DynamicSearch(
-        search,
-        boolean,
-        numbers,
-        string,
-        arrayField
-      );
-      if (search_data?.length == 0) {
-        return res.status(404).json({
-          statusCode: 404,
-          status: false,
-          data: {
-            data: [],
-          },
-          message: 'Results Not Found',
-        });
-      }
-      search_query = search_data;
-    }
-
-    const filterData = dynamic_filter(filter);
-
-    const match_query = {
-      ...filterData,
-      ...search_query,
-      issue_status: { $ne: null },
-    };
-
-    const aggregate_stage = [
-      {
-        $match: match_query,
+    const optimizedResult = await runInventoryListingPagination({
+      itemsModel: flitch_inventory_items_model,
+      invoiceModel: flitch_inventory_invoice_model,
+      invoiceAlias: 'flitch_invoice_details',
+      invoicePrefixes: [{ prefix: 'flitch_invoice_details.' }],
+      staticMatch: {
+        issue_status: { $ne: null },
       },
-      {
-        $sort: {
-          [sortBy]: sort === 'desc' ? -1 : 1,
-          _id: sort === 'desc' ? -1 : 1,
-        },
-      },
-      {
-        $skip: (parseInt(page) - 1) * parseInt(limit),
-      },
-      {
-        $limit: parseInt(limit),
-      },
-    ];
-
-    const List_flitch_inventory_details =
-      await flitch_inventory_items_view_model.aggregate(aggregate_stage);
-
-    const totalCount = await flitch_inventory_items_view_model.countDocuments({
-      ...match_query,
+      req,
     });
 
-    const totalPage = Math.ceil(totalCount / limit);
+    if (optimizedResult.searchMiss) {
+      return res.status(404).json({
+        statusCode: 404,
+        status: false,
+        data: {
+          data: [],
+        },
+        message: 'Results Not Found',
+      });
+    }
 
     return res.status(200).json({
       statusCode: 200,
       status: 'success',
-      data: List_flitch_inventory_details,
-      totalPage: totalPage,
+      data: optimizedResult.data,
+      totalPage: optimizedResult.totalPages,
       message: 'Data fetched successfully',
     });
   }

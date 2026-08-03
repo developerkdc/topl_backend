@@ -25,6 +25,156 @@ import {
   slicing_done_other_details_model,
 } from '../../../../database/schema/factory/slicing/slicing_done.schema.js';
 import { DynamicSearch } from '../../../../utils/dynamicSearch/dynamic.js';
+import UserModel from '../../../../database/schema/user.schema.js';
+import { orderDocumentsByIds } from '../../../../utils/pagination/runOptimizedPaginatedListing.js';
+
+const DRESSING_JOINED_LISTING_CONFIGS = [
+  {
+    key: 'dressing_done_other_details',
+    prefix: 'bundles.dressing_done_other_details.',
+    model: dressing_done_other_details_model,
+    summaryIdField: 'dressing_done_other_details_ids',
+    summarySingleIdField: 'dressing_done_other_details_id',
+  },
+  {
+    key: 'created_user_details',
+    prefix: 'bundles.created_user_details.',
+    model: UserModel,
+    summaryIdField: 'created_by_ids',
+    summarySingleIdField: 'created_by',
+  },
+  {
+    key: 'updated_user_details',
+    prefix: 'bundles.updated_user_details.',
+    model: UserModel,
+    summaryIdField: 'updated_by_ids',
+    summarySingleIdField: 'updated_by',
+  },
+];
+
+const createDressingListingSearchFields = () => ({
+  string: [],
+  boolean: [],
+  numbers: [],
+  arrayField: [],
+});
+
+const hasDressingListingSearchFields = (searchFields = {}) =>
+  Object.values(searchFields).some((fields) => fields?.length > 0);
+
+const buildDressingListingSearchQuery = (search = '', searchFields = {}) => {
+  if (!search || !hasDressingListingSearchFields(searchFields)) {
+    return null;
+  }
+
+  const searchQuery = DynamicSearch(
+    search,
+    searchFields.boolean,
+    searchFields.numbers,
+    searchFields.string,
+    searchFields.arrayField
+  );
+
+  return searchQuery?.$or?.length ? searchQuery : null;
+};
+
+const getDressingJoinedListingSource = (field = '') =>
+  DRESSING_JOINED_LISTING_CONFIGS.find((config) =>
+    field?.startsWith(config.prefix)
+  );
+
+const getDressingSummaryField = (field = '') => {
+  if (field === 'item_sub_cat') return 'item_sub_cat';
+  if (field === '_id') return '_id';
+  if (field === 'updatedAt') return 'latestUpdatedAt';
+  return field;
+};
+
+const splitDressingListingFilterData = (filterData = {}) => {
+  const summaryFilters = {};
+  const joinedFilters = {};
+
+  DRESSING_JOINED_LISTING_CONFIGS.forEach((config) => {
+    joinedFilters[config.key] = {};
+  });
+
+  Object.entries(filterData || {}).forEach(([field, value]) => {
+    const joinedSource = getDressingJoinedListingSource(field);
+    if (joinedSource) {
+      joinedFilters[joinedSource.key][field.slice(joinedSource.prefix.length)] =
+        value;
+      return;
+    }
+
+    summaryFilters[getDressingSummaryField(field)] = value;
+  });
+
+  return {
+    summaryFilters,
+    joinedFilters,
+  };
+};
+
+const splitDressingListingSearchFields = (searchFields = {}) => {
+  const summarySearchFields = createDressingListingSearchFields();
+  const joinedSearchFields = {};
+
+  DRESSING_JOINED_LISTING_CONFIGS.forEach((config) => {
+    joinedSearchFields[config.key] = createDressingListingSearchFields();
+  });
+
+  const {
+    string = [],
+    boolean = [],
+    numbers = [],
+    arrayField = [],
+  } = searchFields || {};
+
+  [
+    ['string', string],
+    ['boolean', boolean],
+    ['numbers', numbers],
+    ['arrayField', arrayField],
+  ].forEach(([fieldType, fields]) => {
+    fields?.forEach((field) => {
+      const joinedSource = getDressingJoinedListingSource(field);
+      if (joinedSource) {
+        joinedSearchFields[joinedSource.key][fieldType].push(
+          field.slice(joinedSource.prefix.length)
+        );
+        return;
+      }
+
+      summarySearchFields[fieldType].push(getDressingSummaryField(field));
+    });
+  });
+
+  return {
+    summarySearchFields,
+    joinedSearchFields,
+  };
+};
+
+const resolveDressingJoinedDistinctValues = async (queries = {}) =>
+  Promise.all(
+    DRESSING_JOINED_LISTING_CONFIGS.map(async (config) => {
+      const query = queries?.[config.key];
+      if (!query || Object.keys(query).length === 0) {
+        return {
+          config,
+          hasQuery: false,
+          values: null,
+        };
+      }
+
+      const values = await config.model.distinct('_id', query);
+      return {
+        config,
+        hasQuery: true,
+        values,
+      };
+    })
+  );
 
 export const create_dressing = catchAsync(async (req, res, next) => {
   const { _id } = req.userDetails;
@@ -298,53 +448,109 @@ export const fetch_all_dressing_done_items = catchAsync(async (req, res) => {
     sort = 'desc',
     search = '',
   } = req.query;
-
-  const {
-    string,
-    boolean,
-    numbers,
-    arrayField = [],
-  } = req.body.searchFields || {};
-
   const { filter } = req.body;
-  let search_query = {};
+  const pageNumber = Math.max(parseInt(page, 10) || 1, 1);
+  const pageLimit = Math.max(parseInt(limit, 10) || 10, 1);
+  const sortDirection = sort === 'desc' ? -1 : 1;
+  const trimmedSearch = search?.trim();
+  const filterData = dynamic_filter(filter);
+  const { summaryFilters, joinedFilters } =
+    splitDressingListingFilterData(filterData);
+  const { summarySearchFields, joinedSearchFields } =
+    splitDressingListingSearchFields(req.body?.searchFields);
+  const joinedFilterResults = await resolveDressingJoinedDistinctValues(
+    joinedFilters
+  );
 
-  if (search != '' && req?.body?.searchFields) {
-    const search_data = DynamicSearch(
-      search,
-      boolean,
-      numbers,
-      string,
-      arrayField
+  if (
+    joinedFilterResults.some(
+      (result) => result.hasQuery && result.values?.length === 0
+    )
+  ) {
+    const response = new ApiResponse(
+      StatusCodes.OK,
+      'Dressing Done List Fetched Successfully',
+      { data: [], totalPages: 0 }
     );
 
-    if (search_data?.length === 0) {
-      throw new ApiError('NO Data found...', StatusCodes.NOT_FOUND);
-    }
-    search_query = search_data;
+    return res.status(StatusCodes.OK).json(response);
   }
 
-  const filterData = dynamic_filter(filter);
+  let searchConditions = [];
+  if (trimmedSearch) {
+    const summarySearchQuery = buildDressingListingSearchQuery(
+      trimmedSearch,
+      summarySearchFields
+    );
+    const joinedSearchQueries = {};
 
-  const matchQuery = {
-    ...search_query,
-    ...filterData,
-    available_bundles: { $gt: 0 },
+    DRESSING_JOINED_LISTING_CONFIGS.forEach((config) => {
+      joinedSearchQueries[config.key] = buildDressingListingSearchQuery(
+        trimmedSearch,
+        joinedSearchFields[config.key]
+      );
+    });
+
+    const joinedSearchResults = await resolveDressingJoinedDistinctValues(
+      joinedSearchQueries
+    );
+
+    searchConditions = [
+      ...(summarySearchQuery?.$or || []),
+      ...joinedSearchResults
+        .filter((result) => result.hasQuery && result.values?.length > 0)
+        .map((result) => ({
+          [result.config.summaryIdField]: { $in: result.values },
+        })),
+    ];
+
+    if (searchConditions.length === 0) {
+      throw new ApiError('NO Data found...', StatusCodes.NOT_FOUND);
+    }
+  }
+
+  const summaryMatchQuery = {
+    ...summaryFilters,
   };
 
-  const aggMatch = {
-    $match: {
-      issue_status: null,
-      ...matchQuery,
-    },
-  };
+  if (summaryFilters.available_bundles !== undefined) {
+    summaryMatchQuery.available_bundles =
+      typeof summaryFilters.available_bundles === 'object' &&
+      summaryFilters.available_bundles !== null &&
+      !Array.isArray(summaryFilters.available_bundles)
+        ? {
+          ...summaryFilters.available_bundles,
+          $gt: 0,
+        }
+        : {
+          $eq: summaryFilters.available_bundles,
+          $gt: 0,
+        };
+  } else {
+    summaryMatchQuery.available_bundles = { $gt: 0 };
+  }
+
+  const joinedFilterConditions = joinedFilterResults
+    .filter((result) => result.hasQuery && result.values?.length > 0)
+    .map((result) => ({
+      [result.config.summaryIdField]: { $in: result.values },
+    }));
+
+  if (joinedFilterConditions.length > 0) {
+    summaryMatchQuery.$and = joinedFilterConditions;
+  }
+
+  if (searchConditions.length > 0) {
+    summaryMatchQuery.$or = searchConditions;
+  }
+
   const aggSortBeforeGroup = {
     $sort: {
       updatedAt: -1,
     },
   };
 
-  const aggGroupBy = {
+  const aggGroupBySummary = {
     $group: {
       _id: '$pallet_number',
       item_name: {
@@ -356,17 +562,23 @@ export const fetch_all_dressing_done_items = catchAsync(async (req, res) => {
       log_no_code: {
         $first: '$log_no_code',
       },
-      // bundles: {
-      //   $push: '$$ROOT',
-      // },
-      bundles: {
-        $push: {
-          $cond: {
-            if: { $eq: ['$issue_status', null] },
-            then: '$$ROOT',
-            else: '$$REMOVE',
-          },
-        },
+      dressing_done_other_details_id: {
+        $first: '$dressing_done_other_details_id',
+      },
+      created_by: {
+        $first: '$created_by',
+      },
+      updated_by: {
+        $first: '$updated_by',
+      },
+      dressing_done_other_details_ids: {
+        $addToSet: '$dressing_done_other_details_id',
+      },
+      created_by_ids: {
+        $addToSet: '$created_by',
+      },
+      updated_by_ids: {
+        $addToSet: '$updated_by',
       },
       total_bundles: {
         $sum: 1,
@@ -383,6 +595,7 @@ export const fetch_all_dressing_done_items = catchAsync(async (req, res) => {
       latestUpdatedAt: { $max: '$updatedAt' },
     },
   };
+
   const aggLookupOtherDetails = {
     $lookup: {
       from: 'dressing_done_other_details',
@@ -452,62 +665,145 @@ export const fetch_all_dressing_done_items = catchAsync(async (req, res) => {
     },
   };
 
-  const aggSort = {
-    $sort: {
-      [sortBy === 'updatedAt' ? 'latestUpdatedAt' : sortBy]:
-        sort === 'desc' ? -1 : 1,
+  const aggGroupBy = {
+    $group: {
+      _id: '$pallet_number',
+      item_name: {
+        $first: '$item_name',
+      },
+      item_sub_cat: {
+        $first: '$item_sub_category_name',
+      },
+      log_no_code: {
+        $first: '$log_no_code',
+      },
+      bundles: {
+        $push: {
+          $cond: {
+            if: { $eq: ['$issue_status', null] },
+            then: '$$ROOT',
+            else: '$$REMOVE',
+          },
+        },
+      },
+      total_bundles: {
+        $sum: 1,
+      },
+      available_bundles: {
+        $sum: {
+          $cond: {
+            if: { $eq: ['$issue_status', null] },
+            then: 1,
+            else: 0,
+          },
+        },
+      },
+      latestUpdatedAt: { $max: '$updatedAt' },
     },
   };
-
-  const aggSkip = {
-    $skip: (parseInt(page) - 1) * parseInt(limit),
-  };
-
-  const aggLimit = {
-    $limit: parseInt(limit),
-  };
-
-  const all_aggregates = [
+  const sortJoinedSource = getDressingJoinedListingSource(sortBy);
+  const summarySortField = getDressingSummaryField(sortBy);
+  const pageKeysAggregate = [
     aggSortBeforeGroup,
-    aggLookupOtherDetails,
-    aggUnwindOtherDetails,
-    aggCreatedUserDetails,
-    aggUpdatedUserDetails,
-    aggUnwindCreatedUserDetails,
-    aggUnwindUpdatedUserDetails,
-    aggGroupBy,
-    aggMatch,
-    aggSort,
-    aggSkip,
-    aggLimit,
+    aggGroupBySummary,
+    {
+      $match: summaryMatchQuery,
+    },
   ];
 
-  const list_dressing_done_items =
-    await dressing_done_items_model.aggregate(all_aggregates);
+  if (sortJoinedSource) {
+    pageKeysAggregate.push(
+      {
+        $lookup: {
+          from: sortJoinedSource.model.collection.name,
+          localField: sortJoinedSource.summarySingleIdField,
+          foreignField: '_id',
+          as: '__sort_join__',
+        },
+      },
+      {
+        $unwind: {
+          path: '$__sort_join__',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $sort: {
+          [`__sort_join__.${sortBy.slice(sortJoinedSource.prefix.length)}`]:
+            sortDirection,
+          _id: sortDirection,
+        },
+      }
+    );
+  } else {
+    pageKeysAggregate.push({
+      $sort: {
+        [summarySortField]: sortDirection,
+        _id: sortDirection,
+      },
+    });
+  }
 
-  const aggCount = {
-    $count: 'totalCount',
-  };
-
-  const aggCountTotalDocs = [
-    aggSortBeforeGroup,
-    aggLookupOtherDetails,
-    aggUnwindOtherDetails,
-    aggCreatedUserDetails,
-    aggUpdatedUserDetails,
-    aggUnwindCreatedUserDetails,
-    aggUnwindUpdatedUserDetails,
-    aggGroupBy,
-    aggMatch,
-    aggCount,
-  ];
-
-  const total_docs =
-    await dressing_done_items_model.aggregate(aggCountTotalDocs);
-
-  const totalPages = Math.ceil(
-    (total_docs?.[0]?.totalCount || 0) / parseInt(limit)
+  pageKeysAggregate.push(
+    {
+      $skip: (pageNumber - 1) * pageLimit,
+    },
+    {
+      $limit: pageLimit,
+    },
+    {
+      $project: {
+        _id: 1,
+      },
+    }
   );
+
+  const countAggregate = [
+    aggSortBeforeGroup,
+    aggGroupBySummary,
+    {
+      $match: summaryMatchQuery,
+    },
+    {
+      $count: 'totalCount',
+    },
+  ];
+
+  const [pageKeys, totalDocs] = await Promise.all([
+    dressing_done_items_model.aggregate(pageKeysAggregate).allowDiskUse(true),
+    dressing_done_items_model.aggregate(countAggregate).allowDiskUse(true),
+  ]);
+
+  const selectedPalletNumbers = pageKeys.map((item) => item?._id);
+  const totalPages = Math.ceil((totalDocs?.[0]?.totalCount || 0) / pageLimit);
+
+  let list_dressing_done_items = [];
+  if (selectedPalletNumbers.length > 0) {
+    const hydratedGroups = await dressing_done_items_model
+      .aggregate([
+        {
+          $match: {
+            pallet_number: {
+              $in: selectedPalletNumbers,
+            },
+          },
+        },
+        aggSortBeforeGroup,
+        aggLookupOtherDetails,
+        aggUnwindOtherDetails,
+        aggCreatedUserDetails,
+        aggUpdatedUserDetails,
+        aggUnwindCreatedUserDetails,
+        aggUnwindUpdatedUserDetails,
+        aggGroupBy,
+      ])
+      .allowDiskUse(true);
+
+    list_dressing_done_items = orderDocumentsByIds(
+      hydratedGroups,
+      selectedPalletNumbers
+    );
+  }
 
   const response = new ApiResponse(
     StatusCodes.OK,
