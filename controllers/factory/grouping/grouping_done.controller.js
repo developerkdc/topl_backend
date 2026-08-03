@@ -25,6 +25,8 @@ import photoModel from '../../../database/schema/masters/photo.schema.js';
 import { decorative_order_item_details_model } from '../../../database/schema/order/decorative_order/decorative_order_item_details.schema.js';
 import series_product_order_item_details_model from '../../../database/schema/order/series_product_order/series_product_order_item_details.schema.js';
 import { getIssueBreakdownForItem } from '../../../utils/getIssueBreakdown.js';
+import UserModel from '../../../database/schema/user.schema.js';
+import { runOptimizedPaginatedListing } from '../../../utils/pagination/runOptimizedPaginatedListing.js';
 
 export const add_grouping_done = catchAsync(async (req, res, next) => {
   const session = await mongoose.startSession();
@@ -403,18 +405,6 @@ export const fetch_all_grouping_done_items = catchAsync(
 
     const filterData = dynamic_filter(filter);
 
-    const match_common_query = {
-      $match: {
-        is_damaged: false,
-        'available_details.no_of_sheets': { $gt: 0 },
-      },
-    };
-
-    const match_query = {
-      ...search_query,
-      ...filterData,
-    };
-
     const aggLookupOtherDetails = {
       $lookup: {
         from: 'grouping_done_details',
@@ -462,11 +452,6 @@ export const fetch_all_grouping_done_items = catchAsync(
         as: 'updated_user_details',
       },
     };
-    const aggMatch = {
-      $match: {
-        ...match_query,
-      },
-    };
     const aggUnwindOtherDetails = {
       $unwind: {
         path: '$grouping_done_other_details',
@@ -486,61 +471,71 @@ export const fetch_all_grouping_done_items = catchAsync(
         preserveNullAndEmptyArrays: true,
       },
     };
-    const aggSort = {
-      $sort: {
-        [sortBy]: sort === 'desc' ? -1 : 1,
+    const optimizedResult = await runOptimizedPaginatedListing({
+      model: grouping_done_items_details_model,
+      page,
+      limit,
+      sortBy,
+      sort,
+      search,
+      searchFields: req.body?.searchFields,
+      filterData,
+      staticMatch: {
+        is_damaged: false,
+        'available_details.no_of_sheets': { $gt: 0 },
       },
-    };
+      joinedFieldConfigs: [
+        {
+          key: 'grouping_done_other_details',
+          prefix: 'grouping_done_other_details.',
+          model: grouping_done_details_model,
+          localField: 'grouping_done_other_details_id',
+          foreignField: '_id',
+        },
+        {
+          key: 'created_user_details',
+          prefix: 'created_user_details.',
+          model: UserModel,
+          localField: 'created_by',
+          foreignField: '_id',
+        },
+        {
+          key: 'updated_user_details',
+          prefix: 'updated_user_details.',
+          model: UserModel,
+          localField: 'updated_by',
+          foreignField: '_id',
+        },
+      ],
+      hydratePipelineBuilder: (pageIds) => [
+        {
+          $match: {
+            _id: { $in: pageIds },
+          },
+        },
+        aggLookupOtherDetails,
+        aggUnwindOtherDetails,
+        aggCreatedUserDetails,
+        aggUpdatedUserDetails,
+        aggUnwindCreatedUser,
+        aggUnwindUpdatedUser,
+      ],
+    });
 
-    const aggSkip = {
-      $skip: (parseInt(page) - 1) * parseInt(limit),
-    };
-
-    const aggLimit = {
-      $limit: parseInt(limit),
-    };
-
-    const list_aggregate = [
-      match_common_query,
-      aggLookupOtherDetails,
-      aggUnwindOtherDetails,
-      aggCreatedUserDetails,
-      aggUpdatedUserDetails,
-      aggUnwindCreatedUser,
-      aggUnwindUpdatedUser,
-      aggMatch,
-      aggSort,
-      aggSkip,
-      aggLimit,
-    ];
-
-    const result =
-      await grouping_done_items_details_model.aggregate(list_aggregate);
-
-    const aggCount = {
-      $count: 'totalCount',
-    };
-
-    const count_total_docs = [
-      match_common_query,
-      aggLookupOtherDetails,
-      aggUnwindOtherDetails,
-      aggCreatedUserDetails,
-      aggUpdatedUserDetails,
-      aggUnwindCreatedUser,
-      aggUnwindUpdatedUser,
-      aggMatch,
-      aggCount,
-    ];
-
-    const total_docs =
-      await grouping_done_items_details_model.aggregate(count_total_docs);
-
-    const totalPages = Math.ceil((total_docs[0]?.totalCount || 0) / limit);
+    if (optimizedResult.searchMiss) {
+      return res.status(404).json({
+        statusCode: 404,
+        status: false,
+        data: {
+          data: [],
+        },
+        message: 'Results Not Found',
+      });
+    }
 
     const response = new ApiResponse(200, 'Data Fetched Successfully', {
-      data: result,
-      totalPages: totalPages,
+      data: optimizedResult.data,
+      totalPages: optimizedResult.totalPages,
     });
     return res.status(200).json(response);
   }

@@ -37,10 +37,12 @@ mongo_service();
 const app = express();
 const server = http.createServer(app);
 
-// Increase timeouts to 10 minutes (600,000 ms) to handle bulk uploads
-server.timeout = 600000;
-server.keepAliveTimeout = 600000;
-server.headersTimeout = 605000; // Must be slightly higher than keepAliveTimeout
+const BULK_UPLOAD_TIMEOUT_MS = 18000000;
+
+// Increase timeouts to 30 minutes for large bulk uploads.
+server.timeout = BULK_UPLOAD_TIMEOUT_MS;
+server.keepAliveTimeout = BULK_UPLOAD_TIMEOUT_MS;
+server.headersTimeout = BULK_UPLOAD_TIMEOUT_MS + 50000;
 
 export const io = new Server(server, {
   cors: {
@@ -127,7 +129,3 @@ io.on('connection', (socket) => {
 server.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
 });
-
-
-
-

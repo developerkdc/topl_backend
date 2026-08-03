@@ -5,56 +5,17 @@ import { dynamic_filter } from '../../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../../utils/dynamicSearch/dynamic.js';
 import catchAsync from '../../../../utils/errors/catchAsync.js';
 import ApiError from '../../../../utils/errors/apiError.js';
-import { issue_for_bunito_view_model } from '../../../../database/schema/factory/bunito/issue_for_bunito/issue_for_bunito.schema.js';
+import {
+  issue_for_bunito_model,
+  issue_for_bunito_view_model,
+} from '../../../../database/schema/factory/bunito/issue_for_bunito/issue_for_bunito.schema.js';
 import { issues_for_status } from '../../../../database/Utils/constants/constants.js';
 import { createFactoryIssueForBunitoExcel } from '../../../../config/downloadExcel/Logs/Factory/Bunito/IssueForBunito/index.js';
+import { runConditionalHydratedPagination } from '../../../../utils/pagination/runConditionalHydratedPagination.js';
 
 export const listing_issued_for_bunito = catchAsync(async (req, res, next) => {
-  const {
-    page = 1,
-    limit = 10,
-    sortBy = 'updatedAt',
-    sort = 'desc',
-    search = '',
-  } = req.query;
-  const {
-    string,
-    boolean,
-    numbers,
-    arrayField = [],
-  } = req?.body?.searchFields || {};
-  const filter = req.body?.filter;
-
-  let search_query = {};
-  if (search != '' && req?.body?.searchFields) {
-    const search_data = DynamicSearch(
-      search,
-      boolean,
-      numbers,
-      string,
-      arrayField
-    );
-    if (search_data?.length == 0) {
-      return res.status(404).json({
-        statusCode: 404,
-        status: false,
-        data: {
-          data: [],
-        },
-        message: 'Results Not Found',
-      });
-    }
-    search_query = search_data;
-  }
-
-  const filterData = dynamic_filter(filter);
-
-  const match_query = {
-    ...filterData,
-    ...search_query,
-    is_bunito_done: false,
-  };
-
+  const { page = 1, limit = 10, sortBy = 'updatedAt', sort = 'desc' } =
+    req.query;
   const aggCommonMatch = {
     $match: {
       'available_details.no_of_sheets': { $gt: 0 },
@@ -116,19 +77,8 @@ export const listing_issued_for_bunito = catchAsync(async (req, res, next) => {
   };
   const aggMatch = {
     $match: {
-      ...match_query,
+      ...{},
     },
-  };
-  const aggSort = {
-    $sort: {
-      [sortBy]: sort === 'desc' ? -1 : 1,
-    },
-  };
-  const aggSkip = {
-    $skip: (parseInt(page) - 1) * parseInt(limit),
-  };
-  const aggLimit = {
-    $limit: parseInt(limit),
   };
 
   const orderItems = [
@@ -169,31 +119,97 @@ export const listing_issued_for_bunito = catchAsync(async (req, res, next) => {
     aggUpdatedByUnwind,
     aggMatch,
     ...orderItems,
-    aggSort,
-    aggSkip,
-    aggLimit,
   ];
+  const optimizedResult = await runConditionalHydratedPagination({
+    model: issue_for_bunito_model,
+    hydrateModel: issue_for_bunito_view_model,
+    req,
+    staticMatch: {
+      is_bunito_done: false,
+      'available_details.no_of_sheets': { $gt: 0 },
+    },
+    joinedFieldPrefixes: [
+      'created_by.',
+      'updated_by.',
+      'order_details.',
+      'order_item_details.',
+      'series_items.',
+      'decorative_items.',
+      'pressing_details.',
+      'grouping_details.',
+      'pressing_done_consumed_items_details.',
+      'created_user_details.',
+      'updated_user_details.',
+    ],
+    hydratePipelineBuilder: (pageIds) => [
+      {
+        $match: {
+          _id: { $in: pageIds },
+        },
+      },
+      aggCreatedByLookup,
+      aggCreatedByUnwind,
+      aggUpdatedByLookup,
+      aggUpdatedByUnwind,
+      ...orderItems,
+    ],
+    fallbackRunner: async ({
+      pageNumber,
+      pageLimit,
+      sortBy: fallbackSortBy,
+      sort: fallbackSort,
+      matchQuery,
+    }) => {
+      aggMatch.$match = matchQuery;
 
-  const issue_for_bunito =
-    await issue_for_bunito_view_model.aggregate(listAggregate);
+      const aggSort = {
+        $sort: {
+          [fallbackSortBy]: fallbackSort === 'desc' ? -1 : 1,
+        },
+      };
+      const aggSkip = {
+        $skip: (pageNumber - 1) * pageLimit,
+      };
+      const aggLimit = {
+        $limit: pageLimit,
+      };
 
-  const aggCount = {
-    $count: 'totalCount',
-  }; // count aggregation stage
+      const fallbackAggregate = [...listAggregate, aggSort, aggSkip, aggLimit];
 
-  const totalAggregate = [...listAggregate?.slice(0, -2), aggCount]; // total aggregation pipiline
+      const [data, totalDocument] = await Promise.all([
+        issue_for_bunito_view_model
+          .aggregate(fallbackAggregate)
+          .allowDiskUse(true),
+        issue_for_bunito_view_model
+          .aggregate([...listAggregate, { $count: 'totalCount' }])
+          .allowDiskUse(true),
+      ]);
 
-  const totalDocument =
-    await issue_for_bunito_view_model.aggregate(totalAggregate);
+      return {
+        searchMiss: false,
+        data,
+        totalPages: Math.ceil((totalDocument?.[0]?.totalCount || 0) / pageLimit),
+      };
+    },
+  });
 
-  const totalPages = Math.ceil((totalDocument?.[0]?.totalCount || 0) / limit);
+  if (optimizedResult.searchMiss) {
+    return res.status(404).json({
+      statusCode: 404,
+      status: false,
+      data: {
+        data: [],
+      },
+      message: 'Results Not Found',
+    });
+  }
 
   const response = new ApiResponse(
     StatusCodes.OK,
     'Issue For Bunito Data Fetched Successfully',
     {
-      data: issue_for_bunito,
-      totalPages: totalPages,
+      data: optimizedResult.data,
+      totalPages: optimizedResult.totalPages,
     }
   );
   return res.status(StatusCodes.OK).json(response);

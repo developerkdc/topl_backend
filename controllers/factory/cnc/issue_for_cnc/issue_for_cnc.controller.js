@@ -11,6 +11,7 @@ import {
 } from '../../../../database/schema/factory/cnc/issue_for_cnc/issue_for_cnc.schema.js';
 import { issues_for_status } from '../../../../database/Utils/constants/constants.js';
 import { createFactoryIssueForCNCExcel } from '../../../../config/downloadExcel/Logs/Factory/CNC/IssueForCNC/index.js';
+import { runConditionalHydratedPagination } from '../../../../utils/pagination/runConditionalHydratedPagination.js';
 
 export const add_issue_for_cnc_from_pressing = catchAsync(async (req, res) => {
   const userDetails = req.userDetails;
@@ -253,50 +254,8 @@ export const revert_issue_for_cnc = catchAsync(async (req, res) => {
 });
 
 export const listing_issued_for_cnc = catchAsync(async (req, res, next) => {
-  const {
-    page = 1,
-    limit = 10,
-    sortBy = 'updatedAt',
-    sort = 'desc',
-    search = '',
-  } = req.query;
-  const {
-    string,
-    boolean,
-    numbers,
-    arrayField = [],
-  } = req?.body?.searchFields || {};
-  const filter = req.body?.filter;
-
-  let search_query = {};
-  if (search != '' && req?.body?.searchFields) {
-    const search_data = DynamicSearch(
-      search,
-      boolean,
-      numbers,
-      string,
-      arrayField
-    );
-    if (search_data?.length == 0) {
-      return res.status(404).json({
-        statusCode: 404,
-        status: false,
-        data: {
-          data: [],
-        },
-        message: 'Results Not Found',
-      });
-    }
-    search_query = search_data;
-  }
-
-  const filterData = dynamic_filter(filter);
-
-  const match_query = {
-    ...filterData,
-    ...search_query,
-    is_cnc_done: false,
-  };
+  const { page = 1, limit = 10, sortBy = 'updatedAt', sort = 'desc' } =
+    req.query;
 
   const aggCommonMatch = {
     $match: {
@@ -382,20 +341,7 @@ export const listing_issued_for_cnc = catchAsync(async (req, res, next) => {
   //   },
   // };
   const aggMatch = {
-    $match: {
-      ...match_query,
-    },
-  };
-  const aggSort = {
-    $sort: {
-      [sortBy]: sort === 'desc' ? -1 : 1,
-    },
-  };
-  const aggSkip = {
-    $skip: (parseInt(page) - 1) * parseInt(limit),
-  };
-  const aggLimit = {
-    $limit: parseInt(limit),
+    $match: {},
   };
 
   const listAggregate = [
@@ -408,30 +354,85 @@ export const listing_issued_for_cnc = catchAsync(async (req, res, next) => {
     // aggUpdatedByLookup,
     // aggUpdatedByUnwind,
     aggMatch,
-    aggSort,
-    aggSkip,
-    aggLimit,
   ]; // aggregation pipiline
+  const optimizedResult = await runConditionalHydratedPagination({
+    model: issue_for_cnc_model,
+    hydrateModel: issue_for_cnc_view_model,
+    req,
+    staticMatch: {
+      is_cnc_done: false,
+      'available_details.no_of_sheets': { $gt: 0 },
+    },
+    joinedFieldPrefixes: [
+      'pressing_details.',
+      'grouping_details.',
+      'pressing_done_consumed_items_details.',
+      'order_details.',
+      'order_item_details.',
+      'created_user_details.',
+      'updated_user_details.',
+    ],
+    hydratePipelineBuilder: (pageIds) => [
+      {
+        $match: {
+          _id: { $in: pageIds },
+        },
+      },
+    ],
+    fallbackRunner: async ({
+      pageNumber,
+      pageLimit,
+      sortBy: fallbackSortBy,
+      sort: fallbackSort,
+      matchQuery,
+    }) => {
+      aggMatch.$match = matchQuery;
+      const aggSort = {
+        $sort: {
+          [fallbackSortBy]: fallbackSort === 'desc' ? -1 : 1,
+        },
+      };
+      const aggSkip = {
+        $skip: (pageNumber - 1) * pageLimit,
+      };
+      const aggLimit = {
+        $limit: pageLimit,
+      };
 
-  const issue_for_cnc = await issue_for_cnc_view_model.aggregate(listAggregate);
+      const [data, totalDocument] = await Promise.all([
+        issue_for_cnc_view_model
+          .aggregate([...listAggregate, aggSort, aggSkip, aggLimit])
+          .allowDiskUse(true),
+        issue_for_cnc_view_model
+          .aggregate([...listAggregate, { $count: 'totalCount' }])
+          .allowDiskUse(true),
+      ]);
 
-  const aggCount = {
-    $count: 'totalCount',
-  }; // count aggregation stage
+      return {
+        searchMiss: false,
+        data,
+        totalPages: Math.ceil((totalDocument?.[0]?.totalCount || 0) / pageLimit),
+      };
+    },
+  });
 
-  const totalAggregate = [...listAggregate?.slice(0, -2), aggCount]; // total aggregation pipiline
-
-  const totalDocument =
-    await issue_for_cnc_view_model.aggregate(totalAggregate);
-
-  const totalPages = Math.ceil((totalDocument?.[0]?.totalCount || 0) / limit);
+  if (optimizedResult.searchMiss) {
+    return res.status(404).json({
+      statusCode: 404,
+      status: false,
+      data: {
+        data: [],
+      },
+      message: 'Results Not Found',
+    });
+  }
 
   const response = new ApiResponse(
     StatusCodes.OK,
     'Issue For CNC Data Fetched Successfully',
     {
-      data: issue_for_cnc,
-      totalPages: totalPages,
+      data: optimizedResult.data,
+      totalPages: optimizedResult.totalPages,
     }
   );
   return res.status(StatusCodes.OK).json(response);
