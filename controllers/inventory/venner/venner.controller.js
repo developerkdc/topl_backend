@@ -184,6 +184,44 @@ const emptyVeneerListingResponse = (res) =>
     message: 'Data fetched successfully',
   });
 
+const getVeneerNestedValue = (source, path) =>
+  `${path || ''}`
+    .split('.')
+    .filter(Boolean)
+    .reduce((currentValue, key) => currentValue?.[key], source);
+
+const normalizeVeneerSortValue = (value) => {
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === 'string') {
+    const parsedDate = Date.parse(value);
+    if (!Number.isNaN(parsedDate)) return parsedDate;
+    return value.toUpperCase();
+  }
+  if (value === undefined || value === null) return null;
+  return value;
+};
+
+const sortVeneerExportRows = (rows = [], sortBy = 'updatedAt', sort = 'desc') => {
+  const sortOrder = sort === 'desc' ? -1 : 1;
+  return [...rows].sort((firstRow, secondRow) => {
+    const firstValue = normalizeVeneerSortValue(
+      getVeneerNestedValue(firstRow, sortBy)
+    );
+    const secondValue = normalizeVeneerSortValue(
+      getVeneerNestedValue(secondRow, sortBy)
+    );
+    if (firstValue === secondValue) {
+      const firstId = `${firstRow?._id || ''}`;
+      const secondId = `${secondRow?._id || ''}`;
+      if (firstId === secondId) return 0;
+      return (firstId > secondId ? 1 : -1) * sortOrder;
+    }
+    if (firstValue === null) return 1;
+    if (secondValue === null) return -1;
+    return firstValue > secondValue ? sortOrder : -sortOrder;
+  });
+};
+
 /*
 Previous veneer listing implementation kept commented for quick rollback/testing:
 
@@ -821,14 +859,14 @@ export const veneerLogsCsv = catchAsync(async (req, res) => {
     available_sheets: { $ne: 0 },
   };
 
-  // Build sort options
-  const sortOrder = sort === 'desc' ? -1 : 1;
-  const sortOptions = { [sortBy]: sortOrder };
-
-  // Final Mongo query with sort
-  const allData = await veneer_inventory_items_view_modal
-    .find(match_query)
-    .sort(sortOptions);
+  const allData = await veneer_inventory_items_model
+    .aggregate([
+      ...veneerInventoryLookupStages,
+      {
+        $match: match_query,
+      },
+    ])
+    .allowDiskUse(true);
 
   if (allData.length === 0) {
     return res
@@ -836,7 +874,9 @@ export const veneerLogsCsv = catchAsync(async (req, res) => {
       .json(new ApiResponse(StatusCodes.NOT_FOUND, 'NO Data found...'));
   }
 
-  const excelLink = await createVeneerLogsExcel(allData);
+  const excelLink = await createVeneerLogsExcel(
+    sortVeneerExportRows(allData, sortBy, sort)
+  );
   console.log('link => ', excelLink);
 
   return res.json(
@@ -887,14 +927,14 @@ export const veneerHistoryLogsCsv = catchAsync(async (req, res) => {
     issue_status: { $ne: null },
   };
 
-  // Build sort options
-  const sortOrder = sort === 'desc' ? -1 : 1;
-  const sortOptions = { [sortBy]: sortOrder };
-
-  // Final Mongo query with sort
-  const allData = await veneer_inventory_items_view_modal
-    .find(match_query)
-    .sort(sortOptions);
+  const allData = await veneer_inventory_items_model
+    .aggregate([
+      ...veneerInventoryLookupStages,
+      {
+        $match: match_query,
+      },
+    ])
+    .allowDiskUse(true);
 
   if (allData.length === 0) {
     return res
@@ -902,7 +942,9 @@ export const veneerHistoryLogsCsv = catchAsync(async (req, res) => {
       .json(new ApiResponse(StatusCodes.NOT_FOUND, 'NO Data found...'));
   }
 
-  const excelLink = await createVeneerLogsExcel(allData);
+  const excelLink = await createVeneerLogsExcel(
+    sortVeneerExportRows(allData, sortBy, sort)
+  );
   console.log('link => ', excelLink);
 
   return res.json(

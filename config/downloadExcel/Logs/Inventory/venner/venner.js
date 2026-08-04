@@ -104,6 +104,10 @@ export const createVeneerLogsExcel = async (newData) => {
 
     newData?.forEach((data) => {
       try {
+        const primaryContact =
+          data?.veneer_invoice_details?.supplier_details?.branch_detail
+            ?.contact_person?.[0] || {};
+
         // let contactPersonData = [];
 
         // data?.supplier_details?.branch_detail?.contact_person?.forEach((cp) => {
@@ -194,18 +198,10 @@ export const createVeneerLogsExcel = async (newData) => {
           web_url:
             data?.veneer_invoice_details?.supplier_details?.branch_detail
               ?.web_url,
-          contact_person_name:
-            data.veneer_invoice_details.supplier_details.branch_detail
-              .contact_person[0].name,
-          contact_person_email:
-            data.veneer_invoice_details.supplier_details.branch_detail
-              .contact_person[0].email,
-          contact_person_designation:
-            data.veneer_invoice_details.supplier_details.branch_detail
-              .contact_person[0].designation,
-          contact_person_mobile_number:
-            data.veneer_invoice_details.supplier_details.branch_detail
-              .contact_person[0].mobile_number,
+          contact_person_name: primaryContact?.name,
+          contact_person_email: primaryContact?.email,
+          contact_person_designation: primaryContact?.designation,
+          contact_person_mobile_number: primaryContact?.mobile_number,
           invoice_date:
             data?.veneer_invoice_details?.invoice_Details?.invoice_date,
           invoice_no: data?.veneer_invoice_details?.invoice_Details?.invoice_no,
@@ -250,7 +246,11 @@ export const createVeneerLogsExcel = async (newData) => {
     const destinationPath = `public/upload/reports/inventory/venner/${dwnldFileName}`;
     await fs.rename(filepath, destinationPath);
 
-    const link = `${process.env.APP_URL}${destinationPath}`;
+    const publicPath = destinationPath
+      .replace(/^public[\\/]/, '')
+      .replace(/\\/g, '/');
+    const baseUrl = `${process.env.APP_URL || ''}`.trim().replace(/\/+$/, '');
+    const link = baseUrl ? `${baseUrl}/${publicPath}` : `/${publicPath}`;
     console.log('link => ', link);
     return link;
   } catch (error) {
