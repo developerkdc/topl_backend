@@ -102,8 +102,6 @@ const vehicleSchema = new mongoose.Schema(
 vehicleSchema.index({ vehicle_number: 1 });
 vehicleSchema.index({ sr_no: 1 }, { unique: true });
 vehicleSchema.index({ invoice_date: 1 });
-vehicleSchema.index({ sr_no: 1 });
-vehicleSchema.index({ sr_no: 1 });
 vehicleSchema.index({ created_by: 1 });
 vehicleSchema.index({ updated_by: 1 });
 

@@ -326,7 +326,6 @@ export const othergoods_invoice_schema = new mongoose.Schema(
   }
 );
 
-othergoods_invoice_schema.index({ inward_sr_no: 1 });
 othergoods_invoice_schema.index(
   { inward_sr_no: 1, 'expensesSchema.expenseType': 1 },
   { unique: true }

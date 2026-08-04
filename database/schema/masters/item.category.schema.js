@@ -54,7 +54,7 @@ const itemCategorySchema = new mongoose.Schema(
 // indexing
 const indexingFields = [
   [{ sr_no: -1 }, { unique: true }],
-  [{ category: 1 }],
+  // [{ category: 1 }],
   [{ product_hsn_code: 1 }],
   [{ gst_percentage: 1 }],
   [{ created_by: 1 }],

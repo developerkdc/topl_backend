@@ -30,7 +30,7 @@ const CutSchema = new mongoose.Schema({
   deleted_at: { type: Date, default: null },
 });
 
-CutSchema.index({ cut_name: 1 }, { unique: true });
+// CutSchema.index({ cut_name: 1 });
 const CutModel = mongoose.model('cut', CutSchema);
 LogSchemaFunction('cut', CutModel, []);
 export default CutModel;

@@ -30,7 +30,7 @@ const CurrencySchema = new mongoose.Schema({
   deleted_at: { type: Date, default: null },
 });
 
-CurrencySchema.index({ currency_name: 1 }, { unique: true });
+// CurrencySchema.index({ currency_name: 1 });
 const CurrencyModel = mongoose.model('currency', CurrencySchema);
 LogSchemaFunction('currency', CurrencyModel, []);
 export default CurrencyModel;

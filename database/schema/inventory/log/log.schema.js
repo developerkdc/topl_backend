@@ -342,7 +342,6 @@ export const log_invoice_schema = new mongoose.Schema(
   }
 );
 
-log_invoice_schema.index({ inward_sr_no: 1 });
 log_invoice_schema.index(
   { inward_sr_no: 1, 'expensesSchema.expenseType': 1 },
   { unique: true }
