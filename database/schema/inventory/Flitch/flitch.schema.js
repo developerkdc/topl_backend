@@ -352,7 +352,6 @@ export const flitch_invoice_schema = new mongoose.Schema(
   }
 );
 
-flitch_invoice_schema.index({ inward_sr_no: 1 });
 flitch_invoice_schema.index(
   { inward_sr_no: 1, 'expensesSchema.expenseType': 1 },
   { unique: true }

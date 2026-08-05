@@ -30,7 +30,7 @@ const GradeNameSchema = new mongoose.Schema({
   deleted_at: { type: Date, default: null },
 });
 
-GradeNameSchema.index({ grade_name: 1 }, { unique: true });
+// GradeNameSchema.index({ grade_name: 1 });
 const GradeModel = mongoose.model('grade', GradeNameSchema);
 LogSchemaFunction('grade', GradeModel, []);
 export default GradeModel;

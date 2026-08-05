@@ -30,7 +30,7 @@ const ExpenseTypeSchema = new mongoose.Schema({
   deleted_at: { type: Date, default: null },
 });
 
-ExpenseTypeSchema.index({ expense_type_name: 1 }, { unique: true });
+// ExpenseTypeSchema.index({ expense_type_name: 1 });
 const ExpenseTypeModel =
   mongoose.models.expense_types ||
   mongoose.model('expense_type', ExpenseTypeSchema);
