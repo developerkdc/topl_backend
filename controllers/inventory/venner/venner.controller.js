@@ -13,7 +13,11 @@ import { dynamic_filter } from '../../../utils/dymanicFilter.js';
 import { StatusCodes } from '../../../utils/constants.js';
 import { createMdfLogsExcel } from '../../../config/downloadExcel/Logs/Inventory/mdf/mdf.js';
 import { createLogLogsExcel } from '../../../config/downloadExcel/Logs/Inventory/log/log.js';
-import { createVeneerLogsExcel } from '../../../config/downloadExcel/Logs/Inventory/venner/venner.js';
+import {
+  streamVeneerLogsExcel,
+  veneerBaseExportProjection,
+  veneerInvoiceExportProjection,
+} from '../../../config/downloadExcel/Logs/Inventory/venner/venner.js';
 import {
   veneer_approval_inventory_invoice_model,
   veneer_approval_inventory_items_model,
@@ -65,6 +69,20 @@ const veneerInventoryLookupStages = [
     },
   },
 ];
+
+const prefixProjectionFields = (projection = {}, prefix = '') =>
+  Object.keys(projection).reduce((acc, field) => {
+    acc[`${prefix}.${field}`] = projection[field];
+    return acc;
+  }, {});
+
+const veneerAggregateExportProjection = {
+  ...veneerBaseExportProjection,
+  ...prefixProjectionFields(veneerInvoiceExportProjection, 'veneer_invoice_details'),
+  'created_user.user_name': 1,
+  'created_user.first_name': 1,
+  'created_user.last_name': 1,
+};
 
 const getVeneerListingFieldSource = (field = '') => {
   if (field.startsWith(VENEER_INVOICE_PREFIX)) {
@@ -184,42 +202,209 @@ const emptyVeneerListingResponse = (res) =>
     message: 'Data fetched successfully',
   });
 
-const getVeneerNestedValue = (source, path) =>
-  `${path || ''}`
-    .split('.')
-    .filter(Boolean)
-    .reduce((currentValue, key) => currentValue?.[key], source);
+const buildVeneerExportMatchQuery = async ({
+  search = '',
+  searchFields = {},
+  filter = {},
+  staticMatch = {},
+}) => {
+  const filterData = dynamic_filter(filter || {});
+  const { baseFilter, invoiceFilter, userFilter } =
+    splitVeneerListingFilter(filterData);
+  const searchFieldsBySource = splitVeneerListingSearchFields(searchFields);
+  const trimmedSearch = search?.trim();
 
-const normalizeVeneerSortValue = (value) => {
-  if (value instanceof Date) return value.getTime();
-  if (typeof value === 'string') {
-    const parsedDate = Date.parse(value);
-    if (!Number.isNaN(parsedDate)) return parsedDate;
-    return value.toUpperCase();
+  const matchQuery = {
+    ...baseFilter,
+    ...staticMatch,
+  };
+
+  const [filterInvoiceIds, filterUserIds] = await Promise.all([
+    distinctVeneerListingIds(veneer_inventory_invoice_model, invoiceFilter),
+    distinctVeneerListingIds(UserModel, userFilter),
+  ]);
+
+  if (filterInvoiceIds?.length === 0 || filterUserIds?.length === 0) {
+    return { noResults: true };
   }
-  if (value === undefined || value === null) return null;
-  return value;
+
+  const andConditions = [];
+  if (filterInvoiceIds) {
+    andConditions.push({ invoice_id: { $in: filterInvoiceIds } });
+  }
+  if (filterUserIds) {
+    andConditions.push({ created_by: { $in: filterUserIds } });
+  }
+
+  if (trimmedSearch) {
+    const baseSearchQuery = buildVeneerSearchQuery(
+      trimmedSearch,
+      searchFieldsBySource.base
+    );
+    const invoiceSearchQuery = buildVeneerSearchQuery(
+      trimmedSearch,
+      searchFieldsBySource.invoice
+    );
+    const userSearchQuery = buildVeneerSearchQuery(
+      trimmedSearch,
+      searchFieldsBySource.user
+    );
+
+    const [searchInvoiceIds, searchUserIds] = await Promise.all([
+      distinctVeneerListingIds(
+        veneer_inventory_invoice_model,
+        invoiceSearchQuery
+      ),
+      distinctVeneerListingIds(UserModel, userSearchQuery),
+    ]);
+
+    const searchConditions = [
+      ...(baseSearchQuery?.$or || []),
+      ...(searchInvoiceIds?.length
+        ? [{ invoice_id: { $in: searchInvoiceIds } }]
+        : []),
+      ...(searchUserIds?.length
+        ? [{ created_by: { $in: searchUserIds } }]
+        : []),
+    ];
+
+    if (searchConditions.length === 0) {
+      return { searchMiss: true };
+    }
+
+    matchQuery.$or = searchConditions;
+  }
+
+  if (andConditions.length > 0) {
+    matchQuery.$and = andConditions;
+  }
+
+  return { matchQuery };
 };
 
-const sortVeneerExportRows = (rows = [], sortBy = 'updatedAt', sort = 'desc') => {
+const hasVeneerExportRows = async (matchQuery) =>
+  Boolean(await veneer_inventory_items_model.exists(matchQuery));
+
+const createVeneerBaseExportCursor = (
+  matchQuery,
+  sortBy = 'updatedAt',
+  sort = 'desc'
+) => {
+  const sortFieldSource = getVeneerListingFieldSource(sortBy);
+  const sortField = sortFieldSource.field || sortFieldSource.responseField;
   const sortOrder = sort === 'desc' ? -1 : 1;
-  return [...rows].sort((firstRow, secondRow) => {
-    const firstValue = normalizeVeneerSortValue(
-      getVeneerNestedValue(firstRow, sortBy)
-    );
-    const secondValue = normalizeVeneerSortValue(
-      getVeneerNestedValue(secondRow, sortBy)
-    );
-    if (firstValue === secondValue) {
-      const firstId = `${firstRow?._id || ''}`;
-      const secondId = `${secondRow?._id || ''}`;
-      if (firstId === secondId) return 0;
-      return (firstId > secondId ? 1 : -1) * sortOrder;
+
+  return veneer_inventory_items_model
+    .find(matchQuery)
+    .sort({
+      [sortField || 'updatedAt']: sortOrder,
+      _id: sortOrder,
+    })
+    .select(veneerBaseExportProjection)
+    .lean()
+    .allowDiskUse(true)
+    .cursor({ batchSize: 2000 });
+};
+
+const hydrateVeneerExportBatch = async (batch = []) => {
+  if (batch.length === 0) return [];
+
+  const invoiceIds = [
+    ...new Set(
+      batch
+        .map((row) => row?.invoice_id)
+        .filter(Boolean)
+        .map((invoiceId) => `${invoiceId}`)
+    ),
+  ].map((invoiceId) => new mongoose.Types.ObjectId(invoiceId));
+
+  const invoices = invoiceIds.length
+    ? await veneer_inventory_invoice_model
+        .find({ _id: { $in: invoiceIds } })
+        .select(veneerInvoiceExportProjection)
+        .lean()
+    : [];
+
+  const invoiceById = new Map(
+    invoices.map((invoice) => [`${invoice?._id}`, invoice])
+  );
+
+  return batch.map((row) => ({
+    ...row,
+    veneer_invoice_details: invoiceById.get(`${row?.invoice_id}`) || null,
+  }));
+};
+
+async function* createVeneerHydratedExportStream(baseCursor, batchSize = 500) {
+  let batch = [];
+
+  try {
+    for await (const row of baseCursor) {
+      batch.push(row);
+      if (batch.length >= batchSize) {
+        const hydratedBatch = await hydrateVeneerExportBatch(batch);
+        for (const hydratedRow of hydratedBatch) {
+          yield hydratedRow;
+        }
+        batch = [];
+      }
     }
-    if (firstValue === null) return 1;
-    if (secondValue === null) return -1;
-    return firstValue > secondValue ? sortOrder : -sortOrder;
-  });
+
+    if (batch.length > 0) {
+      const hydratedBatch = await hydrateVeneerExportBatch(batch);
+      for (const hydratedRow of hydratedBatch) {
+        yield hydratedRow;
+      }
+    }
+  } finally {
+    if (typeof baseCursor?.close === 'function') {
+      await baseCursor.close();
+    }
+  }
+}
+
+const createVeneerFallbackExportCursor = (
+  matchQuery,
+  sortBy = 'updatedAt',
+  sort = 'desc'
+) => {
+  const sortField = getVeneerListingFieldSource(sortBy).responseField;
+  const sortOrder = sort === 'desc' ? -1 : 1;
+
+  return veneer_inventory_items_model
+    .aggregate([
+      {
+        $match: matchQuery,
+      },
+      ...veneerInventoryLookupStages,
+      {
+        $project: veneerAggregateExportProjection,
+      },
+      {
+        $sort: {
+          [sortField || 'updatedAt']: sortOrder,
+          _id: sortOrder,
+        },
+      },
+    ])
+    .allowDiskUse(true)
+    .cursor({ batchSize: 2000 });
+};
+
+const createVeneerExportRowSource = (
+  matchQuery,
+  sortBy = 'updatedAt',
+  sort = 'desc'
+) => {
+  const sortFieldSource = getVeneerListingFieldSource(sortBy);
+
+  if (sortFieldSource.source === 'base') {
+    return createVeneerHydratedExportStream(
+      createVeneerBaseExportCursor(matchQuery, sortBy, sort)
+    );
+  }
+
+  return createVeneerFallbackExportCursor(matchQuery, sortBy, sort);
 };
 
 /*
@@ -819,137 +1004,69 @@ export const veneer_item_listing_by_invoice = catchAsync(
 export const veneerLogsCsv = catchAsync(async (req, res) => {
   const { search = '', sortBy = 'updatedAt', sort = 'desc' } = req.query;
 
-  const {
-    string,
-    boolean,
-    numbers,
-    arrayField = [],
-  } = req?.body?.searchFields || {};
+  const exportContext = await buildVeneerExportMatchQuery({
+    search,
+    searchFields: req?.body?.searchFields,
+    filter: req?.body?.filter,
+    staticMatch: {
+      issue_status: null,
+    },
+  });
 
-  const filter = req.body?.filter;
-
-  // Build search query
-  let search_query = {};
-  if (search !== '' && req?.body?.searchFields) {
-    const search_data = DynamicSearch(
-      search,
-      boolean,
-      numbers,
-      string,
-      arrayField
-    );
-    if (search_data?.length === 0) {
-      return res.status(404).json({
-        statusCode: 404,
-        status: false,
-        data: { data: [] },
-        message: 'Results Not Found',
-      });
-    }
-    search_query = search_data;
+  if (exportContext.searchMiss) {
+    return res.status(404).json({
+      statusCode: 404,
+      status: false,
+      data: { data: [] },
+      message: 'Results Not Found',
+    });
   }
 
-  // Build filter query
-  const filterData = dynamic_filter(filter);
-
-  // Final MongoDB match query
-  const match_query = {
-    ...filterData,
-    ...search_query,
-    available_sheets: { $ne: 0 },
-  };
-
-  const allData = await veneer_inventory_items_model
-    .aggregate([
-      ...veneerInventoryLookupStages,
-      {
-        $match: match_query,
-      },
-    ])
-    .allowDiskUse(true);
-
-  if (allData.length === 0) {
+  if (exportContext.noResults || !(await hasVeneerExportRows(exportContext.matchQuery))) {
     return res
       .status(StatusCodes.NOT_FOUND)
       .json(new ApiResponse(StatusCodes.NOT_FOUND, 'NO Data found...'));
   }
 
-  const excelLink = await createVeneerLogsExcel(
-    sortVeneerExportRows(allData, sortBy, sort)
-  );
-  console.log('link => ', excelLink);
-
-  return res.json(
-    new ApiResponse(StatusCodes.OK, 'Csv downloaded successfully...', excelLink)
-  );
+  await streamVeneerLogsExcel({
+    res,
+    rowSource: createVeneerExportRowSource(exportContext.matchQuery, sortBy, sort),
+    fileNamePrefix: 'VENNER-Inventory-report',
+  });
 });
 
 export const veneerHistoryLogsCsv = catchAsync(async (req, res) => {
   const { search = '', sortBy = 'updatedAt', sort = 'desc' } = req.query;
 
-  const {
-    string,
-    boolean,
-    numbers,
-    arrayField = [],
-  } = req?.body?.searchFields || {};
+  const exportContext = await buildVeneerExportMatchQuery({
+    search,
+    searchFields: req?.body?.searchFields,
+    filter: req?.body?.filter,
+    staticMatch: {
+      issue_status: { $ne: null },
+    },
+  });
 
-  const filter = req.body?.filter;
-
-  // Build search query
-  let search_query = {};
-  if (search !== '' && req?.body?.searchFields) {
-    const search_data = DynamicSearch(
-      search,
-      boolean,
-      numbers,
-      string,
-      arrayField
-    );
-    if (search_data?.length === 0) {
-      return res.status(404).json({
-        statusCode: 404,
-        status: false,
-        data: { data: [] },
-        message: 'Results Not Found',
-      });
-    }
-    search_query = search_data;
+  if (exportContext.searchMiss) {
+    return res.status(404).json({
+      statusCode: 404,
+      status: false,
+      data: { data: [] },
+      message: 'Results Not Found',
+    });
   }
 
-  // Build filter query
-  const filterData = dynamic_filter(filter);
-
-  // Final MongoDB match query
-  const match_query = {
-    ...filterData,
-    ...search_query,
-    issue_status: { $ne: null },
-  };
-
-  const allData = await veneer_inventory_items_model
-    .aggregate([
-      ...veneerInventoryLookupStages,
-      {
-        $match: match_query,
-      },
-    ])
-    .allowDiskUse(true);
-
-  if (allData.length === 0) {
+  if (exportContext.noResults || !(await hasVeneerExportRows(exportContext.matchQuery))) {
     return res
       .status(StatusCodes.NOT_FOUND)
       .json(new ApiResponse(StatusCodes.NOT_FOUND, 'NO Data found...'));
   }
 
-  const excelLink = await createVeneerLogsExcel(
-    sortVeneerExportRows(allData, sortBy, sort)
-  );
-  console.log('link => ', excelLink);
-
-  return res.json(
-    new ApiResponse(StatusCodes.OK, 'Csv downloaded successfully...', excelLink)
-  );
+  await streamVeneerLogsExcel({
+    res,
+    rowSource: createVeneerExportRowSource(exportContext.matchQuery, sortBy, sort),
+    fileNamePrefix: 'VENNER-History-report',
+  });
 });
 // export const veneerHistoryLogsCsv = catchAsync(async (req, res) => {
 //   const {
