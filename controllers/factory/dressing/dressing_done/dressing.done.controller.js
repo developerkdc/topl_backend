@@ -90,6 +90,13 @@ const getDressingSummaryField = (field = '') => {
   return field;
 };
 
+const getDressingSummarySearchMapping = (field = '', fieldType = 'string') => {
+  return {
+    field: getDressingSummaryField(field),
+    fieldType,
+  };
+};
+
 const splitDressingListingFilterData = (filterData = {}) => {
   const summaryFilters = {};
   const joinedFilters = {};
@@ -139,13 +146,17 @@ const splitDressingListingSearchFields = (searchFields = {}) => {
     fields?.forEach((field) => {
       const joinedSource = getDressingJoinedListingSource(field);
       if (joinedSource) {
-        joinedSearchFields[joinedSource.key][fieldType].push(
+        const normalizedJoinedFieldType =
+          fieldType === 'arrayField' ? 'string' : fieldType;
+
+        joinedSearchFields[joinedSource.key][normalizedJoinedFieldType].push(
           field.slice(joinedSource.prefix.length)
         );
         return;
       }
 
-      summarySearchFields[fieldType].push(getDressingSummaryField(field));
+      const searchMapping = getDressingSummarySearchMapping(field, fieldType);
+      summarySearchFields[searchMapping.fieldType].push(searchMapping.field);
     });
   });
 
@@ -547,6 +558,14 @@ export const fetch_all_dressing_done_items = catchAsync(async (req, res) => {
   const aggSortBeforeGroup = {
     $sort: {
       updatedAt: -1,
+      _id: -1,
+    },
+  };
+
+  const aggReSortBeforeHydratedGroup = {
+    $sort: {
+      updatedAt: -1,
+      _id: -1,
     },
   };
 
@@ -556,11 +575,20 @@ export const fetch_all_dressing_done_items = catchAsync(async (req, res) => {
       item_name: {
         $first: '$item_name',
       },
+      item_name_values: {
+        $addToSet: '$item_name',
+      },
       item_sub_cat: {
         $first: '$item_sub_category_name',
       },
+      item_sub_cat_values: {
+        $addToSet: '$item_sub_category_name',
+      },
       log_no_code: {
         $first: '$log_no_code',
+      },
+      log_no_code_values: {
+        $addToSet: '$log_no_code',
       },
       dressing_done_other_details_id: {
         $first: '$dressing_done_other_details_id',
@@ -795,6 +823,7 @@ export const fetch_all_dressing_done_items = catchAsync(async (req, res) => {
         aggUpdatedUserDetails,
         aggUnwindCreatedUserDetails,
         aggUnwindUpdatedUserDetails,
+        aggReSortBeforeHydratedGroup,
         aggGroupBy,
       ])
       .allowDiskUse(true);
