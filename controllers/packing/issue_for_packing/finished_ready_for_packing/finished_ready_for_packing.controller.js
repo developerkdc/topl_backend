@@ -38,6 +38,8 @@ import {
 } from '../../../../database/schema/packing/packing_done/packing_done.schema.js';
 import moment from 'moment';
 import dispatchModel from '../../../../database/schema/dispatch/dispatch.schema.js';
+
+const PACKING_DISPLAY_DATE_FORMAT = 'DD/MM/YYYY';
 import dispatchItemsModel from '../../../../database/schema/dispatch/dispatch_items.schema.js';
 import { customer_model } from '../../../../database/schema/masters/customer.schema.js';
 const __filename = fileURLToPath(import.meta.url);
@@ -943,25 +945,29 @@ export const generatePackingInvoiceBillPDF = catchAsync(async (req, res) => {
   const formattedDispatch = {
     ...dispatch,
     invoice_date_time: dispatch.invoice_date_time
-      ? moment(dispatch.invoice_date_time).format('DD-MM-YYYY')
+      ? moment(dispatch.invoice_date_time).format(PACKING_DISPLAY_DATE_FORMAT)
       : '',
     removal_of_good_date_time: dispatch.removal_of_good_date_time
-      ? moment(dispatch.removal_of_good_date_time).format('DD-MM-YYYY')
+      ? moment(dispatch.removal_of_good_date_time).format(
+          PACKING_DISPLAY_DATE_FORMAT
+        )
       : '',
     trans_doc_date: dispatch.trans_doc_date
-      ? moment(dispatch.trans_doc_date).format('DD-MM-YYYY')
+      ? moment(dispatch.trans_doc_date).format(PACKING_DISPLAY_DATE_FORMAT)
       : '',
     eway_bill_date: dispatch.eway_bill_date
-      ? moment(dispatch.eway_bill_date).format('DD-MM-YYYY')
+      ? moment(dispatch.eway_bill_date).format(PACKING_DISPLAY_DATE_FORMAT)
       : '',
     acknowledgement_date: dispatch.acknowledgement_date
-      ? moment(dispatch.acknowledgement_date).format('DD-MM-YYYY')
+      ? moment(dispatch.acknowledgement_date).format(
+          PACKING_DISPLAY_DATE_FORMAT
+        )
       : '',
     createdAt: dispatch.createdAt
-      ? moment(dispatch.createdAt).format('DD-MM-YYYY')
+      ? moment(dispatch.createdAt).format(PACKING_DISPLAY_DATE_FORMAT)
       : '',
     updatedAt: dispatch.updatedAt
-      ? moment(dispatch.updatedAt).format('DD-MM-YYYY')
+      ? moment(dispatch.updatedAt).format(PACKING_DISPLAY_DATE_FORMAT)
       : '',
   };
 
@@ -975,7 +981,7 @@ export const generatePackingInvoiceBillPDF = catchAsync(async (req, res) => {
   const otherDetails = {
     ...packingEntry,
     packing_date: packingEntry.packing_date
-      ? moment(packingEntry.packing_date).format('DD-MM-YYYY')
+      ? moment(packingEntry.packing_date).format(PACKING_DISPLAY_DATE_FORMAT)
       : '',
   };
 
@@ -1095,10 +1101,10 @@ export const generatePackingEwayBillPDF = catchAsync(async (req, res) => {
 
   // Format dates
   const formattedPackingDate = packingDetails.packing_date
-    ? moment(packingDetails.packing_date).format('DD-MM-YYYY')
+    ? moment(packingDetails.packing_date).format(PACKING_DISPLAY_DATE_FORMAT)
     : '';
   const formattedEwayBillDate = dispatch.eway_bill_date
-    ? moment(dispatch.eway_bill_date).format('DD-MM-YYYY')
+    ? moment(dispatch.eway_bill_date).format(PACKING_DISPLAY_DATE_FORMAT)
     : '';
 
   // Calculate totals
