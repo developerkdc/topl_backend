@@ -28,6 +28,7 @@ import Handlebars from 'handlebars';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const PACKING_DISPLAY_DATE_FORMAT = 'DD/MM/YYYY';
 
 export const create_packing = catchAsync(async (req, res) => {
   const { other_details, packing_done_item_details } = req.body;
@@ -1022,7 +1023,7 @@ export const generatePackingSlip = catchAsync(async (req, res) => {
     .lean();
 
   const formattedPackingDate = otherDetails.packing_date
-    ? moment(otherDetails.packing_date).format('DD-MM-YYYY')
+    ? moment(otherDetails.packing_date).format(PACKING_DISPLAY_DATE_FORMAT)
     : '';
 
   const totalSheets = allItems.reduce(
@@ -1177,7 +1178,7 @@ export const generatePackingPrintPDF = catchAsync(async (req, res) => {
     .lean();
 
   const formattedPackingDate = otherDetails.packing_date
-    ? moment(otherDetails.packing_date).format('DD-MM-YYYY')
+    ? moment(otherDetails.packing_date).format(PACKING_DISPLAY_DATE_FORMAT)
     : '';
 
   const totalSheets = allItems.reduce(
