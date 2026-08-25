@@ -91,6 +91,27 @@ const getDressingSummaryField = (field = '') => {
 };
 
 const getDressingSummarySearchMapping = (field = '', fieldType = 'string') => {
+  if (field === 'item_name') {
+    return {
+      field: 'item_name_values',
+      fieldType: 'arrayField',
+    };
+  }
+
+  if (field === 'item_sub_cat') {
+    return {
+      field: 'item_sub_cat_values',
+      fieldType: 'arrayField',
+    };
+  }
+
+  if (field === 'log_no_code') {
+    return {
+      field: 'log_no_code_values',
+      fieldType: 'arrayField',
+    };
+  }
+
   return {
     field: getDressingSummaryField(field),
     fieldType,
