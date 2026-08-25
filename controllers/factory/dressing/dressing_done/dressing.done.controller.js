@@ -90,28 +90,9 @@ const getDressingSummaryField = (field = '') => {
   return field;
 };
 
+const isDressingRawItemSearchField = (field = '') => field === 'log_no_code';
+
 const getDressingSummarySearchMapping = (field = '', fieldType = 'string') => {
-  if (field === 'item_name') {
-    return {
-      field: 'item_name_values',
-      fieldType: 'arrayField',
-    };
-  }
-
-  if (field === 'item_sub_cat') {
-    return {
-      field: 'item_sub_cat_values',
-      fieldType: 'arrayField',
-    };
-  }
-
-  if (field === 'log_no_code') {
-    return {
-      field: 'log_no_code_values',
-      fieldType: 'arrayField',
-    };
-  }
-
   return {
     field: getDressingSummaryField(field),
     fieldType,
@@ -145,6 +126,7 @@ const splitDressingListingFilterData = (filterData = {}) => {
 
 const splitDressingListingSearchFields = (searchFields = {}) => {
   const summarySearchFields = createDressingListingSearchFields();
+  const rawItemSearchFields = createDressingListingSearchFields();
   const joinedSearchFields = {};
 
   DRESSING_JOINED_LISTING_CONFIGS.forEach((config) => {
@@ -176,6 +158,14 @@ const splitDressingListingSearchFields = (searchFields = {}) => {
         return;
       }
 
+      if (isDressingRawItemSearchField(field)) {
+        const normalizedRawFieldType =
+          fieldType === 'arrayField' ? 'string' : fieldType;
+
+        rawItemSearchFields[normalizedRawFieldType].push(field);
+        return;
+      }
+
       const searchMapping = getDressingSummarySearchMapping(field, fieldType);
       summarySearchFields[searchMapping.fieldType].push(searchMapping.field);
     });
@@ -183,6 +173,7 @@ const splitDressingListingSearchFields = (searchFields = {}) => {
 
   return {
     summarySearchFields,
+    rawItemSearchFields,
     joinedSearchFields,
   };
 };
@@ -488,7 +479,7 @@ export const fetch_all_dressing_done_items = catchAsync(async (req, res) => {
   const filterData = dynamic_filter(filter);
   const { summaryFilters, joinedFilters } =
     splitDressingListingFilterData(filterData);
-  const { summarySearchFields, joinedSearchFields } =
+  const { summarySearchFields, rawItemSearchFields, joinedSearchFields } =
     splitDressingListingSearchFields(req.body?.searchFields);
   const joinedFilterResults = await resolveDressingJoinedDistinctValues(
     joinedFilters
@@ -514,6 +505,10 @@ export const fetch_all_dressing_done_items = catchAsync(async (req, res) => {
       trimmedSearch,
       summarySearchFields
     );
+    const rawItemSearchQuery = buildDressingListingSearchQuery(
+      trimmedSearch,
+      rawItemSearchFields
+    );
     const joinedSearchQueries = {};
 
     DRESSING_JOINED_LISTING_CONFIGS.forEach((config) => {
@@ -526,9 +521,26 @@ export const fetch_all_dressing_done_items = catchAsync(async (req, res) => {
     const joinedSearchResults = await resolveDressingJoinedDistinctValues(
       joinedSearchQueries
     );
+    const rawItemSearchPalletNumbers = rawItemSearchQuery
+      ? (
+        await dressing_done_items_model.aggregate([
+          {
+            $match: rawItemSearchQuery,
+          },
+          {
+            $group: {
+              _id: '$pallet_number',
+            },
+          },
+        ])
+      ).map((item) => item?._id)
+      : [];
 
     searchConditions = [
       ...(summarySearchQuery?.$or || []),
+      ...(rawItemSearchPalletNumbers.length > 0
+        ? [{ _id: { $in: rawItemSearchPalletNumbers } }]
+        : []),
       ...joinedSearchResults
         .filter((result) => result.hasQuery && result.values?.length > 0)
         .map((result) => ({
