@@ -27,6 +27,30 @@ import {
 // import { createFactoryIssueForGroupingExcel } from '../../../../config/downloadExcel/Logs/Factory/Grouping/issuedForGrouping.js';
 import { createFactoryIssueForGroupingExcel } from '../../../config/downloadExcel/Logs/Factory/Grouping/issuedForGrouping.js';
 
+const groupDressingDoneItemsByOtherDetailsId = (items = []) => {
+  const groupedItems = new Map();
+
+  items.forEach((item) => {
+    const otherDetailsId = item?.dressing_done_other_details_id;
+    const key = otherDetailsId?.toString?.();
+
+    if (!key) {
+      return;
+    }
+
+    if (!groupedItems.has(key)) {
+      groupedItems.set(key, {
+        dressing_done_other_details_id: otherDetailsId,
+        bundles: [],
+      });
+    }
+
+    groupedItems.get(key).bundles.push(item);
+  });
+
+  return Array.from(groupedItems.values());
+};
+
 export const issue_for_grouping_from_veneer_inventory = catchAsync(
   async (req, res, next) => {
     const session = await mongoose.startSession();
@@ -443,7 +467,6 @@ export const issue_for_grouping_from_dressing_done = catchAsync(
       }
 
       const dressing_done_items_details = await dressing_done_items_model.find({
-        dressing_done_other_details_id: dressing_done_id,
         _id: { $in: dressing_done_items_ids },
         issue_status: null,
       });
@@ -458,6 +481,11 @@ export const issue_for_grouping_from_dressing_done = catchAsync(
         );
       }
 
+      const groupedDressingDoneItems =
+        groupDressingDoneItemsByOtherDetailsId(dressing_done_items_details);
+      const dressingDoneOtherDetailsIds = groupedDressingDoneItems.map(
+        (group) => group.dressing_done_other_details_id
+      );
       const unique_identifier = new mongoose.Types.ObjectId();
       const issue_for_grouping_details = dressing_done_items_details?.map(
         (e) => {
@@ -513,9 +541,9 @@ export const issue_for_grouping_from_dressing_done = catchAsync(
 
       // update dressing done editable status
       const update_dressing_done_editable =
-        await dressing_done_other_details_model.updateOne(
+        await dressing_done_other_details_model.updateMany(
           {
-            _id: dressing_done_id,
+            _id: { $in: dressingDoneOtherDetailsIds },
           },
           {
             $set: {
@@ -550,7 +578,6 @@ export const issue_for_grouping_from_dressing_done = catchAsync(
         await dressing_done_items_model.updateMany(
           {
             _id: { $in: dressing_done_items_id_from_issue_for_grouping },
-            dressing_done_other_details_id: dressing_done_id,
           },
           {
             $set: {
@@ -579,20 +606,24 @@ export const issue_for_grouping_from_dressing_done = catchAsync(
       }
 
       // add to dressing done history
-      const dressing_done_history = await dressing_done_history_model.create(
-        [
-          {
-            dressing_done_other_details_id: dressing_done_id,
-            bundles: dressing_done_items_id_from_issue_for_grouping,
-            issued_date: issued_date,
-            created_by: userDetails?._id,
-            updated_by: userDetails?._id,
-          },
-        ],
+      const dressingDoneHistoryPayload = groupedDressingDoneItems.map(
+        (group) => ({
+          dressing_done_other_details_id: group.dressing_done_other_details_id,
+          bundles: group.bundles.map((bundle) => bundle._id),
+          issued_date: issued_date,
+          created_by: userDetails?._id,
+          updated_by: userDetails?._id,
+        })
+      );
+      const dressing_done_history = await dressing_done_history_model.insertMany(
+        dressingDoneHistoryPayload,
         { session }
       );
 
-      if (!dressing_done_history?.[0]) {
+      if (
+        !dressing_done_history?.length ||
+        dressing_done_history.length !== dressingDoneHistoryPayload.length
+      ) {
         throw new ApiError(
           'Failed to add dressing done history',
           StatusCodes.NOT_FOUND
@@ -756,6 +787,12 @@ export const revert_issue_for_grouping = catchAsync(async (req, res, next) => {
       const dressing_done_items_ids = issue_for_grouping?.bundles_details?.map(
         (e) => e.dressing_done_item_id
       );
+      const dressingDoneHistoryGroups = groupDressingDoneItemsByOtherDetailsId(
+        issue_for_grouping?.bundles_details?.map((bundle) => ({
+          _id: bundle?.dressing_done_item_id,
+          dressing_done_other_details_id: bundle?.dressing_done_id,
+        }))
+      );
 
       // update dressing done item issue status to null
       const update_dressing_done_items =
@@ -791,18 +828,36 @@ export const revert_issue_for_grouping = catchAsync(async (req, res, next) => {
       }
 
       // delete from dressing done history
-      const delete_dressing_done_history =
-        await dressing_done_history_model.deleteMany(
-          {
-            dressing_done_other_details_id: { $in: dressing_done_id },
-            bundles: { $all: dressing_done_items_ids },
-          },
-          { session }
-        );
+      let deletedDressingDoneHistoryCount = 0;
+
+      for (const historyGroup of dressingDoneHistoryGroups) {
+        const delete_dressing_done_history =
+          await dressing_done_history_model.deleteMany(
+            {
+              dressing_done_other_details_id:
+                historyGroup.dressing_done_other_details_id,
+              bundles: {
+                $all: historyGroup.bundles.map((bundle) => bundle._id),
+                $size: historyGroup.bundles.length,
+              },
+            },
+            { session }
+          );
+
+        if (!delete_dressing_done_history?.acknowledged) {
+          throw new ApiError(
+            'Failed to delete dressing done history',
+            StatusCodes.NOT_FOUND
+          );
+        }
+
+        deletedDressingDoneHistoryCount +=
+          delete_dressing_done_history.deletedCount || 0;
+      }
 
       if (
-        !delete_dressing_done_history?.acknowledged ||
-        delete_dressing_done_history?.deletedCount <= 0
+        dressingDoneHistoryGroups.length > 0 &&
+        deletedDressingDoneHistoryCount !== dressingDoneHistoryGroups.length
       ) {
         throw new ApiError(
           'Failed to delete dressing done history',
@@ -811,18 +866,29 @@ export const revert_issue_for_grouping = catchAsync(async (req, res, next) => {
       }
 
       // Check is dressing done is editable
-      const is_dressing_done_editable = await dressing_done_items_model
-        .find({
-          _id: { $nin: dressing_done_items_ids },
-          dressing_done_other_details_id: { $in: dressing_done_id },
-          issue_status: { $ne: null },
-        })
-        .session(session);
+      const editableDressingDoneIds = [];
 
-      if (is_dressing_done_editable && is_dressing_done_editable?.length <= 0) {
+      for (const historyGroup of dressingDoneHistoryGroups) {
+        const is_dressing_done_editable = await dressing_done_items_model
+          .findOne({
+            _id: { $nin: historyGroup.bundles.map((bundle) => bundle._id) },
+            dressing_done_other_details_id:
+              historyGroup.dressing_done_other_details_id,
+            issue_status: { $ne: null },
+          })
+          .session(session);
+
+        if (!is_dressing_done_editable) {
+          editableDressingDoneIds.push(
+            historyGroup.dressing_done_other_details_id
+          );
+        }
+      }
+
+      if (editableDressingDoneIds.length > 0) {
         const update_dressing_done_editable =
-          await dressing_done_other_details_model.updateOne(
-            { _id: { $in: dressing_done_id } },
+          await dressing_done_other_details_model.updateMany(
+            { _id: { $in: editableDressingDoneIds } },
             {
               $set: {
                 isEditable: true,
