@@ -49,13 +49,307 @@ import { decorative_order_item_details_model } from '../../../../database/schema
 import UserModel from '../../../../database/schema/user.schema.js';
 import { runOptimizedPaginatedListing } from '../../../../utils/pagination/runOptimizedPaginatedListing.js';
 
+const restore_pressing_consumed_sources = async ({
+  pressing_id,
+  consumed_details,
+  session,
+}) => {
+  const { group_details = [], base_details = [], face_details = [] } =
+    consumed_details || {};
+
+  for (const group of group_details) {
+    await issues_for_pressing_model.updateOne(
+      { _id: group.issue_for_pressing_id },
+      {
+        $inc: {
+          'available_details.no_of_sheets': Number(group.no_of_sheets || 0),
+          'available_details.sqm': Number(group.sqm || 0),
+          'available_details.amount': Number(group.amount || 0),
+        },
+      },
+      { session }
+    );
+  }
+
+  for (const base of base_details) {
+    const quantity = {
+      sheets: Number(base.no_of_sheets || 0),
+      rolls: Number(base.number_of_roll || 0),
+      sqm: Number(base.sqm || 0),
+      amount: Number(base.amount || 0),
+    };
+
+    if (
+      base.base_type === base_type_constants.plywood &&
+      base.consumed_from === consumed_from_constants.inventory
+    ) {
+      const item = await plywood_inventory_items_details
+        .findById(base.consumed_from_item_id)
+        .session(session);
+      if (!item) throw new ApiError('Plywood inventory item not found.', StatusCodes.BAD_REQUEST);
+
+      await plywood_inventory_items_details.updateOne(
+        { _id: base.consumed_from_item_id },
+        {
+          $inc: {
+            available_sheets: quantity.sheets,
+            available_sqm: quantity.sqm,
+            available_amount: quantity.amount,
+          },
+        },
+        { session }
+      );
+      await plywood_inventory_invoice_details.updateOne(
+        { _id: item.invoice_id },
+        { $set: { isEditable: true } },
+        { session }
+      );
+      await plywood_history_model.deleteOne(
+        { plywood_item_id: base.consumed_from_item_id, pressing_done_id: pressing_id },
+        { session }
+      );
+    } else if (
+      base.base_type === base_type_constants.plywood &&
+      base.consumed_from === consumed_from_constants.resizing
+    ) {
+      await plywood_resizing_done_details_model.updateOne(
+        { _id: base.consumed_from_item_id },
+        {
+          $inc: {
+            'available_details.no_of_sheets': quantity.sheets,
+            'available_details.sqm': quantity.sqm,
+            'available_details.amount': quantity.amount,
+          },
+          $set: { isEditable: true },
+        },
+        { session }
+      );
+      await plywood_resizing_history_model.deleteOne(
+        { plywood_resizing_done_id: base.consumed_from_item_id, issued_for_id: pressing_id },
+        { session }
+      );
+    } else if (
+      base.base_type === base_type_constants.plywood &&
+      base.consumed_from === consumed_from_constants.production
+    ) {
+      await plywood_production_model.updateOne(
+        { _id: base.consumed_from_item_id },
+        {
+          $inc: {
+            available_no_of_sheets: quantity.sheets,
+            available_total_sqm: quantity.sqm,
+            available_amount: quantity.amount,
+          },
+          $set: { isEditable: true },
+        },
+        { session }
+      );
+      await plywood_production_history_model.deleteOne(
+        { plywood_production_done_id: base.consumed_from_item_id, issued_for_id: pressing_id },
+        { session }
+      );
+    } else if (
+      base.base_type === base_type_constants.mdf &&
+      base.consumed_from === consumed_from_constants.inventory
+    ) {
+      const item = await mdf_inventory_items_details
+        .findById(base.consumed_from_item_id)
+        .session(session);
+      if (!item) throw new ApiError('MDF inventory item not found.', StatusCodes.BAD_REQUEST);
+
+      await mdf_inventory_items_details.updateOne(
+        { _id: base.consumed_from_item_id },
+        {
+          $inc: {
+            available_sheets: quantity.sheets,
+            available_sqm: quantity.sqm,
+            available_amount: quantity.amount,
+          },
+        },
+        { session }
+      );
+      await mdf_inventory_invoice_details.updateOne(
+        { _id: item.invoice_id },
+        { $set: { isEditable: true } },
+        { session }
+      );
+      await mdf_history_model.deleteOne(
+        { mdf_item_id: base.consumed_from_item_id, pressing_done_id: pressing_id },
+        { session }
+      );
+    } else if (base.base_type === base_type_constants.fleece_paper) {
+      const item = await fleece_inventory_items_modal
+        .findById(base.consumed_from_item_id)
+        .session(session);
+      if (!item) throw new ApiError('Fleece paper inventory item not found.', StatusCodes.BAD_REQUEST);
+
+      await fleece_inventory_items_modal.updateOne(
+        { _id: base.consumed_from_item_id },
+        {
+          $inc: {
+            available_number_of_roll: quantity.rolls,
+            available_sqm: quantity.sqm,
+            available_amount: quantity.amount,
+          },
+        },
+        { session }
+      );
+      await fleece_inventory_invoice_modal.updateOne(
+        { _id: item.invoice_id },
+        { $set: { isEditable: true } },
+        { session }
+      );
+      await fleece_history_model.deleteOne(
+        { fleece_item_id: base.consumed_from_item_id, pressing_done_id: pressing_id },
+        { session }
+      );
+    }
+  }
+
+  for (const face of face_details || []) {
+    if (face.consumed_from !== consumed_from_constants.inventory) continue;
+
+    const item = await face_inventory_items_details
+      .findById(face.consumed_from_item_id)
+      .session(session);
+    if (!item) throw new ApiError('Face inventory item not found.', StatusCodes.BAD_REQUEST);
+
+    await face_inventory_items_details.updateOne(
+      { _id: face.consumed_from_item_id },
+      {
+        $inc: {
+          available_sheets: Number(face.no_of_sheets || 0),
+          available_sqm: Number(face.sqm || 0),
+          available_amount: Number(face.amount || 0),
+        },
+      },
+      { session }
+    );
+    await face_inventory_invoice_details.updateOne(
+      { _id: item.invoice_id },
+      { $set: { isEditable: true } },
+      { session }
+    );
+    await face_history_model.deleteOne(
+      { face_item_id: face.consumed_from_item_id, pressing_done_id: pressing_id },
+      { session }
+    );
+  }
+};
+
+const normalize_consumed_detail_value = (value) => {
+  if (value === null || value === undefined || value === '') return '';
+
+  if (typeof value === 'object') {
+    return String(
+      value?._id ??
+        value?.inward_sr_no ??
+        value?.item_sr_no ??
+        JSON.stringify(value)
+    );
+  }
+
+  return String(value);
+};
+
+const consumed_detail_rows_match = (currentRows = [], previousRows = [], keys = []) => {
+  if (currentRows.length !== previousRows.length) return false;
+
+  return previousRows.every((previousRow, index) => {
+    const currentRow = currentRows[index];
+    return keys.every(
+      (key) =>
+        normalize_consumed_detail_value(currentRow?.[key]) ===
+        normalize_consumed_detail_value(previousRow?.[key])
+    );
+  });
+};
+
+const consumed_detail_rows_are_prefix = (
+  currentRows = [],
+  previousRows = [],
+  keys = []
+) => {
+  if (currentRows.length < previousRows.length) return false;
+
+  return previousRows.every((previousRow, index) => {
+    const currentRow = currentRows[index];
+    return keys.every(
+      (key) =>
+        normalize_consumed_detail_value(currentRow?.[key]) ===
+        normalize_consumed_detail_value(previousRow?.[key])
+    );
+  });
+};
+
+const group_detail_match_keys = [
+  'issue_for_pressing_id',
+  'group_no_id',
+  'group_no',
+  'no_of_sheets',
+  'sqm',
+  'amount',
+];
+
+const base_detail_match_keys = [
+  'base_type',
+  'consumed_from',
+  'consumed_from_item_id',
+  'item_name_id',
+  'item_sub_category_id',
+  'pallet_no',
+  'inward_sr_no',
+  'item_sr_no',
+  'no_of_sheets',
+  'number_of_roll',
+  'sqm',
+  'amount',
+];
+
+const face_detail_match_keys = [
+  'consumed_from',
+  'consumed_from_item_id',
+  'inward_sr_no',
+  'item_sr_no',
+  'no_of_sheets',
+  'sqm',
+  'amount',
+];
+
 // Add pressing Api
-export const add_pressing_details = catchAsync(async (req, res, next) => {
+const save_pressing_details = async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
     const userDetails = req.userDetails;
     const { pressing_details, consume_items_details } = req.body;
+    const editPressingDoneId = req.body?.edit_pressing_done_id;
+    let existingPressingDetails = null;
+    let existingConsumedDetails = null;
+
+    if (editPressingDoneId) {
+      if (!isValidObjectId(editPressingDoneId)) {
+        throw new ApiError('Invalid pressing done ID.', StatusCodes.BAD_REQUEST);
+      }
+
+      existingPressingDetails = await pressing_done_details_model
+        .findById(editPressingDoneId)
+        .session(session);
+      if (!existingPressingDetails) {
+        throw new ApiError('Pressing Done Details Not Found.', StatusCodes.NOT_FOUND);
+      }
+      existingConsumedDetails = await pressing_done_consumed_items_details_model
+        .findOne({ pressing_done_details_id: editPressingDoneId })
+        .session(session)
+        .lean();
+      if (!existingConsumedDetails) {
+        throw new ApiError(
+          'Pressing Done Consumed Items Details Not Found.',
+          StatusCodes.NOT_FOUND
+        );
+      }
+
+    }
 
     for (let i of ['pressing_details', 'consume_items_details']) {
       if (!req.body?.[i]) {
@@ -123,19 +417,77 @@ export const add_pressing_details = catchAsync(async (req, res, next) => {
       }
     }
 
+    const appendOnlyEdit = Boolean(
+      editPressingDoneId &&
+        existingConsumedDetails &&
+        consumed_detail_rows_match(
+          group_details,
+          existingConsumedDetails.group_details || [],
+          group_detail_match_keys
+        ) &&
+        consumed_detail_rows_match(
+          face_details || [],
+          existingConsumedDetails.face_details || [],
+          face_detail_match_keys
+        ) &&
+        consumed_detail_rows_are_prefix(
+          base_details,
+          existingConsumedDetails.base_details || [],
+          base_detail_match_keys
+        )
+    );
+
+    if (editPressingDoneId) {
+      // For append-only edits, the existing sources are still consumed and
+      // must not be restored/re-consumed. Only the newly appended base rows
+      // will be processed below.
+      if (!appendOnlyEdit) {
+        await restore_pressing_consumed_sources({
+          pressing_id: editPressingDoneId,
+          consumed_details: existingConsumedDetails,
+          session,
+        });
+      }
+
+      await pressing_done_consumed_items_details_model.deleteOne(
+        { pressing_done_details_id: editPressingDoneId },
+        { session }
+      );
+    }
+
+    const groupDetailsToProcess = appendOnlyEdit ? [] : group_details;
+    const baseDetailsToProcess = appendOnlyEdit
+      ? base_details.slice((existingConsumedDetails?.base_details || []).length)
+      : base_details;
+    const faceDetailsToProcess = appendOnlyEdit ? [] : face_details || [];
+
     // Adding pressing details in db with session
     const pressing_details_data = {
       ...pressing_details,
-      created_by: userDetails?._id,
+      created_by: existingPressingDetails?.created_by || userDetails?._id,
       updated_by: userDetails?._id,
+      ...(editPressingDoneId
+        ? {
+            available_details: {
+              no_of_sheets: Number(pressing_details?.no_of_sheets || 0),
+              sqm: Number(pressing_details?.sqm || 0),
+              amount: Number(pressing_details?.amount || 0),
+            },
+          }
+        : {}),
     };
 
-    const add_pressing_details_data = await pressing_done_details_model.create(
-      [pressing_details_data],
-      { session }
-    );
-
-    const added_pressing_details = add_pressing_details_data?.[0];
+    const added_pressing_details = editPressingDoneId
+      ? await pressing_done_details_model.findOneAndUpdate(
+          { _id: editPressingDoneId },
+          { $set: pressing_details_data },
+          { new: true, runValidators: true, session }
+        )
+      : (
+          await pressing_done_details_model.create([pressing_details_data], {
+            session,
+          })
+        )?.[0];
 
     console.log('added_pressing_details_data', added_pressing_details);
 
@@ -150,16 +502,22 @@ export const add_pressing_details = catchAsync(async (req, res, next) => {
     //initializing the object to be inserted in pressing_done_consumed_item_details collection
     var pressingDoneConsumedItemsDetailsObject = {
       pressing_done_details_id: added_pressing_details?._id,
-      group_details: [],
-      base_details: [],
-      face_details: null,
+      group_details: appendOnlyEdit
+        ? existingConsumedDetails.group_details || []
+        : [],
+      base_details: appendOnlyEdit
+        ? existingConsumedDetails.base_details || []
+        : [],
+      face_details: appendOnlyEdit
+        ? existingConsumedDetails.face_details || null
+        : null,
       created_by: userDetails?._id,
       updated_by: userDetails?._id,
     };
 
     // ================ grouping details handling ========================
 
-    for (const group of group_details) {
+    for (const group of groupDetailsToProcess) {
       const { issue_for_pressing_id, no_of_sheets, sqm, amount, group_no } =
         group;
 
@@ -199,7 +557,7 @@ export const add_pressing_details = catchAsync(async (req, res, next) => {
 
     // ================ Base details handling ========================
 
-    for (const base of base_details) {
+    for (const base of baseDetailsToProcess) {
       const { base_type, consumed_from, consumed_from_item_id } = base;
 
       for (let i of ['base_type', 'consumed_from', 'consumed_from_item_id']) {
@@ -495,6 +853,8 @@ export const add_pressing_details = catchAsync(async (req, res, next) => {
             issued_sheets: no_of_sheets,
             issued_sqm: sqm,
             issued_amount: amount,
+            plywood_production_date:
+              plywoodProductionItem?.plywood_production_date,
             remark: plywoodProductionItem?.remarks,
             created_by: userDetails?._id,
             updated_by: userDetails?._id,
@@ -761,8 +1121,8 @@ export const add_pressing_details = catchAsync(async (req, res, next) => {
     }
 
     // ================ Face details handling ========================
-    if (face_details && Array.isArray(face_details)) {
-      for (const face of face_details) {
+    if (faceDetailsToProcess && Array.isArray(faceDetailsToProcess)) {
+      for (const face of faceDetailsToProcess) {
         for (let i of [
           'inward_sr_no',
           'item_sr_no',
@@ -921,7 +1281,9 @@ export const add_pressing_details = catchAsync(async (req, res, next) => {
 
     const response = new ApiResponse(
       StatusCodes.CREATED,
-      'Pressing created successfully.'
+      editPressingDoneId
+        ? 'Pressing updated successfully.'
+        : 'Pressing created successfully.'
     );
 
     return res.status(StatusCodes.CREATED).json(response);
@@ -931,6 +1293,13 @@ export const add_pressing_details = catchAsync(async (req, res, next) => {
   } finally {
     await session.endSession();
   }
+};
+
+export const add_pressing_details = catchAsync(save_pressing_details);
+
+export const edit_pressing_details = catchAsync(async (req, res, next) => {
+  req.body.edit_pressing_done_id = req.params.id;
+  return save_pressing_details(req, res, next);
 });
 
 export const fetch_all_pressing_done_items = catchAsync(
@@ -1237,6 +1606,135 @@ export const fetch_all_pressing_done_items = catchAsync(
       }
     );
     return res.status(StatusCodes.OK).json(response);
+  }
+);
+
+export const fetch_single_pressing_done_details = catchAsync(
+  async (req, res) => {
+    const { id } = req.params;
+    if (!id || !isValidObjectId(id)) {
+      throw new ApiError('Invalid pressing done ID.', StatusCodes.BAD_REQUEST);
+    }
+
+    const pressing_details = await pressing_done_details_model
+      .findById(id)
+      .lean();
+    if (!pressing_details) {
+      throw new ApiError('Pressing Done Details Not Found.', StatusCodes.NOT_FOUND);
+    }
+
+    const consume_items_details = await pressing_done_consumed_items_details_model
+      .findOne({ pressing_done_details_id: id })
+      .lean();
+    if (!consume_items_details) {
+      throw new ApiError(
+        'Pressing Done Consumed Items Details Not Found.',
+        StatusCodes.NOT_FOUND
+      );
+    }
+
+    const group_details = await Promise.all(
+      (consume_items_details.group_details || []).map(async (group) => {
+        const [issueForPressing, groupingDetails] = await Promise.all([
+          issues_for_pressing_model
+            .findById(group.issue_for_pressing_id)
+            .select('available_details')
+            .lean(),
+          grouping_done_items_details_model
+            .findOne({ group_no: group.group_no })
+            .select('photo_no')
+            .lean(),
+        ]);
+
+        return {
+          ...group,
+          photo_no: group.photo_no || groupingDetails?.photo_no || '',
+          available_amount: issueForPressing?.available_details?.amount,
+          available_sheets: issueForPressing?.available_details?.no_of_sheets,
+          available_sqm: issueForPressing?.available_details?.sqm,
+        };
+      })
+    );
+
+    const base_details = await Promise.all(
+      (consume_items_details.base_details || []).map(async (base) => {
+        let available_details = {};
+
+        if (
+          base.base_type === base_type_constants.plywood &&
+          base.consumed_from === consumed_from_constants.inventory
+        ) {
+          const item = await plywood_inventory_items_details
+            .findById(base.consumed_from_item_id)
+            .select('available_sheets available_sqm available_amount')
+            .lean();
+          available_details = {
+            available_sheets: item?.available_sheets,
+            available_sqm: item?.available_sqm,
+            available_amount: item?.available_amount,
+          };
+        } else if (
+          base.base_type === base_type_constants.plywood &&
+          base.consumed_from === consumed_from_constants.resizing
+        ) {
+          const item = await plywood_resizing_done_details_model
+            .findById(base.consumed_from_item_id)
+            .select('available_details')
+            .lean();
+          available_details = {
+            available_sheets: item?.available_details?.no_of_sheets,
+            available_sqm: item?.available_details?.sqm,
+            available_amount: item?.available_details?.amount,
+          };
+        } else if (
+          base.base_type === base_type_constants.plywood &&
+          base.consumed_from === consumed_from_constants.production
+        ) {
+          const item = await plywood_production_model
+            .findById(base.consumed_from_item_id)
+            .select('available_no_of_sheets available_total_sqm available_amount')
+            .lean();
+          available_details = {
+            available_sheets: item?.available_no_of_sheets,
+            available_sqm: item?.available_total_sqm,
+            available_amount: item?.available_amount,
+          };
+        } else if (base.base_type === base_type_constants.mdf) {
+          const item = await mdf_inventory_items_details
+            .findById(base.consumed_from_item_id)
+            .select('available_sheets available_sqm available_amount')
+            .lean();
+          available_details = {
+            available_sheets: item?.available_sheets,
+            available_sqm: item?.available_sqm,
+            available_amount: item?.available_amount,
+          };
+        } else if (base.base_type === base_type_constants.fleece_paper) {
+          const item = await fleece_inventory_items_modal
+            .findById(base.consumed_from_item_id)
+            .select('available_number_of_roll available_sqm available_amount')
+            .lean();
+          available_details = {
+            available_sheets: item?.available_number_of_roll,
+            available_sqm: item?.available_sqm,
+            available_amount: item?.available_amount,
+          };
+        }
+
+        return { ...base, ...available_details };
+      })
+    );
+
+    return res.status(StatusCodes.OK).json(
+      new ApiResponse(StatusCodes.OK, 'Details fetched successfully', {
+        pressing_details,
+        consume_items_details: {
+          ...consume_items_details,
+          group_details,
+          base_details,
+        },
+      })
+    );
   }
 );
 
