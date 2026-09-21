@@ -4307,6 +4307,10 @@ export const fetch_purchase_history = catchAsync(async (req, res) => {
     }
   }
 
+  if (customerId && !mongoose.isValidObjectId(customerId)) {
+    throw new ApiError('Invalid customer ID', StatusCodes.BAD_REQUEST);
+  }
+
   const match_query = {
     invoice_date_time: {
       $gte: new Date(fromDate),
@@ -4379,15 +4383,134 @@ export const fetch_purchase_history = catchAsync(async (req, res) => {
     {
       $project: {
         _id: 0,
-        InvoiceId: '$invoice_no',
+        InvoiceNo: '$invoice_no',
+        InvoiceId: { $toString: '$_id' },
         OrdrNo: '$dispatch_items_details.order_no',
-        InvoiceDate: '$invoice_date_time',
-        SalesItemName: '$dispatch_items_details.product_name',
+        InvoiceDate: {
+          $dateToString: {
+            format: '%d-%m-%Y',
+            date: '$invoice_date_time',
+          },
+        },
+        SalesItemName: {
+          $cond: {
+            if: { $isArray: '$dispatch_items_details.sales_item_name' },
+            then: {
+              $map: {
+                input: '$dispatch_items_details.sales_item_name',
+                as: 'item',
+                in: {
+                  $cond: {
+                    if: { $eq: [{ $type: '$$item' }, 'object'] },
+                    then: {
+                      itemId: {
+                        $toString: {
+                          $ifNull: [
+                            '$$item.item_id',
+                            {
+                              $ifNull: [
+                                '$dispatch_items_details.item_id',
+                                {
+                                  $ifNull: [
+                                    '$dispatch_items_details.order_item_id',
+                                    {
+                                      $ifNull: [
+                                        '$dispatch_items_details.packing_done_item_id',
+                                        '$dispatch_items_details._id',
+                                      ],
+                                    },
+                                  ],
+                                },
+                              ],
+                            },
+                          ],
+                        },
+                      },
+                      itemName: {
+                        $ifNull: ['$$item.item_name', '$$item.sales_item_name'],
+                      },
+                      salesItemName: '$$item.sales_item_name',
+                      productCategory: '$$item.product_category',
+                    },
+                    else: {
+                      itemId: {
+                        $toString: {
+                          $ifNull: [
+                            '$dispatch_items_details.item_id',
+                            {
+                              $ifNull: [
+                                '$dispatch_items_details.order_item_id',
+                                {
+                                  $ifNull: [
+                                    '$dispatch_items_details.packing_done_item_id',
+                                    '$dispatch_items_details._id',
+                                  ],
+                                },
+                              ],
+                            },
+                          ],
+                        },
+                      },
+                      itemName: '$$item',
+                      salesItemName: '$$item',
+                      productCategory: '$dispatch_items_details.product_category',
+                    },
+                  },
+                },
+              },
+            },
+            else: [
+              {
+                itemId: {
+                  $toString: {
+                    $ifNull: [
+                      '$dispatch_items_details.item_id',
+                      {
+                        $ifNull: [
+                          '$dispatch_items_details.order_item_id',
+                          {
+                            $ifNull: [
+                              '$dispatch_items_details.packing_done_item_id',
+                              '$dispatch_items_details._id',
+                            ],
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                },
+                itemName: {
+                  $ifNull: [
+                    '$dispatch_items_details.sales_item_name',
+                    {
+                      $ifNull: [
+                        '$dispatch_items_details.product_name',
+                        '$dispatch_items_details.item_name',
+                      ],
+                    },
+                  ],
+                },
+                salesItemName: {
+                  $ifNull: [
+                    '$dispatch_items_details.sales_item_name',
+                    {
+                      $ifNull: [
+                        '$dispatch_items_details.product_name',
+                        '$dispatch_items_details.item_name',
+                      ],
+                    },
+                  ],
+                },
+                productCategory: '$dispatch_items_details.product_category',
+              },
+            ],
+          },
+        },
         PhotoNumber: '$grouping_done_item_details.photo_no',
         Length: '$dispatch_items_details.length',
         Width: '$dispatch_items_details.width',
         NoOfSheets: '$dispatch_items_details.no_of_sheets',
-        SQMtr: '$dispatch_items_details.sqm',
+        Sqmtr: '$dispatch_items_details.sqm',
         Rate: '$dispatch_items_details.rate',
         Amount: '$dispatch_items_details.amount',
       },
@@ -4413,6 +4536,10 @@ export const fetch_invoices = catchAsync(async (req, res) => {
     if (!req.body[field]) {
       throw new ApiError(`${field} is required`, StatusCodes.BAD_REQUEST);
     }
+  }
+
+  if (customerId && !mongoose.isValidObjectId(customerId)) {
+    throw new ApiError('Invalid customer ID', StatusCodes.BAD_REQUEST);
   }
 
   const match_query = {
@@ -4478,9 +4605,14 @@ export const fetch_invoices = catchAsync(async (req, res) => {
     {
       $project: {
         _id: 0,
-        CustomerId: '$customer_details.sr_no',
+        CustomerId: { $toString: '$customer_id' },
         InvoiceNo: '$invoice_no',
-        InvoiceDate: '$invoice_date_time',
+        InvoiceDate: {
+          $dateToString: {
+            format: '%d-%m-%Y',
+            date: '$invoice_date_time',
+          },
+        },
         TotalQuantity: {
           $arrayElemAt: ['$dispatch_items_details.total_quantity', 0],
         },
@@ -4490,6 +4622,7 @@ export const fetch_invoices = catchAsync(async (req, res) => {
             2,
           ],
         },
+        InvoiceId: { $toString: '$_id' },
       },
     },
   ];
@@ -4510,35 +4643,25 @@ export const fetch_packing_details_by_customer_id = catchAsync(
     } = req.body;
 
     for (let field of ['fromDate', 'toDate', 'maximumRows']) {
-      if (!req.body[field]) {
+      if (req.body[field] === undefined || req.body[field] === null || req.body[field] === '') {
         throw new ApiError(`${field} is required`, StatusCodes.BAD_REQUEST);
       }
     }
 
+    if (customerId && !mongoose.isValidObjectId(customerId)) {
+      throw new ApiError('Invalid customer ID', StatusCodes.BAD_REQUEST);
+    }
+
+    const toDateEnd = new Date(toDate);
+    toDateEnd.setHours(23, 59, 59, 999);
+
     const match_query = {
       invoice_date_time: {
         $gte: new Date(fromDate),
-        $lte: new Date(toDate),
+        $lte: toDateEnd,
       },
       ...(customerId && {
         customer_id: mongoose.Types.ObjectId.createFromHexString(customerId),
-      }),
-      ...(strSearch && {
-        $or: [
-          { invoice_no: { $regex: strSearch, $options: 'i' } },
-          {
-            'customer_details.company_name': {
-              $regex: strSearch,
-              $options: 'i',
-            },
-          },
-          {
-            'customer_details.owner_name': { $regex: strSearch, $options: 'i' },
-          },
-          {
-            'packing_details.packing_id': { $regex: strSearch, $options: 'i' },
-          },
-        ],
       }),
     };
 
@@ -4562,6 +4685,7 @@ export const fetch_packing_details_by_customer_id = catchAsync(
           pipeline: [
             {
               $project: {
+                _id: 1,
                 packing_id: 1,
                 packing_date: 1,
               },
@@ -4576,29 +4700,79 @@ export const fetch_packing_details_by_customer_id = catchAsync(
           preserveNullAndEmptyArrays: true,
         },
       },
+      ...(strSearch
+        ? [
+            {
+              $match: {
+                $or: [
+                  { invoice_no: { $regex: strSearch, $options: 'i' } },
+                  {
+                    'customer_details.company_name': {
+                      $regex: strSearch,
+                      $options: 'i',
+                    },
+                  },
+                  {
+                    'customer_details.owner_name': {
+                      $regex: strSearch,
+                      $options: 'i',
+                    },
+                  },
+                  {
+                    'packing_details.packing_id': {
+                      $regex: strSearch,
+                      $options: 'i',
+                    },
+                  },
+                ],
+              },
+            },
+          ]
+        : []),
       {
         $sort: {
           updatedAt: -1,
         },
       },
       {
-        $skip: parseInt(startRowIndex),
+        $skip: Math.max(0, parseInt(startRowIndex) || 0),
       },
 
       {
-        $limit: parseInt(maximumRows),
+        $limit: Math.max(1, parseInt(maximumRows) || 100),
       },
 
       {
         $project: {
           _id: 0,
-          CustomerId: '$customer_details.sr_no',
-          InvoiceId: '$invoice_no',
-          InvoiceDate: '$invoice_date_time',
-          PackingId: '$packing_details.packing_id',
-          PackingDate: '$packing_details.packing_date',
-          CreatedOn: '$createdAt',
-          ModifiedOn: '$updatedAt',
+          CustomerId: { $toString: '$customer_id' },
+          InvoiceNo: '$invoice_no',
+          InvoiceId: { $toString: '$_id' },
+          InvoiceDate: {
+            $dateToString: {
+              format: '%d-%m-%Y',
+              date: '$invoice_date_time',
+            },
+          },
+          PackingId: { $toString: '$packing_details._id' },
+          PackingDate: {
+            $dateToString: {
+              format: '%d-%m-%Y',
+              date: '$packing_details.packing_date',
+            },
+          },
+          CreatedOn: {
+            $dateToString: {
+              format: '%d-%m-%Y',
+              date: '$createdAt',
+            },
+          },
+          ModifiedOn: {
+            $dateToString: {
+              format: '%d-%m-%Y',
+              date: '$updatedAt',
+            },
+          },
         },
       },
     ];
