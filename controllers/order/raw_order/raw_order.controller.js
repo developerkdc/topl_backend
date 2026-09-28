@@ -13,6 +13,12 @@ import {
 } from '../../../database/Utils/constants/constants.js';
 import { orders_approval_model } from '../../../database/schema/order/orders.approval.schema.js';
 import { approval_raw_order_item_details } from '../../../database/schema/order/raw_order/approval_raw_order_item_details.schema.js';
+import {
+  PROCESS_ISSUE_COLLECTIONS,
+  findProcessLockedItemIds,
+  getProcessLockedItemError,
+  hasProcessLockedItemChanged,
+} from '../../../utils/orderItemProcessLock.js';
 
 export const add_raw_order = catchAsync(async (req, res, next) => {
   const { order_details, item_details } = req.body;
@@ -130,6 +136,33 @@ export const update_raw_order = catchAsync(async (req, res) => {
     const order_details_result = await OrderModel.findOne({ _id: order_details_id });
     if (!order_details_result) {
       throw new ApiError('Order details not found', StatusCodes.NOT_FOUND);
+    }
+
+    const existingOrderItems = await RawOrderItemDetailsModel.find(
+      { order_id: order_details_id },
+      null,
+      { session }
+    );
+    const processLockedItemIds = await findProcessLockedItemIds(
+      existingOrderItems.map((item) => item._id),
+      session
+    );
+    const incomingItemsById = new Map(
+      item_details
+        .filter((item) => item?._id)
+        .map((item) => [String(item._id), item])
+    );
+
+    for (const existingItem of existingOrderItems) {
+      if (!processLockedItemIds.has(String(existingItem._id))) continue;
+
+      const incomingItem = incomingItemsById.get(String(existingItem._id));
+      if (!incomingItem || hasProcessLockedItemChanged(existingItem, incomingItem)) {
+        throw new ApiError(
+          getProcessLockedItemError(existingItem),
+          StatusCodes.BAD_REQUEST
+        );
+      }
     }
 
     if (!send_for_approval) {
@@ -652,6 +685,35 @@ export const fetch_all_raw_order_items_by_order_id = catchAsync(
           foreignField: 'order_id',
           localField: '_id',
           as: 'order_items_details',
+          pipeline: [
+            ...PROCESS_ISSUE_COLLECTIONS.map((collectionName, index) => ({
+              $lookup: {
+                from: collectionName,
+                localField: '_id',
+                foreignField: 'order_item_id',
+                as: `process_issue_records_${index}`,
+              },
+            })),
+            {
+              $addFields: {
+                is_issued: {
+                  $or: PROCESS_ISSUE_COLLECTIONS.map((_, index) => ({
+                    $gt: [{ $size: `$process_issue_records_${index}` }, 0],
+                  })),
+                },
+              },
+            },
+            {
+              $project: {
+                ...Object.fromEntries(
+                  PROCESS_ISSUE_COLLECTIONS.map((_, index) => [
+                    `process_issue_records_${index}`,
+                    0,
+                  ])
+                ),
+              },
+            },
+          ],
         },
       },
       {

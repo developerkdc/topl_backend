@@ -20,6 +20,11 @@ import { orders_approval_model } from '../../../database/schema/order/orders.app
 import approval_series_product_order_item_details_model from '../../../database/schema/order/series_product_order/approval.series_product_order_item_details.schema.js';
 import dispatchItemsModel from '../../../database/schema/dispatch/dispatch_items.schema.js';
 import { pressing_done_details_model } from '../../../database/schema/factory/pressing/pressing_done/pressing_done.schema.js';
+import {
+  PROCESS_ISSUE_COLLECTIONS,
+  findProcessLockedItemIds,
+  getProcessLockedItemError,
+} from '../../../utils/orderItemProcessLock.js';
 
 export const add_series_order = catchAsync(async (req, res) => {
   const session = await mongoose.startSession();
@@ -178,13 +183,29 @@ export const update_series_order = catchAsync(async (req, res) => {
     const userDetails = req.userDetails;
     const send_for_approval = req.sendForApproval;
     const BASE_LOCKED_FIELDS = ['base_type', 'base_sub_category_id', 'base_sub_category_name', 'base_min_thickness'];
-    const INVOICE_LOCKED_FIELDS = ['process_flow', 'sales_item_name', 'rate_per_sq_feet'];
+    const INVOICE_LOCKED_FIELDS = ['flow_process', 'sales_item_name', 'rate_per_sq_feet', 'alternate_sales_item_name'];
+    const ALL_LOCKABLE_FIELDS = [
+      'photo_number', 'additional_photo_number', 'group_number', 'item_sub_category_name', 'previous_rate', 'veneer_min_thickness',
+      'item_name', 'length', 'width', 'thickness', 'no_of_sheets', 'sqm', 'polish_type', 'color_code', 'product_code',
+      'pressing_instructions', 'different_group_photo_number', 'different_group_group_number', 'base_required_sheet',
+      'different_thickness', 'remark', 'amount', 'dispatch_schedule', 'product_code', 'base_size', 'base_type'
+    ];
+    const ORDER_LOCKED_FIELDS = [
+      'orderDate',
+      'customer_id',
+      'order_type',
+      'common_instructions',
+      'series_product',
+    ];
     const hasFieldChanged = (existing, incoming, field) => {
       const a = existing?.[field];
       const b = incoming?.[field];
       return JSON.stringify(a ?? null) !== JSON.stringify(b ?? null);
     };
     const assertFieldsEditable = async (existingItem, incomingItem, session) => {
+      const changedAllLockableFields = ALL_LOCKABLE_FIELDS.filter((f) =>
+        hasFieldChanged(existingItem, incomingItem, f)
+      );
       const changedBaseFields = BASE_LOCKED_FIELDS.filter((f) =>
         hasFieldChanged(existingItem, incomingItem, f)
       );
@@ -192,11 +213,18 @@ export const update_series_order = catchAsync(async (req, res) => {
         hasFieldChanged(existingItem, incomingItem, f)
       );
 
-      if (changedBaseFields.length === 0 && changedInvoiceFields.length === 0) {
+      if (
+        changedAllLockableFields.length === 0 &&
+        changedBaseFields.length === 0 &&
+        changedInvoiceFields.length === 0
+      ) {
         return;
       }
 
-      const [pressingRecord, dispatchRecord] = await Promise.all([
+      const [processLockedItemIds, pressingRecord, dispatchRecord] = await Promise.all([
+        changedAllLockableFields.length
+          ? findProcessLockedItemIds([existingItem._id], session)
+          : new Set(),
         changedBaseFields.length
           ? pressing_done_details_model.findOne(
             { order_item_id: existingItem._id },
@@ -212,6 +240,13 @@ export const update_series_order = catchAsync(async (req, res) => {
           )
           : null,
       ]);
+
+      if (changedAllLockableFields.length && processLockedItemIds.has(String(existingItem._id))) {
+        throw new ApiError(
+          getProcessLockedItemError(existingItem),
+          StatusCodes.BAD_REQUEST
+        );
+      }
 
       if (changedBaseFields.length && pressingRecord) {
         throw new ApiError(
@@ -246,6 +281,28 @@ export const update_series_order = catchAsync(async (req, res) => {
     }
 
     if (!send_for_approval) {
+      const existingOrderItemsForLock =
+        await series_product_order_item_details_model.find(
+          { order_id: order_details_id },
+          { _id: 1 },
+          { session }
+        );
+      const orderProcessLockedItemIds = await findProcessLockedItemIds(
+        existingOrderItemsForLock.map((item) => item._id),
+        session
+      );
+      const changedOrderFields = ORDER_LOCKED_FIELDS.filter(
+        (field) =>
+          Object.prototype.hasOwnProperty.call(order_details, field) &&
+          hasFieldChanged(order_details_result, order_details, field)
+      );
+      if (orderProcessLockedItemIds.size && changedOrderFields.length) {
+        throw new ApiError(
+          `Cannot edit ${changedOrderFields.join(', ')} because an order item has already been issued for processing.`,
+          StatusCodes.BAD_REQUEST
+        );
+      }
+
       const order_details_result = await OrderModel.findOneAndUpdate(
         { _id: order_details_id },
         {
@@ -271,18 +328,34 @@ export const update_series_order = catchAsync(async (req, res) => {
       const order_items_details =
         await series_product_order_item_details_model?.find(
           { order_id: order_details_result?._id },
-          {
-            _id: 1, photo_number_id: 1, photo_number: 1, no_of_sheets: 1,
-            pressing_instructions: 1, base_type: 1, base_sub_category_id: 1,
-            base_sub_category_name: 1, base_min_thickness: 1,
-            flow_process: 1, sales_item_name: 1, rate_per_sq_feet: 1,
-          },
+          null,
           { session }
         );
 
       const existingItemsMap = new Map(
         order_items_details.map((item) => [String(item._id), item])
       );
+      const processLockedItemIds = await findProcessLockedItemIds(
+        order_items_details.map((item) => item._id),
+        session
+      );
+      const incomingItemsById = new Map(
+        item_details
+          .filter((item) => item?._id)
+          .map((item) => [String(item._id), item])
+      );
+
+      for (const existingItem of order_items_details) {
+        if (!processLockedItemIds.has(String(existingItem._id))) continue;
+
+        const incomingItem = incomingItemsById.get(String(existingItem._id));
+        if (!incomingItem) {
+          throw new ApiError(
+            getProcessLockedItemError(existingItem),
+            StatusCodes.BAD_REQUEST
+          );
+        }
+      }
 
       //revert photo sheets
       for (const item of order_items_details) {
@@ -845,16 +918,39 @@ export const fetch_all_series_order_items_by_order_id = catchAsync(
                 as: 'dispatch_records',
               },
             },
+            ...PROCESS_ISSUE_COLLECTIONS.map((collectionName, index) => ({
+              $lookup: {
+                from: collectionName,
+                localField: '_id',
+                foreignField: 'order_item_id',
+                as: `process_issue_records_${index}`,
+              },
+            })),
             {
               $addFields: {
                 is_pressed: { $gt: [{ $size: '$pressing_records' }, 0] },
                 is_dispatched: { $gt: [{ $size: '$dispatch_records' }, 0] },
+                is_issued: {
+                  $or: [
+                    { $gt: [{ $size: '$pressing_records' }, 0] },
+                    { $gt: [{ $size: '$dispatch_records' }, 0] },
+                    ...PROCESS_ISSUE_COLLECTIONS.map((_, index) => ({
+                      $gt: [{ $size: `$process_issue_records_${index}` }, 0],
+                    })),
+                  ],
+                },
               },
             },
             {
               $project: {
                 pressing_records: 0,
                 dispatch_records: 0,
+                ...Object.fromEntries(
+                  PROCESS_ISSUE_COLLECTIONS.map((_, index) => [
+                    `process_issue_records_${index}`,
+                    0,
+                  ])
+                ),
               },
             },
           ],
@@ -918,9 +1014,9 @@ export const fetch_all_series_order_items_by_order_id = catchAsync(
       result[0].order_items_details = result[0].order_items_details.map((item) => ({
         ...item,
         locked_fields: [
-          ...ALL_LOCKABLE_FIELDS,
-          ...(item.is_pressed ? [] : BASE_LOCKED_FIELDS),
-          ...(item.is_dispatched ? [] : INVOICE_LOCKED_FIELDS),
+          ...(item.is_issued ? ALL_LOCKABLE_FIELDS : []),
+          ...(item.is_pressed ? BASE_LOCKED_FIELDS : []),
+          ...(item.is_dispatched ? INVOICE_LOCKED_FIELDS : []),
         ],
       }));
     }

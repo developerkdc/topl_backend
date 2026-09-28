@@ -697,7 +697,7 @@ export const fetch_single_customer_by_id = catchAsync(async (req, res, next) => 
   // };
 
   const updated_payload = {
-    bi_CustomerId: customerData?.sr_no ?? null,
+    bi_CustomerId: customerData?._id ? String(customerData._id) : null,
     vc_CustomerName: customerData?.company_name ?? null,
     d_BirthDate: customerData?.dob ?? null,
     vc_OwnerName: customerData?.owner_name ?? null,

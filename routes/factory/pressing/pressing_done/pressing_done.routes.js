@@ -5,7 +5,9 @@ import {
   add_to_damage_from_pressing_done,
   fetch_all_pressing_done_items,
   fetch_all_pressing_done_items_history,
+  fetch_single_pressing_done_details,
   fetch_pressing_done_consumed_item_details,
+  edit_pressing_details,
   fetch_reserved_orders_for_item,
   revert_pressing_done_details,
 } from '../../../../controllers/factory/pressing/pressing_done/pressing_done.controller.js';
@@ -18,21 +20,21 @@ pressing_done_router.post(
   AuthMiddleware,
   add_pressing_details
 );
-// pressing_done_router.patch(
-//   '/edit-tapping-done/:tapping_done_id',
-//   AuthMiddleware,
-//   edit_tapping_details
-// );
+pressing_done_router.patch(
+  '/edit-pressing-done/:id',
+  AuthMiddleware,
+  edit_pressing_details
+);
 pressing_done_router.post(
   '/list-pressing-done-items',
   AuthMiddleware,
   fetch_all_pressing_done_items
 );
-// pressing_done_router.get(
-//   '/fetch-single-pressing-done-details/:id',
-//   AuthMiddleware,
-//   fetch_all_details_by_tapping_id
-// );
+pressing_done_router.get(
+  '/fetch-single-pressing-done-details/:id',
+  AuthMiddleware,
+  fetch_single_pressing_done_details
+);
 pressing_done_router.get(
   '/fetch-pressing-done-consumed-item-details/:id',
   AuthMiddleware,

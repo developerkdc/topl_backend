@@ -16,7 +16,7 @@ customerRouter.post('/add-customer', AuthMiddleware, addCustomer);
 customerRouter.patch('/update-customer/:id', AuthMiddleware, editCustomer);
 
 customerRouter.get('/single-customer/:id', AuthMiddleware, fetchSingleCustomer);
-customerRouter.post('/list-customer', AuthMiddleware, fetchCustomerList);
+customerRouter.post('/list-customer',AuthMiddleware, fetchCustomerList);
 
 customerRouter.get('/dropdown-customer', AuthMiddleware, dropdownCustomer);
 
@@ -25,5 +25,6 @@ customerRouter.get('/verify-customer-gstin', AuthMiddleware, EInvoiceAuthMiddlew
 
 //mobile API's
 customerRouter.post('/fetch-single-customer-by-id', fetch_single_customer_by_id);
+customerRouter.post('/all-customers', fetchCustomerList);
 
 export default customerRouter;
