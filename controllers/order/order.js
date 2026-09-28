@@ -308,9 +308,14 @@ export const fetch_decorative_and_series_product_order_items = catchAsync(
       throw new ApiError('Order Type is required', StatusCodes.BAD_REQUEST);
     }
     const models_map = {
+      raw: 'raw_order_item_details',
       decorative: 'decorative_order_item_details',
       series: 'series_product_order_item_details',
+      series_product: 'series_product_order_item_details',
     };
+
+    const selectedOrderType = orderType ? String(orderType).toLowerCase() : 'decorative';
+    const targetCollection = models_map[selectedOrderType] || 'decorative_order_item_details';
 
     const pipeline = [
       {
@@ -331,7 +336,7 @@ export const fetch_decorative_and_series_product_order_items = catchAsync(
       },
       {
         $lookup: {
-          from: models_map[orderType],
+          from: targetCollection,
           localField: '_id',
           foreignField: 'order_id',
           as: 'order_item_details',
@@ -394,11 +399,21 @@ export const fetch_decorative_and_series_product_order_items = catchAsync(
           _id: 0,
           OrderNo: '$order_no',
           SODetId: '$order_item_details.item_no',
-          Date: '$orderDate',
+          Date: {
+            $dateToString: {
+              format: '%d-%m-%Y',
+              date: '$orderDate',
+              // timezone: 'Asia/Kolkata',
+            },
+          },
           Priority: {
             $ifNull: ['$order_item_details.dispatch_schedule', null],
           },
-          CustomerId: '$customer_details.sr_no',
+          CustomerId: {
+            $toString: {
+              $ifNull: ['$customer_id', '$customer_details._id'],
+            },
+          },
           CustomerName: '$customer_details.company_name',
           Product: '$order_category',
           CurrentStage: {
@@ -426,8 +441,20 @@ export const fetch_decorative_and_series_product_order_items = catchAsync(
           DeliveryDate: null,
           Remark: '$order_remarks',
           PlywoodSubType: '$order_item_details.base_type',
-          CreatedOn: '$createdAt',
-          ModifiedOn: '$updatedAt',
+          CreatedOn: {
+            $dateToString: {
+              format: '%d-%m-%Y',
+              date: '$createdAt',
+              // timezone: 'Asia/Kolkata',
+            },
+          },
+          ModifiedOn:  {
+            $dateToString: {
+              format: '%d-%m-%Y',
+              date: '$updatedAt',
+              // timezone: 'Asia/Kolkata',
+            },
+          },
           OrderStatus: '$order_status',
           PalletNo: null,
         },
