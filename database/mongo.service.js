@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import getConfigs from '../config/config.js';
 import { veneer_inventory_items_model } from './schema/inventory/venner/venner.schema.js';
+import { customer_model } from './schema/masters/customer.schema.js';
 
 const Configs = getConfigs();
 let isConnected = false;
@@ -12,6 +13,23 @@ const matchesIndexKey = (currentKey = {}, expectedKey = {}) => {
     currentEntries.length === expectedEntries.length &&
     expectedEntries.every(([field, direction]) => currentKey[field] === direction)
   );
+};
+
+const dropCustomerGstNumberUniqueIndex = async () => {
+  try {
+    const collection = customer_model.collection;
+    const existingIndexes = await collection.indexes();
+    const legacyIndex = existingIndexes.find(
+      (index) => index?.unique && matchesIndexKey(index?.key, { gst_number: 1 })
+    );
+
+    if (legacyIndex) {
+      await collection.dropIndex(legacyIndex.name);
+      console.log(`Dropped customer gst_number unique index: ${legacyIndex.name}`);
+    }
+  } catch (error) {
+    console.log(`Failed to drop customer gst_number unique index: ${error.message}`);
+  }
 };
 
 const syncVeneerInventoryCombinationIndex = async () => {
@@ -87,6 +105,7 @@ let connect = () => {
         `Connected to the MongoDB Database ${Configs?.server?.name} ${Configs?.server?.version}`
       );
       await syncVeneerInventoryCombinationIndex();
+      await dropCustomerGstNumberUniqueIndex();
       // const serverstatus = await db.db.admin().command({ serverstatus: 1 })
       // console.log(serverstatus.connections)
     });
