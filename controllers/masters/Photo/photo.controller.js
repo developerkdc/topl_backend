@@ -722,8 +722,8 @@ export const fetchPhotoAlbumList = catchAsync(async (req, res, next) => {
   };
 
   const aggSort = { $sort: { [sortBy]: sort === 'desc' ? -1 : 1 } };
-  // const aggSkip = { $skip: (page - 1) * limit };
-  // const aggLimit = { $limit: limit };
+  const aggSkip = { $skip: (page - 1) * limit };
+  const aggLimit = { $limit: limit };
 
   const pipeline = [
     aggMatch,
@@ -731,7 +731,7 @@ export const fetchPhotoAlbumList = catchAsync(async (req, res, next) => {
     aggUpdatedByLookup,
     {
       $facet: {
-        data: [aggSort],
+        data: [aggSort, aggSkip, aggLimit],
         totalCount: [{ $count: 'count' }],
       },
     },
@@ -746,6 +746,7 @@ export const fetchPhotoAlbumList = catchAsync(async (req, res, next) => {
     new ApiResponse(200, 'Photo Data Fetched Successfully', {
       data: photoData,
       totalPages,
+      totalCount,
     })
   );
 });
