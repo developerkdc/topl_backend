@@ -28,8 +28,13 @@ const EInvoiceAuthMiddleware = async (req, res, next) => {
         error_message: data.status_desc,
         message: 'E-Invoice Authentication Failed',
       });
-    } else if (data.status_cd == 'Sucess') {
+    // } else if (data.status_cd == 'Sucess') {
+    //   req.eInvoiceAuthToken = data?.data?.AuthToken;
+    //   console.log("EInvoiceAuthMiddleware PASSED");
+    //   next();
+    } else if (data.status_cd == '1') {
       req.eInvoiceAuthToken = data?.data?.AuthToken;
+      // console.log("EInvoiceAuthMiddleware PASSED");
       next();
     }
   } catch (error) {
