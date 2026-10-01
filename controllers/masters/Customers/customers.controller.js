@@ -14,6 +14,38 @@ import { EInvoiceHeaderVariable } from '../../../middlewares/eInvoiceAuth.middle
 import { CustomerJSONtoXML } from '../../../utils/tally-utils/TallyLedgerCreation.js';
 import { sendToTally } from '../../../utils/tally-utils/TallyService.js';
 import { XMLParser } from 'fast-xml-parser';
+import { customer_supplier_type } from '../../../database/Utils/constants/constants.js';
+
+const URP_DUPLICATE_ALLOWED_SUPPLIER_TYPES = [
+  customer_supplier_type.b2c,
+  customer_supplier_type.expwp,
+  customer_supplier_type.expwop,
+];
+
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const isUrpGstDuplicateAllowed = (gstNumber, supplierType) => {
+  const gst = String(gstNumber ?? '').trim().toUpperCase();
+  const supplier = String(supplierType ?? '').trim().toUpperCase();
+  return gst === 'URP' && URP_DUPLICATE_ALLOWED_SUPPLIER_TYPES.includes(supplier);
+};
+
+const findDuplicateCustomerGst = async (gstNumber, excludeId = null, session = null) => {
+  const gst = String(gstNumber ?? '').trim();
+  if (!gst) return null;
+
+  const query = {
+    gst_number: { $regex: `^${escapeRegex(gst)}$`, $options: 'i' },
+  };
+
+  if (excludeId && mongoose.isValidObjectId(excludeId)) {
+    query._id = { $ne: excludeId };
+  }
+
+  const finder = customer_model.findOne(query).select('_id');
+  if (session) finder.session(session);
+  return finder;
+};
 
 export const addCustomer = catchAsync(async (req, res, next) => {
   const session = await mongoose.startSession();
@@ -41,6 +73,18 @@ export const addCustomer = catchAsync(async (req, res, next) => {
     ]);
 
     const maxSrNo = maxNumber?.length > 0 ? maxNumber?.[0]?.max + 1 : 1;
+
+    if (!isUrpGstDuplicateAllowed(customer?.gst_number, customer?.supplier_type)) {
+      const duplicateGst = await findDuplicateCustomerGst(
+        customer?.gst_number,
+        null,
+        session
+      );
+      if (duplicateGst) {
+        await session.abortTransaction();
+        return next(new ApiError('Gst Number already exists.', 400));
+      }
+    }
 
     const customerData = {
       ...customer,
@@ -157,6 +201,13 @@ export const editCustomer = catchAsync(async (req, res, next) => {
     local_freight: customer?.local_freight,
     tally_name: customer?.tally_name,
   };
+
+  if (!isUrpGstDuplicateAllowed(customer?.gst_number, customer?.supplier_type)) {
+    const duplicateGst = await findDuplicateCustomerGst(customer?.gst_number, id);
+    if (duplicateGst) {
+      return next(new ApiError('Gst Number already exists.', 400));
+    }
+  }
 
   const updateCustomerData = await customer_model.updateOne(
     { _id: id },
@@ -530,6 +581,10 @@ export const dropdownCustomer = catchAsync(async (req, res, next) => {
 export const verify_customer_gstin = catchAsync(async (req, res, next) => {
   const { param1 } = req.query;
   const authToken = req.eInvoiceAuthToken;
+
+  console.log("param1: ", param1);
+  console.log("authToken: ", authToken);
+  console.log("EInvoiceHeaderVariable: ", EInvoiceHeaderVariable);
 
   const irnResponse = await axios.get(
     `${process.env.E_INVOICE_BASE_URL}/einvoice/type/GSTNDETAILS/version/V1_03?email=${process.env.E_INVOICE_EMAIL_ID}&param1=${param1}`,

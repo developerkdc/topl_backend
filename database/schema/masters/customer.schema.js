@@ -306,7 +306,6 @@ const customerSchema = new mongoose.Schema(
 );
 
 customerSchema.index({ company_name: 1 }, { unique: true });
-customerSchema.index({ gst_number: 1 }, { unique: true });
 customerSchema.index({ pan_number: 1 }, { unique: true });
 customerSchema.index({ sr_no: 1 }, { unique: true });
 customerSchema.index({ created_by: 1 });

@@ -611,7 +611,7 @@ export const dropdownPhoto = catchAsync(async (req, res, next) => {
     match_query.sub_category_type = sub_category.hybrid;
   }
 
-  if (isAvailable === "true") {
+  if (isAvailable === 'true') {
     match_query.available_no_of_sheets = { $gt: 0 };
   }
 
@@ -638,20 +638,15 @@ export const dropdownPhoto = catchAsync(async (req, res, next) => {
   return res.status(200).json(response);
 });
 
-export const fetchPhotoAlbumList = catchAsync(async (req, res, next) => {
-  const { sortBy = 'updatedAt', sort = 'desc', search = '' } = req.query;
-
+const buildPhotoAlbumMatchQuery = (req) => {
+  const { search = '' } = req.query;
   const {
     string,
     boolean,
     numbers,
     arrayField = [],
   } = req?.body?.searchFields || {};
-
   const filter = req.body?.filter;
-
-  const page = Math.max(1, parseInt(req.query.page) || 1);
-  const limit = Math.max(1, parseInt(req.query.limit) || 10);
 
   let search_query = {};
 
@@ -664,21 +659,17 @@ export const fetchPhotoAlbumList = catchAsync(async (req, res, next) => {
       arrayField
     );
     if (search_data?.length === 0) {
-      return res.status(404).json({
-        statusCode: 404,
-        status: false,
-        data: { data: [] },
-        message: 'Results Not Found',
-      });
+      return { notFound: true, match_query: null };
     }
     search_query = search_data;
   }
 
   const filterData = dynamic_filter(filter);
-  const match_query = { ...filterData, ...search_query };
+  return { notFound: false, match_query: { ...filterData, ...search_query } };
+};
 
-  const aggMatch = { $match: match_query };
-  const aggCreatedByLookup = {
+const photoAlbumUserLookups = [
+  {
     $lookup: {
       from: 'users',
       localField: 'created_by',
@@ -698,8 +689,8 @@ export const fetchPhotoAlbumList = catchAsync(async (req, res, next) => {
       ],
       as: 'created_by',
     },
-  };
-  const aggUpdatedByLookup = {
+  },
+  {
     $lookup: {
       from: 'users',
       localField: 'updated_by',
@@ -719,16 +710,53 @@ export const fetchPhotoAlbumList = catchAsync(async (req, res, next) => {
       ],
       as: 'updated_by',
     },
-  };
+  },
+];
 
+const fetchPhotoAlbumMatchingRecords = async (req, excludedPhotoIds = []) => {
+  const { match_query, notFound } = buildPhotoAlbumMatchQuery(req);
+  if (notFound) return [];
+
+  const pipeline = [{ $match: match_query }, ...photoAlbumUserLookups];
+
+  const excluded = (excludedPhotoIds || []).filter(Boolean);
+  if (excluded.length) {
+    pipeline.push({
+      $match: {
+        _id: {
+          $nin: excluded.map((id) => new mongoose.Types.ObjectId(String(id))),
+        },
+      },
+    });
+  }
+
+  return photoModel.aggregate(pipeline);
+};
+
+export const fetchPhotoAlbumList = catchAsync(async (req, res, next) => {
+  const { sortBy = 'updatedAt', sort = 'desc' } = req.query;
+
+  const page = Math.max(1, parseInt(req.query.page) || 1);
+  const limit = Math.max(1, parseInt(req.query.limit) || 10);
+
+  const { match_query, notFound } = buildPhotoAlbumMatchQuery(req);
+  if (notFound) {
+    return res.status(404).json({
+      statusCode: 404,
+      status: false,
+      data: { data: [] },
+      message: 'Results Not Found',
+    });
+  }
+
+  const aggMatch = { $match: match_query };
   const aggSort = { $sort: { [sortBy]: sort === 'desc' ? -1 : 1 } };
   const aggSkip = { $skip: (page - 1) * limit };
   const aggLimit = { $limit: limit };
 
   const pipeline = [
     aggMatch,
-    aggCreatedByLookup,
-    aggUpdatedByLookup,
+    ...photoAlbumUserLookups,
     {
       $facet: {
         data: [aggSort, aggSkip, aggLimit],
@@ -752,16 +780,25 @@ export const fetchPhotoAlbumList = catchAsync(async (req, res, next) => {
 });
 
 export const downloadPhotoAlbumZip = catchAsync(async (req, res, next) => {
-  const { selectedPhotos = [] } = req.body;
+  const {
+    selectedPhotos = [],
+    selectAllMatching = false,
+    excludedPhotos = [],
+  } = req.body;
 
-  if (!Array.isArray(selectedPhotos) || selectedPhotos.length === 0) {
-    return res.status(400).json({
-      status: false,
-      message: 'No photos selected',
-    });
+  let photos;
+
+  if (selectAllMatching) {
+    photos = await fetchPhotoAlbumMatchingRecords(req, excludedPhotos);
+  } else {
+    if (!Array.isArray(selectedPhotos) || selectedPhotos.length === 0) {
+      return res.status(400).json({
+        status: false,
+        message: 'No photos selected',
+      });
+    }
+    photos = await photoModel.find({ _id: { $in: selectedPhotos } });
   }
-
-  const photos = await photoModel.find({ _id: { $in: selectedPhotos } });
 
   if (!photos || photos.length === 0) {
     return res.status(404).json({
@@ -965,13 +1002,13 @@ export const fetch_available_photo_quantity = catchAsync(async (req, res) => {
 
 export const handle_photo_master_streams = async () => {
   try {
-    const photo_master_stream = photoModel.watch([], { fullDocument: 'updateLookup' });
+    const photo_master_stream = photoModel.watch([], {
+      fullDocument: 'updateLookup',
+    });
 
     photo_master_stream.on('change', async (operation) => {
-      if (
-        ['insert', 'update'].includes(operation?.operationType)
-      ) {
-        console.log("operation => ", operation)
+      if (['insert', 'update'].includes(operation?.operationType)) {
+        console.log('operation => ', operation);
         const record = operation?.fullDocument;
 
         const updated_payload = {
@@ -988,7 +1025,9 @@ export const handle_photo_master_streams = async () => {
           SalesItemName: record?.sales_item_name,
           NewSalesItemname: record?.sales_item_name, //for now adding same field
           Processes: record?.process_name,
-          ValueAddedProcess: record?.value_added_process?.map((i) => i?.process_name).join(', '),
+          ValueAddedProcess: record?.value_added_process
+            ?.map((i) => i?.process_name)
+            .join(', '),
           Placements: record?.placement,
           VeneerThickness: record?.thickness,
           Characters: record?.character_name,
@@ -1002,9 +1041,9 @@ export const handle_photo_master_streams = async () => {
           DyedColour: record?.process_color_name,
           AddedDateAndTime: record?.createdAt,
           ModifiedDateAndTime: record?.updatedAt,
-        }
+        };
 
-        console.log("payload => ", updated_payload)
+        console.log('payload => ', updated_payload);
 
         // const insert_or_update_result = await axios.post(
         //   'https://app.naturalveneers.com/services/updategroups.phpsss',

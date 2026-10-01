@@ -289,7 +289,7 @@ export const update_decorative_order = catchAsync(async (req, res) => {
         );
       }
 
-      const order_details_result = await OrderModel.findOneAndUpdate(
+      const updated_order_details = await OrderModel.findOneAndUpdate(
         { _id: order_details_id },
         {
           $set: {
@@ -300,22 +300,22 @@ export const update_decorative_order = catchAsync(async (req, res) => {
         },
         { session, runValidators: true, new: true }
       );
-      if (!order_details_result) {
+      if (!updated_order_details) {
         throw new ApiError(
           'Failed to Update order details data.',
           StatusCodes.BAD_REQUEST
         );
       }
 
-      // if (order_details_result.order_status === order_status.cancelled) {
+      // if (updated_order_details.order_status === order_status.cancelled) {
       //   throw new ApiError("Order is already cancelled", StatusCodes.BAD_REQUEST);
       // }
-      if (order_details_result.order_status === order_status.closed) {
+      if (updated_order_details.order_status === order_status.closed) {
         throw new ApiError('Order is already closed', StatusCodes.BAD_REQUEST);
       }
 
       const order_items_details = await decorative_order_item_details_model?.find(
-        { order_id: order_details_result?._id },
+        { order_id: updated_order_details?._id },
         null,
         { session }
       );
@@ -399,7 +399,7 @@ export const update_decorative_order = catchAsync(async (req, res) => {
 
       const delete_order_items =
         await decorative_order_item_details_model?.deleteMany(
-          { order_id: order_details_result?._id },
+          { order_id: updated_order_details?._id },
           { session }
         );
 
@@ -459,8 +459,8 @@ export const update_decorative_order = catchAsync(async (req, res) => {
         const { _id, ...rest } = item;
         const payload = {
           ...rest,
-          order_id: order_details_result?._id,
-          product_category: `${order_details_result?.product_category} ${item.base_type}`,
+          order_id: updated_order_details?._id,
+          product_category: `${updated_order_details?.product_category} ${item.base_type}`,
           created_by: item.created_by ? item.created_by : userDetails?._id,
           updated_by: userDetails?._id,
           updatedAt: new Date(),
@@ -504,7 +504,7 @@ export const update_decorative_order = catchAsync(async (req, res) => {
       const response = new ApiResponse(
         StatusCodes.OK,
         'Order Updated Successfully.',
-        { order_details: order_details_result, item_details: create_order_result }
+        { order_details: updated_order_details, item_details: create_order_result }
       );
       await session?.commitTransaction();
       return res.status(StatusCodes.OK).json(response);
