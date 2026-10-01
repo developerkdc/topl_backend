@@ -38,7 +38,17 @@ const PROCESS_LOCK_METADATA_FIELDS = new Set([
 
 const comparableValue = (value) => JSON.stringify(value ?? null);
 
+/**
+ * Read-only check: which order item ids appear in any factory issue collection.
+ *
+ * Do not run these reads inside a multi-document transaction. At least one
+ * collection (`issue_for_dressing`) is a MongoDB view whose pipeline uses
+ * `$unionWith`, which MongoDB rejects when the query is bound to a transaction
+ * session (even for a plain find()). Callers may still pass `session` for API
+ * compatibility; it is intentionally not used here.
+ */
 export const findProcessLockedItemIds = async (itemIds, session) => {
+  void session;
   const ids = itemIds?.filter(Boolean) || [];
   if (!ids.length || !mongoose?.connection?.db) return new Set();
 
@@ -46,10 +56,7 @@ export const findProcessLockedItemIds = async (itemIds, session) => {
     PROCESS_ISSUE_COLLECTIONS.map((collectionName) =>
       mongoose.connection.db
         .collection(collectionName)
-        .find(
-          { order_item_id: { $in: ids } },
-          { projection: { order_item_id: 1 }, session }
-        )
+        .find({ order_item_id: { $in: ids } }, { projection: { order_item_id: 1 } })
         .toArray()
     )
   );
