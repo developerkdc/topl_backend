@@ -303,7 +303,7 @@ export const update_series_order = catchAsync(async (req, res) => {
         );
       }
 
-      const order_details_result = await OrderModel.findOneAndUpdate(
+      const updated_order_details = await OrderModel.findOneAndUpdate(
         { _id: order_details_id },
         {
           $set: {
@@ -314,20 +314,20 @@ export const update_series_order = catchAsync(async (req, res) => {
         },
         { session, runValidators: true, new: true }
       );
-      if (!order_details_result) {
+      if (!updated_order_details) {
         throw new ApiError(
           'Failed to Update order details data.',
           StatusCodes.BAD_REQUEST
         );
       }
 
-      if (order_details_result.order_status === order_status.closed) {
+      if (updated_order_details.order_status === order_status.closed) {
         throw new ApiError('Order is already closed', StatusCodes.BAD_REQUEST);
       }
 
       const order_items_details =
         await series_product_order_item_details_model?.find(
-          { order_id: order_details_result?._id },
+          { order_id: updated_order_details?._id },
           null,
           { session }
         );
@@ -421,7 +421,7 @@ export const update_series_order = catchAsync(async (req, res) => {
 
       const delete_order_items =
         await series_product_order_item_details_model?.deleteMany(
-          { order_id: order_details_result?._id },
+          { order_id: updated_order_details?._id },
           { session }
         );
 
@@ -463,8 +463,8 @@ export const update_series_order = catchAsync(async (req, res) => {
 
         updated_item_details.push({
           ...item,
-          order_id: order_details_result?._id,
-          product_category: order_details_result?.series_product,
+          order_id: updated_order_details?._id,
+          product_category: updated_order_details?.series_product,
           created_by: item.created_by ? item?.created_by : userDetails?._id,
           updated_by: userDetails?._id,
           createdAt: item.createdAt ? item?.createdAt : new Date(),
@@ -488,7 +488,7 @@ export const update_series_order = catchAsync(async (req, res) => {
         StatusCodes.OK,
         'Order Updated Successfully.',
         {
-          order_details: order_details_result,
+          order_details: updated_order_details,
           item_details: create_order_result,
         }
       );
