@@ -260,12 +260,12 @@ const approval_packing_done_items_schema = new mongoose.Schema(
             type: String,
             default: null,
             trim: true,
-            validate: {
-                validator: function (v) {
-                    return v === null || /^[0-9+\-*/.() ]*$/.test(v);
-                },
-                message: (props) => `${props.value} contains invalid characters!`,
-            },
+            // validate: {
+            //     validator: function (v) {
+            //         return v === null || /^[0-9+\-*/.() ]*$/.test(v);
+            //     },
+            //     message: (props) => `${props.value} contains invalid characters!`,
+            // },
         },
 
         total_no_of_bundles: {
