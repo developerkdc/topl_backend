@@ -1105,6 +1105,7 @@ export const downloadPDF = catchAsync(async (req, res) => {
       $addFields: {
         group_no: '$photo_data.group_no',
         character: '$photo_data.character_name',
+        series_name: '$photo_data.series_name',
       },
     },
   ]);
@@ -1112,6 +1113,12 @@ export const downloadPDF = catchAsync(async (req, res) => {
   if (!order || items.length === 0) {
     throw new ApiError('Order or order items not found', StatusCodes.NOT_FOUND);
   }
+
+  // Series line items do not store series_name; it comes from the linked photo master.
+  const pdfItems = items.map((item) => ({
+    ...item,
+    series_name: item.photo_data?.series_name ?? item.series_name ?? '',
+  }));
 
   order.orderDateFormatted = moment(order.orderDate).format('DD/MM/YYYY');
   const firstItem = items[0] || {};
@@ -1145,22 +1152,22 @@ export const downloadPDF = catchAsync(async (req, res) => {
     });
   };
 
-  const groupedSeries = groupItemsBySeries(items);
+  const groupedSeries = groupItemsBySeries(pdfItems);
 
   const pdfBuffer = await generatePDFBuffer({
     templateName: templateFileName,
     data: {
       order,
-      items,
+      items: pdfItems,
       base_type,
       groupedSeries,
       base_sub_category,
-      totalSheets: items.reduce(
+      totalSheets: pdfItems.reduce(
         (sum, item) => sum + (item.no_of_sheets || 0),
         0
       ),
-      totalSqMtr: items.reduce((sum, item) => sum + (item.sqm || 0), 0),
-      totalAmount: items.reduce((sum, item) => sum + (item.amount || 0), 0),
+      totalSqMtr: pdfItems.reduce((sum, item) => sum + (item.sqm || 0), 0),
+      totalAmount: pdfItems.reduce((sum, item) => sum + (item.amount || 0), 0),
     },
   });
 
