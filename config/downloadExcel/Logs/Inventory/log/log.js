@@ -3,7 +3,10 @@ import fs from 'fs/promises';
 import ApiError from '../../../../../utils/errors/apiError.js';
 import dotenv from 'dotenv/config';
 
-export const createLogLogsExcel = async (newData) => {
+export const createLogLogsExcel = async (
+  newData,
+  { includeIssuedDate = false } = {}
+) => {
   try {
     const folderPath = 'public/upload/reports/inventory/log';
     try {
@@ -34,7 +37,9 @@ export const createLogLogsExcel = async (newData) => {
       { header: 'Rate in INR', key: 'rate_in_inr', width: 20 },
 
       { header: 'Amount', key: 'amount', width: 20 },
-      { header: 'Issued Date', key: 'issued_date', width: 20 },
+      ...(includeIssuedDate
+        ? [{ header: 'Issued Date', key: 'issued_date', width: 20 }]
+        : []),
       { header: 'Remark', key: 'remark', width: 20 },
       { header: 'Created Date', key: 'createdAt', width: 20 },
       { header: 'Updated Date', key: 'updatedAt', width: 20 },
