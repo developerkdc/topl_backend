@@ -1013,7 +1013,9 @@ export const historyLogsCsv = catchAsync(async (req, res) => {
     .sort({ [sortBy]: sort === 'desc' ? -1 : 1 });
 
   // 8. Generate CSV
-  const excelLink = await createLogLogsExcel(allData);
+    const excelLink = await createLogLogsExcel(allData, {
+    includeIssuedDate: true,
+  });
 
   // 9. Return
   return res.json(
