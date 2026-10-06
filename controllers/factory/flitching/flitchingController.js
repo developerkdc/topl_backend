@@ -839,6 +839,7 @@ export const flitchingDoneExcel = catchAsync(async (req, res) => {
   const match_query = {
     ...filterData,
     ...search_query,
+    issue_status: null,
   };
 
   const allData = await flitching_done_model.find(match_query);
