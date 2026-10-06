@@ -131,7 +131,7 @@ export const add_decorative_order = catchAsync(async (req, res) => {
 
     const create_order_result =
       await decorative_order_item_details_model?.create(updated_item_details, {
-        session,
+        session,   ordered: true,
       });
     if (create_order_result?.length === 0) {
       throw new ApiError(
