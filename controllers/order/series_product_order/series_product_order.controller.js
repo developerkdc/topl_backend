@@ -22,8 +22,13 @@ import dispatchItemsModel from '../../../database/schema/dispatch/dispatch_items
 import { pressing_done_details_model } from '../../../database/schema/factory/pressing/pressing_done/pressing_done.schema.js';
 import {
   PROCESS_ISSUE_COLLECTIONS,
+  assertOrderItemFieldsEditable,
+  buildOrderItemLockedFields,
   findProcessLockedItemIds,
   getProcessLockedItemError,
+  orderItemGroupingDoneLookups,
+  orderItemGroupingDoneProjectHide,
+  orderItemProcessStatusAddFields,
 } from '../../../utils/orderItemProcessLock.js';
 
 export const add_series_order = catchAsync(async (req, res) => {
@@ -182,14 +187,6 @@ export const update_series_order = catchAsync(async (req, res) => {
     const { order_details, item_details } = req.body;
     const userDetails = req.userDetails;
     const send_for_approval = req.sendForApproval;
-    const BASE_LOCKED_FIELDS = ['base_type', 'base_sub_category_id', 'base_sub_category_name', 'base_min_thickness'];
-    const INVOICE_LOCKED_FIELDS = ['flow_process', 'sales_item_name', 'rate_per_sq_feet', 'alternate_sales_item_name'];
-    const ALL_LOCKABLE_FIELDS = [
-      'photo_number', 'additional_photo_number', 'group_number', 'item_sub_category_name', 'previous_rate', 'veneer_min_thickness',
-      'item_name', 'length', 'width', 'thickness', 'no_of_sheets', 'sqm', 'polish_type', 'color_code', 'product_code',
-      'pressing_instructions', 'different_group_photo_number', 'different_group_group_number', 'base_required_sheet',
-      'different_thickness', 'remark', 'amount', 'dispatch_schedule', 'product_code', 'base_size', 'base_type'
-    ];
     const ORDER_LOCKED_FIELDS = [
       'orderDate',
       'customer_id',
@@ -202,68 +199,6 @@ export const update_series_order = catchAsync(async (req, res) => {
       const b = incoming?.[field];
       return JSON.stringify(a ?? null) !== JSON.stringify(b ?? null);
     };
-    const assertFieldsEditable = async (existingItem, incomingItem, session) => {
-      const changedAllLockableFields = ALL_LOCKABLE_FIELDS.filter((f) =>
-        hasFieldChanged(existingItem, incomingItem, f)
-      );
-      const changedBaseFields = BASE_LOCKED_FIELDS.filter((f) =>
-        hasFieldChanged(existingItem, incomingItem, f)
-      );
-      const changedInvoiceFields = INVOICE_LOCKED_FIELDS.filter((f) =>
-        hasFieldChanged(existingItem, incomingItem, f)
-      );
-
-      if (
-        changedAllLockableFields.length === 0 &&
-        changedBaseFields.length === 0 &&
-        changedInvoiceFields.length === 0
-      ) {
-        return;
-      }
-
-      const [processLockedItemIds, pressingRecord, dispatchRecord] = await Promise.all([
-        changedAllLockableFields.length
-          ? findProcessLockedItemIds([existingItem._id], session)
-          : new Set(),
-        changedBaseFields.length
-          ? pressing_done_details_model.findOne(
-            { order_item_id: existingItem._id },
-            { _id: 1 },
-            { session }
-          )
-          : null,
-        changedInvoiceFields.length
-          ? dispatchItemsModel.findOne(
-            { order_item_id: existingItem._id },
-            { _id: 1 },
-            { session }
-          )
-          : null,
-      ]);
-
-      if (changedAllLockableFields.length && processLockedItemIds.has(String(existingItem._id))) {
-        throw new ApiError(
-          getProcessLockedItemError(existingItem),
-          StatusCodes.BAD_REQUEST
-        );
-      }
-
-      if (changedBaseFields.length && pressingRecord) {
-        throw new ApiError(
-          `Cannot edit ${changedBaseFields.join(', ')} for item ${existingItem.item_no} — item has already been pressed.`,
-          StatusCodes.BAD_REQUEST
-        );
-      }
-
-      if (changedInvoiceFields.length && dispatchRecord) {
-        throw new ApiError(
-          `Cannot edit ${changedInvoiceFields.join(', ')} for item ${existingItem.item_no} — item has already been dispatched.`,
-          StatusCodes.BAD_REQUEST
-        );
-      }
-    };
-
-
     for (let field of ['order_details', 'item_details']) {
       if (!req.body[field]) {
         throw new ApiError(`${field} is required`, StatusCodes?.NOT_FOUND);
@@ -439,7 +374,14 @@ export const update_series_order = catchAsync(async (req, res) => {
       for (const item of item_details) {
         const existingItem = item._id ? existingItemsMap.get(String(item._id)) : null;
         if (existingItem) {
-          await assertFieldsEditable(existingItem, item, session);
+          await assertOrderItemFieldsEditable({
+            orderType: 'series',
+            existingItem,
+            incomingItem: item,
+            session,
+            pressingDoneModel: pressing_done_details_model,
+            dispatchItemsModel,
+          });
         }
         if (item.photo_number && item.photo_number_id) {
           const requiredSheets = item.pressing_instructions === "BOTH SIDE WITH SAME GROUP" ? item.no_of_sheets * 2 : item.no_of_sheets;
@@ -881,14 +823,6 @@ export const fetch_all_series_order_items_by_order_id = catchAsync(
     }
 
 
-    const BASE_LOCKED_FIELDS = ['base_type', 'base_sub_category_id', 'base_sub_category_name', 'base_min_thickness'];
-    const INVOICE_LOCKED_FIELDS = ['flow_process', 'sales_item_name', 'rate_per_sq_feet', 'alternate_sales_item_name'];
-    const ALL_LOCKABLE_FIELDS = [
-      'photo_number', 'additional_photo_number', 'group_number', 'item_sub_category_name', 'previous_rate', 'veneer_min_thickness',
-      'item_name', 'length', 'width', 'thickness', 'no_of_sheets', 'sqm', 'polish_type', 'color_code', 'product_code',
-      'pressing_instructions', 'different_group_photo_number', 'different_group_group_number', 'base_required_sheet',
-      'different_thickness', 'remark', 'amount', 'dispatch_schedule', 'product_code', 'base_size', 'base_type'
-    ];
     const pipeline = [
       {
         $match: {
@@ -926,25 +860,15 @@ export const fetch_all_series_order_items_by_order_id = catchAsync(
                 as: `process_issue_records_${index}`,
               },
             })),
+            ...orderItemGroupingDoneLookups(),
             {
-              $addFields: {
-                is_pressed: { $gt: [{ $size: '$pressing_records' }, 0] },
-                is_dispatched: { $gt: [{ $size: '$dispatch_records' }, 0] },
-                is_issued: {
-                  $or: [
-                    { $gt: [{ $size: '$pressing_records' }, 0] },
-                    { $gt: [{ $size: '$dispatch_records' }, 0] },
-                    ...PROCESS_ISSUE_COLLECTIONS.map((_, index) => ({
-                      $gt: [{ $size: `$process_issue_records_${index}` }, 0],
-                    })),
-                  ],
-                },
-              },
+              $addFields: orderItemProcessStatusAddFields(),
             },
             {
               $project: {
                 pressing_records: 0,
                 dispatch_records: 0,
+                ...orderItemGroupingDoneProjectHide,
                 ...Object.fromEntries(
                   PROCESS_ISSUE_COLLECTIONS.map((_, index) => [
                     `process_issue_records_${index}`,
@@ -1013,11 +937,7 @@ export const fetch_all_series_order_items_by_order_id = catchAsync(
     if (result?.[0]?.order_items_details) {
       result[0].order_items_details = result[0].order_items_details.map((item) => ({
         ...item,
-        locked_fields: [
-          ...(item.is_issued ? ALL_LOCKABLE_FIELDS : []),
-          ...(item.is_pressed ? BASE_LOCKED_FIELDS : []),
-          ...(item.is_dispatched ? INVOICE_LOCKED_FIELDS : []),
-        ],
+        locked_fields: buildOrderItemLockedFields(item, 'series'),
       }));
     }
 
