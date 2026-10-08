@@ -1108,7 +1108,10 @@ export const crossCuttingDoneExcel = catchAsync(async (req, res) => {
     issue_status: null,
   };
 
-  const allData = await crosscutting_done_model.find(match_query);
+  const allData = await crossCuttingsDone_view_modal.aggregate([
+    { $match: match_query },
+    { $sort: { updatedAt: -1, _id: -1 } },
+  ]);
 
   const excelLink = await createCrosscuttingDoneExcel(allData);
   console.log('link => ', excelLink);

@@ -842,7 +842,10 @@ export const flitchingDoneExcel = catchAsync(async (req, res) => {
     issue_status: null,
   };
 
-  const allData = await flitching_done_model.find(match_query);
+  const allData = await flitching_view_modal.aggregate([
+    { $match: match_query },
+    { $sort: { updatedAt: -1, _id: -1 } },
+  ]);
 
   const excelLink = await createFlitchingDoneExcel(allData);
   console.log('link => ', excelLink);
