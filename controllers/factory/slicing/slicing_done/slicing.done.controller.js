@@ -89,8 +89,9 @@ export const add_slicing_done = catchAsync(async (req, res, next) => {
     const add_other_details_id = other_details_data?._id;
 
     // item details
-    const items_details_data = items_details?.map((item, index) => {
+    const items_details_data = items_details?.map((item) => {
       item.slicing_done_other_details_id = add_other_details_id;
+      item.slicing_done_from = slicing_done_from.issue_for_slicing;
       item.created_by = userDetails?._id;
       item.updated_by = userDetails?._id;
       return item;
@@ -699,8 +700,11 @@ export const edit_slicing_done = catchAsync(async (req, res, next) => {
 
     // item details
 
-    const items_details_data = items_details?.map((item, index) => {
+    const items_details_data = items_details?.map((item) => {
       item.slicing_done_other_details_id = add_other_details_id;
+      if (item.slicing_done_from !== slicing_done_from.re_slicing) {
+        item.slicing_done_from = slicing_done_from.issue_for_slicing;
+      }
       item.created_by = item.created_by ? item.created_by : userDetails?._id;
       item.createdAt = item.createdAt || new Date();
       item.updatedAt = new Date();
