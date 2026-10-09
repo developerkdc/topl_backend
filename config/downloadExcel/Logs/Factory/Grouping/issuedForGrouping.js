@@ -95,7 +95,7 @@ export const createFactoryIssueForGroupingExcel = async (details, req, res) => {
 
     // Define headers
     const headers = [
-      { header: 'Sr. No', key: 'sr_no', width: 10 },
+      // { header: 'Sr. No', key: 'sr_no', width: 10 },
       { header: 'Issues From', key: 'issued_from', width: 30 },
       { header: 'Item Name', key: 'item_name', width: 30 },
       { header: 'Item SubCategory', key: 'item_subcategory', width: 30 },
