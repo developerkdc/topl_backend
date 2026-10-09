@@ -847,6 +847,8 @@ export const flitchingDoneExcel = catchAsync(async (req, res) => {
     { $sort: { updatedAt: -1, _id: -1 } },
   ]);
 
+  console.log(allData[0],"<<<<<<<<<<<<<<<allData");
+
   const excelLink = await createFlitchingDoneExcel(allData);
   console.log('link => ', excelLink);
 
