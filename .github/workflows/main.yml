@@ -1,0 +1,50 @@
+name: Frontend Deploy - toplbe.uat.metaphi.in
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    env:
+      PATH: /root/.nvm/versions/node/v18.20.8/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      PM2_HOME: /root/.pm2
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Verify node, npm and pm2
+        run: |
+          node -v
+          npm -v
+          pm2 -v
+
+      - name: Copy files to deployment directory
+        run: |
+          rsync -av --exclude='.git' \
+                    --exclude='node_modules' \
+                    --exclude='.env' \
+                    ./ /var/www/toplbe.uat.metaphi.in/
+
+      - name: Install dependencies
+        working-directory: /var/www/toplbe.uat.metaphi.in
+        run: npm i
+
+      - name: Stop existing pm2 process
+        working-directory: /var/www/toplbe.uat.metaphi.in
+        run: |
+          pm2 delete topl-uat-be || true
+          sleep 2
+
+      - name: Start development server with pm2
+        working-directory: /var/www/toplbe.uat.metaphi.in
+        run: |
+          pm2 start npm --name "toplbe.uat.metaphi.in" -- run dev
+          sleep 5
+          pm2 save
+          pm2 list
+          pm2 logs toplbe.uat.metaphi.in --lines 30 --nostream
