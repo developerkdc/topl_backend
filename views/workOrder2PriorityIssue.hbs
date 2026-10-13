@@ -188,7 +188,7 @@
                     <td>{{length}}</td>
                     <td>{{width}}</td>
                     <td>{{no_of_sheets}}</td>
-                    <td>{{sqm}}</td>
+                    <td>{{formatSqm sqm}}</td>
                     <td>{{remark}}</td>
                     <td> </td>
                     <td> </td>
@@ -200,7 +200,7 @@
                 <tr>
                     <td colspan="7" style="text-align: right; font-weight: bold;">Total :</td>
                     <td>{{totalSheets}}</td>
-                    <td>{{totalSqMtr}}</td>
+                    <td>{{formatSqm totalSqMtr}}</td>
                     <td colspan="6"></td>
                 </tr>
             </tbody>
@@ -227,7 +227,7 @@
                 <td style="max-width: 300px; white-space: normal; word-wrap: break-word; word-break: break-word;">
                     {{sales_item_name}}</td>
                 <td style='text-align: right;'>{{no_of_sheets}}</td>
-                <td style='text-align: right;'>{{sqm}}</td>
+                <td style='text-align: right;'>{{formatSqm sqm}}</td>
             </tr>
             {{/each}}
 
@@ -236,12 +236,12 @@
                 <td class='vertical-bar'></td>
                 <td style='font-weight: bold; text-align: left;'>Total</td>
                 <td style='text-align: right; font-weight: bold;'>{{totalSheets}}</td>
-                <td style='text-align: right; font-weight: bold;'>{{totalSqMtr}}</td>
+                <td style='text-align: right; font-weight: bold;'>{{formatSqm totalSqMtr}}</td>
             </tr>
             <tr>
                 <td colspan='2' style='font-weight: bold; text-align: left;'>Total</td>
                 <td style='text-align: right; font-weight: bold;'>{{totalSheets}}</td>
-                <td style='text-align: right; font-weight: bold;'>{{totalSqMtr}}</td>
+                <td style='text-align: right; font-weight: bold;'>{{formatSqm totalSqMtr}}</td>
             </tr>
         </tbody>
     </table>

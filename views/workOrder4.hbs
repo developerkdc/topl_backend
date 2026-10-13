@@ -157,7 +157,7 @@
           <td>{{length}}</td>
           <td>{{width}}</td>
           <td>{{no_of_sheets}}</td>
-          <td>{{sqm}}</td>
+          <td>{{formatSqm sqm}}</td>
           <td>{{remark}}</td>
           <td>{{raw_issue}}</td>
           <td> </td>
@@ -167,7 +167,7 @@
     </table>
 
     <div style="text-align: right; margin-top: 5px;">
-      <strong>Total Sq.Mtr: {{totalSqMtr}}</strong> &nbsp;&nbsp;&nbsp; <strong>Total Sheets:
+      <strong>Total Sq.Mtr: {{formatSqm totalSqMtr}}</strong> &nbsp;&nbsp;&nbsp; <strong>Total Sheets:
         {{totalSheets}}</strong>
     </div>
 
@@ -186,7 +186,7 @@
           <td style="max-width: 300px; white-space: normal; word-wrap: break-word; word-break: break-word;">
             {{sales_item_name}}</td>
           <td>{{no_of_sheets}}</td>
-          <td>{{sqm}}</td>
+          <td>{{formatSqm sqm}}</td>
         </tr>
         {{/each}}
         </tr>
@@ -194,7 +194,7 @@
       <tr>
         <td><strong>Total</strong></td>
         <td><strong>{{totalSheets}}</strong></td>
-        <td><strong>{{totalSqMtr}}</strong></td>
+        <td><strong>{{formatSqm totalSqMtr}}</strong></td>
       </tr>
     </table>
   </div>

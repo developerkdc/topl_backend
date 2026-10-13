@@ -192,14 +192,14 @@
           <td>{{length}}</td>
           <td>{{width}}</td>
           <td>{{no_of_sheets}}</td>
-          <td>{{sqm}}</td>
+          <td>{{formatSqm sqm}}</td>
           <td>{{remark}}</td>
         </tr>
         {{/each}}
         <tr>
           <td colspan="8" style="text-align: right; font-weight: bold;">Total :</td>
           <td>{{totalSheets}}</td>
-          <td>{{totalSqMtr}}</td>
+          <td>{{formatSqm totalSqMtr}}</td>
           <td colspan="6"></td>
         </tr>
       </tbody>
@@ -229,7 +229,7 @@
         <td colspan="2" style="max-width: 300px; white-space: normal; word-wrap: break-word; word-break: break-word;">
           {{sales_item_name}}</td>
         <td style="text-align: right;"><strong>{{no_of_sheets}}</strong></td>
-        <td style="text-align: right;"><strong>{{sqm}}</strong></td>
+        <td style="text-align: right;"><strong>{{formatSqm sqm}}</strong></td>
       </tr>
       {{/each}}
       {{/each}}
@@ -239,18 +239,18 @@
         <td></td>
         <td colspan="2" style="font-weight: bold; text-align: left;">Total</td>
         <td style="text-align: right; font-weight: bold;">{{totalSheets}}</td>
-        <td style="text-align: right; font-weight: bold;">{{totalSqMtr}}</td>
+        <td style="text-align: right; font-weight: bold;">{{formatSqm totalSqMtr}}</td>
       </tr>
       <tr>
         <td class="vertical-bar"></td>
         <td colspan="3" style="font-weight: bold; text-align: left;">Total</td>
         <td style="text-align: right; font-weight: bold;">{{totalSheets}}</td>
-        <td style="text-align: right; font-weight: bold;">{{totalSqMtr}}</td>
+        <td style="text-align: right; font-weight: bold;">{{formatSqm totalSqMtr}}</td>
       </tr>
       <tr>
         <td colspan="4" style="font-weight: bold; text-align: left;">Total</td>
         <td style="text-align: right; font-weight: bold;">{{totalSheets}}</td>
-        <td style="text-align: right; font-weight: bold;">{{totalSqMtr}}</td>
+        <td style="text-align: right; font-weight: bold;">{{formatSqm totalSqMtr}}</td>
       </tr>
     </tbody>
   </table>
