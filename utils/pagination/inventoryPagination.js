@@ -168,6 +168,9 @@ export const runInventoryHistoryPagination = async ({
   itemAlias,
   req,
   itemLookupPipeline = [],
+  itemSortModel,
+  itemSortLookupPipeline = [],
+  legacyItemInvoicePrefix,
   staticMatch = {},
 }) => {
   const {
@@ -180,6 +183,31 @@ export const runInventoryHistoryPagination = async ({
 
   const filterData = dynamic_filter(req.body?.filter);
 
+  const itemJoinedFieldConfigs = [
+    {
+      key: itemAlias,
+      prefix: `${itemAlias}.`,
+      model: itemViewModel,
+      localField: itemLocalField,
+      foreignField: '_id',
+      sortModel: itemSortModel,
+      sortLookupPipeline: itemSortLookupPipeline,
+    },
+  ];
+
+  if (legacyItemInvoicePrefix) {
+    itemJoinedFieldConfigs.push({
+      key: `${itemAlias}_invoice`,
+      prefix: legacyItemInvoicePrefix,
+      model: itemViewModel,
+      localField: itemLocalField,
+      foreignField: '_id',
+      sortModel: itemSortModel,
+      sortLookupPipeline: itemSortLookupPipeline,
+      mapField: (field) => `${legacyItemInvoicePrefix}${field}`,
+    });
+  }
+
   return runOptimizedPaginatedListing({
     model: historyModel,
     page,
@@ -191,13 +219,7 @@ export const runInventoryHistoryPagination = async ({
     filterData,
     staticMatch,
     joinedFieldConfigs: [
-      {
-        key: itemAlias,
-        prefix: `${itemAlias}.`,
-        model: itemViewModel,
-        localField: itemLocalField,
-        foreignField: '_id',
-      },
+      ...itemJoinedFieldConfigs,
       {
         key: 'created_user_details',
         prefix: 'created_user_details.',
