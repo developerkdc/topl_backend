@@ -13,6 +13,11 @@ import {
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import generatePDFBuffer from '../../../utils/generatePDF/generatePDFBuffer.js';
+import {
+  computeTotalSqMtrForPdf,
+  formatGroupedSeriesSqmForPdf,
+  formatItemsSqmForPdf,
+} from '../../../utils/generatePDF/prepareWorkOrderPdfData.js';
 import moment from 'moment';
 import photoModel from '../../../database/schema/masters/photo.schema.js';
 import { orders_approval_model } from '../../../database/schema/order/orders.approval.schema.js';
@@ -1083,20 +1088,22 @@ export const downloadPDF = catchAsync(async (req, res) => {
   };
 
   const groupedSeries = groupItemsBySeries(items);
+  const itemsForPdf = formatItemsSqmForPdf(items);
+  const groupedSeriesForPdf = formatGroupedSeriesSqmForPdf(groupedSeries);
 
   const pdfBuffer = await generatePDFBuffer({
     templateName: templateFileName,
     data: {
       order,
-      items,
+      items: itemsForPdf,
       base_type,
-      groupedSeries,
+      groupedSeries: groupedSeriesForPdf,
       base_sub_category,
       totalSheets: items.reduce(
         (sum, item) => sum + (item.no_of_sheets || 0),
         0
       ),
-      totalSqMtr: items.reduce((sum, item) => sum + (item.sqm || 0), 0),
+      totalSqMtr: computeTotalSqMtrForPdf(items),
       totalAmount: items.reduce((sum, item) => sum + (item.amount || 0), 0),
     },
   });
