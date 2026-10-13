@@ -18,9 +18,9 @@ const normalizeJoinedFieldConfigs = (joinedFieldConfigs = []) =>
   }));
 
 const getFieldSource = (field = '', joinedFieldConfigs = []) => {
-  const joinedConfig = joinedFieldConfigs.find((config) =>
-    field?.startsWith(config.prefix)
-  );
+  const joinedConfig = joinedFieldConfigs
+    .filter((config) => field?.startsWith(config.prefix))
+    .sort((a, b) => b.prefix.length - a.prefix.length)[0];
 
   if (!joinedConfig) {
     return {
@@ -327,9 +327,10 @@ export const runOptimizedPaginatedListing = async ({
 
   if (context.sortFieldSource.source === 'joined') {
     const sortConfig = context.sortFieldSource.config;
+    const sortLookupModel = sortConfig.sortModel || sortConfig.model;
     const sortLookup = {
       $lookup: {
-        from: sortConfig.model.collection.name,
+        from: sortLookupModel.collection.name,
         localField: sortConfig.localField,
         foreignField: sortConfig.foreignField,
         as: '__sort_join__',
