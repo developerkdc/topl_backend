@@ -107,6 +107,7 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
         {
           $set: {
             issue_status: issues_for_status?.order,
+            issued_date: new Date(),
             updated_by: userDetails?._id,
           },
         },
