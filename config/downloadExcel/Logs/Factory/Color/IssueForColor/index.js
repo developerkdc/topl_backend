@@ -186,6 +186,7 @@ export const createFactoryIssueForColorExcel = async (newData, req, res) => {
       const orderItem = item.order_item_details || {};
       const press = item.pressing_details || {};
       const groupDet = item.pressing_done_consumed_items_details?.[0]?.group_details?.[0] || {};
+      const groupingDetails = item.grouping_details || {};
       const available = item.available_details || {};
 
       const createdUser = item.created_user_details || {};
@@ -208,7 +209,13 @@ export const createFactoryIssueForColorExcel = async (newData, req, res) => {
 
         /* ---- group ----------------------------------------------- */
         group_no: groupDet.group_no || '',
-        photo_no: groupDet.photo_no || '',
+        photo_no:
+          item.photo_number ||
+          orderItem.photo_number ||
+          groupingDetails.photo_no ||
+          groupingDetails?.[0]?.photo_no ||
+          groupDet.photo_no ||
+          '',
 
         /* ---- pressing size --------------------------------------- */
         length: press.length || '',

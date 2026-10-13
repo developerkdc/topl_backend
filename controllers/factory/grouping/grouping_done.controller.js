@@ -870,6 +870,95 @@ export const fetch_all_details_by_grouping_done_item_id = catchAsync(
   }
 );
 
+export const fetch_grouping_done_item_stage_sheets_availability = catchAsync(
+  async (req, res, next) => {
+    const { id } = req.params;
+
+    if (!id || !mongoose.isValidObjectId(id)) {
+      throw new ApiError('Invalid ID', StatusCodes.NOT_FOUND);
+    }
+
+    const groupingItem = await grouping_done_items_details_model
+      .findById(id)
+      .select('group_no available_details.no_of_sheets')
+      .lean();
+
+    if (!groupingItem) {
+      throw new ApiError('No data found', StatusCodes.NOT_FOUND);
+    }
+
+    const group_no = groupingItem.group_no;
+
+    const [issue_for_tapping, tapping_done, issue_for_pressing] =
+      await Promise.all([
+        issue_for_tapping_model.aggregate([
+          {
+            $match: {
+              group_no,
+              is_tapping_done: false,
+            },
+          },
+          {
+            $group: {
+              _id: '$group_no',
+              total_no_of_sheets: {
+                $sum: '$no_of_sheets',
+              },
+            },
+          },
+        ]),
+        tapping_done_items_details_model.aggregate([
+          {
+            $match: {
+              group_no,
+            },
+          },
+          {
+            $group: {
+              _id: '$group_no',
+              total_no_of_sheets: {
+                $sum: '$available_details.no_of_sheets',
+              },
+            },
+          },
+        ]),
+        issues_for_pressing_model.aggregate([
+          {
+            $match: {
+              group_no,
+            },
+          },
+          {
+            $group: {
+              _id: '$group_no',
+              total_no_of_sheets: {
+                $sum: '$available_details.no_of_sheets',
+              },
+            },
+          },
+        ]),
+      ]);
+
+    const availability = {
+      grouping_available_no_of_sheets:
+        groupingItem?.available_details?.no_of_sheets ?? 0,
+      tapping_available_no_of_sheets:
+        (issue_for_tapping?.[0]?.total_no_of_sheets ?? 0) +
+        (tapping_done?.[0]?.total_no_of_sheets ?? 0),
+      pressing_available_no_of_sheets:
+        issue_for_pressing?.[0]?.total_no_of_sheets ?? 0,
+    };
+
+    return res.status(StatusCodes.OK).json(
+      new ApiResponse(
+        StatusCodes.OK,
+        'Stage sheets availability fetched successfully',
+        availability
+      )
+    );
+  }
+);
+
 export const revert_all_grouping_done = catchAsync(async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();

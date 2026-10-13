@@ -276,7 +276,18 @@ export const fetchAllSupplierWithBranchesDetails = catchAsync(
     const skipped = (pageInt - 1) * limitInt;
 
     const sortDirection = sortOrder === 'desc' ? -1 : 1;
-    const sortObj = sortField ? { [sortField]: sortDirection } : {};
+
+    // Branch fields live in supplierDetails[]; list UI uses supplierDetails[0]
+    const branchNestedSortFieldMap = {
+      'supplierDetails.city': '_sort_branch_city',
+      'supplierDetails.gst_number': '_sort_branch_gst_number',
+      'supplierDetails.state': '_sort_branch_state',
+      'supplierDetails.country': '_sort_branch_country',
+      'supplierDetails.address': '_sort_branch_address',
+      'supplierDetails.web_url': '_sort_branch_web_url',
+    };
+    const resolvedSortField =
+      branchNestedSortFieldMap[sortField] || sortField;
 
     const searchQuery = query
       ? {
@@ -356,19 +367,99 @@ export const fetchAllSupplierWithBranchesDetails = catchAsync(
           as: 'supplierDetails',
         },
       },
-
-      // {
-      //   $unwind: "$supplierDetails",
-      // },
-      { $sort: { [sortField]: sortOrder === 'desc' ? -1 : 1 } },
       { $match: searchQuery },
+      {
+        $addFields: {
+          _sort_branch_city: {
+            $toUpper: {
+              $ifNull: [
+                {
+                  $let: {
+                    vars: {
+                      branch: { $arrayElemAt: ['$supplierDetails', 0] },
+                    },
+                    in: '$$branch.city',
+                  },
+                },
+                '',
+              ],
+            },
+          },
+          _sort_branch_gst_number: {
+            $ifNull: [
+              {
+                $let: {
+                  vars: {
+                    branch: { $arrayElemAt: ['$supplierDetails', 0] },
+                  },
+                  in: '$$branch.gst_number',
+                },
+              },
+              '',
+            ],
+          },
+          _sort_branch_state: {
+            $toUpper: {
+              $ifNull: [
+                {
+                  $let: {
+                    vars: {
+                      branch: { $arrayElemAt: ['$supplierDetails', 0] },
+                    },
+                    in: '$$branch.state',
+                  },
+                },
+                '',
+              ],
+            },
+          },
+          _sort_branch_country: {
+            $toUpper: {
+              $ifNull: [
+                {
+                  $let: {
+                    vars: {
+                      branch: { $arrayElemAt: ['$supplierDetails', 0] },
+                    },
+                    in: '$$branch.country',
+                  },
+                },
+                '',
+              ],
+            },
+          },
+          _sort_branch_address: {
+            $ifNull: [
+              {
+                $let: {
+                  vars: {
+                    branch: { $arrayElemAt: ['$supplierDetails', 0] },
+                  },
+                  in: '$$branch.address',
+                },
+              },
+              '',
+            ],
+          },
+          _sort_branch_web_url: {
+            $ifNull: [
+              {
+                $let: {
+                  vars: {
+                    branch: { $arrayElemAt: ['$supplierDetails', 0] },
+                  },
+                  in: '$$branch.web_url',
+                },
+              },
+              '',
+            ],
+          },
+        },
+      },
+      { $sort: { [resolvedSortField]: sortDirection } },
       { $skip: skipped },
       { $limit: limitInt },
     ];
-
-    // if (Object.keys(sortObj).length > 0) {
-    //   pipeline.push({ $sort: sortObj });
-    // }
 
     const allDetails = await SupplierModel.aggregate(pipeline).collation({
       locale: 'en',

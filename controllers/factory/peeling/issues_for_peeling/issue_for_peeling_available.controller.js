@@ -1001,6 +1001,7 @@ export const reflitching_issue_for_slicing = catchAsync(
       }
 
       const re_flitching_other_details_ids = new Set();
+      const issued_date = new Date().toISOString().split('T')[0];
       const issue_for_slicing = fetch_reflitching_items_details.map((item) => {
         re_flitching_other_details_ids.add(item.re_flitching_other_details_id);
         return {
@@ -1027,6 +1028,7 @@ export const reflitching_issue_for_slicing = catchAsync(
           issued_from: issues_for_status?.reflitching,
           is_peeling_done: true,
           remark: item?.remark,
+          issued_date,
           created_by: userDetails?._id,
           updated_by: userDetails?._id,
         };

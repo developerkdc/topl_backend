@@ -13,6 +13,11 @@ import {
 import { dynamic_filter } from '../../../utils/dymanicFilter.js';
 import { DynamicSearch } from '../../../utils/dynamicSearch/dynamic.js';
 import generatePDFBuffer from '../../../utils/generatePDF/generatePDFBuffer.js';
+import {
+  computeTotalSqMtrForPdf,
+  formatGroupedSeriesSqmForPdf,
+  formatItemsSqmForPdf,
+} from '../../../utils/generatePDF/prepareWorkOrderPdfData.js';
 import moment from 'moment';
 import photoModel from '../../../database/schema/masters/photo.schema.js';
 import { orders_approval_model } from '../../../database/schema/order/orders.approval.schema.js';
@@ -21,8 +26,13 @@ import { pressing_done_details_model } from '../../../database/schema/factory/pr
 import dispatchItemsModel from '../../../database/schema/dispatch/dispatch_items.schema.js';
 import {
   PROCESS_ISSUE_COLLECTIONS,
+  assertOrderItemFieldsEditable,
+  buildOrderItemLockedFields,
   findProcessLockedItemIds,
   getProcessLockedItemError,
+  orderItemGroupingDoneLookups,
+  orderItemGroupingDoneProjectHide,
+  orderItemProcessStatusAddFields,
 } from '../../../utils/orderItemProcessLock.js';
 
 export const add_decorative_order = catchAsync(async (req, res) => {
@@ -160,14 +170,6 @@ export const update_decorative_order = catchAsync(async (req, res) => {
   const { order_details, item_details } = req.body;
   const userDetails = req.userDetails;
   const send_for_approval = req.sendForApproval;
-  const BASE_LOCKED_FIELDS = ['base_type', 'base_sub_category_id', 'base_sub_category_name', 'base_min_thickness'];
-  const INVOICE_LOCKED_FIELDS = ['value_added_process', 'sales_item_name', 'rate_per_sqm'];
-  const ALL_LOCKABLE_FIELDS = [
-    'photo_number', 'additional_photo_number', 'group_number', 'item_sub_category_name', 'previous_rate',
-    'item_name', 'length', 'width', 'thickness', 'no_of_sheets', 'sqm',
-    'pressing_instructions', 'different_group_photo_number', 'different_group_group_number',
-    'different_thickness', 'alternate_sales_item_name', 'remark',
-  ];
   const ORDER_LOCKED_FIELDS = [
     'orderDate',
     'customer_id',
@@ -178,67 +180,6 @@ export const update_decorative_order = catchAsync(async (req, res) => {
     const a = existing?.[field];
     const b = incoming?.[field];
     return JSON.stringify(a ?? null) !== JSON.stringify(b ?? null);
-  };
-
-  const assertFieldsEditable = async (existingItem, incomingItem, session) => {
-    const changedAllLockableFields = ALL_LOCKABLE_FIELDS.filter((f) =>
-      hasFieldChanged(existingItem, incomingItem, f)
-    );
-    const changedBaseFields = BASE_LOCKED_FIELDS.filter((f) =>
-      hasFieldChanged(existingItem, incomingItem, f)
-    );
-    const changedInvoiceFields = INVOICE_LOCKED_FIELDS.filter((f) =>
-      hasFieldChanged(existingItem, incomingItem, f)
-    );
-
-    if (
-      changedAllLockableFields.length === 0 &&
-      changedBaseFields.length === 0 &&
-      changedInvoiceFields.length === 0
-    ) {
-      return;
-    }
-
-    const [processLockedItemIds, pressingRecord, dispatchRecord] = await Promise.all([
-      changedAllLockableFields.length
-        ? findProcessLockedItemIds([existingItem._id], session)
-        : new Set(),
-      changedBaseFields.length
-        ? pressing_done_details_model.findOne(
-          { order_item_id: existingItem._id },
-          { _id: 1 },
-          { session }
-        )
-        : null,
-      changedInvoiceFields.length
-        ? dispatchItemsModel.findOne(
-          { order_item_id: existingItem._id },
-          { _id: 1 },
-          { session }
-        )
-          : null,
-    ]);
-
-    if (changedAllLockableFields.length && processLockedItemIds.has(String(existingItem._id))) {
-      throw new ApiError(
-        getProcessLockedItemError(existingItem),
-        StatusCodes.BAD_REQUEST
-      );
-    }
-
-    if (changedBaseFields.length && pressingRecord) {
-      throw new ApiError(
-        `Cannot edit ${changedBaseFields.join(', ')} for item ${existingItem.item_no} — item has already been pressed.`,
-        StatusCodes.BAD_REQUEST
-      );
-    }
-
-    if (changedInvoiceFields.length && dispatchRecord) {
-      throw new ApiError(
-        `Cannot edit ${changedInvoiceFields.join(', ')} for item ${existingItem.item_no} — item has already been dispatched.`,
-        StatusCodes.BAD_REQUEST
-      );
-    }
   };
 
   // const send_for_approval = true; //for now always sending for approval
@@ -444,7 +385,14 @@ export const update_decorative_order = catchAsync(async (req, res) => {
       for (const item of item_details) {
         const existingItem = item._id ? existingItemsMap.get(String(item._id)) : null;
         if (existingItem) {
-          await assertFieldsEditable(existingItem, item, session);
+          await assertOrderItemFieldsEditable({
+            orderType: 'decorative',
+            existingItem,
+            incomingItem: item,
+            session,
+            pressingDoneModel: pressing_done_details_model,
+            dispatchItemsModel,
+          });
         }
 
         if (item.photo_number && item.photo_number_id) {
@@ -893,15 +841,6 @@ export const fetch_all_decorative_order_items_by_order_id = catchAsync(
       throw new ApiError('Invalid ID', StatusCodes.BAD_REQUEST);
     }
 
-    const BASE_LOCKED_FIELDS = ['base_type', 'base_sub_category_id', 'base_sub_category_name', 'base_min_thickness'];
-    const INVOICE_LOCKED_FIELDS = ['value_added_process', 'sales_item_name', 'rate_per_sqm'];
-    const ALL_LOCKABLE_FIELDS = [
-      'photo_number', 'additional_photo_number', 'group_number', 'item_sub_category_name', 'previous_rate',
-      'item_name', 'length', 'width', 'thickness', 'no_of_sheets', 'sqm',
-      'pressing_instructions', 'different_group_photo_number', 'different_group_group_number',
-      'different_thickness', 'alternate_sales_item_name', 'remark',
-    ];
-
     const pipeline = [
       {
         $match: {
@@ -939,25 +878,15 @@ export const fetch_all_decorative_order_items_by_order_id = catchAsync(
                 as: `process_issue_records_${index}`,
               },
             })),
+            ...orderItemGroupingDoneLookups(),
             {
-              $addFields: {
-                is_pressed: { $gt: [{ $size: '$pressing_records' }, 0] },
-                is_dispatched: { $gt: [{ $size: '$dispatch_records' }, 0] },
-                is_issued: {
-                  $or: [
-                    { $gt: [{ $size: '$pressing_records' }, 0] },
-                    { $gt: [{ $size: '$dispatch_records' }, 0] },
-                    ...PROCESS_ISSUE_COLLECTIONS.map((_, index) => ({
-                      $gt: [{ $size: `$process_issue_records_${index}` }, 0],
-                    })),
-                  ],
-                },
-              },
+              $addFields: orderItemProcessStatusAddFields(),
             },
             {
               $project: {
                 pressing_records: 0,
                 dispatch_records: 0,
+                ...orderItemGroupingDoneProjectHide,
                 ...Object.fromEntries(
                   PROCESS_ISSUE_COLLECTIONS.map((_, index) => [
                     `process_issue_records_${index}`,
@@ -1026,11 +955,7 @@ export const fetch_all_decorative_order_items_by_order_id = catchAsync(
     if (result?.[0]?.order_items_details) {
       result[0].order_items_details = result[0].order_items_details.map((item) => ({
         ...item,
-        locked_fields: [
-          ...(item.is_issued ? ALL_LOCKABLE_FIELDS : []),
-          ...(item.is_pressed ? BASE_LOCKED_FIELDS : []),
-          ...(item.is_dispatched ? INVOICE_LOCKED_FIELDS : []),
-        ],
+        locked_fields: buildOrderItemLockedFields(item, 'decorative'),
       }));
     }
 
@@ -1163,20 +1088,22 @@ export const downloadPDF = catchAsync(async (req, res) => {
   };
 
   const groupedSeries = groupItemsBySeries(items);
+  const itemsForPdf = formatItemsSqmForPdf(items);
+  const groupedSeriesForPdf = formatGroupedSeriesSqmForPdf(groupedSeries);
 
   const pdfBuffer = await generatePDFBuffer({
     templateName: templateFileName,
     data: {
       order,
-      items,
+      items: itemsForPdf,
       base_type,
-      groupedSeries,
+      groupedSeries: groupedSeriesForPdf,
       base_sub_category,
       totalSheets: items.reduce(
         (sum, item) => sum + (item.no_of_sheets || 0),
         0
       ),
-      totalSqMtr: items.reduce((sum, item) => sum + (item.sqm || 0), 0),
+      totalSqMtr: computeTotalSqMtrForPdf(items),
       totalAmount: items.reduce((sum, item) => sum + (item.amount || 0), 0),
     },
   });

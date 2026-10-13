@@ -168,6 +168,7 @@ export const createFactoryColorDoneExcel = async (newData, req, res) => {
       const orderItem = issue.order_item_details || {};
       const press = issue.pressing_details || {};
       const groupDet = issue.pressing_done_consumed_items_details?.[0]?.group_details?.[0] || {};
+      const groupingDetails = issue.grouping_details || {};
       const available = item.available_details || {};
       const createdUser = item.created_by || {};
       const updatedUser = item.updated_by || {};
@@ -185,7 +186,13 @@ export const createFactoryColorDoneExcel = async (newData, req, res) => {
         item_no: orderItem.item_no || '',
         series_product: order.series_product || '',
         group_no: groupDet.group_no || '',
-        photo_no: groupDet.photo_no || '',
+        photo_no:
+          issue.photo_number ||
+          orderItem.photo_number ||
+          groupingDetails.photo_no ||
+          groupingDetails?.[0]?.photo_no ||
+          groupDet.photo_no ||
+          '',
         length: press.length || '',
         width: press.width || '',
         thickness: press.thickness || '',
