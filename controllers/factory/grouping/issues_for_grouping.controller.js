@@ -51,6 +51,18 @@ const groupDressingDoneItemsByOtherDetailsId = (items = []) => {
   return Array.from(groupedItems.values());
 };
 
+/** Grouped view rows nest audit/user fields under bundles_details; flatten for sort/filter/search. */
+const issueForGroupingViewFlattenFields = {
+  $addFields: {
+    issued_date: { $first: '$bundles_details.issued_date' },
+    created_by: { $first: '$bundles_details.created_by' },
+    updated_by: { $first: '$bundles_details.updated_by' },
+    createdAt: { $first: '$bundles_details.createdAt' },
+    updatedAt: { $first: '$bundles_details.updatedAt' },
+    other_details: { pallet_number: '$pallet_number' },
+  },
+};
+
 export const issue_for_grouping_from_veneer_inventory = catchAsync(
   async (req, res, next) => {
     const session = await mongoose.startSession();
@@ -1124,7 +1136,13 @@ export const fetch_all_issue_for_grouping_details = catchAsync(
       $limit: parseInt(limit),
     };
 
-    const aggregation_pipeline = [agg_match, agg_sort, agg_skip, agg_limit];
+    const aggregation_pipeline = [
+      issueForGroupingViewFlattenFields,
+      agg_match,
+      agg_sort,
+      agg_skip,
+      agg_limit,
+    ];
 
     const result =
       await issues_for_grouping_view_model.aggregate(aggregation_pipeline);
@@ -1133,7 +1151,11 @@ export const fetch_all_issue_for_grouping_details = catchAsync(
       $count: 'totalCount',
     };
 
-    const total_count_aggregation_pipeline = [agg_match, agg_count];
+    const total_count_aggregation_pipeline = [
+      issueForGroupingViewFlattenFields,
+      agg_match,
+      agg_count,
+    ];
 
     const total_docs = await issues_for_grouping_view_model.aggregate(
       total_count_aggregation_pipeline
@@ -1205,7 +1227,11 @@ export const download_excel_factory_grouping_details = catchAsync(
       $limit: parseInt(limit),
     };
 
-    const aggregation_pipeline = [agg_match, agg_sort];
+    const aggregation_pipeline = [
+      issueForGroupingViewFlattenFields,
+      agg_match,
+      agg_sort,
+    ];
 
     const result =
       await issues_for_grouping_view_model.aggregate(aggregation_pipeline);
