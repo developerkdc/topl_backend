@@ -3,6 +3,9 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import Handlebars from 'handlebars';
 import puppeteer from 'puppeteer';
+import { registerPdfHandlebarsHelpers } from './formatSqmForPdf.js';
+
+registerPdfHandlebarsHelpers(Handlebars);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -57,9 +60,6 @@ export default async function generatePDFBuffer({ templateName, data }) {
   );
   const logoBuffer = await fs.readFile(logoPath);
   const logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
-  Handlebars.registerHelper('add', function (a, b) {
-    return a + b;
-  });
   const template = Handlebars.compile(templateContent);
   const html = template({ ...data, logoUrl: logoBase64 });
 
@@ -112,9 +112,6 @@ export async function generatePDF({ templateName, templatePath, data }) {
   const logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
   const headerBase64 = `data:image/png;base64,${headerBuffer.toString('base64')}`;
   const footerBase64 = `data:image/png;base64,${footerBuffer.toString('base64')}`;
-  Handlebars.registerHelper('add', function (a, b) {
-    return a + b;
-  });
   const template = Handlebars.compile(templateContent);
   const html = template({ ...data, logoUrl: logoBase64, headerUrl: headerBase64, footerUrl: footerBase64 });
 
@@ -150,9 +147,6 @@ export async function generatePDF_packing({ templateName, templatePath, data }) 
   const logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
   const headerBase64 = `data:image/png;base64,${headerBuffer.toString('base64')}`;
   const footerBase64 = `data:image/png;base64,${footerBuffer.toString('base64')}`;
-  Handlebars.registerHelper('add', function (a, b) {
-    return a + b;
-  });
   const template = Handlebars.compile(templateContent);
   const html = template({ ...data, logoUrl: logoBase64, headerUrl: headerBase64, footerUrl: footerBase64 });
 
@@ -192,10 +186,6 @@ export async function generatePackingPDF({ templateName, templatePath, data }) {
   const headerBase64 = `data:image/png;base64,${headerBuffer.toString('base64')}`;
   const footerBase64 = `data:image/png;base64,${footerBuffer.toString('base64')}`;
 
-  // Register helper
-  Handlebars.registerHelper('add', (a, b) => a + b);
-
-  // Compile Handlebars HTML
   const template = Handlebars.compile(templateContent);
   const html = template({
     ...data,
@@ -244,10 +234,6 @@ export async function generatePrintPDF({ templateName, templatePath, data }) {
   const logoBuffer = await fs.readFile(logoPath);
   const logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
 
-  // Register helper
-  Handlebars.registerHelper('add', (a, b) => a + b);
-
-  // Compile Handlebars HTML
   const template = Handlebars.compile(templateContent);
   const html = template({
     ...data,

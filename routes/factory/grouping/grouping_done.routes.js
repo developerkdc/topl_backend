@@ -6,6 +6,7 @@ import {
   fetch_all_damaged_grouping_done_items,
   fetch_all_details_by_grouping_done_id,
   fetch_all_details_by_grouping_done_item_id,
+  fetch_grouping_done_item_stage_sheets_availability,
   fetch_all_grouping_done_items,
   fetch_all_grouping_history_details,
   group_no_dropdown,
@@ -65,6 +66,11 @@ groupingDoneRouter.get(
   '/fetch-single-grouping-done-item-details/:id',
   AuthMiddleware,
   fetch_all_details_by_grouping_done_item_id
+);
+groupingDoneRouter.get(
+  '/fetch-grouping-done-item-stage-sheets-availability/:id',
+  AuthMiddleware,
+  fetch_grouping_done_item_stage_sheets_availability
 );
 groupingDoneRouter.post(
   '/revert-grouping-done-details/:id',

@@ -182,7 +182,7 @@
         <td style='font-size: 10px;'>{{length}}</td>
         <td style='font-size: 10px;'>{{width}}</td>
         <td style='font-size: 10px;'>{{no_of_sheets}}</td>
-        <td style='font-size: 10px;'>{{sqm}}</td>
+        <td style='font-size: 10px;'>{{formatSqm sqm}}</td>
         <td style='font-size: 10px;'>{{remark}}</td>
         <td></td>
         <td></td>
@@ -194,7 +194,7 @@
     <tr style='font-weight: bold; text-align: left;'>
       <td colspan='7' style='text-align: right;font-size: 12px;'>Total</td>
       <td style='font-size: 12px;'>{{totalSheets}}</td>
-      <td style='font-size: 12px;'>{{totalSqMtr}}</td>
+      <td style='font-size: 12px;'>{{formatSqm totalSqMtr}}</td>
       <td colspan='4'></td>
     </tr>
   </table>
@@ -222,7 +222,7 @@
         <td style="max-width: 300px; white-space: normal; word-wrap: break-word; word-break: break-word;">
           {{sales_item_name}}</td>
         <td style='text-align: left;'>{{no_of_sheets}}</td>
-        <td style='text-align: left;'>{{sqm}}</td>
+        <td style='text-align: left;'>{{formatSqm sqm}}</td>
       </tr>
       {{/each}}
 
@@ -231,12 +231,12 @@
         <td class='vertical-bar'></td>
         <td style='font-weight: bold; text-align: left;'>Total</td>
         <td style='text-align: left; font-weight: bold;'>{{totalSheets}}</td>
-        <td style='text-align: left; font-weight: bold;'>{{totalSqMtr}}</td>
+        <td style='text-align: left; font-weight: bold;'>{{formatSqm totalSqMtr}}</td>
       </tr>
       <tr>
         <td colspan='2' style='font-weight: bold; text-align: left;'>Total</td>
         <td style='text-align: left; font-weight: bold;'>{{totalSheets}}</td>
-        <td style='text-align: left; font-weight: bold;'>{{totalSqMtr}}</td>
+        <td style='text-align: left; font-weight: bold;'>{{formatSqm totalSqMtr}}</td>
       </tr>
     </tbody>
   </table>

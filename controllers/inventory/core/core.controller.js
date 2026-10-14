@@ -737,10 +737,30 @@ export const coreHistoryLogsCsv = catchAsync(async (req, res) => {
 });
 
 //fetch core history
+const coreHistoryItemSortLookupPipeline = [
+  {
+    $lookup: {
+      from: core_inventory_invoice_details.collection.name,
+      localField: 'invoice_id',
+      foreignField: '_id',
+      as: 'core_invoice_details',
+    },
+  },
+  {
+    $unwind: {
+      path: '$core_invoice_details',
+      preserveNullAndEmptyArrays: true,
+    },
+  },
+];
+
 export const fetch_core_history = catchAsync(async (req, res, next) => {
   const optimizedResult = await runInventoryHistoryPagination({
     historyModel: core_history_model,
     itemViewModel: core_inventory_items_view_modal,
+    itemSortModel: core_inventory_items_details,
+    itemSortLookupPipeline: coreHistoryItemSortLookupPipeline,
+    legacyItemInvoicePrefix: 'core_invoice_details.',
     itemLocalField: 'core_item_id',
     itemAlias: 'core_item_details',
     itemLookupPipeline: [

@@ -27,7 +27,13 @@ export const listing_log_inventory = catchAsync(async (req, res, next) => {
     itemsModel: log_inventory_items_model,
     invoiceModel: log_inventory_invoice_model,
     invoiceAlias: 'log_invoice_details',
-    invoicePrefixes: [{ prefix: 'log_invoice_details.' }],
+    invoicePrefixes: [
+      { prefix: 'log_invoice_details.' },
+      {
+        prefix: 'supplier_details.',
+        mapField: (_field, fullField) => fullField,
+      },
+    ],
     staticMatch: {
       issue_status: null,
     },
@@ -815,7 +821,13 @@ export const listing_log_history_inventory = catchAsync(
       itemsModel: log_inventory_items_model,
       invoiceModel: log_inventory_invoice_model,
       invoiceAlias: 'log_invoice_details',
-      invoicePrefixes: [{ prefix: 'log_invoice_details.' }],
+      invoicePrefixes: [
+        { prefix: 'log_invoice_details.' },
+        {
+          prefix: 'supplier_details.',
+          mapField: (_field, fullField) => fullField,
+        },
+      ],
       staticMatch: {
         issue_status: { $ne: null },
       },

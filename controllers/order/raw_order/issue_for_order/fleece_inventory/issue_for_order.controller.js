@@ -194,6 +194,7 @@ export const add_issue_for_order = catchAsync(async (req, res) => {
           issued_number_of_roll: issued_number_of_roll_for_order,
           issued_sqm: issued_sqm_for_order,
           issued_amount: issued_amount_for_order,
+          issued_date: new Date(),
           created_by: userDetails?._id,
           updated_by: userDetails?._id,
         },

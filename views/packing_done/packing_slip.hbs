@@ -212,7 +212,7 @@
             {{else if quantity}}{{quantity}}
             {{else}}{{no_of_sheets}}{{/if}}
           </td>
-          <td>{{sqm}}</td>
+          <td>{{formatSqm sqm}}</td>
           <td>{{bundle_no}}</td>
           <td>{{bundle_description}}</td>
           <td>{{total_no_of_bundles}}</td>
@@ -225,13 +225,13 @@
           <td>{{customer_name}}</td>
           <td colspan='4'></td>
           <td>{{totalSheets}}</td>
-          <td>{{totalSqMtr}}</td>
+          <td>{{formatSqm totalSqMtr}}</td>
           <td colspan='4'></td>
         </tr>
         <tr>
           <td colspan='5'>Grand Total</td>
           <td>{{totalSheets}}</td>
-          <td>{{totalSqMtr}}</td>
+          <td>{{formatSqm totalSqMtr}}</td>
           <td colspan='4'></td>
         </tr>
       </tbody>
@@ -256,13 +256,13 @@
         <td>{{item_name}}</td>
         <td>{{size}}</td>
         <td>{{sheets}}</td>
-        <td>{{sqm}}</td>
+        <td>{{formatSqm sqm}}</td>
       </tr>
       {{/each}}
       <tr>
         <td colspan='2'>Total</td>
         <td>{{totalSheets}}</td>
-        <td>{{totalSqMtr}}</td>
+        <td>{{formatSqm totalSqMtr}}</td>
       </tr>
     </tbody>
   </table>
