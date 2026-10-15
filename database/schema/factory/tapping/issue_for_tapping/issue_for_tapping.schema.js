@@ -115,13 +115,13 @@ const issue_for_tapping_schema = new mongoose.Schema(
     },
     process_id: {
       type: mongoose.Schema.Types.ObjectId,
-      required: [true, 'process id is required'],
+      // required: [true, 'process id is required'],
     },
     process_name: {
       type: String,
       uppercase: true,
       trim: true,
-      required: [true, 'process name is required'],
+      // required: [true, 'process name is required'],
     },
     cut_id: {
       type: mongoose.Schema.Types.ObjectId,
