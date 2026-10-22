@@ -1,8 +1,8 @@
 import {
   extractDataFromMDBFile,
-  format_date,
   StatusCodes,
 } from '../../../../utils/constants.js';
+import { parse_dressing_machine_fecha } from '../../../../utils/dressingMachineFecha.js';
 import ApiResponse from '../../../../utils/ApiResponse.js';
 import ApiError from '../../../../utils/errors/apiError.js';
 import catchAsync from '../../../../utils/errors/catchAsync.js';
@@ -340,7 +340,7 @@ export const bulk_upload_machine_raw_data_new = async (req, res, next) => {
 
     //formatting date
     const formatted_items_dates = dressing_items?.map((item) => {
-      const jsDate = format_date(item?.Fecha);
+      const jsDate = parse_dressing_machine_fecha(item?.Fecha);
       const dressingString = jsDate?.toISOString()?.split('T')?.[0];
       return {
         ...item,
