@@ -72,7 +72,9 @@ export const createFlitchingDoneExcel = async (newData) => {
           expense_amount: data?.expense_amount,
           required_hours: data?.required_hours,
           required_workers: data?.required_workers,
-          flitching_completed: data?.flitching_completed,
+          flitching_completed:
+            data?.issueForFlitchingDetails?.flitching_completed ??
+            data?.flitching_completed,
           remarks: data?.remarks,
           flitching_date: new Date(
             data?.worker_details?.flitching_date

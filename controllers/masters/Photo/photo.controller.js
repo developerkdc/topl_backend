@@ -13,6 +13,11 @@ import path from 'path';
 import { createPhotoAlbumExcel } from '../../../config/downloadExcel/Logs/Masters/photoAlbum.js';
 import { sub_category } from '../../../database/Utils/constants/constants.js';
 import axios from 'axios';
+import {
+  hasPhotoGroupAssignmentChanged,
+  isPhotoLockedForGroupChange,
+  PHOTO_GROUP_NO_LOCK_MESSAGE,
+} from '../../../utils/photoGroupLock.js';
 
 export const addPhoto = catchAsync(async (req, res, next) => {
   let { photo_number } = req.body;
@@ -181,16 +186,29 @@ export const updatePhoto = catchAsync(async (req, res, next) => {
         throw error;
       }
     }
+
+    const fetchPhotoData = await photoModel
+      .findOne({ _id: id })
+      .session(session);
+
+    if (!fetchPhotoData) {
+      return next(new ApiError('Photo Details not found', 404));
+    }
+
+    const groupLocked = await isPhotoLockedForGroupChange(fetchPhotoData._id);
+    if (
+      groupLocked &&
+      hasPhotoGroupAssignmentChanged(fetchPhotoData, other_details)
+    ) {
+      return next(new ApiError(PHOTO_GROUP_NO_LOCK_MESSAGE, StatusCodes.BAD_REQUEST));
+    }
+
     const photoData = {
       ...other_details,
       photo_number: photo_number,
       status: status,
       updated_by: authUserDetail?._id,
     };
-
-    const fetchPhotoData = await photoModel
-      .findOne({ _id: id })
-      .session(session);
     if (bannerImage) {
       photoData.banner_image = bannerImage;
       if (fs.existsSync(fetchPhotoData?.banner_image?.path)) {
@@ -592,10 +610,19 @@ export const fetchSinglePhoto = catchAsync(async (req, res, next) => {
     return next(new ApiError('Document Not found', 404));
   }
 
+  const photo = photoData?.[0];
+  const is_group_no_locked = await isPhotoLockedForGroupChange(photo?._id);
+
   const response = new ApiResponse(
     200,
     'Photo Data Fetched Successfully',
-    photoData?.[0]
+    {
+      ...photo,
+      is_group_no_locked,
+      group_no_lock_message: is_group_no_locked
+        ? PHOTO_GROUP_NO_LOCK_MESSAGE
+        : null,
+    }
   );
   return res.status(200).json(response);
 });
